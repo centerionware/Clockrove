@@ -55,6 +55,14 @@ class InvoicePdfTest {
         }
         assertEquals(3, images.distinct().size)
     }
+    @Test fun blankOptionalFieldsKeepTheActualTotalOnTheFinalPage() {
+        val data = fixture("MODERN", 20).copy(company = "", companyContact = "", customer = "", customerContact = "", header = "", footer = "")
+        inspect(InvoicePdf.generate(data)) { renderer ->
+            renderer.openPage(renderer.pageCount - 1).use { page ->
+                if (android.os.Build.VERSION.SDK_INT >= 35) assertTrue(page.textContents.joinToString(" ") { it.text }.contains("TOTAL"))
+            }
+        }
+    }
     @Test fun longRowsHeadersAndFootersPaginateIntoRealPdfPages() {
         val data = fixture("MODERN", 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
         inspect(InvoicePdf.generate(data)) { renderer -> assertTrue(renderer.pageCount > 8); renderer.openPage(renderer.pageCount - 1).use { assertTrue(it.height > 0) } }

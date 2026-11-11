@@ -1245,3 +1245,12 @@ All checks remain pending; no VM builds/tests/rendering ran. Real PDF run
 prompt; corrected CI uses explicit replacement of ephemeral runner SDK copies
 with the pinned vendor archives. This is not proof the PDFs rendered successfully.
 Play delivery stays disabled until the combined feature set passes acceptance.
+
+Branding run 43089105094 passed Flutter presentation/retry checks and the Android
+app build, but unit-test compilation rejected desktop-only ImageIO fixture APIs
+on the Android test classpath. Replaced that fixture with a tiny valid PNG built
+using standard CRC/zlib streams; production image decoding stays native and is
+instrumented separately. Added native-eligible red deletion in job settings as
+well as the archive view and avoided creating a trailing page for a blank invoice
+footer. Exact updated checks remain pending. Emulator setup now also records the
+pinned package descriptor required by avdmanager; no device rendering claim yet.

@@ -48,8 +48,10 @@ internal object InvoicePdf {
                 flow.tableHeader()
                 snapshot.lines.forEach { flow.line(it) }
                 flow.total()
-                flow.space(20f)
-                flow.text(snapshot.footer, 10f)
+                if (snapshot.footer.isNotBlank()) {
+                    flow.space(20f)
+                    flow.text(snapshot.footer, 10f)
+                }
                 flow.finish()
                 return ByteArrayOutputStream().also { document.writeTo(it) }.toByteArray()
             } finally { document.close() }

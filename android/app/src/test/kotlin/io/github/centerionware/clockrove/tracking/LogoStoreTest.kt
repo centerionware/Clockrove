@@ -23,12 +23,26 @@ class LogoStoreTest {
         repository = TimerRepository(app, wallClock = { now }); job = repository.createJob("Synthetic branding job")
     }
     @After fun close() { repository.close() }
-    /** Standard-JDK synthetic PNG fixture; actual Android decoding is instrumented. */
+    /** Small, valid synthetic PNG; Android decoding is tested on the emulator. */
     private fun asset(color: Int): LogoStore.Asset {
-        val image = java.awt.image.BufferedImage(2, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB)
-        image.setRGB(0, 0, color); image.setRGB(1, 0, color)
-        val bytes = ByteArrayOutputStream().also { check(javax.imageio.ImageIO.write(image, "png", it)) }.toByteArray()
-        return LogoStore.Asset(LogoStore.hash(bytes), 2, 1, bytes)
+        val output = ByteArrayOutputStream()
+        val stream = java.io.DataOutputStream(output)
+        stream.write(byteArrayOf(137.toByte(),80,78,71,13,10,26,10))
+        fun chunk(type: String, bytes: ByteArray) {
+            val name = type.toByteArray(Charsets.US_ASCII)
+            stream.writeInt(bytes.size); stream.write(name); stream.write(bytes)
+            stream.writeInt(java.util.zip.CRC32().apply { update(name); update(bytes) }.value.toInt())
+        }
+        val header = ByteArrayOutputStream().also { java.io.DataOutputStream(it).apply { writeInt(2); writeInt(1); write(byteArrayOf(8,6,0,0,0)) } }.toByteArray()
+        chunk("IHDR", header)
+        val pixels = ByteArrayOutputStream().apply {
+            write(0)
+            repeat(2) { write(color ushr 16 and 255); write(color ushr 8 and 255); write(color and 255); write(color ushr 24 and 255) }
+        }.toByteArray()
+        val compressed = ByteArrayOutputStream().also { java.util.zip.DeflaterOutputStream(it).use { zip -> zip.write(pixels) } }.toByteArray()
+        chunk("IDAT", compressed); chunk("IEND", byteArrayOf()); stream.flush()
+        val bytes = output.toByteArray()
+        return LogoStore.Asset(LogoStore.hash(bytes),2,1,bytes)
     }
     private fun apply(command: String, asset: LogoStore.Asset) = repository.applyLogo(command, version, asset.id) { asset }
     private fun <T> inspect(block: (SQLiteDatabase) -> T): T = SQLiteDatabase.openDatabase(RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use(block)
