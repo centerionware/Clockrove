@@ -1262,6 +1262,31 @@ results/previews during the GitHub Actions incident. Release tooling did not run
 this is not a passed validation. Combined current main (834a7e4) into #17 for a
 fresh complete validation including actual PDF checks. No VM build/test ran.
 
+### Versioned job creation and strict timer transport — source prepared
+
+The production create-job call still allocated a new ID on every invocation and
+could not retain a response-loss intent. Prepared a versioned native command with
+a proposed stable job ID, one atomic job/board/revision commit, deleted-ID fencing
+and durable original outcome replay. New jobs capture the current default currency
+once; a retry does not relabel an existing job. The old one-argument repository
+helper is internal fixture convenience and is no longer used by production UI.
+
+App creation retains command ID/job ID/name/version while uncertain, exposes the
+existing retry action and blocks another app timer/create command until resolved.
+The dialog permits the same 240-character name bound as job settings. Native timer
+transport now rejects fractional versions instead of truncating them and still
+captures its own timestamps/manual origin. Existing tracking remains independent.
+
+Eight API-24/35 native cases (sixteen executions), three controller retry/concurrency
+checks and one codec case are prepared, alongside the existing create/switch/stop
+widget journey. All validation remains pending in GitHub Actions; no VM builds,
+tests or formatting ran. This is an independent milestone-3 contract fix, not proof
+that remaining history/widgets/backup work or full launch acceptance is complete.
+
+Initial job-command run 43108121797 stopped at formatting and one analyzer lint:
+the screen fixture's wrapped if statement needed braces. Applied the exact Actions
+formatter patch and added that block. No behavior/build/native result is claimed;
+corrected exact-head validation remains required.
 PR #30 initially had no Actions run because its appended evidence conflicted with
 the newly merged recovery notes. Combined main 315bce1 and retained both histories
 to restore PR mergeability; fresh validation is required, not assumed passed.
@@ -1295,3 +1320,18 @@ Reference: https://developer.android.com/reference/android/icu/util/Calendar#set
 Applied the exact formatter artifact from current wall-time run 43105393744 to
 the Flutter API and codec checks. Analysis/behavior/device results for this new
 source remain under validation. No VM formatter, test, build or rendering ran.
+
+History #30 exact head 026824c passed full Actions 43105996492. Inspected XML
+confirms 215 native tests and ten actual Android cases across API 24/35, all with
+zero failures/errors/skips, including three calendar cases per API. Merged to
+main as 8bb533d. This branch now includes that source; fresh combined validation
+is required. History UI and full M3/M4 acceptance remain incomplete. Play is held.
+
+Job-command run 43108685907 passed Flutter checks and the Android build but
+reported four native failures (two fixture issues on each API): direct SQL
+inspection preceded the lazy helper's first open, and the timestamp assertion
+incorrectly expected the business-fixture clock to control native surface taps.
+Open storage via a normal snapshot before inspection and verify the tap's captured
+time against the actual native call window, still rejecting the caller's supplied
+Long.MAX_VALUE timestamp/automation origin. Production timestamp behavior is
+unchanged. Corrected combined-main validation remains pending.

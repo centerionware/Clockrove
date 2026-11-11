@@ -69,10 +69,20 @@ class TimerApi {
     );
   }
 
-  Future<String> createJob(String name) async {
-    final id = await _channel.invokeMethod<String>('createJob', {'name': name});
-    if (id == null) throw const FormatException('Missing job ID');
-    return id;
+  Future<TimerOutcome> createJob({
+    required String id,
+    required int version,
+    required String jobId,
+    required String name,
+  }) async {
+    final raw = await _channel.invokeMapMethod<String, Object?>('createJob', {
+      'id': id,
+      'version': version,
+      'jobId': jobId,
+      'name': name,
+    });
+    if (raw == null) throw const FormatException('Missing job outcome');
+    return TimerOutcome(raw['version'] as int, raw['conflict'] as String?);
   }
 
   /// Retain id, version, action and jobId for retries of the same user intent.

@@ -35,10 +35,18 @@ class ScreenApi extends TimerApi {
       TimerSnapshot(version, List.unmodifiable(jobs), running);
 
   @override
-  Future<String> createJob(String name) async {
-    jobs.add(JobSummary('job-b', name));
-    version++;
-    return 'job-b';
+  Future<TimerOutcome> createJob({
+    required String id,
+    required int version,
+    required String jobId,
+    required String name,
+  }) async {
+    if (version != this.version) {
+      return TimerOutcome(this.version, 'STALE_STATE');
+    }
+    jobs.add(JobSummary(jobId, name));
+    this.version++;
+    return TimerOutcome(this.version, null);
   }
 
   @override
@@ -161,7 +169,7 @@ void main() {
       find.descendant(of: second, matching: find.byType(TextButton)),
     );
     await tester.pumpAndSettle();
-    expect(api.running!.jobId, 'job-b');
+    expect(api.running!.jobId, api.jobs.last.id);
     await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.clockOut));

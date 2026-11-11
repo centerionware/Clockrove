@@ -42,9 +42,9 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     fun snapshot(): Snapshot = readSnapshot(helper.readableDatabase)
 
-    /** Prototype job creation; the full job/board command contract follows in milestone 3. */
+    /** Fixture convenience; production creation uses the versioned command below. */
     @Synchronized
-    fun createJob(name: String): String {
+    internal fun createJob(name: String): String {
         require(name.isNotBlank())
         val id = UUID.randomUUID().toString()
         val db = helper.writableDatabase
@@ -332,6 +332,20 @@ class TimerRepository internal constructor(context: Context,
         BoardStore.read(helper.readableDatabase, jobId))
     @Synchronized
     internal fun taskTemplates(search: String = ""): List<BoardStore.Template> = BoardStore.templates(helper.readableDatabase, search)
+    @Synchronized
+    internal fun createJob(id: String, version: Long, jobId: String, name: String): Outcome =
+        boardChange(id, version, "JOB_CREATE", listOf(jobId, name)) { db ->
+            if (jobId.isBlank() || jobId.length > 128 || name.isBlank() || name.length > 240) "INVALID_JOB"
+            else if (db.rawQuery("SELECT id FROM jobs WHERE id=? UNION ALL SELECT entity_id FROM entity_heads WHERE kind='job' AND entity_id=? UNION ALL SELECT id FROM job_deletions WHERE id=? LIMIT 1",
+                arrayOf(jobId, jobId, jobId)).use { it.moveToFirst() }) "JOB_ID_EXISTS"
+            else {
+                val at = wallClock()
+                db.execSQL("INSERT INTO jobs(id,name,currency) SELECT ?,?,currency FROM app_settings WHERE id=1", arrayOf(jobId, name.trim()))
+                BusinessSchema.seedBoard(db, jobId, at)
+                RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, at, where = "id=?", args = arrayOf(jobId), origin = "MANUAL")
+                null
+            }
+        }
     @Synchronized
     internal fun saveColumn(id: String, version: Long, columnId: String, jobId: String, name: String, completed: Boolean): Outcome =
         boardChange(id, version, "COLUMN_SAVE", listOf(columnId, jobId, name, completed)) { BoardStore.saveColumn(it, columnId, jobId, name, completed, wallClock()) }
