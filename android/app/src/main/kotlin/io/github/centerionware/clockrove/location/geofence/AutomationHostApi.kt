@@ -16,13 +16,15 @@ import io.github.centerionware.clockrove.tracking.GeofenceStore
 import io.github.centerionware.clockrove.tracking.TimerRepository
 
 /** Settings commands carry expected versions and never accept a caller-selected event origin. */
-class AutomationHostApi(private val activity: Activity, messenger: BinaryMessenger,
+class AutomationHostApi internal constructor(private val activity: Activity, messenger: BinaryMessenger,
     private val repository: TimerRepository = TimerRepository.get(activity),
     private val permissionChanged: () -> Unit = { GeofenceRuntime.resume(activity.applicationContext) },
+    private val positionProvider: SitePositionProvider = FusedSitePositionProvider(activity.applicationContext),
     private val visible: () -> Boolean) {
     private val channel = MethodChannel(messenger, "clockrove/automation/v1")
     private val events = EventChannel(messenger, "clockrove/automation/health/v1")
     private val main = Handler(Looper.getMainLooper())
+    private val position = SitePositionController(positionProvider, visible, ::precise)
     private var pending: MethodChannel.Result? = null
     private var subscription: AutoCloseable? = null
     private var generation = 0
@@ -40,10 +42,20 @@ class AutomationHostApi(private val activity: Activity, messenger: BinaryMesseng
             override fun onCancel(arguments: Any?) { ++generation; subscription?.close(); subscription = null }
         })
         channel.setMethodCallHandler { call, result ->
+            if (call.method == "cancelPosition") {
+                position.cancel("CANCELLED")
+                result.success(null)
+                return@setMethodCallHandler
+            }
+            if (call.method == "currentPosition") {
+                if (pending != null) result.error("REQUEST_PENDING", "A permission request is pending", null)
+                else position.request((call.arguments as? Map<*, *>)?.get("purposeAccepted") == true, result)
+                return@setMethodCallHandler
+            }
             if (call.method in setOf("requestPrecise", "requestBackground", "openSettings")) {
                 try {
                     if (!visible()) result.error("FOREGROUND_REQUIRED", "Open Clockrove to change permissions", null)
-                    else if (pending != null) result.error("REQUEST_PENDING", "A permission request is pending", null)
+                    else if (pending != null || position.busy) result.error("REQUEST_PENDING", "A permission request is pending", null)
                     else if (call.method == "openSettings") {
                         openSettings()
                         result.success(permissions())
@@ -118,8 +130,10 @@ class AutomationHostApi(private val activity: Activity, messenger: BinaryMesseng
         "health" to GeofenceRuntime.health,
     )
     private fun openSettings() { activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${activity.packageName}"))) }
+    fun foregroundStopped() { position.cancel() }
     fun detach() {
         detached = true
+        position.detach()
         pending?.error("ACTIVITY_DETACHED", "Reopen Clockrove to continue", null)
         pending = null
         ++generation

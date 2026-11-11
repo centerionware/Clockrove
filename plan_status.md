@@ -961,3 +961,38 @@ cases. The added held-departure copy assertion searched an off-screen, lazily
 unbuilt card after scrolling to the review action. The test now reveals the
 pending card before checking that copy, then reveals recorded boundaries and
 acceptance separately. Both assertions remain; a corrected Actions run is required.
+
+### M2 controls merged; site selection source awaiting Actions
+
+PR #15 merged 897e120 after exact head 8a266c4 passed run 43028074243:
+98 native tests, no failures/errors/skips, all Dart/UI and Android build checks.
+Reviewed final departure light/dark images and earlier site/editor/timer images.
+Main adapter validation 43026215698 and Play internal 43027191550 succeeded.
+
+Map selection now has source for tap/radius/zoom/attribution and a coordinate
+fallback on failure or polar locations. Current location uses an explicit,
+foreground-only, cancellable fresh-fix request; setup fixes stay out of history.
+Seven API-24/35 controller cases, one API-29/35 bridge case, eight UI/map cases and
+one codec case are prepared but unrun. Two map previews plus updated site-editor
+previews will render in Actions. The form retains off-screen validators. No VM
+builds/tests/rendering ran. Native/device and final visual evidence remain pending.
+
+First site-selection run 43064678311 exported formatter changes, then stopped
+at an invalid const Semantics construction and an unused test import. Applied
+the Actions formatter patch, corrected both analyzer issues and retained all
+behavior assertions. No VM validation ran; corrected CI evidence is still needed.
+
+Owner reiterated the current-location work-site button with a precise permission
+request only when missing. That flow is implemented in the site editor/native
+preflight; added a direct UI case asserting one precise request, no background
+request, a fresh fix retry, and explicit Save site. The already-granted case now
+asserts zero permission requests. These refinements await Actions validation.
+
+Site selection run 43065083546 passed full CI on 8d26499: inspected native
+XML shows 114 tests, zero failures/errors/skips. Reviewed map/editor previews
+from artifact 13875397031. The dark marker needed contrast refinement; reviewed
+that corrected light/dark rendering from artifact 13874933679. Owner-specific
+permission case then passed all behavior/build checks in run 43066607243 on
+53f08f8, including 114 clean native tests; only the final formatting gate failed.
+Applied its Actions-generated formatter patch. Final exact-head CI is pending;
+actual device fixes and live tiles remain unproven. No VM validation ran.

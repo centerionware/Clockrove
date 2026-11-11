@@ -1030,3 +1030,45 @@ cases. The added held-departure copy assertion searched an off-screen, lazily
 unbuilt card after scrolling to the review action. The test now reveals the
 pending card before checking that copy, then reveals recorded boundaries and
 acceptance separately. Both assertions remain; a corrected Actions run is required.
+
+### Milestone 2 — verified control UI and site selection source
+
+Controls exact head 8a266c4 passed full Actions run 43028074243. Native XML:
+98 tests, zero failures/errors/skips; Dart/UI checks and Android build passed.
+Reviewed final light/dark departure images plus the previously reviewed site,
+editor and timer previews. PR #15 merged 897e120bc0c802eb6ff42adfb4aab430a93851e0.
+Main geofence adapter validation 43026215698 and internal delivery 43027191550
+also succeeded. This is automated/visual source evidence, not device acceptance.
+
+Added unvalidated map-tap/current-location site selection on that merged base.
+OSM picker reuses identified/cached/backed-off tiles, radius overlay, attribution,
+zoom and coordinate fallback. Polar coordinates remain editable without forcing
+invalid Web Mercator rendering. A foreground-only cancellable fused one-shot
+requests a fresh fix with a 15-second provider duration and a 20-second UI timeout; measured time/accuracy are displayed
+in the draft, and no setup point enters work history. Backgrounding/detach cancels
+and late callbacks cannot overwrite a newer request. The site form builds all
+validators in one scroll view so off-screen fields cannot evade validation.
+Seven native controller cases (API 24/35), one bridge case (API 29/35), eight UI/map
+cases and one Dart codec case are prepared. All builds, formatter, tests and preview
+rendering remain in Actions. Actual fused fixes, live OSM, device permissions and
+background tracking remain unproven; milestones 2 and 5 are incomplete.
+
+First site-selection run 43064678311 exported formatter changes, then stopped
+at an invalid const Semantics construction and an unused test import. Applied
+the Actions formatter patch, corrected both analyzer issues and retained all
+behavior assertions. No VM validation ran; corrected CI evidence is still needed.
+
+Owner reiterated the current-location work-site button with a precise permission
+request only when missing. That flow is implemented in the site editor/native
+preflight; added a direct UI case asserting one precise request, no background
+request, a fresh fix retry, and explicit Save site. The already-granted case now
+asserts zero permission requests. These refinements await Actions validation.
+
+Site selection run 43065083546 passed full CI on 8d26499: inspected native
+XML shows 114 tests, zero failures/errors/skips. Reviewed map/editor previews
+from artifact 13875397031. The dark marker needed contrast refinement; reviewed
+that corrected light/dark rendering from artifact 13874933679. Owner-specific
+permission case then passed all behavior/build checks in run 43066607243 on
+53f08f8, including 114 clean native tests; only the final formatting gate failed.
+Applied its Actions-generated formatter patch. Final exact-head CI is pending;
+actual device fixes and live tiles remain unproven. No VM validation ran.

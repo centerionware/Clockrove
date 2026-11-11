@@ -147,3 +147,21 @@ UI activation/review/health and physical-device acceptance remain outstanding.
 Primary platform references: [geofences](https://developer.android.com/develop/sensors-and-location/location/geofencing),
 [background location](https://developer.android.com/develop/sensors-and-location/location/permissions/background),
 [foreground-service restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start).
+
+## Site centre selection
+
+The site form supports coordinates, explicit map selection and an explained
+one-shot current-location request. The OSM picker uses the existing cache,
+identification and shared backoff policy; attribution stays visible on failures.
+Unavailable tiles and unsupported polar rendering preserve coordinate entry.
+Choosing a centre updates the draft only; saving is a separate versioned command.
+
+Setup location requires a foreground activity and precise permission. It uses
+`getCurrentLocation` with zero historical cache age, a 15-second provider duration
+and a cancellable 20-second UI deadline. Missing, stale, future or malformed measurement
+payloads fail without inventing a point. The draft shows actual measured time and
+accuracy. App backgrounding, editor cancellation or activity detach cancels the
+request; late callbacks cannot complete it again or replace a newer request.
+Neither this controller nor its provider owns a repository/history writer.
+Synthetic provider/codec tests are distinct from real fused-location validation.
+Platform basis: [current location request parameters](https://developers.google.com/android/reference/com/google/android/gms/location/CurrentLocationRequest.Builder).
