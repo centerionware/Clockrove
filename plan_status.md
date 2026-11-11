@@ -533,3 +533,52 @@ permission result prevents late service startup; approximate grant records a
 foreground-service intent while retaining timer; background entry cannot prompt
 or mutate timer. Pinned Robolectric permission APIs verified from exact source.
 These tests are pending CI and do not prove physical FGS delivery. No VM tests ran.
+
+### Owner UI direction and modern timer design
+
+Owner explicitly requests extremely clean, modern UI from the start. Applied that
+direction to the prototype instead of deferring visual work to release polish:
+consistent Material 3 light/dark themes, forest-green palette, soft neutral canvas,
+restrained cards, strong timer hierarchy, readable tabular elapsed display,
+maximum reading width, grouped jobs and quieter state-dependent location controls.
+No fake navigation or unsupported feature buttons added.
+
+Elapsed display derives from committed native UTC start timestamps; a foreground
+refresh timer only redraws and is cancelled in background/disposal. Backward clock
+shows a correction prompt instead of negative elapsed time. Added UTC DST/long
+session display checks, large-text layout check, and Actions-rendered light/dark
+synthetic PNG previews with fonts from the pinned Flutter SDK. No previews have
+yet been rendered or inspected; new UI is pending its own CI/visual review.
+
+Permission-flow PR #4 passed Actions 42993338165, including native lifecycle tests,
+and merged exact tested d490aa0 as 0262d861a553e45ed87f4e6552132dd6949230cf.
+Visual changes isolated on modern-timer-ui; no unvalidated UI merged. No VM tests,
+formatter or build ran. Geofence/map/recovery/device feasibility remains open.
+
+### Modern UI validation correction
+
+Previous turn: progress (clean light/dark UI, display/accessibility/preview source
+and PR #5). Revalidated existing run 42994742872; it concluded FAILURE at formatting,
+so no previews were rendered. Downloaded and reviewed Actions formatter-source
+patch (artifact 13843147570), applied source-only corrections without running a
+VM formatter. Added a lifecycle guard so elapsed display refresh does not start
+when its widget is initially created while backgrounded. Display derives from
+native timestamps and never writes timer state. New CI run must prove formatting,
+analysis, layout/tests and generated previews; visual review remains outstanding.
+
+Corrected UI run 42995204970 passed formatting but failed analysis on exactly two
+unnecessary imports (dart:ui in elapsed_display.dart and dart:typed_data in the
+screen preview test). Removed only those imports; no check was disabled. Rendering
+still has not run, so there is no visual artifact to approve yet. New validation
+will cover this source correction. No VM analyzer/formatter/build/test executed.
+
+### UI test-harness failures diagnosed
+
+Previous turn: progress (formatter/analyzer corrections). Existing run 42995708218
+concluded FAILURE in tests: ten passed, including large-text layout; manual journey
+tap happened before scroll layout repainted, and both previews failed because
+Flutter's test isolate does not support resolvePackageUri. No preview artifact
+was generated. Added frame settling after scroll operations (not tap suppression)
+and explicit pinned FLUTTER_ROOT export/font lookup for CI rendering. Removed
+unsupported isolate lookup; preview assertions remain enabled. New source needs
+fresh Actions validation and image review. No VM tests/formatter/build ran.
