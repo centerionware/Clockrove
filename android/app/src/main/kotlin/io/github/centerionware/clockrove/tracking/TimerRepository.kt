@@ -145,7 +145,7 @@ class TimerRepository internal constructor(context: Context) {
         try {
             db.rawQuery("SELECT * FROM location_points WHERE id=?", arrayOf(point.id)).use {
                 if (it.moveToFirst()) {
-                    val result = if (decodePoint(it) == point) SampleResult.DUPLICATE else SampleResult.ID_CONFLICT
+                    val result = if (decodePoint(it).copy(receivedUtcMillis = point.receivedUtcMillis) == point) SampleResult.DUPLICATE else SampleResult.ID_CONFLICT
                     db.setTransactionSuccessful()
                     return result
                 }

@@ -37,6 +37,7 @@ class LocationPersistenceTest {
         val observed = point("actual", session, 1200)
         assertEquals(TimerRepository.SampleResult.RECORDED, repository.recordLocation(observed))
         val committed = repository.snapshot().version
+        assertEquals(TimerRepository.SampleResult.DUPLICATE, repository.recordLocation(observed.copy(receivedUtcMillis = 1400)))
         assertEquals(TimerRepository.SampleResult.DUPLICATE, repository.recordLocation(observed))
         assertEquals(committed, repository.snapshot().version)
         assertEquals(TimerRepository.SampleResult.ID_CONFLICT, repository.recordLocation(observed.copy(latitude = 11.0)))

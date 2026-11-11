@@ -31,3 +31,7 @@ Native prototype test dependencies: JUnit 4.13.2 (EPL-1.0) and Robolectric 4.16.
 Prototype presentation: flutter_riverpod 3.0.3 / riverpod 3.0.3 (MIT). Exact
 transitive versions are in Actions-resolved pubspec.lock. UI controls are isolated
 on the prototype-controls feature branch until validation passes.
+
+Native location prototype: Google Play services location 21.3.0, pinned Maven
+coordinate `com.google.android.gms:play-services-location:21.3.0`. Google SDK
+terms/third-party notices require review before release. No map key is involved.

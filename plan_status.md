@@ -468,3 +468,31 @@ checks: validation/dedup, boundary pruning/late callbacks, upgrade preserving op
 session and dedup outcomes, and failed-upgrade rollback without record/schema loss.
 No VM tests/builds ran. New code needs Actions validation before main integration.
 FGS/fused callback/notification/geofence/map feasibility remain incomplete.
+
+### Foreground fused-location service implementation
+
+Previous turn: progress (native storage/migration slice and PR #2). Re-polled its
+existing validation 42990150091; still active, not restarted due to elapsed time.
+Added pinned Google Play services location 21.3.0 (artifact existence verified)
+and native location foreground service with explicit manifest permissions/type,
+ten-minute target, measured/reception metadata and per-request session binding.
+Ongoing notification reflects committed repository state; clock-out uses a private
+broadcast receiver sharing native commands, independent of Flutter/GPS permission.
+Observer/provider cleanup rejects work after destruction; process loss is not
+claimed as continuous tracking. Sample mapper test covers actual timestamp,
+accuracy and stable duplicate identity; repeated delivery retains first reception.
+
+Current Android foreground-service requirements and fused API docs were read.
+Service code is not wired to a visible permission/onboarding flow or enabled in
+Flutter yet; tracking remains unavailable to users until that adapter is added.
+No real callback/foreground notification/device cadence proof exists. No local
+build/test ran. New source requires its own Actions validation after the storage
+slice run finishes; it must not be mistaken for already-validated code.
+
+Storage PR #2 passed Actions run 42990150091 and merged exact tested head a970b71
+as d6e4d9c177323032d921b32a5350fa356340487a. Schema-2 storage/migration checks
+are verified in CI, not real callback delivery. Service follow-up was preserved
+on separate foreground-location-prototype branch; nothing unvalidated was merged.
+Manual-controls Play delivery 42989964414 succeeded: allocated versionCode
+216550241 and Google upload accepted at 08:54:33 UTC. Tester installation remains
+unverified. New service additions require their own PR/Actions run.

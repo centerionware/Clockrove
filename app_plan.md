@@ -611,3 +611,17 @@ validation/dedup, late/off-clock/pruned samples, preserved upgrade and failed
 migration rollback. These storage changes are unvalidated until Actions runs;
 no fused callbacks, foreground notification, device GPS or map success claimed.
 All builds/tests remain on GitHub, never the VM.
+
+### Foreground location prototype source
+
+Added pinned fused-location dependency 21.3.0, declared location FGS type/permissions,
+service callback/session binding, target cadence, notification with independent
+native clock-out receiver, cleanup and stable measured-point mapper/test. Startup
+permission/UI adapter is still pending; Flutter continues to show tracking
+unavailable. These additions are source-only until Actions and real device checks
+prove them. No synthetic GPS or guaranteed ten-minute delivery is claimed.
+
+Storage PR #2 passed complete Actions run 42990150091 and merged at d6e4d9c.
+Foreground service source is isolated on foreground-location-prototype for separate
+validation; no runtime/device proof yet. Automatic manual-controls delivery
+42989964414 accepted versionCode 216550241; this is not installation evidence.
