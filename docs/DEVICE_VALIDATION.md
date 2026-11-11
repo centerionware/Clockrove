@@ -33,3 +33,13 @@ After native geofence adapters are connected, also verify that the device-local
 Keystore receipt key survives process death and app upgrade. An unavailable key
 must surface degraded automation while manual timekeeping stays available. CI's
 synthetic HMAC fixture does not establish device Keystore behavior.
+
+The departure alarm adapter now has source and planned synthetic API-24/API-35
+coverage, pending Actions validation. After platform registration is connected,
+verify a grace alarm with the screen off and battery saver/Doze: record actual wake
+latency and ensure the session ends at the observed exit, with later points removed.
+Re-enter/manual stop before grace, then allow a stale alarm to arrive; it must not
+close current/new work. Reboot and edit the wall clock during grace: uncertainty
+must hold automatic expiry without an alarm loop, and manual clock-out must work.
+No exact-alarm access should be requested. Android force-stop is a separate case;
+relaunch must preserve work and reconcile, not claim uninterrupted automation.

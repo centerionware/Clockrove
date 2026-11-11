@@ -41,10 +41,9 @@ silently reopening or manufacturing work. Explicit acceptGeofenceReview preserve
 recorded history, rotates registrations and waits for new qualified exit/entry;
 future correction UI must let the user review those existing boundaries first.
 
-This source layer has no platform geofence receiver/registration, background
-permission UI, alarm scheduling or review notification yet. Those adapters must
-join this boundary, use inexact scheduling and reconcile persisted deadlines on
-recovery. No exact-alarm permission or periodic GPS timer is justified by this
+Platform geofence receiver/registration, background permission UI and review
+notification remain pending. The departure wake-up adapter described below joins
+this boundary; platform registration must reconcile persisted state on recovery. No exact-alarm permission or periodic GPS timer is justified by this
 contract. Native unit tests do not prove Android delivery, ten-minute sampling,
 reboot/force-stop continuity, physical boundaries or a completed application.
 
@@ -89,3 +88,26 @@ Historical ambiguity is sticky until explicit review. A later transient fault,
 known timely return or manual stop cannot erase a late conflict about an earlier
 part of the work record. Clearing current processing uncertainty is separate from
 accepting ambiguous history. New manual work remains independent of older alerts.
+
+## Departure wake-up adapter
+
+`DepartureAlarmController` schedules one inexact `RTC_WAKEUP` alarm using
+`setAndAllowWhileIdle`. It requests no exact-alarm permission and does not sample
+location. The explicit, immutable broadcast token contains the affected session
+and persisted deadline. Every delivery checks those values, current work, due
+time and review state inside the native serialized repository before finalizing.
+Re-entry/manual changes cancel the scheduled wake through a process-lifetime
+commit observer; an already delivered stale intent remains harmless. Late Android
+delivery preserves the observed exit boundary and prunes later measurements.
+Reopening re-reads the durable candidate; no Dart countdown owns expiry.
+
+Private boot/time-change receivers hold uncertain work for review and disarm
+current membership rather than treating reboot or a clock edit as departure proof.
+Held work has no repeatedly rescheduled alarm, and manual stop remains available.
+Physical wake latency, process death, reboot and force-stop behavior remain device
+gates. Platform geofence registration/callbacks and permission/site/review UI still
+need integration before users can enable this automation.
+
+Platform basis: [inexact Android alarms](https://developer.android.com/develop/background-work/services/alarms).
+Android may delay delivery, including during power-saving modes; no precise grace
+expiry guarantee is presented to the user.
