@@ -104,7 +104,7 @@ void main() {
       expect(api.positionRequests, 0);
       await _current(tester);
       expect(api.positionRequests, 1);
-    expect(api.preciseRequests, 0);
+      expect(api.preciseRequests, 0);
       expect(api.attempts, isEmpty);
       expect(api.sites, isEmpty);
       expect(find.textContaining('25 m accuracy'), findsOneWidget);
@@ -116,25 +116,30 @@ void main() {
       expect(api.attempts, hasLength(1));
     },
   );
-  testWidgets('current-location button requests precise permission only when it is missing', (tester) async {
-    final api = FixtureAutomationApi()..precise = false;
-    api.positionResult = () async {
-      if (!api.precise) { throw PlatformException(code: 'PRECISE_REQUIRED'); }
-      return SitePosition(10, 20, 25, DateTime.utc(2026, 11, 11, 12));
-    };
-    await _show(tester, api);
-    await _newSite(tester);
-    await _current(tester);
-    expect(api.preciseRequests, 1);
-    expect(api.backgroundRequests, 0);
-    expect(api.positionRequests, 2);
-    expect(api.sites, isEmpty);
-    await _reveal(tester, 'Save site');
-    await tester.tap(find.text('Save site'));
-    await tester.pumpAndSettle();
-    expect(api.sites.single.latitude, 10);
-    expect(api.sites.single.longitude, 20);
-  });
+  testWidgets(
+    'current-location button requests precise permission only when it is missing',
+    (tester) async {
+      final api = FixtureAutomationApi()..precise = false;
+      api.positionResult = () async {
+        if (!api.precise) {
+          throw PlatformException(code: 'PRECISE_REQUIRED');
+        }
+        return SitePosition(10, 20, 25, DateTime.utc(2026, 11, 11, 12));
+      };
+      await _show(tester, api);
+      await _newSite(tester);
+      await _current(tester);
+      expect(api.preciseRequests, 1);
+      expect(api.backgroundRequests, 0);
+      expect(api.positionRequests, 2);
+      expect(api.sites, isEmpty);
+      await _reveal(tester, 'Save site');
+      await tester.tap(find.text('Save site'));
+      await tester.pumpAndSettle();
+      expect(api.sites.single.latitude, 10);
+      expect(api.sites.single.longitude, 20);
+    },
+  );
   testWidgets(
     'unavailable current fix preserves manual coordinate entry and save',
     (tester) async {

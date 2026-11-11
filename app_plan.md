@@ -1063,3 +1063,12 @@ request only when missing. That flow is implemented in the site editor/native
 preflight; added a direct UI case asserting one precise request, no background
 request, a fresh fix retry, and explicit Save site. The already-granted case now
 asserts zero permission requests. These refinements await Actions validation.
+
+Site selection run 43065083546 passed full CI on 8d26499: inspected native
+XML shows 114 tests, zero failures/errors/skips. Reviewed map/editor previews
+from artifact 13875397031. The dark marker needed contrast refinement; reviewed
+that corrected light/dark rendering from artifact 13874933679. Owner-specific
+permission case then passed all behavior/build checks in run 43066607243 on
+53f08f8, including 114 clean native tests; only the final formatting gate failed.
+Applied its Actions-generated formatter patch. Final exact-head CI is pending;
+actual device fixes and live tiles remain unproven. No VM validation ran.
