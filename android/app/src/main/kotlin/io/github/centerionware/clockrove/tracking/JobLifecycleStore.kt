@@ -44,6 +44,12 @@ internal object JobLifecycleStore {
         // template is an explicit user choice and must not be recreated here.
         val templates = db.rawQuery("SELECT id FROM task_templates WHERE source_job_id=?", arrayOf(id)).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
         db.execSQL("UPDATE task_templates SET source_job_id=NULL,source_card_id=NULL WHERE source_job_id=?", arrayOf(id))
+        // Removed templates have no live catalog row, but their older revisions
+        // must lose deleted-job provenance as well (without requiring JSON SQL).
+        val historicalTemplates = db.rawQuery("SELECT id,payload FROM entity_revisions WHERE kind='template' AND payload IS NOT NULL", null).use { rows -> buildList {
+            while (rows.moveToNext()) if (org.json.JSONObject(rows.getString(1)).optString("source_job_id") == id) add(rows.getString(0))
+        } }
+        historicalTemplates.forEach { revision -> db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE id=?", arrayOf(revision)) }
         // Old template revisions must not retain deleted-job provenance either.
         templates.forEach { template ->
             db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='template' AND entity_id=?", arrayOf(template))

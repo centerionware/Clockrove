@@ -50,12 +50,15 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
                     "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency) }) }
             "templates" -> return repository.taskTemplates(input.string("search")).map { mapOf("id" to it.id, "title" to it.title, "description" to it.description,
                 "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName) }
+            "invoices" -> { val s = repository.invoices(input.string("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style) }) }
+            "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
+            "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
             "business" -> { val s = repository.businessSnapshot(); return mapOf("version" to s.version, "settings" to settings(s.settings), "customers" to s.customers.map(::customer)) }
             "job" -> { val s = repository.jobDetail(input.string("jobId")); return mapOf("version" to s.version, "settings" to job(s.job.settings), "archived" to s.job.archived,
-                "archivedMillis" to s.job.archivedMillis, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString()) }
+                "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString()) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -71,6 +74,10 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
             "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody")))
             "saveCustomer" -> repository.saveCustomer(id, version, BusinessStore.Customer(v.string("customerId"), v.string("name"), v.string("email"), v.string("phone"), v.string("address"), v.string("notes"), v.bool("archived")))
             "removeCustomer" -> repository.removeCustomer(id, version, v.string("customerId"))
+            "archiveJob" -> repository.archiveJob(id, version, v.string("jobId"))
+            "restoreJob" -> repository.restoreJob(id, version, v.string("jobId"))
+            "deleteJob" -> repository.deleteJob(id, version, v.string("jobId"))
+            "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
             "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride")))
             else -> error("Unreachable")
         }
@@ -86,10 +93,10 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
         val r = s.report
         return mapOf("version" to s.version, "timezone" to r.selection.timezone, "workCsv" to ReportCsv.work(r), "gpsCsv" to ReportCsv.gps(r),
             "days" to r.days.map { mapOf("date" to it.date, "start" to it.start, "end" to it.end) },
-            "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin) },
-            "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason) },
-            "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy) },
-            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency) },
+            "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone), "endLabel" to ReportCsv.instant(it.end, r.selection.timezone)) },
+            "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone)) },
+            "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy, "measuredLabel" to ReportCsv.instant(it.measured, r.selection.timezone)) },
+            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
             "totals" to r.totals.map { mapOf("jobId" to it.jobId, "jobName" to it.jobName, "mode" to it.mode, "currency" to it.currency, "fractionDigits" to Currency.getInstance(it.currency).defaultFractionDigits,
                 "durationMillis" to it.durationMillis.toString(), "hourlyMinor" to it.hourlyMinor?.toString(), "amountMinor" to it.amountMinor?.toString(), "missingPrices" to it.missingPrices) })
     }

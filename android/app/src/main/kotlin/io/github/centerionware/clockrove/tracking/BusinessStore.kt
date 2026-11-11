@@ -81,6 +81,7 @@ internal object BusinessStore {
         db.execSQL("DELETE FROM customers WHERE id=?", arrayOf(id))
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='customer' AND entity_id=?", arrayOf(id))
         RevisionStore.record(db, "customer", id, null, mapOf("id" to id), at, deleted = true)
+        OpaqueReceipt.purgePayloads(db)
         return null
     }
     fun saveJob(db: SQLiteDatabase, value: JobSettings, at: Long): String? {

@@ -104,7 +104,7 @@ internal object ReportCsv {
     private data class Numeric(val value: String)
     private fun numeric(value: Any) = Numeric(value.toString())
     private fun row(vararg values: Any) = values.joinToString(",") { if (it is Numeric) "\"${it.value}\"" else text(it.toString()) } + "\r\n"
-    private fun instant(value: Long, zone: String) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
+    internal fun instant(value: Long, zone: String) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
     fun work(report: ReportStore.Report): String = buildString {
         append(row("session_id", "job_id", "job_name", "report_date", "source_start", "source_end", "export_start", "export_end", "duration_seconds", "report_timezone", "origin", "source_timezone", "source_offset_seconds"))
         report.intervals.forEach { i -> append(row(i.sessionId, i.jobId, i.jobName, i.date, instant(i.sourceStart, report.selection.timezone), instant(i.sourceEnd, report.selection.timezone),

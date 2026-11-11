@@ -1040,14 +1040,14 @@ re-enable automatic delivery only for the complete validated combined iteration.
 
 | Addition | Status | Required evidence |
 | --- | --- | --- |
-| Hourly/task billing mode and task prices | Pending | Exact native arithmetic, mode switching, missing prices/currency and report tests |
-| Reusable task templates including deleted-job content | Pending | Independent catalog, fresh card IDs, deletion/backup safeguards |
-| Complete reporting and Kanban task management | Pending | Actual persisted journeys, report/filter/map/CSV agreement and accessible board moves |
-| Customers and per-job customer/email | Pending | Real CRUD/reference integrity and editable effective job recipient |
+| Hourly/task billing mode and task prices | Native/settings UI passed; report UI pending | PRs #20–24; exact integer, mode, zero/missing/currency and DST cases passed; combined report UI #28 awaits checks |
+| Reusable task templates including deleted-job content | Board/native lifecycle passed; final cleanup pending | Independent catalog/copy/removal tested; #27 historical-provenance cleanup and final UI checks remain |
+| Complete reporting and Kanban task management | Kanban passed; report core passed; integrated UI pending | #23 validated board and previews; #22 DST/pricing/CSV native tests; #28 full report/map/export UI unverified |
+| Customers and per-job customer/email | Implemented and Actions passed | #21 native persistence/references and #24 typed forms/customer journeys; refresh-race fix in #28 pending |
 | PDF invoice beside CSV | Pending | Valid multipage PDF with actual report line items/totals |
 | Email draft with automatic fields and PDF attachment | Pending | Native Intent/URI grant tests; device email handoff evidence separate |
-| Global company/contact and email subject/body templates | Pending | Persisted settings, safe placeholder expansion and no injected headers |
-| Optional invoice header/footer and company logo import | Pending | Bounded private image handling and output/backup validation |
+| Global company/contact and email subject/body templates | Implemented and Actions passed | #21 literal/injection/persistence tests and #24 UI journeys passed; document handoff pending |
+| Optional invoice header/footer and company logo import | Header/footer stored; logo importer pending | Header/footer settings/native snapshot source exists; actual PDF/logo/device checks and importer remain |
 | Minimal, Classic and Modern invoice styles | Pending | Three distinct real rendered PDFs with equal totals and logo/pagination checks |
 | Combined internal release | Held | All scope implemented and checked before Play workflow is re-enabled |
 
@@ -1171,3 +1171,74 @@ pending. Play publication is held; no VM validation ran.
 Lifecycle fdd33a8 passed the completed android check in 43085255507 (176 native
 tests, zero failures/errors/skips). Merged #25. This monitoring branch now includes
 that main source; exact combined validation is pending. Play delivery remains held.
+### Immutable invoice/PDF source prepared
+
+Prepared stable numbered invoice snapshots using actual finalized hourly or
+completed-task report selections. Missing rates/prices prevent allocation; explicit
+free tasks remain valid. Snapshots preserve contacts, company/templates/style,
+exact totals and optional immutable logo references. Rendering is outside the
+repository writer; cached PDF cannot overwrite a prepared document. Added native
+Minimal/Classic/Modern layouts with wrapped multipage content, aspect-preserving
+logo, optional header/footer and shared exact totals. Five API-24 snapshot cases
+and two native-graphics PDF cases are prepared: generate bytes, reopen actual PDF
+pages and export synthetic previews. These have not yet run. Logo picker, document
+provider/share/email, preview UI and report UI still remain; no release claim.
+
+### Kanban UI acceptance and document handoff source
+
+Board head 65d4734 passed Actions 43080530052; downloaded XML confirms 166 native
+tests with zero failures/errors/skips. Reviewed actual light/dark board previews:
+readable task pricing/due dates, clear hierarchy, no clipped card content. Merged
+PR #23. This is not full combined iteration completion or physical-device proof.
+
+Prepared a nonexported invoice content provider with temporary read grants,
+actual saved PDF attachment/email recipient/subject/body, email-app routing,
+share fallback, document save picker and native preview of real PDF pages.
+Source adds provider/Intent cases on API 24/35; no external email has been sent
+by the agent and composer opening is never recorded as delivery. Added archive/
+report/invoice-index transport and corrected deletion to scrub provenance from
+older revisions of explicitly removed templates, plus customer command payload
+purging. Invoice build 43082392102 exposed that PdfDocument has no Kotlin use
+receiver; changed to explicit close in finally. Corrected Actions checks and
+all new document/provider/UI journeys remain pending. Play delivery is held.
+PDF run 43083368119 built Android and passed snapshot/domain cases but the two
+real-PDF host cases failed: pinned Robolectric has no PdfDocument implementation
+and returns a closed native document handle. Moved those assertions to Android
+instrumentation (not mocks or relaxed assertions), with API 24/35 emulator checks
+in Actions, pinned vendor archives and AndroidX runner 1.7.0 / JUnit extension
+1.3.0. Actual PDF page/text/render/pagination checks and previews remain pending.
+No emulator/SDK/build/test was run on this VM. Settings journeys in 43082585871
+passed except formatting; applied its runner-generated patch to the source.
+
+### Combined release UI integration — source prepared, unverified
+
+Prepared shared date-range/calendar/job-filter reporting screens with exact
+alternative hourly/task amounts, finalized interval list, completed task lines,
+excluded active/review work, measured GPS map with accuracy/timestamps and trace
+breaks at session/gap/antimeridian boundaries. CSV/GPS save through the document
+picker rechecks the displayed native version. PDF invoice is beside CSV, with
+actual saved-document preview, page navigation, email attachment/save/share and
+prepared-invoice history. Added archive/restore UI and red, irreversible native-
+eligibility-only deletion confirmation. Added settings archive action.
+
+Provider reloads now retain editor data instead of destroying pending commands
+when native version notifications precede responses. Prepared a response-loss/
+refresh regression test proving the original invoice ID/version/intent survives,
+plus CSV selection, elapsed precision, trace and deletion-confirmation cases.
+Source awaits Actions formatting/analyzer/build/tests and real visual review;
+logo import, final integration fixes and combined release acceptance remain open.
+No VM build/test/render ran; Play delivery remains disabled.
+
+Settings head 4875670 passed 43085253088; inspected XML confirms 166 native tests
+with zero failures/errors/skips and the new Flutter customer/settings/job billing
+journeys passed. Reviewed six light/dark company/customer/billing previews. Merged
+#24; real logo import and document/render/combined acceptance remain unfinished.
+Removed the customer action's heavy elevation in the next UI source revision to
+match existing flat surfaces. Integrated UI formatter artifact from 43086427014
+applied; remaining analyzer/test results are still being inspected.
+
+Monitoring recovery run 43094466938 completed with successful formatting, analysis,
+Flutter tests, Android build and native tests, but failed while exporting native
+results/previews during the GitHub Actions incident. Release tooling did not run;
+this is not a passed validation. Combined current main (834a7e4) into #17 for a
+fresh complete validation including actual PDF checks. No VM build/test ran.

@@ -105,6 +105,7 @@ class JobLifecycleTest {
         repository.removeTaskTemplate("forget", version, repository.taskTemplates().single().id)
         archive(); now += JobLifecycleStore.retentionMillis; assertNull(remove().conflict)
         assertTrue(repository.taskTemplates().isEmpty())
+        inspect { db -> db.rawQuery("SELECT payload FROM entity_revisions WHERE kind='template' AND payload IS NOT NULL", null).use { while (it.moveToNext()) assertFalse(it.getString(0).contains(job)) } }
     }
     @Test fun oldTimerAndConfigurationResponsesReplayAfterPrivatePayloadPurgeWithoutExecutingAgain() {
         site(); val siteVersion = inspect { db -> db.rawQuery("SELECT version FROM commands WHERE id='site'", null).use { it.moveToFirst(); it.getLong(0) - 1 } }

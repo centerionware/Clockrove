@@ -1,6 +1,6 @@
 # Clockrove — implementation plan and handoff to Luna
 
-Prepared: 2026-11-11. Status: foundation CI passed; milestone 2 prototype in progress; public terms review pending; see `plan_status.md` for task-level status.
+Prepared: 2026-11-11. Status: native tracking device acceptance pending; job/board/customer/billing increments passed Actions; combined business iteration in progress; public terms review pending; see `plan_status.md` for task-level status.
 
 ## 1. Start here
 
@@ -28,13 +28,14 @@ The user explicitly requested this handoff after creating agent instructions and
 ### Next concrete action
 
 Complete the owner-requested combined internal iteration in
-[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). The compact widget and
-native schema/revision foundation passed Actions and merged; continue native
-Kanban/job/customer/settings commands, then usable job/board/report screens and
-all pricing/PDF/email/branding features. Keep Play delivery disabled until the
-entire requested set is implemented and validated. All builds/tests/rendering
-remain in Actions. Physical GPS/launcher/recovery/email evidence remains separate;
-the complete application objective and production gates remain unfinished.
+[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). Compact widget, native
+schema/Kanban/customer/billing/report calculations and board/company/customer/job
+settings UI increments passed Actions and merged. Finish integrated report/map/
+CSV/archive/invoice/email UI checks, real Android PDF instrumentation, logo import
+and final combined acceptance. Keep Play delivery disabled until the entire set
+is implemented and validated. All builds/tests/rendering remain in Actions.
+Physical GPS/launcher/recovery/email evidence remains separate; the complete
+application objective and production gates remain unfinished.
 
 ## 2. Product decisions
 
@@ -1210,3 +1211,17 @@ current main without changing the combined next-release contract or publication
 hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
 Fresh exact-head Actions validation is required. This remains source-level recovery
 behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.
+### Combined business iteration evidence (continuation)
+
+PR #20 (7be840e) passed 43077477547: 139 native tests, twelve new board cases.
+PR #21 (493814c) passed 43078381276: 150 native tests, eleven business command
+cases. PR #22 (5972331) passed 43078930808: 160 native tests, ten DST/exact billing/
+CSV cases. PR #23 (65d4734) passed 43080530052: 166 native tests; typed board UI
+and interaction checks plus light/dark previews reviewed. PR #24 (4875670) passed
+43085253088: customer/company/job billing journeys and six reviewed previews.
+These increments merged; none implies the combined iteration or milestone 3 is
+fully accepted. Native lifecycle source passed an earlier run; corrected exact
+heads and UI remain under validation. Actual PDF checks moved from unsupported
+Robolectric PdfDocument to pinned Android emulator instrumentation in Actions.
+Logo import, document/provider/integrated report UI checks and release acceptance
+remain open. Play workflow 414395901 stays disabled; no partial release publishes.

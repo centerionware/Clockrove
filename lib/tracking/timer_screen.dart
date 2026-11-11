@@ -8,6 +8,8 @@ import 'tracking_api.dart';
 import '../automation/automation_screen.dart';
 import '../business/job_screen.dart';
 import '../business/settings_screen.dart';
+import '../business/report_screen.dart';
+import '../business/archive_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 
@@ -185,14 +187,19 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
             onSelected: (value) => Navigator.push(
               context,
               MaterialPageRoute<void>(
-                builder: (_) => value == 'settings'
-                    ? const SettingsScreen()
-                    : const CustomersScreen(),
+                builder: (_) => switch (value) {
+                  'settings' => const SettingsScreen(),
+                  'customers' => const CustomersScreen(),
+                  'reports' => const ReportScreen(),
+                  _ => const ArchiveScreen(),
+                },
               ),
             ),
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'settings', child: Text('Settings')),
               PopupMenuItem(value: 'customers', child: Text('Customers')),
+              PopupMenuItem(value: 'reports', child: Text('Reports')),
+              PopupMenuItem(value: 'archive', child: Text('Archived jobs')),
             ],
           ),
           IconButton(
