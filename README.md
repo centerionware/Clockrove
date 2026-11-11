@@ -21,22 +21,20 @@ Builds and tests run exclusively through GitHub Actions; do not execute build,
 analysis, formatting or test commands on this development VM. Edit and review
 source locally, push a reviewed change, then inspect the Validate workflow run.
 The workflow installs pinned tools, resolves the lockfile, and runs checks on
-GitHub-hosted ubuntu-24.04. Publishing is not configured.
+GitHub-hosted ubuntu-24.04. Successful validated main pushes publish to Play
+internal testing through a separate protected workflow.
 
-CI JDK: Eclipse Temurin **17.0.17+10** (exact setup-java-compatible pin). Android build compatibility is being validated.
+CI JDK: Eclipse Temurin **17.0.17+10** (exact setup-java-compatible pin). Android debug and signed bundle builds are verified in Actions.
 Do not interpret analysis success as Android build or device validation. Generated
 Gradle inputs select AGP 9.1.0, Kotlin 2.4.0 and Gradle 9.3.1; minimum SDK **24**, compile/target SDK **36**, build tools **36.0.0** and NDK
 **28.2.13676358** are pinned. API 24 follows the selected Flutter minimum;
 recheck the target API against Play requirements before release.
-Release signing and store publishing are unconfigured.
+The permanent upload key is stored in repository secrets. Tagged production
+submission remains readiness-gated; see [Play delivery](docs/PLAY_DELIVERY.md).
 
-On this ARM64 development host, the official Flutter Linux archive bundled x64
-Dart. The matching official ARM64 Dart 3.13.7 SDK was installed into the ignored
-local Flutter cache and flutter_tools.snapshot rebuilt. Android native tools may
-also require a compatible build host. On ARM64, Gradle's Maven AAPT2 is x64;
-set `android.aapt2FromMavenOverride=/absolute/path/to/arm64/aapt2` only in a
-local Gradle user properties file after validating that tool. Never commit a
-host path to Android build settings. See the status record for actual evidence.
+Use the checked-in tool versions and workflows for validation. No host-specific
+SDK/JDK path belongs in committed Gradle settings. Historical VM setup attempts
+are documented in the status ledger and predate the Actions-only instruction.
 
 ## Protected workspace Git mount
 
@@ -55,6 +53,8 @@ staged paths and source terms before creating or pushing a public repository.
 Never publish `.local-skills`, `.tools`, `.local`, real data, or credentials.
 
 Architecture and dependency inventory are in `docs/`. No private local skill is
-required to build or contribute. The validation-only GitHub workflow runs formatting, analysis, implemented tests,
-Android debug build and native unit tasks without publishing credentials. No
-Android device, CI run or store release has been validated yet.
+required to contribute. Validation runs formatting, analysis, implemented tests,
+UI previews, Android debug builds and native unit tasks without publishing secrets.
+Signed internal uploads are confirmed; tester installation, physical tracking and
+production release remain unproven. See the [device checklist](docs/DEVICE_VALIDATION.md)
+and [UI direction](docs/UI_DESIGN.md).

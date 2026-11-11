@@ -22,7 +22,8 @@ not raw SQL or a second Dart timer/database.
 The adapter refreshes widgets after completed calls and provides version
 invalidation hints on clockrove/timer/versions/v1. Widgets also refresh after
 their own command callbacks. Other native event sources must join this same
-boundary as implemented. No notification/location provider has been wired yet.
+boundary as implemented. Foreground location and independent notification clock-out
+now use this repository. Geofence registration and runtime automation remain pending.
 
 The Dart contract tests use transport mocks and prove decoding/retry semantics
 only. Native Robolectric tests exercise repository transactions separately.

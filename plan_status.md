@@ -16,10 +16,10 @@ iOS and future service remain deferred.
 | M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/tools; no publishing secrets; source-only diagnostic/lockfile artifacts |
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
-| M2.1 SQLite/manual timer/widget/notification prototype | In progress | SQLite commands, typed bridge, native widget code and eight Robolectric tests pass in Actions; prototype Flutter controls merged via PR #1 after full Actions success; notification/device integration incomplete |
-| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter and measured status validated in Actions; departure PR #7 awaiting rebase validation; geofence membership source pending Actions; registration/suppression/scheduling/device evidence remain |
+| M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
+| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; registration/suppression/scheduling/device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
-| M2.4 Physical screen-off/battery validation | Pending external device | No device identified |
+| M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
 | M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
 | M3.3 Jobs/sites/boards/session corrections/queries | Pending | Integrity and snapshot tests required |
@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
-| M8.2 Device/dependency/release/upgrade validation | Pending | No build or device success claimed |
+| M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
 | M8.3 Protected workflows/Fastlane/internal delivery | Internal upload verified; broader release readiness incomplete | Actions 42988068348 attempt 2 succeeded; Play accepted versionCode 216549708; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
@@ -683,3 +683,15 @@ Native visual run 43000557414 passed Dart/UI checks and Android APK compilation,
 then failed Kotlin test compilation: Robolectric getApplication has no type
 parameter. Removed the unsupported generic argument. Rendering remains unproven;
 all preview checks remain enabled. No VM tests/build/format/render were run.
+
+### Native visual review and combined main validation
+
+Corrected native visual run 43001359856 concluded SUCCESS: complete Dart/UI,
+Android debug build, native tests/resource rendering and release version-policy
+checks. Downloaded artifact 13845869738 and visually inspected all five PNGs:
+legacy/adaptive/themed mark and light/dark launch backgrounds. No VM rendering.
+Membership PR #8 passed exact-head run 43000880173 and merged at dc26e64.
+Native visual branch rebased onto that main; conflicts were evidence appendices
+only. Added public prototype device checklist and corrected outdated README and
+timer contract status. New combined-head Actions validation pending; device and
+runtime automation acceptance remain unproven. No production release submitted.

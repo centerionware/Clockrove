@@ -39,3 +39,8 @@ and launch transitions still require physical-device review.
 
 Platform references: [adaptive icons](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive),
 [system splash screen](https://developer.android.com/develop/ui/views/launch/splash-screen).
+
+Native previews from Actions run 43001359856 / artifact 13845869738 were inspected:
+legacy/adaptive icons, monochrome mark and both launch backgrounds are clean and
+consistent. This validates rendered resources under Robolectric, not actual device
+launcher masks or system launch animations. Combined-main validation is separate.
