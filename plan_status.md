@@ -732,3 +732,8 @@ applied its exact CI correction. Map point/accuracy ink now stays forest green
 with a white marker halo so standard light OSM tiles remain legible in dark mode.
 The marker is centered on the measured coordinate; no displaced pin tip. New
 validation remains required before merging. No VM validation executed.
+
+OSM run 43005218796 passed formatting, then analysis reported two redundant
+Dart typed-data imports provided by Flutter services. Removed only those imports;
+checks remain enabled. No map behavior/native/device success is inferred before
+the next full Actions run and rendered-image inspection. No VM validation ran.
