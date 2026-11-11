@@ -19,7 +19,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NativeVisualPreviewTest {
     @Test fun renderAndroidVisualResources() {
-        val app = RuntimeEnvironment.getApplication<android.app.Application>()
+        val app = RuntimeEnvironment.getApplication()
         val root = System.getenv("GITHUB_WORKSPACE")?.let { File(it, "build/native-ui-preview") }
             ?: File("build/native-ui-preview")
         root.mkdirs()
