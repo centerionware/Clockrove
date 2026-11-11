@@ -517,3 +517,19 @@ precedes native permission calls while denied location preserves manual clock-ou
 These UI/bridge changes require new Actions validation. No VM formatting/build or
 tests ran. Physical screen-off sampling, recovery, geofences, map experiment and
 clock-out sampling target are still incomplete; milestone 2 is not complete.
+
+### Permission flow validation correction and native lifecycle tests
+
+Previous turn: progress (tracking permission bridge/UI and PR #4). Existing PR run
+42992333516 concluded FAILURE at Dart formatting. Downloaded/reviewed its source
+patch and applied the exact Actions formatter corrections; no VM formatter ran.
+
+Source review found native enable requests were not reserved before asynchronous
+storage checks and could overwrite a permission result. Reserved them immediately,
+ignored cancelled continuations, marshalled replies back to main, and sanitized
+storage exceptions so callers do not hang. Added native Robolectric codec-driven
+bridge tests: competing enables preserve original callback; cancelling before a
+permission result prevents late service startup; approximate grant records a
+foreground-service intent while retaining timer; background entry cannot prompt
+or mutate timer. Pinned Robolectric permission APIs verified from exact source.
+These tests are pending CI and do not prove physical FGS delivery. No VM tests ran.

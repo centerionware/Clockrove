@@ -10,26 +10,35 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
-  test('denied location and notifications remain explicit native states', () async {
-    messenger.setMockMethodCallHandler(channel, (call) async => {
-      'permission': 'denied',
-      'service': 'STOPPED',
-      'working': true,
-      'notificationsAllowed': false,
-    });
-    final status = await api.enable();
-    expect(status.permission, 'denied');
-    expect(status.working, isTrue);
-    expect(status.notificationsAllowed, isFalse);
-    expect(status.service, 'STOPPED');
-  });
+  test(
+    'denied location and notifications remain explicit native states',
+    () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (call) async => {
+          'permission': 'denied',
+          'service': 'STOPPED',
+          'working': true,
+          'notificationsAllowed': false,
+        },
+      );
+      final status = await api.enable();
+      expect(status.permission, 'denied');
+      expect(status.working, isTrue);
+      expect(status.notificationsAllowed, isFalse);
+      expect(status.service, 'STOPPED');
+    },
+  );
 
-  test('restricted startup does not become a fabricated successful status', () async {
-    messenger.setMockMethodCallHandler(channel, (call) async {
-      throw PlatformException(code: 'START_RESTRICTED');
-    });
-    await expectLater(api.enable(), throwsA(isA<PlatformException>()));
-    messenger.setMockMethodCallHandler(channel, (call) async => null);
-    await expectLater(api.status(), throwsFormatException);
-  });
+  test(
+    'restricted startup does not become a fabricated successful status',
+    () async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        throw PlatformException(code: 'START_RESTRICTED');
+      });
+      await expectLater(api.enable(), throwsA(isA<PlatformException>()));
+      messenger.setMockMethodCallHandler(channel, (call) async => null);
+      await expectLater(api.status(), throwsFormatException);
+    },
+  );
 }

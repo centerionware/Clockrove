@@ -39,7 +39,10 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
 
   Future<void> _run(Future<TrackingStatus> Function() action) async {
     if (_busy) return;
-    setState(() { _busy = true; _notice = null; });
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
     try {
       final status = await action();
       if (!mounted) return;
@@ -80,34 +83,43 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
             const Text(AppStrings.locationTitle),
             status.when(
               loading: () => const LinearProgressIndicator(),
-              error: (error, stack) => const Text(AppStrings.locationRestricted),
+              error: (error, stack) =>
+                  const Text(AppStrings.locationRestricted),
               data: (value) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_description(value)),
                   if (value.permission == 'approximate')
                     const Text(AppStrings.locationApproximate),
-                  if (value.working) Wrap(
-                    spacing: 8,
-                    children: [
-                      TextButton(
-                        onPressed: _busy ? null : _enable,
-                        child: const Text(AppStrings.enableLocation),
-                      ),
-                      TextButton(
-                        onPressed: _busy ? null : () => _run(
-                          () => ref.read(trackingApiProvider).disable(),
+                  if (value.working)
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: _busy ? null : _enable,
+                          child: const Text(AppStrings.enableLocation),
                         ),
-                        child: const Text(AppStrings.disableLocation),
-                      ),
-                      if (!value.notificationsAllowed) TextButton(
-                        onPressed: _busy ? null : () => _run(
-                          () => ref.read(trackingApiProvider).requestNotifications(),
+                        TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => _run(
+                                  () => ref.read(trackingApiProvider).disable(),
+                                ),
+                          child: const Text(AppStrings.disableLocation),
                         ),
-                        child: const Text(AppStrings.allowNotifications),
-                      ),
-                    ],
-                  ),
+                        if (!value.notificationsAllowed)
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _run(
+                                    () => ref
+                                        .read(trackingApiProvider)
+                                        .requestNotifications(),
+                                  ),
+                            child: const Text(AppStrings.allowNotifications),
+                          ),
+                      ],
+                    ),
                 ],
               ),
             ),

@@ -16,10 +16,10 @@ import java.util.concurrent.Executors
 
 /** Explicit visible-activity entry; never starts location as a background side effect. */
 class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger,
+    private val repository: TimerRepository = TimerRepository.get(activity),
     private val visible: () -> Boolean) {
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private val repository = TimerRepository.get(activity)
     private var pending: MethodChannel.Result? = null
     private var enablingLocation = false
     @Volatile private var detached = false
@@ -50,11 +50,17 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
                 "enable" -> {
                     if (!visible()) result.error("FOREGROUND_REQUIRED", "Open Clockrove to enable location", null)
                     else if (pending != null) result.error("REQUEST_PENDING", "A permission request is pending", null)
-                    else worker.execute {
-                        val working = repository.snapshot().running != null
+                    else {
+                        pending = result
+                        worker.execute {
+                        val working = try { repository.snapshot().running != null }
+                        catch (_: Exception) {
+                            main.post { fail(result, "STORAGE_UNAVAILABLE", "Tracking storage unavailable") }
+                            return@execute
+                        }
                         main.post {
-                            if (detached) return@post
-                            if (!visible()) result.error("FOREGROUND_REQUIRED", "Open Clockrove to enable location", null)
+                            if (detached || pending !== result) return@post
+                            if (!visible()) fail(result, "FOREGROUND_REQUIRED", "Open Clockrove to enable location")
                             else if (!working) replyStatus(result)
                             else if (!hasLocation()) {
                                 pending = result
@@ -62,6 +68,7 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
                                 activity.requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,
                                     Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_REQUEST)
                             } else startVisible(result)
+                        }
                         }
                     }
                 }
@@ -90,14 +97,13 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
     fun permissionResult(code: Int): Boolean {
         if (code != LOCATION_REQUEST && code != NOTIFICATION_REQUEST) return false
         val result = pending ?: return true
-        pending = null
         if (enablingLocation && hasLocation()) startVisible(result) else replyStatus(result)
         return true
     }
 
     private fun startVisible(result: MethodChannel.Result) {
         if (!visible()) {
-            result.error("FOREGROUND_REQUIRED", "Open Clockrove to enable location", null)
+            fail(result, "FOREGROUND_REQUIRED", "Open Clockrove to enable location")
             return
         }
         try {
@@ -107,28 +113,44 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
             replyStatus(result)
         } catch (_: RuntimeException) {
             WorkLocationService.markStartRestricted()
-            result.error("START_RESTRICTED", "Android restricted location startup; manual timekeeping still works", null)
+            fail(result, "START_RESTRICTED", "Android restricted location startup; manual timekeeping still works")
         }
     }
 
     private fun hasLocation() = activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
+    private fun fail(result: MethodChannel.Result, code: String, message: String) {
+        if (pending === result) pending = null
+        if (!detached) result.error(code, message, null)
+    }
+
     private fun replyStatus(result: MethodChannel.Result) {
         if (detached) return
+        val wasPending = pending === result
         worker.execute {
             if (detached) return@execute
-            val running = repository.snapshot().running
-            result.success(mapOf(
-                "permission" to when {
-                    activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED -> "precise"
-                    hasLocation() -> "approximate"
-                    else -> "denied"
-                },
-                "service" to WorkLocationService.health,
-                "working" to (running != null),
-                "notificationsAllowed" to activity.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
-            ))
+            try {
+                val running = repository.snapshot().running
+                val status = mapOf(
+                    "permission" to when {
+                        activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED -> "precise"
+                        hasLocation() -> "approximate"
+                        else -> "denied"
+                    },
+                    "service" to WorkLocationService.health,
+                    "working" to (running != null),
+                    "notificationsAllowed" to activity.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
+                )
+                main.post {
+                    if (!detached && (!wasPending || pending === result)) {
+                        if (pending === result) pending = null
+                        result.success(status)
+                    }
+                }
+            } catch (_: Exception) {
+                main.post { if (!wasPending || pending === result) fail(result, "STORAGE_UNAVAILABLE", "Tracking storage unavailable") }
+            }
         }
     }
 

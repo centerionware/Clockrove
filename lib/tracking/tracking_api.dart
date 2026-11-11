@@ -25,7 +25,8 @@ class TrackingApi {
   Future<TrackingStatus> status() => _invoke('status');
   Future<TrackingStatus> enable() => _invoke('enable');
   Future<TrackingStatus> disable() => _invoke('disable');
-  Future<TrackingStatus> requestNotifications() => _invoke('requestNotifications');
+  Future<TrackingStatus> requestNotifications() =>
+      _invoke('requestNotifications');
 
   Future<TrackingStatus> _invoke(String method) async {
     final raw = await _channel.invokeMapMethod<String, Object?>(method);

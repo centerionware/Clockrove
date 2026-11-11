@@ -97,8 +97,14 @@ void main() {
     await tester.tap(find.text(AppStrings.continueLabel));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton,
-        AppStrings.clockOut)).onPressed, isNotNull);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, AppStrings.clockOut),
+          )
+          .onPressed,
+      isNotNull,
+    );
     await tester.ensureVisible(find.text(AppStrings.newJob));
     await tester.tap(find.text(AppStrings.newJob));
     await tester.pumpAndSettle();

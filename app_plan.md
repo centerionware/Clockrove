@@ -635,3 +635,9 @@ invalidation, purpose dialog before native calls and independent location stop.
 Denied/restricted states preserve manual timing. New transport/permission-purpose
 UI checks are pending Actions; no physical callback/FGS success is claimed.
 No VM tests/builds/formatter ran. Geofence/map/recovery feasibility remains open.
+
+PR #4 run 42992333516 failed formatting; applied reviewed Actions-generated patch.
+Added native permission lifecycle tests and corrected concurrent enable/cancel
+handling and asynchronous storage-error completion. New code remains unvalidated
+until the next PR check; native test shadows are not physical-device evidence.
+No local formatter/build/test executed.
