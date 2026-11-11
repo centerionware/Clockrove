@@ -231,6 +231,10 @@ class CustomersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(title: const Text('Customers')),
     floatingActionButton: FloatingActionButton.extended(
+      elevation: 0,
+      focusElevation: 0,
+      hoverElevation: 0,
+      highlightElevation: 0,
       onPressed: () => Navigator.push(
         context,
         MaterialPageRoute<void>(builder: (_) => const CustomerEditor()),

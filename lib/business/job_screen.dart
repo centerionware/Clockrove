@@ -14,9 +14,22 @@ class JobScreen extends ConsumerWidget {
     final data = ref.watch(boardProvider(jobId));
     return Scaffold(
       appBar: AppBar(
-        title: Text(data.value?.name ?? jobName, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          data.value?.name ?? jobName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          IconButton(tooltip: 'Job report', icon: const Icon(Icons.assessment_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ReportScreen(jobId: jobId)))),
+          IconButton(
+            tooltip: 'Job report',
+            icon: const Icon(Icons.assessment_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => ReportScreen(jobId: jobId),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Job settings',
             icon: const Icon(Icons.settings_outlined),

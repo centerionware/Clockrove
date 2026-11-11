@@ -1040,14 +1040,14 @@ re-enable automatic delivery only for the complete validated combined iteration.
 
 | Addition | Status | Required evidence |
 | --- | --- | --- |
-| Hourly/task billing mode and task prices | Pending | Exact native arithmetic, mode switching, missing prices/currency and report tests |
-| Reusable task templates including deleted-job content | Pending | Independent catalog, fresh card IDs, deletion/backup safeguards |
-| Complete reporting and Kanban task management | Pending | Actual persisted journeys, report/filter/map/CSV agreement and accessible board moves |
-| Customers and per-job customer/email | Pending | Real CRUD/reference integrity and editable effective job recipient |
+| Hourly/task billing mode and task prices | Native/settings UI passed; report UI pending | PRs #20–24; exact integer, mode, zero/missing/currency and DST cases passed; combined report UI #28 awaits checks |
+| Reusable task templates including deleted-job content | Board/native lifecycle passed; final cleanup pending | Independent catalog/copy/removal tested; #27 historical-provenance cleanup and final UI checks remain |
+| Complete reporting and Kanban task management | Kanban passed; report core passed; integrated UI pending | #23 validated board and previews; #22 DST/pricing/CSV native tests; #28 full report/map/export UI unverified |
+| Customers and per-job customer/email | Implemented and Actions passed | #21 native persistence/references and #24 typed forms/customer journeys; refresh-race fix in #28 pending |
 | PDF invoice beside CSV | Pending | Valid multipage PDF with actual report line items/totals |
 | Email draft with automatic fields and PDF attachment | Pending | Native Intent/URI grant tests; device email handoff evidence separate |
-| Global company/contact and email subject/body templates | Pending | Persisted settings, safe placeholder expansion and no injected headers |
-| Optional invoice header/footer and company logo import | Pending | Bounded private image handling and output/backup validation |
+| Global company/contact and email subject/body templates | Implemented and Actions passed | #21 literal/injection/persistence tests and #24 UI journeys passed; document handoff pending |
+| Optional invoice header/footer and company logo import | Header/footer stored; logo importer pending | Header/footer settings/native snapshot source exists; actual PDF/logo/device checks and importer remain |
 | Minimal, Classic and Modern invoice styles | Pending | Three distinct real rendered PDFs with equal totals and logo/pagination checks |
 | Combined internal release | Held | All scope implemented and checked before Play workflow is re-enabled |
 
@@ -1218,3 +1218,11 @@ plus CSV selection, elapsed precision, trace and deletion-confirmation cases.
 Source awaits Actions formatting/analyzer/build/tests and real visual review;
 logo import, final integration fixes and combined release acceptance remain open.
 No VM build/test/render ran; Play delivery remains disabled.
+
+Settings head 4875670 passed 43085253088; inspected XML confirms 166 native tests
+with zero failures/errors/skips and the new Flutter customer/settings/job billing
+journeys passed. Reviewed six light/dark company/customer/billing previews. Merged
+#24; real logo import and document/render/combined acceptance remain unfinished.
+Removed the customer action's heavy elevation in the next UI source revision to
+match existing flat surfaces. Integrated UI formatter artifact from 43086427014
+applied; remaining analyzer/test results are still being inspected.
