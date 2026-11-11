@@ -1269,3 +1269,14 @@ reaches the actual runner. Run 43090913550 found eager reflection of a generated
 API-35-only text lambda on API 24; isolated those types in a guarded helper,
 retaining real PDF text/render assertions. Fresh checks are pending. Applied the
 completed branding run's formatting artifact for settings deletion controls.
+
+Invoice core head 8c43978 reports a successful Actions run 43093219562, including
+the real API-24/35 instrumentation step after isolating API-35-only text types.
+Artifact downloads currently return GitHub HTTP 502; do not claim inspected XML
+counts or document visual acceptance until actual artifacts can be read. Added a
+mandatory post-device Flutter check that reads the actual Android-generated page
+files, exercises the viewer at large landscape text, and exports light/dark views
+for all three styles. Also prepared hourly/task report and measured-map previews
+using synthetic data/tiles. No mocks substitute for actual PDF generation here;
+the viewer routing stub receives real device-produced page images. All new checks
+and visual acceptance remain pending. Play delivery remains disabled.

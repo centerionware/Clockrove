@@ -58,7 +58,9 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
     body: SafeArea(
       child: Column(
         children: [
-          Padding(
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .42),
+            child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -94,6 +96,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
           Expanded(
