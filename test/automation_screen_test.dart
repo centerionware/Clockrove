@@ -208,6 +208,14 @@ void main() {
     await _show(tester, api);
     await _reveal(tester, 'Keep recorded times');
     expect(find.textContaining('Still running'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Automatic departure is paused while this work needs review',
+      ),
+      findsOneWidget,
+    );
+    final record = tester.widget<Text>(find.textContaining('Start:'));
+    expect(record.data, contains('2026'));
     await tester.tap(find.text('Keep recorded times'));
     await tester.pumpAndSettle();
     expect(api.attempts, isEmpty);
