@@ -16,7 +16,7 @@ class MainActivity : FlutterActivity() {
         visible = true
         io.github.centerionware.clockrove.location.geofence.GeofenceRuntime.resume(applicationContext)
     }
-    override fun onStop() { visible = false; super.onStop() }
+    override fun onStop() { visible = false; automationApi?.foregroundStopped(); super.onStop() }
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
         if (automationApi?.permissionResult(code) == true) return
         if (trackingApi?.permissionResult(code) != true) super.onRequestPermissionsResult(code, permissions, results)

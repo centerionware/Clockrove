@@ -17,6 +17,17 @@ class FixtureAutomationApi extends AutomationApi {
   int preciseRequests = 0;
   int backgroundRequests = 0;
   int settingsVisits = 0;
+  int positionRequests = 0;
+  int positionCancellations = 0;
+  Future<SitePosition> Function()? positionResult;
+  @override
+  Future<SitePosition> currentPosition() async {
+    positionRequests++;
+    return positionResult == null ? SitePosition(51.5, -0.1, 25, DateTime.utc(2026, 11, 11, 12)) : await positionResult!();
+  }
+  @override
+  Future<void> cancelPosition() async { positionCancellations++; }
+
   final attempts = <(String, int)>[];
   final _receipts = <String, TimerOutcome>{};
   @override

@@ -20,8 +20,9 @@ publish only sanitized outcomes and timing differences.
 | Visuals | Check light/dark themes, largest comfortable text size, long job names, widget readability, launcher mask/themed icon, cold/warm launch and keyboard/dialog behavior. |
 
 Geofence registration, automatic entry/suppression, pending-departure scheduling,
-site editing, maps and their recovery matrix are still unimplemented or awaiting
-integration. They cannot pass device acceptance through the current prototype.
+coordinate site editing, permission/review UI and a stored-point map now have source
+and Actions evidence. Their real-device recovery/delivery matrix remains unproven.
+Map-tap and one-shot current-position site setup are being validated separately.
 Repeat the full matrix after those implementations. Use at least one stock Android
 and one device with aggressive battery management before release.
 
@@ -43,3 +44,11 @@ close current/new work. Reboot and edit the wall clock during grace: uncertainty
 must hold automatic expiry without an alarm loop, and manual clock-out must work.
 No exact-alarm access should be requested. Android force-stop is a separate case;
 relaunch must preserve work and reconcile, not claim uninterrupted automation.
+
+For site setup, select by coordinates, map tap and current location separately.
+Repeat off-clock and while a work session is active. A setup fix may update the
+site draft but must never insert a work-history sample. Deny precise permission,
+disable location, leave the app during the request, cancel the editor and simulate
+an unavailable provider. The request must finish/cancel honestly; map/coordinate
+setup and manual timing must remain available. Actual accuracy/time shown must
+match the supplied fix. OSM requests require live network evidence, not CI tiles.

@@ -1030,3 +1030,25 @@ cases. The added held-departure copy assertion searched an off-screen, lazily
 unbuilt card after scrolling to the review action. The test now reveals the
 pending card before checking that copy, then reveals recorded boundaries and
 acceptance separately. Both assertions remain; a corrected Actions run is required.
+
+### Milestone 2 — verified control UI and site selection source
+
+Controls exact head 8a266c4 passed full Actions run 43028074243. Native XML:
+98 tests, zero failures/errors/skips; Dart/UI checks and Android build passed.
+Reviewed final light/dark departure images plus the previously reviewed site,
+editor and timer previews. PR #15 merged 897e120bc0c802eb6ff42adfb4aab430a93851e0.
+Main geofence adapter validation 43026215698 and internal delivery 43027191550
+also succeeded. This is automated/visual source evidence, not device acceptance.
+
+Added unvalidated map-tap/current-location site selection on that merged base.
+OSM picker reuses identified/cached/backed-off tiles, radius overlay, attribution,
+zoom and coordinate fallback. Polar coordinates remain editable without forcing
+invalid Web Mercator rendering. A foreground-only cancellable fused one-shot
+requests a fresh fix with a 15-second provider duration and a 20-second UI timeout; measured time/accuracy are displayed
+in the draft, and no setup point enters work history. Backgrounding/detach cancels
+and late callbacks cannot overwrite a newer request. The site form builds all
+validators in one scroll view so off-screen fields cannot evade validation.
+Seven native controller cases (API 24/35), one bridge case (API 29/35), eight UI/map
+cases and one Dart codec case are prepared. All builds, formatter, tests and preview
+rendering remain in Actions. Actual fused fixes, live OSM, device permissions and
+background tracking remain unproven; milestones 2 and 5 are incomplete.

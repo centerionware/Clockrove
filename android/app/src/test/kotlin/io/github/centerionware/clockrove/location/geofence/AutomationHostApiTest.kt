@@ -118,6 +118,35 @@ class AutomationHostApiTest {
         assertEquals(0, permissionChanges)
         assertNull(shadowOf(activity).nextStartedService)
     }
+    @Test fun setupPositionCodecCancelsOnStopAndNeverMutatesWorkHistory() {
+        api.detach()
+        val callbacks = mutableListOf<(android.location.Location?) -> Unit>()
+        var cancelled = 0
+        val provider = object : SitePositionProvider {
+            override fun request(completed: (android.location.Location?) -> Unit, failed: () -> Unit): AutoCloseable {
+                callbacks.add(completed)
+                return AutoCloseable { cancelled++ }
+            }
+        }
+        api = AutomationHostApi(activity, messenger, repository, {}, provider) { visible }
+        shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
+        val before = repository.snapshot()
+        val first = messenger.invoke("currentPosition", mapOf("purposeAccepted" to true))
+        api.foregroundStopped()
+        assertEquals("FOREGROUND_REQUIRED", first.error)
+        callbacks[0](android.location.Location("synthetic").apply { latitude = 10.0; longitude = 20.0; accuracy = 25f; time = System.currentTimeMillis() })
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("FOREGROUND_REQUIRED", first.error)
+        val second = messenger.invoke("currentPosition", mapOf("purposeAccepted" to true))
+        callbacks[1](android.location.Location("synthetic").apply { latitude = 10.0; longitude = 20.0; accuracy = 25f; time = System.currentTimeMillis() })
+        until { second.finished }
+        assertNull(second.error)
+        assertEquals(10.0, (second.value as Map<*, *>)["latitude"])
+        assertTrue((second.value as Map<*, *>)["measured"] is Number)
+        assertEquals(before, repository.snapshot())
+        assertTrue(repository.locationPoints("off-clock").isEmpty())
+        assertEquals(2, cancelled)
+    }
     private class Response {
         @Volatile var finished = false
         var value: Any? = null

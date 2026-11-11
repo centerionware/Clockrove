@@ -39,6 +39,14 @@ class WorkSite {
   );
 }
 
+class SitePosition {
+  const SitePosition(this.latitude, this.longitude, this.accuracy, this.measuredUtc);
+  final double latitude;
+  final double longitude;
+  final double accuracy;
+  final DateTime measuredUtc;
+}
+
 class SiteSettings {
   const SiteSettings({
     this.enabled = false,
@@ -152,6 +160,13 @@ class AutomationApi {
     return AutomationSnapshot.decode(raw);
   }
 
+  Future<SitePosition> currentPosition() async {
+    final raw = await _channel.invokeMapMethod<String, Object?>('currentPosition', {'purposeAccepted': true});
+    if (raw == null) throw const FormatException('Missing site position');
+    return SitePosition((raw['latitude'] as num).toDouble(), (raw['longitude'] as num).toDouble(),
+        (raw['accuracy'] as num).toDouble(), DateTime.fromMillisecondsSinceEpoch(raw['measured'] as int, isUtc: true));
+  }
+  Future<void> cancelPosition() async { await _channel.invokeMethod<void>('cancelPosition'); }
   Future<void> requestPrecise() => _permission('requestPrecise');
   Future<void> requestBackground() => _permission('requestBackground');
   Future<void> openSettings() => _permission('openSettings');

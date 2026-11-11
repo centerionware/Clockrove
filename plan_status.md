@@ -961,3 +961,18 @@ cases. The added held-departure copy assertion searched an off-screen, lazily
 unbuilt card after scrolling to the review action. The test now reveals the
 pending card before checking that copy, then reveals recorded boundaries and
 acceptance separately. Both assertions remain; a corrected Actions run is required.
+
+### M2 controls merged; site selection source awaiting Actions
+
+PR #15 merged 897e120 after exact head 8a266c4 passed run 43028074243:
+98 native tests, no failures/errors/skips, all Dart/UI and Android build checks.
+Reviewed final departure light/dark images and earlier site/editor/timer images.
+Main adapter validation 43026215698 and Play internal 43027191550 succeeded.
+
+Map selection now has source for tap/radius/zoom/attribution and a coordinate
+fallback on failure or polar locations. Current location uses an explicit,
+foreground-only, cancellable fresh-fix request; setup fixes stay out of history.
+Seven API-24/35 controller cases, one API-29/35 bridge case, eight UI/map cases and
+one codec case are prepared but unrun. Two map previews plus updated site-editor
+previews will render in Actions. The form retains off-screen validators. No VM
+builds/tests/rendering ran. Native/device and final visual evidence remain pending.
