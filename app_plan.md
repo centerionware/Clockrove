@@ -945,3 +945,16 @@ provider faults and manual clock-out, while a newer manually started session can
 still finalize normally. A sticky history-review flag prevents transient recovery
 from silently accepting ambiguous past work. Only explicit review resolves it.
 Latest source remains pending Actions; no VM validation executed.
+
+### Milestone 2 — departure wake-up source (pending CI)
+
+Added a native inexact AlarmManager adapter, private deadline/recovery receivers,
+and commit subscription on the shared repository singleton. The SQLite writer
+checks expected candidate deadline/session, due time and review before expiry;
+re-entry/manual changes cancel wake-ups. Boot or clock changes hold uncertain
+work instead of inventing an exit. No exact-alarm permission or GPS timer added.
+Seven synthetic cases target API 24 and 35: inexact immutable alarm configuration,
+delayed pruning, early/stale delivery, cancellation, recovery hold/manual action,
+reopening and malformed broadcasts. They have not run yet; all builds/tests stay
+in GitHub Actions. Platform geofence registration and app activation UI remain
+unfinished, and physical wake/recovery evidence is still missing.

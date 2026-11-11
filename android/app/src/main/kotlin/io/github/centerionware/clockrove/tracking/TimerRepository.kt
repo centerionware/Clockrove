@@ -34,7 +34,7 @@ class TimerRepository internal constructor(context: Context,
         val latitude: Double, val longitude: Double, val accuracyMeters: Double,
     )
     data class Departure(val sessionId: String, val detectedUtcMillis: Long, val deadlineUtcMillis: Long)
-    enum class DepartureResult { RECORDED, ALREADY_PENDING, CANCELLED, FINALIZED, NOT_DUE, NO_PENDING, STALE_SESSION, INVALID_BOUNDARY, EXPIRED, NEEDS_REVIEW }
+    enum class DepartureResult { RECORDED, ALREADY_PENDING, CANCELLED, FINALIZED, NOT_DUE, NO_PENDING, STALE_SESSION, STALE_CANDIDATE, INVALID_BOUNDARY, EXPIRED, NEEDS_REVIEW }
     data class TrackingObservation(val running: Session?, val latest: LocationPoint?)
     enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION }
 
@@ -194,6 +194,14 @@ class TimerRepository internal constructor(context: Context,
         "SELECT session_id,detected_ms,deadline_ms FROM pending_departure", null,
     ).use { if (it.moveToFirst()) Departure(it.getString(0), it.getLong(1), it.getLong(2)) else null }
 
+    /** One coherent read for the Android alarm adapter; review holds must not spin alarms. */
+    @Synchronized
+    internal fun schedulableDeparture(): Departure? {
+        val candidate = pendingDeparture() ?: return null
+        return candidate.takeIf { readSnapshot(helper.readableDatabase).running?.id == it.sessionId &&
+            !GeofenceStore.needsReview(helper.readableDatabase, it.sessionId) }
+    }
+
     /** Called only after qualified native exits from all of a job's enabled sites. */
     @Synchronized
     internal fun beginDeparture(sessionId: String, detectedUtcMillis: Long, graceMinutes: Int): DepartureResult {
@@ -224,8 +232,10 @@ class TimerRepository internal constructor(context: Context,
     }
 
     @Synchronized
-    internal fun finalizeDeparture(sessionId: String, nowUtcMillis: Long): DepartureResult {
+    internal fun finalizeDeparture(sessionId: String, nowUtcMillis: Long, expectedDeadlineUtcMillis: Long? = null): DepartureResult {
         val candidate = pendingDeparture() ?: return DepartureResult.NO_PENDING
+        if (expectedDeadlineUtcMillis != null && candidate.deadlineUtcMillis != expectedDeadlineUtcMillis)
+            return DepartureResult.STALE_CANDIDATE
         if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
             return DepartureResult.STALE_SESSION
         if (nowUtcMillis < candidate.deadlineUtcMillis) return DepartureResult.NOT_DUE
@@ -598,7 +608,10 @@ class TimerRepository internal constructor(context: Context,
     companion object {
         @Volatile private var instance: TimerRepository? = null
         fun get(context: Context): TimerRepository = instance ?: synchronized(this) {
-            instance ?: TimerRepository(context).also { instance = it }
+            instance ?: TimerRepository(context).also {
+                instance = it
+                io.github.centerionware.clockrove.location.geofence.DepartureRuntime.attach(context.applicationContext, it)
+            }
         }
     }
 }

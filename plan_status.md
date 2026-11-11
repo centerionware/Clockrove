@@ -891,3 +891,11 @@ provider faults and manual clock-out, while a newer manually started session can
 still finalize normally. A sticky history-review flag prevents transient recovery
 from silently accepting ambiguous past work. Only explicit review resolves it.
 Latest source remains pending Actions; no VM validation executed.
+
+### M2 departure alarm integration — source prepared, unverified
+
+Native departure alarms now observe committed candidate state on the singleton
+repository, request one inexact wake, and use SQL-guarded candidate/session expiry.
+Private boot/clock-change receivers hold uncertain work. Seven API-24/API-35 test
+cases are prepared for CI; no VM tests/builds ran. Runtime geofence registration,
+permission/site/review UI and physical wake/recovery proof remain incomplete.
