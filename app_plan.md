@@ -792,3 +792,13 @@ OSM run 43005218796 passed formatting, then analysis reported two redundant
 Dart typed-data imports provided by Flutter services. Removed only those imports;
 checks remain enabled. No map behavior/native/device success is inferred before
 the next full Actions run and rendered-image inspection. No VM validation ran.
+
+OSM run 43005707318 passed formatting/analysis and 20 Dart/UI checks, including
+the real timer-screen map-outage/manual-stop journey. Failed malformed Retry-After
+handling (Dart HttpDate throws HttpException) and two end-of-test accessibility
+handle cleanup checks. Corrected the exception type and moved semantic-handle
+disposal into test-body finally blocks; assertions remain active. Compact map
+controls use a horizontal arrangement and the large-text check now covers a
+320-high landscape viewport with full button bounds. CI exported six synthetic
+previews (artifact 13848461149); visual inspection pending. No native/device/live
+OSM success inferred; no VM validation ran.

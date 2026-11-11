@@ -18,67 +18,70 @@ void main() {
       'recorded point, accuracy, attribution and accessible zoom ${dark ? "dark" : "light"}',
       (tester) async {
         final semantics = tester.ensureSemantics();
-        addTearDown(semantics.dispose);
-        tester.view.physicalSize = const Size(420, 920);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        await tester.runAsync(loadMapPreviewFonts);
-        final boundary = GlobalKey();
-        await tester.pumpWidget(
-          RepaintBoundary(
-            key: boundary,
-            child: ProviderScope(
-              overrides: [
-                workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
-              ],
-              child: MaterialApp(
-                debugShowCheckedModeBanner: false,
-                theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
-                home: WorkLocationMap(
-                  latitude: 51.5,
-                  longitude: -0.1,
-                  measuredUtc: DateTime.utc(2026, 11, 11, 10),
-                  accuracyMeters: 80,
+        try {
+          tester.view.physicalSize = const Size(420, 920);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.runAsync(loadMapPreviewFonts);
+          final boundary = GlobalKey();
+          await tester.pumpWidget(
+            RepaintBoundary(
+              key: boundary,
+              child: ProviderScope(
+                overrides: [
+                  workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+                ],
+                child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
+                  home: WorkLocationMap(
+                    latitude: 51.5,
+                    longitude: -0.1,
+                    measuredUtc: DateTime.utc(2026, 11, 11, 10),
+                    accuracyMeters: 80,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-        await tester.runAsync(
-          () => precacheImage(
-            MemoryImage(_tile),
-            tester.element(find.byType(FlutterMap)),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
-        expect(find.text('80 m accuracy'), findsOneWidget);
-        expect(
-          find.bySemanticsLabel(AppStrings.recordedLocation),
-          findsOneWidget,
-        );
-        final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
-        expect(map.mapController!.camera.center.latitude, 51.5);
-        expect(map.mapController!.camera.zoom, 15);
-        await tester.tap(find.byTooltip(AppStrings.zoomIn));
-        await tester.pumpAndSettle();
-        expect(map.mapController!.camera.zoom, 16);
-        expect(tester.takeException(), isNull);
-        await tester.runAsync(
-          () => saveMapPreview(
-            boundary,
-            'clockrove-map-${dark ? "dark" : "light"}',
-          ),
-        );
-        await tester.pumpWidget(const SizedBox.shrink());
+          );
+          await tester.runAsync(
+            () => precacheImage(
+              MemoryImage(_tile),
+              tester.element(find.byType(FlutterMap)),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+          expect(find.text('80 m accuracy'), findsOneWidget);
+          expect(
+            find.bySemanticsLabel(AppStrings.recordedLocation),
+            findsOneWidget,
+          );
+          final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
+          expect(map.mapController!.camera.center.latitude, 51.5);
+          expect(map.mapController!.camera.zoom, 15);
+          await tester.tap(find.byTooltip(AppStrings.zoomIn));
+          await tester.pumpAndSettle();
+          expect(map.mapController!.camera.zoom, 16);
+          expect(tester.takeException(), isNull);
+          await tester.runAsync(
+            () => saveMapPreview(
+              boundary,
+              'clockrove-map-${dark ? "dark" : "light"}',
+            ),
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          semantics.dispose();
+        }
       },
     );
   }
   testWidgets(
     'large landscape text keeps attribution and map controls usable',
     (tester) async {
-      tester.view.physicalSize = const Size(640, 360);
+      tester.view.physicalSize = const Size(640, 320);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -111,6 +114,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(FlutterMap)).contains(
+          tester.getRect(find.byTooltip(AppStrings.zoomOut)).bottomRight,
+        ),
+        isTrue,
+      );
       await tester.tap(find.byTooltip(AppStrings.zoomOut));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

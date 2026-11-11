@@ -43,7 +43,7 @@ class TileBackoffClient extends http.BaseClient {
         } else {
           try {
             deadline = HttpDate.parse(header).toUtc();
-          } on FormatException {
+          } on HttpException {
             // The server's invalid/missing deadline falls back to a short pause.
           }
         }

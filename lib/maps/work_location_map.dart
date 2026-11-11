@@ -207,7 +207,11 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                     Positioned(
                       right: 16,
                       top: 16,
-                      child: Column(
+                      child: Flex(
+                        direction: constraints.maxHeight < 400
+                            ? Axis.horizontal
+                            : Axis.vertical,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton.filledTonal(
                             tooltip: AppStrings.zoomIn,
@@ -219,7 +223,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                             ),
                             icon: const Icon(Icons.add),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(width: 8, height: 8),
                           IconButton.filledTonal(
                             tooltip: AppStrings.zoomOut,
                             onPressed: () => _controller.move(
