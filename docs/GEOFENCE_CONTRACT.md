@@ -20,7 +20,8 @@ conflict and choice-required flag). Choice IDs and warning registration IDs are
 transient hints and are omitted from stored receipts. Callers must honor replayed
 and query current state before starting services or posting choices. Old registration
 IDs are ignored. Pre-configuration observations cannot establish a new transition.
-Events older than manual actions or contradictory/newer observations require review.
+Manual/newer facts win over obsolete callbacks. Contradictions affecting recorded
+work require review; a pre-manual callback cannot create an idle approval loop.
 
 Enabling while inside does not start work. Known outside state arms a subsequent
 qualified entry. Manual stop/switch suppresses the previous job while inside or
@@ -83,3 +84,8 @@ Configuration generation and current-fact freshness use separate barriers. A
 provider recovery can discard stale current membership without discarding a late
 entry that may correct previously finalized work from the same registration.
 Only a real configuration/review reset invalidates that old registration context.
+
+Historical ambiguity is sticky until explicit review. A later transient fault,
+known timely return or manual stop cannot erase a late conflict about an earlier
+part of the work record. Clearing current processing uncertainty is separate from
+accepting ambiguous history. New manual work remains independent of older alerts.

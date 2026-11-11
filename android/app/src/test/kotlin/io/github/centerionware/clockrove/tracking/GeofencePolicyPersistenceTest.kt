@@ -169,6 +169,27 @@ class GeofencePolicyPersistenceTest {
         assertEquals(session, repository.snapshot().running!!.id)
     }
 
+    @Test fun historicalAmbiguitySurvivesTransientFaultAndManualStopWithoutBlockingNewManualWork() {
+        configure(grace = 1)
+        event("outside", OUTSIDE, 1100, "site")
+        event("entry", INSIDE, 2000, "site")
+        event("newer-inside", INSIDE, 100000, "site")
+        assertEquals("TRANSITION_NEEDS_REVIEW", event("late-exit", OUTSIDE, 5000, "site", received = 110000).conflict)
+        clock = 120000
+        repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE)
+        assertNull(stop("manual-end-after-late-exit", 130000).conflict)
+        assertEquals(setOf(job), repository.geofenceReviewJobs())
+        assertNull(manualStart("new-manual-work", 140000).conflict)
+        val current = repository.snapshot().running!!.id
+        event("new-work-inside", INSIDE, 150000, "site")
+        event("new-work-exit", OUTSIDE, 160000, "site")
+        assertEquals(TimerRepository.DepartureResult.FINALIZED, repository.finalizeDeparture(current, 230000))
+        assertEquals(setOf(job), repository.geofenceReviewJobs())
+        clock = 240000
+        assertNull(repository.acceptGeofenceReview("accept-historical-record", repository.snapshot().version, job).conflict)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+    }
+
     @Test fun zeroGraceClosesAtExitAndAQualifiedLaterEntryStartsNewWork() {
         configure(grace = 0)
         event("outside", OUTSIDE, 1100, "site")

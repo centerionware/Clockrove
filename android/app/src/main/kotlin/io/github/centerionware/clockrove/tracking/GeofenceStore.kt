@@ -23,7 +23,7 @@ internal object GeofenceStore {
         db.execSQL("CREATE TABLE work_sites(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 150 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
         db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
         db.execSQL("CREATE TABLE geofence_event_results(id TEXT PRIMARY KEY REFERENCES commands(id),payload TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE geofence_conflicts(session_id TEXT PRIMARY KEY REFERENCES sessions(id),job_id TEXT NOT NULL REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE geofence_conflicts(session_id TEXT PRIMARY KEY REFERENCES sessions(id),job_id TEXT NOT NULL REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL,requires_history_review INTEGER NOT NULL DEFAULT 0 CHECK(requires_history_review IN(0,1)))")
         db.execSQL("CREATE TABLE finalized_departures(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL)")
     }
 
@@ -122,7 +122,7 @@ internal object GeofenceStore {
 
     /** Caller runs this in the same transaction that commits the manual stop/switch. */
     fun manualStop(db: SQLiteDatabase, jobId: String, at: Long) {
-        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id IN (SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL)", arrayOf(jobId))
+        db.execSQL("DELETE FROM geofence_conflicts WHERE requires_history_review=0 AND session_id IN (SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL)", arrayOf(jobId))
         val outside = policies(db).firstOrNull { it.settings.jobId == jobId }?.lastPresence == GeofenceMembership.Presence.OUTSIDE
         db.execSQL("UPDATE automation_policies SET suppressed=?,armed=?,manual_barrier_ms=CASE WHEN manual_barrier_ms IS NULL OR manual_barrier_ms<? THEN ? ELSE manual_barrier_ms END WHERE job_id=?",
             arrayOf<Any?>(if (outside) 0 else 1, if (outside) 1 else 0, at, at, jobId))
@@ -150,12 +150,12 @@ internal object GeofenceStore {
         "SELECT DISTINCT job_id FROM geofence_conflicts", null,
     ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
 
-    fun conflict(db: SQLiteDatabase, sessionId: String, at: Long, reason: String) {
-        // Alerts concern recorded work, never a retained idle movement log.
-        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(session_id,job_id,observed_ms,reason) SELECT id,job_id,?,? FROM sessions WHERE id=?",
-            arrayOf<Any?>(at, reason, sessionId))
-        db.execSQL("UPDATE geofence_conflicts SET observed_ms=?,reason=? WHERE session_id=? AND observed_ms<=?",
-            arrayOf<Any?>(at, reason, sessionId, at))
+    fun conflict(db: SQLiteDatabase, sessionId: String, at: Long, reason: String, historyReview: Boolean = false) {
+        // Preserve historical ambiguity even if a newer transient fault also occurs.
+        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(session_id,job_id,observed_ms,reason,requires_history_review) SELECT id,job_id,?,?,? FROM sessions WHERE id=?",
+            arrayOf<Any?>(at, reason, if (historyReview) 1 else 0, sessionId))
+        db.execSQL("UPDATE geofence_conflicts SET requires_history_review=MAX(requires_history_review,?),reason=CASE WHEN observed_ms<=? THEN ? ELSE reason END,observed_ms=MAX(observed_ms,?) WHERE session_id=?",
+            arrayOf<Any?>(if (historyReview) 1 else 0, at, reason, at, sessionId))
     }
 
     fun suspendFacts(db: SQLiteDatabase, jobId: String, at: Long) {
@@ -189,7 +189,7 @@ internal object GeofenceStore {
                     val jobId = active.getString(0)
                     if (observed > active.getLong(1) && policyByJob[jobId]?.settings?.automaticDeparture == true &&
                         sites.any { it.jobId == jobId && it.registrationKey in warnings - barrierKeys }) {
-                        conflict(db, activeSessionId, observed, "LATE_OR_CONFLICTING_TRANSITION")
+                        conflict(db, activeSessionId, observed, "LATE_OR_CONFLICTING_TRANSITION", true)
                     }
                 }
             }

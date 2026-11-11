@@ -370,7 +370,7 @@ class TimerRepository internal constructor(context: Context,
                     GeofenceStore.sites(db, true).filter { it.registrationKey in registrationKeys &&
                         observedUtcMillis >= policies.getValue(it.jobId).configuredUtcMillis }.map { it.jobId }.toSet().forEach { jobId ->
                         GeofenceStore.timelyFinalizedSessions(db, jobId, observedUtcMillis).forEach { sessionId ->
-                            GeofenceStore.conflict(db, sessionId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION")
+                            GeofenceStore.conflict(db, sessionId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION", true)
                             warning = "TRANSITION_NEEDS_REVIEW"
                             changed = true
                         }
@@ -384,7 +384,7 @@ class TimerRepository internal constructor(context: Context,
                         candidate.sessionId == running.id && observedUtcMillis >= candidate.detectedUtcMillis &&
                         observedUtcMillis < candidate.deadlineUtcMillis) {
                         db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(running.id))
-                        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id=?", arrayOf(running.id))
+                        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id=? AND requires_history_review=0", arrayOf(running.id))
                         changed = true
                     }
                     if (!GeofenceStore.needsReview(db, running.id) &&
@@ -396,7 +396,7 @@ class TimerRepository internal constructor(context: Context,
                                 arrayOf<Any?>(running.id, boundary, deadline))
                             changed = true
                         } else {
-                            GeofenceStore.conflict(db, running.id, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY")
+                            GeofenceStore.conflict(db, running.id, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY", true)
                             warning = "TRANSITION_NEEDS_REVIEW"
                             changed = true
                         }

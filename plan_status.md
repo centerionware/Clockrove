@@ -885,3 +885,9 @@ case now includes an intervening idle provider fault: recovery must not hide a
 valid late re-entry relevant to a finalized work session. Configuration changes
 still invalidate obsolete keys; current facts after faults require fresh evidence.
 Latest recovery refinements remain isolated and unvalidated until the next CI run.
+
+Added a fourteenth policy case: a historical late-exit ambiguity survives later
+provider faults and manual clock-out, while a newer manually started session can
+still finalize normally. A sticky history-review flag prevents transient recovery
+from silently accepting ambiguous past work. Only explicit review resolves it.
+Latest source remains pending Actions; no VM validation executed.
