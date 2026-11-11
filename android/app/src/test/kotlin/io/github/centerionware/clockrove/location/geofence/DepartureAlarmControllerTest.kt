@@ -152,7 +152,7 @@ class DepartureAlarmControllerTest {
         for (receiver in listOf(DepartureAlarmReceiver::class.java, DepartureRecoveryReceiver::class.java)) {
             assertFalse(manager.getReceiverInfo(android.content.ComponentName(context, receiver), 0).exported)
         }
-        val permissions = manager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions.toSet()
+        val permissions = manager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions.orEmpty().toSet()
         assertFalse("android.permission.SCHEDULE_EXACT_ALARM" in permissions)
         assertFalse("android.permission.USE_EXACT_ALARM" in permissions)
     }

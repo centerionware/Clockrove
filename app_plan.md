@@ -964,3 +964,8 @@ JUnit XML: 42 native tests, zero failures/errors/skips, including fourteen new
 policy cases. PR #12 merged as 87539048b9c5f468f8f52ebec88aac38de981b8b.
 Dart/UI, Android build and release-version checks passed in that run. Alarm
 adapter additions remain separate and need their own CI; milestone 2 is incomplete.
+
+Alarm adapter run 43021499336 compiled the Android app, but native test
+compilation rejected a nullable PackageInfo permission array in the new manifest
+assertion. Added an explicit empty-array fallback without changing the permission
+assertions. Runtime tests remain unverified until the corrected Actions run.
