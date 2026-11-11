@@ -969,3 +969,17 @@ Alarm adapter run 43021499336 compiled the Android app, but native test
 compilation rejected a nullable PackageInfo permission array in the new manifest
 assertion. Added an explicit empty-array fallback without changing the permission
 assertions. Runtime tests remain unverified until the corrected Actions run.
+
+### Milestone 2 — Android geofence adapter source (pending CI)
+
+Added Play Services inventory replacement, explicit mutable callback token/private
+receiver, precise/background permission checks, asynchronous readiness tracking
+and a cleanup-only preference. The registry rejects stale readiness results and
+avoids endless provider retries. Startup holds uncertain prior registrations before
+an alarm can finalize work. Callback/alarm work shares one native executor; events
+use measured time without retaining off-clock coordinates, honor replay outcomes,
+recheck the running session for FGS handoff and offer manual job selection for
+ambiguous entries. No background permission request or automation activation UI
+has been added yet. Fifteen synthetic cases target API 24/35; they use fake
+platform completions and a public HMAC fixture, not real registration or Keystore
+proof. All source still requires Actions validation and device acceptance.

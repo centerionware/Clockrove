@@ -6,4 +6,7 @@
     <string name="widget_stop">Clock out</string>
     <string name="tracking_channel">Work location</string>
     <string name="tracking_target">Location sampling targets ten minutes; delivery may vary.</string>
+    <string name="automation_channel">Work site automation</string>
+    <string name="automation_choose_title">Several work sites match</string>
+    <string name="automation_choose_description">Open Clockrove to choose a job.</string>
 </resources>
