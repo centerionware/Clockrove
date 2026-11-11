@@ -17,7 +17,7 @@ iOS and future service remain deferred.
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | In progress | SQLite commands, typed bridge, native widget code and eight Robolectric tests pass in Actions; prototype Flutter controls merged via PR #1 after full Actions success; notification/device integration incomplete |
-| M2.2 Location/geofences/departure/recovery prototype | Location persistence in progress | Native sample validation/dedup/session binding and schema-2 upgrade added on feature branch; service/callbacks/geofences/departure remain |
+| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter and measured status validated in Actions; departure PR #7 awaiting rebase validation; geofence membership source pending Actions; registration/suppression/scheduling/device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
@@ -639,3 +639,28 @@ v2 upgrade preserving points. Current schema-1 rollback tests also remain active
 These native internals are not wired to geofence callbacks, alarms or UI yet;
 no automation is enabled by this slice. Validation is pending; all tests run on
 Actions, never VM. This PR depends on measured-status PR #6, then targets main.
+
+### Clean UI and qualified membership progress
+
+PR #6 complete validation 42998378446 succeeded and merged as db7c24b. Inspected
+all four CI-rendered images from artifact 13844847336: light/dark first-screen
+and scrolled location states; debug ribbon removed and measured sample metadata
+readable. UI quality is established for this prototype, not launch readiness.
+Main validation 42999610367 is live; later Play delivery is independently tracked.
+
+PR #7 complete validation 42998556045 succeeded. Squash ancestry caused a merge
+conflict after retargeting; rebased onto main as 36b7239 with identical source tree
+verified using git diff. New exact-head validation pending before merge.
+
+Prepared isolated native geofence membership reducer plus six JUnit tests. Any
+inside same-job site prevents departure; unknown is not an exit; stale/equal-time
+contradictions are surfaced. Capacity >100 is rejected. Only qualified new entries
+can select a sole eligible/armed/unsuppressed job, multiple matches require choice,
+and active timers never switch. Caller must still persist membership, arming and
+suppression and use the native repository for commands. No registration, runtime
+automation or device success is claimed. GitHub Actions validation pending.
+
+Departure PR #7 passed rebased-head Actions 42999724652 and merged as
+b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Membership source was rebased onto
+that main commit; only append-only evidence sections needed conflict resolution.
+Combined-head validation pending. Main UI validation 42999610367 also succeeded.

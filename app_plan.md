@@ -21,18 +21,18 @@ The user explicitly requested this handoff after creating agent instructions and
 - CI pins Flutter 3.47.9, Dart 3.13.7, Temurin 17.0.17+10, AGP 9.1.0,
   Kotlin 2.4.0, Gradle 9.3.1, API 24 minimum / 36 target, build tools 36.0.0,
   and NDK 28.2.13676358. Compatibility requires a successful Actions build.
-- Foundation debug build and signed setup AAB are proven in Actions. Current native
-  behavior and physical-device evidence are unproven. No store upload/publication
-  is confirmed. Store setup is being handled by the owner.
+- Foundation debug build and signed setup AAB are proven in Actions. Physical-device tracking evidence remains unproven. Automatic Play internal
+  uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
 
 ### Next concrete action
 
-Validate the native repository/widget/typed adapter and committed-version event
-changes in Actions. Correct the reported test formatting issue first. Then connect
-prototype manual controls and continue notification/location/map feasibility.
-The one-time initial AAB and permanent upload-key secrets have been delivered;
-that setup build does not establish finished-app readiness. See plan_status.md.
+Continue milestone 2 native feasibility: finish validated departure persistence,
+qualified geofence membership and recovery integration, then map-provider proof.
+Modern timer UI is merged and CI-rendered previews have been reviewed in both
+themes. All validation runs in GitHub Actions. Physical GPS/widget/background
+behavior and runtime Google-key initialization remain unproven; they do not block
+independent implementation. See plan_status.md for exact run and PR evidence.
 
 ## 2. Product decisions
 
@@ -693,3 +693,29 @@ retrospective end/pruning guarded by session ID. Forward migrations and four nat
 persistence/grace/recovery tests added. No scheduler/geofence callback/UI activation
 is included; internals await CI and later integration. No GPS absence is treated
 as departure and no new session is silently stopped. No VM checks executed.
+
+### 2026-11-11 — clean UI refinement validated and merged
+
+Measured-status PR #6 passed complete Actions run 42998378446 and merged at
+db7c24b3110228550bf9107fd9858b9273757128. All four clean light/dark and scrolled
+location previews from artifact 13844847336 were visually inspected. Timer/actions,
+job groups and actual sample metadata are readable; no debug ribbon remains.
+Dart/UI, Android build, native and version-policy checks passed in Actions only.
+Departure PR #7 passed run 42998556045; rebased onto merged main after squash
+ancestry conflict, with byte-identical source tree. New-head validation pending.
+
+### Qualified geofence membership source
+
+Isolated geofence-membership adds native membership/selection facts and six tests:
+overlapping same-job sites, unknown/duplicate/late/conflicting observations,
+archive/disabled filtering, 100-site capacity and unambiguous qualified entry.
+Active sessions never select a new job; supplied suppression and arming filter
+candidates. This does not persist suppression/arming or register callbacks, post
+selection notifications or start timers. Native integration still requires those
+steps and device evidence. Source is unvalidated until Actions completes; no VM
+build, test, formatter or rendering was run.
+
+Departure PR #7 passed rebased-head Actions 42999724652 and merged as
+b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Membership source was rebased onto
+that main commit; only append-only evidence sections needed conflict resolution.
+Combined-head validation pending. Main UI validation 42999610367 also succeeded.
