@@ -30,7 +30,9 @@ void main() {
               key: boundary,
               child: ProviderScope(
                 overrides: [
-                  workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+                  workMapTilesProvider.overrideWithValue(
+                    (_) => SyntheticTiles(),
+                  ),
                 ],
                 child: MaterialApp(
                   debugShowCheckedModeBanner: false,
@@ -115,9 +117,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
       expect(
-        tester.getRect(find.byType(FlutterMap)).contains(
-          tester.getRect(find.byTooltip(AppStrings.zoomOut)).bottomRight,
-        ),
+        tester
+            .getRect(find.byType(FlutterMap))
+            .contains(
+              tester.getRect(find.byTooltip(AppStrings.zoomOut)).bottomRight,
+            ),
         isTrue,
       );
       await tester.tap(find.byTooltip(AppStrings.zoomOut));

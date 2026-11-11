@@ -20,6 +20,8 @@ https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.jso
 Builds and tests run exclusively through GitHub Actions; do not execute build,
 analysis, formatting or test commands on this development VM. Edit and review
 source locally, push a reviewed change, then inspect the Validate workflow run.
+CI exports formatter corrections and continues independent checks in the same run;
+a final required gate still fails validation when formatting differs.
 The workflow installs pinned tools, resolves the lockfile, and runs checks on
 GitHub-hosted ubuntu-24.04. Successful validated main pushes publish to Play
 internal testing through a separate protected workflow.

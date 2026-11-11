@@ -802,3 +802,13 @@ controls use a horizontal arrangement and the large-text check now covers a
 320-high landscape viewport with full button bounds. CI exported six synthetic
 previews (artifact 13848461149); visual inspection pending. No native/device/live
 OSM success inferred; no VM validation ran.
+
+OSM run 43006137440 required two formatter wraps after the stronger cleanup/bounds
+checks; applied exact Actions patch. First map light/dark and location-card previews
+from artifact 13848461149 were visually inspected: restrained layout, readable
+measured metadata/attribution and consistent action styling. Tiles are synthetic.
+CI now continues independent behavior/build checks after collecting a formatter
+correction, with an explicit final Require clean formatting failure gate. Failed
+formatting cannot produce a successful validation or trigger Play delivery. This
+improves Actions-only feedback without disabling any checks or exposing secrets.
+New full map validation remains pending; no VM checks executed.

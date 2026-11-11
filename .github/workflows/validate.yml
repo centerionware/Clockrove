@@ -78,12 +78,14 @@ jobs:
           if-no-files-found: error
       - name: Check formatting
         id: format
+        # Collect behavior evidence in the same run; the final gate still fails.
+        continue-on-error: true
         run: |
           dart format lib test
           git diff --binary -- lib test > "$RUNNER_TEMP/format.patch"
           git diff --exit-code -- lib test
       - name: Export formatter correction for source review
-        if: failure() && steps.format.outcome == 'failure'
+        if: always() && steps.format.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: formatter-source-patch
@@ -136,3 +138,8 @@ jobs:
           bundle exec ruby -c fastlane/Fastfile
       - name: Publishing status
         run: echo 'Validation only. Successful main pushes trigger separate Play internal delivery; production tags remain readiness-gated.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Require clean formatting
+        if: always() && steps.format.outcome == 'failure'
+        run: |
+          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
+          exit 1
