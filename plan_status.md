@@ -1173,3 +1173,21 @@ logo, optional header/footer and shared exact totals. Five API-24 snapshot cases
 and two native-graphics PDF cases are prepared: generate bytes, reopen actual PDF
 pages and export synthetic previews. These have not yet run. Logo picker, document
 provider/share/email, preview UI and report UI still remain; no release claim.
+
+### Kanban UI acceptance and document handoff source
+
+Board head 65d4734 passed Actions 43080530052; downloaded XML confirms 166 native
+tests with zero failures/errors/skips. Reviewed actual light/dark board previews:
+readable task pricing/due dates, clear hierarchy, no clipped card content. Merged
+PR #23. This is not full combined iteration completion or physical-device proof.
+
+Prepared a nonexported invoice content provider with temporary read grants,
+actual saved PDF attachment/email recipient/subject/body, email-app routing,
+share fallback, document save picker and native preview of real PDF pages.
+Source adds provider/Intent cases on API 24/35; no external email has been sent
+by the agent and composer opening is never recorded as delivery. Added archive/
+report/invoice-index transport and corrected deletion to scrub provenance from
+older revisions of explicitly removed templates, plus customer command payload
+purging. Invoice build 43082392102 exposed that PdfDocument has no Kotlin use
+receiver; changed to explicit close in finally. Corrected Actions checks and
+all new document/provider/UI journeys remain pending. Play delivery is held.

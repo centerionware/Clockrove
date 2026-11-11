@@ -358,12 +358,15 @@ class TimerRepository internal constructor(context: Context,
     internal fun removeTaskTemplate(id: String, version: Long, templateId: String): Outcome =
         boardChange(id, version, "TEMPLATE_REMOVE", listOf(templateId)) { BoardStore.removeTemplate(it, templateId, wallClock()) }
     internal data class BusinessSnapshot(val version: Long, val settings: BusinessStore.Settings, val customers: List<BusinessStore.Customer>)
-    internal data class JobDetailSnapshot(val version: Long, val job: BusinessStore.JobDetail)
+    internal data class JobDetailSnapshot(val version: Long, val job: BusinessStore.JobDetail, val canDelete: Boolean)
     @Synchronized
     internal fun businessSnapshot(): BusinessSnapshot = BusinessSnapshot(readSnapshot(helper.readableDatabase).version,
         BusinessStore.settings(helper.readableDatabase), BusinessStore.customers(helper.readableDatabase))
     @Synchronized
-    internal fun jobDetail(jobId: String): JobDetailSnapshot = JobDetailSnapshot(readSnapshot(helper.readableDatabase).version, BusinessStore.job(helper.readableDatabase, jobId))
+    internal fun jobDetail(jobId: String): JobDetailSnapshot {
+        val job = BusinessStore.job(helper.readableDatabase, jobId)
+        return JobDetailSnapshot(readSnapshot(helper.readableDatabase).version, job, JobLifecycleStore.eligible(job.archived, job.archivedMillis, wallClock()))
+    }
     @Synchronized
     internal fun saveBusinessSettings(id: String, version: Long, value: BusinessStore.Settings): Outcome =
         boardChange(id, version, "BUSINESS_SETTINGS", value.values()) { BusinessStore.saveSettings(it, value, wallClock()) }
@@ -381,6 +384,13 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun report(selection: ReportStore.Selection): ReportSnapshot = ReportSnapshot(readSnapshot(helper.readableDatabase).version, ReportStore.read(helper.readableDatabase, selection))
 
+    internal data class ArchiveSnapshot(val version: Long, val jobs: List<JobLifecycleStore.Archived>)
+    @Synchronized
+    internal fun archiveSnapshot(): ArchiveSnapshot = ArchiveSnapshot(readSnapshot(helper.readableDatabase).version, JobLifecycleStore.archived(helper.readableDatabase, wallClock()))
+    @Synchronized
+    internal fun reportChoices(): List<Triple<String, String, Boolean>> = helper.readableDatabase.rawQuery("SELECT id,name,archived FROM jobs ORDER BY archived,name,id", null).use { rows -> buildList {
+        while (rows.moveToNext()) add(Triple(rows.getString(0), rows.getString(1), rows.getInt(2) != 0))
+    } }
     @Synchronized
     internal fun archivedJobs(): List<JobLifecycleStore.Archived> = JobLifecycleStore.archived(helper.readableDatabase, wallClock())
     @Synchronized
@@ -395,6 +405,13 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
             InvoiceStore.prepare(it, invoiceId, selection, wallClock())
         }
+    internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String)
+    internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
+    @Synchronized
+    internal fun invoices(jobId: String): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
+        helper.readableDatabase.rawQuery("SELECT id,number,created_ms,payload FROM invoices WHERE job_id=? ORDER BY created_ms DESC,id", arrayOf(jobId)).use { rows -> buildList {
+            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style)) }
+        } })
     @Synchronized
     internal fun invoice(id: String): InvoiceStore.Record = InvoiceStore.read(helper.readableDatabase, id)
     @Synchronized
