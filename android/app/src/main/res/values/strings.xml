@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Clockrove running job and clock-out</string>
+    <string name="widget_idle">No timer running</string>
+    <string name="widget_open">Open Clockrove</string>
+    <string name="widget_stop">Clock out</string>
+</resources>

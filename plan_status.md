@@ -182,3 +182,23 @@ Pinned JUnit 4.13.2 and Robolectric 4.16.1 (artifact existence verified upstream
 No tests/build ran locally. New code is not validated yet. Full schema/revision
 ancestry, migrations, typed Flutter bridge, widget, notification, locations/maps
 and physical-device prototype evidence remain unfinished.
+
+### 2026-11-11 — native widget clock-out slice
+
+Previous turn: progress (native repository and tests committed in d45e286).
+Revalidated run 42982039427: still in_progress, debug compilation active; not
+terminal or failed. Added independent prototype widget code while it runs.
+
+Native AppWidgetProvider renders authoritative running job and a timestamp-based
+chronometer. Running action submits STOP without a Flutter engine or location
+permission; idle opens the app (default-job/picker configuration is unfinished).
+Widget actions carry displayed version and widget ID. Stale actions refresh rather
+than stopping a newer session. Native surface command API captures wall-clock and
+IANA zone once and returns persisted outcomes on retry without recapturing time.
+Added sixth repository test for surface retry and stale widget safety.
+
+No widget/device/receiver execution proven yet. Widget refresh after all future
+app commits, default/picker configuration, typed Flutter adapter, native tracking
+notification/service, and the rest of milestone 2 remain outstanding. New source
+requires a fresh Actions run; earlier running validation may be superseded by the
+new commit, because behavior changed, not because observation timed out.

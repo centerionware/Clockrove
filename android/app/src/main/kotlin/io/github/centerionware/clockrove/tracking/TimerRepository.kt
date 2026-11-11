@@ -21,7 +21,7 @@ class TimerRepository internal constructor(context: Context) {
         val offsetSeconds: Int,
         val origin: Origin,
     )
-    data class Session(val id: String, val jobId: String, val startUtcMillis: Long)
+    data class Session(val id: String, val jobId: String, val startUtcMillis: Long, val jobName: String)
     data class Snapshot(val version: Long, val running: Session?)
     data class Outcome(val version: Long, val conflict: String?)
 
@@ -88,6 +88,28 @@ class TimerRepository internal constructor(context: Context) {
         } finally { db.endTransaction() }
     }
 
+    /** Native tap timestamp is captured once; retries reuse the persisted outcome. */
+    @Synchronized
+    fun executeFromSurface(id: String, version: Long, action: Action, jobId: String?, origin: Origin): Outcome {
+        require(origin != Origin.GEOFENCE)
+        helper.readableDatabase.rawQuery(
+            "SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(id),
+        ).use {
+            if (it.moveToFirst()) {
+                val prior = org.json.JSONArray(it.getString(0))
+                val same = prior.getLong(0) == version && prior.getString(1) == action.name &&
+                    (if (prior.isNull(2)) null else prior.getString(2)) == jobId &&
+                    prior.getString(6) == origin.name
+                return if (same) Outcome(it.getLong(1), if (it.isNull(2)) null else it.getString(2))
+                    else Outcome(readSnapshot(helper.readableDatabase).version, "COMMAND_ID_REUSED")
+            }
+        }
+        val now = java.time.Instant.now()
+        val zone = java.time.ZoneId.systemDefault()
+        return execute(Command(id, version, action, jobId, now.toEpochMilli(), zone.id,
+            zone.rules.getOffset(now).totalSeconds, origin))
+    }
+
     @Synchronized
     internal fun close() { helper.close() }
 
@@ -110,8 +132,8 @@ class TimerRepository internal constructor(context: Context) {
 
     private fun readSnapshot(db: SQLiteDatabase): Snapshot {
         val version = db.rawQuery("SELECT version FROM state WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
-        val running = db.rawQuery("SELECT id,job_id,start_ms FROM sessions WHERE end_ms IS NULL", null).use {
-            if (it.moveToFirst()) Session(it.getString(0), it.getString(1), it.getLong(2)) else null
+        val running = db.rawQuery("SELECT s.id,s.job_id,s.start_ms,j.name FROM sessions s JOIN jobs j ON j.id=s.job_id WHERE s.end_ms IS NULL", null).use {
+            if (it.moveToFirst()) Session(it.getString(0), it.getString(1), it.getLong(2), it.getString(3)) else null
         }
         return Snapshot(version, running)
     }

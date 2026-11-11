@@ -77,6 +77,22 @@ class TimerRepositoryTest {
         assertNull(repository.execute(command("adjacent", TimerRepository.Action.START, 2000)).conflict)
     }
 
+    @Test fun nativeSurfaceRetryKeepsOriginalOutcomeAndStaleTapCannotStopAnotherSession() {
+        repository.execute(command("start", TimerRepository.Action.START, 1000))
+        val displayedVersion = repository.snapshot().version
+        val first = repository.executeFromSurface("widget-stop", displayedVersion,
+            TimerRepository.Action.STOP, null, TimerRepository.Origin.WIDGET)
+        assertNull(first.conflict)
+        assertEquals(first, repository.executeFromSurface("widget-stop", displayedVersion,
+            TimerRepository.Action.STOP, null, TimerRepository.Origin.WIDGET))
+        val now = System.currentTimeMillis() + 1000
+        repository.execute(command("restart", TimerRepository.Action.START, now))
+        val current = repository.snapshot()
+        assertEquals("STALE_STATE", repository.executeFromSurface("stale-widget", displayedVersion,
+            TimerRepository.Action.STOP, null, TimerRepository.Origin.WIDGET).conflict)
+        assertEquals(current, repository.snapshot())
+    }
+
     @Test fun automationCannotUseIncompletePrototypePolicy() {
         assertEquals("AUTOMATION_NOT_READY", repository.execute(command("geo", TimerRepository.Action.START, 1000,
             origin = TimerRepository.Origin.GEOFENCE)).conflict)

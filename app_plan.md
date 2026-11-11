@@ -459,3 +459,14 @@ Automation rejects commands until policy is implemented. Test/build validation
 for this code is pending GitHub Actions. No UI/widget/notification integration,
 location/map experiment or physical-device success is claimed. Full migration
 and revision schema remains milestone 3 work. No VM build/test was executed.
+
+### 2026-11-11 — native widget action implementation
+
+Added prototype AppWidgetProvider, layout/resources and receiver declaration.
+It reads the native repository, displays actual running job and timestamp-based
+elapsed time, and submits deduplicated version-checked clock-out commands without
+Flutter. Native surface commands persist the first tap timestamp/timezone and
+reuse outcomes for retries. Sixth repository test covers retry/stale-tap safety.
+Idle widget opens the app; configuration, typed Flutter controls, complete refresh
+propagation, ongoing location notification/service, maps and physical validation
+remain incomplete. No VM validation ran; code awaits Actions and runtime evidence.
