@@ -6,6 +6,7 @@ import 'business_api.dart';
 import 'business_command.dart';
 import 'settings_api.dart';
 import 'settings_screen.dart';
+import 'lifecycle_api.dart';
 
 class JobSettingsScreen extends ConsumerWidget {
   const JobSettingsScreen({super.key, required this.jobId});
@@ -17,6 +18,7 @@ class JobSettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Job settings')),
       body: job.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
           child: FilledButton(
@@ -25,6 +27,7 @@ class JobSettingsScreen extends ConsumerWidget {
           ),
         ),
         data: (preferences) => business.when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => Center(
             child: FilledButton(
@@ -69,12 +72,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref
-        .watch(jobPreferencesProvider(widget.initial.id))
-        .asData
-        ?.value;
+    final data = ref.watch(jobPreferencesProvider(widget.initial.id)).value;
     final customers =
-        ref.watch(businessSettingsProvider).asData?.value.customers ??
+        ref.watch(businessSettingsProvider).value?.customers ??
         widget.business.customers;
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -263,17 +263,64 @@ class _JobFormState extends ConsumerState<_JobForm> {
             Navigator.pop(context);
           },
         ),
-        const SizedBox(height: 24),
-        OutlinedButton.icon(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) => AutomationScreen(
-                jobId: widget.initial.id,
-                jobName: data?.name ?? widget.initial.name,
+        const SizedBox(height: 32),
+        if (data?.archived == false)
+          OutlinedButton.icon(
+            icon: const Icon(Icons.archive_outlined),
+            label: const Text('Archive job'),
+            onPressed: () => showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialog) => AlertDialog(
+                title: const Text('Archive this job?'),
+                content: const Text(
+                  'Clock out first. History and automation preferences are kept. You can restore the job; permanent deletion requires 30 continuous days archived.',
+                ),
+                actions: [
+                  BusinessCommand(
+                    label: 'Archive job',
+                    create: () {
+                      final id = newBusinessId();
+                      final version = data!.version;
+                      final api = ref.read(lifecycleApiProvider);
+                      return () => api.archive(id, version, data.id);
+                    },
+                    onCommitted: () {
+                      ref.invalidate(archiveProvider);
+                      Navigator.pop(dialog);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
               ),
             ),
           ),
+        if (data?.archived == true)
+          BusinessCommand(
+            label: 'Restore job',
+            create: () {
+              final id = newBusinessId();
+              final api = ref.read(lifecycleApiProvider);
+              return () => api.restore(id, data!.version, data.id);
+            },
+            onCommitted: () {
+              ref.invalidate(archiveProvider);
+              ref.invalidate(jobPreferencesProvider(widget.initial.id));
+            },
+          ),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: data?.archived != false
+              ? null
+              : () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => AutomationScreen(
+                      jobId: widget.initial.id,
+                      jobName: data?.name ?? widget.initial.name,
+                    ),
+                  ),
+                ),
           icon: const Icon(Icons.location_on_outlined),
           label: const Text('Worksites & automation'),
         ),

@@ -13,6 +13,7 @@ class SettingsScreen extends ConsumerWidget {
     body: ref
         .watch(businessSettingsProvider)
         .when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => Center(
             child: FilledButton(
@@ -94,7 +95,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   );
   @override
   Widget build(BuildContext context) {
-    final current = ref.watch(businessSettingsProvider).asData?.value;
+    final current = ref.watch(businessSettingsProvider).value;
     final currencies = <String, int>{
       'USD': 2,
       'EUR': 2,
@@ -230,6 +231,10 @@ class CustomersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(title: const Text('Customers')),
     floatingActionButton: FloatingActionButton.extended(
+      elevation: 0,
+      focusElevation: 0,
+      hoverElevation: 0,
+      highlightElevation: 0,
       onPressed: () => Navigator.push(
         context,
         MaterialPageRoute<void>(builder: (_) => const CustomerEditor()),
@@ -240,6 +245,7 @@ class CustomersScreen extends ConsumerWidget {
     body: ref
         .watch(businessSettingsProvider)
         .when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => Center(
             child: TextButton(
@@ -316,7 +322,7 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref.watch(businessSettingsProvider).asData?.value;
+    final data = ref.watch(businessSettingsProvider).value;
     return Scaffold(
       appBar: AppBar(
         title: Text(

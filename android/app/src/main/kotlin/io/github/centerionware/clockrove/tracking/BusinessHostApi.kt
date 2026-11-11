@@ -93,10 +93,10 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
         val r = s.report
         return mapOf("version" to s.version, "timezone" to r.selection.timezone, "workCsv" to ReportCsv.work(r), "gpsCsv" to ReportCsv.gps(r),
             "days" to r.days.map { mapOf("date" to it.date, "start" to it.start, "end" to it.end) },
-            "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin) },
-            "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason) },
-            "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy) },
-            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency) },
+            "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone), "endLabel" to ReportCsv.instant(it.end, r.selection.timezone)) },
+            "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone)) },
+            "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy, "measuredLabel" to ReportCsv.instant(it.measured, r.selection.timezone)) },
+            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
             "totals" to r.totals.map { mapOf("jobId" to it.jobId, "jobName" to it.jobName, "mode" to it.mode, "currency" to it.currency, "fractionDigits" to Currency.getInstance(it.currency).defaultFractionDigits,
                 "durationMillis" to it.durationMillis.toString(), "hourlyMinor" to it.hourlyMinor?.toString(), "amountMinor" to it.amountMinor?.toString(), "missingPrices" to it.missingPrices) })
     }

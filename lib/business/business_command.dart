@@ -62,6 +62,15 @@ class _BusinessCommandState extends State<BusinessCommand> {
     'CURRENCY_MISMATCH' =>
       'The template uses another currency. Copy without its price.',
     'DESTINATION_REQUIRED' => 'Choose a destination for the tasks first.',
+    'STOP_JOB_BEFORE_ARCHIVE' ||
+    'STOP_JOB_BEFORE_DELETE' => 'Clock out of this job before continuing.',
+    'ARCHIVE_RETENTION_REQUIRED' =>
+      'Keep the job archived for 30 continuous days before deleting it.',
+    'SITE_CAPACITY_EXCEEDED' => 'Restoring would exceed 100 enabled worksites. Disable other sites before restoring.',
+    'HOURLY_RATE_REQUIRED' => 'Set a default hourly rate or a job override before preparing this invoice.',
+    'TASK_PRICES_REQUIRED' => 'Set prices for the selected completed billable tasks before preparing this invoice.',
+    'NO_BILLABLE_ITEMS' =>
+      'Choose dates with finalized work or completed billable tasks.',
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
     'CUSTOMER_ARCHIVED' =>
       'Choose an active customer or unarchive this customer first.',
