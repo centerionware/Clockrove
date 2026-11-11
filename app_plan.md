@@ -1225,3 +1225,12 @@ heads and UI remain under validation. Actual PDF checks moved from unsupported
 Robolectric PdfDocument to pinned Android emulator instrumentation in Actions.
 Logo import, document/provider/integrated report UI checks and release acceptance
 remain open. Play workflow 414395901 stays disabled; no partial release publishes.
+
+### Independent milestone-3 session history continuation
+
+Prepared native closed-session manual CRUD and history/revision queries through
+the serialized repository. Positive/half-open overlap and explicit timezone
+validation, transactional GPS pruning/deletion fences, immutable invoices and
+current-timer isolation have fourteen new API-24 cases awaiting Actions. No UI,
+bridge or full manual correction journey is claimed yet; Play remains held for
+the separately specified combined business iteration.

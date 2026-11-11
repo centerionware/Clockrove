@@ -1237,8 +1237,61 @@ Removed the customer action's heavy elevation in the next UI source revision to
 match existing flat surfaces. Integrated UI formatter artifact from 43086427014
 applied; remaining analyzer/test results are still being inspected.
 
+### Session correction/history storage — source prepared
+
+Prepared a separate milestone-3 native slice: closed-session manual entries,
+correction/deletion, stable paginated history and revision ancestry queries.
+Commands use the existing serialized writer and durable response-loss receipts.
+Global half-open overlap checks include open sessions; positive durations avoid
+overflow and timezone/offset context must match the supplied start instant.
+Correction records manual origin, prunes points outside both corrected bounds,
+and records point deletion revisions; extension never manufactures observations.
+Deletion retains session tombstones/history. Job identity remains stable.
+Historical edits clear only that session's automation references, preserving a
+current same-job timer/departure and registration. Prepared invoices stay immutable.
+
+Added fourteen API-24 native cases for boundaries, DST offset ambiguity, overlap,
+concurrency/deduplication, rollback, GPS pruning, current automation isolation,
+deleted-ID fences, archived queries/pagination and immutable invoices. All await
+GitHub Actions; no VM tests/builds ran. Typed Flutter bridge/forms remain future
+work, so M3/M4 and the complete manual-history journey are not accepted. This
+branch is independent of the held combined internal iteration.
 Monitoring recovery run 43094466938 completed with successful formatting, analysis,
 Flutter tests, Android build and native tests, but failed while exporting native
 results/previews during the GitHub Actions incident. Release tooling did not run;
 this is not a passed validation. Combined current main (834a7e4) into #17 for a
 fresh complete validation including actual PDF checks. No VM build/test ran.
+
+PR #30 initially had no Actions run because its appended evidence conflicted with
+the newly merged recovery notes. Combined main 315bce1 and retained both histories
+to restore PR mergeability; fresh validation is required, not assumed passed.
+
+Added strict native transport for session commands, cursor history and revisions.
+Four API-24/35 bridge cases (eight executions) cover real dispatch round-trips,
+forged-origin isolation, malformed integer/cursor rejection, response-loss replay
+and stale-draft protection. Native bridge code is prepared; typed Flutter API/forms
+and successful CI evidence remain pending.
+
+Prepared the typed Flutter history API for immutable drafts, native cursor pages,
+revision ancestry/purged payloads and explicit command IDs/expected versions.
+Three codec checks cover preserved milliseconds/timezone context, cursor identity,
+immutable revision parents and response-loss propagation without automatic duplicate
+submission. These verify transport only; the actual native storage cases remain
+separate. API source and new checks await Actions; history forms are unfinished.
+
+Earlier history head b2af063 / run 43103934067 passed its Android build and native
+unit step. Inspected XML confirms 215 native cases with zero failures/errors/skips,
+including all fourteen history and eight bridge executions. That full run subsequently completed successfully; newer
+Flutter API and wall-time resolver validation remain required.
+
+Prepared native strict wall-time resolution for the correction form: return both
+UTC/offset choices for a repeated local time, one for ordinary time and no choices
+for a clock gap/skipped date. Keep milliseconds and reject invalid dates/zones.
+Three actual-framework cases per API (24/35) are added to the instrumentation
+class list; these remain pending, without mocked ICU success. Flutter transport
+exposes the choices; forms and full milestone acceptance remain unfinished.
+Reference: https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int).
+
+Applied the exact formatter artifact from current wall-time run 43105393744 to
+the Flutter API and codec checks. Analysis/behavior/device results for this new
+source remain under validation. No VM formatter, test, build or rendering ran.
