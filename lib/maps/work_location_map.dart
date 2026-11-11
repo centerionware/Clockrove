@@ -89,6 +89,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
   @override
   Widget build(BuildContext context) {
     final point = LatLng(widget.latitude, widget.longitude);
+    const mapInk = Color(0xFF176B55);
     final colors = Theme.of(context).colorScheme;
     final measured = widget.measuredUtc.toLocal();
     return Scaffold(
@@ -172,10 +173,8 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                                 point: point,
                                 radius: accuracy,
                                 useRadiusInMeter: true,
-                                color: colors.primary.withValues(alpha: 0.12),
-                                borderColor: colors.primary.withValues(
-                                  alpha: 0.5,
-                                ),
+                                color: mapInk.withValues(alpha: 0.12),
+                                borderColor: mapInk.withValues(alpha: 0.6),
                                 borderStrokeWidth: 1,
                               ),
                             ],
@@ -188,10 +187,16 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                               height: 48,
                               child: Semantics(
                                 label: AppStrings.recordedLocation,
-                                child: Icon(
-                                  Icons.location_on_rounded,
-                                  color: colors.primary,
-                                  size: 40,
+                                child: const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.my_location_rounded,
+                                    color: mapInk,
+                                    size: 30,
+                                  ),
                                 ),
                               ),
                             ),

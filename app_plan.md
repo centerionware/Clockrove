@@ -781,3 +781,9 @@ landscape test; applied its source patch. Added an actual TimerScreen journey
 through failed map decoding back to manual clock-out and updated synthetic
 tracking previews to include valid coordinates. No native/physical or live-tile
 success claimed. Next Actions run must pass analysis, all tests and visual review.
+
+OSM run 43004745776 stopped on import-group formatting in the new timer journey;
+applied its exact CI correction. Map point/accuracy ink now stays forest green
+with a white marker halo so standard light OSM tiles remain legible in dark mode.
+The marker is centered on the measured coordinate; no displaced pin tip. New
+validation remains required before merging. No VM validation executed.
