@@ -1,0 +1,72 @@
+# Local agents and machine-specific setup (AGENTS.md remains public)
+/.local-skills/
+/.agents/
+/.codex/
+/.aws/
+/.tools/
+/.local/
+/.idea/
+/.vscode/
+.DS_Store
+*.iml
+
+# Credentials and signing material
+.env
+.env.*
+!.env.example
+**/key.properties
+**/local.properties
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+*.pem
+/secrets/
+/credentials/
+**/service-account*.json
+
+# Personal runtime data; synthetic fixtures must use a different format/name
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.clockrove-backup
+/backups/
+/exports/
+/device-evidence/
+*.log
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+coverage/
+
+# Android
+.gradle/
+.kotlin/
+captures/
+*.apk
+*.aab
+
+# iOS / macOS generated state
+Pods/
+.symlinks/
+DerivedData/
+**/Flutter/ephemeral/
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+**/xcuserdata/
+*.ipa
+*.dSYM.zip
+
+# Tool caches
+__pycache__/
+*.pyc
+.venv/
+
+# Commit pubspec.lock, Gemfile.lock, Gradle wrapper and other build inputs.

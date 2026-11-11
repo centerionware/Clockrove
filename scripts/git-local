@@ -1,0 +1,5 @@
+#!/bin/sh
+# Alternate metadata for workspaces whose root .git is a protected mount.
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec git --git-dir="$root/.local/git" --work-tree="$root" "$@"
