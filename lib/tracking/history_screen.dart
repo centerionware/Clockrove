@@ -53,7 +53,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
 
   Future<void> _load({bool more = false}) async {
     if (_busy) {
-      if (!more) { _refreshAgain = true; }
+      if (!more) {
+        _refreshAgain = true;
+      }
       return;
     }
     setState(() {

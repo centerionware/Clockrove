@@ -1034,26 +1034,27 @@ large text. Native visual harness renders idle/running images in Actions. No VM
 build/test/render ran; source is not yet validated on CI or the owner's launcher.
 
 
-### Binding combined next-test-release scope and publishing hold
+### Binding combined business scope — current internal acceptance
 
-Contract: [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). Owner requires the
-next internal release to include all requested features; documentation is not
-completion. **Play delivery workflow 414395901 is temporarily disabled_manually**
-(verified through GitHub API). Validate is active. Do not publish partial builds;
-re-enable automatic delivery only for the complete validated combined iteration.
+Contract: [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). The complete
+combined implementation passed exact-head checks 43117726325 and merged in #29.
+Main checks 43120365067 and Play delivery 43121445107 passed for cb2efc9;
+0.1.0-internal.19.1 / 216603660 was accepted. Play delivery is active and
+production readiness remains unset. Earlier held/pending ledger notes below
+record the development history, not the current release state.
 
-| Addition | Status | Required evidence |
+| Addition | Status | Evidence / remaining gap |
 | --- | --- | --- |
-| Hourly/task billing mode and task prices | Native/settings UI passed; report UI pending | PRs #20–24; exact integer, mode, zero/missing/currency and DST cases passed; combined report UI #28 awaits checks |
-| Reusable task templates including deleted-job content | Board/native lifecycle passed; final cleanup pending | Independent catalog/copy/removal tested; #27 historical-provenance cleanup and final UI checks remain |
-| Complete reporting and Kanban task management | Kanban passed; report core passed; integrated UI pending | #23 validated board and previews; #22 DST/pricing/CSV native tests; #28 full report/map/export UI unverified |
-| Customers and per-job customer/email | Implemented and Actions passed | #21 native persistence/references and #24 typed forms/customer journeys; refresh-race fix in #28 pending |
-| PDF invoice beside CSV | Pending | Valid multipage PDF with actual report line items/totals |
-| Email draft with automatic fields and PDF attachment | Pending | Native Intent/URI grant tests; device email handoff evidence separate |
-| Global company/contact and email subject/body templates | Implemented and Actions passed | #21 literal/injection/persistence tests and #24 UI journeys passed; document handoff pending |
-| Optional invoice header/footer and company logo import | Header/footer stored; logo importer pending | Header/footer settings/native snapshot source exists; actual PDF/logo/device checks and importer remain |
-| Minimal, Classic and Modern invoice styles | Pending | Three distinct real rendered PDFs with equal totals and logo/pagination checks |
-| Combined internal release | Held | All scope implemented and checked before Play workflow is re-enabled |
+| Hourly/task billing mode and task prices | Merged and Actions verified | Exact integer pricing, missing/zero values, currencies, completion dates and DST report cases passed; report UI integrated |
+| Reusable templates including deleted-job content | Merged and Actions verified | Independent catalog/copy/removal, deletion retention and provenance cleanup passed |
+| Reporting and full Kanban management | Merged and Actions verified | Board CRUD/reorder/drag/accessibility, selected date/job list/map/totals/CSV, reviewed theme previews |
+| Customers and per-job customer/email | Merged and Actions verified | Native references and typed customer/job forms, refresh-race checks passed |
+| PDF invoice beside CSV | Merged and actual-framework verified | Immutable numbered snapshots and all-style multipage row/amount/total checks passed |
+| Email draft with automatic fields and PDF attachment | Merged; native handoff checks verified | Real Intent/content-URI/read-grant tests pass; installed email-app compatibility remains a physical-device gap |
+| Company/contact and email templates | Merged and Actions verified | Persistence, placeholder handling, immutable snapshots and UI journeys passed |
+| Optional header/footer and company logo | Merged and actual-framework verified | Bounded PNG/JPEG/WebP import, metadata removal, immutable retention and actual rendered logo/pagination checks passed |
+| Minimal, Classic and Modern invoice styles | Merged; actual visuals reviewed | Three distinct native PDFs, multipage first/middle/final pages and decoded light/dark viewer captures reviewed |
+| Combined internal release | Upload accepted | Delivery 43121445107 / versionCode 216603660; tester installation is separate |
 
 No new login/server/SMTP credential system, task timer, tax calculation or recurring
 billing is authorized by these features. Existing application scope remains active.
@@ -1607,3 +1608,8 @@ tester.runAsync and retain real capture assertions. Also queue a fresh read
 when native versions arrive during a history request, with a held-response UI
 regression. New source needs fresh Actions checks; no device/native result from
 that old run is inferred.
+
+Corrected history head ebfda2a is being validated in 43122948408. Applied its
+exact Actions formatter patch for the queued-refresh regression and real-I/O
+capture calls. Behavior/native/device results are still pending; the formatting
+correction requires an exact-head validation before merge. No VM execution ran.

@@ -53,9 +53,12 @@ class _History extends HistoryApi {
     historyCalls++;
     final held = holdHistory;
     holdHistory = null;
-    if (held != null) { return held.future; }
+    if (held != null) {
+      return held.future;
+    }
     return HistoryData(version, entry == null ? [] : [entry!], null);
   }
+
   @override
   Future<HistoryDetail> detail(String jobId, String sessionId) async =>
       HistoryDetail(version, entry);
@@ -212,24 +215,33 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('native change during history read queues a fresh authoritative read', (tester) async {
-    final api = _History();
-    final events = StreamController<int>();
-    addTearDown(events.close);
-    await _show(tester, api, const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'), timer: _Timer(events.stream));
-    final held = Completer<HistoryData>();
-    api.holdHistory = held;
-    await tester.tap(find.byTooltip('Refresh work history'));
-    await tester.pump();
-    events.add(13);
-    await tester.pump();
-    api.version = 13; api.entry = null;
-    held.complete(HistoryData(12, [_entry], null));
-    await tester.pumpAndSettle();
-    expect(api.historyCalls, 3);
-    expect(find.text('No work entries yet.'), findsOneWidget);
-    expect(find.textContaining('needs review'), findsNothing);
-  });
+  testWidgets(
+    'native change during history read queues a fresh authoritative read',
+    (tester) async {
+      final api = _History();
+      final events = StreamController<int>();
+      addTearDown(events.close);
+      await _show(
+        tester,
+        api,
+        const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'),
+        timer: _Timer(events.stream),
+      );
+      final held = Completer<HistoryData>();
+      api.holdHistory = held;
+      await tester.tap(find.byTooltip('Refresh work history'));
+      await tester.pump();
+      events.add(13);
+      await tester.pump();
+      api.version = 13;
+      api.entry = null;
+      held.complete(HistoryData(12, [_entry], null));
+      await tester.pumpAndSettle();
+      expect(api.historyCalls, 3);
+      expect(find.text('No work entries yet.'), findsOneWidget);
+      expect(find.textContaining('needs review'), findsNothing);
+    },
+  );
   testWidgets(
     'correction preserves exact bounds and selected repeated-hour offsets; lost response retries same intent',
     (tester) async {
@@ -423,14 +435,20 @@ void main() {
         final key = GlobalKey();
         await _show(tester, _History(), item.$2, dark: dark, capture: key);
         expect(tester.takeException(), isNull);
-        await tester.runAsync(() => saveMapPreview(
-          key,
-          'clockrove-history-${item.$1}-${dark ? 'dark' : 'light'}',
-        ));
+        await tester.runAsync(
+          () => saveMapPreview(
+            key,
+            'clockrove-history-${item.$1}-${dark ? 'dark' : 'light'}',
+          ),
+        );
         if (item.$1 == 'editor') {
           await _reveal(tester, 'Save correction');
-          await tester.runAsync(() => saveMapPreview(key,
-            'clockrove-history-editor-offsets-${dark ? 'dark' : 'light'}'));
+          await tester.runAsync(
+            () => saveMapPreview(
+              key,
+              'clockrove-history-editor-offsets-${dark ? 'dark' : 'light'}',
+            ),
+          );
         }
         await tester.pumpWidget(const SizedBox.shrink());
       }
