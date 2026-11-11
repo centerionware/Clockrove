@@ -111,3 +111,39 @@ need integration before users can enable this automation.
 Platform basis: [inexact Android alarms](https://developer.android.com/develop/background-work/services/alarms).
 Android may delay delivery, including during power-saving modes; no precise grace
 expiry guarantee is presented to the user.
+
+## Android geofence platform adapter (pending Actions/device evidence)
+
+`AndroidGeofencePlatform` removes this app's previous PendingIntent inventory
+before adding at most 100 desired sites. Registration IDs are the repository's
+configuration-generation UUIDs. Initial ENTER/EXIT observations establish facts;
+they do not bypass outside-then-entry arming. The callback token is explicit and
+mutable as required by Play Services, and the receiver is private. Precise and,
+on API 29+, background location are checked separately from manual sampling.
+The manifest declares background access; a purpose-specific activation/settings
+flow remains to be implemented, so the app does not request it automatically.
+
+`GeofenceRegistrationController` distinguishes desired inventory from successful
+platform completion. An obsolete in-flight result cannot report a newer
+configuration ready. Failures hold affected work and require a configuration
+change or explicit foreground retry, avoiding a provider-error retry loop.
+An app-private boolean remembers that cleanup may be needed; it stores no sites,
+keys or locations and is not a success receipt. A fresh install with no enabled
+sites never initializes the Play Services client. Reopening after a prior request
+holds recovery uncertainty before processing an already delivered expiry alarm.
+
+Geofence callbacks and departure alarms share one native executor. Definite
+ENTER/EXIT with a triggering-location timestamp enter the repository; missing,
+future or unsupported measurements and provider errors hold automation. Callback
+coordinates never enter off-clock history. Duplicate receipts suppress repeated
+service/choice-notification effects. A qualified start rechecks the active session
+and permission before requesting the location foreground service; Android startup
+restrictions remain explicit health failures. Ambiguous idle entries post a generic
+notification opening the existing manual job selection, and never auto-switch.
+
+Synthetic tests inject platform task completions and a public HMAC fixture; they
+cannot prove real Play Services registration, delivery or Android FGS exemptions.
+UI activation/review/health and physical-device acceptance remain outstanding.
+Primary platform references: [geofences](https://developer.android.com/develop/sensors-and-location/location/geofencing),
+[background location](https://developer.android.com/develop/sensors-and-location/location/permissions/background),
+[foreground-service restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start).

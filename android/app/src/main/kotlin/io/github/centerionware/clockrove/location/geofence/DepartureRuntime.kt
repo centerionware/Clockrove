@@ -9,19 +9,22 @@ import java.util.concurrent.Executors
 
 /** A process-lifetime observer. Every callback re-reads committed native state. */
 internal object DepartureRuntime {
-    private val worker = Executors.newSingleThreadExecutor()
+    internal val executor = Executors.newSingleThreadExecutor()
     private var subscription: AutoCloseable? = null
 
     fun attach(context: Context, repository: TimerRepository) {
         val controller = DepartureAlarmController(context, repository)
-        subscription = repository.subscribe { worker.execute { controller.reconcile() } }
+        subscription = repository.subscribe { executor.execute { controller.reconcile() } }
     }
 
     fun receive(context: Context, intent: Intent, recover: Boolean, finish: () -> Unit) {
-        worker.execute {
+        executor.execute {
             try {
                 val controller = DepartureAlarmController(context, TimerRepository.get(context))
-                if (recover) controller.recover() else controller.deliver(intent)
+                if (recover) {
+                    controller.recover()
+                    GeofenceRuntime.resume(context, recovery = true)
+                } else controller.deliver(intent)
                 TimerWidget.refreshAll(context)
             } finally { finish() }
         }

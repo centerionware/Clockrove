@@ -10,7 +10,11 @@ class MainActivity : FlutterActivity() {
     private var trackingApi: TrackingHostApi? = null
     private var visible = false
 
-    override fun onStart() { super.onStart(); visible = true }
+    override fun onStart() {
+        super.onStart()
+        visible = true
+        io.github.centerionware.clockrove.location.geofence.GeofenceRuntime.resume(applicationContext)
+    }
     override fun onStop() { visible = false; super.onStop() }
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
         if (trackingApi?.permissionResult(code) != true) super.onRequestPermissionsResult(code, permissions, results)

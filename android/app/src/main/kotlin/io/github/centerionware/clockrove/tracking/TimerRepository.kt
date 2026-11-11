@@ -609,8 +609,9 @@ class TimerRepository internal constructor(context: Context,
         @Volatile private var instance: TimerRepository? = null
         fun get(context: Context): TimerRepository = instance ?: synchronized(this) {
             instance ?: TimerRepository(context).also {
-                instance = it
+                io.github.centerionware.clockrove.location.geofence.GeofenceRuntime.attach(context.applicationContext, it)
                 io.github.centerionware.clockrove.location.geofence.DepartureRuntime.attach(context.applicationContext, it)
+                instance = it
             }
         }
     }

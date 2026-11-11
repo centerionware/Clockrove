@@ -910,3 +910,13 @@ Alarm adapter run 43021499336 compiled the Android app, but native test
 compilation rejected a nullable PackageInfo permission array in the new manifest
 assertion. Added an explicit empty-array fallback without changing the permission
 assertions. Runtime tests remain unverified until the corrected Actions run.
+
+### M2 Android geofence platform adapters — source prepared, unverified
+
+Native registration now removes old inventory before replacement and distinguishes
+requested sites from platform task success. Private callbacks use shared serialized
+work, precise/background permission guards, replay-safe location-service handoff
+and a generic notification for ambiguous manual selection. Startup protects pending
+work before uncertain recovery; default idle state does not initialize Play Services.
+Thirteen API-24/API-35 cases are prepared with synthetic task completions/HMAC.
+Actions/device validation and site/permission/review/health UI remain outstanding.
