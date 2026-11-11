@@ -1085,3 +1085,14 @@ Play publication remains held for the entire requested iteration.
 Job lifecycle/customer/settings/report/invoice features are unfinished. Play
 workflow 414395901 remains disabled_manually; do not publish an incomplete test
 iteration. Existing owner GPS/device feedback is still not full device acceptance.
+
+### Customer, company and billing command source
+
+Prepared serialized native settings/customer/job commands with revision ancestry,
+exact integer rates, explicit hourly/task mode, effective customer email overrides,
+customer archive/reference guards and safe literal email template expansion.
+Existing jobs retain their currency when the default changes; incompatible default
+rates do not apply. Eleven API-24 cases cover response-loss dedup/stale writes,
+transaction rollback, exact large/zero rates, references and template injection.
+Actions validation is pending. UI, reports, invoices/logo and job lifecycle remain
+unfinished; Play delivery remains held. No VM builds/tests ran.

@@ -361,6 +361,26 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun removeTaskTemplate(id: String, version: Long, templateId: String): Outcome =
         boardChange(id, version, "TEMPLATE_REMOVE", listOf(templateId)) { BoardStore.removeTemplate(it, templateId, wallClock()) }
+    internal data class BusinessSnapshot(val version: Long, val settings: BusinessStore.Settings, val customers: List<BusinessStore.Customer>)
+    internal data class JobDetailSnapshot(val version: Long, val job: BusinessStore.JobDetail)
+    @Synchronized
+    internal fun businessSnapshot(): BusinessSnapshot = BusinessSnapshot(readSnapshot(helper.readableDatabase).version,
+        BusinessStore.settings(helper.readableDatabase), BusinessStore.customers(helper.readableDatabase))
+    @Synchronized
+    internal fun jobDetail(jobId: String): JobDetailSnapshot = JobDetailSnapshot(readSnapshot(helper.readableDatabase).version, BusinessStore.job(helper.readableDatabase, jobId))
+    @Synchronized
+    internal fun saveBusinessSettings(id: String, version: Long, value: BusinessStore.Settings): Outcome =
+        boardChange(id, version, "BUSINESS_SETTINGS", value.values()) { BusinessStore.saveSettings(it, value, wallClock()) }
+    @Synchronized
+    internal fun saveCustomer(id: String, version: Long, value: BusinessStore.Customer): Outcome =
+        boardChange(id, version, "CUSTOMER_SAVE", value.values()) { BusinessStore.saveCustomer(it, value, wallClock()) }
+    @Synchronized
+    internal fun removeCustomer(id: String, version: Long, customerId: String): Outcome =
+        boardChange(id, version, "CUSTOMER_REMOVE", listOf(customerId)) { BusinessStore.removeCustomer(it, customerId, wallClock()) }
+    @Synchronized
+    internal fun saveJobSettings(id: String, version: Long, value: BusinessStore.JobSettings): Outcome =
+        boardChange(id, version, "JOB_SETTINGS", value.values()) { BusinessStore.saveJob(it, value, wallClock()) }
+
     private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
         changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
 
