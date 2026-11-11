@@ -27,13 +27,14 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Continue milestone 2 by validating work-site/automation controls, permission and
-review journeys, then finish native recovery and device acceptance. Durable policy,
-Android geofence callbacks and inexact departure alarms are merged with CI evidence. Stored-point OSM source,
-network policy and synthetic UI tests passed; live OSM and optional secure runtime
-Google-key proof still need a device/network/key. Native physical tracking/widget
-acceptance remains unproven. All builds/tests/rendering stay in GitHub Actions.
-See plan_status.md for exact run and merge evidence; milestone 2 is incomplete.
+Complete the owner-requested combined internal iteration in
+[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). The compact widget and
+native schema/revision foundation passed Actions and merged; continue native
+Kanban/job/customer/settings commands, then usable job/board/report screens and
+all pricing/PDF/email/branding features. Keep Play delivery disabled until the
+entire requested set is implemented and validated. All builds/tests/rendering
+remain in Actions. Physical GPS/launcher/recovery/email evidence remains separate;
+the complete application objective and production gates remain unfinished.
 
 ## 2. Product decisions
 
@@ -1180,3 +1181,24 @@ tracking/receipt preservation, default boards, ancestry/dedup, retrospective end
 site tombstones, FK/money guards and rollback. Source is unvalidated until Actions;
 customer/board/pricing/invoice commands and screens remain unfinished. No VM
 build, dependency resolution, formatter or test was run.
+
+
+### Native foundation and compact widget merged; Kanban command source
+
+Widget exact head 1cfc12a passed Actions 43072986373; reviewed real RemoteViews
+idle/running renders and merged PR #18 as 45670b2fac16b04929a8f7cb3ec564965a829b0d.
+Business foundation exact head dec72f4 passed 43073787801: inspected JUnit XML,
+127 native tests with zero failures/errors/skips, including all eight migration/
+revision cases. PR #19 merged f94179e02f33a91e4631a9a273606a0b78abb220. These
+are CI/resource proofs, not actual launcher or owner-data upgrade acceptance.
+
+Prepared real native board commands for column/card CRUD/order/moves, explicit
+completion roles/dates, fixed task prices and reusable templates. All operations
+share the serialized versioned command ledger and record revision ancestry.
+Column deletion requires a destination when populated and keeps at least one;
+copying templates creates a new identity without old due/completion/timekeeping
+state. Twelve API-24 cases cover integrity, concurrency, rollback, native
+completion, currency/date validation and archived-source templates. These new
+commands still need Actions and transport/UI integration. Job deletion, customers,
+reports, billing settings and invoices remain in progress/pending; no partial
+internal release is authorized while the publication hold is active.

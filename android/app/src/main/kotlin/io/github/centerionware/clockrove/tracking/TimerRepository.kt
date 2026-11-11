@@ -298,7 +298,7 @@ class TimerRepository internal constructor(context: Context,
     internal fun geofenceReviewJobs(): Set<String> = GeofenceStore.unresolvedJobs(helper.readableDatabase)
 
     @Synchronized
-    internal fun saveSite(id: String, version: Long, site: GeofenceStore.Site): Outcome = configureGeofences(id,
+    internal fun saveSite(id: String, version: Long, site: GeofenceStore.Site): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "SITE_SAVE", site.id, site.jobId, site.name,
             site.latitude.toString(), site.longitude.toString(), site.radiusMeters.toString(), site.enabled)).toString(), version) {
         val conflict = GeofenceStore.saveSite(it, site, wallClock())
@@ -307,7 +307,7 @@ class TimerRepository internal constructor(context: Context,
         conflict
     }
     @Synchronized
-    internal fun removeSite(id: String, version: Long, siteId: String): Outcome = configureGeofences(id,
+    internal fun removeSite(id: String, version: Long, siteId: String): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "SITE_REMOVE", siteId)).toString(), version) {
         val jobId = it.rawQuery("SELECT job_id FROM work_sites WHERE id=?", arrayOf(siteId)).use { row -> if (row.moveToFirst()) row.getString(0) else null }
         val conflict = GeofenceStore.removeSite(it, siteId, wallClock())
@@ -316,7 +316,7 @@ class TimerRepository internal constructor(context: Context,
         conflict
     }
     @Synchronized
-    internal fun saveAutomation(id: String, version: Long, settings: GeofenceStore.Settings): Outcome = configureGeofences(id,
+    internal fun saveAutomation(id: String, version: Long, settings: GeofenceStore.Settings): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "AUTOMATION_SAVE", settings.jobId, settings.enabled,
             settings.autoStart, settings.automaticDeparture, settings.graceMinutes)).toString(), version) {
         val conflict = GeofenceStore.saveSettings(it, settings, wallClock())
@@ -325,12 +325,46 @@ class TimerRepository internal constructor(context: Context,
     }
 
     @Synchronized
-    internal fun acceptGeofenceReview(id: String, version: Long, jobId: String): Outcome = configureGeofences(id,
+    internal fun acceptGeofenceReview(id: String, version: Long, jobId: String): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "REVIEW_ACCEPT_CURRENT", jobId)).toString(), version) {
         GeofenceStore.acceptCurrentHistory(it, jobId, wallClock())
     }
 
-    private fun configureGeofences(id: String, fingerprint: String, expectedVersion: Long,
+    internal data class BoardSnapshot(val version: Long, val board: BoardStore.Board)
+    @Synchronized
+    internal fun boardSnapshot(jobId: String): BoardSnapshot = BoardSnapshot(readSnapshot(helper.readableDatabase).version,
+        BoardStore.read(helper.readableDatabase, jobId))
+    @Synchronized
+    internal fun taskTemplates(search: String = ""): List<BoardStore.Template> = BoardStore.templates(helper.readableDatabase, search)
+    @Synchronized
+    internal fun saveColumn(id: String, version: Long, columnId: String, jobId: String, name: String, completed: Boolean): Outcome =
+        boardChange(id, version, "COLUMN_SAVE", listOf(columnId, jobId, name, completed)) { BoardStore.saveColumn(it, columnId, jobId, name, completed, wallClock()) }
+    @Synchronized
+    internal fun reorderColumns(id: String, version: Long, jobId: String, columnIds: List<String>): Outcome =
+        boardChange(id, version, "COLUMNS_ORDER", listOf(jobId, org.json.JSONArray(columnIds))) { BoardStore.reorderColumns(it, jobId, columnIds, wallClock()) }
+    @Synchronized
+    internal fun removeColumn(id: String, version: Long, jobId: String, columnId: String, destination: String?): Outcome =
+        boardChange(id, version, "COLUMN_REMOVE", listOf(jobId, columnId, destination)) { BoardStore.removeColumn(it, jobId, columnId, destination, wallClock()) }
+    @Synchronized
+    internal fun saveCard(id: String, version: Long, value: BoardStore.Draft): Outcome =
+        boardChange(id, version, "CARD_SAVE", listOf(value.id, value.jobId, value.columnId, value.title, value.description, value.dueDate,
+            value.billable, value.priceMinor, value.currency)) { BoardStore.saveCard(it, value, wallClock()) }
+    @Synchronized
+    internal fun moveCard(id: String, version: Long, jobId: String, cardId: String, destination: String, position: Int): Outcome =
+        boardChange(id, version, "CARD_MOVE", listOf(jobId, cardId, destination, position)) { BoardStore.moveCard(it, jobId, cardId, destination, position, wallClock()) }
+    @Synchronized
+    internal fun removeCard(id: String, version: Long, jobId: String, cardId: String): Outcome =
+        boardChange(id, version, "CARD_REMOVE", listOf(jobId, cardId)) { BoardStore.removeCard(it, jobId, cardId, wallClock()) }
+    @Synchronized
+    internal fun copyTaskTemplate(id: String, version: Long, templateId: String, cardId: String, jobId: String, columnId: String, copyPrice: Boolean): Outcome =
+        boardChange(id, version, "TEMPLATE_COPY", listOf(templateId, cardId, jobId, columnId, copyPrice)) { BoardStore.copyTemplate(it, templateId, cardId, jobId, columnId, copyPrice, wallClock()) }
+    @Synchronized
+    internal fun removeTaskTemplate(id: String, version: Long, templateId: String): Outcome =
+        boardChange(id, version, "TEMPLATE_REMOVE", listOf(templateId)) { BoardStore.removeTemplate(it, templateId, wallClock()) }
+    private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
+        changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
+
+    private fun changeConfiguration(id: String, fingerprint: String, expectedVersion: Long,
         change: (SQLiteDatabase) -> String?): Outcome {
         require(id.isNotBlank())
         val db = helper.writableDatabase
