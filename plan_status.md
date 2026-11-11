@@ -1226,3 +1226,23 @@ journeys passed. Reviewed six light/dark company/customer/billing previews. Merg
 Removed the customer action's heavy elevation in the next UI source revision to
 match existing flat surfaces. Integrated UI formatter artifact from 43086427014
 applied; remaining analyzer/test results are still being inspected.
+
+### Session correction/history storage — source prepared
+
+Prepared a separate milestone-3 native slice: closed-session manual entries,
+correction/deletion, stable paginated history and revision ancestry queries.
+Commands use the existing serialized writer and durable response-loss receipts.
+Global half-open overlap checks include open sessions; positive durations avoid
+overflow and timezone/offset context must match the supplied start instant.
+Correction records manual origin, prunes points outside both corrected bounds,
+and records point deletion revisions; extension never manufactures observations.
+Deletion retains session tombstones/history. Job identity remains stable.
+Historical edits clear only that session's automation references, preserving a
+current same-job timer/departure and registration. Prepared invoices stay immutable.
+
+Added fourteen API-24 native cases for boundaries, DST offset ambiguity, overlap,
+concurrency/deduplication, rollback, GPS pruning, current automation isolation,
+deleted-ID fences, archived queries/pagination and immutable invoices. All await
+GitHub Actions; no VM tests/builds ran. Typed Flutter bridge/forms remain future
+work, so M3/M4 and the complete manual-history journey are not accepted. This
+branch is independent of the held combined internal iteration.
