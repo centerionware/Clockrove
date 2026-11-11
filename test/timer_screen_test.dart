@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/l10n/app_strings.dart';
@@ -91,10 +90,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.idle), findsOneWidget);
     await tester.scrollUntilVisible(find.text(AppStrings.clockIn), 200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.clockIn));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.clockOut), findsOneWidget);
     await tester.scrollUntilVisible(find.text(AppStrings.enableLocation), 200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.enableLocation));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
@@ -108,6 +109,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
     await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.pumpAndSettle();
     expect(
       tester
           .widget<FilledButton>(
@@ -117,6 +119,7 @@ void main() {
       isNotNull,
     );
     await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.newJob));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Synthetic second');
@@ -132,6 +135,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.running!.jobId, 'job-b');
     await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.clockOut));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.idle), findsOneWidget);
@@ -146,10 +150,10 @@ void main() {
       tester,
     ) async {
       await tester.runAsync(() async {
-        final library = await Isolate.resolvePackageUri(
-          Uri.parse('package:flutter/material.dart'),
-        );
-        final sdk = File.fromUri(library!).parent.parent.parent.parent.path;
+        final sdk = Platform.environment['FLUTTER_ROOT'];
+        if (sdk == null) {
+          throw StateError('FLUTTER_ROOT must identify the pinned preview SDK');
+        }
         final loader = FontLoader('Roboto');
         for (final font in [
           'Roboto-Regular.ttf',
@@ -251,6 +255,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text(AppStrings.newJob), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());

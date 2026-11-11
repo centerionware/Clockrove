@@ -38,6 +38,7 @@ jobs:
           echo "25ed8c3c29d51a7353f2a944310b478af8214920639524b19c50a19e6c044c5a  $RUNNER_TEMP/flutter.tar.xz" | sha256sum --check
           tar -xf "$RUNNER_TEMP/flutter.tar.xz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          echo "FLUTTER_ROOT=$RUNNER_TEMP/flutter" >> "$GITHUB_ENV"
       - name: Install pinned Android components
         shell: bash
         run: |

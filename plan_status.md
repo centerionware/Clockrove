@@ -571,3 +571,14 @@ unnecessary imports (dart:ui in elapsed_display.dart and dart:typed_data in the
 screen preview test). Removed only those imports; no check was disabled. Rendering
 still has not run, so there is no visual artifact to approve yet. New validation
 will cover this source correction. No VM analyzer/formatter/build/test executed.
+
+### UI test-harness failures diagnosed
+
+Previous turn: progress (formatter/analyzer corrections). Existing run 42995708218
+concluded FAILURE in tests: ten passed, including large-text layout; manual journey
+tap happened before scroll layout repainted, and both previews failed because
+Flutter's test isolate does not support resolvePackageUri. No preview artifact
+was generated. Added frame settling after scroll operations (not tap suppression)
+and explicit pinned FLUTTER_ROOT export/font lookup for CI rendering. Removed
+unsupported isolate lookup; preview assertions remain enabled. New source needs
+fresh Actions validation and image review. No VM tests/formatter/build ran.

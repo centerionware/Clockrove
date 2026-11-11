@@ -661,3 +661,9 @@ CI success and actual light/dark preview inspection; no visual success claimed.
 UI run 42995204970 passed formatting, then analysis flagged two unnecessary imports.
 Removed the flagged imports without weakening analysis. UI preview rendering is
 still pending and visual quality has not yet been verified from rendered output.
+
+UI run 42995708218 passed analysis and ten tests, including large text, but failed
+journey scroll/tap frame timing and preview package-URI lookup unsupported by
+Flutter tester. Corrected harness to settle scroll frames and load fonts through
+explicit pinned FLUTTER_ROOT. Kept all assertions/preview generation enabled.
+No rendering success or visual approval claimed; no VM validation executed.
