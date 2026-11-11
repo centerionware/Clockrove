@@ -11,10 +11,10 @@ mkdir -p "$ANDROID_AVD_HOME" "$GITHUB_WORKSPACE/build/device-test-results"
 # official repository2-3.xml and sys-img/android/sys-img2-3.xml on 2026-11-11.
 curl --fail --location --retry 3 https://dl.google.com/android/repository/emulator-linux_x64-16740729.zip -o "$RUNNER_TEMP/clockrove-emulator.zip"
 echo "f41f9e31eb5ca64926603c03265c50bbc0ff4172  $RUNNER_TEMP/clockrove-emulator.zip" | sha1sum --check
-unzip -q "$RUNNER_TEMP/clockrove-emulator.zip" -d "$ANDROID_HOME"
+unzip -oq "$RUNNER_TEMP/clockrove-emulator.zip" -d "$ANDROID_HOME"
 curl --fail --location --retry 3 https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip -o "$RUNNER_TEMP/clockrove-platform-tools.zip"
 echo "477254aa5f903c15cf51001717bdf347fb6b53e0  $RUNNER_TEMP/clockrove-platform-tools.zip" | sha1sum --check
-unzip -q "$RUNNER_TEMP/clockrove-platform-tools.zip" -d "$ANDROID_HOME"
+unzip -oq "$RUNNER_TEMP/clockrove-platform-tools.zip" -d "$ANDROID_HOME"
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 "$ANDROID_HOME/emulator/emulator" -version | tee "$RUNNER_TEMP/clockrove-emulator-version.txt"
 grep -F 'Android emulator version 37.2.13' "$RUNNER_TEMP/clockrove-emulator-version.txt"
@@ -34,7 +34,7 @@ for clockrove_api in 24 35; do
   curl --fail --location --retry 3 "https://dl.google.com/android/repository/sys-img/android/$clockrove_archive" -o "$RUNNER_TEMP/$clockrove_archive"
   echo "$clockrove_checksum  $RUNNER_TEMP/$clockrove_archive" | sha1sum --check
   mkdir -p "$ANDROID_HOME/system-images/android-$clockrove_api/default"
-  unzip -q "$RUNNER_TEMP/$clockrove_archive" -d "$ANDROID_HOME/system-images/android-$clockrove_api/default"
+  unzip -oq "$RUNNER_TEMP/$clockrove_archive" -d "$ANDROID_HOME/system-images/android-$clockrove_api/default"
   grep -E "^Pkg.Revision\s*=\s*$clockrove_revision\s*$" "$ANDROID_HOME/system-images/android-$clockrove_api/default/x86_64/source.properties"
   # The SDK legacy-package scanner registers the fixed, manually extracted image.
   "$sdkmanager" --sdk_root="$ANDROID_HOME" --list_installed > "$RUNNER_TEMP/clockrove-installed-$clockrove_api.txt"
