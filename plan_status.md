@@ -1173,3 +1173,12 @@ logo, optional header/footer and shared exact totals. Five API-24 snapshot cases
 and two native-graphics PDF cases are prepared: generate bytes, reopen actual PDF
 pages and export synthetic previews. These have not yet run. Logo picker, document
 provider/share/email, preview UI and report UI still remain; no release claim.
+
+PDF run 43083368119 built Android and passed snapshot/domain cases but the two
+real-PDF host cases failed: pinned Robolectric has no PdfDocument implementation
+and returns a closed native document handle. Moved those assertions to Android
+instrumentation (not mocks or relaxed assertions), with API 24/35 emulator checks
+in Actions, pinned vendor archives and AndroidX runner 1.7.0 / JUnit extension
+1.3.0. Actual PDF page/text/render/pagination checks and previews remain pending.
+No emulator/SDK/build/test was run on this VM. Settings journeys in 43082585871
+passed except formatting; applied its runner-generated patch to the source.
