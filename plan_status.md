@@ -1313,3 +1313,10 @@ now targets main for logo import, final integration/calendar fixes and strengthe
 real-device artifact/visual gates. Its latest validation remains queued. Main
 validation and the final combined acceptance are still required. Play delivery
 remains disabled; no partial internal release has been published.
+
+Branding run 43101008984 passed analysis and Flutter checks and exported readable
+artifacts again. Applied its exact formatter correction. Reviewed six synthetic
+hourly/task report and measured-map light/dark captures: amounts, billing basis,
+CSV/PDF actions and sample labels are legible without overflow. Synthetic blank
+tiles verify layout only, not live map availability. Actual PDF/logo device checks
+are still running; invoice visual acceptance and combined release remain pending.

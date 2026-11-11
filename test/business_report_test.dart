@@ -89,8 +89,11 @@ class _Reports extends ReportApi {
 
 class _UnavailableReports extends _Reports {
   _UnavailableReports(super.versions);
-  @override Future<WorkReport> report(ReportSelection s) async => throw StateError('Synthetic report unavailable');
+  @override
+  Future<WorkReport> report(ReportSelection s) async =>
+      throw StateError('Synthetic report unavailable');
 }
+
 class _Archive extends LifecycleApi {
   @override
   Future<ArchiveData> archived() async => const ArchiveData(1, [
@@ -100,11 +103,26 @@ class _Archive extends LifecycleApi {
 }
 
 void main() {
-  testWidgets('failed report keeps date and job selection controls available', (tester) async {
-    final versions = _Versions(); addTearDown(versions.versions.close);
-    await tester.pumpWidget(ProviderScope(overrides: [reportApiProvider.overrideWithValue(_UnavailableReports(versions)), timerApiProvider.overrideWithValue(versions)], child: const MaterialApp(home: ReportScreen(jobId: 'job'))));
-    await tester.pumpAndSettle(); expect(find.text('Choose jobs'), findsOneWidget); await tester.tap(find.text('Change dates')); await tester.pumpAndSettle();
-    expect(find.byType(DateRangePickerDialog), findsOneWidget); expect(tester.takeException(), isNull);
+  testWidgets('failed report keeps date and job selection controls available', (
+    tester,
+  ) async {
+    final versions = _Versions();
+    addTearDown(versions.versions.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reportApiProvider.overrideWithValue(_UnavailableReports(versions)),
+          timerApiProvider.overrideWithValue(versions),
+        ],
+        child: const MaterialApp(home: ReportScreen(jobId: 'job')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Choose jobs'), findsOneWidget);
+    await tester.tap(find.text('Change dates'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DateRangePickerDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   test(

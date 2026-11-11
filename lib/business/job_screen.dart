@@ -84,23 +84,49 @@ class _Board extends ConsumerWidget {
   ) async {
     final api = ref.read(businessApiProvider);
     await showDialog<void>(
-      context: context, barrierDismissible: false,
-      builder: (dialog) => Consumer(builder: (dialog, dialogRef, _) {
-        final latest = dialogRef.watch(boardProvider(board.jobId)).value ?? board;
-        final moving = latest.cards.where((c) => c.id == card.id).firstOrNull;
-        final target = latest.columns.where((c) => c.id == destination).firstOrNull;
-        final available = moving != null && target != null && !latest.archived;
-        final count = latest.inColumn(destination).where((c) => c.id != card.id).length;
-        return AlertDialog(
-          title: const Text('Move task'),
-          content: Text(moving != null && target != null && !latest.archived ? 'Move “${moving.title}” to ${target.name}?' : 'The task or destination is no longer available.'),
-          actions: [BusinessCommand(
-            label: 'Move task', enabled: available,
-            create: () { final id = newBusinessId(); return () => api.moveCard(id, latest, moving!, destination, position.clamp(0, count)); },
-            onCommitted: () => Navigator.pop(dialog),
-          )],
-        );
-      }),
+      context: context,
+      barrierDismissible: false,
+      builder: (dialog) => Consumer(
+        builder: (dialog, dialogRef, _) {
+          final latest =
+              dialogRef.watch(boardProvider(board.jobId)).value ?? board;
+          final moving = latest.cards.where((c) => c.id == card.id).firstOrNull;
+          final target = latest.columns
+              .where((c) => c.id == destination)
+              .firstOrNull;
+          final available =
+              moving != null && target != null && !latest.archived;
+          final count = latest
+              .inColumn(destination)
+              .where((c) => c.id != card.id)
+              .length;
+          return AlertDialog(
+            title: const Text('Move task'),
+            content: Text(
+              moving != null && target != null && !latest.archived
+                  ? 'Move “${moving.title}” to ${target.name}?'
+                  : 'The task or destination is no longer available.',
+            ),
+            actions: [
+              BusinessCommand(
+                label: 'Move task',
+                enabled: available,
+                create: () {
+                  final id = newBusinessId();
+                  return () => api.moveCard(
+                    id,
+                    latest,
+                    moving!,
+                    destination,
+                    position.clamp(0, count),
+                  );
+                },
+                onCommitted: () => Navigator.pop(dialog),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 

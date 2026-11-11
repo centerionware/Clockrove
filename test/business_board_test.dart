@@ -62,17 +62,37 @@ class _BoardApi extends BusinessApi {
 
 class _MovingTimer extends TimerApi {
   final versions = StreamController<int>.broadcast();
-  @override Stream<int> get committedVersions => versions.stream;
+  @override
+  Stream<int> get committedVersions => versions.stream;
 }
+
 class _MovingApi extends _BoardApi {
   int current = 1;
   int? submittedVersion;
-  @override Future<JobBoard> board(String jobId) async => JobBoard(current, data.jobId, data.name, data.currency, data.digits, data.archived, data.columns, data.cards);
-  @override Future<TimerOutcome> moveCard(String id, JobBoard b, TaskCard c, String destination, int position) async {
+  @override
+  Future<JobBoard> board(String jobId) async => JobBoard(
+    current,
+    data.jobId,
+    data.name,
+    data.currency,
+    data.digits,
+    data.archived,
+    data.columns,
+    data.cards,
+  );
+  @override
+  Future<TimerOutcome> moveCard(
+    String id,
+    JobBoard b,
+    TaskCard c,
+    String destination,
+    int position,
+  ) async {
     submittedVersion = b.version;
     return TimerOutcome(current, b.version == current ? null : 'STALE_STATE');
   }
 }
+
 Future<void> _show(
   WidgetTester tester, {
   bool dark = false,
@@ -105,14 +125,37 @@ Future<void> _show(
 }
 
 void main() {
-  testWidgets('move dialog reflects native version refresh before confirming', (tester) async {
-    final api = _MovingApi(); final timer = _MovingTimer(); addTearDown(timer.versions.close);
-    await tester.pumpWidget(ProviderScope(overrides: [businessApiProvider.overrideWithValue(api), timerApiProvider.overrideWithValue(timer)], child: MaterialApp(theme: ClockroveTheme.light(), home: const JobScreen(jobId: 'job', jobName: 'Synthetic'))));
-    await tester.pumpAndSettle(); await tester.tap(find.byTooltip('Task actions').first); await tester.pumpAndSettle();
-    await tester.tap(find.text('Move to Doing')); await tester.pumpAndSettle();
-    api.current = 2; timer.versions.add(2); await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Move task')); await tester.pumpAndSettle();
-    expect(api.submittedVersion, 2); expect(find.byType(AlertDialog), findsNothing); expect(tester.takeException(), isNull);
+  testWidgets('move dialog reflects native version refresh before confirming', (
+    tester,
+  ) async {
+    final api = _MovingApi();
+    final timer = _MovingTimer();
+    addTearDown(timer.versions.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          businessApiProvider.overrideWithValue(api),
+          timerApiProvider.overrideWithValue(timer),
+        ],
+        child: MaterialApp(
+          theme: ClockroveTheme.light(),
+          home: const JobScreen(jobId: 'job', jobName: 'Synthetic'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Task actions').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move to Doing'));
+    await tester.pumpAndSettle();
+    api.current = 2;
+    timer.versions.add(2);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Move task'));
+    await tester.pumpAndSettle();
+    expect(api.submittedVersion, 2);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   test('money parsing preserves exact values, blank and explicit zero', () {

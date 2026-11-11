@@ -59,44 +59,46 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
       child: Column(
         children: [
           ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .42),
-            child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.',
-                ),
-                if (_message != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(_message!),
-                  ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _busy ? null : () => _handoff('email'),
-                      icon: const Icon(Icons.email_outlined),
-                      label: const Text('Email invoice'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _busy ? null : () => _handoff('save'),
-                      icon: const Icon(Icons.save_alt),
-                      label: const Text('Save PDF'),
-                    ),
-                    IconButton(
-                      tooltip: 'Share PDF',
-                      onPressed: _busy ? null : () => _handoff('share'),
-                      icon: const Icon(Icons.share_outlined),
-                    ),
-                  ],
-                ),
-              ],
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * .42,
             ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.',
+                  ),
+                  if (_message != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(_message!),
+                    ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _busy ? null : () => _handoff('email'),
+                        icon: const Icon(Icons.email_outlined),
+                        label: const Text('Email invoice'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _handoff('save'),
+                        icon: const Icon(Icons.save_alt),
+                        label: const Text('Save PDF'),
+                      ),
+                      IconButton(
+                        tooltip: 'Share PDF',
+                        onPressed: _busy ? null : () => _handoff('share'),
+                        icon: const Icon(Icons.share_outlined),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
