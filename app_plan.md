@@ -845,3 +845,31 @@ documentation-only PR #11 run 43007883446 both completed SUCCESS independently.
 The only new changes after those runs are evidence text; application/workflow
 source is unchanged. Physical/device/provider gates and full app milestones remain
 incomplete. No VM validation executed.
+
+### Durable geofence policy and native event transaction source
+
+Previous goal turn: progress (OSM prototype merged after full CI and six-image
+review; formatter failure gate proven in Actions). Continued from clean main
+4a50778. Added isolated durable-geofence-policy source: schema 4 site inventory,
+settings/arming/suppression, registration generations, membership facts, persisted
+event outcomes and late-event review state. Configuration edits rotate registration
+IDs and clear obsolete candidates; labels preserve known geometry/facts. Manual
+stop/switch updates suppression in the same transaction. Eligible native events
+can start one job, require choice for multiple jobs, never switch an active job,
+and reconcile departure/re-entry with retrospective pruning and delayed wake.
+Raw Flutter timer commands still cannot claim geofence origin.
+
+Added ten minimum-API native tests covering enable-inside/exit-entry, recovery,
+manual suppression/explicit restart, overlapping sites and timestamp ordering,
+late re-entry review, zero grace, paid travel, ambiguous jobs, capacity/settings
+rollback, ID reuse, concurrent native exit/manual stop and fixed schema-3 upgrade
+plus failed-upgrade rollback. Existing schema 1/2 and command tests remain enabled.
+These changes await Actions. Platform geofence registration/receiver, background
+permissions, scheduler, health/provisional UI and physical-device proof are not
+included yet; source tests do not establish runtime automation. Full revisions,
+site UI and backup format remain later milestone work. No VM validation ran.
+
+Main evidence validation 43008859456 completed SUCCESS. OSM source bb2a9eb also
+completed Play internal delivery 43008466949; this is upload acceptance, not tester
+installation or physical behavior. New durable-policy source remains isolated
+until its own full Actions validation passes.
