@@ -1271,3 +1271,10 @@ Four API-24/35 bridge cases (eight executions) cover real dispatch round-trips,
 forged-origin isolation, malformed integer/cursor rejection, response-loss replay
 and stale-draft protection. Native bridge code is prepared; typed Flutter API/forms
 and successful CI evidence remain pending.
+
+Prepared the typed Flutter history API for immutable drafts, native cursor pages,
+revision ancestry/purged payloads and explicit command IDs/expected versions.
+Three codec checks cover preserved milliseconds/timezone context, cursor identity,
+immutable revision parents and response-loss propagation without automatic duplicate
+submission. These verify transport only; the actual native storage cases remain
+separate. API source and new checks await Actions; history forms are unfinished.
