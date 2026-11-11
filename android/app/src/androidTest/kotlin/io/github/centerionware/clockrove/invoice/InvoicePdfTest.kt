@@ -59,7 +59,7 @@ class InvoicePdfTest {
         val data = fixture("MODERN", 20).copy(company = "", companyContact = "", customer = "", customerContact = "", header = "", footer = "")
         inspect(InvoicePdf.generate(data)) { renderer ->
             renderer.openPage(renderer.pageCount - 1).use { page ->
-                if (android.os.Build.VERSION.SDK_INT >= 35) assertTrue(page.textContents.joinToString(" ") { it.text }.contains("TOTAL"))
+                if (android.os.Build.VERSION.SDK_INT >= 35) assertTrue(PdfTextApi35.read(page).contains("TOTAL"))
             }
         }
     }
