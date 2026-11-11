@@ -32,7 +32,7 @@ void main() {
         final key = GlobalKey();
         await tester.pumpWidget(RepaintBoundary(key:key,child:ProviderScope(overrides:[reportApiProvider.overrideWithValue(_VisualReport(task)),timerApiProvider.overrideWithValue(_Timer())],child:MaterialApp(debugShowCheckedModeBanner:false,theme:dark ? ClockroveTheme.dark() : ClockroveTheme.light(),home:const ReportScreen(jobId:'job')))));
         await tester.pumpAndSettle();
-        await tester.runAsync(() => saveMapPreview(key,'clockrove-report-${task ? 'task' : 'hourly'}-${dark ? 'dark' : 'light'}.png'));
+        await tester.runAsync(() => saveMapPreview(key,'clockrove-report-${task ? 'task' : 'hourly'}-${dark ? 'dark' : 'light'}'));
         expect(find.text(task ? 'USD 185.00' : 'USD 340.00'),findsWidgets); expect(tester.takeException(),isNull);
       });
     }
@@ -41,7 +41,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
       final key = GlobalKey();
       await tester.pumpWidget(RepaintBoundary(key:key,child:ProviderScope(overrides:[workMapTilesProvider.overrideWithValue((_) => SyntheticTiles())],child:MaterialApp(debugShowCheckedModeBanner:false,theme:dark ? ClockroveTheme.dark() : ClockroveTheme.light(),home:ReportMap(points:_VisualReport.points,timezone:'UTC')))));
-      await tester.pumpAndSettle(); await tester.runAsync(() => saveMapPreview(key,'clockrove-report-map-${dark ? 'dark' : 'light'}.png'));
+      await tester.pumpAndSettle(); await tester.runAsync(() => saveMapPreview(key,'clockrove-report-map-${dark ? 'dark' : 'light'}'));
       expect(tester.takeException(),isNull);
     });
   }
