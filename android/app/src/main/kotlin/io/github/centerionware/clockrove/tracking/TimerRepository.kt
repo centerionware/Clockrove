@@ -381,6 +381,10 @@ class TimerRepository internal constructor(context: Context,
     internal fun saveJobSettings(id: String, version: Long, value: BusinessStore.JobSettings): Outcome =
         boardChange(id, version, "JOB_SETTINGS", value.values()) { BusinessStore.saveJob(it, value, wallClock()) }
 
+    internal data class ReportSnapshot(val version: Long, val report: ReportStore.Report)
+    @Synchronized
+    internal fun report(selection: ReportStore.Selection): ReportSnapshot = ReportSnapshot(readSnapshot(helper.readableDatabase).version, ReportStore.read(helper.readableDatabase, selection))
+
     private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
         changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
 

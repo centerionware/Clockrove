@@ -1096,3 +1096,20 @@ rates do not apply. Eleven API-24 cases cover response-loss dedup/stale writes,
 transaction rollback, exact large/zero rates, references and template injection.
 Actions validation is pending. UI, reports, invoices/logo and job lifecycle remain
 unfinished; Play delivery remains held. No VM builds/tests ran.
+
+### Kanban validation and shared reporting source
+
+PR #20 head 7be840eb88c128261f24dba55ee385247e472157 passed Actions
+43077477547. Downloaded native XML confirms 139 tests, zero failures/errors/skips,
+including all twelve new board cases. Merged the validated source; typed bridge
+and usable board screens are still pending, so Kanban is not feature-complete.
+
+Shared native report source now clips finalized intervals at current report-zone
+calendar boundaries, separates active/review-held work, selects completed billable
+tasks and measured GPS, calculates exact alternative hourly/task totals, and
+produces quoted/formula-protected work and separate GPS CSV. Missing rate/price
+stays explicit; hourly rounding is once per selected job total, half up to the
+currency minor unit. Ten prepared API-24 cases cover DST (23/25 hours), skipped
+calendar days, clipping, exact rounding/large values, task mode and CSV consistency.
+This source awaits Actions; report UI, map wiring, document save/share and actual
+PDFs remain unfinished. Play publication remains held; no VM checks ran.
