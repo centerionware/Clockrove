@@ -96,6 +96,9 @@ class GeofencePolicyPersistenceTest {
         reopen()
         assertEquals(TimerRepository.DepartureResult.FINALIZED, repository.finalizeDeparture(session, 150000))
         assertEquals(listOf("kept"), repository.locationPoints(session).map { it.id })
+        clock = 155000
+        repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
         val late = event("late-timely-reentry", INSIDE, 100000, "b", received = 160000)
         assertEquals("TRANSITION_NEEDS_REVIEW", late.conflict)
         assertNull(repository.snapshot().running)

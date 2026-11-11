@@ -78,3 +78,8 @@ A new timely return cancels grace and clears uncertainty for that active session
 Manual stop/switch resolves uncertainty for the session being explicitly closed,
 while alerts for older finalized work remain available for correction. Expiry is
 guarded per session so a historical alert cannot block newer manual work.
+
+Configuration generation and current-fact freshness use separate barriers. A
+provider recovery can discard stale current membership without discarding a late
+entry that may correct previously finalized work from the same registration.
+Only a real configuration/review reset invalidates that old registration context.

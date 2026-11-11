@@ -14,12 +14,12 @@ internal object GeofenceStore {
         val graceMinutes: Int = 30)
     data class Policy(val settings: Settings, val armed: Boolean, val suppressed: Boolean,
         val lastPresence: GeofenceMembership.Presence, val configuredUtcMillis: Long,
-        val manualBarrierUtcMillis: Long?)
+        val factsSinceUtcMillis: Long, val manualBarrierUtcMillis: Long?)
     data class Observation(val membership: GeofenceMembership.Result,
         val selection: GeofenceMembership.StartSelection, val changed: Boolean)
 
     fun createTables(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE automation_policies(job_id TEXT PRIMARY KEY REFERENCES jobs(id),enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN(0,1)),auto_start INTEGER NOT NULL DEFAULT 0 CHECK(auto_start IN(0,1)),automatic_departure INTEGER NOT NULL DEFAULT 1 CHECK(automatic_departure IN(0,1)),grace_minutes INTEGER NOT NULL DEFAULT 30 CHECK(grace_minutes BETWEEN 0 AND 1440),armed INTEGER NOT NULL DEFAULT 0 CHECK(armed IN(0,1)),suppressed INTEGER NOT NULL DEFAULT 0 CHECK(suppressed IN(0,1)),last_presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(last_presence IN('UNKNOWN','INSIDE','OUTSIDE')),configured_ms INTEGER NOT NULL,manual_barrier_ms INTEGER)")
+        db.execSQL("CREATE TABLE automation_policies(job_id TEXT PRIMARY KEY REFERENCES jobs(id),enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN(0,1)),auto_start INTEGER NOT NULL DEFAULT 0 CHECK(auto_start IN(0,1)),automatic_departure INTEGER NOT NULL DEFAULT 1 CHECK(automatic_departure IN(0,1)),grace_minutes INTEGER NOT NULL DEFAULT 30 CHECK(grace_minutes BETWEEN 0 AND 1440),armed INTEGER NOT NULL DEFAULT 0 CHECK(armed IN(0,1)),suppressed INTEGER NOT NULL DEFAULT 0 CHECK(suppressed IN(0,1)),last_presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(last_presence IN('UNKNOWN','INSIDE','OUTSIDE')),configured_ms INTEGER NOT NULL,facts_since_ms INTEGER NOT NULL,manual_barrier_ms INTEGER)")
         db.execSQL("CREATE TABLE work_sites(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 150 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
         db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
         db.execSQL("CREATE TABLE geofence_event_results(id TEXT PRIMARY KEY REFERENCES commands(id),payload TEXT NOT NULL)")
@@ -45,11 +45,11 @@ internal object GeofenceStore {
             int("auto_start") != 0, int("automatic_departure") != 0, int("grace_minutes")),
             int("armed") != 0, int("suppressed") != 0,
             GeofenceMembership.Presence.valueOf(c.getString(c.getColumnIndexOrThrow("last_presence"))),
-            long("configured_ms"), if (c.isNull(c.getColumnIndexOrThrow("manual_barrier_ms"))) null else long("manual_barrier_ms")))
+            long("configured_ms"), long("facts_since_ms"), if (c.isNull(c.getColumnIndexOrThrow("manual_barrier_ms"))) null else long("manual_barrier_ms")))
     } } }
 
     private fun ensurePolicy(db: SQLiteDatabase, jobId: String, now: Long) {
-        db.execSQL("INSERT OR IGNORE INTO automation_policies(job_id,configured_ms) VALUES (?,?)", arrayOf<Any?>(jobId, now))
+        db.execSQL("INSERT OR IGNORE INTO automation_policies(job_id,configured_ms,facts_since_ms) VALUES (?,?,?)", arrayOf<Any?>(jobId, now, now))
     }
     private fun jobAvailable(db: SQLiteDatabase, id: String) = db.rawQuery(
         "SELECT id FROM jobs WHERE id=? AND archived=0", arrayOf(id),
@@ -62,8 +62,8 @@ internal object GeofenceStore {
             db.execSQL("UPDATE work_sites SET registration_key=?,presence='UNKNOWN',observed_ms=NULL WHERE id=?",
                 arrayOf(UUID.randomUUID().toString(), it.id))
         }
-        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',configured_ms=? WHERE job_id=?",
-            arrayOf<Any?>(now, jobId))
+        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',configured_ms=?,facts_since_ms=? WHERE job_id=?",
+            arrayOf<Any?>(now, now, jobId))
         db.execSQL("DELETE FROM pending_departure WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(jobId))
     }
 
@@ -160,7 +160,7 @@ internal object GeofenceStore {
 
     fun suspendFacts(db: SQLiteDatabase, jobId: String, at: Long) {
         db.execSQL("UPDATE work_sites SET presence='UNKNOWN',observed_ms=NULL WHERE job_id=?", arrayOf(jobId))
-        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',configured_ms=MAX(configured_ms,?) WHERE job_id=?",
+        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',facts_since_ms=MAX(facts_since_ms,?) WHERE job_id=?",
             arrayOf<Any?>(at, jobId))
     }
 
@@ -175,13 +175,13 @@ internal object GeofenceStore {
         val before = GeofenceMembership.State(records, policyByJob.filterValues {
             it.lastPresence != GeofenceMembership.Presence.UNKNOWN
         }.mapValues { it.value.lastPresence })
-        val oldConfigKeys = sites.filter { site -> site.registrationKey in keys &&
-            observed < policyByJob.getValue(site.jobId).configuredUtcMillis }.map { it.registrationKey }.toSet()
+        val olderFactsKeys = sites.filter { site -> site.registrationKey in keys &&
+            observed < policyByJob.getValue(site.jobId).factsSinceUtcMillis }.map { it.registrationKey }.toSet()
         val barrierKeys = sites.filter { site -> site.registrationKey in keys && policyByJob[site.jobId]?.let {
             it.manualBarrierUtcMillis != null && observed <= it.manualBarrierUtcMillis
         } == true }.map { it.registrationKey }.toSet()
         val result = GeofenceMembership.apply(before, sites.map { GeofenceMembership.Site(it.registrationKey, it.jobId) },
-            keys - barrierKeys - oldConfigKeys, presence, observed)
+            keys - barrierKeys - olderFactsKeys, presence, observed)
         val warnings = result.lateOrConflictingSites + barrierKeys
         if (activeSessionId != null && warnings.isNotEmpty()) {
             db.rawQuery("SELECT job_id,start_ms FROM sessions WHERE id=? AND end_ms IS NULL", arrayOf(activeSessionId)).use { active ->

@@ -879,3 +879,9 @@ re-entry clears active departure uncertainty. A historical alert cannot block a
 new manually started session's expiry. Explicit review acceptance still preserves
 recorded times and resets the job's automation context. Thirteen policy cases
 are prepared; all latest refinements await a new Actions run.
+
+Separated registration-generation time from current-fact freshness. The late-entry
+case now includes an intervening idle provider fault: recovery must not hide a
+valid late re-entry relevant to a finalized work session. Configuration changes
+still invalidate obsolete keys; current facts after faults require fresh evidence.
+Latest recovery refinements remain isolated and unvalidated until the next CI run.
