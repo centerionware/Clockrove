@@ -20,7 +20,7 @@ iOS and future service remain deferred.
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
-| M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
+| M3.1 Schema, migrations and typed contracts | Native schema/revision foundation verified; full contracts in progress | PR #19; Actions 43073787801 passed 127 native tests; business command/UI integration remains |
 | M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
 | M3.3 Jobs/sites/boards/session corrections/queries | Pending | Integrity and snapshot tests required |
 | M4.1 Manual tracker UI and history | Prototype controls merged; full history pending | Native-backed start/stop/switch, modern UI and map-outage journey pass Actions; corrections/history/full job management remain |
@@ -1069,3 +1069,19 @@ for migration, invariants, dedup, retrospective revisions and rollback. No VM
 validation ran. New business commands/UI and backup merge remain pending; do not
 mark the combined feature set or schema migration verified before Actions passes.
 Play publication remains held for the entire requested iteration.
+
+
+### Foundation merge evidence and native Kanban commands
+
+- PR #18 merged 45670b2 after 1cfc12a passed 43072986373. Reviewed compact idle/
+  running RemoteViews previews; actual launcher sizing remains to be checked.
+- PR #19 merged f94179e after dec72f4 passed 43073787801. JUnit XML confirms
+  127 tests, no failures/errors/skips, including eight real migration/revision cases.
+- Native Kanban command source now covers columns/cards, ordering/moves, explicit
+  completion and prices, independent template copy/removal, transaction guards
+  and revision ancestry. Twelve API-24 cases are prepared. No VM validation ran;
+  Actions, typed transport and real board UI integration are still required.
+
+Job lifecycle/customer/settings/report/invoice features are unfinished. Play
+workflow 414395901 remains disabled_manually; do not publish an incomplete test
+iteration. Existing owner GPS/device feedback is still not full device acceptance.
