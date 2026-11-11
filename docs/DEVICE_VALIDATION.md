@@ -28,3 +28,8 @@ and one device with aggressive battery management before release.
 For each row record pass/fail/untested, expected behavior, actual result, timestamp
 and sanitized reproduction steps. A screenshot of a running timer alone does not
 prove sampling cadence, engine-independent actions or recovery.
+
+After native geofence adapters are connected, also verify that the device-local
+Keystore receipt key survives process death and app upgrade. An unavailable key
+must surface degraded automation while manual timekeeping stays available. CI's
+synthetic HMAC fixture does not establish device Keystore behavior.

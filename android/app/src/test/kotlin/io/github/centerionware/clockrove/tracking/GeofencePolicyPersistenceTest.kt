@@ -24,10 +24,18 @@ class GeofencePolicyPersistenceTest {
     @Before fun setup() {
         val app = RuntimeEnvironment.getApplication()
         app.deleteDatabase("clockrove.db")
-        repository = TimerRepository(app) { clock }
+        repository = TimerRepository(app, eventDigest = ::fixtureDigest) { clock }
         job = repository.createJob("Synthetic geofence work")
     }
     @After fun teardown() { repository.close() }
+    // Public synthetic test key; this does not exercise the device Keystore provider.
+    private fun fixtureDigest(value: String): String {
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256")
+        mac.init(javax.crypto.spec.SecretKeySpec(ByteArray(32) { 42 }, "HmacSHA256"))
+        return mac.doFinal(value.toByteArray(Charsets.UTF_8)).joinToString("") {
+            (it.toInt() and 255).toString(16).padStart(2, '0')
+        }
+    }
     private fun saveSite(site: GeofenceStore.Site) = repository.saveSite("config-${counter++}", repository.snapshot().version, site)
     private fun settings(value: GeofenceStore.Settings) = repository.saveAutomation("settings-${counter++}", repository.snapshot().version, value)
     private fun configure(jobId: String = job, ids: List<String> = listOf("site"), grace: Int = 30, departure: Boolean = true) {
@@ -43,7 +51,7 @@ class GeofencePolicyPersistenceTest {
         repository.snapshot().version, TimerRepository.Action.START, selected, at, "Etc/UTC", 0, TimerRepository.Origin.MANUAL))
     private fun reopen() {
         repository.close()
-        repository = TimerRepository(RuntimeEnvironment.getApplication()) { clock }
+        repository = TimerRepository(RuntimeEnvironment.getApplication(), eventDigest = ::fixtureDigest) { clock }
     }
 
     @Test fun enableInsideRequiresExitThenEntryAndSuppressionSurvivesRecovery() {
@@ -90,6 +98,17 @@ class GeofencePolicyPersistenceTest {
         assertEquals("TRANSITION_NEEDS_REVIEW", late.conflict)
         assertNull(repository.snapshot().running)
         assertEquals(setOf(job), repository.geofenceReviewJobs())
+        clock = 170000
+        assertNull(repository.acceptGeofenceReview("accept-history", repository.snapshot().version, job).conflict)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+        assertNull(event("inside-after-review", INSIDE, 180000, "b").startedSessionId)
+        event("outside-after-review", OUTSIDE, 190000, "a", "b")
+        assertNotNull(event("new-entry-after-review", INSIDE, 200000, "b").startedSessionId)
+        SQLiteDatabase.openOrCreateDatabase(RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db"), null).use { db ->
+            db.rawQuery("SELECT end_ms FROM sessions WHERE id=?", arrayOf(session)).use {
+                assertTrue(it.moveToFirst()); assertEquals(76000L, it.getLong(0))
+            }
+        }
     }
 
     @Test fun zeroGraceClosesAtExitAndAQualifiedLaterEntryStartsNewWork() {
@@ -133,6 +152,23 @@ class GeofencePolicyPersistenceTest {
         assertEquals(setOf(job, other), result.choices)
         assertNull(result.startedSessionId)
         assertNull(repository.snapshot().running)
+        assertTrue(result.choiceRequired)
+        val replay = event("ambiguous-entry", INSIDE, 2000, "site", "other-site")
+        assertTrue(replay.replayed)
+        assertTrue(replay.choiceRequired)
+        assertTrue(replay.choices.isEmpty())
+        SQLiteDatabase.openOrCreateDatabase(RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db"), null).use { db ->
+            db.rawQuery("SELECT c.id,c.fingerprint,r.payload FROM commands c JOIN geofence_event_results r ON r.id=c.id", null).use {
+                while (it.moveToNext()) {
+                    assertTrue(it.getString(0).matches(Regex("geofence/[0-9a-f]{64}")))
+                    assertTrue(it.getString(1).matches(Regex("[0-9a-f]{64}")))
+                    val payload = it.getString(2)
+                    assertFalse(payload.contains(job))
+                    assertFalse(payload.contains(other))
+                    repository.sites().forEach { site -> assertFalse(payload.contains(site.registrationKey)) }
+                }
+            }
+        }
     }
 
     @Test fun configurationRotatesKeysButLabelOnlyEditsPreserveFactsAndPendingBoundary() {
@@ -160,11 +196,11 @@ class GeofencePolicyPersistenceTest {
         assertNotNull(repository.pendingDeparture())
         assertNull(settings(GeofenceStore.Settings(job, enabled = false)).conflict)
         assertNull(repository.pendingDeparture())
-        assertTrue(repository.registeredSites().isEmpty())
+        assertTrue(repository.sitesToRegister().isEmpty())
         assertEquals(session, repository.snapshot().running!!.id)
     }
 
-    @Test fun capacityValidationRollsBackSettingsAndRegistrationKeysAndKeepsRetryOutcome() {
+    @Test fun capacityValidationPreservesSettingsAndRegistrationKeysAndKeepsRetryOutcome() {
         configure(ids = (1..100).map { "site-$it" })
         val before = repository.sites()
         val version = repository.snapshot().version
@@ -178,11 +214,11 @@ class GeofencePolicyPersistenceTest {
         assertNull(saveSite(off).conflict)
         assertEquals("SITE_CAPACITY_EXCEEDED", settings(GeofenceStore.Settings(other, enabled = true)).conflict)
         assertFalse(repository.automationPolicies().first { it.settings.jobId == other }.settings.enabled)
-        assertEquals(100, repository.registeredSites().size)
+        assertEquals(100, repository.sitesToRegister().size)
         assertNull(repository.removeSite("remove", repository.snapshot().version, "site-100").conflict)
         assertEquals(failure, repository.saveSite("overflow-command", version, site))
         assertNull(settings(GeofenceStore.Settings(other, enabled = true)).conflict)
-        assertEquals(100, repository.registeredSites().size)
+        assertEquals(100, repository.sitesToRegister().size)
         assertEquals("INVALID_SITE", saveSite(site.copy(radiusMeters = 149.0)).conflict)
         assertEquals("INVALID_SITE", saveSite(site.copy(latitude = Double.NaN)).conflict)
     }
@@ -197,7 +233,7 @@ class GeofencePolicyPersistenceTest {
         assertTrue(repository.automationPolicies().single().suppressed)
         assertNull(repository.snapshot().running)
         assertNull(manualStart("manual-overrides-review", 1600).conflict)
-        assertEquals("COMMAND_ID_REUSED", repository.executeFromSurface("late", repository.snapshot().version,
+        assertEquals("COMMAND_ID_REUSED", repository.executeFromSurface(repository.geofenceCommandId("late"), repository.snapshot().version,
             TimerRepository.Action.STOP, null, TimerRepository.Origin.WIDGET).conflict)
         assertEquals("COMMAND_ID_REUSED", event("late", INSIDE, 1700, "site").conflict)
         assertNotNull(repository.snapshot().running)
@@ -242,7 +278,7 @@ class GeofencePolicyPersistenceTest {
             }
         }
         legacy(false)
-        repository = TimerRepository(app) { clock }
+        repository = TimerRepository(app, eventDigest = ::fixtureDigest) { clock }
         assertEquals("old-session", repository.snapshot().running!!.id)
         assertEquals(listOf("old-point"), repository.locationPoints("old-session").map { it.id })
         assertEquals(TimerRepository.Departure("old-session", 2000, 62000), repository.pendingDeparture())
@@ -250,7 +286,7 @@ class GeofencePolicyPersistenceTest {
         repository.close()
         app.deleteDatabase("clockrove.db")
         legacy(true)
-        repository = TimerRepository(app) { clock }
+        repository = TimerRepository(app, eventDigest = ::fixtureDigest) { clock }
         try { repository.snapshot(); fail("Conflicting migration accepted") }
         catch (_: android.database.sqlite.SQLiteException) { }
         SQLiteDatabase.openOrCreateDatabase(app.getDatabasePath("clockrove.db"), null).use { db ->

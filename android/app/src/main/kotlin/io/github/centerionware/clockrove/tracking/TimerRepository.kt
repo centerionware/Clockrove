@@ -6,7 +6,9 @@ import android.database.sqlite.SQLiteOpenHelper
 import java.util.UUID
 
 /** Native prototype boundary. Callers share this instance; Flutter never writes SQL. */
-class TimerRepository internal constructor(context: Context, private val wallClock: () -> Long = System::currentTimeMillis) {
+class TimerRepository internal constructor(context: Context,
+    private val eventDigest: (String) -> String = GeofenceEventDigest::digest,
+    private val wallClock: () -> Long = System::currentTimeMillis) {
     private val helper = Store(context.applicationContext)
     private val listeners = mutableSetOf<(Long) -> Unit>()
 
@@ -108,7 +110,8 @@ class TimerRepository internal constructor(context: Context, private val wallClo
             "SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(id),
         ).use {
             if (it.moveToFirst()) {
-                val prior = org.json.JSONArray(it.getString(0))
+                val prior = try { org.json.JSONArray(it.getString(0)) }
+                    catch (_: org.json.JSONException) { return Outcome(readSnapshot(helper.readableDatabase).version, "COMMAND_ID_REUSED") }
                 val same = prior.length() == 7 && prior.opt(0) is Number && prior.getLong(0) == version && prior.getString(1) == action.name &&
                     (if (prior.isNull(2)) null else prior.getString(2)) == jobId &&
                     prior.getString(6) == origin.name
@@ -249,12 +252,13 @@ class TimerRepository internal constructor(context: Context, private val wallClo
 
     internal data class GeofenceOutcome(val version: Long, val startedSessionId: String? = null,
         val choices: Set<String> = emptySet(), val warnings: Set<String> = emptySet(),
-        val conflict: String? = null, val replayed: Boolean = false)
+        val conflict: String? = null, val replayed: Boolean = false,
+        val choiceRequired: Boolean = choices.isNotEmpty())
 
     @Synchronized
     internal fun sites(): List<GeofenceStore.Site> = GeofenceStore.sites(helper.readableDatabase)
     @Synchronized
-    internal fun registeredSites(): List<GeofenceStore.Site> = GeofenceStore.sites(helper.readableDatabase, true)
+    internal fun sitesToRegister(): List<GeofenceStore.Site> = GeofenceStore.sites(helper.readableDatabase, true)
     @Synchronized
     internal fun automationPolicies(): List<GeofenceStore.Policy> = GeofenceStore.policies(helper.readableDatabase)
     @Synchronized
@@ -278,6 +282,12 @@ class TimerRepository internal constructor(context: Context, private val wallClo
         GeofenceStore.saveSettings(it, settings, wallClock())
     }
 
+    @Synchronized
+    internal fun acceptGeofenceReview(id: String, version: Long, jobId: String): Outcome = configureGeofences(id,
+        org.json.JSONArray(listOf(version, "REVIEW_ACCEPT_CURRENT", jobId)).toString(), version) {
+        GeofenceStore.acceptCurrentHistory(it, jobId, wallClock())
+    }
+
     private fun configureGeofences(id: String, fingerprint: String, expectedVersion: Long,
         change: (SQLiteDatabase) -> String?): Outcome {
         require(id.isNotBlank())
@@ -288,13 +298,9 @@ class TimerRepository internal constructor(context: Context, private val wallClo
         try {
             priorOutcome(db, id, fingerprint)?.let { db.setTransactionSuccessful(); return it }
             val before = readSnapshot(db).version
-            val conflict = if (before != expectedVersion) "STALE_STATE" else {
-                db.execSQL("SAVEPOINT configuration_change")
-                val result = change(db)
-                if (result != null) db.execSQL("ROLLBACK TO configuration_change")
-                db.execSQL("RELEASE configuration_change")
-                result
-            }
+            // Helpers reject invalid configurations before writing. Unexpected failures
+            // roll back this whole transaction, including the outcome ledger.
+            val conflict = if (before != expectedVersion) "STALE_STATE" else change(db)
             val version = if (conflict == null) before + 1 else before
             changed = version != before
             if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
@@ -321,20 +327,21 @@ class TimerRepository internal constructor(context: Context, private val wallClo
         presence: io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence,
         observedUtcMillis: Long, receivedUtcMillis: Long): GeofenceOutcome {
         require(id.isNotBlank())
-        val fingerprint = org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name, observedUtcMillis,
-            org.json.JSONArray(registrationKeys.sorted()))).toString()
+        val commandId = geofenceCommandId(id)
+        val fingerprint = eventDigest(org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name, observedUtcMillis,
+            org.json.JSONArray(registrationKeys.sorted()))).toString())
         val db = helper.writableDatabase
         val result: GeofenceOutcome
         var changed = false
         db.beginTransaction()
         try {
-            val prior = priorOutcome(db, id, fingerprint)
+            val prior = priorOutcome(db, commandId, fingerprint)
             if (prior != null) {
                 if (prior.conflict == "COMMAND_ID_REUSED") {
                     db.setTransactionSuccessful()
                     return GeofenceOutcome(prior.version, conflict = prior.conflict, replayed = true)
                 }
-                val payload = db.rawQuery("SELECT payload FROM geofence_event_results WHERE id=?", arrayOf(id)).use {
+                val payload = db.rawQuery("SELECT payload FROM geofence_event_results WHERE id=?", arrayOf(commandId)).use {
                     check(it.moveToFirst()) { "Missing persisted geofence result" }; it.getString(0)
                 }
                 db.setTransactionSuccessful()
@@ -346,13 +353,13 @@ class TimerRepository internal constructor(context: Context, private val wallClo
             if (invalid) {
                 result = GeofenceOutcome(before.version, conflict = "INVALID_GEOFENCE_EVENT")
             } else {
-                val observation = GeofenceStore.observe(db, id, registrationKeys, presence, observedUtcMillis, before.running?.id)
+                val observation = GeofenceStore.observe(db, registrationKeys, presence, observedUtcMillis, before.running?.id)
                 changed = observation.changed
                 val membership = observation.membership
                 var warning = if (membership.lateOrConflictingSites.isEmpty()) null else "TRANSITION_NEEDS_REVIEW"
                 membership.enteredJobs.forEach { jobId ->
                     if (GeofenceStore.timelyEntryAfterFinalization(db, jobId, observedUtcMillis)) {
-                        GeofenceStore.conflict(db, id, jobId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION")
+                        GeofenceStore.conflict(db, jobId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION")
                         warning = "TRANSITION_NEEDS_REVIEW"
                         changed = true
                     }
@@ -376,7 +383,7 @@ class TimerRepository internal constructor(context: Context, private val wallClo
                                 arrayOf<Any?>(running.id, boundary, deadline))
                             changed = true
                         } else {
-                            GeofenceStore.conflict(db, id, running.jobId, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY")
+                            GeofenceStore.conflict(db, running.jobId, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY")
                             warning = "TRANSITION_NEEDS_REVIEW"
                             changed = true
                         }
@@ -395,7 +402,7 @@ class TimerRepository internal constructor(context: Context, private val wallClo
                 var started: String? = null
                 var conflict = warning
                 if (selection.startJobId != null) {
-                    val command = Command("$id/start", before.version, Action.START, selection.startJobId,
+                    val command = Command("$commandId/start", before.version, Action.START, selection.startJobId,
                         observedUtcMillis, "Etc/UTC", 0, Origin.GEOFENCE)
                     val error = validate(db, current, command, true)
                     if (error == null) {
@@ -403,7 +410,7 @@ class TimerRepository internal constructor(context: Context, private val wallClo
                         started = readSnapshot(db).running!!.id
                         changed = true
                     } else {
-                        GeofenceStore.conflict(db, id, selection.startJobId, observedUtcMillis, error)
+                        GeofenceStore.conflict(db, selection.startJobId, observedUtcMillis, error)
                         changed = true
                         conflict = error
                     }
@@ -414,8 +421,8 @@ class TimerRepository internal constructor(context: Context, private val wallClo
                     membership.lateOrConflictingSites, conflict)
             }
             db.execSQL("INSERT INTO commands(id,fingerprint,version,conflict) VALUES (?,?,?,?)",
-                arrayOf<Any?>(id, fingerprint, result.version, result.conflict))
-            db.execSQL("INSERT INTO geofence_event_results(id,payload) VALUES (?,?)", arrayOf(id, encodeGeofenceOutcome(result)))
+                arrayOf<Any?>(commandId, fingerprint, result.version, result.conflict))
+            db.execSQL("INSERT INTO geofence_event_results(id,payload) VALUES (?,?)", arrayOf(commandId, encodeGeofenceOutcome(result)))
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
         if (changed) publishVersion(result.version)
@@ -425,18 +432,20 @@ class TimerRepository internal constructor(context: Context, private val wallClo
     private fun encodeGeofenceOutcome(value: GeofenceOutcome) = org.json.JSONObject().apply {
         put("version", value.version)
         put("started", value.startedSessionId ?: org.json.JSONObject.NULL)
-        put("choices", org.json.JSONArray(value.choices.sorted()))
-        put("warnings", org.json.JSONArray(value.warnings.sorted()))
+        put("choiceRequired", value.choiceRequired)
         put("conflict", value.conflict ?: org.json.JSONObject.NULL)
     }.toString()
     private fun decodeGeofenceOutcome(text: String): GeofenceOutcome {
         val json = org.json.JSONObject(text)
-        fun strings(key: String): Set<String> = json.getJSONArray(key).let { array ->
-            (0 until array.length()).map { array.getString(it) }.toSet()
-        }
-        return GeofenceOutcome(json.getLong("version"), if (json.isNull("started")) null else json.getString("started"),
-            strings("choices"), strings("warnings"), if (json.isNull("conflict")) null else json.getString("conflict"))
+        // Notification choices and raw warning keys are transient, not an idle trail.
+        return GeofenceOutcome(json.getLong("version"),
+            startedSessionId = if (json.isNull("started")) null else json.getString("started"),
+            conflict = if (json.isNull("conflict")) null else json.getString("conflict"),
+            choiceRequired = json.getBoolean("choiceRequired"))
     }
+
+    @Synchronized
+    internal fun geofenceCommandId(id: String): String = "geofence/" + eventDigest("id/$id")
 
     private fun applyTimerRows(db: SQLiteDatabase, before: Snapshot, command: Command) {
         if (command.action != Action.START) {

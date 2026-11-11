@@ -873,3 +873,27 @@ Main evidence validation 43008859456 completed SUCCESS. OSM source bb2a9eb also
 completed Play internal delivery 43008466949; this is upload acceptance, not tester
 installation or physical behavior. New durable-policy source remains isolated
 until its own full Actions validation passes.
+
+Prepared an explicit native accept-current-history review action: it preserves
+session boundaries, resolves the alert and disarms/rotates registration state until
+new qualified exit/entry. Extended the late-reentry test to prove no silent history
+rewrite. Renamed requested inventory to sitesToRegister so it cannot be confused
+with actual Android registration success. Contract is in docs/GEOFENCE_CONTRACT.md.
+Initial run 43011366016 passed Android compilation and is running native checks;
+review-action additions need new validation. No VM tests/build/formatter ran.
+
+Initial policy run 43011366016 passed Android compilation and 37 of 38 native
+checks; the capacity rejection hit API-24 transaction dispatch of ROLLBACK TO.
+Confirmed the platform behavior in Android 7 DatabaseUtils/SQLiteSession source.
+Moved capacity checks before mutation within the same serialized transaction;
+kept rejection/key-preservation assertions and full migration rollback checks.
+Native JUnit XML will now be exported from Actions for precise failure diagnosis.
+
+Tightened idle-data retention before platform activation: event IDs/fingerprints
+are device-keyed HMAC-SHA256 receipts, persisted outcomes omit raw choice/warning
+IDs, and review state holds one current alert per job until explicit acceptance.
+Current membership facts remain; no historical raw off-clock event payload is
+retained. Unit tests inject a public synthetic HMAC fixture and inspect persisted
+receipts, so Android Keystore persistence is explicitly still a device gate.
+Review action, capacity correction and minimized receipts need the next full CI.
+No VM validation ran; automation is not exposed in the app yet.

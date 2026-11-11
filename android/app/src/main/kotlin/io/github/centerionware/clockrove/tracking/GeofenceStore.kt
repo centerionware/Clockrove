@@ -23,7 +23,7 @@ internal object GeofenceStore {
         db.execSQL("CREATE TABLE work_sites(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 150 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
         db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
         db.execSQL("CREATE TABLE geofence_event_results(id TEXT PRIMARY KEY REFERENCES commands(id),payload TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE geofence_conflicts(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL,resolved INTEGER NOT NULL DEFAULT 0 CHECK(resolved IN(0,1)))")
+        db.execSQL("CREATE TABLE geofence_conflicts(job_id TEXT PRIMARY KEY REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL)")
         db.execSQL("CREATE TABLE finalized_departures(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL)")
     }
 
@@ -54,7 +54,6 @@ internal object GeofenceStore {
     private fun jobAvailable(db: SQLiteDatabase, id: String) = db.rawQuery(
         "SELECT id FROM jobs WHERE id=? AND archived=0", arrayOf(id),
     ).use { it.moveToFirst() }
-    fun capacityValid(db: SQLiteDatabase) = sites(db, true).size <= 100
 
     /** Configuration changes invalidate every old registration for this job. */
     private fun invalidate(db: SQLiteDatabase, jobId: String, now: Long) {
@@ -79,6 +78,10 @@ internal object GeofenceStore {
         }
         if (previous != null && previous.jobId != site.jobId) return "SITE_JOB_IMMUTABLE"
         if (previous?.copy(registrationKey = "") == site.copy(registrationKey = "")) return null
+        val active = policies(db).firstOrNull { it.settings.jobId == site.jobId }?.settings?.enabled == true
+        val projected = sites(db, true).size - (if (active && previous?.enabled == true) 1 else 0) +
+            (if (active && site.enabled) 1 else 0)
+        if (projected > 100) return "SITE_CAPACITY_EXCEEDED"
         if (previous == null) {
             db.execSQL("INSERT INTO work_sites(id,job_id,name,latitude,longitude,radius,enabled,registration_key) VALUES (?,?,?,?,?,?,?,?)",
                 arrayOf<Any?>(site.id, site.jobId, site.name, site.latitude, site.longitude, site.radiusMeters,
@@ -90,7 +93,7 @@ internal object GeofenceStore {
         if (previous == null || previous.copy(name = site.name, registrationKey = "") != site.copy(registrationKey = "")) {
             invalidate(db, site.jobId, now)
         }
-        return if (capacityValid(db)) null else "SITE_CAPACITY_EXCEEDED"
+        return null
     }
 
     fun saveSettings(db: SQLiteDatabase, settings: Settings, now: Long): String? {
@@ -98,12 +101,16 @@ internal object GeofenceStore {
         if (!jobAvailable(db, settings.jobId)) return "JOB_UNAVAILABLE"
         val previous = policies(db).firstOrNull { it.settings.jobId == settings.jobId }
         if (previous?.settings == settings) return null
+        val siteCount = sites(db).count { it.jobId == settings.jobId && it.enabled }
+        val projected = sites(db, true).size - (if (previous?.settings?.enabled == true) siteCount else 0) +
+            (if (settings.enabled) siteCount else 0)
+        if (projected > 100) return "SITE_CAPACITY_EXCEEDED"
         ensurePolicy(db, settings.jobId, now)
         db.execSQL("UPDATE automation_policies SET enabled=?,auto_start=?,automatic_departure=?,grace_minutes=? WHERE job_id=?",
             arrayOf<Any?>(if (settings.enabled) 1 else 0, if (settings.autoStart) 1 else 0,
                 if (settings.automaticDeparture) 1 else 0, settings.graceMinutes, settings.jobId))
         invalidate(db, settings.jobId, now)
-        return if (capacityValid(db)) null else "SITE_CAPACITY_EXCEEDED"
+        return null
     }
 
     fun removeSite(db: SQLiteDatabase, siteId: String, now: Long): String? {
@@ -120,17 +127,28 @@ internal object GeofenceStore {
             arrayOf<Any?>(if (outside) 0 else 1, if (outside) 1 else 0, at, at, jobId))
     }
 
-    fun unresolvedJobs(db: SQLiteDatabase): Set<String> = db.rawQuery(
-        "SELECT DISTINCT job_id FROM geofence_conflicts WHERE resolved=0", null,
-    ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
-
-    fun conflict(db: SQLiteDatabase, eventId: String, jobId: String, at: Long, reason: String) {
-        val id = org.json.JSONArray(listOf(eventId, jobId, reason)).toString()
-        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(id,job_id,observed_ms,reason) VALUES (?,?,?,?)",
-            arrayOf<Any?>(id, jobId, at, reason))
+    /** Explicit acceptance preserves all recorded history and waits for new qualified entry. */
+    fun acceptCurrentHistory(db: SQLiteDatabase, jobId: String, now: Long): String? {
+        if (!jobAvailable(db, jobId)) return "JOB_UNAVAILABLE"
+        db.execSQL("DELETE FROM geofence_conflicts WHERE job_id=?", arrayOf(jobId))
+        invalidate(db, jobId, now)
+        db.execSQL("UPDATE automation_policies SET manual_barrier_ms=CASE WHEN manual_barrier_ms IS NULL OR manual_barrier_ms<? THEN ? ELSE manual_barrier_ms END WHERE job_id=?", arrayOf<Any?>(now, now, jobId))
+        return null
     }
 
-    fun observe(db: SQLiteDatabase, eventId: String, keys: Set<String>, presence: GeofenceMembership.Presence,
+    fun unresolvedJobs(db: SQLiteDatabase): Set<String> = db.rawQuery(
+        "SELECT job_id FROM geofence_conflicts", null,
+    ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
+
+    fun conflict(db: SQLiteDatabase, jobId: String, at: Long, reason: String) {
+        // One current alert per job; accepting it removes the operational detail.
+        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(job_id,observed_ms,reason) VALUES (?,?,?)",
+            arrayOf<Any?>(jobId, at, reason))
+        db.execSQL("UPDATE geofence_conflicts SET observed_ms=?,reason=? WHERE job_id=? AND observed_ms<=?",
+            arrayOf<Any?>(at, reason, jobId, at))
+    }
+
+    fun observe(db: SQLiteDatabase, keys: Set<String>, presence: GeofenceMembership.Presence,
         observed: Long, activeSessionId: String?): Observation {
         val sites = sites(db, true)
         val policyByJob = policies(db).associateBy { it.settings.jobId }
@@ -150,7 +168,7 @@ internal object GeofenceStore {
             keys - barrierKeys - oldConfigKeys, presence, observed)
         val warnings = result.lateOrConflictingSites + barrierKeys
         warnings.forEach { key -> sites.firstOrNull { it.registrationKey == key }?.let {
-            conflict(db, eventId, it.jobId, observed, "LATE_OR_CONFLICTING_TRANSITION")
+            conflict(db, it.jobId, observed, "LATE_OR_CONFLICTING_TRANSITION")
         } }
         result.state.sites.forEach { (key, value) ->
             db.execSQL("UPDATE work_sites SET presence=?,observed_ms=? WHERE registration_key=?",
