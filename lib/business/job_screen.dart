@@ -16,7 +16,16 @@ class JobScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(data.asData?.value.name ?? jobName),
         actions: [
-          IconButton(tooltip: 'Job settings', icon: const Icon(Icons.settings_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => JobSettingsScreen(jobId: jobId)))),
+          IconButton(
+            tooltip: 'Job settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => JobSettingsScreen(jobId: jobId),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Worksites and automation',
             icon: const Icon(Icons.location_on_outlined),

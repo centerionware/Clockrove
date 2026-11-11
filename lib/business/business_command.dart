@@ -63,9 +63,11 @@ class _BusinessCommandState extends State<BusinessCommand> {
       'The template uses another currency. Copy without its price.',
     'DESTINATION_REQUIRED' => 'Choose a destination for the tasks first.',
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
-    'CUSTOMER_ARCHIVED' => 'Choose an active customer or unarchive this customer first.',
+    'CUSTOMER_ARCHIVED' =>
+      'Choose an active customer or unarchive this customer first.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
-    'INVALID_CUSTOMER' => 'Enter a customer name and a valid email, or leave email blank.',
+    'INVALID_CUSTOMER' =>
+      'Enter a customer name and a valid email, or leave email blank.',
     'INVALID_JOB' => 'Check the job name, rate and customer email.',
     'JOB_UNAVAILABLE' ||
     'JOB_ARCHIVED' => 'This job is unavailable for editing.',
