@@ -1226,3 +1226,22 @@ journeys passed. Reviewed six light/dark company/customer/billing previews. Merg
 Removed the customer action's heavy elevation in the next UI source revision to
 match existing flat surfaces. Integrated UI formatter artifact from 43086427014
 applied; remaining analyzer/test results are still being inspected.
+
+### Company logo import and immutable branding — source prepared
+
+Prepared system image/document picking with a bounded private copy, accepted PNG/
+JPEG/WebP validation, pixel/byte limits, EXIF orientation, downscaling with preserved
+aspect and metadata-free PNG re-encoding. Settings can preview/apply/change/remove
+the logo; immutable assets remain while referenced by prepared invoices. Unused
+assets are removed without rewriting earlier PDFs. Cached draft tokens are opaque
+content hashes; replay checks the original committed result before needing draft
+bytes. Input URIs/filenames and source EXIF/GPS are not retained as settings.
+
+Added five API-24 SQLite/receipt/rollback/retained-branding cases, four real Android
+image cases to the API 24/35 instrumentation matrix, and three logo UI retry/cancel
+regressions. Also locks report filter changes while invoice intent is pending.
+All checks remain pending; no VM builds/tests/rendering ran. Real PDF run
+43085897954 passed host checks but emulator setup stopped at an unzip overwrite
+prompt; corrected CI uses explicit replacement of ephemeral runner SDK copies
+with the pinned vendor archives. This is not proof the PDFs rendered successfully.
+Play delivery stays disabled until the combined feature set passes acceptance.

@@ -65,6 +65,7 @@ internal object JobLifecycleStore {
         db.execSQL("DELETE FROM jobs WHERE id=?", arrayOf(id))
         val revision = RevisionStore.record(db, "job", id, id, mapOf("id" to id, "job_id" to id), now, deleted = true)
         db.execSQL("INSERT INTO job_deletions VALUES(?,?,?)", arrayOf<Any?>(id, revision, now))
+        LogoStore.collectUnused(db, now)
         OpaqueReceipt.purgePayloads(db)
         return null
     }

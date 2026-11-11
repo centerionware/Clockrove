@@ -422,6 +422,15 @@ class TimerRepository internal constructor(context: Context,
         return db.update("invoices", values, "id=? AND payload=? AND pdf IS NULL", arrayOf(id, payload)) == 1
     }
 
+    @Synchronized
+    internal fun logo(): LogoStore.Snapshot = helper.readableDatabase.rawQuery("SELECT l.id,l.width,l.height,l.bytes FROM app_settings s LEFT JOIN logo_assets l ON l.id=s.logo_id WHERE s.id=1", null).use {
+        it.moveToFirst(); LogoStore.Snapshot(readSnapshot(helper.readableDatabase).version, if (it.isNull(0)) null else it.getString(0), if (it.isNull(1)) null else it.getInt(1), if (it.isNull(2)) null else it.getInt(2), if (it.isNull(3)) null else it.getBlob(3))
+    }
+    @Synchronized
+    internal fun applyLogo(id: String, version: Long, token: String, load: () -> LogoStore.Asset?): Outcome = boardChange(id, version, "LOGO_APPLY", listOf(token)) { LogoStore.apply(it, token, load, wallClock()) }
+    @Synchronized
+    internal fun removeLogo(id: String, version: Long): Outcome = boardChange(id, version, "LOGO_REMOVE", emptyList()) { LogoStore.remove(it, wallClock()) }
+
     private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
         changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
 

@@ -54,7 +54,7 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
   clockrove_result=0
-  (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.github.centerionware.clockrove.invoice.InvoicePdfTest "-Pandroid.testInstrumentationRunnerArguments.clockroveApi=$clockrove_api") || clockrove_result=$?
+  (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.github.centerionware.clockrove.invoice.InvoicePdfTest,io.github.centerionware.clockrove.invoice.LogoImagesTest "-Pandroid.testInstrumentationRunnerArguments.clockroveApi=$clockrove_api") || clockrove_result=$?
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
   if [[ -d "$GITHUB_WORKSPACE/build/app/outputs/androidTest-results" ]]; then cp -R "$GITHUB_WORKSPACE/build/app/outputs/androidTest-results/." "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/"; fi
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"

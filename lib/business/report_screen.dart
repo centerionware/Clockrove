@@ -38,6 +38,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   ReportSelection? _selection;
   String? _error;
   bool _exporting = false;
+  bool _invoicePending = false;
   @override
   void initState() {
     super.initState();
@@ -59,6 +60,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _load() async {
+    if (_invoicePending) return;
     try {
       final data = await ref.read(reportApiProvider).context();
       if (!mounted) return;
@@ -85,6 +87,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _range() async {
+    if (_invoicePending) return;
     final selection = _selection!;
     final range = await showDateRangePicker(
       context: context,
@@ -108,6 +111,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _jobs() async {
+    if (_invoicePending) return;
     final selected = _selection!.jobs.toSet();
     final result = await showDialog<List<String>>(
       context: context,
@@ -162,7 +166,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _csv(WorkReport report, bool gps) async {
-    if (_exporting) return;
+    if (_exporting || _invoicePending) return;
     setState(() => _exporting = true);
     try {
       final saved = await ref
@@ -320,6 +324,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               child: _InvoiceButton(
                                 selection: selection,
                                 report: report,
+                      onPendingChanged: (value) { if (mounted) { setState(() => _invoicePending = value); } },
                               ),
                             ),
                           OutlinedButton.icon(
@@ -455,9 +460,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
 }
 
 class _InvoiceButton extends ConsumerStatefulWidget {
-  const _InvoiceButton({required this.selection, required this.report});
+  const _InvoiceButton({required this.selection, required this.report, required this.onPendingChanged});
   final ReportSelection selection;
   final WorkReport report;
+  final ValueChanged<bool> onPendingChanged;
   @override
   ConsumerState<_InvoiceButton> createState() => _InvoiceButtonState();
 }
@@ -467,6 +473,7 @@ class _InvoiceButtonState extends ConsumerState<_InvoiceButton> {
   @override
   Widget build(BuildContext context) => BusinessCommand(
     label: 'PDF invoice',
+    onPendingChanged: widget.onPendingChanged,
     create: () {
       final id = newBusinessId();
       final invoiceId = newBusinessId();

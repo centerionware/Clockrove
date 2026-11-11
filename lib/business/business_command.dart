@@ -11,11 +11,13 @@ class BusinessCommand extends StatefulWidget {
     required this.onCommitted,
     required this.label,
     this.enabled = true,
+    this.onPendingChanged,
   });
   final Future<TimerOutcome> Function() Function() create;
   final VoidCallback onCommitted;
   final String label;
   final bool enabled;
+  final ValueChanged<bool>? onPendingChanged;
   @override
   State<BusinessCommand> createState() => _BusinessCommandState();
 }
@@ -28,6 +30,7 @@ class _BusinessCommandState extends State<BusinessCommand> {
     if (_busy) return;
     try {
       _pending ??= widget.create();
+      widget.onPendingChanged?.call(true);
       setState(() {
         _busy = true;
         _message = null;
@@ -39,6 +42,7 @@ class _BusinessCommandState extends State<BusinessCommand> {
         _busy = false;
         _message = result.committed ? null : _conflict(result.conflict);
       });
+      widget.onPendingChanged?.call(false);
       if (result.committed) widget.onCommitted();
     } on FormatException catch (e) {
       if (mounted) {
@@ -71,6 +75,8 @@ class _BusinessCommandState extends State<BusinessCommand> {
     'TASK_PRICES_REQUIRED' => 'Set prices for the selected completed billable tasks before preparing this invoice.',
     'NO_BILLABLE_ITEMS' =>
       'Choose dates with finalized work or completed billable tasks.',
+    'INVALID_LOGO' => 'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
+    'LOGO_IMPORT_EXPIRED' => 'The temporary image copy is unavailable. Choose the logo again.',
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
     'CUSTOMER_ARCHIVED' =>
       'Choose an active customer or unarchive this customer first.',

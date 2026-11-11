@@ -15,12 +15,25 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
     private val channel = MethodChannel(messenger, "clockrove/documents/v1", io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
     private data class Save(val invoiceId: String?, val bytes: ByteArray?, val result: MethodChannel.Result)
     private var save: Save? = null
+    private var logoResult: MethodChannel.Result? = null
     private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
     @Volatile private var attached = true
     init {
         channel.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "pickLogo" -> main.post {
+                        if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
+                        else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a document first", null)
+                        else {
+                            logoResult = result
+                            try { activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE); type = "image/*"
+                                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/png", "image/jpeg", "image/webp"))
+                            }, 0xcc43) }
+                            catch (_: ActivityNotFoundException) { logoResult = null; result.error("NO_DOCUMENT_PICKER", "No image document picker is installed", null) }
+                        }
+                    }
                     "invoicePreview" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
@@ -36,7 +49,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                         val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(snapshot.report)).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
-                            else if (save != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
+                            else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
                             else {
                                 save = Save(null, bytes, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -51,7 +64,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                         val record = InvoiceDocuments.ensure(repository, id)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
-                            else if (save != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
+                            else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
                             else {
                                 save = Save(id, null, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -79,6 +92,20 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         }
     }
     fun activityResult(code: Int, status: Int, data: Intent?): Boolean {
+        if (code == 0xcc43) {
+            val pending = logoResult ?: return true
+            logoResult = null
+            val uri = data?.data
+            if (status != Activity.RESULT_OK || uri == null) { pending.success(null); return true }
+            writer.execute {
+                try {
+                    val asset = requireNotNull(activity.contentResolver.openInputStream(uri)).use { LogoImages.normalize(it) }
+                    LogoImages.remember(activity, asset)
+                    main.post { pending.success(mapOf("token" to asset.id, "width" to asset.width, "height" to asset.height, "png" to asset.bytes)) }
+                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", "Choose a PNG, JPEG or WebP image up to 5 MB and 16 megapixels", null) } }
+            }
+            return true
+        }
         if (code != 0xcc42) return false
         val pending = save ?: return true
         save = null
@@ -93,5 +120,5 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         }
         return true
     }
-    fun detach() { attached = false; save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null); save = null; writer.shutdown(); channel.setMethodCallHandler(null) }
+    fun detach() { attached = false; logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null); logoResult = null; save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null); save = null; writer.shutdown(); channel.setMethodCallHandler(null) }
 }

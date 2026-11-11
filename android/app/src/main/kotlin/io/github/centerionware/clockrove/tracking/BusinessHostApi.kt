@@ -15,7 +15,7 @@ internal class BusinessHostApi(context: Context, messenger: BinaryMessenger) {
     init {
         channel.setMethodCallHandler { call, result ->
             try {
-                val response = BusinessDispatch(repository).call(call)
+                val response = BusinessDispatch(repository) { token -> io.github.centerionware.clockrove.invoice.LogoImages.recall(app, token) }.call(call)
                 if (response == null) result.notImplemented() else {
                     if (response is TimerRepository.Outcome) {
                         TimerWidget.refreshAll(app)
@@ -30,7 +30,7 @@ internal class BusinessHostApi(context: Context, messenger: BinaryMessenger) {
     fun detach() { channel.setMethodCallHandler(null) }
 }
 
-internal class BusinessDispatch(private val repository: TimerRepository) {
+internal class BusinessDispatch(private val repository: TimerRepository, private val logoLoader: (String) -> LogoStore.Asset? = { null }) {
     private class Input(val value: Map<*, *>) {
         fun string(key: String) = requireNotNull(value[key] as? String) { "Missing $key" }
         fun nullable(key: String): String? { val v = value[key]; require(v == null || v is String); return v as String? }
@@ -53,12 +53,13 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
             "invoices" -> { val s = repository.invoices(input.string("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style) }) }
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
             "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
+            "companyLogo" -> { val s = repository.logo(); return mapOf("version" to s.version, "id" to s.id, "width" to s.width, "height" to s.height, "png" to s.bytes) }
             "business" -> { val s = repository.businessSnapshot(); return mapOf("version" to s.version, "settings" to settings(s.settings), "customers" to s.customers.map(::customer)) }
             "job" -> { val s = repository.jobDetail(input.string("jobId")); return mapOf("version" to s.version, "settings" to job(s.job.settings), "archived" to s.job.archived,
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString()) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "applyLogo", "removeLogo")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -77,6 +78,8 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
             "archiveJob" -> repository.archiveJob(id, version, v.string("jobId"))
             "restoreJob" -> repository.restoreJob(id, version, v.string("jobId"))
             "deleteJob" -> repository.deleteJob(id, version, v.string("jobId"))
+            "applyLogo" -> repository.applyLogo(id, version, v.string("token")) { logoLoader(v.string("token")) }
+            "removeLogo" -> repository.removeLogo(id, version)
             "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
             "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride")))
             else -> error("Unreachable")

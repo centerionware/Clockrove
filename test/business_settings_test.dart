@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/business/job_settings_screen.dart';
 import 'package:clockrove/business/settings_api.dart';
+import 'package:clockrove/business/logo_controls.dart';
 import 'package:clockrove/business/settings_screen.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
@@ -19,6 +20,9 @@ class _Timer extends TimerApi {
   Stream<int> get committedVersions => const Stream.empty();
 }
 
+class _LogoApi extends LogoApi {
+  @override Future<CompanyLogo> read() async => const CompanyLogo(1, null, null);
+}
 class _SettingsApi extends BusinessSettingsApi {
   static const company = CompanySettings(
     currency: 'USD',
@@ -97,6 +101,7 @@ Future<void> _show(
       child: ProviderScope(
         overrides: [
           businessSettingsApiProvider.overrideWithValue(api),
+          logoApiProvider.overrideWithValue(_LogoApi()),
           timerApiProvider.overrideWithValue(_Timer()),
         ],
         child: MaterialApp(
