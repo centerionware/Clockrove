@@ -40,11 +40,30 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         fun money(key: String): Long? = nullable(key)?.let { require(it.matches(Regex("0|[1-9][0-9]{0,18}"))); requireNotNull(it.toLongOrNull()) }
         fun strings(key: String): List<String> = requireNotNull(value[key] as? List<*>).map { requireNotNull(it as? String) }
     }
+    private fun historyEntry(entry: SessionHistoryStore.Entry) = mapOf(
+        "id" to entry.id, "jobId" to entry.jobId, "start" to entry.start, "end" to entry.end, "timezone" to entry.timezone,
+        "offsetSeconds" to entry.offsetSeconds, "origin" to entry.origin, "needsReview" to entry.needsReview)
+    private fun historyRevision(value: SessionHistoryStore.Revision) = mapOf("id" to value.id, "changed" to value.changed,
+        "origin" to value.origin, "deleted" to value.deleted, "payload" to value.payload, "parents" to value.parents)
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
             "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
                 mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
+            }
+            "formatSessionTime" -> return SessionTime.format(input.integer("instant"), input.string("timezone")).let {
+                mapOf("localTime" to it.localTime, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
+            }
+            "historyContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "now" to System.currentTimeMillis())
+            "sessionDetail" -> return repository.sessionDetail(input.string("jobId"), input.string("sessionId")).let {
+                mapOf("version" to it.version, "entry" to it.entry?.let(::historyEntry))
+            }
+            "sessionAudit" -> {
+                val before = if (input.value["before"] == null) null else input.integer("before")
+                val result = repository.sessionAudit(input.string("jobId"), before, if (input.value.containsKey("limit")) input.int("limit") else 100)
+                return mapOf("version" to result.version, "next" to result.page.next, "events" to result.page.events.map {
+                    mapOf("sequence" to it.sequence, "sessionId" to it.sessionId, "revision" to historyRevision(it.revision))
+                })
             }
             "sessionHistory" -> {
                 val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
@@ -55,9 +74,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                     "offsetSeconds" to entry.offsetSeconds, "origin" to entry.origin, "needsReview" to entry.needsReview) },
                     "next" to snapshot.page.next?.let { mapOf("start" to it.start, "id" to it.id) })
             }
-            "sessionRevisions" -> return repository.sessionRevisions(input.string("jobId"), input.string("sessionId")).map {
-                mapOf("id" to it.id, "changed" to it.changed, "origin" to it.origin, "deleted" to it.deleted, "payload" to it.payload, "parents" to it.parents)
-            }
+            "sessionRevisions" -> return repository.sessionRevisions(input.string("jobId"), input.string("sessionId")).map(::historyRevision)
             "board" -> { val s = repository.boardSnapshot(input.string("jobId")); return mapOf("version" to s.version, "jobId" to s.board.jobId, "name" to s.board.name,
                 "currency" to s.board.currency, "fractionDigits" to Currency.getInstance(s.board.currency).defaultFractionDigits, "archived" to s.board.archived,
                 "columns" to s.board.columns.map { mapOf("id" to it.id, "name" to it.name, "position" to it.position, "completed" to it.completed) },

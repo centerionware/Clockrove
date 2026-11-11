@@ -421,6 +421,18 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun sessionRevisions(jobId: String, sessionId: String): List<SessionHistoryStore.Revision> =
         SessionHistoryStore.revisions(helper.readableDatabase, jobId, sessionId)
+    internal data class SessionDetail(val version: Long, val entry: SessionHistoryStore.Entry?)
+    @Synchronized
+    internal fun sessionDetail(jobId: String, sessionId: String): SessionDetail {
+        // Validate the job even when a session has already been deleted.
+        SessionHistoryStore.read(helper.readableDatabase, jobId, null, 1)
+        val entry = SessionHistoryStore.entry(helper.readableDatabase, sessionId)
+        return SessionDetail(readSnapshot(helper.readableDatabase).version, entry?.takeIf { it.jobId == jobId })
+    }
+    internal data class SessionAuditSnapshot(val version: Long, val page: SessionHistoryStore.AuditPage)
+    @Synchronized
+    internal fun sessionAudit(jobId: String, before: Long? = null, limit: Int = 100): SessionAuditSnapshot =
+        SessionAuditSnapshot(readSnapshot(helper.readableDatabase).version, SessionHistoryStore.audit(helper.readableDatabase, jobId, before, limit))
     @Synchronized
     internal fun createManualSession(id: String, version: Long, value: SessionHistoryStore.Draft): Outcome =
         boardChange(id, version, "SESSION_CREATE", listOf(value.id, value.jobId, value.start, value.end, value.timezone, value.offsetSeconds)) {

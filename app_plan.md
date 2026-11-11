@@ -1,6 +1,6 @@
 # Clockrove — implementation plan and handoff to Luna
 
-Prepared: 2026-11-11. Status: native tracking device acceptance pending; job/board/customer/billing increments passed Actions; combined business iteration in progress; public terms review pending; see `plan_status.md` for task-level status.
+Prepared: 2026-11-11. Status: native tracking device acceptance pending; job/board/customer/billing increments passed Actions; combined business iteration validated and merged; public terms review pending; see `plan_status.md` for task-level status.
 
 ## 1. Start here
 
@@ -27,15 +27,15 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Complete the owner-requested combined internal iteration in
-[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). Compact widget, native
-schema/Kanban/customer/billing/report calculations and board/company/customer/job
-settings UI increments passed Actions and merged. Finish integrated report/map/
-CSV/archive/invoice/email UI checks, real Android PDF instrumentation, logo import
-and final combined acceptance. Keep Play delivery disabled until the entire set
-is implemented and validated. All builds/tests/rendering remain in Actions.
-Physical GPS/launcher/recovery/email evidence remains separate; the complete
-application objective and production gates remain unfinished.
+The owner-requested combined internal iteration in
+[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md) passed exact-head Actions
+43117726325 and merged via #29 as cb2efc9. Play delivery is active again;
+follow main validation 43120365067 and its subsequent internal upload before
+claiming Play acceptance. Production readiness remains unset. After delivery,
+continue the outstanding manual-history UI and widget configuration contracts.
+Physical GPS/launcher/recovery/email evidence, provider settings, encrypted
+backup/merge and full launch acceptance remain unfinished. All builds/tests and
+rendering remain in GitHub Actions.
 
 ## 2. Product decisions
 
@@ -1253,3 +1253,32 @@ validation, transactional GPS pruning/deletion fences, immutable invoices and
 current-timer isolation have fourteen new API-24 cases awaiting Actions. No UI,
 bridge or full manual correction journey is claimed yet; Play remains held for
 the separately specified combined business iteration.
+
+### Combined business iteration merged to main
+
+PR #29 exact head 8e0e19e0f6bac377ed9acbb1a3aa70a6507054ce passed full
+Actions 43117726325. Inspected artifacts contain 238 native cases and thirteen
+actual Android cases on each API (24/35), with zero failures/errors/skips. All
+six decoded light/dark viewer captures match the reviewed actual-document
+images. Native multipage first/middle/final pages were reviewed for all three
+styles; physical email-app and GPS/launcher compatibility remain unproven.
+
+Merged #29 as cb2efc9d9aa3dd8fb2b183ebc2eb457e71c514ec after confirming no
+older main validation remained active. Re-enabled Play workflow 414395901;
+PRODUCTION_READY is unset. Main validation 43120365067 passed and automatically started queued Play
+delivery 43121445107; upload/acceptance for this source is pending. No VM build/test was performed.
+
+### Manual history UI milestone prepared
+
+Added job work-history navigation, paginated entries, manual entry/correction
+forms, exact millisecond and original-zone formatting, explicit repeated-time
+offset selection and nonexistent-time rejection. Unknown command replies retain
+the original intent and lock editing/navigation; stale drafts are kept and a
+changed saved entry cannot silently advance its expected version. Delete requires
+a warning confirmation. Job-wide paginated revision history includes deleted
+entries, ordered by local insertion sequence despite clock rollback. Native
+detail reads are scoped to the requested job; purged jobs remain inaccessible.
+
+New native query/bridge, real-framework time-round-trip and UI/retry/accessibility
+checks are prepared. They await GitHub Actions; no UI/device acceptance is claimed
+from source alone. Widget configuration and full M3/M4 acceptance remain open.

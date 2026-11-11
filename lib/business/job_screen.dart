@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../tracking/history_screen.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'job_settings_screen.dart';
@@ -20,6 +21,12 @@ class JobScreen extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            tooltip: 'Work history', icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
+              builder: (_) => HistoryScreen(jobId: jobId, jobName: data.value?.name ?? jobName),
+            )),
+          ),
           IconButton(
             tooltip: 'Job report',
             icon: const Icon(Icons.assessment_outlined),

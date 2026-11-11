@@ -61,4 +61,21 @@ class SessionHistoryBridgeTest {
         assertEquals("STALE_STATE", change("correctSession", value() + ("end" to 3000L), v = captured).conflict)
         assertEquals(2000L, repository.sessionHistory(job).page.entries.single().end)
     }
+    @Test fun detailAndDeletedAuditUseStrictBoundedReadTransport() {
+        assertNull(change("createManualSession", value()).conflict)
+        val detail = dispatch.call(MethodCall("sessionDetail", mapOf("jobId" to job, "sessionId" to "entry"))) as Map<*, *>
+        assertEquals(version, detail["version"])
+        assertEquals(1000L, (detail["entry"] as Map<*, *>)["start"])
+        assertNull(change("deleteSession", mapOf("sessionId" to "entry")).conflict)
+        val result = dispatch.call(MethodCall("sessionAudit", mapOf("jobId" to job, "limit" to 1))) as Map<*, *>
+        val event = (result["events"] as List<*>).single() as Map<*, *>
+        assertEquals("entry", event["sessionId"])
+        assertEquals(true, (event["revision"] as Map<*, *>)["deleted"])
+        assertNotNull(result["next"])
+        for (query in listOf(mapOf("jobId" to job, "before" to 1.5), mapOf("jobId" to job, "before" to 0), mapOf("jobId" to job, "limit" to 501))) {
+            try { dispatch.call(MethodCall("sessionAudit", query)); fail("Invalid audit query accepted") } catch (_: IllegalArgumentException) {}
+        }
+        try { dispatch.call(MethodCall("formatSessionTime", mapOf("instant" to 1000.5, "timezone" to "UTC"))); fail("Fractional instant accepted") } catch (_: IllegalArgumentException) {}
+    }
+
 }

@@ -187,4 +187,40 @@ class SessionHistoryTest {
         assertNull(repository.deleteSession("remove", version, "entry").conflict)
         assertEquals(payload, repository.invoice("invoice").payload)
     }
+    @Test fun auditIncludesDeletedWorkAndPaginatesByInsertionDespiteClockRollback() {
+        assertNull(create().conflict)
+        now = 1
+        assertNull(correct(draft(end = 2200)).conflict)
+        now = 0
+        assertNull(repository.deleteSession("audit-delete", version, "entry").conflict)
+        val captured = version
+        val first = repository.sessionAudit(job, limit = 1)
+        assertEquals(captured, first.version)
+        assertEquals("MANUAL_DELETE", first.page.events.single().revision.origin)
+        assertEquals("entry", first.page.events.single().sessionId)
+        assertTrue(first.page.events.single().revision.deleted)
+        val second = repository.sessionAudit(job, first.page.next, 1)
+        assertEquals("MANUAL_CORRECTION", second.page.events.single().revision.origin)
+        assertEquals(1L, second.page.events.single().revision.changed)
+        val third = repository.sessionAudit(job, second.page.next, 1)
+        assertEquals("MANUAL_ENTRY", third.page.events.single().revision.origin)
+        assertNull(third.page.next)
+        assertEquals(3, (first.page.events + second.page.events + third.page.events).map { it.sequence }.distinct().size)
+        assertNull(repository.sessionDetail(job, "entry").entry)
+        assertEquals(captured, repository.snapshot().version)
+    }
+    @Test fun detailAndAuditDoNotLeakAnotherJobsWorkAndRespectPurge() {
+        assertNull(create().conflict)
+        val other = repository.createJob("Unrelated synthetic job")
+        assertNull(repository.sessionDetail(other, "entry").entry)
+        assertTrue(repository.sessionAudit(other).page.events.isEmpty())
+        assertEquals("entry", repository.sessionDetail(job, "entry").entry!!.id)
+        assertNull(repository.archiveJob("archive-audit", version, job).conflict)
+        assertEquals(1, repository.sessionAudit(job).page.events.size)
+        now += 30L * 24 * 60 * 60 * 1000
+        assertNull(repository.deleteJob("purge-audit", version, job).conflict)
+        try { repository.sessionAudit(job); fail("Purged job query accepted") } catch (_: IllegalArgumentException) {}
+        try { repository.sessionDetail(job, "entry"); fail("Purged detail query accepted") } catch (_: IllegalArgumentException) {}
+    }
+
 }

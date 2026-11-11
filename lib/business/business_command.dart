@@ -63,6 +63,11 @@ class _BusinessCommandState extends State<BusinessCommand> {
 
   String _conflict(String? value) => switch (value) {
     'STALE_STATE' => 'This job changed. Your draft is kept. Review the latest data and save again.',
+    'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
+    'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
+    'INVALID_TIMEZONE' => 'Check the timezone and choose the intended UTC offset.',
+    'SESSION_UNAVAILABLE' => 'This work entry was removed. Your draft is kept.',
+    'STOP_SESSION_BEFORE_EDIT' => 'Clock out before changing this work entry.',
     'CURRENCY_MISMATCH' =>
       'The template uses another currency. Copy without its price.',
     'DESTINATION_REQUIRED' => 'Choose a destination for the tasks first.',
