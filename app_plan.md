@@ -72,7 +72,7 @@ Exact-source-license wording, the name check, and store identity/account setup a
 - Manual entries and edits record their origin; never pretend manually supplied times were observed by GPS.
 - Archive jobs without destroying history. Stop a job's running timer before archiving it; exclude archived jobs from start pickers and automation.
 - Retain timekeeping when location permission is denied, approximate only, GPS is disabled, or the device is offline. Clearly show which location/automation capability is unavailable.
-- No rounding, break state, automatic unpaid deductions, invoicing, pay-rate calculations, or task-level timers at launch. Users clock out and back in for unpaid breaks.
+- No rounding of work intervals, break state, automatic unpaid deductions, or task-level timers at launch. The owner subsequently requested configurable hourly-rate reporting; use the current global rate or explicit job override for completed report time. Users clock out and back in for unpaid breaks.
 
 ### 3.2 Home-screen widget and ongoing notification
 
@@ -160,6 +160,18 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Preview proposed additions, changes, deletions, unresolved references, and time overlaps. Distinct overlapping sessions require choosing a record or correcting intervals. Do not auto-double-count.
 - Commit the fully validated merge transactionally; a failed/interrupted merge leaves the previous database intact. Guard against source data changing after preview.
 - Keep imported jobs' geofence automation disabled until the user explicitly enables it. Refresh UI/widgets after commit. Do not merge credentials or device registrations.
+
+### 3.8 Owner-requested business and combined test-release scope
+
+The binding additional contract is [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md).
+It adds job detail/Kanban, reusable templates retained after job deletion, customer
+management, hourly or task billing, report amounts owed, PDF/email invoices and
+global company/contact/logo/email/header/footer settings with at least three
+invoice styles. This replaces the earlier exclusions of pricing and invoicing.
+The next internal test release must include all of these features together.
+Archive/unarchive and red confirmed deletion after 30 continuous archived days
+remain required. Reusable template/customer records are explicit independent
+exceptions to deleted-job data removal and must not resurrect deleted work.
 
 ## 4. Architecture and interfaces
 
@@ -1072,3 +1084,80 @@ permission case then passed all behavior/build checks in run 43066607243 on
 53f08f8, including 114 clean native tests; only the final formatting gate failed.
 Applied its Actions-generated formatter patch. Final exact-head CI is pending;
 actual device fixes and live tiles remain unproven. No VM validation ran.
+
+### Owner-directed job lifecycle (implementation in progress)
+
+The owner requested a red, confirmed permanent Delete job action, then refined
+that policy: jobs must first be archived continuously for 30 days before deletion.
+Archived jobs can be unarchived to return to clock-in and automation choices.
+Implement archive/restore without losing history or preferences; require clock-out
+before archiving the running job. Restoration resets the retention period and
+site detection, preserves automation preferences, and respects the 100-site limit.
+
+Deletion is unavailable for active jobs or before 30 elapsed UTC days. The native
+serialized writer must enforce this independently of UI state. Eligible deletion
+must show a red action and explicit permanent-loss confirmation, remove the job's
+work/sites/location data transactionally, and keep only opaque deletion metadata
+needed to prevent future silent backup resurrection. Command receipt payloads
+must not retain deleted names/coordinates/times; deduplication must still work.
+Legacy archived rows without an archive date start a fresh retention period on
+migration rather than becoming immediately deletable. These owner-requested job
+operations add foundation work while physical milestone-2 gates remain pending;
+no broader milestone-3 completion is implied.
+
+
+### Owner-directed next iteration scope
+
+Owner reports the current main build generally works, but the widget occupies too
+much home-screen space. GPS tracking has not yet been tested; permission prompting
+worked, and background access required app settings. This is owner-reported
+feedback without a device/OS log, not a completed physical acceptance matrix.
+
+Deliver alongside current site-selection and archive work:
+- A compact home-screen widget with the same native clock-out boundary.
+- A real job detail display and the planned Kanban board: columns/cards, due dates,
+  reorder/move controls and accessible actions, with committed native persistence.
+- A main settings page for a default hourly rate and report currency, with an
+  optional per-job hourly-rate override.
+- Job reports showing completed time and amount owed using the effective current
+  hourly rate. Exclude active/provisional work. Apply the rate to total finalized
+  duration, round money once for the report using the currency's precision, and
+  clearly state the calculation; payments/taxes are not added; the later owner request explicitly adds PDF invoicing and email drafts.
+- Archive/unarchive and red, confirmed permanent deletion only after 30 continuous
+  archived days, as specified above. Unarchive restores eligibility/preferences
+  with fresh site detection and restarts the retention period if archived again.
+- Clearer guidance for Android's separate background-permission settings step;
+  do not pretend the foreground permission dialog includes an all-time option.
+
+This explicitly replaces the original exclusion of hourly-rate calculations.
+Implement native schema/commands and migrations before the corresponding screens;
+maintain the single writer, revision/deletion integrity and real CI evidence.
+
+Compact widget source now requests a 2×1 launcher footprint (110×56 dp legacy
+minimum), uses one horizontal row and a 48 dp icon action, and retains native
+versioned clock-out. Large text prioritizes job/action over the elapsed second
+line. Added API-24/35 RemoteViews layout/accessibility cases and CI-rendered idle/
+running previews. These are pending Actions and actual launcher/device review;
+an installed widget's existing host size may require resizing or re-adding.
+
+
+### Expanded combined-release request and temporary publishing hold
+
+Owner added fixed task prices, per-job hourly/task billing mode, reusable task
+content even from deleted jobs, full reports, customer management and job email,
+PDF invoice/email handoff, global company/contact/logo/header/footer/email
+settings and at least three invoice styles. These are fully recorded in the
+linked next-test-release contract. No implementation of these additions is
+claimed by documenting them.
+
+At the owner's request that the next test release include the whole set, disabled
+Play delivery workflow 414395901 temporarily; verified GitHub state
+`disabled_manually`. Validate remains enabled. Re-enable normal automatic Play
+delivery only when the complete combined iteration is ready, then merge/publish
+from validated main. Production readiness remains disabled. Do not ship partial
+intermediate test builds while this hold is in effect.
+
+Compact-widget run 43071623833 built the Android app but native test compilation
+failed because the new widget fixtures used Dart snapshot argument ordering for
+the Kotlin type. Switched fixtures to named fields; all layout/state assertions
+remain. Corrected Actions validation is pending; no VM checks ran.

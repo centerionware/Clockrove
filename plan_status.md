@@ -996,3 +996,65 @@ permission case then passed all behavior/build checks in run 43066607243 on
 53f08f8, including 114 clean native tests; only the final formatting gate failed.
 Applied its Actions-generated formatter patch. Final exact-head CI is pending;
 actual device fixes and live tiles remain unproven. No VM validation ran.
+
+### Owner request — archive/unarchive and delayed permanent job deletion
+
+In progress: archive jobs while retaining history/preferences; unarchive restores
+clock-in and automation eligibility with fresh site facts. A continuous 30-day
+archive period is required before red, confirmed, non-undoable deletion. Native
+version/active-session/age/capacity guards and transactional child-data cleanup,
+opaque deletion metadata and privacy-preserving deduplication are required.
+Migration must not invent a historic archive date. No implementation or validation
+is claimed yet; current-location button delivery remains in PR #16.
+
+
+### Next iteration requested by owner
+
+| Task | Status | Evidence / next action |
+| --- | --- | --- |
+| Current-location site button and precise-on-demand permission | Implemented; final CI pending | PR #16, 114 native checks and UI flow passed before formatter-only correction; await exact final head |
+| Compact home widget | In progress | Owner reports existing widget too large; reduce footprint while retaining native stop |
+| Archive/unarchive and 30-day red confirmed deletion | In progress | Owner requirements recorded; native schema/commands and UI still required |
+| Job detail display | Pending | Real overview/settings/board/report navigation required |
+| Persistent Kanban | Pending | Follow full board contract, including accessible moves and safe column deletion |
+| Global hourly rate/currency and per-job override | Pending | Explicit owner scope update replaces original no-rate calculation decision |
+| Job report amount owed | Pending | Current effective rate × finalized duration; exclude active/provisional work; currency rounding required |
+| Background-permission guidance | Pending | Owner encountered expected separate Android settings flow; clarify the in-app instructions |
+
+Owner says main generally works; GPS is untested and device/OS metadata is absent.
+This does not establish native screen-off, recovery or location acceptance.
+
+Compact widget: source prepared for a 2×1 default and one-row 48 dp action. Native
+API-24/35 cases cover real RemoteViews inflation, touch bounds, state/labels and
+large text. Native visual harness renders idle/running images in Actions. No VM
+build/test/render ran; source is not yet validated on CI or the owner's launcher.
+
+
+### Binding combined next-test-release scope and publishing hold
+
+Contract: [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). Owner requires the
+next internal release to include all requested features; documentation is not
+completion. **Play delivery workflow 414395901 is temporarily disabled_manually**
+(verified through GitHub API). Validate is active. Do not publish partial builds;
+re-enable automatic delivery only for the complete validated combined iteration.
+
+| Addition | Status | Required evidence |
+| --- | --- | --- |
+| Hourly/task billing mode and task prices | Pending | Exact native arithmetic, mode switching, missing prices/currency and report tests |
+| Reusable task templates including deleted-job content | Pending | Independent catalog, fresh card IDs, deletion/backup safeguards |
+| Complete reporting and Kanban task management | Pending | Actual persisted journeys, report/filter/map/CSV agreement and accessible board moves |
+| Customers and per-job customer/email | Pending | Real CRUD/reference integrity and editable effective job recipient |
+| PDF invoice beside CSV | Pending | Valid multipage PDF with actual report line items/totals |
+| Email draft with automatic fields and PDF attachment | Pending | Native Intent/URI grant tests; device email handoff evidence separate |
+| Global company/contact and email subject/body templates | Pending | Persisted settings, safe placeholder expansion and no injected headers |
+| Optional invoice header/footer and company logo import | Pending | Bounded private image handling and output/backup validation |
+| Minimal, Classic and Modern invoice styles | Pending | Three distinct real rendered PDFs with equal totals and logo/pagination checks |
+| Combined internal release | Held | All scope implemented and checked before Play workflow is re-enabled |
+
+No new login/server/SMTP credential system, task timer, tax calculation or recurring
+billing is authorized by these features. Existing application scope remains active.
+
+Compact-widget run 43071623833 built the Android app but native test compilation
+failed because the new widget fixtures used Dart snapshot argument ordering for
+the Kotlin type. Switched fixtures to named fields; all layout/state assertions
+remain. Corrected Actions validation is pending; no VM checks ran.

@@ -44,4 +44,30 @@ class NativeVisualPreviewTest {
                 context.getDrawable(R.drawable.launch_background)!!, 420, 920)
         }
     }
+    @Test fun renderCompactWidgetStates() {
+        val app = RuntimeEnvironment.getApplication()
+        val rootDirectory = System.getenv("GITHUB_WORKSPACE")?.let { File(it, "build/native-ui-preview") }
+            ?: File("build/native-ui-preview")
+        rootDirectory.mkdirs()
+        val density = app.resources.displayMetrics.density
+        val width = (160 * density).toInt()
+        val height = (56 * density).toInt()
+        for (running in listOf(false, true)) {
+            val state = io.github.centerionware.clockrove.tracking.TimerRepository.Snapshot(version = 1, jobs = emptyList(), running =
+                if (running) io.github.centerionware.clockrove.tracking.TimerRepository.Session("synthetic", "synthetic-job",
+                    System.currentTimeMillis() - 60000, "Studio renovation") else null)
+            val view = io.github.centerionware.clockrove.widget.TimerWidget.viewsFor(app, state, 101)
+                .apply(app, android.widget.FrameLayout(app))
+            view.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(height, android.view.View.MeasureSpec.EXACTLY))
+            view.layout(0, 0, width, height)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(bitmap))
+            File(rootDirectory, "clockrove-widget-${if (running) "running" else "idle"}.png").outputStream().use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            bitmap.recycle()
+        }
+    }
+
 }
