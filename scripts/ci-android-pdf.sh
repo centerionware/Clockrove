@@ -3,6 +3,9 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]] || { echo 'This check runs only in GitHub Actions.' >&2; exit 2; }
 : "${ANDROID_HOME:?}" "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
+# Ubuntu runner prerequisite linked by the pinned emulator, even with no audio.
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends libpulse0
 sdkmanager="$ANDROID_HOME/cmdline-tools/19.0/bin/sdkmanager"
 avdmanager="$ANDROID_HOME/cmdline-tools/19.0/bin/avdmanager"
 export ANDROID_AVD_HOME="$RUNNER_TEMP/clockrove-pdf-avds"
