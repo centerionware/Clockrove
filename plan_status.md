@@ -1427,6 +1427,31 @@ The independent session resolver's actual API-24/35 XML from 43105393744 confirm
 three calendar cases on each API passed, alongside the earlier two PDF cases per
 API. That run failed only formatting; the exact formatter patch is applied in
 #30 and its corrected run remains active. No VM tests or rendering ran.
+### Versioned job creation and strict timer transport — source prepared
+
+The production create-job call still allocated a new ID on every invocation and
+could not retain a response-loss intent. Prepared a versioned native command with
+a proposed stable job ID, one atomic job/board/revision commit, deleted-ID fencing
+and durable original outcome replay. New jobs capture the current default currency
+once; a retry does not relabel an existing job. The old one-argument repository
+helper is internal fixture convenience and is no longer used by production UI.
+
+App creation retains command ID/job ID/name/version while uncertain, exposes the
+existing retry action and blocks another app timer/create command until resolved.
+The dialog permits the same 240-character name bound as job settings. Native timer
+transport now rejects fractional versions instead of truncating them and still
+captures its own timestamps/manual origin. Existing tracking remains independent.
+
+Eight API-24/35 native cases (sixteen executions), three controller retry/concurrency
+checks and one codec case are prepared, alongside the existing create/switch/stop
+widget journey. All validation remains pending in GitHub Actions; no VM builds,
+tests or formatting ran. This is an independent milestone-3 contract fix, not proof
+that remaining history/widgets/backup work or full launch acceptance is complete.
+
+Initial job-command run 43108121797 stopped at formatting and one analyzer lint:
+the screen fixture's wrapped if statement needed braces. Applied the exact Actions
+formatter patch and added that block. No behavior/build/native result is claimed;
+corrected exact-head validation remains required.
 PR #30 initially had no Actions run because its appended evidence conflicted with
 the newly merged recovery notes. Combined main 315bce1 and retained both histories
 to restore PR mergeability; fresh validation is required, not assumed passed.
@@ -1479,3 +1504,17 @@ was blank. The test captured an Image widget before asynchronous frame decoding.
 Wait for the actual memory image to decode and assert a non-null painted image
 before capturing. This is an artifact/verification correction; actual decoded
 viewer visuals still need new Actions review. Play remains held.
+Job-command run 43108685907 passed Flutter checks and the Android build but
+reported four native failures (two fixture issues on each API): direct SQL
+inspection preceded the lazy helper's first open, and the timestamp assertion
+incorrectly expected the business-fixture clock to control native surface taps.
+Open storage via a normal snapshot before inspection and verify the tap's captured
+time against the actual native call window, still rejecting the caller's supplied
+Long.MAX_VALUE timestamp/automation origin. Production timestamp behavior is
+unchanged. Corrected combined-main validation remains pending.
+
+Job commands #31 exact head 0f0c7c4 passed full Actions 43115650224; inspected
+231 native cases including sixteen new job-creation executions, zero failures/
+errors/skips. Merged to main as 4c253b7. Final business integration now includes
+that validated source as well as #30 history contracts; fresh combined checks
+remain required. Physical acceptance and manual-history UI are unfinished.

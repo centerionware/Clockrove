@@ -1238,6 +1238,13 @@ were reviewed in light/dark themes. Latest #29 adds all-style multipage captures
 and requires all ten expected device cases per API. Final exact-head checks,
 actual document visual acceptance and main validation remain required; no partial
 Play release is authorized. Task-level status is maintained in plan_status.md.
+### Independent job-command correctness continuation
+
+Prepared versioned/idempotent job creation through the native command boundary,
+retained app response-loss intent and strict integral timer versions. Covers atomic
+board/revision creation, stale/duplicate requests, rollback and deleted-ID fences.
+Eight API-24/35 native cases plus retry/controller/codec journeys await Actions;
+remaining milestone-3/4/7 implementation and physical acceptance remain open.
 ### Independent milestone-3 session history continuation
 
 Prepared native closed-session manual CRUD and history/revision queries through
