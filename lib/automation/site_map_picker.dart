@@ -165,6 +165,14 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 point: point,
                                 radius: widget.radius,
                                 useRadiusInMeter: true,
+                                color: Colors.transparent,
+                                borderColor: Colors.white,
+                                borderStrokeWidth: 5,
+                              ),
+                              CircleMarker(
+                                point: point,
+                                radius: widget.radius,
+                                useRadiusInMeter: true,
                                 color: const Color(0xFF176B55)
                                     .withValues(alpha: 0.15),
                                 borderColor: const Color(0xFF176B55),
@@ -181,10 +189,16 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 height: 48,
                                 child: Semantics(
                                   label: 'Selected site centre',
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Color(0xFF176B55),
-                                    size: 40,
+                                  child: const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFF176B55),
+                                      size: 36,
+                                    ),
                                   ),
                                 ),
                               ),
