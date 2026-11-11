@@ -20,10 +20,10 @@ iOS and future service remain deferred.
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
-| M3.1 Schema, migrations and typed contracts | Schema 5 and business bridges verified; full contract in progress | PRs #19–28 merged; migration/revision, board, customer/billing, lifecycle and report/invoice commands checked in Actions; session corrections and backup contracts remain |
-| M3.2 IDs/revisions/tombstones/serialized commands | Business foundation verified; full milestone incomplete | Native serialized writer, revision ancestry, opaque receipts and job deletion fences exercised by migration/board/lifecycle/invoice tests; manual corrections and backup merge integrity remain |
-| M3.3 Jobs/sites/boards/session corrections/queries | Jobs/sites/boards/report queries implemented; corrections pending | PRs #16 and #19–28 on main; native integrity/concurrency/rollback tests pass; manual session CRUD/history still required |
-| M4.1 Manual tracker UI and history | Timer and job/business UI merged; full history pending | Native start/stop/switch, job board/settings/customer/report/archive/invoice views on main; session corrections/history still required |
+| M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration, provider settings and backup contracts remain |
+| M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
+| M3.3 Jobs/sites/boards/session corrections/queries | Native corrections and queries verified; history UI pending | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
+| M4.1 Manual tracker UI and history | Timer and business UI merged; correction/history screens pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30, UI forms and full manual journey remain unfinished |
 | M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition checks verified; recovery update/device proof pending | Departure/alarm/geofence tests on main; #17 monitoring retry/app-upgrade recovery awaits complete current-main validation; screen-off/OEM/reboot/GPS evidence remains |
@@ -1518,3 +1518,22 @@ Job commands #31 exact head 0f0c7c4 passed full Actions 43115650224; inspected
 errors/skips. Merged to main as 4c253b7. Final business integration now includes
 that validated source as well as #30 history contracts; fresh combined checks
 remain required. Physical acceptance and manual-history UI are unfinished.
+
+Reviewed the nine original-resolution API-35 multipage captures from successful
+run 43108568856: first, middle and final pages for Minimal/Classic/Modern.
+Long headers/footers wrap within margins; repeated headings/page numbers and
+aligned task amounts remain legible. Together with the priced-row extraction
+checks and earlier single-page logo/total review, native PDF layout acceptance is
+supported. Decoded Flutter viewer captures and the current combined exact-head
+checks remain required before lifting the Play hold.
+
+Viewer head 65b0f44 / 43115429141 passed build/native checks but the device step
+stopped before instrumentation: the pinned emulator archive transfer failed with
+curl 92 (HTTP/2 stream INTERNAL_ERROR). No device XML/viewer result was produced.
+Rerunning the failed job for the same commit is an infrastructure retry; the full
+combined/device/decoded-viewer gate remains required. Play stays disabled.
+
+Job-command head 0f0c7c4 / 43115650224 passed its native step: inspected XML
+confirms 231 cases, including all sixteen job-creation executions, with zero
+failures/errors/skips. Full workflow/device completion is still required before
+merging #31. Source has not been built or tested on this VM.
