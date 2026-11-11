@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../automation/automation_screen.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'job_settings_screen.dart';
+import 'report_screen.dart';
 
 class JobScreen extends ConsumerWidget {
   const JobScreen({super.key, required this.jobId, required this.jobName});
@@ -14,8 +14,9 @@ class JobScreen extends ConsumerWidget {
     final data = ref.watch(boardProvider(jobId));
     return Scaffold(
       appBar: AppBar(
-        title: Text(data.asData?.value.name ?? jobName),
+        title: Text(data.value?.name ?? jobName, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(tooltip: 'Job report', icon: const Icon(Icons.assessment_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ReportScreen(jobId: jobId)))),
           IconButton(
             tooltip: 'Job settings',
             icon: const Icon(Icons.settings_outlined),
@@ -26,22 +27,10 @@ class JobScreen extends ConsumerWidget {
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Worksites and automation',
-            icon: const Icon(Icons.location_on_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => AutomationScreen(
-                  jobId: jobId,
-                  jobName: data.asData?.value.name ?? jobName,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
       body: data.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
           child: FilledButton(
@@ -457,7 +446,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final board = ref.watch(boardProvider(widget.jobId)).asData?.value;
+    final board = ref.watch(boardProvider(widget.jobId)).value;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.card == null ? 'New task' : 'Edit task'),
@@ -622,7 +611,7 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final board = ref.watch(boardProvider(widget.jobId)).asData?.value;
+    final board = ref.watch(boardProvider(widget.jobId)).value;
     final column = widget.column;
     return Scaffold(
       appBar: AppBar(

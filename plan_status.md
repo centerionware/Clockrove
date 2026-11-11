@@ -1199,3 +1199,22 @@ in Actions, pinned vendor archives and AndroidX runner 1.7.0 / JUnit extension
 1.3.0. Actual PDF page/text/render/pagination checks and previews remain pending.
 No emulator/SDK/build/test was run on this VM. Settings journeys in 43082585871
 passed except formatting; applied its runner-generated patch to the source.
+
+### Combined release UI integration — source prepared, unverified
+
+Prepared shared date-range/calendar/job-filter reporting screens with exact
+alternative hourly/task amounts, finalized interval list, completed task lines,
+excluded active/review work, measured GPS map with accuracy/timestamps and trace
+breaks at session/gap/antimeridian boundaries. CSV/GPS save through the document
+picker rechecks the displayed native version. PDF invoice is beside CSV, with
+actual saved-document preview, page navigation, email attachment/save/share and
+prepared-invoice history. Added archive/restore UI and red, irreversible native-
+eligibility-only deletion confirmation. Added settings archive action.
+
+Provider reloads now retain editor data instead of destroying pending commands
+when native version notifications precede responses. Prepared a response-loss/
+refresh regression test proving the original invoice ID/version/intent survives,
+plus CSV selection, elapsed precision, trace and deletion-confirmation cases.
+Source awaits Actions formatting/analyzer/build/tests and real visual review;
+logo import, final integration fixes and combined release acceptance remain open.
+No VM build/test/render ran; Play delivery remains disabled.
