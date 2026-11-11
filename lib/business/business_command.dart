@@ -107,33 +107,35 @@ class _BusinessCommandState extends State<BusinessCommand>
   Widget build(BuildContext context) {
     super.build(context);
     return PopScope(
-    canPop: _pending == null,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_message != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              _message!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+      canPop: _pending == null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_message != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _message!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
+          FilledButton(
+            onPressed: _busy || (!widget.enabled && _pending == null)
+                ? null
+                : _submit,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    _pending != null ? 'Retry same operation' : widget.label,
+                  ),
           ),
-        FilledButton(
-          onPressed: _busy || (!widget.enabled && _pending == null)
-              ? null
-              : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_pending != null ? 'Retry same operation' : widget.label),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
   }
 }

@@ -1622,3 +1622,10 @@ preview captures passed. Preserve BusinessCommand state with native Flutter
 keep-alive while its outcome is unknown, releasing it after a known result. Keep
 the scroll-away/retry test unchanged to verify the actual defect is fixed.
 Android build/native/device stages did not run after this UI failure.
+
+Reviewed all eight original-resolution history captures from ebfda2a /
+43122948408: list, editor, offset/save section and deleted-change history in
+light/dark themes. Text, timestamp precision, selected offsets, scrolling save
+actions and red deletion are legible. This is synthetic UI visual evidence, not
+a native history/device acceptance substitute. Current retry fix 386ce0d is
+being validated in 43123476933; exact-head native/device checks remain pending.
