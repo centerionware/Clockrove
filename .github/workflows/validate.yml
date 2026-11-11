@@ -76,9 +76,19 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Check formatting
+        id: format
         run: |
           dart format lib test
+          git diff --binary -- lib test > "$RUNNER_TEMP/format.patch"
           git diff --exit-code -- lib test
+      - name: Export formatter correction for source review
+        if: failure() && steps.format.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatter-source-patch
+          path: ${{ runner.temp }}/format.patch
+          retention-days: 1
+          if-no-files-found: ignore
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Test implemented behavior

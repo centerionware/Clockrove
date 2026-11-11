@@ -558,3 +558,12 @@ Native run 42986013201 built debug APK but failed host-test task graph validatio
 AGP packaging lacked dependency on copyFlutterAssetsDebug. Added explicit producer
 dependency for variant host-test packaging. No test execution success or automatic
 internal upload is claimed. Subsequent validation must pass before Play delivery.
+
+### 2026-11-11 — prototype manual controls on feature branch
+
+Actions-resolved Riverpod 3.0.3 lockfile applied. Added prototype Flutter controls
+for native job creation/start/stop/switch, New job last, resume refresh and explicit
+location-unavailable state. Riverpod consumes native version invalidations and
+snapshots; uncertain commands retain IDs and block competing app intents pending
+retry. Added three presentation tests; physical/native/UI runtime proof pending.
+Branch remains separate from main until validated; no VM builds/tests/formatting.

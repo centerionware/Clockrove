@@ -349,3 +349,33 @@ owner-only prepare_dependencies mode resolves/exports proposed pubspec.lock as a
 source artifact; normal pushes/PRs still enforce the committed lockfile. No secret
 access or publication is enabled by this preparation mode. Main source and its
 active build remain unchanged. No VM resolution/build/test ran.
+
+Feature dependency preparation run: 42987027150 on prototype-controls / e52b1fd.
+Dispatched successfully with prepare_dependencies=true; this is source lockfile
+preparation, not publication. Main fixed run remains 42986727241. Preserve these
+handles and inspect results rather than starting replacements.
+
+Prepared uncommitted Riverpod timer providers/controller: snapshots depend on
+native committed-version hints; commands retain an immutable intent ID/version
+across uncertain response retries and block competing UI intents while unresolved.
+Native outcomes remain authoritative. No optimistic timer or second database.
+Controller tests and prototype controls UI remain next, after Actions lockfile
+resolution; this code is unvalidated and not on main. No VM checks executed.
+
+### Prototype manual controls and controller tests
+
+Actions run 42987027150 exported proposed-pubspec-lock artifact 13840027259;
+retrieved its source lockfile and applied it without local dependency resolution.
+Added Riverpod prototype controls on isolated feature branch: authoritative timer,
+start/stop/switch, New job last, job creation, refresh/resume re-query and honest
+unavailable-location state. Immutable retry intents prevent lost-response retries
+from changing IDs or emitting competing actions. Added three presentation tests
+for response loss/dedupe, simultaneous taps and stale-state refresh; mocks prove
+presentation semantics, not native/physical execution. No fake running timer or
+second writer. All new source is pending Actions validation, not on main yet.
+
+Validation now exports source-only formatter patches on format failure so edits
+can be applied from CI output without ever running a formatter on the VM. Earlier
+main run 42986580821 is terminal failure; corrected run 42986727241 is live.
+Feature dependency run remains live on its previous source; new controls require
+a new feature validation run rather than pretending that old run covered them.

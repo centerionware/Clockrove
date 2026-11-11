@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'l10n/app_strings.dart';
+import 'tracking/timer_screen.dart';
 
-void main() => runApp(const ClockroveApp());
+void main() => runApp(const ProviderScope(child: ClockroveApp()));
 
 class ClockroveApp extends StatelessWidget {
   const ClockroveApp({super.key});
@@ -15,23 +17,6 @@ class ClockroveApp extends StatelessWidget {
       colorSchemeSeed: Colors.teal,
       brightness: Brightness.dark,
     ),
-    home: Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.appName)),
-      body: const SafeArea(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(AppStrings.setupTitle),
-                SizedBox(height: 16),
-                Text(AppStrings.setupMessage),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
+    home: const TimerScreen(),
   );
 }
