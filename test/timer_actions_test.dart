@@ -58,63 +58,76 @@ class ControlledApi extends TimerApi {
 void main() {
   const displayed = TimerSnapshot(1, [], null);
 
-  test('uncertain creation retains job identity and blocks another app command', () async {
-    final api = ControlledApi()..loseFirstResponse = true;
-    final container = ProviderContainer(
-      overrides: [timerApiProvider.overrideWithValue(api)],
-    );
-    addTearDown(container.dispose);
-    final actions = container.read(timerActionsProvider.notifier);
-    await actions.createJob(displayed, '  Synthetic job  ');
-    expect(container.read(timerActionsProvider).pendingJob, isNotNull);
-    expect(container.read(timerActionsProvider).hasPending, isTrue);
-    await actions.createJob(displayed, 'Different job');
-    await actions.submit(displayed, TimerAction.start, jobId: 'other');
-    expect(api.jobCalls.length, 1);
-    expect(api.calls, isEmpty);
-    await actions.retry();
-    expect(api.jobCalls.length, 2);
-    expect(api.jobCalls.last.id, api.jobCalls.first.id);
-    expect(api.jobCalls.last.jobId, api.jobCalls.first.jobId);
-    expect(api.jobCalls.last.version, 1);
-    expect(api.jobCalls.last.name, 'Synthetic job');
-    expect(container.read(timerActionsProvider).hasPending, isFalse);
-    expect((await container.read(timerSnapshotProvider.future)).version, 2);
-  });
+  test(
+    'uncertain creation retains job identity and blocks another app command',
+    () async {
+      final api = ControlledApi()..loseFirstResponse = true;
+      final container = ProviderContainer(
+        overrides: [timerApiProvider.overrideWithValue(api)],
+      );
+      addTearDown(container.dispose);
+      final actions = container.read(timerActionsProvider.notifier);
+      await actions.createJob(displayed, '  Synthetic job  ');
+      expect(container.read(timerActionsProvider).pendingJob, isNotNull);
+      expect(container.read(timerActionsProvider).hasPending, isTrue);
+      await actions.createJob(displayed, 'Different job');
+      await actions.submit(displayed, TimerAction.start, jobId: 'other');
+      expect(api.jobCalls.length, 1);
+      expect(api.calls, isEmpty);
+      await actions.retry();
+      expect(api.jobCalls.length, 2);
+      expect(api.jobCalls.last.id, api.jobCalls.first.id);
+      expect(api.jobCalls.last.jobId, api.jobCalls.first.jobId);
+      expect(api.jobCalls.last.version, 1);
+      expect(api.jobCalls.last.name, 'Synthetic job');
+      expect(container.read(timerActionsProvider).hasPending, isFalse);
+      expect((await container.read(timerSnapshotProvider.future)).version, 2);
+    },
+  );
 
-  test('known creation conflict clears uncertainty without automatic retry', () async {
-    final api = ControlledApi()..outcome = const TimerOutcome(7, 'STALE_STATE');
-    final container = ProviderContainer(
-      overrides: [timerApiProvider.overrideWithValue(api)],
-    );
-    addTearDown(container.dispose);
-    final actions = container.read(timerActionsProvider.notifier);
-    await actions.createJob(displayed, 'Synthetic');
-    expect(container.read(timerActionsProvider).hasPending, isFalse);
-    expect(container.read(timerActionsProvider).conflict, 'JOB_CREATE_FAILED');
-    await actions.retry();
-    expect(api.jobCalls.length, 1);
-    expect((await container.read(timerSnapshotProvider.future)).version, 7);
-  });
+  test(
+    'known creation conflict clears uncertainty without automatic retry',
+    () async {
+      final api = ControlledApi()
+        ..outcome = const TimerOutcome(7, 'STALE_STATE');
+      final container = ProviderContainer(
+        overrides: [timerApiProvider.overrideWithValue(api)],
+      );
+      addTearDown(container.dispose);
+      final actions = container.read(timerActionsProvider.notifier);
+      await actions.createJob(displayed, 'Synthetic');
+      expect(container.read(timerActionsProvider).hasPending, isFalse);
+      expect(
+        container.read(timerActionsProvider).conflict,
+        'JOB_CREATE_FAILED',
+      );
+      await actions.retry();
+      expect(api.jobCalls.length, 1);
+      expect((await container.read(timerSnapshotProvider.future)).version, 7);
+    },
+  );
 
-  test('creation double taps and timer taps cannot overlap in presentation', () async {
-    final api = ControlledApi()..response = Completer<TimerOutcome>();
-    final container = ProviderContainer(
-      overrides: [timerApiProvider.overrideWithValue(api)],
-    );
-    addTearDown(container.dispose);
-    final actions = container.read(timerActionsProvider.notifier);
-    final first = actions.createJob(displayed, 'Synthetic');
-    expect(container.read(timerActionsProvider).working, isTrue);
-    await actions.createJob(displayed, 'Duplicate');
-    await actions.submit(displayed, TimerAction.stop);
-    expect(api.jobCalls.length, 1);
-    expect(api.calls, isEmpty);
-    api.response!.complete(const TimerOutcome(2, null));
-    await first;
-    expect(container.read(timerActionsProvider).working, isFalse);
-    expect(container.read(timerActionsProvider).hasPending, isFalse);
-  });
+  test(
+    'creation double taps and timer taps cannot overlap in presentation',
+    () async {
+      final api = ControlledApi()..response = Completer<TimerOutcome>();
+      final container = ProviderContainer(
+        overrides: [timerApiProvider.overrideWithValue(api)],
+      );
+      addTearDown(container.dispose);
+      final actions = container.read(timerActionsProvider.notifier);
+      final first = actions.createJob(displayed, 'Synthetic');
+      expect(container.read(timerActionsProvider).working, isTrue);
+      await actions.createJob(displayed, 'Duplicate');
+      await actions.submit(displayed, TimerAction.stop);
+      expect(api.jobCalls.length, 1);
+      expect(api.calls, isEmpty);
+      api.response!.complete(const TimerOutcome(2, null));
+      await first;
+      expect(container.read(timerActionsProvider).working, isFalse);
+      expect(container.read(timerActionsProvider).hasPending, isFalse);
+    },
+  );
 
   test('lost response blocks new intent and retries original ID', () async {
     final api = ControlledApi()..loseFirstResponse = true;

@@ -59,24 +59,33 @@ void main() {
     expect(payload.containsKey('origin'), isFalse);
   });
 
-  test('job creation retries preserve command, job identity, version and name', () async {
-    final calls = <MethodCall>[];
-    messenger.setMockMethodCallHandler(channel, (call) async {
-      calls.add(call);
-      if (calls.length == 1) throw PlatformException(code: 'RESPONSE_LOST');
-      return {'version': 8, 'conflict': null};
-    });
-    Future<TimerOutcome> create() => api.createJob(
-      id: 'command', version: 7, jobId: 'new-job', name: 'Synthetic',
-    );
-    await expectLater(create(), throwsA(isA<PlatformException>()));
-    expect((await create()).committed, isTrue);
-    expect(calls.last.method, 'createJob');
-    expect(calls.last.arguments, calls.first.arguments);
-    expect(calls.last.arguments, {
-      'id': 'command', 'version': 7, 'jobId': 'new-job', 'name': 'Synthetic',
-    });
-  });
+  test(
+    'job creation retries preserve command, job identity, version and name',
+    () async {
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        if (calls.length == 1) throw PlatformException(code: 'RESPONSE_LOST');
+        return {'version': 8, 'conflict': null};
+      });
+      Future<TimerOutcome> create() => api.createJob(
+        id: 'command',
+        version: 7,
+        jobId: 'new-job',
+        name: 'Synthetic',
+      );
+      await expectLater(create(), throwsA(isA<PlatformException>()));
+      expect((await create()).committed, isTrue);
+      expect(calls.last.method, 'createJob');
+      expect(calls.last.arguments, calls.first.arguments);
+      expect(calls.last.arguments, {
+        'id': 'command',
+        'version': 7,
+        'jobId': 'new-job',
+        'name': 'Synthetic',
+      });
+    },
+  );
 
   test('stale and missing responses never look committed', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {

@@ -1263,3 +1263,8 @@ checks and one codec case are prepared, alongside the existing create/switch/sto
 widget journey. All validation remains pending in GitHub Actions; no VM builds,
 tests or formatting ran. This is an independent milestone-3 contract fix, not proof
 that remaining history/widgets/backup work or full launch acceptance is complete.
+
+Initial job-command run 43108121797 stopped at formatting and one analyzer lint:
+the screen fixture's wrapped if statement needed braces. Applied the exact Actions
+formatter patch and added that block. No behavior/build/native result is claimed;
+corrected exact-head validation remains required.

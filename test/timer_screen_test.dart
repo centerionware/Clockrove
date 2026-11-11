@@ -41,7 +41,9 @@ class ScreenApi extends TimerApi {
     required String jobId,
     required String name,
   }) async {
-    if (version != this.version) return TimerOutcome(this.version, 'STALE_STATE');
+    if (version != this.version) {
+      return TimerOutcome(this.version, 'STALE_STATE');
+    }
     jobs.add(JobSummary(jobId, name));
     this.version++;
     return TimerOutcome(this.version, null);

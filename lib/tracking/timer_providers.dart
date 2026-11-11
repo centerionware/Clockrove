@@ -38,7 +38,12 @@ String _newIntentId() {
 }
 
 class TimerActionState {
-  const TimerActionState({this.working = false, this.pending, this.pendingJob, this.conflict});
+  const TimerActionState({
+    this.working = false,
+    this.pending,
+    this.pendingJob,
+    this.conflict,
+  });
   final bool working;
   final TimerIntent? pending;
   final JobCreateIntent? pendingJob;
@@ -106,20 +111,27 @@ class TimerActions extends Notifier<TimerActionState> {
 
   Future<void> createJob(TimerSnapshot displayed, String name) async {
     if (state.working || state.hasPending || name.trim().isEmpty) return;
-    await _attemptJob(JobCreateIntent(
-      _newIntentId(), displayed.version, _newIntentId(), name.trim(),
-    ));
+    await _attemptJob(
+      JobCreateIntent(
+        _newIntentId(),
+        displayed.version,
+        _newIntentId(),
+        name.trim(),
+      ),
+    );
   }
 
   Future<void> _attemptJob(JobCreateIntent intent) async {
     state = TimerActionState(working: true, pendingJob: intent);
     try {
-      final outcome = await ref.read(timerApiProvider).createJob(
-        id: intent.id,
-        version: intent.version,
-        jobId: intent.jobId,
-        name: intent.name,
-      );
+      final outcome = await ref
+          .read(timerApiProvider)
+          .createJob(
+            id: intent.id,
+            version: intent.version,
+            jobId: intent.jobId,
+            name: intent.name,
+          );
       if (_active) {
         state = TimerActionState(
           conflict: outcome.committed ? null : 'JOB_CREATE_FAILED',
