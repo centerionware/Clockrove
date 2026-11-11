@@ -115,6 +115,7 @@ class JobPreferences {
     required this.archived,
     required this.effectiveEmail,
     this.archivedMillis,
+    this.canDelete = false,
     this.rate,
     this.effectiveRate,
     this.customerId,
@@ -125,6 +126,7 @@ class JobPreferences {
   final String id, name, mode, currency, effectiveEmail;
   final String? rate, effectiveRate, customerId, emailOverride;
   final bool archived;
+  final bool canDelete;
   factory JobPreferences.decode(Map<Object?, Object?> v) {
     final s = v['settings'] as Map<Object?, Object?>;
     return JobPreferences(
@@ -136,6 +138,7 @@ class JobPreferences {
       currency: s['currency'] as String,
       digits: s['fractionDigits'] as int,
       archived: v['archived'] as bool,
+      canDelete: v['canDelete'] as bool? ?? false,
       effectiveEmail: v['effectiveEmail'] as String,
       archivedMillis: v['archivedMillis'] as int?,
       rate: s['hourlyRateMinor'] as String?,

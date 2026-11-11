@@ -55,9 +55,64 @@ class InvoicePdfTest {
         }
         assertEquals(3, images.distinct().size)
     }
+    @Test fun blankOptionalFieldsKeepTheActualTotalOnTheFinalPage() {
+        val data = fixture("MODERN", 20).copy(company = "", companyContact = "", customer = "", customerContact = "", header = "", footer = "")
+        inspect(InvoicePdf.generate(data)) { renderer ->
+            renderer.openPage(renderer.pageCount - 1).use { page ->
+                if (android.os.Build.VERSION.SDK_INT >= 35) assertTrue(PdfTextApi35.read(page).contains("TOTAL"))
+            }
+        }
+    }
     @Test fun longRowsHeadersAndFootersPaginateIntoRealPdfPages() {
-        val data = fixture("MODERN", 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
-        inspect(InvoicePdf.generate(data)) { renderer -> assertTrue(renderer.pageCount > 8); renderer.openPage(renderer.pageCount - 1).use { assertTrue(it.height > 0) } }
+        for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
+            val data = fixture(style, 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
+            val bytes = InvoicePdf.generate(data)
+            val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
+            root.mkdirs()
+            File(root, "clockrove-invoice-${style.lowercase()}-multipage.pdf").writeBytes(bytes)
+            inspect(bytes) { renderer ->
+                assertTrue(renderer.pageCount > 8)
+                val text = StringBuilder()
+                for (index in 0 until renderer.pageCount) {
+                    renderer.openPage(index).use { page ->
+                        if (android.os.Build.VERSION.SDK_INT >= 35) text.append(PdfTextApi35.read(page)).append('\n')
+                        if (index in setOf(0, renderer.pageCount / 2, renderer.pageCount - 1)) {
+                            val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                            try {
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                File(root, "clockrove-invoice-${style.lowercase()}-multipage-page-${index + 1}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            } finally { bitmap.recycle() }
+                        }
+                    }
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 35) {
+                    File(root, "clockrove-invoice-${style.lowercase()}-multipage-extracted.txt").writeText(text.toString())
+                    try {
+                        // Framework extraction can put a line break between
+                        // individual glyphs even though the page renders normally.
+                        // Keep their order and require each complete priced row.
+                        val compact = text.toString().filterNot { it.isWhitespace() }
+                        assertTrue(compact.contains("USD1250.00"))
+                        data.lines.forEachIndexed { index, line ->
+                            val pricedRow = (line.title + line.amount).filterNot { it.isWhitespace() }
+                            assertTrue("Missing priced row ${index + 1} in $style", compact.contains(pricedRow))
+                        }
+                        assertTrue(compact.contains("Longoptionalfooter."))
+                    } catch (failure: AssertionError) {
+                        // Preserve every failing page for comparison with the
+                        // actual framework extraction; never synthesize a pass.
+                        for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                            val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                            try {
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                File(root, "clockrove-invoice-${style.lowercase()}-failure-page-${index + 1}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            } finally { bitmap.recycle() }
+                        }
+                        throw failure
+                    }
+                }
+            }
+        }
     }
 }
 

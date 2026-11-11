@@ -69,14 +69,41 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
-  clockrove_result=0
-  (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.github.centerionware.clockrove.invoice.InvoicePdfTest,io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest "-Pandroid.testInstrumentationRunnerArguments.clockroveApi=$clockrove_api") || clockrove_result=$?
+  # Keep both APKs installed until the actual results and pages are captured.
+  # Gradle's connected-test cleanup removes app-specific external files.
+  adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
+  adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
-  if [[ -d "$GITHUB_WORKSPACE/build/app/outputs/androidTest-results" ]]; then cp -R "$GITHUB_WORKSPACE/build/app/outputs/androidTest-results/." "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/"; fi
+  adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
+  # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
   adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/" || true
+  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml"
+  python3 - "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml" <<'PY_DEVICE'
+import sys
+import xml.etree.ElementTree as E
+root = E.parse(sys.argv[1]).getroot()
+assert int(root.attrib['tests']) > 0, 'No actual Android tests ran'
+assert all(int(root.attrib[k]) == 0 for k in ['failures','errors','skipped']), root.attrib
+classes = {case.attrib['classname'] for case in root.findall('testcase')}
+expected = {
+    'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 3,
+    'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
+    'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
+    'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 3,
+}
+for classname, count in expected.items():
+    actual = sum(case.attrib['classname'] == classname for case in root.findall('testcase'))
+    assert actual == count, (classname, actual, count)
+print('Verified actual Android JUnit results:', root.attrib)
+PY_DEVICE
+  for clockrove_style in minimal classic modern; do
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.png"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
+  done
   adb -s emulator-5554 emu kill || true
   wait "$clockrove_emulator_pid" || true
   trap - EXIT
-  [[ "$clockrove_result" == 0 ]]
 done

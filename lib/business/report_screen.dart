@@ -38,6 +38,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   ReportSelection? _selection;
   String? _error;
   bool _exporting = false;
+  bool _invoicePending = false;
   @override
   void initState() {
     super.initState();
@@ -59,6 +60,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _load() async {
+    if (_invoicePending) return;
     try {
       final data = await ref.read(reportApiProvider).context();
       if (!mounted) return;
@@ -85,6 +87,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _range() async {
+    if (_invoicePending) return;
     final selection = _selection!;
     final range = await showDateRangePicker(
       context: context,
@@ -108,6 +111,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _jobs() async {
+    if (_invoicePending) return;
     final selected = _selection!.jobs.toSet();
     final result = await showDialog<List<String>>(
       context: context,
@@ -162,7 +166,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 
   Future<void> _csv(WorkReport report, bool gps) async {
-    if (_exporting) return;
+    if (_exporting || _invoicePending) return;
     setState(() => _exporting = true);
     try {
       final saved = await ref
@@ -222,11 +226,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (_, _) => Center(
-                    child: TextButton(
-                      onPressed: () =>
-                          ref.invalidate(reportProvider(selection)),
-                      child: const Text(
-                        'Retry report · use a shorter date range if needed',
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'This report is unavailable. Retry or choose a smaller selection.',
+                          ),
+                          TextButton(
+                            onPressed: _range,
+                            child: const Text('Change dates'),
+                          ),
+                          TextButton(
+                            onPressed: _jobs,
+                            child: const Text('Choose jobs'),
+                          ),
+                          FilledButton(
+                            onPressed: () =>
+                                ref.invalidate(reportProvider(selection)),
+                            child: const Text('Retry report'),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -238,14 +259,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         runSpacing: 8,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: _range,
+                            onPressed: _invoicePending ? null : _range,
                             icon: const Icon(Icons.date_range),
                             label: Text(
                               '${selection.firstDate} – ${selection.lastDate}',
                             ),
                           ),
                           OutlinedButton.icon(
-                            onPressed: _jobs,
+                            onPressed: _invoicePending ? null : _jobs,
                             icon: const Icon(Icons.filter_list),
                             label: Text(
                               '${selection.jobs.length} job${selection.jobs.length == 1 ? '' : 's'}',
@@ -308,7 +329,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         crossAxisAlignment: WrapCrossAlignment.start,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: _exporting
+                            onPressed: _exporting || _invoicePending
                                 ? null
                                 : () => _csv(report, false),
                             icon: const Icon(Icons.file_download_outlined),
@@ -320,10 +341,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               child: _InvoiceButton(
                                 selection: selection,
                                 report: report,
+                                onPendingChanged: (value) {
+                                  if (mounted) {
+                                    setState(() => _invoicePending = value);
+                                  }
+                                },
                               ),
                             ),
                           OutlinedButton.icon(
-                            onPressed: _exporting || report.points.isEmpty
+                            onPressed:
+                                _exporting ||
+                                    _invoicePending ||
+                                    report.points.isEmpty
                                 ? null
                                 : () => _csv(report, true),
                             icon: const Icon(Icons.location_on_outlined),
@@ -455,9 +484,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
 }
 
 class _InvoiceButton extends ConsumerStatefulWidget {
-  const _InvoiceButton({required this.selection, required this.report});
+  const _InvoiceButton({
+    required this.selection,
+    required this.report,
+    required this.onPendingChanged,
+  });
   final ReportSelection selection;
   final WorkReport report;
+  final ValueChanged<bool> onPendingChanged;
   @override
   ConsumerState<_InvoiceButton> createState() => _InvoiceButtonState();
 }
@@ -467,6 +501,7 @@ class _InvoiceButtonState extends ConsumerState<_InvoiceButton> {
   @override
   Widget build(BuildContext context) => BusinessCommand(
     label: 'PDF invoice',
+    onPendingChanged: widget.onPendingChanged,
     create: () {
       final id = newBusinessId();
       final invoiceId = newBusinessId();

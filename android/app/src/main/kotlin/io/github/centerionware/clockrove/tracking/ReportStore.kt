@@ -29,7 +29,15 @@ internal object ReportStore {
     private fun dateParts(value: String) = value.split('-').map { it.toInt() }
     private fun midnight(value: String, zone: TimeZone): Long {
         val parts = dateParts(value)
-        return calendar(zone).apply { clear(); set(parts[0], parts[1] - 1, parts[2], 0, 0, 0) }.timeInMillis
+        // A report day begins at the FIRST repeated midnight, or the next valid
+        // instant if midnight is skipped. java.util.Calendar defaults to the
+        // later overlap and can omit an hour in zones such as America/Havana.
+        return android.icu.util.GregorianCalendar(android.icu.util.TimeZone.getTimeZone(zone.id), Locale.ROOT).apply {
+            gregorianChange = Date(Long.MIN_VALUE)
+            repeatedWallTimeOption = android.icu.util.Calendar.WALLTIME_FIRST
+            skippedWallTimeOption = android.icu.util.Calendar.WALLTIME_NEXT_VALID
+            clear(); set(parts[0], parts[1] - 1, parts[2], 0, 0, 0)
+        }.timeInMillis
     }
     private fun nextDate(value: String): String {
         val next = calendar(utc).apply { timeInMillis = midnight(value, utc); add(Calendar.DAY_OF_MONTH, 1) }
@@ -43,9 +51,10 @@ internal object ReportStore {
         val zone = TimeZone.getTimeZone(selection.timezone)
         return buildList {
             var current = selection.firstDate
-            while (current <= selection.lastDate) {
+            while (true) {
                 val next = nextDate(current)
                 add(Day(current, midnight(current, zone), midnight(next, zone)))
+                if (current == selection.lastDate) break
                 current = next
             }
         }

@@ -20,17 +20,21 @@ iOS and future service remain deferred.
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
-| M3.1 Schema, migrations and typed contracts | Native schema/revision foundation verified; full contracts in progress | PR #19; Actions 43073787801 passed 127 native tests; business command/UI integration remains |
-| M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
-| M3.3 Jobs/sites/boards/session corrections/queries | Pending | Integrity and snapshot tests required |
-| M4.1 Manual tracker UI and history | Prototype controls merged; full history pending | Native-backed start/stop/switch, modern UI and map-outage journey pass Actions; corrections/history/full job management remain |
-| M4.2 Widgets/configuration/notification actions | Pending | Offline/recovery/accessibility journey required |
-| M5.1 Permissions/site editor/capacity/entry/departure | Pending | Both departure modes and suppression required |
-| M5.2 Grace/re-entry/late events/pruning/health/recovery | Pending | State-machine matrix and physical tests required |
-| M6.1 Boards and accessible moves | Pending | Preserve cards and calendar due dates |
-| M6.2 Date/list/totals/map/timezones | Pending | DST and filter agreement tests required |
+| M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration, provider settings and backup contracts remain |
+| M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
+| M3.3 Jobs/sites/boards/session corrections/queries | Native corrections and queries verified; history UI pending | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
+| M4.1 Manual tracker UI and history | Timer and business UI merged; correction/history screens pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30, UI forms and full manual journey remain unfinished |
+| M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
+| M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
+| M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition checks verified; recovery update/device proof pending | Departure/alarm/geofence tests on main; #17 monitoring retry/app-upgrade recovery awaits complete current-main validation; screen-off/OEM/reboot/GPS evidence remains |
+| M6.1 Boards and accessible moves | Implemented and merged; final integration checks pending | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 adds refreshed move-dialog regression |
+| M6.2 Date/list/totals/map/timezones | Implemented and merged; strengthened calendar checks pending | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks still under validation |
 | M6.3 Provider settings/secure credentials/tile policy | Pending | Outage must preserve manual functionality |
-| M6.4 CSV and document sharing | Pending | Escaping/formula/clipping tests required |
+| M6.4 CSV and document sharing | Implemented and merged; combined document acceptance pending | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; actual framework PDF tests pass in earlier run, final logo/pagination/viewer checks pending |
+| Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
+| Business iteration: archive/restore/delete | Implemented and merged; final settings integration pending | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
+| Business iteration: invoices and email | Implemented and merged; combined acceptance pending | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
+| Business iteration: logo and final document previews | Source prepared in #29; validation in progress | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; no final visual acceptance yet |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
@@ -1237,6 +1241,134 @@ Removed the customer action's heavy elevation in the next UI source revision to
 match existing flat surfaces. Integrated UI formatter artifact from 43086427014
 applied; remaining analyzer/test results are still being inspected.
 
+### Company logo import and immutable branding — source prepared
+
+Prepared system image/document picking with a bounded private copy, accepted PNG/
+JPEG/WebP validation, pixel/byte limits, EXIF orientation, downscaling with preserved
+aspect and metadata-free PNG re-encoding. Settings can preview/apply/change/remove
+the logo; immutable assets remain while referenced by prepared invoices. Unused
+assets are removed without rewriting earlier PDFs. Cached draft tokens are opaque
+content hashes; replay checks the original committed result before needing draft
+bytes. Input URIs/filenames and source EXIF/GPS are not retained as settings.
+
+Added five API-24 SQLite/receipt/rollback/retained-branding cases, four real Android
+image cases to the API 24/35 instrumentation matrix, and three logo UI retry/cancel
+regressions. Also locks report filter changes while invoice intent is pending.
+All checks remain pending; no VM builds/tests/rendering ran. Real PDF run
+43085897954 passed host checks but emulator setup stopped at an unzip overwrite
+prompt; corrected CI uses explicit replacement of ephemeral runner SDK copies
+with the pinned vendor archives. This is not proof the PDFs rendered successfully.
+Play delivery stays disabled until the combined feature set passes acceptance.
+
+Branding run 43089105094 passed Flutter presentation/retry checks and the Android
+app build, but unit-test compilation rejected desktop-only ImageIO fixture APIs
+on the Android test classpath. Replaced that fixture with a tiny valid PNG built
+using standard CRC/zlib streams; production image decoding stays native and is
+instrumented separately. Added native-eligible red deletion in job settings as
+well as the archive view and avoided creating a trailing page for a blank invoice
+footer. Exact updated checks remain pending. Emulator setup now also records the
+pinned package descriptor required by avdmanager; no device rendering claim yet.
+
+Integration review also keeps date/job controls available after a failed report
+query (so a selection can be narrowed), refreshes a move dialog's actual native
+snapshot before a fresh confirmation, and adds corresponding presentation
+regressions. Pending-command retries still retain the original captured operation.
+These source fixes await Actions; no VM checks ran.
+
+Lifecycle head fdd33a8 has a successful completed `android` check in run
+43085255507 (GitHub's overall run status lagged). Downloaded XML confirms 176
+native tests, zero failures/errors/skips, including all ten lifecycle cases;
+merged #25 with the exact checked head. PDF instrumentation now boots API 24 and
+reaches the actual runner. Run 43090913550 found eager reflection of a generated
+API-35-only text lambda on API 24; isolated those types in a guarded helper,
+retaining real PDF text/render assertions. Fresh checks are pending. Applied the
+completed branding run's formatting artifact for settings deletion controls.
+
+Invoice core head 8c43978 reports a successful Actions run 43093219562, including
+the real API-24/35 instrumentation step after isolating API-35-only text types.
+Artifact downloads currently return GitHub HTTP 502; do not claim inspected XML
+counts or document visual acceptance until actual artifacts can be read. Added a
+mandatory post-device Flutter check that reads the actual Android-generated page
+files, exercises the viewer at large landscape text, and exports light/dark views
+for all three styles. Also prepared hourly/task report and measured-map previews
+using synthetic data/tiles. No mocks substitute for actual PDF generation here;
+the viewer routing stub receives real device-produced page images. All new checks
+and visual acceptance remain pending. Play delivery remains disabled.
+
+Report boundary review found that the default repeated-midnight interpretation can
+omit an hour in zones such as Havana. Prepared API-24 ICU first-occurrence/next-
+valid day boundaries, retaining UTC duration math, with host and actual framework
+checks for midnight overlap, midnight gap, skipped dates and the final supported
+year. The maximum calendar date now terminates before lexicographic year rollover.
+Using the historical Sao Paulo 2015 transition keeps the fixture compatible with
+both old device tzdata and current rules. New checks await Actions. Reference:
+[Android ICU wall-time options](https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int)).
+
+Device-capture review found that connected-test teardown can uninstall the app
+before its app-specific external previews are pulled. Prepared direct invocation
+of the same AndroidJUnitRunner after building/installing the test APK, a test-only
+JUnit XML listener, nonzero/no-failure/no-skip assertions and mandatory PDF/PNG
+capture for each style on each API. No broad storage permission is introduced;
+test data remains app-specific and is captured before emulator cleanup. Actual
+runner support: [AndroidJUnitRunner listener](https://developer.android.com/reference/androidx/test/runner/AndroidJUnitRunner).
+This strengthens artifact/coverage evidence; updated Actions validation is pending.
+
+### Owner-requested main merges
+
+Merged the exact validated heads as requested:
+- #26 head 8c43978 / Actions 43093219562 -> main merge 036233f.
+- #27 head 5142c2f / Actions 43093223910 -> main merge e495231.
+- #28 head a06b13c / Actions 43093226704 -> main merge 834a7e4.
+
+These include invoice snapshots/PDF styles, private document/email handoff and
+integrated report/archive UI. Their checks passed; artifact downloads were still
+returning HTTP 502, so actual document visual acceptance remains unproven. #29
+now targets main for logo import, final integration/calendar fixes and strengthened
+real-device artifact/visual gates. Its latest validation remains queued. Main
+validation and the final combined acceptance are still required. Play delivery
+remains disabled; no partial internal release has been published.
+
+Branding run 43101008984 passed analysis and Flutter checks and exported readable
+artifacts again. Applied its exact formatter correction. Reviewed six synthetic
+hourly/task report and measured-map light/dark captures: amounts, billing basis,
+CSV/PDF actions and sample labels are legible without overflow. Synthetic blank
+tiles verify layout only, not live map availability. Actual PDF/logo device checks
+are still running; invoice visual acceptance and combined release remain pending.
+
+Extended actual Android pagination acceptance to all three styles: each long
+invoice must retain all 130 item titles and its total in API-35 extracted text;
+API 24/35 export the real multipage PDFs and first/middle/last rendered pages.
+Device XML now requires the expected PDF (3), logo (4) and report-boundary (3)
+cases individually, preventing missing test classes from passing the gate.
+These strengthened checks remain pending in Actions.
+
+### Recovered artifact evidence and current task status
+
+Artifact downloads recovered. Inspected exact CI XML (no local test execution):
+- #26 / 43093219562: two actual PDF instrumentation cases on each of API 24
+  and API 35, four total, zero failures/errors/skips. This proves real framework
+  execution; that earlier capture still lacks retained page previews.
+- #27 / 43093223910 and #28 / 43093226704: 191 native cases each, zero
+  failures/errors/skips, including ten attachment/provider handoff and five
+  immutable invoice snapshot cases.
+- #29 earlier head 042216c / 43101008984: 198 native cases, zero
+  failures/errors/skips, including five logo-store and twelve reporting cases.
+  Actual framework/logo/viewer steps remain running; full run is not yet passed.
+
+Updated the task table to distinguish merged behavior from missing implementation
+and physical acceptance. Latest heads still requiring complete checks are #17
+4d3db27 (43101725472) and #29 ba22cb6 (43101862377). Play remains held.
+
+Run 43101008984 completed actual Android instrumentation: ten cases on API 24
+and ten on API 35, zero failures/errors/skips. Inspected the retained actual
+single-page Minimal/Classic/Modern renders: distinct layouts, aspect-preserved
+logo, readable contacts/items and matching USD 1250.00 totals. Full run failed
+its viewer regression and the already-applied formatting correction. Viewer
+fixture review found it replaced MediaQuery with a new size-zero instance when
+changing text scale, collapsing the size-dependent controls area. Preserve the
+real viewport/insets via copyWith, then scroll and hit-test the whole button
+before tapping. New viewer captures and all-style long-document checks still
+require Actions; no local rendering or test execution ran.
 ### Session correction/history storage — source prepared
 
 Prepared a separate milestone-3 native slice: closed-session manual entries,
@@ -1262,6 +1394,39 @@ results/previews during the GitHub Actions incident. Release tooling did not run
 this is not a passed validation. Combined current main (834a7e4) into #17 for a
 fresh complete validation including actual PDF checks. No VM build/test ran.
 
+Monitoring recovery #17 head 4d3db27 passed full Actions 43101725472; inspected
+193 native cases, zero failures/errors/skips. Merged exact head to main as
+315bce1, then combined that source into #29 for final integration validation.
+Physical app-upgrade/recovery evidence remains separate. Play is still held.
+
+Combined head 12ea2b9 / 43103492055 passed formatting, analysis, Flutter tests,
+Android build and 200 native tests (inspected XML, zero failures/errors/skips).
+API 24 instrumentation passed all ten cases. API 35 failed the strengthened
+all-row PDF extraction assertion: "Missing row 8 in MINIMAL"; nine other device
+cases passed. The viewer step did not run, so combined acceptance remains open.
+
+Current failure gating stopped before retaining API-35 preview files. Capture
+documents before XML enforcement, preserve actual extracted text and render every
+page of a failing document for diagnosis, retaining all failure gates. Reviewed
+the existing API-24 first/middle/last minimal captures; this does not explain the
+API-35 text mismatch or prove all styles/pages accepted. No production rendering
+change or weakened assertion is being substituted for the missing evidence.
+Play delivery remains disabled.
+
+Diagnostic head 1cc258e / 43106859741 retained the failing API-35 PDF, extracted
+text and all fifteen Minimal pages. Original-resolution review of page 4 shows
+rows 8–20 intact with their amounts. The actual extracted text splits "section 8"
+(and many subsequent glyphs) across individual lines; this is an extraction
+whitespace mismatch, not evidence of a missing rendered row. Normalize whitespace
+while still requiring every complete title together with its exact amount, plus
+total/footer. Including amounts also avoids a shorter row number accidentally
+matching a longer numbered title. Retain real PDF/render/coverage and failure
+capture gates. All three styles and corrected viewer still await fresh Actions.
+
+The independent session resolver's actual API-24/35 XML from 43105393744 confirms
+three calendar cases on each API passed, alongside the earlier two PDF cases per
+API. That run failed only formatting; the exact formatter patch is applied in
+#30 and its corrected run remains active. No VM tests or rendering ran.
 ### Versioned job creation and strict timer transport — source prepared
 
 The production create-job call still allocated a new ID on every invocation and
@@ -1327,6 +1492,18 @@ zero failures/errors/skips, including three calendar cases per API. Merged to
 main as 8bb533d. This branch now includes that source; fresh combined validation
 is required. History UI and full M3/M4 acceptance remain incomplete. Play is held.
 
+PDF assertion head d79957d passed full Actions 43108568856, including ten actual
+cases on each Android API and the viewer/landscape checks. Downloaded actual XML
+confirms zero device failures/errors/skips. The whitespace-aware priced-row check
+passed for all 130 items in all three styles. Current #29 also includes validated
+main history contracts and requires thirteen actual device cases per API.
+
+Visual review of the passing viewer artifacts found a remaining capture defect:
+all three styles had identical hashes within each theme and the document area
+was blank. The test captured an Image widget before asynchronous frame decoding.
+Wait for the actual memory image to decode and assert a non-null painted image
+before capturing. This is an artifact/verification correction; actual decoded
+viewer visuals still need new Actions review. Play remains held.
 Job-command run 43108685907 passed Flutter checks and the Android build but
 reported four native failures (two fixture issues on each API): direct SQL
 inspection preceded the lazy helper's first open, and the timestamp assertion
@@ -1335,3 +1512,28 @@ Open storage via a normal snapshot before inspection and verify the tap's captur
 time against the actual native call window, still rejecting the caller's supplied
 Long.MAX_VALUE timestamp/automation origin. Production timestamp behavior is
 unchanged. Corrected combined-main validation remains pending.
+
+Job commands #31 exact head 0f0c7c4 passed full Actions 43115650224; inspected
+231 native cases including sixteen new job-creation executions, zero failures/
+errors/skips. Merged to main as 4c253b7. Final business integration now includes
+that validated source as well as #30 history contracts; fresh combined checks
+remain required. Physical acceptance and manual-history UI are unfinished.
+
+Reviewed the nine original-resolution API-35 multipage captures from successful
+run 43108568856: first, middle and final pages for Minimal/Classic/Modern.
+Long headers/footers wrap within margins; repeated headings/page numbers and
+aligned task amounts remain legible. Together with the priced-row extraction
+checks and earlier single-page logo/total review, native PDF layout acceptance is
+supported. Decoded Flutter viewer captures and the current combined exact-head
+checks remain required before lifting the Play hold.
+
+Viewer head 65b0f44 / 43115429141 passed build/native checks but the device step
+stopped before instrumentation: the pinned emulator archive transfer failed with
+curl 92 (HTTP/2 stream INTERNAL_ERROR). No device XML/viewer result was produced.
+Rerunning the failed job for the same commit is an infrastructure retry; the full
+combined/device/decoded-viewer gate remains required. Play stays disabled.
+
+Job-command head 0f0c7c4 / 43115650224 passed its native step: inspected XML
+confirms 231 cases, including all sixteen job-creation executions, with zero
+failures/errors/skips. Full workflow/device completion is still required before
+merging #31. Source has not been built or tested on this VM.

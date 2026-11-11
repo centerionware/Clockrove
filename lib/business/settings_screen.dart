@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'settings_api.dart';
+import 'logo_controls.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -34,6 +35,7 @@ class _CompanyForm extends ConsumerStatefulWidget {
 }
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
+  bool _logoBusy = false;
   late final _rate = TextEditingController(
     text: money(widget.initial.defaultHourlyMinor, widget.initial.digits),
   );
@@ -181,6 +183,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           },
         ),
         const SizedBox(height: 20),
+        LogoControls(
+          onBusyChanged: (value) {
+            if (mounted) {
+              setState(() => _logoBusy = value);
+            }
+          },
+        ),
+        const SizedBox(height: 20),
         _field(_header, 'Optional invoice header', lines: 2),
         _field(_footer, 'Optional invoice footer', lines: 2),
         Text('Email draft', style: Theme.of(context).textTheme.titleLarge),
@@ -193,7 +203,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         _field(_body, 'Email body template', lines: 5, length: 20000),
         BusinessCommand(
           label: 'Save settings',
-          enabled: current != null,
+          enabled: current != null && !_logoBusy,
           create: () {
             final id = newBusinessId();
             final version = current!.version;

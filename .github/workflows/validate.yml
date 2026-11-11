@@ -125,6 +125,16 @@ jobs:
           if-no-files-found: ignore
       - name: Real Android PDF generation and rendering on API 24 and 35
         run: bash scripts/ci-android-pdf.sh
+      - name: Check invoice viewer using actual Android-generated pages
+        run: flutter test --no-pub test/invoice_document_preview_test.dart --dart-define=CLOCKROVE_DEVICE_PREVIEW=true
+      - name: Export actual-document Flutter previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: invoice-viewer-previews
+          path: build/invoice-viewer-preview
+          retention-days: 1
+          if-no-files-found: ignore
       - name: Export Android device test results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
