@@ -283,3 +283,31 @@ change a durable command outcome. Engine detach/cancellation closes subscription
 and invalidates queued events. Dart receives typed version hints and re-queries
 snapshots. Added seventh native test for replay, commit-only delivery, unsubscribe
 and reconnect. Code/test validation is pending Actions; no device claim.
+
+Active prototype validation: run 42985050236 on fa360ff, confirmed live in Actions.
+Formatting, analysis and Dart test steps passed; Android debug compilation started
+08:13:23 UTC and remains in_progress. Do not cancel this run merely to push
+prepared edits. Re-poll it for terminal results and inspect native unit evidence.
+
+Source review found java.time requires API 26 without desugaring while minimum
+is 24. Prepared an uncommitted correction using System.currentTimeMillis and
+java.util.TimeZone for first-tap UTC/IANA-zone/offset capture, plus an API-24
+Robolectric retry-boundary test. No VM checks executed. Commit this compatibility
+fix after the current validation run finishes, then validate it in Actions.
+
+### Owner internal-delivery activation and automatic versioning
+
+Owner reports initial AAB uploaded to Play (owner evidence, not API verification)
+and authorizes automatic internal testing after every validated main push, plus
+production delivery from pinned version tags once testing/readiness permits it.
+No manual version increments: tags set production versionName; internal names and
+versionCodes are assigned by CI. Same upload key is mandatory for both tracks.
+
+Current native run 42985050236 is terminal FAILURE: Kotlin 2.4 rejects inferred
+intersection types in three mixed SQL bind arrays. Prepared explicit Any? array
+types along with the API-24 capture correction and eighth native test. Formatting,
+analysis and Dart tests passed before the compiler failure; native tests did not run.
+Selected pinned release tools Ruby 3.3.6 / Bundler 2.5.23 / Fastlane 2.228.0;
+prepare-release-tools workflow resolves the committed Gemfile lock on Actions.
+No VM builds/tests/dependency resolution executed. Internal/production uploads are
+not yet proven; publication must wait for successful native validation and setup.

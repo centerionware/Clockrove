@@ -110,6 +110,20 @@ class TimerRepositoryTest {
         assertEquals(listOf(repository.snapshot().version), reconnected)
     }
 
+    @Test
+    @Config(sdk = [24])
+    fun minimumApiNativeTapStartsAndRetainsItsCapturedBoundaryOnRetry() {
+        val version = repository.snapshot().version
+        val result = repository.executeFromSurface("api24", version,
+            TimerRepository.Action.START, job, TimerRepository.Origin.WIDGET)
+        assertNull(result.conflict)
+        val started = repository.snapshot()
+        assertNotNull(started.running)
+        assertEquals(result, repository.executeFromSurface("api24", version,
+            TimerRepository.Action.START, job, TimerRepository.Origin.WIDGET))
+        assertEquals(started, repository.snapshot())
+    }
+
     @Test fun automationCannotUseIncompletePrototypePolicy() {
         assertEquals("AUTOMATION_NOT_READY", repository.execute(command("geo", TimerRepository.Action.START, 1000,
             origin = TimerRepository.Origin.GEOFENCE)).conflict)

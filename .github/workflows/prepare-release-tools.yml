@@ -1,0 +1,24 @@
+name: Prepare locked release tools
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lock:
+    if: github.actor == 'centerionware' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
+        with:
+          ruby-version: '3.3.6'
+          bundler: '2.5.23'
+      - run: bundle lock --add-platform x86_64-linux --add-platform ruby
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-tool-lockfile
+          path: Gemfile.lock
+          retention-days: 1
+          if-no-files-found: error

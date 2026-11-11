@@ -81,19 +81,19 @@ class TimerRepository internal constructor(context: Context) {
             val version = if (conflict == null) before.version + 1 else before.version
             if (conflict == null) {
                 if (command.action != Action.START) {
-                    db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf(command.atUtcMillis, before.running!!.id))
+                    db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, before.running!!.id))
                 }
                 if (command.action != Action.STOP) {
                     db.execSQL(
                         "INSERT INTO sessions(id,job_id,start_ms,timezone,offset_seconds,origin) VALUES (?,?,?,?,?,?)",
-                        arrayOf(UUID.randomUUID().toString(), command.jobId, command.atUtcMillis,
+                        arrayOf<Any?>(UUID.randomUUID().toString(), command.jobId, command.atUtcMillis,
                             command.timezone, command.offsetSeconds, command.origin.name),
                     )
                 }
                 db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
             }
             db.execSQL("INSERT INTO commands(id,fingerprint,version,conflict) VALUES (?,?,?,?)",
-                arrayOf(command.id, fingerprint, version, conflict))
+                arrayOf<Any?>(command.id, fingerprint, version, conflict))
             db.setTransactionSuccessful()
             return Outcome(version, conflict)
         } finally { db.endTransaction() }
@@ -115,10 +115,10 @@ class TimerRepository internal constructor(context: Context) {
                     else Outcome(readSnapshot(helper.readableDatabase).version, "COMMAND_ID_REUSED")
             }
         }
-        val now = java.time.Instant.now()
-        val zone = java.time.ZoneId.systemDefault()
-        return execute(Command(id, version, action, jobId, now.toEpochMilli(), zone.id,
-            zone.rules.getOffset(now).totalSeconds, origin))
+        val now = System.currentTimeMillis()
+        val zone = java.util.TimeZone.getDefault()
+        return execute(Command(id, version, action, jobId, now, zone.id,
+            zone.getOffset(now) / 1000, origin))
     }
 
     @Synchronized

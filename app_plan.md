@@ -522,3 +522,21 @@ Seventh repository test covers commit/replay/unsubscribe semantics. Corrected lo
 Dart test descriptions flagged by Actions; formatter failures now print source
 diffs in CI for read-only diagnosis. No VM format/test/build executed. Validation
 for current prototype remains pending; no runtime/widget/device proof claimed.
+
+Current run 42985050236 on fa360ff passes formatting/analysis/Dart tests; Android
+compilation remains live. Preserve that run until terminal. API-24 compatibility
+correction and minimum-API native tap test are prepared locally after source
+review found undesugared java.time usage. These pending edits are unvalidated.
+
+### Owner handoff to automatic internal and tagged production delivery
+
+Owner confirms initial Play upload and authorizes each validated main push to
+internal testing. Version tags select production versionName and trigger release
+once eligibility/app readiness gates are satisfied. CI must allocate strictly
+increasing versionCodes for both paths with no manual bump, serialize uploads,
+and reuse the saved key. Owner confirmation is not API upload verification.
+
+Native run 42985050236 failed Kotlin compilation on three mixed SQL argument
+arrays; explicit Any? arrays prepared, plus API-24 capture fix/eighth native test.
+Dart checks passed. Preparing pinned Ruby/Fastlane lockfile via Actions before
+publishing workflow activation. No VM validation or Play upload attempted.
