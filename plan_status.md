@@ -36,6 +36,7 @@ iOS and future service remain deferred.
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Pending | No build or device success claimed |
+| Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
 | M8.3 Protected workflows/Fastlane/internal delivery | Pending owner setup | Publishing not configured; no signing/store credentials |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
@@ -247,3 +248,23 @@ SERVICE_ACCOUNT_JSON is present but not used for building the manual-upload file
 Current native adapter run 42982856409 failed formatting in test/timer_api_test.dart;
 this does not invalidate the previously validated foundation commit. Unpushed
 prototype event changes remain separate from this one-time delivery workflow.
+
+### Initial signed AAB delivered — 2026-11-11
+
+Actions run 42984008259 completed SUCCESS. Built validated foundation d6dbe94,
+version 0.1.0+1, signed with a newly generated RSA-4096 upload key; jarsigner
+strict verification passed in Actions. Owner-download artifact:
+https://github.com/centerionware/Clockrove/actions/runs/42984008259/artifacts/13839295891
+Name clockrove-initial-play-aab, expires 2026-11-12T08:08:17Z (one day).
+
+Recovered the CI-generated keystore through CMS-encrypted transport and stored
+UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD, UPLOAD_KEY_ALIAS and
+UPLOAD_KEY_PASSWORD as repository secrets; verified all four names. No values
+printed or committed. Removed encrypted recovery artifact 13839570276 and
+BOOTSTRAP_RECIPIENT_CERT; API confirms only AAB/public certificate artifact remains.
+Permanent key reuse is configured via release Gradle environment inputs; bootstrap
+refuses replacement if key secret exists. Owner explicitly authorized secret
+creation and public plaintext AAB with one-day retention. SERVICE_ACCOUNT_JSON
+was not used. No Play upload, acceptance, store release or production readiness
+claimed. App compilation/signing occurred only in Actions; local activity was
+credential recovery/secret administration, not a VM build/test.

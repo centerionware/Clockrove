@@ -32,3 +32,13 @@ With Play App Signing, Google registers the upload certificate and signs the
 store-distributed APKs using the app-signing key. Preserve the upload key for CI.
 Manual upload, Play acceptance, installation, review and publication each require
 separate evidence; an artifact build proves none of those outcomes.
+
+## Delivered setup build
+
+Successful run: https://github.com/centerionware/Clockrove/actions/runs/42984008259
+
+Artifact: https://github.com/centerionware/Clockrove/actions/runs/42984008259/artifacts/13839295891
+
+Expires 2026-11-12 at 08:08:17 UTC. The CI-generated upload key is now stored in
+all four UPLOAD_* repository secrets. The encrypted recovery artifact and
+bootstrap recipient secret were removed. No Play upload has been performed.

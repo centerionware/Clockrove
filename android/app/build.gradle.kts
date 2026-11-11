@@ -4,6 +4,19 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val uploadStore = System.getenv("CLOCKROVE_UPLOAD_KEYSTORE")
+val uploadStorePassword = System.getenv("CLOCKROVE_UPLOAD_STORE_PASSWORD")
+val uploadAlias = System.getenv("CLOCKROVE_UPLOAD_KEY_ALIAS")
+val uploadKeyPassword = System.getenv("CLOCKROVE_UPLOAD_KEY_PASSWORD")
+val signingReady = listOf(uploadStore, uploadStorePassword, uploadAlias, uploadKeyPassword)
+    .all { !it.isNullOrBlank() }
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name == "bundleRelease" || it.name == "assembleRelease" }) {
+        check(signingReady) { "Release signing is not configured; supply CLOCKROVE_UPLOAD_* environment variables" }
+    }
+}
+
 android {
     namespace = "io.github.centerionware.clockrove"
     compileSdk = 36
@@ -31,10 +44,20 @@ android {
 
     testOptions { unitTests.isIncludeAndroidResources = true }
 
+    signingConfigs {
+        if (signingReady) {
+            create("upload") {
+                storeFile = file(uploadStore!!)
+                storePassword = uploadStorePassword
+                keyAlias = uploadAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Store signing is intentionally unconfigured.
+            if (signingReady) signingConfig = signingConfigs.getByName("upload")
         }
     }
 }

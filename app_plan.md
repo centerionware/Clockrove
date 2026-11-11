@@ -500,3 +500,14 @@ CMS-encrypted; keys/passwords must never be plaintext artifacts or Git content.
 SERVICE_ACCOUNT_JSON exists; no Play API upload is performed for this request.
 No signing/build result is claimed until Actions finishes. See
  docs/INITIAL_PLAY_UPLOAD.md and plan_status.md for the operation and key lifecycle.
+
+### 2026-11-11 — initial setup AAB build and key persistence verified
+
+One-time Actions run 42984008259 succeeded: validated foundation source d6dbe94,
+version 0.1.0+1, RSA-4096 upload signing and strict jarsigner verification. Signed
+artifact 13839295891 expires 2026-11-12T08:08:17Z (owner accepted one-day public
+artifact). CI-generated upload keystore/passwords saved in UPLOAD_KEYSTORE_BASE64,
+UPLOAD_STORE_PASSWORD, UPLOAD_KEY_ALIAS and UPLOAD_KEY_PASSWORD repository secrets.
+Temporary encrypted recovery artifact and bootstrap recipient secret deleted;
+remaining artifact includes AAB and public upload certificate only. Same permanent
+key must be used for future CI. No Play upload or finished-app release claimed.
