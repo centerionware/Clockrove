@@ -1280,3 +1280,12 @@ for all three styles. Also prepared hourly/task report and measured-map previews
 using synthetic data/tiles. No mocks substitute for actual PDF generation here;
 the viewer routing stub receives real device-produced page images. All new checks
 and visual acceptance remain pending. Play delivery remains disabled.
+
+Report boundary review found that the default repeated-midnight interpretation can
+omit an hour in zones such as Havana. Prepared API-24 ICU first-occurrence/next-
+valid day boundaries, retaining UTC duration math, with host and actual framework
+checks for midnight overlap, midnight gap, skipped dates and the final supported
+year. The maximum calendar date now terminates before lexicographic year rollover.
+Using the historical Sao Paulo 2015 transition keeps the fixture compatible with
+both old device tzdata and current rules. New checks await Actions. Reference:
+[Android ICU wall-time options](https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int)).

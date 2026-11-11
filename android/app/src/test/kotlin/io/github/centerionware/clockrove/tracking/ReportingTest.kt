@@ -133,11 +133,23 @@ class ReportingTest {
         }
         assertEquals(before, version)
     }
+    @Test fun repeatedMidnightIncludesBothOccurrencesInItsCalendarDay() {
+        session("2026-11-01T04:00:00.000Z", "2026-11-02T05:00:00.000Z")
+        val report = repository.report(selection(zone = "America/Havana")).report
+        assertEquals(at("2026-11-01T04:00:00.000Z"), report.days.single().start)
+        assertEquals(BigInteger.valueOf(25L * 3600000), report.totals.single().durationMillis)
+        assertEquals(BigInteger.valueOf(150000), report.totals.single().amountMinor)
+        assertTrue(ReportCsv.work(report).contains("2026-11-01T00:00:00.000-04:00"))
+    }
+    @Test fun finalSupportedCalendarDateTerminatesAtTheFollowingExclusiveBoundary() {
+        val day = ReportStore.days(selection("9999-12-31", zone = "UTC")).single()
+        assertEquals(86400000L, day.end - day.start)
+    }
     @Test fun skippedAndMidnightTransitionDaysDoNotCauseInfiniteLoopsOrDuplicateDuration() {
         val skipped = ReportStore.days(selection("2011-12-29", "2011-12-31", "Pacific/Apia"))
         assertEquals(3, skipped.size); assertEquals(0L, skipped[1].end - skipped[1].start)
         assertEquals(skipped[0].end, skipped[1].start); assertEquals(skipped[1].end, skipped[2].start)
-        val midnight = ReportStore.days(selection("2018-11-04", zone = "America/Sao_Paulo")).single()
+        val midnight = ReportStore.days(selection("2015-10-18", zone = "America/Sao_Paulo")).single()
         assertEquals(23L * 3600000, midnight.end - midnight.start)
     }
 }
