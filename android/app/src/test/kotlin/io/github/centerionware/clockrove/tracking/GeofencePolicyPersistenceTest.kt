@@ -20,6 +20,7 @@ class GeofencePolicyPersistenceTest {
     private lateinit var repository: TimerRepository
     private var clock = 1000L
     private var counter = 0
+    private var digestUnavailable = false
     private lateinit var job: String
     @Before fun setup() {
         val app = RuntimeEnvironment.getApplication()
@@ -30,6 +31,7 @@ class GeofencePolicyPersistenceTest {
     @After fun teardown() { repository.close() }
     // Public synthetic test key; this does not exercise the device Keystore provider.
     private fun fixtureDigest(value: String): String {
+        if (digestUnavailable) throw java.security.GeneralSecurityException("Synthetic unavailable receipt key")
         val mac = javax.crypto.Mac.getInstance("HmacSHA256")
         mac.init(javax.crypto.spec.SecretKeySpec(ByteArray(32) { 42 }, "HmacSHA256"))
         return mac.doFinal(value.toByteArray(Charsets.UTF_8)).joinToString("") {
@@ -109,6 +111,20 @@ class GeofencePolicyPersistenceTest {
                 assertTrue(it.moveToFirst()); assertEquals(76000L, it.getLong(0))
             }
         }
+    }
+
+    @Test fun unavailableReceiptKeyBlocksAutomaticFinalizationButKeepsManualStopAvailable() {
+        configure(grace = 1)
+        event("outside", OUTSIDE, 1100, "site")
+        val session = event("entry", INSIDE, 2000, "site").startedSessionId!!
+        event("exit", OUTSIDE, 3000, "site")
+        digestUnavailable = true
+        assertEquals("GEOFENCE_RECEIPTS_UNAVAILABLE", event("return-during-key-failure", INSIDE, 4000, "site").conflict)
+        assertEquals(TimerRepository.DepartureResult.NEEDS_REVIEW, repository.finalizeDeparture(session, 100000))
+        assertEquals(session, repository.snapshot().running!!.id)
+        assertNull(stop("manual-during-key-failure", 100100).conflict)
+        assertNull(repository.pendingDeparture())
+        assertNull(repository.snapshot().running)
     }
 
     @Test fun zeroGraceClosesAtExitAndAQualifiedLaterEntryStartsNewWork() {

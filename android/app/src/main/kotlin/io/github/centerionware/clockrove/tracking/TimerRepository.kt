@@ -327,9 +327,13 @@ class TimerRepository internal constructor(context: Context,
         presence: io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence,
         observedUtcMillis: Long, receivedUtcMillis: Long): GeofenceOutcome {
         require(id.isNotBlank())
-        val commandId = geofenceCommandId(id)
-        val fingerprint = eventDigest(org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name, observedUtcMillis,
-            org.json.JSONArray(registrationKeys.sorted()))).toString())
+        val identity = try {
+            geofenceCommandId(id) to eventDigest(org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name,
+                observedUtcMillis, org.json.JSONArray(registrationKeys.sorted()))).toString())
+        } catch (_: Exception) {
+            return unavailableGeofenceReceipts(receivedUtcMillis)
+        }
+        val (commandId, fingerprint) = identity
         val db = helper.writableDatabase
         val result: GeofenceOutcome
         var changed = false
@@ -427,6 +431,25 @@ class TimerRepository internal constructor(context: Context,
         } finally { db.endTransaction() }
         if (changed) publishVersion(result.version)
         return result
+    }
+
+    private fun unavailableGeofenceReceipts(receivedUtcMillis: Long): GeofenceOutcome {
+        val db = helper.writableDatabase
+        val version: Long
+        var changed = false
+        db.beginTransaction()
+        try {
+            val before = readSnapshot(db)
+            val jobs = GeofenceStore.policies(db).filter { it.settings.enabled }.map { it.settings.jobId }.toMutableSet()
+            if (pendingDeparture() != null) before.running?.let { jobs.add(it.jobId) }
+            jobs.forEach { GeofenceStore.conflict(db, it, receivedUtcMillis, "GEOFENCE_RECEIPTS_UNAVAILABLE") }
+            changed = jobs.isNotEmpty()
+            version = if (changed) before.version + 1 else before.version
+            if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        if (changed) publishVersion(version)
+        return GeofenceOutcome(version, conflict = "GEOFENCE_RECEIPTS_UNAVAILABLE")
     }
 
     private fun encodeGeofenceOutcome(value: GeofenceOutcome) = org.json.JSONObject().apply {

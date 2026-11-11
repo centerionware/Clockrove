@@ -61,3 +61,9 @@ API-24 configuration validation runs before writes, avoiding raw SQLite savepoin
 control through Android's transaction API. Primary source:
 [Android 7 statement classification](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-7.0.0_r1/core/java/android/database/DatabaseUtils.java#L1394)
 and [transaction dispatch](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-7.0.0_r1/core/java/android/database/sqlite/SQLiteSession.java#L865).
+
+If receipt-key access fails, the writer records current degraded review state and
+blocks automatic finalization, preserving a possibly unprocessed re-entry for
+manual review. Manual stop remains independent of the key. A synthetic provider
+failure test covers this policy; actual device key/provider handling remains a
+physical validation requirement.

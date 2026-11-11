@@ -897,3 +897,17 @@ retained. Unit tests inject a public synthetic HMAC fixture and inspect persiste
 receipts, so Android Keystore persistence is explicitly still a device gate.
 Review action, capacity correction and minimized receipts need the next full CI.
 No VM validation ran; automation is not exposed in the app yet.
+
+Added an eleventh native policy case for unavailable receipt keys: a possibly
+unprocessed re-entry blocks automatic expiry for review while manual clock-out
+still works. This is tested with a synthetic provider error, not a claimed Android
+Keystore hardware/provider result. Late-event acceptance preserves existing time
+history and disarms until fresh outside/entry facts. New source remains pending CI.
+
+Corrected policy run 43014180179 on 32ec72d completed SUCCESS: Dart/UI, Android
+compilation, 38 native tests (0 failures/errors/skips, XML artifact inspected),
+resource previews and release-version policy. This verifies the capacity correction,
+minimized receipts and explicit review acceptance in native unit conditions.
+The additional unavailable-key expiry guard/test is a new source change and must
+pass a subsequent full Actions run before merge. Device Keystore, receiver and
+scheduler behavior are still unproven; no VM validation executed.
