@@ -249,6 +249,20 @@ void main() {
     await _reveal(tester, 'Departure grace');
     expect(tester.takeException(), isNull);
   });
+  testWidgets('provider retry reports actual health without pretending registration succeeded', (tester) async {
+    final api = _configured()..monitoringHealth = 'UNAVAILABLE';
+    await _show(tester, api);
+    await tester.tap(find.text('Retry site monitoring'));
+    await tester.pumpAndSettle();
+    expect(api.monitoringRetries, 1);
+    expect(find.text('Site monitoring needs attention'), findsOneWidget);
+    expect(api.settingsVisits, 0);
+    expect(api.attempts, isEmpty);
+    api.retryUnavailable = true;
+    await tester.tap(find.text('Retry site monitoring'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Site monitoring could not be retried'), findsOneWidget);
+  });
   for (final dark in [false, true]) {
     testWidgets(
       'render work sites, editor and provisional review ${dark ? 'dark' : 'light'}',

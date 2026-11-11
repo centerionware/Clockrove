@@ -1145,3 +1145,11 @@ the editable default rate before saving, preserving explicit monetary intent.
 Prepared source requires Actions formatting/analyzer/tests and synthetic visual
 review. Logo import, PDF/style previews, report screens and lifecycle still remain;
 no combined release or complete invoice claim is made.
+
+### Monitoring retry and upgrade recovery continuation
+
+Rebased the pending explicit monitoring retry/app-upgrade recovery source onto
+current main without changing the combined next-release contract or publication
+hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
+Fresh exact-head Actions validation is required. This remains source-level recovery
+behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.

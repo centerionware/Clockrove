@@ -143,6 +143,13 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     }
   }
 
+  Future<void> _retryMonitoring() async {
+    if (_locked) return;
+    setState(() { _busy = true; _notice = null; });
+    try { await ref.read(automationApiProvider).retryMonitoring(); }
+    catch (_) { if (mounted) { setState(() => _notice = 'Site monitoring could not be retried. You can keep using the manual timer.'); } }
+    finally { if (mounted) { setState(() => _busy = false); _refresh(); } }
+  }
   Future<void> _openSettings() async {
     if (_locked) return;
     setState(() {
@@ -330,11 +337,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   const Text(
                     'Manual timing always stays available. Arrivals never switch a running job.',
                   ),
-                  if (value.settings.enabled &&
+                  if (value.settings.enabled && value.precise && value.background &&
                       !const {'READY', 'REGISTERING'}.contains(value.health))
                     TextButton(
-                      onPressed: _locked ? null : _openSettings,
-                      child: const Text('App settings'),
+                      onPressed: _locked ? null : _retryMonitoring,
+                      child: const Text('Retry site monitoring'),
                     ),
                 ]),
                 const SizedBox(height: 16),
