@@ -622,3 +622,20 @@ and applied its Actions-generated patch to three Dart source/test files. No VM
 formatter/build/test ran. New validation will cover actual sample metadata and
 clean/scrolled previews. Native departure-state follow-up is prepared locally,
 not included in this correction and not enabled at runtime.
+
+### Persisted departure primitives (dependent feature branch)
+
+Prepared departure-state-persistence based on measured-tracking-status. Prototype
+schema 3 adds one durable departure candidate with detected boundary and deadline;
+v1/v2 forward migrations preserve prior work/location records. Duplicate exits
+keep the first boundary/grace. Re-entry strictly before expiry cancels; delayed
+finalization closes at detected exit, prunes points after that boundary and never
+closes a different/new manual session. Manual stop/switch clears candidates in its
+own transaction. Missing GPS is not an input to these primitives.
+
+Added four Robolectric tests for recovered deadlines/retrospective pruning,
+re-entry/zero grace/duplicate callbacks, manual precedence, max/invalid grace and
+v2 upgrade preserving points. Current schema-1 rollback tests also remain active.
+These native internals are not wired to geofence callbacks, alarms or UI yet;
+no automation is enabled by this slice. Validation is pending; all tests run on
+Actions, never VM. This PR depends on measured-status PR #6, then targets main.
