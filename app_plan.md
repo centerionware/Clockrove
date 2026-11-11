@@ -1225,3 +1225,11 @@ heads and UI remain under validation. Actual PDF checks moved from unsupported
 Robolectric PdfDocument to pinned Android emulator instrumentation in Actions.
 Logo import, document/provider/integrated report UI checks and release acceptance
 remain open. Play workflow 414395901 stays disabled; no partial release publishes.
+
+### Independent job-command correctness continuation
+
+Prepared versioned/idempotent job creation through the native command boundary,
+retained app response-loss intent and strict integral timer versions. Covers atomic
+board/revision creation, stale/duplicate requests, rollback and deleted-ID fences.
+Eight API-24/35 native cases plus retry/controller/codec journeys await Actions;
+remaining milestone-3/4/7 implementation and physical acceptance remain open.

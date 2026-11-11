@@ -40,26 +40,12 @@ class TimerHostApi(context: Context, messenger: BinaryMessenger) {
         })
         channel.setMethodCallHandler { call, result ->
             try {
-                when (call.method) {
-                    "snapshot" -> result.success(encode(repository.snapshot()))
-                    "createJob" -> {
-                        val name = requireNotNull(call.argument<String>("name"))
-                        val id = repository.createJob(name)
-                        TimerWidget.refreshAll(appContext)
-                        result.success(id)
-                    }
-                    "execute" -> {
-                        val id = requireNotNull(call.argument<String>("id"))
-                        val version = requireNotNull(call.argument<Number>("version")).toLong()
-                        val action = TimerRepository.Action.valueOf(requireNotNull(call.argument<String>("action")))
-                        val job = call.argument<String>("jobId")
-                        require(version >= 0)
-                        val outcome = repository.executeFromSurface(id, version, action, job, TimerRepository.Origin.MANUAL)
-                        TimerWidget.refreshAll(appContext)
-                        result.success(mapOf("version" to outcome.version, "conflict" to outcome.conflict))
-                    }
-                    else -> result.notImplemented()
-                }
+                val response = TimerDispatch(repository).call(call)
+                if (response == null) result.notImplemented()
+                else if (response is TimerRepository.Outcome) {
+                    TimerWidget.refreshAll(appContext)
+                    result.success(mapOf("version" to response.version, "conflict" to response.conflict))
+                } else result.success(response)
             } catch (invalid: IllegalArgumentException) {
                 result.error("INVALID_ARGUMENT", "Invalid timer request", null)
             } catch (invalid: ClassCastException) {
@@ -77,6 +63,28 @@ class TimerHostApi(context: Context, messenger: BinaryMessenger) {
         subscription = null
         channel.setMethodCallHandler(null)
         events.setStreamHandler(null)
+    }
+
+}
+
+/** Strict transport; callers cannot choose timer timestamps or automation origins. */
+internal class TimerDispatch(private val repository: TimerRepository) {
+    fun call(call: io.flutter.plugin.common.MethodCall): Any? {
+        val args = (call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>
+        fun string(key: String) = requireNotNull(args[key] as? String)
+        fun version(): Long {
+            val value = args["version"]; require(value is Int || value is Long)
+            return (value as Number).toLong().also { require(it >= 0) }
+        }
+        return when (call.method) {
+            "snapshot" -> encode(repository.snapshot())
+            "createJob" -> repository.createJob(string("id"), version(), string("jobId"), string("name"))
+            "execute" -> {
+                val rawJob = args["jobId"]; require(rawJob == null || rawJob is String)
+                repository.executeFromSurface(string("id"), version(), TimerRepository.Action.valueOf(string("action")), rawJob as String?, TimerRepository.Origin.MANUAL)
+            }
+            else -> null
+        }
     }
 
     private fun encode(snapshot: TimerRepository.Snapshot): Map<String, Any?> = mapOf(

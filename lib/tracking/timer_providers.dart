@@ -23,11 +23,27 @@ class TimerIntent {
   final String? jobId;
 }
 
+class JobCreateIntent {
+  const JobCreateIntent(this.id, this.version, this.jobId, this.name);
+  final String id, jobId, name;
+  final int version;
+}
+
+String _newIntentId() {
+  final random = Random.secure();
+  return List.generate(
+    16,
+    (_) => random.nextInt(256),
+  ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
+}
+
 class TimerActionState {
-  const TimerActionState({this.working = false, this.pending, this.conflict});
+  const TimerActionState({this.working = false, this.pending, this.pendingJob, this.conflict});
   final bool working;
   final TimerIntent? pending;
+  final JobCreateIntent? pendingJob;
   final String? conflict;
+  bool get hasPending => pending != null || pendingJob != null;
 }
 
 final timerActionsProvider = NotifierProvider<TimerActions, TimerActionState>(
@@ -50,16 +66,18 @@ class TimerActions extends Notifier<TimerActionState> {
     TimerAction action, {
     String? jobId,
   }) async {
-    if (state.working || state.pending != null) return;
-    final random = Random.secure();
-    final id = List.generate(
-      16,
-      (_) => random.nextInt(256),
-    ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
+    if (state.working || state.hasPending) return;
+    final id = _newIntentId();
     await _attempt(TimerIntent(id, displayed.version, action, jobId));
   }
 
   Future<void> retry() async {
+    if (state.working) return;
+    final job = state.pendingJob;
+    if (job != null) {
+      await _attemptJob(job);
+      return;
+    }
     final pending = state.pending;
     if (pending == null || state.working) return;
     await _attempt(pending);
@@ -86,16 +104,29 @@ class TimerActions extends Notifier<TimerActionState> {
     if (_active) ref.invalidate(timerSnapshotProvider);
   }
 
-  Future<void> createJob(String name) async {
-    if (state.working || state.pending != null || name.trim().isEmpty) return;
-    state = const TimerActionState(working: true);
+  Future<void> createJob(TimerSnapshot displayed, String name) async {
+    if (state.working || state.hasPending || name.trim().isEmpty) return;
+    await _attemptJob(JobCreateIntent(
+      _newIntentId(), displayed.version, _newIntentId(), name.trim(),
+    ));
+  }
+
+  Future<void> _attemptJob(JobCreateIntent intent) async {
+    state = TimerActionState(working: true, pendingJob: intent);
     try {
-      await ref.read(timerApiProvider).createJob(name.trim());
-      if (_active) state = const TimerActionState();
-    } catch (_) {
+      final outcome = await ref.read(timerApiProvider).createJob(
+        id: intent.id,
+        version: intent.version,
+        jobId: intent.jobId,
+        name: intent.name,
+      );
       if (_active) {
-        state = const TimerActionState(conflict: 'JOB_CREATE_FAILED');
+        state = TimerActionState(
+          conflict: outcome.committed ? null : 'JOB_CREATE_FAILED',
+        );
       }
+    } catch (_) {
+      if (_active) state = TimerActionState(pendingJob: intent);
     }
     if (_active) ref.invalidate(timerSnapshotProvider);
   }

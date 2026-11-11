@@ -44,7 +44,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
     }
   }
 
-  Future<void> _newJob() async {
+  Future<void> _newJob(TimerSnapshot displayed) async {
     var enteredName = '';
     final name = await showDialog<String>(
       context: context,
@@ -53,6 +53,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
         content: TextField(
           onChanged: (value) => enteredName = value,
           autofocus: true,
+          maxLength: 240,
           decoration: const InputDecoration(labelText: AppStrings.jobName),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (value) {
@@ -75,7 +76,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
       ),
     );
     if (name != null && mounted) {
-      await ref.read(timerActionsProvider.notifier).createJob(name);
+      final current = ref.read(timerSnapshotProvider).value ?? displayed;
+      await ref.read(timerActionsProvider.notifier).createJob(current, name);
     }
   }
 
@@ -157,7 +159,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
   Widget build(BuildContext context) {
     final snapshot = ref.watch(timerSnapshotProvider);
     final actions = ref.watch(timerActionsProvider);
-    final disabled = actions.working || actions.pending != null;
+    final disabled = actions.working || actions.hasPending;
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -253,7 +255,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                       padding: EdgeInsets.only(top: 12),
                       child: LinearProgressIndicator(),
                     ),
-                  if (actions.pending != null && !actions.working)
+                  if (actions.hasPending && !actions.working)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Card(
@@ -355,7 +357,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                             ),
                           ),
                           enabled: !disabled,
-                          onTap: disabled ? null : _newJob,
+                          onTap: disabled ? null : () => _newJob(state),
                         ),
                       ],
                     ),

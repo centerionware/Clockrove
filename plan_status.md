@@ -1242,3 +1242,24 @@ Flutter tests, Android build and native tests, but failed while exporting native
 results/previews during the GitHub Actions incident. Release tooling did not run;
 this is not a passed validation. Combined current main (834a7e4) into #17 for a
 fresh complete validation including actual PDF checks. No VM build/test ran.
+
+### Versioned job creation and strict timer transport — source prepared
+
+The production create-job call still allocated a new ID on every invocation and
+could not retain a response-loss intent. Prepared a versioned native command with
+a proposed stable job ID, one atomic job/board/revision commit, deleted-ID fencing
+and durable original outcome replay. New jobs capture the current default currency
+once; a retry does not relabel an existing job. The old one-argument repository
+helper is internal fixture convenience and is no longer used by production UI.
+
+App creation retains command ID/job ID/name/version while uncertain, exposes the
+existing retry action and blocks another app timer/create command until resolved.
+The dialog permits the same 240-character name bound as job settings. Native timer
+transport now rejects fractional versions instead of truncating them and still
+captures its own timestamps/manual origin. Existing tracking remains independent.
+
+Eight API-24/35 native cases (sixteen executions), three controller retry/concurrency
+checks and one codec case are prepared, alongside the existing create/switch/stop
+widget journey. All validation remains pending in GitHub Actions; no VM builds,
+tests or formatting ran. This is an independent milestone-3 contract fix, not proof
+that remaining history/widgets/backup work or full launch acceptance is complete.

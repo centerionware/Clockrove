@@ -61,5 +61,5 @@ abstract final class AppStrings {
   static const commandConflict =
       'The action could not be applied. Review the current timer and try again.';
   static const jobCreateFailed =
-      'Could not confirm job creation. Refresh the list before creating it again.';
+      'Job was not created. Check its name, refresh the list and try again.';
 }
