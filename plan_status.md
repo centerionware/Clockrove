@@ -338,3 +338,71 @@ copyFlutterAssetsDebug outputs without a declared dependency. Added the explicit
 variant-matched dependency in Gradle; this preserves host-test asset packaging and
 checks rather than bypassing them. New validation queues behind 42986580821 and
 will be eligible for automatic internal delivery only if all checks pass.
+
+### Prototype controls dependency preparation
+
+Previous turn: progress (publishing workflow, pinned lock and native task fix).
+Revalidated runs 42986580821 (live) and 42986727241 (pending), preserving both.
+Prepared Riverpod 3.0.3 on branch prototype-controls; official pub metadata requires
+Dart ^3.7.0 / Flutter >=3.0.0, compatible with selected tools. Validate manual
+owner-only prepare_dependencies mode resolves/exports proposed pubspec.lock as a
+source artifact; normal pushes/PRs still enforce the committed lockfile. No secret
+access or publication is enabled by this preparation mode. Main source and its
+active build remain unchanged. No VM resolution/build/test ran.
+
+Feature dependency preparation run: 42987027150 on prototype-controls / e52b1fd.
+Dispatched successfully with prepare_dependencies=true; this is source lockfile
+preparation, not publication. Main fixed run remains 42986727241. Preserve these
+handles and inspect results rather than starting replacements.
+
+Prepared uncommitted Riverpod timer providers/controller: snapshots depend on
+native committed-version hints; commands retain an immutable intent ID/version
+across uncertain response retries and block competing UI intents while unresolved.
+Native outcomes remain authoritative. No optimistic timer or second database.
+Controller tests and prototype controls UI remain next, after Actions lockfile
+resolution; this code is unvalidated and not on main. No VM checks executed.
+
+### Prototype manual controls and controller tests
+
+Actions run 42987027150 exported proposed-pubspec-lock artifact 13840027259;
+retrieved its source lockfile and applied it without local dependency resolution.
+Added Riverpod prototype controls on isolated feature branch: authoritative timer,
+start/stop/switch, New job last, job creation, refresh/resume re-query and honest
+unavailable-location state. Immutable retry intents prevent lost-response retries
+from changing IDs or emitting competing actions. Added three presentation tests
+for response loss/dedupe, simultaneous taps and stale-state refresh; mocks prove
+presentation semantics, not native/physical execution. No fake running timer or
+second writer. All new source is pending Actions validation, not on main yet.
+
+Validation now exports source-only formatter patches on format failure so edits
+can be applied from CI output without ever running a formatter on the VM. Earlier
+main run 42986580821 is terminal failure; corrected run 42986727241 is live.
+Feature dependency run remains live on its previous source; new controls require
+a new feature validation run rather than pretending that old run covered them.
+
+Dependency preparation run 42987027150 on e52b1fd completed SUCCESS. Retrieved logs:
+Android build passed; native testDebugUnitTest ran (not NO-SOURCE) and Gradle
+reported BUILD SUCCESSFUL (23s); release version allocation/tag checks passed and
+Fastfile syntax was OK. This source predates the new screen/controller and cannot
+validate those changes. It provides native repository/Robolectric and compilation
+evidence only, not real widget delivery or physical-location evidence.
+
+New controls are committed as 787916b in draft PR #1:
+https://github.com/centerionware/Clockrove/pull/1
+PR validation run 42987698700 is pending/in progress. Main run 42986727241 is still
+live in Android compilation; no automatic Play upload success yet. Do not merge
+PR until new UI/presentation checks pass. No VM checks executed.
+
+### Prototype review and first automatic publishing run
+
+Previous turn: progress (native prototype controls, tests and draft PR).
+Main corrected validation 42986727241 completed SUCCESS, triggering automatic
+Play delivery run 42988068348. Its source eligibility and Ruby tool install passed;
+JDK setup is active. No Play upload acceptance claimed yet.
+
+PR run 42987698700 completed FAILURE at formatting. Downloaded/reviewed its
+formatter-source-patch artifact and applied that Actions-generated source patch;
+no VM formatter ran. Added braces to keep the formatted conditional lint-safe.
+Added a screen journey test for start/create/switch/stop and New job ordering,
+using a controlled adapter (UI semantics only; native tests remain separate).
+Feature changes require fresh PR validation. No main merge or VM tests performed.

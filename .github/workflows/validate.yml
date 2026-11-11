@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      prepare_dependencies:
+        description: Resolve a proposed dependency lockfile as a source artifact
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,11 +59,36 @@ jobs:
           echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
       - name: Resolve locked dependencies
-        run: flutter pub get --enforce-lockfile
+        env:
+          PREPARE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_dependencies && github.actor == 'centerionware' }}
+        run: |
+          if [[ "$PREPARE" == true ]]; then
+            flutter pub get
+          else
+            flutter pub get --enforce-lockfile
+          fi
+      - name: Export proposed source lockfile
+        if: github.event_name == 'workflow_dispatch' && inputs.prepare_dependencies && github.actor == 'centerionware'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: proposed-pubspec-lock
+          path: pubspec.lock
+          retention-days: 1
+          if-no-files-found: error
       - name: Check formatting
+        id: format
         run: |
           dart format lib test
+          git diff --binary -- lib test > "$RUNNER_TEMP/format.patch"
           git diff --exit-code -- lib test
+      - name: Export formatter correction for source review
+        if: failure() && steps.format.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatter-source-patch
+          path: ${{ runner.temp }}/format.patch
+          retention-days: 1
+          if-no-files-found: ignore
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Test implemented behavior

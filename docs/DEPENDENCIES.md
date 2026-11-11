@@ -27,3 +27,7 @@ The job installs this into its own SDK root instead of using runner PATH state.
 
 Native prototype test dependencies: JUnit 4.13.2 (EPL-1.0) and Robolectric 4.16.1
 (MIT), test-only. Full transitive notice review remains a release gate.
+
+Prototype presentation: flutter_riverpod 3.0.3 / riverpod 3.0.3 (MIT). Exact
+transitive versions are in Actions-resolved pubspec.lock. UI controls are isolated
+on the prototype-controls feature branch until validation passes.
