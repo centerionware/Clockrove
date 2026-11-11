@@ -31,6 +31,8 @@ class TimerRepository internal constructor(context: Context) {
         val measuredUtcMillis: Long, val receivedUtcMillis: Long,
         val latitude: Double, val longitude: Double, val accuracyMeters: Double,
     )
+    data class Departure(val sessionId: String, val detectedUtcMillis: Long, val deadlineUtcMillis: Long)
+    enum class DepartureResult { RECORDED, ALREADY_PENDING, CANCELLED, FINALIZED, NOT_DUE, NO_PENDING, STALE_SESSION, INVALID_BOUNDARY, EXPIRED }
     data class TrackingObservation(val running: Session?, val latest: LocationPoint?)
     enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION }
 
@@ -90,6 +92,7 @@ class TimerRepository internal constructor(context: Context) {
             if (conflict == null) {
                 if (command.action != Action.START) {
                     val closing = requireNotNull(before.running)
+                    db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(closing.id))
                     db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, closing.id))
                     db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?",
                         arrayOf<Any?>(closing.id, command.atUtcMillis))
@@ -197,6 +200,69 @@ class TimerRepository internal constructor(context: Context) {
     )
 
     @Synchronized
+    internal fun pendingDeparture(): Departure? = helper.readableDatabase.rawQuery(
+        "SELECT session_id,detected_ms,deadline_ms FROM pending_departure", null,
+    ).use { if (it.moveToFirst()) Departure(it.getString(0), it.getLong(1), it.getLong(2)) else null }
+
+    /** Called only after qualified native exits from all of a job's enabled sites. */
+    @Synchronized
+    internal fun beginDeparture(sessionId: String, detectedUtcMillis: Long, graceMinutes: Int): DepartureResult {
+        require(graceMinutes in 0..1440)
+        val running = readSnapshot(helper.readableDatabase).running
+        if (running?.id != sessionId) return DepartureResult.STALE_SESSION
+        if (detectedUtcMillis <= running.startUtcMillis) return DepartureResult.INVALID_BOUNDARY
+        if (pendingDeparture() != null) return DepartureResult.ALREADY_PENDING
+        val deadline = Math.addExact(detectedUtcMillis, graceMinutes * 60_000L)
+        return changeDeparture {
+            it.execSQL("INSERT INTO pending_departure(session_id,detected_ms,deadline_ms) VALUES (?,?,?)",
+                arrayOf<Any?>(sessionId, detectedUtcMillis, deadline))
+            DepartureResult.RECORDED
+        }
+    }
+
+    @Synchronized
+    internal fun reenterBeforeDeadline(sessionId: String, detectedUtcMillis: Long): DepartureResult {
+        val candidate = pendingDeparture() ?: return DepartureResult.NO_PENDING
+        if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
+            return DepartureResult.STALE_SESSION
+        if (detectedUtcMillis < candidate.detectedUtcMillis) return DepartureResult.INVALID_BOUNDARY
+        if (detectedUtcMillis >= candidate.deadlineUtcMillis) return DepartureResult.EXPIRED
+        return changeDeparture {
+            it.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(sessionId))
+            DepartureResult.CANCELLED
+        }
+    }
+
+    @Synchronized
+    internal fun finalizeDeparture(sessionId: String, nowUtcMillis: Long): DepartureResult {
+        val candidate = pendingDeparture() ?: return DepartureResult.NO_PENDING
+        if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
+            return DepartureResult.STALE_SESSION
+        if (nowUtcMillis < candidate.deadlineUtcMillis) return DepartureResult.NOT_DUE
+        return changeDeparture {
+            it.execSQL("UPDATE sessions SET end_ms=? WHERE id=? AND end_ms IS NULL",
+                arrayOf<Any?>(candidate.detectedUtcMillis, sessionId))
+            it.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?",
+                arrayOf<Any?>(sessionId, candidate.detectedUtcMillis))
+            it.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(sessionId))
+            DepartureResult.FINALIZED
+        }
+    }
+
+    private fun changeDeparture(change: (SQLiteDatabase) -> DepartureResult): DepartureResult {
+        val db = helper.writableDatabase
+        val result: DepartureResult
+        db.beginTransaction()
+        try {
+            result = change(db)
+            db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        publishVersion(readSnapshot(db).version)
+        return result
+    }
+
+    @Synchronized
     internal fun close() { listeners.clear(); helper.close() }
 
     @Synchronized
@@ -241,7 +307,7 @@ class TimerRepository internal constructor(context: Context) {
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 2) {
+    private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 3) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -252,14 +318,20 @@ class TimerRepository internal constructor(context: Context) {
             db.execSQL("CREATE INDEX session_dates ON sessions(start_ms,end_ms)")
             db.execSQL("CREATE TABLE commands(id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,version INTEGER NOT NULL,conflict TEXT)")
             createLocationTable(db)
+            createDepartureTable(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
             db.execSQL("CREATE INDEX location_session_date ON location_points(session_id,measured_ms)")
         }
+        private fun createDepartureTable(db: SQLiteDatabase) {
+            db.execSQL("CREATE TABLE pending_departure(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL CHECK(deadline_ms>=detected_ms))")
+            db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
+        }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion == 1 && newVersion == 2) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
-            createLocationTable(db)
+            check(oldVersion in 1..2 && newVersion == 3) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            if (oldVersion < 2) createLocationTable(db)
+            createDepartureTable(db)
         }
     }
 

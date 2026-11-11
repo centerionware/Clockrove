@@ -684,3 +684,12 @@ Reusable owner UI direction recorded in docs/UI_DESIGN.md for later features.
 PR #6 run 42997495311 failed formatting; applied reviewed CI-generated source patch
 without local formatting. Actual measured-status/preview validation remains
 pending. Departure-state persistence follow-up remains separate and unscheduled.
+
+### Prototype durable departure state
+
+Dependent branch departure-state-persistence adds schema-3 pending exit/deadline
+storage, timely re-entry cancellation, duplicate exit stability, manual clear and
+retrospective end/pruning guarded by session ID. Forward migrations and four native
+persistence/grace/recovery tests added. No scheduler/geofence callback/UI activation
+is included; internals await CI and later integration. No GPS absence is treated
+as departure and no new session is silently stopped. No VM checks executed.
