@@ -21,8 +21,10 @@ class _Timer extends TimerApi {
 }
 
 class _LogoApi extends LogoApi {
-  @override Future<CompanyLogo> read() async => const CompanyLogo(1, null, null);
+  @override
+  Future<CompanyLogo> read() async => const CompanyLogo(1, null, null);
 }
+
 class _SettingsApi extends BusinessSettingsApi {
   static const company = CompanySettings(
     currency: 'USD',

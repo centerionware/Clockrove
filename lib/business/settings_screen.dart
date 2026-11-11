@@ -183,9 +183,15 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           },
         ),
         const SizedBox(height: 20),
-        LogoControls(onBusyChanged: (value) { if (mounted) { setState(() => _logoBusy = value); } }),
-      const SizedBox(height: 20),
-      _field(_header, 'Optional invoice header', lines: 2),
+        LogoControls(
+          onBusyChanged: (value) {
+            if (mounted) {
+              setState(() => _logoBusy = value);
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _field(_header, 'Optional invoice header', lines: 2),
         _field(_footer, 'Optional invoice footer', lines: 2),
         Text('Email draft', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),

@@ -324,7 +324,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               child: _InvoiceButton(
                                 selection: selection,
                                 report: report,
-                      onPendingChanged: (value) { if (mounted) { setState(() => _invoicePending = value); } },
+                                onPendingChanged: (value) {
+                                  if (mounted) {
+                                    setState(() => _invoicePending = value);
+                                  }
+                                },
                               ),
                             ),
                           OutlinedButton.icon(
@@ -460,7 +464,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
 }
 
 class _InvoiceButton extends ConsumerStatefulWidget {
-  const _InvoiceButton({required this.selection, required this.report, required this.onPendingChanged});
+  const _InvoiceButton({
+    required this.selection,
+    required this.report,
+    required this.onPendingChanged,
+  });
   final ReportSelection selection;
   final WorkReport report;
   final ValueChanged<bool> onPendingChanged;

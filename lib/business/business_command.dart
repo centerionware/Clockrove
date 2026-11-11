@@ -75,8 +75,10 @@ class _BusinessCommandState extends State<BusinessCommand> {
     'TASK_PRICES_REQUIRED' => 'Set prices for the selected completed billable tasks before preparing this invoice.',
     'NO_BILLABLE_ITEMS' =>
       'Choose dates with finalized work or completed billable tasks.',
-    'INVALID_LOGO' => 'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
-    'LOGO_IMPORT_EXPIRED' => 'The temporary image copy is unavailable. Choose the logo again.',
+    'INVALID_LOGO' =>
+      'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
+    'LOGO_IMPORT_EXPIRED' =>
+      'The temporary image copy is unavailable. Choose the logo again.',
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
     'CUSTOMER_ARCHIVED' =>
       'Choose an active customer or unarchive this customer first.',
