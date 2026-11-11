@@ -338,3 +338,14 @@ copyFlutterAssetsDebug outputs without a declared dependency. Added the explicit
 variant-matched dependency in Gradle; this preserves host-test asset packaging and
 checks rather than bypassing them. New validation queues behind 42986580821 and
 will be eligible for automatic internal delivery only if all checks pass.
+
+### Prototype controls dependency preparation
+
+Previous turn: progress (publishing workflow, pinned lock and native task fix).
+Revalidated runs 42986580821 (live) and 42986727241 (pending), preserving both.
+Prepared Riverpod 3.0.3 on branch prototype-controls; official pub metadata requires
+Dart ^3.7.0 / Flutter >=3.0.0, compatible with selected tools. Validate manual
+owner-only prepare_dependencies mode resolves/exports proposed pubspec.lock as a
+source artifact; normal pushes/PRs still enforce the committed lockfile. No secret
+access or publication is enabled by this preparation mode. Main source and its
+active build remain unchanged. No VM resolution/build/test ran.
