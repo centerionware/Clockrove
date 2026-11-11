@@ -6,6 +6,7 @@ import 'timer_api.dart';
 import 'timer_providers.dart';
 import 'tracking_api.dart';
 import '../automation/automation_screen.dart';
+import '../business/job_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 
@@ -284,7 +285,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                                 ? null
                                 : () => Navigator.of(context).push(
                                     MaterialPageRoute<void>(
-                                      builder: (_) => AutomationScreen(
+                                      builder: (_) => JobScreen(
                                         jobId: job.id,
                                         jobName: job.name,
                                       ),

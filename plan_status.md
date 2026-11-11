@@ -1113,3 +1113,24 @@ currency minor unit. Ten prepared API-24 cases cover DST (23/25 hours), skipped
 calendar days, clipping, exact rounding/large values, task mode and CSV consistency.
 This source awaits Actions; report UI, map wiring, document save/share and actual
 PDFs remain unfinished. Play publication remains held; no VM checks ran.
+
+### Native bridge and job board UI source
+
+Added a strict business channel with string-encoded minor units and typed Dart
+board/template adapters, connected job taps to the actual board, and prepared
+column/card editors, due dates, fixed prices, completion roles, accessible moves,
+long-press drag destinations and independent template reuse/removal. Unknown
+mutation outcomes retain the original request closure for retries; editor drafts
+survive conflicts. Added bridge rejection cases on API 24/35, Dart exact-money/
+board/editor/retry cases and synthetic light/dark preview generation in Actions.
+Validation and visual review are pending. Customer/settings/report/invoice screens
+and lifecycle remain unfinished, and Play delivery is still held.
+
+Customer/settings head 493814c passed Actions 43078381276; inspected XML confirms
+150 native tests, zero failures/errors/skips, including eleven business command
+cases. Reporting head 5972331 passed 43078930808; XML confirms 160 native tests,
+zero failures/errors/skips, including all ten DST/pricing/CSV report cases. Both
+validated source increments merged. Neither result proves complete screen/PDF/
+email/device behavior. First board UI validation 43079870604 stopped at formatting
+and multiline-if lint; applied the runner's formatting artifact and added explicit
+blocks. Corrected UI validation is pending. Play delivery remains disabled.
