@@ -11,8 +11,8 @@ iOS and future service remain deferred.
 | M1.3 Preserve handoff | Preserved | AGENTS.md, app_plan.md and ignore rules retained |
 | M1.4 Draft source/contribution rights | Drafted; owner review required | docs/SOURCE_TERMS_DRAFT.md, CONTRIBUTING.md; no effective license adopted, no publication |
 | M1.5 README, architecture, dependency inventory | Drafted | docs/ARCHITECTURE.md and docs/DEPENDENCIES.md written; README setup commands recorded; Android compatibility pending |
-| M1.6 Install/pin compatible tools | In progress | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; SDK located; Gradle build running; Ruby/Fastlane deferred until publishing work |
-| M1.7 Android Flutter scaffold and lockfiles | Scaffolded, build incomplete | Agreed application ID; pubspec.lock resolved; format and analysis pass; initial build failed without JDK; JDK-configured retry running |
+| M1.6 Install/pin compatible tools | In progress | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; SDK located; local builds stopped; CI JDK pin 17.0.17+10; Ruby/Fastlane deferred until publishing work |
+| M1.7 Android Flutter scaffold and lockfiles | Scaffolded, build incomplete | Agreed application ID; pubspec.lock resolved; format and analysis pass; local retry cancelled; Actions build pending |
 | M1.8 Nonprivileged validation CI | Implemented; GitHub run in progress | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
 | M1.9 Create public repository | Private staging created; public gated | https://github.com/centerionware/Clockrove; verified private; terms review pending |
 | M1 acceptance | Incomplete | No Android build or CI evidence yet |
@@ -125,3 +125,21 @@ Actions run 42980408630 failed before any build/test: setup-java rejected
 17.0.20.1+1 as invalid SemVer (four version components). Changed CI to exact
 Temurin 17.0.17+10; upstream x64 Linux metadata confirms this release exists.
 This is a CI configuration correction; no local build/test was run.
+
+### Current continuation
+
+Previous goal turn: progress (private repository, reviewed push, Actions workflow
+and correction). Re-polled the same run 42980514022: in_progress, setup-java
+succeeded, verified Flutter installation in progress. No restart. Updated stale
+workspace facts in the plan to match committed source and private repository;
+historical entries remain as a chronological record. No local validation executed.
+
+Run 42980514022 is terminal failure: JDK and Flutter installation passed;
+Android component step failed because sdkmanager was not on PATH (exit 127).
+Resolved by installing command-line tools 19.0, archive 13114758, from Google's
+fixed URL into a job-local SDK root. Official repository metadata provides SHA-1;
+archive SHA-256 recorded as
+7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee.
+VM action was archive/metadata inspection only, no tool execution/build/test.
+Workflow checks SHA-256, installs pinned packages, and exports SDK root explicitly.
+Updated stale plan workspace facts. No build/test success claimed for failed run.

@@ -19,3 +19,8 @@ Flutter lints 6.0.0 and transitive dependencies are pinned in pubspec.lock.
 
 Riverpod, typed adapter, crypto and publishing tool selection remain
 pending compatibility validation. No dependency license review is complete yet.
+
+CI Android command-line tools: 19.0, archive 13114758 (the upstream filename ends
+in `_latest.zip` but the build ID and checksum are fixed). SHA-256:
+`7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee`.
+The job installs this into its own SDK root instead of using runner PATH state.

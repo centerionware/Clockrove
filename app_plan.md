@@ -10,17 +10,27 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Current workspace facts
 
-- Workspace: `/workspace/TimesheetTracker`.
-- Public handoff files: `AGENTS.md`, `.gitignore`, and this plan.
-- Local skills: `.local-skills/clockrove-milestones/SKILL.md`, `.local-skills/clockrove-native-tracking/SKILL.md`, and `.local-skills/clockrove-release/SKILL.md`. Read these explicitly when relevant; this location is not assumed to be automatically discovered. They must not be committed.
-- `git`, `gh`, and Python are available. `flutter`, `dart`, `java`, and `gradle` were not found on PATH during preparation. Android SDK availability has not been established.
-- The workspace contains empty read-only `.git`, `.agents`, `.codex`, and `.aws` mounts. `git status` reported that this is not a Git repository. Do not claim it was initialized or pushed.
-- GitHub authentication and remote existence have not been verified. Use the existing signed-in account rather than asking for tokens in chat.
-- No app code, dependency lockfiles, CI runs, device results, store profiles, or credentials have been created.
+- Workspace: `/workspace/TimesheetTracker`; protected root `.git` remains untouched.
+- `scripts/git-local` uses ignored `.local/git` metadata with the intended origin.
+- `centerionware/Clockrove` exists privately for CI; public visibility awaits owner
+  review of `docs/SOURCE_TERMS_DRAFT.md`.
+- User 1000's authenticated `gh` identity is `centerionware`.
+- Android Flutter scaffold, pubspec.lock and pinned Gradle wrapper are committed.
+- All builds/tests now run in GitHub Actions, per owner instruction. VM tool setup
+  and attempted builds in the historical ledger predate that instruction.
+- CI pins Flutter 3.47.9, Dart 3.13.7, Temurin 17.0.17+10, AGP 9.1.0,
+  Kotlin 2.4.0, Gradle 9.3.1, API 24 minimum / 36 target, build tools 36.0.0,
+  and NDK 28.2.13676358. Compatibility requires a successful Actions build.
+- No native behavior, physical-device evidence, signing, store upload or publication
+  is proven yet. Store setup is being handled by the owner.
+- Optional ignored local skills remain supplements, never contributor dependencies.
 
 ### Next concrete action
 
-Verify GitHub identity and whether `centerionware/Clockrove` exists. Resolve a writable Git checkout without overwriting existing work or weakening protected mounts; if necessary, use an authorized writable checkout and transfer only reviewed public files. Establish the toolchain and complete milestone 1. Preserve this handoff in that checkout.
+Inspect Actions run 42980514022 on f06ab12 and correct any reported CI failure.
+Record its actual build/check results before advancing the native prototype.
+Continue independent implementation while public terms/device/store gates await
+external inputs. See `plan_status.md` for individual tasks and current evidence.
 
 ## 2. Product decisions
 
@@ -419,3 +429,10 @@ will be run on the VM following the owner's instruction.
 First Actions run failed in setup-java before build/test because 17.0.20.1+1
 has unsupported SemVer notation. CI corrected to exact verified x64 Temurin
 17.0.17+10. No local validation used for the correction.
+
+### 2026-11-11 — Actions SDK setup correction
+
+Run 42980514022 passed JDK/verified Flutter setup, then failed with sdkmanager
+not found (127). Workflow now downloads checksum-pinned command-line tools 19.0
+(build 13114758), installs the selected Android packages in a job-local SDK root,
+and exports that root. No VM build/test executed. Task details in plan_status.md.
