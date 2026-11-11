@@ -9,6 +9,7 @@ class MainActivity : FlutterActivity() {
     private var timerApi: TimerHostApi? = null
     private var trackingApi: TrackingHostApi? = null
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
+    private var businessApi: io.github.centerionware.clockrove.tracking.BusinessHostApi? = null
     private var visible = false
 
     override fun onStart() {
@@ -23,11 +24,14 @@ class MainActivity : FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        businessApi = io.github.centerionware.clockrove.tracking.BusinessHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         timerApi = TimerHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         trackingApi = TrackingHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
         automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        businessApi?.detach()
+        businessApi = null
         automationApi?.detach()
         automationApi = null
         trackingApi?.detach()
