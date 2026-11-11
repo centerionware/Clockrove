@@ -38,15 +38,15 @@ class _History extends HistoryApi {
   }
   @override
   Future<List<HistoryTimeChoice>> resolve(String localTime, String timezone) async {
-    if (gap) return [];
-    if (timezone == 'UTC') return [HistoryTimeChoice(DateTime.parse('${localTime}Z').millisecondsSinceEpoch, 0, '$localTime +00:00')];
+    if (gap) { return []; }
+    if (timezone == 'UTC') { return [HistoryTimeChoice(DateTime.parse('${localTime}Z').millisecondsSinceEpoch, 0, '$localTime +00:00')]; }
     final fraction = localTime.endsWith('123') ? 123 : 789;
     return [HistoryTimeChoice(1793511000000 + fraction, -14400, '$localTime -04:00'), HistoryTimeChoice(1793514600000 + fraction, -18000, '$localTime -05:00')];
   }
   @override
   Future<TimerOutcome> correct(String id, int version, HistoryDraft draft) async {
     calls.add((id, version, draft));
-    if (loseReply && calls.length == 1) throw PlatformException(code: 'LOST_REPLY');
+    if (loseReply && calls.length == 1) { throw PlatformException(code: 'LOST_REPLY'); }
     return TimerOutcome(version + 1, null);
   }
   @override
@@ -54,7 +54,7 @@ class _History extends HistoryApi {
   @override
   Future<TimerOutcome> delete(String id, int version, String sessionId) async {
     deletions.add((id, version, sessionId));
-    if (loseReply && deletions.length == 1) throw PlatformException(code: 'LOST_REPLY');
+    if (loseReply && deletions.length == 1) { throw PlatformException(code: 'LOST_REPLY'); }
     return TimerOutcome(version + 1, null);
   }
   @override
@@ -76,7 +76,7 @@ Future<void> _show(WidgetTester tester, _History api, Widget screen, {bool dark 
     child: RepaintBoundary(key: capture, child: MaterialApp(theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
       debugShowCheckedModeBanner: false, builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)), child: child!),
       home: Builder(builder: (context) => Scaffold(body: TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen)), child: const Text('Open')))),
-    )));
+    ))));
   await tester.tap(find.text('Open')); await tester.pumpAndSettle();
 }
 Future<void> _reveal(WidgetTester tester, String label) async {

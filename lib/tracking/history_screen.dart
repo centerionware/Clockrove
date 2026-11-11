@@ -40,29 +40,29 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> with WidgetsBindi
   void dispose() { WidgetsBinding.instance.removeObserver(this); super.dispose(); }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _load();
+    if (state == AppLifecycleState.resumed) { _load(); }
   }
 
   Future<void> _load({bool more = false}) async {
-    if (_busy) return;
+    if (_busy) { return; }
     setState(() { _busy = true; _error = null; });
     try {
       final page = await ref.read(historyApiProvider).history(widget.jobId,
         before: more ? _page?.next : null);
-      if (!mounted) return;
+      if (!mounted) { return; }
       if (more && _page?.version != page.version) {
         setState(() => _error = 'Work changed while loading. Refresh the list before loading more.');
       } else {
         setState(() {
-          if (!more) _entries.clear();
+          if (!more) { _entries.clear(); }
           _entries.addAll(page.entries);
           _page = page;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Work history could not be loaded. Your saved work is unchanged.');
+      if (mounted) { setState(() => _error = 'Work history could not be loaded. Your saved work is unchanged.'); }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) { setState(() => _busy = false); }
     }
   }
 
@@ -70,12 +70,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> with WidgetsBindi
     await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => HistoryEditor(
       jobId: widget.jobId, sessionId: entry?.id,
     )));
-    if (mounted) _load();
+    if (mounted) { _load(); }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(timerVersionsProvider, (_, next) { if (next.hasValue) _load(); });
+    ref.listen(timerVersionsProvider, (_, next) { if (next.hasValue) { _load(); } });
     return Scaffold(
     appBar: AppBar(title: const Text('Work history'), actions: [
       IconButton(tooltip: 'Refresh work history', onPressed: _busy ? null : () => _load(), icon: const Icon(Icons.refresh)),
@@ -147,28 +147,28 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       if (widget.sessionId == null) {
         final context = await api.context();
         final data = await api.history(widget.jobId, limit: 1);
-        if (!mounted) return;
+        if (!mounted) { return; }
         _original = null; _version = data.version; _zone.text = context.timezone;
         start = context.now - 3600000; end = context.now;
       } else {
         final detail = await api.detail(widget.jobId, _sessionId);
-        if (!mounted) return;
+        if (!mounted) { return; }
         _original = detail.entry; _version = detail.version;
         if (_original == null || _original!.end == null) {
-          if (mounted) setState(() => _loading = false);
+          if (mounted) { setState(() => _loading = false); }
           return;
         }
         _zone.text = _original!.timezone;
         start = _original!.start; end = _original!.end!;
       }
       final bounds = await Future.wait([api.format(start, _zone.text), api.format(end, _zone.text)]);
-      if (!mounted) return;
+      if (!mounted) { return; }
       _start.text = bounds[0].localTime; _end.text = bounds[1].localTime;
       await _resolve(preferredStart: start, preferredEnd: end);
     } catch (_) {
-      if (mounted) setState(() => _error = 'The entry could not be loaded. Retry without changing saved work.');
+      if (mounted) { setState(() => _error = 'The entry could not be loaded. Retry without changing saved work.'); }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 
@@ -181,14 +181,14 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
     if (date) {
       final selected = await showDatePicker(context: context, initialDate: value,
         firstDate: DateTime(1), lastDate: DateTime(9999, 12, 31));
-      if (selected != null) changed = DateTime.utc(selected.year, selected.month, selected.day,
-        value.hour, value.minute, value.second, value.millisecond);
+      if (selected != null) { changed = DateTime.utc(selected.year, selected.month, selected.day,
+        value.hour, value.minute, value.second, value.millisecond); }
     } else {
       final selected = await showTimePicker(context: context, initialTime: TimeOfDay(hour: value.hour, minute: value.minute));
-      if (selected != null) changed = DateTime.utc(value.year, value.month, value.day,
-        selected.hour, selected.minute, value.second, value.millisecond);
+      if (selected != null) { changed = DateTime.utc(value.year, value.month, value.day,
+        selected.hour, selected.minute, value.second, value.millisecond); }
     }
-    if (!mounted || changed == null) return;
+    if (!mounted || changed == null) { return; }
     field.text = changed.toIso8601String().replaceAll('Z', '');
     _changed(field.text);
   }
@@ -198,24 +198,24 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
   });
 
   Future<void> _resolve({int? preferredStart, int? preferredEnd}) async {
-    if (_resolving || _pending) return;
-    if (preferredStart == null && !(_form.currentState?.validate() ?? false)) return;
+    if (_resolving || _pending) { return; }
+    if (preferredStart == null && !(_form.currentState?.validate() ?? false)) { return; }
     setState(() { _resolving = true; _reviewed = false; _error = null; });
     try {
       final api = ref.read(historyApiProvider);
       final choices = await Future.wait([api.resolve(_start.text.trim(), _zone.text.trim()), api.resolve(_end.text.trim(), _zone.text.trim())]);
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         _starts = choices[0]; _ends = choices[1];
         _selectedStart = _starts.where((c) => c.instant == preferredStart).firstOrNull ?? (_starts.length == 1 ? _starts.single : null);
         _selectedEnd = _ends.where((c) => c.instant == preferredEnd).firstOrNull ?? (_ends.length == 1 ? _ends.single : null);
         _reviewed = true;
-        if (_starts.isEmpty || _ends.isEmpty) _error = 'This local time does not exist in the selected timezone. Choose a time outside the clock change or skipped date.';
+        if (_starts.isEmpty || _ends.isEmpty) { _error = 'This local time does not exist in the selected timezone. Choose a time outside the clock change or skipped date.'; }
       });
     } catch (_) {
-      if (mounted) setState(() => _error = 'Check the full date, time and IANA timezone. Times must include seconds and three millisecond digits.');
+      if (mounted) { setState(() => _error = 'Check the full date, time and IANA timezone. Times must include seconds and three millisecond digits.'); }
     } finally {
-      if (mounted) setState(() => _resolving = false);
+      if (mounted) { setState(() => _resolving = false); }
     }
   }
 
@@ -227,10 +227,10 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       final api = ref.read(historyApiProvider);
       if (widget.sessionId == null) {
         final data = await api.history(widget.jobId, limit: 1);
-        if (mounted) setState(() => _version = data.version);
+        if (mounted) { setState(() => _version = data.version); }
       } else {
         final detail = await api.detail(widget.jobId, _sessionId);
-        if (!mounted) return;
+        if (!mounted) { return; }
         setState(() {
           if (_sameEntry(_original, detail.entry)) {
             _version = detail.version;
@@ -240,9 +240,9 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not check the saved entry. Your draft is kept.');
+      if (mounted) { setState(() => _error = 'Could not check the saved entry. Your draft is kept.'); }
     } finally {
-      if (mounted) setState(() => _resolving = false);
+      if (mounted) { setState(() => _resolving = false); }
     }
   }
 
@@ -252,7 +252,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       actions: [TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Keep draft')),
         FilledButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Reload'))],
     ));
-    if (confirmed == true && mounted) _load();
+    if (confirmed == true && mounted) { _load(); }
   }
 
   void _committed() {
@@ -363,23 +363,23 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load({bool more = false}) async {
-    if (_busy) return;
+    if (_busy) { return; }
     setState(() { _busy = true; _error = null; });
     try {
       final page = await ref.read(historyApiProvider).audit(widget.jobId, before: more ? _page?.next : null);
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         if (more && _page?.version != page.version) {
           _error = 'Work changed. Refresh change history before loading more.';
         } else {
-          if (!more) _events.clear();
+          if (!more) { _events.clear(); }
           _events.addAll(page.events); _page = page;
         }
       });
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not load change history. Retry to read saved changes.');
+      if (mounted) { setState(() => _error = 'Could not load change history. Retry to read saved changes.'); }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) { setState(() => _busy = false); }
     }
   }
   @override
@@ -407,8 +407,8 @@ class _HistoryRevisionsScreenState extends ConsumerState<HistoryRevisionsScreen>
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Entry changes')),
     body: FutureBuilder(future: _data, builder: (context, snapshot) {
-      if (snapshot.hasError) return Center(child: TextButton(onPressed: () => setState(() => _data = ref.read(historyApiProvider).revisions(widget.jobId, widget.sessionId)), child: const Text('Retry entry changes')));
-      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) { return Center(child: TextButton(onPressed: () => setState(() => _data = ref.read(historyApiProvider).revisions(widget.jobId, widget.sessionId)), child: const Text('Retry entry changes'))); }
+      if (!snapshot.hasData) { return const Center(child: CircularProgressIndicator()); }
       return ListView(padding: const EdgeInsets.all(20), children: [
         const Text('Corrections and deletions keep their local revision history. Prepared invoices and exported copies keep the values captured when they were created.'),
         if (snapshot.data!.isEmpty) const Text('No retained changes for this entry.'),

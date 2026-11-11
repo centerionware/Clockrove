@@ -144,7 +144,7 @@ void main() {
     final calls = <MethodCall>[];
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
-      if (call.method == 'sessionDetail') return {'version': 42, 'entry': null};
+      if (call.method == 'sessionDetail') { return {'version': 42, 'entry': null}; }
       return {'version': 42, 'next': 99, 'events': [
         {'sequence': 100, 'sessionId': 'removed', 'revision': {
           'id': 'deletion', 'changed': 1, 'origin': 'MANUAL_DELETE', 'deleted': true,

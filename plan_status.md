@@ -1583,3 +1583,9 @@ was superseded. Additional local review bounds calendar-picker seed years and
 makes UI test scrolling independent of the previous scroll position; these
 changes must be included in the next validation head. Main delivery 43121445107
 is currently building with the permanent key; acceptance remains pending.
+
+History run 43121754750 stopped at analysis: ten unbraced conditional lints in
+the screen, one in the codec fixture, and a missing closing parenthesis in the
+widget harness. No behavior/native/device check ran. Corrected those source
+issues; formatter output was unavailable because the syntax error stopped the
+format step before patch generation. Fresh Actions evidence remains required.
