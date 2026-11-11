@@ -1238,3 +1238,11 @@ were reviewed in light/dark themes. Latest #29 adds all-style multipage captures
 and requires all ten expected device cases per API. Final exact-head checks,
 actual document visual acceptance and main validation remain required; no partial
 Play release is authorized. Task-level status is maintained in plan_status.md.
+### Independent milestone-3 session history continuation
+
+Prepared native closed-session manual CRUD and history/revision queries through
+the serialized repository. Positive/half-open overlap and explicit timezone
+validation, transactional GPS pruning/deletion fences, immutable invoices and
+current-timer isolation have fourteen new API-24 cases awaiting Actions. No UI,
+bridge or full manual correction journey is claimed yet; Play remains held for
+the separately specified combined business iteration.
