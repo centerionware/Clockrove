@@ -183,7 +183,10 @@ class AutomationApi {
     await _channel.invokeMethod<void>('cancelPosition');
   }
 
-  Future<void> retryMonitoring() async { await _channel.invokeMethod<void>('retryMonitoring'); }
+  Future<void> retryMonitoring() async {
+    await _channel.invokeMethod<void>('retryMonitoring');
+  }
+
   Future<void> requestPrecise() => _permission('requestPrecise');
   Future<void> requestBackground() => _permission('requestBackground');
   Future<void> openSettings() => _permission('openSettings');

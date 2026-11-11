@@ -23,7 +23,9 @@ class FixtureAutomationApi extends AutomationApi {
   @override
   Future<void> retryMonitoring() async {
     monitoringRetries++;
-    if (retryUnavailable) { throw PlatformException(code: 'REGISTRATION_UNAVAILABLE'); }
+    if (retryUnavailable) {
+      throw PlatformException(code: 'REGISTRATION_UNAVAILABLE');
+    }
   }
 
   int positionRequests = 0;
