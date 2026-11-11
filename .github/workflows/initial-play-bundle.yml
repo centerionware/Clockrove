@@ -1,0 +1,110 @@
+name: One-time initial Play bundle
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: initial-play-bootstrap
+  cancel-in-progress: false
+jobs:
+  bundle:
+    if: github.repository == 'centerionware/Clockrove' && github.actor == 'centerionware' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout validated initial setup source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d6dbe94af192450088f28da9a789387336f5c769
+          persist-credentials: false
+      - name: Require successful source validation and unused bootstrap
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECIPIENT: ${{ secrets.BOOTSTRAP_RECIPIENT_CERT }}
+          EXISTING_KEY: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$RECIPIENT"
+          test -z "$EXISTING_KEY" || { echo 'Upload key already configured; bootstrap cannot replace it.'; exit 1; }
+          gh api repos/centerionware/Clockrove/actions/runs/42980838050 --jq '.head_sha + " " + .conclusion' | grep -Fx 'd6dbe94af192450088f28da9a789387336f5c769 success'
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17.0.17+10'
+      - name: Install verified Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.9-stable.tar.xz -o "$RUNNER_TEMP/flutter.tar.xz"
+          echo "25ed8c3c29d51a7353f2a944310b478af8214920639524b19c50a19e6c044c5a  $RUNNER_TEMP/flutter.tar.xz" | sha256sum --check
+          tar -xf "$RUNNER_TEMP/flutter.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Install pinned Android components
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="$RUNNER_TEMP/clockrove-android-sdk"
+          curl --fail --location --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+          echo "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee  $RUNNER_TEMP/android-tools.zip" | sha256sum --check
+          mkdir -p "$sdk_root/cmdline-tools"
+          unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$sdk_root/cmdline-tools"
+          mv "$sdk_root/cmdline-tools/cmdline-tools" "$sdk_root/cmdline-tools/19.0"
+          sdkmanager="$sdk_root/cmdline-tools/19.0/bin/sdkmanager"
+          # yes may receive SIGPIPE after sdkmanager finishes reading licenses.
+          set +o pipefail
+          yes | "$sdkmanager" --sdk_root="$sdk_root" --licenses > /dev/null
+          license_result=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$license_result" -eq 0
+          "$sdkmanager" --sdk_root="$sdk_root" 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+      - name: Validate selected source
+        run: |
+          flutter pub get --enforce-lockfile
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze --no-pub
+      - name: Build initial setup AAB
+        run: flutter build appbundle --release --no-pub --build-name=0.1.0 --build-number=1
+      - name: Generate upload key, sign and encrypt recovery material
+        env:
+          RECIPIENT: ${{ secrets.BOOTSTRAP_RECIPIENT_CERT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          secure="$RUNNER_TEMP/clockrove-signing"
+          mkdir -p "$secure" "$RUNNER_TEMP/aab-artifact" "$RUNNER_TEMP/key-recovery"
+          export CLOCKROVE_UPLOAD_STORE_PASSWORD="$(openssl rand -hex 32)"
+          export CLOCKROVE_UPLOAD_KEY_PASSWORD="$CLOCKROVE_UPLOAD_STORE_PASSWORD"
+          echo "::add-mask::$CLOCKROVE_UPLOAD_STORE_PASSWORD"
+          keytool -genkeypair -keystore "$secure/upload.p12" -storetype PKCS12 -alias clockrove-upload -keyalg RSA -keysize 4096 -validity 10000 -dname 'CN=Clockrove Upload' -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD -keypass:env CLOCKROVE_UPLOAD_KEY_PASSWORD
+          bundle="$RUNNER_TEMP/aab-artifact/clockrove-initial-setup-0.1.0-1.aab"
+          cp build/app/outputs/bundle/release/app-release.aab "$bundle"
+          jarsigner -keystore "$secure/upload.p12" -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD -keypass:env CLOCKROVE_UPLOAD_KEY_PASSWORD -sigalg SHA256withRSA -digestalg SHA-256 "$bundle" clockrove-upload
+          jarsigner -verify -strict -keystore "$secure/upload.p12" -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD "$bundle"
+          keytool -exportcert -rfc -keystore "$secure/upload.p12" -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD -alias clockrove-upload -file "$RUNNER_TEMP/aab-artifact/upload-certificate.pem"
+          python3 -c 'import os,json; json.dump({"alias":"clockrove-upload","store_password":os.environ["CLOCKROVE_UPLOAD_STORE_PASSWORD"],"key_password":os.environ["CLOCKROVE_UPLOAD_KEY_PASSWORD"]},open(os.environ["RUNNER_TEMP"]+"/clockrove-signing/signing.json","w"))'
+          printf '%s' "$RECIPIENT" > "$secure/recipient.crt"
+          (cd "$secure" && zip -q recovery.zip upload.p12 signing.json)
+          openssl cms -encrypt -binary -aes-256-cbc -in "$secure/recovery.zip" -outform DER -out "$RUNNER_TEMP/key-recovery/upload-key-recovery.cms" "$secure/recipient.crt"
+          sha256sum "$bundle"
+          echo 'Signed initial Play setup bundle, versionCode 1. Incomplete prototype; no store upload or production release performed. Artifact retention: one day.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload signed AAB for owner manual upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: clockrove-initial-play-aab
+          path: ${{ runner.temp }}/aab-artifact/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Upload encrypted signing recovery
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: encrypted-upload-key-recovery
+          path: ${{ runner.temp }}/key-recovery/upload-key-recovery.cms
+          retention-days: 1
+          if-no-files-found: error
+      - name: Clean temporary signing files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/clockrove-signing" "$RUNNER_TEMP/key-recovery"

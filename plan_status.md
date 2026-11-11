@@ -227,3 +227,23 @@ native-only timestamps/origin, stale conflicts and missing responses. These mock
 prove codec semantics only. No VM validation ran. docs/TIMER_CONTRACT.md records
 wire/lifecycle semantics and outstanding event delivery. App controls/Riverpod,
 notification/location/geofence/map prototypes and physical proof remain unfinished.
+
+### Owner-requested one-time initial Play bundle
+
+Owner added SERVICE_ACCOUNT_JSON and explicitly requested a signed setup AAB
+artifact via Actions, allowing public plaintext AAB downloads and the minimum
+one-day retention after the access/retention limitations were explained. No
+private repository is permitted. Owner authorizes generation and persistence of
+signing keys as repository secrets, with exactly the same key for future CI.
+
+Prepared dispatch-only initial-play-bundle.yml. It builds validated foundation
+commit d6dbe94 (run 42980838050), versionCode 1, without claiming full app readiness.
+Creates the upload key in Actions, verifies AAB signing and exports a public
+certificate; encrypts private recovery material to a temporary recipient whose
+private key is ignored and never published. Operator will recover/store signing
+secrets and delete encrypted recovery artifact. Bootstrap refuses replacement
+when an upload key is already configured. No Play upload or production submission.
+SERVICE_ACCOUNT_JSON is present but not used for building the manual-upload file.
+Current native adapter run 42982856409 failed formatting in test/timer_api_test.dart;
+this does not invalidate the previously validated foundation commit. Unpushed
+prototype event changes remain separate from this one-time delivery workflow.

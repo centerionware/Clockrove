@@ -487,3 +487,16 @@ for Actions; mocks do not prove device/native delivery. Full UI, event stream,
 notification/service/location/maps and physical feasibility still incomplete.
 Public repository state is reflected in README/status; draft terms remain draft.
 No VM builds/tests executed. See docs/TIMER_CONTRACT.md for contract details.
+
+### Owner-directed initial Play setup artifact
+
+Owner explicitly requests a signed first-upload AAB before full app completion,
+using Actions only. This is a setup/testing bundle, not the paid production launch.
+Owner accepts public artifact availability and one-day minimum retention, authorizes
+new upload-key generation and repository-secret persistence, and requires key
+reuse for all future CI uploads. Prepared initial-play-bundle workflow pinned to
+validated foundation d6dbe94 / run 42980838050, versionCode 1. Private recovery is
+CMS-encrypted; keys/passwords must never be plaintext artifacts or Git content.
+SERVICE_ACCOUNT_JSON exists; no Play API upload is performed for this request.
+No signing/build result is claimed until Actions finishes. See
+ docs/INITIAL_PLAY_UPLOAD.md and plan_status.md for the operation and key lifecycle.
