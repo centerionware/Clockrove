@@ -1204,6 +1204,13 @@ commands still need Actions and transport/UI integration. Job deletion, customer
 reports, billing settings and invoices remain in progress/pending; no partial
 internal release is authorized while the publication hold is active.
 
+### Monitoring retry and upgrade recovery continuation
+
+Rebased the pending explicit monitoring retry/app-upgrade recovery source onto
+current main without changing the combined next-release contract or publication
+hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
+Fresh exact-head Actions validation is required. This remains source-level recovery
+behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.
 ### Combined business iteration evidence (continuation)
 
 PR #20 (7be840e) passed 43077477547: 139 native tests, twelve new board cases.
