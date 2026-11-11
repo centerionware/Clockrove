@@ -1298,3 +1298,18 @@ capture for each style on each API. No broad storage permission is introduced;
 test data remains app-specific and is captured before emulator cleanup. Actual
 runner support: [AndroidJUnitRunner listener](https://developer.android.com/reference/androidx/test/runner/AndroidJUnitRunner).
 This strengthens artifact/coverage evidence; updated Actions validation is pending.
+
+### Owner-requested main merges
+
+Merged the exact validated heads as requested:
+- #26 head 8c43978 / Actions 43093219562 -> main merge 036233f.
+- #27 head 5142c2f / Actions 43093223910 -> main merge e495231.
+- #28 head a06b13c / Actions 43093226704 -> main merge 834a7e4.
+
+These include invoice snapshots/PDF styles, private document/email handoff and
+integrated report/archive UI. Their checks passed; artifact downloads were still
+returning HTTP 502, so actual document visual acceptance remains unproven. #29
+now targets main for logo import, final integration/calendar fixes and strengthened
+real-device artifact/visual gates. Its latest validation remains queued. Main
+validation and the final combined acceptance are still required. Play delivery
+remains disabled; no partial internal release has been published.
