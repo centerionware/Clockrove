@@ -981,3 +981,9 @@ First site-selection run 43064678311 exported formatter changes, then stopped
 at an invalid const Semantics construction and an unused test import. Applied
 the Actions formatter patch, corrected both analyzer issues and retained all
 behavior assertions. No VM validation ran; corrected CI evidence is still needed.
+
+Owner reiterated the current-location work-site button with a precise permission
+request only when missing. That flow is implemented in the site editor/native
+preflight; added a direct UI case asserting one precise request, no background
+request, a fresh fix retry, and explicit Save site. The already-granted case now
+asserts zero permission requests. These refinements await Actions validation.
