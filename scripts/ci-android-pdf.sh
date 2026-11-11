@@ -83,7 +83,14 @@ root = E.parse(sys.argv[1]).getroot()
 assert int(root.attrib['tests']) > 0, 'No actual Android tests ran'
 assert all(int(root.attrib[k]) == 0 for k in ['failures','errors','skipped']), root.attrib
 classes = {case.attrib['classname'] for case in root.findall('testcase')}
-assert 'io.github.centerionware.clockrove.invoice.InvoicePdfTest' in classes, classes
+expected = {
+    'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 3,
+    'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
+    'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
+}
+for classname, count in expected.items():
+    actual = sum(case.attrib['classname'] == classname for case in root.findall('testcase'))
+    assert actual == count, (classname, actual, count)
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
@@ -91,6 +98,8 @@ PY_DEVICE
   for clockrove_style in minimal classic modern; do
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.png"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
   done
   adb -s emulator-5554 emu kill || true
   wait "$clockrove_emulator_pid" || true

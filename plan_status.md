@@ -1320,3 +1320,10 @@ hourly/task report and measured-map light/dark captures: amounts, billing basis,
 CSV/PDF actions and sample labels are legible without overflow. Synthetic blank
 tiles verify layout only, not live map availability. Actual PDF/logo device checks
 are still running; invoice visual acceptance and combined release remain pending.
+
+Extended actual Android pagination acceptance to all three styles: each long
+invoice must retain all 130 item titles and its total in API-35 extracted text;
+API 24/35 export the real multipage PDFs and first/middle/last rendered pages.
+Device XML now requires the expected PDF (3), logo (4) and report-boundary (3)
+cases individually, preventing missing test classes from passing the gate.
+These strengthened checks remain pending in Actions.

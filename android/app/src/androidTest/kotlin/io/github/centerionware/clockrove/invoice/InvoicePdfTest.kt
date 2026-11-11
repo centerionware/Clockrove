@@ -64,8 +64,34 @@ class InvoicePdfTest {
         }
     }
     @Test fun longRowsHeadersAndFootersPaginateIntoRealPdfPages() {
-        val data = fixture("MODERN", 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
-        inspect(InvoicePdf.generate(data)) { renderer -> assertTrue(renderer.pageCount > 8); renderer.openPage(renderer.pageCount - 1).use { assertTrue(it.height > 0) } }
+        for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
+            val data = fixture(style, 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
+            val bytes = InvoicePdf.generate(data)
+            val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
+            root.mkdirs()
+            File(root, "clockrove-invoice-${style.lowercase()}-multipage.pdf").writeBytes(bytes)
+            inspect(bytes) { renderer ->
+                assertTrue(renderer.pageCount > 8)
+                val text = StringBuilder()
+                for (index in 0 until renderer.pageCount) {
+                    renderer.openPage(index).use { page ->
+                        if (android.os.Build.VERSION.SDK_INT >= 35) text.append(PdfTextApi35.read(page)).append('\n')
+                        if (index in setOf(0, renderer.pageCount / 2, renderer.pageCount - 1)) {
+                            val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                            try {
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                File(root, "clockrove-invoice-${style.lowercase()}-multipage-page-${index + 1}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            } finally { bitmap.recycle() }
+                        }
+                    }
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 35) {
+                    assertTrue(text.contains("USD 1250.00"))
+                    for (row in 1..130) assertTrue("Missing row $row in $style", text.contains("Install tiles — section $row"))
+                    assertTrue(text.contains("Long optional footer."))
+                }
+            }
+        }
     }
 }
 
