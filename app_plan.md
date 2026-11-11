@@ -580,3 +580,23 @@ Main run 42986727241 passed all checks and automatically triggered Play delivery
 42987698700; applied reviewed Actions-generated source patch and added prototype
 screen journey test. No VM formatter/test/build executed. New UI remains unmerged
 and unvalidated until the next PR run passes.
+
+Automatic delivery run 42988068348 failed before allocation/upload: Google Play
+begin_edit rejected caller permission. Owner input needed for service-account app
+visibility/testing-release access in Play Console. No upload success claimed;
+avoid repeated unchanged permission attempts and continue app implementation.
+
+Owner reports Play service-account invitation and asks to retry. Failed delivery
+job in run 42988068348 was re-run after that change; result pending. Same upload
+key/source and automatic code allocator apply. No upload acceptance claimed yet.
+
+PR #1 passed complete Actions validation 42988271415 and was merged at 6713ddf.
+Prototype controls are now on main; merged-main validation 42989132915 is live.
+Play retry 42988068348 attempt 2 successfully read history/allocated a code after
+owner invitation and is building the signed AAB; no upload acceptance yet.
+
+First automatic internal delivery succeeded in run 42988068348 attempt 2.
+Play accepted versionCode 216549708 at 08:45:37 UTC after signed AAB build and
+verification with the permanent upload key. This proves upload/submission only;
+no tester installation/review/production availability claimed. New manual-controls
+merge 6713ddf is still in main validation 42989132915 for its subsequent delivery.

@@ -6,17 +6,17 @@ iOS and future service remain deferred.
 
 | Task | Status | Evidence / next action |
 | --- | --- | --- |
-| M1.1 Verify GitHub identity and remote | Verified | Escalated network check: user 1000 (`agent`) authenticates as `centerionware`; initially absent; private intended repository now created for CI |
+| M1.1 Verify GitHub identity and remote | Verified | Escalated network check: user 1000 (`agent`) authenticates as `centerionware`; verified public centerionware/Clockrove after owner publication instruction |
 | M1.2 Resolve writable Git metadata | Implemented locally | `scripts/git-local` uses ignored `.local/git`; status and ignore checks succeed without modifying protected root `.git` |
 | M1.3 Preserve handoff | Preserved | AGENTS.md, app_plan.md and ignore rules retained |
-| M1.4 Draft source/contribution rights | Drafted; owner review required | docs/SOURCE_TERMS_DRAFT.md, CONTRIBUTING.md; no effective license adopted, no publication |
-| M1.5 README, architecture, dependency inventory | Drafted | docs/ARCHITECTURE.md and docs/DEPENDENCIES.md written; README setup commands recorded; Android compatibility pending |
-| M1.6 Install/pin compatible tools | Installed in Actions; build compatibility pending | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; Actions passed JDK/Flutter/Android SDK installation; Ruby/Fastlane deferred until publishing work |
+| M1.4 Draft source/contribution rights | Drafted; owner review required | docs/SOURCE_TERMS_DRAFT.md, CONTRIBUTING.md; repository public by owner instruction; no effective license adopted |
+| M1.5 README, architecture, dependency inventory | Drafted | docs/ARCHITECTURE.md and docs/DEPENDENCIES.md written; setup and architecture documented; Actions debug/AAB and native tests verified |
+| M1.6 Install/pin compatible tools | Pinned tools verified in Actions | Flutter 3.47.9/Dart 3.13.7, JDK 17.0.17+10, SDK 36, Ruby 3.3.6/Bundler 2.5.23/Fastlane 2.228.0 and lockfiles; successful Actions setup/build/tests |
 | M1.7 Android Flutter scaffold and lockfiles | Build verified in Actions | Agreed application ID; Actions locked resolution, formatting and analysis pass; debug APK built in run 42980838050 |
-| M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
+| M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/tools; no publishing secrets; source-only diagnostic/lockfile artifacts |
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
-| M1 acceptance | Technical foundation verified; public rights gated | Actions 42980838050 succeeded; no effective license/public visibility until owner review |
-| M2.1 SQLite/manual timer/widget/notification prototype | In progress | Native SQLite timer repository and five Robolectric tests added; Actions validation pending; UI/widget/notification integration remains |
+| M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
+| M2.1 SQLite/manual timer/widget/notification prototype | In progress | SQLite commands, typed bridge, native widget code and eight Robolectric tests pass in Actions; prototype Flutter controls merged via PR #1 after full Actions success; notification/device integration incomplete |
 | M2.2 Location/geofences/departure/recovery prototype | Pending | Native callbacks required |
 | M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified |
@@ -37,7 +37,7 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Pending | No build or device success claimed |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Pending owner setup | Publishing not configured; no signing/store credentials |
+| M8.3 Protected workflows/Fastlane/internal delivery | Internal upload verified; broader release readiness incomplete | Actions 42988068348 attempt 2 succeeded; Play accepted versionCode 216549708; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -406,3 +406,47 @@ no VM formatter ran. Added braces to keep the formatted conditional lint-safe.
 Added a screen journey test for start/create/switch/stop and New job ordering,
 using a controlled adapter (UI semantics only; native tests remain separate).
 Feature changes require fresh PR validation. No main merge or VM tests performed.
+
+First automatic Play delivery run 42988068348 is terminal FAILURE at begin_edit:
+Google Api Error: Invalid request - The caller does not have permission. No code
+allocated, release bundle built, upload or submission occurred in that run. JDK,
+SDK and locked tools installed; credential setup ran, then API authorization
+failed. Owner asked to grant service-account client_email Clockrove visibility
+and testing-release access in Play Console Users and permissions. No key/JSON
+requested in chat. Do not repeat unchanged permission failures; await owner access
+change before another Play attempt. Continue independent prototype work.
+PR correction validation handle: 42988271415. Main validation 42986727241 passed.
+
+### Play permission state changed — retry authorized
+
+Owner reports the service-account user has been invited and explicitly asks to
+retry. Re-ran failed job in delivery run 42988068348 after that external change;
+this is not an unchanged-credential retry. Same validated source/upload key are
+preserved; allocator will inspect Play history again. No success claimed yet.
+PR run 42988271415 is still being observed independently; no replacement started.
+
+### Prototype controls validated and merged
+
+PR validation 42988271415 concluded SUCCESS on exact head 7e3dd12: formatting,
+analysis, adapter/controller/screen tests, Android debug build, native unit task,
+locked release-tool/version-policy checks all passed. Marked PR ready and merged
+that tested head as 6713ddf0e61bfdde48be6c3f09273d78d3db1895. No local checks ran.
+Main merge validation handle 42989132915 is live; its subsequent internal delivery
+must use that exact validated SHA and the permanent saved upload key.
+
+Play permission retry 42988068348 attempt 2 passed allocation after owner's account
+invitation, proving that the earlier permission barrier changed. It is now in
+signed release AAB build (started 08:41:48 UTC). Upload/Play acceptance is still
+unproven. Preserve this live run and observe its result, not another restart.
+
+### First automatic internal upload accepted — 2026-11-11
+
+Delivery run 42988068348 attempt 2 completed SUCCESS. Logs report allocated
+Android versionCode 216549708, signed build/strict verification passed, and
+"Successfully finished the upload to Google Play" at 08:45:37 UTC, followed by
+internal upload/submission accepted. This is successful internal upload evidence,
+not proof of approval, tester installation or production readiness. The delivered
+source is the earlier validated native prototype; merged manual controls at
+6713ddf will follow through main validation 42989132915 and automatic delivery.
+No signing key was replaced; saved key and store-history allocator were reused.
+Owner invitation resolved the initial API permission failure. No VM builds/tests.
