@@ -18,12 +18,12 @@ iOS and future service remain deferred.
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; registration/suppression/scheduling/device evidence remain |
-| M2.3 OSM and runtime Google-key experiment | OSM prototype source pending validation | Stored-point map and policy tests prepared; live default rendering and Google runtime-key proof still need device/network/owner key |
+| M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
 | M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
 | M3.3 Jobs/sites/boards/session corrections/queries | Pending | Integrity and snapshot tests required |
-| M4.1 Manual tracker UI and history | Pending | Native authoritative state only |
+| M4.1 Manual tracker UI and history | Prototype controls merged; full history pending | Native-backed start/stop/switch, modern UI and map-outage journey pass Actions; corrections/history/full job management remain |
 | M4.2 Widgets/configuration/notification actions | Pending | Offline/recovery/accessibility journey required |
 | M5.1 Permissions/site editor/capacity/entry/departure | Pending | Both departure modes and suppression required |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Pending | State-machine matrix and physical tests required |
@@ -757,3 +757,37 @@ correction, with an explicit final Require clean formatting failure gate. Failed
 formatting cannot produce a successful validation or trigger Play delivery. This
 improves Actions-only feedback without disabling any checks or exposing secrets.
 New full map validation remains pending; no VM checks executed.
+
+### OSM prototype merged with complete code validation
+
+Previous goal turn: progress. This continuation completed native visual merge #9
+and the stored-point OSM prototype. Exact head 94451c2 passed full Actions
+43006507700: formatting/analysis, 23 Dart/UI tests, debug APK, native tests/rendering
+and locked release-version checks. Inspected all six PNGs in artifact 13849240735
+across both themes. Merged #10 at bb2a9eb1a5a78074434472cb601d8755168f95e5.
+The map receives actual matching measured coordinates/accuracy, has visible
+attribution/cache/backoff and permits manual clock-out after tile failure.
+
+Runtime Google-key and live OSM/device proof remain pending. Geofence platform
+registration/callbacks, durable arming/suppression, scheduler/recovery and physical
+acceptance remain M2 work; no full milestone or launch completion is claimed.
+Main visual build f9207b5 separately passed validation 43003375715 and internal
+Play delivery 43004256117 (upload only). Merged-map main validation 43007569229
+is live; its subsequent internal delivery is not yet confirmed.
+
+Formatter negative-path proof is live in disposable branch ci-format-gate-proof,
+commit fa4437e / owner manual run 43007665309. Only source whitespace differs;
+expected result is failed final gate after the independent checks complete.
+Do not merge the probe branch. Observe its terminal result, record it and delete
+the temporary branch. No VM build/test/format/render was executed.
+
+Formatter negative-path run 43007665309 completed with the intended FAILURE at
+Require clean formatting. Analysis, all 23 Dart/UI tests, Android compilation,
+native tests and release-version policy passed first; the exported source patch
+confirms the intentional whitespace difference. This proves continued diagnostic
+checks do not turn invalid formatting into a green validation. Probe branch is
+being removed after terminal evidence. Main map validation 43007569229 and the
+documentation-only PR #11 run 43007883446 both completed SUCCESS independently.
+The only new changes after those runs are evidence text; application/workflow
+source is unchanged. Physical/device/provider gates and full app milestones remain
+incomplete. No VM validation executed.

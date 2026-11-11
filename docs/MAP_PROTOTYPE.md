@@ -31,3 +31,9 @@ Sources reviewed for the selected implementation:
 - [flutter_map caching](https://docs.fleaflet.dev/layers/raster-tile-layer/caching)
 - [8.3.2 cache metadata](https://github.com/fleaflet/flutter_map/blob/v8.3.2/lib/src/layer/tile_layer/tile_provider/network/caching/tile_metadata.dart)
 - [8.3.2 conditional network loading](https://github.com/fleaflet/flutter_map/blob/v8.3.2/lib/src/layer/tile_layer/tile_provider/network/image_provider/image_provider.dart)
+
+Validation: full Actions run 43006507700 on 94451c2 passed; PR #10 merged at bb2a9eb.
+Six synthetic previews in artifact 13849240735 were reviewed in both themes.
+The checked journey returns from a failed map to the actual TimerScreen and
+successfully stops the same running session. This is UI/native-unit evidence,
+with the runtime/provider/device limitations above still in force.
