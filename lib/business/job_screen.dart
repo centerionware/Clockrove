@@ -22,10 +22,17 @@ class JobScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Work history', icon: const Icon(Icons.history),
-            onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
-              builder: (_) => HistoryScreen(jobId: jobId, jobName: data.value?.name ?? jobName),
-            )),
+            tooltip: 'Work history',
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => HistoryScreen(
+                  jobId: jobId,
+                  jobName: data.value?.name ?? jobName,
+                ),
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Job report',

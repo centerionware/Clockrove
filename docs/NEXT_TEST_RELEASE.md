@@ -4,12 +4,13 @@ Owner-requested scope, 2026-11-11. This supplements `app_plan.md` and replaces
 its earlier exclusions of pricing and invoicing. It does not narrow the complete
 application objective or declare physical-device acceptance complete.
 
-The next Play internal release must contain **all** the features below. Until
-then, Play delivery is temporarily disabled (workflow 414395901); Actions
-validation remains enabled. Keep production readiness disabled. Re-enable normal
-Play delivery only when the combined implementation has passed its checks, then
-publish from the exact validated main commit using the permanent upload key and
-automatic version allocation. Do not publish a partial intermediate test build.
+The combined Play internal release must contain **all** the features below.
+This gate passed: #29 exact-head checks 43117726325, merged-main checks
+43120365067 and Play delivery 43121445107 accepted 0.1.0-internal.19.1
+(versionCode 216603660) from cb2efc9 using the permanent upload key. Normal
+automatic internal delivery is active again. Production readiness remains
+disabled; tester installation and physical-device acceptance are separate.
+Do not substitute a partial feature set for this contract.
 
 ## Job display, lifecycle and widget
 

@@ -41,7 +41,7 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Internal upload verified; broader release readiness incomplete | Actions 42988068348 attempt 2 succeeded; Play accepted versionCode 216549708; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Main 43120365067 and delivery 43121445107 succeeded for cb2efc9; Play accepted 0.1.0-internal.19.1 / 216603660; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -1589,3 +1589,21 @@ the screen, one in the codec fixture, and a missing closing parenthesis in the
 widget harness. No behavior/native/device check ran. Corrected those source
 issues; formatter output was unavailable because the syntax error stopped the
 format step before patch generation. Fresh Actions evidence remains required.
+
+### Combined business internal upload verified
+
+Main validation 43120365067 and automatic Play delivery 43121445107 succeeded
+for cb2efc9. Inspected delivery logs confirm permanent-key signing, automatic
+versionCode 216603660 and versionName 0.1.0-internal.19.1. Play accepted the
+internal upload at 2026-11-11 23:45:25 UTC. This supersedes the queued/building
+notes above. Tester availability/installation and physical GPS/launcher/email
+compatibility are not inferred, and production readiness remains unset.
+
+Applied the exact Actions formatter patch from 43122136231; analysis passed
+on that source. Its behavior step remained live during review. The new preview
+harness awaited real font/file work inside the fake widget-test clock, unlike
+the accepted preview harnesses. Move font loading and image/file capture into
+tester.runAsync and retain real capture assertions. Also queue a fresh read
+when native versions arrive during a history request, with a held-response UI
+regression. New source needs fresh Actions checks; no device/native result from
+that old run is inferred.

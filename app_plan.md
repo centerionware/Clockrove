@@ -30,9 +30,9 @@ The user explicitly requested this handoff after creating agent instructions and
 The owner-requested combined internal iteration in
 [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md) passed exact-head Actions
 43117726325 and merged via #29 as cb2efc9. Play delivery is active again;
-follow main validation 43120365067 and its subsequent internal upload before
-claiming Play acceptance. Production readiness remains unset. After delivery,
-continue the outstanding manual-history UI and widget configuration contracts.
+main validation 43120365067 and Play delivery 43121445107 passed. Play accepted
+0.1.0-internal.19.1 (216603660) from cb2efc9. Production readiness remains
+unset. Finish manual-history PR #32 checks, then continue widget configuration.
 Physical GPS/launcher/recovery/email evidence, provider settings, encrypted
 backup/merge and full launch acceptance remain unfinished. All builds/tests and
 rendering remain in GitHub Actions.
@@ -1282,3 +1282,12 @@ detail reads are scoped to the requested job; purged jobs remain inaccessible.
 New native query/bridge, real-framework time-round-trip and UI/retry/accessibility
 checks are prepared. They await GitHub Actions; no UI/device acceptance is claimed
 from source alone. Widget configuration and full M3/M4 acceptance remain open.
+
+### Complete business iteration accepted by Play internal track
+
+Main cb2efc9 passed Actions 43120365067. Automatic Play delivery 43121445107
+completed successfully using the permanent upload key; logs allocate versionCode
+216603660, build versionName 0.1.0-internal.19.1, and confirm successful upload
+at 2026-11-11 23:45:25 UTC. This satisfies the combined iteration's internal
+upload gate. Tester availability/installation, physical tracking/email behavior
+and production acceptance are not inferred. Production readiness stays unset.

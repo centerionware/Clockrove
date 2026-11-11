@@ -136,34 +136,58 @@ class HistoryApi {
   const HistoryApi();
   static const _channel = MethodChannel('clockrove/business/v1');
   Future<HistoryContext> context() async {
-    final value = (await _channel.invokeMapMethod<Object?, Object?>('historyContext'))!;
+    final value = (await _channel.invokeMapMethod<Object?, Object?>(
+      'historyContext',
+    ))!;
     return HistoryContext(value['timezone'] as String, value['now'] as int);
   }
 
   Future<HistoryTime> format(int instant, String timezone) async {
     final value = (await _channel.invokeMapMethod<Object?, Object?>(
-      'formatSessionTime', {'instant': instant, 'timezone': timezone},
+      'formatSessionTime',
+      {'instant': instant, 'timezone': timezone},
     ))!;
-    return HistoryTime(value['localTime'] as String, value['offsetSeconds'] as int, value['label'] as String);
+    return HistoryTime(
+      value['localTime'] as String,
+      value['offsetSeconds'] as int,
+      value['label'] as String,
+    );
   }
 
   Future<HistoryDetail> detail(String jobId, String sessionId) async {
     final value = (await _channel.invokeMapMethod<Object?, Object?>(
-      'sessionDetail', {'jobId': jobId, 'sessionId': sessionId},
+      'sessionDetail',
+      {'jobId': jobId, 'sessionId': sessionId},
     ))!;
-    return HistoryDetail(value['version'] as int,
-      value['entry'] == null ? null : HistoryEntry.decode(value['entry'] as Map<Object?, Object?>));
+    return HistoryDetail(
+      value['version'] as int,
+      value['entry'] == null
+          ? null
+          : HistoryEntry.decode(value['entry'] as Map<Object?, Object?>),
+    );
   }
 
-  Future<HistoryAudit> audit(String jobId, {int? before, int limit = 100}) async {
+  Future<HistoryAudit> audit(
+    String jobId, {
+    int? before,
+    int limit = 100,
+  }) async {
     final value = (await _channel.invokeMapMethod<Object?, Object?>(
-      'sessionAudit', {'jobId': jobId, 'before': before, 'limit': limit},
+      'sessionAudit',
+      {'jobId': jobId, 'before': before, 'limit': limit},
     ))!;
-    return HistoryAudit(value['version'] as int, (value['events'] as List).map((raw) {
-      final event = raw as Map<Object?, Object?>;
-      return HistoryEvent(event['sequence'] as int, event['sessionId'] as String,
-        _revision(event['revision'] as Map<Object?, Object?>));
-    }).toList(), value['next'] as int?);
+    return HistoryAudit(
+      value['version'] as int,
+      (value['events'] as List).map((raw) {
+        final event = raw as Map<Object?, Object?>;
+        return HistoryEvent(
+          event['sequence'] as int,
+          event['sessionId'] as String,
+          _revision(event['revision'] as Map<Object?, Object?>),
+        );
+      }).toList(),
+      value['next'] as int?,
+    );
   }
 
   Future<List<HistoryTimeChoice>> resolve(
@@ -215,7 +239,9 @@ class HistoryApi {
       'sessionRevisions',
       {'jobId': jobId, 'sessionId': sessionId},
     ))!;
-    return List.unmodifiable(values.map((raw) => _revision(raw as Map<Object?, Object?>)));
+    return List.unmodifiable(
+      values.map((raw) => _revision(raw as Map<Object?, Object?>)),
+    );
   }
 
   Future<TimerOutcome> _change(
