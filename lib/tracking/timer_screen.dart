@@ -5,6 +5,7 @@ import '../l10n/app_strings.dart';
 import 'timer_api.dart';
 import 'timer_providers.dart';
 import 'tracking_api.dart';
+import '../automation/automation_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 
@@ -218,6 +219,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   ),
                   const SizedBox(height: 24),
                   _sessionCard(state, disabled),
+                  if (state.running != null) AutomationNotice(jobId: state.running!.jobId, jobName: state.running!.jobName),
                   if (actions.working)
                     const Padding(
                       padding: EdgeInsets.only(top: 12),
@@ -273,6 +275,9 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                               color: colors.primary,
                             ),
                             title: Text(job.name),
+                            subtitle: JobSiteSubtitle(jobId: job.id),
+                            onTap: disabled ? null : () => Navigator.of(context).push(MaterialPageRoute<void>(
+                              builder: (_) => AutomationScreen(jobId: job.id, jobName: job.name))),
                             trailing: TextButton(
                               onPressed:
                                   disabled || state.running?.jobId == job.id

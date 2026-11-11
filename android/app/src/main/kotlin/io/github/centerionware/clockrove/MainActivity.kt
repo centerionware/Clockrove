@@ -8,6 +8,7 @@ import io.github.centerionware.clockrove.location.TrackingHostApi
 class MainActivity : FlutterActivity() {
     private var timerApi: TimerHostApi? = null
     private var trackingApi: TrackingHostApi? = null
+    private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
     private var visible = false
 
     override fun onStart() {
@@ -17,14 +18,18 @@ class MainActivity : FlutterActivity() {
     }
     override fun onStop() { visible = false; super.onStop() }
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
+        if (automationApi?.permissionResult(code) == true) return
         if (trackingApi?.permissionResult(code) != true) super.onRequestPermissionsResult(code, permissions, results)
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         timerApi = TimerHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         trackingApi = TrackingHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
+        automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        automationApi?.detach()
+        automationApi = null
         trackingApi?.detach()
         trackingApi = null
         timerApi?.detach()

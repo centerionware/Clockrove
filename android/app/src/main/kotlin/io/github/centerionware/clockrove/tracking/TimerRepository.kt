@@ -265,6 +265,27 @@ class TimerRepository internal constructor(context: Context,
         val conflict: String? = null, val replayed: Boolean = false,
         val choiceRequired: Boolean = choices.isNotEmpty())
 
+    internal data class WorkReview(val sessionId: String, val start: Long, val end: Long?, val historical: Boolean)
+    internal data class AutomationSnapshot(val version: Long, val settings: GeofenceStore.Settings,
+        val sites: List<GeofenceStore.Site>, val pending: Departure?, val reviews: List<WorkReview>,
+        val armed: Boolean, val suppressed: Boolean, val working: Boolean)
+
+    @Synchronized
+    internal fun automationSnapshot(jobId: String): AutomationSnapshot {
+        val db = helper.readableDatabase
+        val state = readSnapshot(db)
+        require(state.jobs.any { it.id == jobId })
+        val policy = GeofenceStore.policies(db).firstOrNull { it.settings.jobId == jobId }
+        val reviews = db.rawQuery("SELECT s.id,s.start_ms,s.end_ms,c.requires_history_review FROM geofence_conflicts c JOIN sessions s ON s.id=c.session_id WHERE c.job_id=? ORDER BY s.start_ms", arrayOf(jobId)).use { cursor ->
+            buildList { while (cursor.moveToNext()) add(WorkReview(cursor.getString(0), cursor.getLong(1),
+                if (cursor.isNull(2)) null else cursor.getLong(2), cursor.getInt(3) != 0)) }
+        }
+        return AutomationSnapshot(state.version, policy?.settings ?: GeofenceStore.Settings(jobId),
+            GeofenceStore.sites(db).filter { it.jobId == jobId },
+            pendingDeparture().takeIf { state.running?.jobId == jobId }, reviews,
+            policy?.armed ?: false, policy?.suppressed ?: false, state.running?.jobId == jobId)
+    }
+
     @Synchronized
     internal fun sites(): List<GeofenceStore.Site> = GeofenceStore.sites(helper.readableDatabase)
     @Synchronized

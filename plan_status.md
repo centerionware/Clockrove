@@ -920,3 +920,18 @@ and a generic notification for ambiguous manual selection. Startup protects pend
 work before uncertain recovery; default idle state does not initialize Play Services.
 Fifteen API-24/API-35 cases are prepared with synthetic task completions/HMAC.
 Actions/device validation and site/permission/review/health UI remain outstanding.
+
+### M2 verified alarm merge; automation control UI prepared
+
+PR #13 merged f845937 after exact head c76e806 passed Actions 43022813646:
+56 native tests, zero failures/errors/skips; Dart/UI, build and version gates passed.
+Policy main run 43021843305 and Play internal delivery 43022739286 succeeded.
+PR #14 head e42b37e passed 43023461269 with 86 native tests (all clean). The
+rebased exact head d0ef67b remains under final Actions validation.
+
+Work-site editing, versioned settings, permission education/separate Android flows,
+provisional departure and explicit history-preserving review now have source.
+Retained command identity supports response-loss retries. Six native API cases on
+API 29/35 and nine Dart/UI cases are prepared, including six light/dark preview
+images. No VM validation ran. Source/UI acceptance and physical device evidence
+remain pending; M2/M5 are incomplete.

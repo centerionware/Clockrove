@@ -10,6 +10,7 @@ internal class GeofenceRegistrationController(
     private val permitted: () -> Boolean,
     private val wasRequested: () -> Boolean,
     private val rememberRequested: (Boolean) -> Unit,
+    private val onHealth: (Health) -> Unit = {},
 ) {
     interface Platform {
         /** Empty inventory removes this app's geofences without registering replacements. */
@@ -17,7 +18,11 @@ internal class GeofenceRegistrationController(
     }
     enum class Health { IDLE, PERMISSION_MISSING, REGISTERING, READY, UNAVAILABLE }
     var health = Health.IDLE
-        private set
+        private set(value) {
+            if (field == value) return
+            field = value
+            onHealth(value)
+        }
     private data class Request(val keys: List<String>, val permitted: Boolean)
     private var attempted: Request? = null
     private var observedRequest: Request? = null

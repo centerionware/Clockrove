@@ -983,3 +983,23 @@ ambiguous entries. No background permission request or automation activation UI
 has been added yet. Fifteen synthetic cases target API 24/35; they use fake
 platform completions and a public HMAC fixture, not real registration or Keystore
 proof. All source still requires Actions validation and device acceptance.
+
+### Milestone 2 — alarm evidence and automation controls source
+
+Alarm head c76e806 passed full Actions run 43022813646. Inspected native XML:
+56 tests, zero failures/errors/skips, including seven alarm cases on API 24 and
+35. PR #13 merged f845937ecf90838da0b1f7dc6c6da15e779e0bd4. Policy main
+validation 43021843305 and Play internal delivery 43022739286 also succeeded.
+Geofence adapter head e42b37e passed run 43023461269 with 86 native tests,
+zero failures/errors/skips (fifteen adapter cases on API 24/35). PR #14 was rebased
+onto merged alarm code; its new exact head d0ef67b needs final validation.
+
+Added unvalidated work-site UI source with native versioned save/remove/settings
+commands, background-purpose education, separate precise/background permission
+flows, measured pending-departure display and recorded-work review. Acceptance
+preserves shown history and explicitly resets pending automation. Command retries
+retain their original ID/version. The timer surface links to real site controls and
+shows pending/review state. Six native API cases target API 29/35; nine Dart/UI
+cases include light/dark site/editor/departure previews and large-text layout.
+All tests, formatting and rendering remain in Actions. These additions do not
+prove physical geofence/FGS/alarm delivery, nor complete milestones 2 or 5.

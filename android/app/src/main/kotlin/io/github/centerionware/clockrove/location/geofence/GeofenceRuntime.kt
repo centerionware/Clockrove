@@ -19,6 +19,18 @@ import io.github.centerionware.clockrove.widget.TimerWidget
 internal object GeofenceRuntime {
     private var registration: GeofenceRegistrationController? = null
     private var subscription: AutoCloseable? = null
+    private val healthListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
+    @Volatile var health = "IDLE"
+        private set
+    fun subscribeHealth(listener: (String) -> Unit): AutoCloseable {
+        healthListeners.add(listener)
+        listener(health)
+        return AutoCloseable { healthListeners.remove(listener) }
+    }
+    private fun publishHealth(value: GeofenceRegistrationController.Health) {
+        health = value.name
+        healthListeners.forEach { try { it(health) } catch (_: Exception) { } }
+    }
     private const val CHOICES = 202
     private const val CHANNEL = "clockrove-automation"
 
@@ -27,7 +39,7 @@ internal object GeofenceRuntime {
         val controller = GeofenceRegistrationController(repository, AndroidGeofencePlatform(context),
             { AndroidGeofencePlatform.hasPermission(context) },
             { preferences.getBoolean("cleanupRequired", false) },
-            { preferences.edit().putBoolean("cleanupRequired", it).commit(); Unit })
+            { preferences.edit().putBoolean("cleanupRequired", it).commit(); Unit }, ::publishHealth)
         // Hold recovery uncertainty before any already-delivered alarm can finalize.
         controller.prepareRecovery()
         registration = controller
