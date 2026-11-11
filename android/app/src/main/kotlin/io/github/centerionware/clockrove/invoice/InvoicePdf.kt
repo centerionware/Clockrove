@@ -25,7 +25,8 @@ internal object InvoicePdf {
             requireNotNull(BitmapFactory.decodeByteArray(it, 0, it.size)) { "INVALID_LOGO" }
         }
         try {
-            PdfDocument().use { document ->
+            val document = PdfDocument()
+            try {
                 val flow = Flow(document, snapshot, logo)
                 flow.start()
                 flow.text(snapshot.company, 22f, bold = true)
@@ -51,7 +52,7 @@ internal object InvoicePdf {
                 flow.text(snapshot.footer, 10f)
                 flow.finish()
                 return ByteArrayOutputStream().also { document.writeTo(it) }.toByteArray()
-            }
+            } finally { document.close() }
         } finally { logo?.recycle() }
     }
     private class Flow(val document: PdfDocument, val data: InvoiceStore.Snapshot, val logo: Bitmap?) {
