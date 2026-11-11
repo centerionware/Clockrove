@@ -1125,3 +1125,12 @@ survive conflicts. Added bridge rejection cases on API 24/35, Dart exact-money/
 board/editor/retry cases and synthetic light/dark preview generation in Actions.
 Validation and visual review are pending. Customer/settings/report/invoice screens
 and lifecycle remain unfinished, and Play delivery is still held.
+
+Customer/settings head 493814c passed Actions 43078381276; inspected XML confirms
+150 native tests, zero failures/errors/skips, including eleven business command
+cases. Reporting head 5972331 passed 43078930808; XML confirms 160 native tests,
+zero failures/errors/skips, including all ten DST/pricing/CSV report cases. Both
+validated source increments merged. Neither result proves complete screen/PDF/
+email/device behavior. First board UI validation 43079870604 stopped at formatting
+and multiline-if lint; applied the runner's formatting artifact and added explicit
+blocks. Corrected UI validation is pending. Play delivery remains disabled.
