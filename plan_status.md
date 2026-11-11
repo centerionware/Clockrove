@@ -1145,3 +1145,18 @@ the editable default rate before saving, preserving explicit monetary intent.
 Prepared source requires Actions formatting/analyzer/tests and synthetic visual
 review. Logo import, PDF/style previews, report screens and lifecycle still remain;
 no combined release or complete invoice claim is made.
+
+### Native job lifecycle — source prepared, unverified
+
+Prepared serialized archive/restore/delete commands. Archive requires clock-out;
+restore preserves preferences but rotates registrations and checks site capacity.
+Native deletion enforces thirty continuous elapsed UTC days, resets after restore/
+rearchive, rejects rollback/unknown archive dates and purges job-specific entities
+transactionally. Independent customers/templates remain, with deleted-job template
+provenance and historical private revision payloads cleared. Opaque command hashes
+preserve original outcome replay after personal fingerprints are purged; retained
+surface headers contain only version/action/opaque job ID/origin. This is logical
+data removal, not a forensic secure-erasure guarantee. Ten API-24 cases cover age,
+reset, running guard, preferences, retained templates/customer, response-loss replay,
+capacity, rollback and duplicate concurrent delete. Actions/UI integration remain
+pending. Play publication is held; no VM validation ran.

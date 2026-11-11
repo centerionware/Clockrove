@@ -83,7 +83,7 @@ class TimerRepository internal constructor(context: Context,
             )).toString()
             db.rawQuery("SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(command.id)).use {
                 if (it.moveToFirst()) {
-                    val result = if (it.getString(0) == fingerprint) {
+                    val result = if (OpaqueReceipt.matches(it.getString(0), fingerprint)) {
                         Outcome(it.getLong(1), if (it.isNull(2)) null else it.getString(2))
                     } else Outcome(readSnapshot(db).version, "COMMAND_ID_REUSED")
                     db.setTransactionSuccessful()
@@ -112,11 +112,7 @@ class TimerRepository internal constructor(context: Context,
             "SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(id),
         ).use {
             if (it.moveToFirst()) {
-                val prior = try { org.json.JSONArray(it.getString(0)) }
-                    catch (_: org.json.JSONException) { return Outcome(readSnapshot(helper.readableDatabase).version, "COMMAND_ID_REUSED") }
-                val same = prior.length() == 7 && prior.opt(0) is Number && prior.getLong(0) == version && prior.getString(1) == action.name &&
-                    (if (prior.isNull(2)) null else prior.getString(2)) == jobId &&
-                    prior.getString(6) == origin.name
+                val same = OpaqueReceipt.matchesSurface(it.getString(0), version, action.name, jobId, origin.name)
                 return if (same) Outcome(it.getLong(1), if (it.isNull(2)) null else it.getString(2))
                     else Outcome(readSnapshot(helper.readableDatabase).version, "COMMAND_ID_REUSED")
             }
@@ -385,6 +381,15 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun report(selection: ReportStore.Selection): ReportSnapshot = ReportSnapshot(readSnapshot(helper.readableDatabase).version, ReportStore.read(helper.readableDatabase, selection))
 
+    @Synchronized
+    internal fun archivedJobs(): List<JobLifecycleStore.Archived> = JobLifecycleStore.archived(helper.readableDatabase, wallClock())
+    @Synchronized
+    internal fun archiveJob(id: String, version: Long, jobId: String): Outcome = boardChange(id, version, "JOB_ARCHIVE", listOf(jobId)) { JobLifecycleStore.archive(it, jobId, wallClock()) }
+    @Synchronized
+    internal fun restoreJob(id: String, version: Long, jobId: String): Outcome = boardChange(id, version, "JOB_RESTORE", listOf(jobId)) { JobLifecycleStore.restore(it, jobId, wallClock()) }
+    @Synchronized
+    internal fun deleteJob(id: String, version: Long, jobId: String): Outcome = boardChange(id, version, "JOB_DELETE", listOf(jobId)) { JobLifecycleStore.remove(it, jobId, wallClock()) }
+
     private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
         changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
 
@@ -416,7 +421,7 @@ class TimerRepository internal constructor(context: Context,
     private fun priorOutcome(db: SQLiteDatabase, id: String, fingerprint: String): Outcome? = db.rawQuery(
         "SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(id),
     ).use {
-        if (!it.moveToFirst()) null else if (it.getString(0) != fingerprint)
+        if (!it.moveToFirst()) null else if (!OpaqueReceipt.matches(it.getString(0), fingerprint))
             Outcome(readSnapshot(db).version, "COMMAND_ID_REUSED")
         else Outcome(it.getLong(1), if (it.isNull(2)) null else it.getString(2))
     }
