@@ -834,3 +834,14 @@ only Dart whitespace to exercise the final formatter failure gate. It has no PR
 and is not intended for main. Result is pending; do not count the negative-path
 check as passed until its final failure and preceding check results are observed.
 Merged-map main validation 43007569229 is independently in progress.
+
+Formatter negative-path run 43007665309 completed with the intended FAILURE at
+Require clean formatting. Analysis, all 23 Dart/UI tests, Android compilation,
+native tests and release-version policy passed first; the exported source patch
+confirms the intentional whitespace difference. This proves continued diagnostic
+checks do not turn invalid formatting into a green validation. Probe branch is
+being removed after terminal evidence. Main map validation 43007569229 and the
+documentation-only PR #11 run 43007883446 both completed SUCCESS independently.
+The only new changes after those runs are evidence text; application/workflow
+source is unchanged. Physical/device/provider gates and full app milestones remain
+incomplete. No VM validation executed.

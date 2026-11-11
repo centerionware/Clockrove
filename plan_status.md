@@ -780,3 +780,14 @@ commit fa4437e / owner manual run 43007665309. Only source whitespace differs;
 expected result is failed final gate after the independent checks complete.
 Do not merge the probe branch. Observe its terminal result, record it and delete
 the temporary branch. No VM build/test/format/render was executed.
+
+Formatter negative-path run 43007665309 completed with the intended FAILURE at
+Require clean formatting. Analysis, all 23 Dart/UI tests, Android compilation,
+native tests and release-version policy passed first; the exported source patch
+confirms the intentional whitespace difference. This proves continued diagnostic
+checks do not turn invalid formatting into a green validation. Probe branch is
+being removed after terminal evidence. Main map validation 43007569229 and the
+documentation-only PR #11 run 43007883446 both completed SUCCESS independently.
+The only new changes after those runs are evidence text; application/workflow
+source is unchanged. Physical/device/provider gates and full app milestones remain
+incomplete. No VM validation executed.
