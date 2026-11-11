@@ -1014,3 +1014,13 @@ First controls run 43026170277 exported formatter corrections but stopped at
 eight Dart flow-control brace lints. Applied the Actions-generated patch and
 added braces; no local formatter/test/build executed. Behavior and previews
 remain pending the corrected full run.
+
+Controls run 43026618644 passed formatting/analyze and all Dart/UI checks;
+Android/native checks were still live at this observation. Reviewed the six new
+site/editor/departure and two changed timer previews in both themes (artifact
+13857262562): clear spacing, wrapping and consistent hierarchy. Review revealed
+a copy ambiguity: pending work held for review must not promise automatic expiry.
+Added conditional held-work copy and explicit year/seconds/UTC offset to review
+boundaries; these source refinements require the next CI. Coordinate editing is
+implemented; map-tap/current-position selection and full correction UI remain
+planned, along with physical acceptance. No VM builds/tests/rendering ran.

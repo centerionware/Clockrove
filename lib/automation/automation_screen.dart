@@ -227,7 +227,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final zone =
         '${offset < 0 ? "−" : "+"}${(offset.abs() ~/ 60).toString().padLeft(2, '0')}:${(offset.abs() % 60).toString().padLeft(2, '0')}';
     final labels = MaterialLocalizations.of(context);
-    return '${labels.formatMediumDate(local)} ${labels.formatTimeOfDay(TimeOfDay.fromDateTime(local))} (UTC$zone)';
+    return '${labels.formatMediumDate(local)}, ${local.year} '
+        '${labels.formatTimeOfDay(TimeOfDay.fromDateTime(local), alwaysUse24HourFormat: true)}:'
+        '${local.second.toString().padLeft(2, '0')} (UTC$zone)';
   }
 
   String _health(AutomationSnapshot value) {
@@ -346,8 +348,10 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     Text('Left site: ${_time(value.departed!)}'),
                     Text('Grace ends: ${_time(value.deadline!)}'),
                     const SizedBox(height: 8),
-                    const Text(
-                      'This work is provisional. Returning before grace ends keeps the timer running. Otherwise, recorded work ends at departure. Android may handle this later.',
+                    Text(
+                      value.reviews.isNotEmpty
+                          ? 'Automatic departure is paused while this work needs review. The timer keeps running; you can still clock out manually.'
+                          : 'This work is provisional. Returning before grace ends keeps the timer running. Otherwise, recorded work ends at departure. Android may handle this later.',
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -360,7 +364,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Site events could not be reconciled safely. Automatic departure is held for affected ongoing work.',
+                      'Site monitoring was interrupted or an event arrived late. Check the recorded times below. Automatic departure is paused for affected ongoing work.',
                     ),
                     for (final review in value.reviews)
                       Padding(
