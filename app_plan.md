@@ -27,12 +27,12 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Continue milestone 2 native feasibility: finish validated departure persistence,
-qualified geofence membership and recovery integration, then map-provider proof.
-Modern timer UI is merged and CI-rendered previews have been reviewed in both
-themes. All validation runs in GitHub Actions. Physical GPS/widget/background
-behavior and runtime Google-key initialization remain unproven; they do not block
-independent implementation. See plan_status.md for exact run and PR evidence.
+Continue milestone 2 with durable qualified geofence state, manual suppression,
+platform callbacks and departure scheduling/recovery. Stored-point OSM source,
+network policy and synthetic UI tests passed; live OSM and optional secure runtime
+Google-key proof still need a device/network/key. Native physical tracking/widget
+acceptance remains unproven. All builds/tests/rendering stay in GitHub Actions.
+See plan_status.md for exact run and merge evidence; milestone 2 is incomplete.
 
 ## 2. Product decisions
 
@@ -40,7 +40,7 @@ independent implementation. See plan_status.md for exact run and PR evidence.
 | --- | --- |
 | Name | Clockrove; chosen by owner, provisional pending direct store-name verification |
 | Repository | Public `centerionware/Clockrove`; use existing GitHub credentials |
-| Application ID | Proposed implementation default `io.github.centerionware.clockrove`; freeze before first store upload |
+| Application ID | Frozen as `io.github.centerionware.clockrove` at the first Play upload |
 | Launch | Android phone app with home-screen widget; no computer desktop companion |
 | Later platform | iOS app and widget, after Android launch |
 | Price | USD $5.99 one-time paid store download |
@@ -812,3 +812,25 @@ correction, with an explicit final Require clean formatting failure gate. Failed
 formatting cannot produce a successful validation or trigger Play delivery. This
 improves Actions-only feedback without disabling any checks or exposing secrets.
 New full map validation remains pending; no VM checks executed.
+
+### OSM prototype validation and merge
+
+Actions 43006507700 on exact head 94451c2 concluded SUCCESS: clean formatting,
+analysis, 23 Dart/UI tests, Android debug APK, native unit/resource-rendering tests,
+locked Ruby tooling and release-version policy. All six synthetic images from
+artifact 13849240735 were visually inspected (timer, scrolled location and map,
+each in light/dark). Exact tested source merged through PR #10 as
+bb2a9eb1a5a78074434472cb601d8755168f95e5. No VM build/test/format/render executed.
+
+This proves source compilation, synthetic map/overlay layout, HTTP policy and
+manual-timer UI isolation during tile failure. It does not prove live OSM service,
+physical GPS/background/widget operation, Google runtime-key initialization or
+full reporting/site editing. Those gates remain open. Native visual merge f9207b5
+also completed main validation 43003375715 and Play internal delivery 43004256117;
+that is upload acceptance, not tester installation or production availability.
+
+Disposable owner-dispatched validation 43007665309 at fa4437e deliberately changes
+only Dart whitespace to exercise the final formatter failure gate. It has no PR
+and is not intended for main. Result is pending; do not count the negative-path
+check as passed until its final failure and preceding check results are observed.
+Merged-map main validation 43007569229 is independently in progress.
