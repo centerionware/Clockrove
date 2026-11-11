@@ -12,14 +12,6 @@ import '../support/map_preview.dart';
 
 final _tile = TileProvider.transparentImage;
 
-class SyntheticTiles extends TileProvider {
-  SyntheticTiles({this.fail = false});
-  final bool fail;
-  @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
-      MemoryImage(fail ? Uint8List(0) : _tile);
-}
-
 void main() {
   for (final dark in [false, true]) {
     testWidgets(
@@ -98,9 +90,8 @@ void main() {
           child: MaterialApp(
             theme: ClockroveTheme.light(),
             builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                textScaler: const TextScaler.linear(1.8),
-              ),
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.8)),
               child: child!,
             ),
             home: WorkLocationMap(

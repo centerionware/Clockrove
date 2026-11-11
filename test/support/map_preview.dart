@@ -1,14 +1,17 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 Future<void> loadMapPreviewFonts() async {
   final sdk = Platform.environment['FLUTTER_ROOT'];
-  if (sdk == null)
+  if (sdk == null) {
     throw StateError('FLUTTER_ROOT must identify the pinned SDK');
+  }
   final text = FontLoader('Roboto');
   for (final name in [
     'Roboto-Regular.ttf',
@@ -40,4 +43,12 @@ Future<void> saveMapPreview(GlobalKey key, String name) async {
   await File('${directory.path}/$name.png')
       .writeAsBytes(bytes!.buffer.asUint8List());
   image.dispose();
+}
+
+class SyntheticTiles extends TileProvider {
+  SyntheticTiles({this.fail = false});
+  final bool fail;
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
+      MemoryImage(fail ? Uint8List(0) : TileProvider.transparentImage);
 }

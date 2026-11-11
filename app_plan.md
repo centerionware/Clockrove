@@ -775,3 +775,9 @@ and a large-text landscape check while keeping map controls/attribution visible;
 enabled semantics in map accessibility checks. Dependency preparation 43002798859
 completed SUCCESS independently; new map behavior still awaits its own CI.
 No local build, formatter, tests or rendering ran.
+
+OSM run 43004367001 required one additional formatter wrapping correction in the
+landscape test; applied its source patch. Added an actual TimerScreen journey
+through failed map decoding back to manual clock-out and updated synthetic
+tracking previews to include valid coordinates. No native/physical or live-tile
+success claimed. Next Actions run must pass analysis, all tests and visual review.
