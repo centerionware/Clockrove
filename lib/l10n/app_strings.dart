@@ -7,6 +7,8 @@ abstract final class AppStrings {
   static const elapsed = 'Elapsed this session';
   static const checkDeviceTime = 'Check device time';
   static const locationTitle = 'Work location';
+  static const lastSample = 'Last sample';
+  static const accuracy = 'accuracy';
   static const locationPurpose =
       'Record location only while clocked in, targeting a sample about every ten '
       'minutes. Accuracy and delivery vary. Manual timekeeping works without '

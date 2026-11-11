@@ -31,6 +31,7 @@ class TimerRepository internal constructor(context: Context) {
         val measuredUtcMillis: Long, val receivedUtcMillis: Long,
         val latitude: Double, val longitude: Double, val accuracyMeters: Double,
     )
+    data class TrackingObservation(val running: Session?, val latest: LocationPoint?)
     enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION }
 
 
@@ -171,6 +172,19 @@ class TimerRepository internal constructor(context: Context) {
         helper.readableDatabase.rawQuery(
             "SELECT * FROM location_points WHERE session_id=? ORDER BY measured_ms,id", arrayOf(sessionId),
         ).use { cursor -> buildList { while (cursor.moveToNext()) add(decodePoint(cursor)) } }
+
+    @Synchronized
+    fun trackingObservation(): TrackingObservation {
+        val running = readSnapshot(helper.readableDatabase).running
+        return TrackingObservation(running, running?.let { latestLocation(it.id) })
+    }
+
+    @Synchronized
+    fun latestLocation(sessionId: String): LocationPoint? =
+        helper.readableDatabase.rawQuery(
+            "SELECT * FROM location_points WHERE session_id=? ORDER BY measured_ms DESC,id DESC LIMIT 1",
+            arrayOf(sessionId),
+        ).use { if (it.moveToFirst()) decodePoint(it) else null }
 
     private fun decodePoint(cursor: android.database.Cursor) = LocationPoint(
         cursor.getString(cursor.getColumnIndexOrThrow("id")),

@@ -1,7 +1,8 @@
 # Clockrove
 
 Local-first Android timekeeping, location history and job boards. Implementation
-is in milestone 1; this scaffold does not yet provide timekeeping. Android launch
+is in milestone 2: manual timer controls, native persistence and location
+integrations are being validated as a development prototype. Android launch
 requires all milestones 1–8 in [app_plan.md](app_plan.md). Track individual tasks
 and actual validation in [plan_status.md](plan_status.md).
 

@@ -667,3 +667,16 @@ journey scroll/tap frame timing and preview package-URI lookup unsupported by
 Flutter tester. Corrected harness to settle scroll frames and load fonts through
 explicit pinned FLUTTER_ROOT. Kept all assertions/preview generation enabled.
 No rendering success or visual approval claimed; no VM validation executed.
+
+First modern UI preview artifact 13843514422 from run 42996201315 was downloaded
+and both themes visually inspected; hierarchy/contrast/spacing are sound. Fixed
+preview debug ribbon and added scrolled location captures. Also added atomic
+tracking-observation status with actual latest measured time/accuracy, choosing
+measurement order over callback order; native/codec tests added. Changes need new
+CI/visual review. No VM build/render/test ran and no physical GPS evidence claimed.
+
+Modern design PR #5 passed complete Actions 42996201315, both preview themes were
+visually inspected, and exact head dadb445 merged at 9e32c90. This validates the
+prototype UI/layout, not launch/device readiness. Latest measured-status and
+clean debug/scrolled preview changes are isolated on measured-tracking-status.
+Reusable owner UI direction recorded in docs/UI_DESIGN.md for later features.

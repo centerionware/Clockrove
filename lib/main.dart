@@ -12,6 +12,7 @@ class ClockroveApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
     title: AppStrings.appName,
     theme: ClockroveTheme.light(),
     darkTheme: ClockroveTheme.dark(),
