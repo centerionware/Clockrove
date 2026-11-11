@@ -496,3 +496,24 @@ on separate foreground-location-prototype branch; nothing unvalidated was merged
 Manual-controls Play delivery 42989964414 succeeded: allocated versionCode
 216550241 and Google upload accepted at 08:54:33 UTC. Tester installation remains
 unverified. New service additions require their own PR/Actions run.
+
+### Visible location permission/start flow — 2026-11-11
+
+Previous turn: progress (service source/mapper tests and draft PR #3). Service-only
+validation 42991221956 concluded SUCCESS; merged exact tested head 4db4b34 as
+ a99faa954b9a74c9fb1c971510c63520395cd5ca. This proves compilation/tests, not actual
+fused delivery or FGS lifecycle on a physical device.
+
+Prepared location-permission-flow branch: native activity visibility checks,
+foreground fine/coarse permission callback and separately requested notification
+permission, typed tracking status/enable/disable contracts and native health
+invalidation events. Activity detach cancels pending permission callbacks. Service
+startup failures remain explicit; no background location permission is requested
+or geofence automation enabled. Added Flutter purpose dialog and independent
+location controls, honest denied/approximate/provider status and resume refresh.
+Tests cover denial/restriction codec responses and that purpose confirmation
+precedes native permission calls while denied location preserves manual clock-out.
+
+These UI/bridge changes require new Actions validation. No VM formatting/build or
+tests ran. Physical screen-off sampling, recovery, geofences, map experiment and
+clock-out sampling target are still incomplete; milestone 2 is not complete.

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_strings.dart';
 import 'timer_api.dart';
 import 'timer_providers.dart';
+import 'tracking_api.dart';
+import 'tracking_controls.dart';
 
 class TimerScreen extends ConsumerStatefulWidget {
   const TimerScreen({super.key});
@@ -29,6 +31,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      ref.invalidate(trackingStatusProvider);
+      ref.invalidate(trackingHealthProvider);
       ref.invalidate(timerVersionsProvider);
       ref.invalidate(timerSnapshotProvider);
     }
@@ -80,7 +84,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
         actions: [
           IconButton(
             tooltip: AppStrings.refresh,
-            onPressed: () => ref.invalidate(timerSnapshotProvider),
+            onPressed: () {
+              ref.invalidate(timerSnapshotProvider);
+              ref.invalidate(trackingStatusProvider);
+            },
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -100,7 +107,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
           data: (state) => ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(AppStrings.prototype),
+              const TrackingControls(),
               const SizedBox(height: 16),
               Text(
                 state.running?.jobName ?? AppStrings.idle,
