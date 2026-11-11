@@ -1161,3 +1161,22 @@ Compact-widget run 43071623833 built the Android app but native test compilation
 failed because the new widget fixtures used Dart snapshot argument ordering for
 the Kotlin type. Switched fixtures to named fields; all layout/state assertions
 remain. Corrected Actions validation is pending; no VM checks ran.
+
+### Native business persistence foundation — source awaiting Actions
+
+Prepared schema 5 for the owner-requested combined iteration: job archive dates,
+billing/customer fields, real three-column boards, cards, independent reusable
+templates, customers, company/email/invoice settings, logo assets and prepared
+invoice records. Currency/rates remain explicit and unset rates are not invented.
+Money columns reject floating-point values; card placement has a composite
+job/column foreign key. Legacy archived dates begin at migration, not a guessed past.
+
+Added revision heads and ancestry rows, recording actual job/site/preferences and
+manual/automatic session changes under the existing serialized native transaction.
+Migration captures roots without operational geofence facts; new jobs seed boards
+and revisions atomically. This is not a claim of tamper-proof history or a completed
+backup merge implementation. Eight API-24 cases cover released-schema-4 migration,
+tracking/receipt preservation, default boards, ancestry/dedup, retrospective ends,
+site tombstones, FK/money guards and rollback. Source is unvalidated until Actions;
+customer/board/pricing/invoice commands and screens remain unfinished. No VM
+build, dependency resolution, formatter or test was run.

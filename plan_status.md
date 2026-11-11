@@ -1058,3 +1058,14 @@ Compact-widget run 43071623833 built the Android app but native test compilation
 failed because the new widget fixtures used Dart snapshot argument ordering for
 the Kotlin type. Switched fixtures to named fields; all layout/state assertions
 remain. Corrected Actions validation is pending; no VM checks ran.
+
+### M3/native business foundation — source prepared, unverified
+
+Schema 5 and transactional revision metadata now have source for the complete
+combined iteration. Existing tracking data/command receipts are preserved; new
+jobs seed real default boards, and core job/site/preferences/session changes
+record ancestry. Added a frozen released schema-4 fixture and eight API-24 tests
+for migration, invariants, dedup, retrospective revisions and rollback. No VM
+validation ran. New business commands/UI and backup merge remain pending; do not
+mark the combined feature set or schema migration verified before Actions passes.
+Play publication remains held for the entire requested iteration.

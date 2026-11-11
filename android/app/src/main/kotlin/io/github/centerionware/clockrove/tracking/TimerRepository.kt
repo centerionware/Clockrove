@@ -9,7 +9,7 @@ import java.util.UUID
 class TimerRepository internal constructor(context: Context,
     private val eventDigest: (String) -> String = GeofenceEventDigest::digest,
     private val wallClock: () -> Long = System::currentTimeMillis) {
-    private val helper = Store(context.applicationContext)
+    private val helper = Store(context.applicationContext, wallClock)
     private val listeners = mutableSetOf<(Long) -> Unit>()
 
     enum class Action { START, STOP, SWITCH }
@@ -50,7 +50,9 @@ class TimerRepository internal constructor(context: Context,
         val db = helper.writableDatabase
         db.beginTransaction()
         try {
-            db.execSQL("INSERT INTO jobs(id,name) VALUES (?,?)", arrayOf(id, name))
+            db.execSQL("INSERT INTO jobs(id,name,currency) SELECT ?,?,currency FROM app_settings WHERE id=1", arrayOf(id, name))
+            BusinessSchema.seedBoard(db, id, wallClock())
+            RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, wallClock(), where = "id=?", args = arrayOf(id))
             db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
@@ -299,18 +301,27 @@ class TimerRepository internal constructor(context: Context,
     internal fun saveSite(id: String, version: Long, site: GeofenceStore.Site): Outcome = configureGeofences(id,
         org.json.JSONArray(listOf(version, "SITE_SAVE", site.id, site.jobId, site.name,
             site.latitude.toString(), site.longitude.toString(), site.radiusMeters.toString(), site.enabled)).toString(), version) {
-        GeofenceStore.saveSite(it, site, wallClock())
+        val conflict = GeofenceStore.saveSite(it, site, wallClock())
+        if (conflict == null) RevisionStore.snapshotRows(it, "work_sites", "site", BusinessSchema.siteColumns,
+            wallClock(), "job_id", "id=?", arrayOf(site.id))
+        conflict
     }
     @Synchronized
     internal fun removeSite(id: String, version: Long, siteId: String): Outcome = configureGeofences(id,
         org.json.JSONArray(listOf(version, "SITE_REMOVE", siteId)).toString(), version) {
-        GeofenceStore.removeSite(it, siteId, wallClock())
+        val jobId = it.rawQuery("SELECT job_id FROM work_sites WHERE id=?", arrayOf(siteId)).use { row -> if (row.moveToFirst()) row.getString(0) else null }
+        val conflict = GeofenceStore.removeSite(it, siteId, wallClock())
+        if (conflict == null && jobId != null) RevisionStore.record(it, "site", siteId, jobId,
+            mapOf("id" to siteId, "job_id" to jobId), wallClock(), deleted = true)
+        conflict
     }
     @Synchronized
     internal fun saveAutomation(id: String, version: Long, settings: GeofenceStore.Settings): Outcome = configureGeofences(id,
         org.json.JSONArray(listOf(version, "AUTOMATION_SAVE", settings.jobId, settings.enabled,
             settings.autoStart, settings.automaticDeparture, settings.graceMinutes)).toString(), version) {
-        GeofenceStore.saveSettings(it, settings, wallClock())
+        val conflict = GeofenceStore.saveSettings(it, settings, wallClock())
+        if (conflict == null) BusinessSchema.snapshotAutomation(it, settings.jobId, wallClock())
+        conflict
     }
 
     @Synchronized
@@ -531,12 +542,17 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(closing.id))
             db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, closing.id))
             db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?", arrayOf<Any?>(closing.id, command.atUtcMillis))
+            RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, command.atUtcMillis,
+                "job_id", "id=?", arrayOf(closing.id))
         }
         if (command.action != Action.STOP) {
             if (command.origin != Origin.GEOFENCE) GeofenceStore.manualStart(db, requireNotNull(command.jobId), command.atUtcMillis)
+            val sessionId = UUID.randomUUID().toString()
             db.execSQL("INSERT INTO sessions(id,job_id,start_ms,timezone,offset_seconds,origin) VALUES (?,?,?,?,?,?)",
-                arrayOf<Any?>(UUID.randomUUID().toString(), command.jobId, command.atUtcMillis,
+                arrayOf<Any?>(sessionId, command.jobId, command.atUtcMillis,
                     command.timezone, command.offsetSeconds, command.origin.name))
+            RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, command.atUtcMillis,
+                "job_id", "id=?", arrayOf(sessionId))
         }
     }
 
@@ -548,6 +564,8 @@ class TimerRepository internal constructor(context: Context,
         db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?",
             arrayOf<Any?>(candidate.sessionId, candidate.detectedUtcMillis))
         db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(candidate.sessionId))
+        RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, candidate.detectedUtcMillis,
+            "job_id", "id=?", arrayOf(candidate.sessionId))
     }
 
     @Synchronized
@@ -596,7 +614,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 4) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 5) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -609,6 +627,7 @@ class TimerRepository internal constructor(context: Context,
             createLocationTable(db)
             createDepartureTable(db)
             GeofenceStore.createTables(db)
+            BusinessSchema.install(db, now())
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -619,10 +638,11 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..3 && newVersion == 4) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..4 && newVersion == 5) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
-            GeofenceStore.createTables(db)
+            if (oldVersion < 4) GeofenceStore.createTables(db)
+            if (oldVersion < 5) BusinessSchema.install(db, now())
         }
     }
 
