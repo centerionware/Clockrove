@@ -7,6 +7,7 @@ import 'timer_providers.dart';
 import 'tracking_api.dart';
 import '../automation/automation_screen.dart';
 import '../business/job_screen.dart';
+import '../business/settings_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 
@@ -179,6 +180,21 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
           ],
         ),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'App settings and customers',
+            onSelected: (value) => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => value == 'settings'
+                    ? const SettingsScreen()
+                    : const CustomersScreen(),
+              ),
+            ),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'customers', child: Text('Customers')),
+            ],
+          ),
           IconButton(
             tooltip: AppStrings.refresh,
             onPressed: () {

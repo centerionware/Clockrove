@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../automation/automation_screen.dart';
 import 'business_api.dart';
 import 'business_command.dart';
+import 'job_settings_screen.dart';
 
 class JobScreen extends ConsumerWidget {
   const JobScreen({super.key, required this.jobId, required this.jobName});
@@ -15,6 +16,16 @@ class JobScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(data.asData?.value.name ?? jobName),
         actions: [
+          IconButton(
+            tooltip: 'Job settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => JobSettingsScreen(jobId: jobId),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Worksites and automation',
             icon: const Icon(Icons.location_on_outlined),

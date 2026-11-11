@@ -1134,3 +1134,14 @@ validated source increments merged. Neither result proves complete screen/PDF/
 email/device behavior. First board UI validation 43079870604 stopped at formatting
 and multiline-if lint; applied the runner's formatting artifact and added explicit
 blocks. Corrected UI validation is pending. Play delivery remains disabled.
+
+### Company/customer/job settings screens — source prepared
+
+Connected main Settings/Customers navigation and job settings to persisted native
+records. Prepared global hourly/currency and company/contact/header/footer/style/
+email-template forms, customer CRUD/archive/manage view, per-job hourly/task basis,
+rate override, color and customer/email override controls. Currency changes clear
+the editable default rate before saving, preserving explicit monetary intent.
+Prepared source requires Actions formatting/analyzer/tests and synthetic visual
+review. Logo import, PDF/style previews, report screens and lifecycle still remain;
+no combined release or complete invoice claim is made.
