@@ -56,7 +56,7 @@ internal object GeofenceStore {
     ).use { it.moveToFirst() }
 
     /** Configuration changes invalidate every old registration for this job. */
-    private fun invalidate(db: SQLiteDatabase, jobId: String, now: Long) {
+    internal fun invalidate(db: SQLiteDatabase, jobId: String, now: Long) {
         ensurePolicy(db, jobId, now)
         sites(db).filter { it.jobId == jobId }.forEach {
             db.execSQL("UPDATE work_sites SET registration_key=?,presence='UNKNOWN',observed_ms=NULL WHERE id=?",
