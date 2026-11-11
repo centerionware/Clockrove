@@ -565,3 +565,9 @@ VM formatter. Added a lifecycle guard so elapsed display refresh does not start
 when its widget is initially created while backgrounded. Display derives from
 native timestamps and never writes timer state. New CI run must prove formatting,
 analysis, layout/tests and generated previews; visual review remains outstanding.
+
+Corrected UI run 42995204970 passed formatting but failed analysis on exactly two
+unnecessary imports (dart:ui in elapsed_display.dart and dart:typed_data in the
+screen preview test). Removed only those imports; no check was disabled. Rendering
+still has not run, so there is no visual artifact to approve yet. New validation
+will cover this source correction. No VM analyzer/formatter/build/test executed.

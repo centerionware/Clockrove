@@ -657,3 +657,7 @@ PR #5 run 42994742872 failed formatting before preview rendering. Applied review
 Actions-generated source patch and guarded display refresh against initial
 background lifecycle state. No VM tests/build/format executed. New UI still needs
 CI success and actual light/dark preview inspection; no visual success claimed.
+
+UI run 42995204970 passed formatting, then analysis flagged two unnecessary imports.
+Removed the flagged imports without weakening analysis. UI preview rendering is
+still pending and visual quality has not yet been verified from rendered output.
