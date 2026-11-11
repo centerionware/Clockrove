@@ -1466,3 +1466,16 @@ confirms 215 native tests and ten actual Android cases across API 24/35, all wit
 zero failures/errors/skips, including three calendar cases per API. Merged to
 main as 8bb533d. This branch now includes that source; fresh combined validation
 is required. History UI and full M3/M4 acceptance remain incomplete. Play is held.
+
+PDF assertion head d79957d passed full Actions 43108568856, including ten actual
+cases on each Android API and the viewer/landscape checks. Downloaded actual XML
+confirms zero device failures/errors/skips. The whitespace-aware priced-row check
+passed for all 130 items in all three styles. Current #29 also includes validated
+main history contracts and requires thirteen actual device cases per API.
+
+Visual review of the passing viewer artifacts found a remaining capture defect:
+all three styles had identical hashes within each theme and the document area
+was blank. The test captured an Image widget before asynchronous frame decoding.
+Wait for the actual memory image to decode and assert a non-null painted image
+before capturing. This is an artifact/verification correction; actual decoded
+viewer visuals still need new Actions review. Play remains held.

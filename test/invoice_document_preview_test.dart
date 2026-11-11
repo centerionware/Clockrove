@@ -67,6 +67,16 @@ Future<void> _show(
     ),
   );
   await tester.pumpAndSettle();
+  await tester.runAsync(
+    () => precacheImage(
+      MemoryImage(api.bytes),
+      tester.element(find.byType(Image)),
+    ),
+  );
+  await tester.pumpAndSettle();
+  final decoded = tester.renderObject<RenderImage>(find.byType(RawImage));
+  expect(decoded.image, isNotNull);
+  expect(decoded.image!.width, greaterThan(0));
 }
 
 void main() {
