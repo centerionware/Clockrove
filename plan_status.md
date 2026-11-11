@@ -613,3 +613,12 @@ Baseline release builds do not show the debug ribbon seen in the initial test
 preview. Observation-status/debug-preview refinements remain isolated on
 measured-tracking-status for new CI review. docs/UI_DESIGN.md records the owner
 style requirement and reusable design standards for subsequent features.
+
+### Measured-status validation correction
+
+Previous turn: progress (modern UI merge/visual review and measured-status PR #6).
+Existing PR run 42997495311 concluded FAILURE at formatting. Downloaded/reviewed
+and applied its Actions-generated patch to three Dart source/test files. No VM
+formatter/build/test ran. New validation will cover actual sample metadata and
+clean/scrolled previews. Native departure-state follow-up is prepared locally,
+not included in this correction and not enabled at runtime.

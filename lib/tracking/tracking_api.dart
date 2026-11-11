@@ -42,7 +42,10 @@ class TrackingApi {
       raw['notificationsAllowed'] as bool,
       lastObservationUtc: raw['lastMeasuredMillis'] == null
           ? null
-          : DateTime.fromMillisecondsSinceEpoch(raw['lastMeasuredMillis'] as int, isUtc: true),
+          : DateTime.fromMillisecondsSinceEpoch(
+              raw['lastMeasuredMillis'] as int,
+              isUtc: true,
+            ),
       lastAccuracyMeters: (raw['lastAccuracyMeters'] as num?)?.toDouble(),
     );
   }

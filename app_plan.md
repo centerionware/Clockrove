@@ -680,3 +680,7 @@ visually inspected, and exact head dadb445 merged at 9e32c90. This validates the
 prototype UI/layout, not launch/device readiness. Latest measured-status and
 clean debug/scrolled preview changes are isolated on measured-tracking-status.
 Reusable owner UI direction recorded in docs/UI_DESIGN.md for later features.
+
+PR #6 run 42997495311 failed formatting; applied reviewed CI-generated source patch
+without local formatting. Actual measured-status/preview validation remains
+pending. Departure-state persistence follow-up remains separate and unscheduled.

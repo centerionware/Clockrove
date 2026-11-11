@@ -76,8 +76,13 @@ class PreviewTrackingApi extends TrackingApi {
   Stream<String> get health => const Stream<String>.empty();
   @override
   Future<TrackingStatus> status() async => TrackingStatus(
-    'approximate', 'REQUESTING', true, true,
-    lastObservationUtc: DateTime.now().toUtc().subtract(const Duration(minutes: 6)),
+    'approximate',
+    'REQUESTING',
+    true,
+    true,
+    lastObservationUtc: DateTime.now().toUtc().subtract(
+      const Duration(minutes: 6),
+    ),
     lastAccuracyMeters: 80,
   );
 }
@@ -93,7 +98,8 @@ void main() {
           trackingApiProvider.overrideWithValue(tracking),
         ],
         child: MaterialApp(
-          debugShowCheckedModeBanner: false,          theme: ClockroveTheme.light(),
+          debugShowCheckedModeBanner: false,
+          theme: ClockroveTheme.light(),
           home: const TimerScreen(),
         ),
       ),
@@ -215,7 +221,8 @@ void main() {
               trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
             ],
             child: MaterialApp(
-          debugShowCheckedModeBanner: false,              theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
+              debugShowCheckedModeBanner: false,
+              theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
               home: const TimerScreen(),
             ),
           ),
@@ -241,11 +248,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.runAsync(() async {
-        final render = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+        final render =
+            boundary.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
         final image = await render.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        await File('build/ui-preview/clockrove-location-${dark ? "dark" : "light"}.png')
-            .writeAsBytes(bytes!.buffer.asUint8List());
+        await File(
+          'build/ui-preview/clockrove-location-${dark ? "dark" : "light"}.png',
+        ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
       await tester.pumpWidget(const SizedBox.shrink());
@@ -267,7 +277,8 @@ void main() {
           trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
         ],
         child: MaterialApp(
-          debugShowCheckedModeBanner: false,          theme: ClockroveTheme.light(),
+          debugShowCheckedModeBanner: false,
+          theme: ClockroveTheme.light(),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
                 .copyWith(textScaler: const TextScaler.linear(1.8)),
