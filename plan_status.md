@@ -1160,3 +1160,16 @@ data removal, not a forensic secure-erasure guarantee. Ten API-24 cases cover ag
 reset, running guard, preferences, retained templates/customer, response-loss replay,
 capacity, rollback and duplicate concurrent delete. Actions/UI integration remain
 pending. Play publication is held; no VM validation ran.
+
+### Immutable invoice/PDF source prepared
+
+Prepared stable numbered invoice snapshots using actual finalized hourly or
+completed-task report selections. Missing rates/prices prevent allocation; explicit
+free tasks remain valid. Snapshots preserve contacts, company/templates/style,
+exact totals and optional immutable logo references. Rendering is outside the
+repository writer; cached PDF cannot overwrite a prepared document. Added native
+Minimal/Classic/Modern layouts with wrapped multipage content, aspect-preserving
+logo, optional header/footer and shared exact totals. Five API-24 snapshot cases
+and two native-graphics PDF cases are prepared: generate bytes, reopen actual PDF
+pages and export synthetic previews. These have not yet run. Logo picker, document
+provider/share/email, preview UI and report UI still remain; no release claim.
