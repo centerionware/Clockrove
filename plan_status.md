@@ -11,12 +11,12 @@ iOS and future service remain deferred.
 | M1.3 Preserve handoff | Preserved | AGENTS.md, app_plan.md and ignore rules retained |
 | M1.4 Draft source/contribution rights | Drafted; owner review required | docs/SOURCE_TERMS_DRAFT.md, CONTRIBUTING.md; no effective license adopted, no publication |
 | M1.5 README, architecture, dependency inventory | Drafted | docs/ARCHITECTURE.md and docs/DEPENDENCIES.md written; README setup commands recorded; Android compatibility pending |
-| M1.6 Install/pin compatible tools | In progress | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; SDK located; local builds stopped; CI JDK pin 17.0.17+10; Ruby/Fastlane deferred until publishing work |
-| M1.7 Android Flutter scaffold and lockfiles | Scaffolded, build incomplete | Agreed application ID; pubspec.lock resolved; format and analysis pass; local retry cancelled; Actions build pending |
-| M1.8 Nonprivileged validation CI | Implemented; GitHub run in progress | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
+| M1.6 Install/pin compatible tools | Installed in Actions; build compatibility pending | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; Actions passed JDK/Flutter/Android SDK installation; Ruby/Fastlane deferred until publishing work |
+| M1.7 Android Flutter scaffold and lockfiles | Build verified in Actions | Agreed application ID; Actions locked resolution, formatting and analysis pass; debug APK built in run 42980838050 |
+| M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
 | M1.9 Create public repository | Private staging created; public gated | https://github.com/centerionware/Clockrove; verified private; terms review pending |
-| M1 acceptance | Incomplete | No Android build or CI evidence yet |
-| M2.1 SQLite/manual timer/widget/notification prototype | Pending | Depends on foundation |
+| M1 acceptance | Technical foundation verified; public rights gated | Actions 42980838050 succeeded; no effective license/public visibility until owner review |
+| M2.1 SQLite/manual timer/widget/notification prototype | In progress | Native SQLite timer repository and five Robolectric tests added; Actions validation pending; UI/widget/notification integration remains |
 | M2.2 Location/geofences/departure/recovery prototype | Pending | Native callbacks required |
 | M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified |
@@ -143,3 +143,42 @@ archive SHA-256 recorded as
 VM action was archive/metadata inspection only, no tool execution/build/test.
 Workflow checks SHA-256, installs pinned packages, and exports SDK root explicitly.
 Updated stale plan workspace facts. No build/test success claimed for failed run.
+
+Active validation handle: GitHub run 42980838050, commit
+d6dbe94af192450088f28da9a789387336f5c769, job 130390618681.
+https://github.com/centerionware/Clockrove/actions/runs/42980838050
+API/watch confirms in_progress; setup-java passed and Flutter setup is active.
+Local gh watch session 97215 is monitoring that run; it performs no build/test.
+Next action is to re-poll this exact run, inspect terminal logs if it fails, or
+record successful checks and advance milestone 2 if the foundation passes.
+
+### 2026-11-11 — live Actions foundation validation
+
+Previous turn: progress (checksum-pinned SDK setup correction committed as d6dbe94).
+Revalidated the same run 42980838050 / job 130390618681 rather than restarting.
+Actions now reports success for JDK, verified Flutter archive, pinned Android
+components, enforced dependency lockfile, formatting and analysis. Conditional
+application test step completed with no behavior tests present; this is not
+native test evidence. Debug APK compilation started at 07:39:33 UTC and remains
+in_progress on the latest API observation. No VM build/test/format/analysis ran.
+Native unit task and final job result remain pending. Do not mark milestone 1
+complete until the CI result and remaining public-license gate are resolved.
+
+### 2026-11-11 — foundation passed; native prototype started
+
+Run 42980838050 concluded success on d6dbe94. Downloaded its logs for read-only
+inspection: debug APK built; native unit task was NO-SOURCE (not behavior proof).
+Verified lockfile/format/analysis and build tool compatibility on GitHub. Public
+rights review remains the independent milestone 1 gate; continue native prototype
+without public publication while awaiting that input.
+
+Added native singleton SQLite command repository (prototype schema 1), serialized
+transactions, global open-session uniqueness, persisted command fingerprints and
+outcomes, stale-version rejection, atomic switch, UTC/timezone/origin storage and
+boundary checks. Automation is explicitly unavailable until full policy exists.
+Added five Robolectric tests for simultaneous surfaces, repeat IDs, clock reversal,
+atomic switch, reopen recovery, overlap/adjacency and unavailable automation.
+Pinned JUnit 4.13.2 and Robolectric 4.16.1 (artifact existence verified upstream).
+No tests/build ran locally. New code is not validated yet. Full schema/revision
+ancestry, migrations, typed Flutter bridge, widget, notification, locations/maps
+and physical-device prototype evidence remain unfinished.

@@ -1,6 +1,6 @@
 # Clockrove — implementation plan and handoff to Luna
 
-Prepared: 2026-11-11. Status: milestone 1 in progress; see `plan_status.md` for task-level status.
+Prepared: 2026-11-11. Status: foundation CI passed; milestone 2 prototype in progress; public terms review pending; see `plan_status.md` for task-level status.
 
 ## 1. Start here
 
@@ -27,7 +27,8 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Inspect Actions run 42980514022 on f06ab12 and correct any reported CI failure.
+Inspect the existing Actions run 42980838050 on d6dbe94; SDK setup, lockfile,
+formatting and analysis have passed; debug APK compilation is in progress.
 Record its actual build/check results before advancing the native prototype.
 Continue independent implementation while public terms/device/store gates await
 external inputs. See `plan_status.md` for individual tasks and current evidence.
@@ -436,3 +437,25 @@ Run 42980514022 passed JDK/verified Flutter setup, then failed with sdkmanager
 not found (127). Workflow now downloads checksum-pinned command-line tools 19.0
 (build 13114758), installs the selected Android packages in a job-local SDK root,
 and exports that root. No VM build/test executed. Task details in plan_status.md.
+
+### 2026-11-11 — foundation checks passed; compilation live
+
+Same run 42980838050 passed JDK/Flutter/Android SDK setup, enforced lockfile,
+formatting and analysis. No application behavior tests exist yet; the conditional
+test step is not proof of native behavior. Debug APK compilation started at
+07:39:33 UTC and is still in progress. Native unit task and job conclusion pending.
+No VM validation ran. Public terms review remains pending independently.
+
+### 2026-11-11 — first successful Actions build and native repository slice
+
+Run 42980838050 on d6dbe94 concluded success. Logs show debug APK built and
+native test task NO-SOURCE. Foundation checks/build are proven; native behavior
+was not tested by that run. Public license/visibility gate remains pending.
+
+Started independent milestone 2 implementation: native SQLite timer repository
+and five Robolectric tests; serialized transactions, persisted retry outcomes,
+version conflicts, UTC context, one-open-session index and atomic switch.
+Automation rejects commands until policy is implemented. Test/build validation
+for this code is pending GitHub Actions. No UI/widget/notification integration,
+location/map experiment or physical-device success is claimed. Full migration
+and revision schema remains milestone 3 work. No VM build/test was executed.

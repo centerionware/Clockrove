@@ -24,3 +24,6 @@ CI Android command-line tools: 19.0, archive 13114758 (the upstream filename end
 in `_latest.zip` but the build ID and checksum are fixed). SHA-256:
 `7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee`.
 The job installs this into its own SDK root instead of using runner PATH state.
+
+Native prototype test dependencies: JUnit 4.13.2 (EPL-1.0) and Robolectric 4.16.1
+(MIT), test-only. Full transitive notice review remains a release gate.

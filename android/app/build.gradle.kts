@@ -29,6 +29,8 @@ android {
         versionName = flutter.versionName
     }
 
+    testOptions { unitTests.isIncludeAndroidResources = true }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -45,4 +47,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16.1")
 }
