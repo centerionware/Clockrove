@@ -17,7 +17,7 @@ iOS and future service remain deferred.
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | In progress | SQLite commands, typed bridge, native widget code and eight Robolectric tests pass in Actions; prototype Flutter controls merged via PR #1 after full Actions success; notification/device integration incomplete |
-| M2.2 Location/geofences/departure/recovery prototype | Pending | Native callbacks required |
+| M2.2 Location/geofences/departure/recovery prototype | Location persistence in progress | Native sample validation/dedup/session binding and schema-2 upgrade added on feature branch; service/callbacks/geofences/departure remain |
 | M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
@@ -450,3 +450,21 @@ source is the earlier validated native prototype; merged manual controls at
 6713ddf will follow through main validation 42989132915 and automatic delivery.
 No signing key was replaced; saved key and store-history allocator were reused.
 Owner invitation resolved the initial API permission failure. No VM builds/tests.
+
+### Native location persistence prototype — 2026-11-11
+
+Previous turn: progress (Play retry succeeded, tested controls merged, status table
+reconciled). Created native-location-prototype branch from current main. Added
+schema 2 location point persistence with actual measurement/reception timestamps,
+coordinates, accuracy and session association. Only a requesting active session
+can accept a new sample; idle/late/wrong-session samples rejected. Immutable IDs
+deduplicate repeated samples and reject divergent reuse; invalid coordinates,
+accuracy and future measurements rejected. Stop/switch prune points after end
+atomically, including wall-clock rewind. No synthetic GPS generation or recording
+callbacks are implemented by this slice.
+
+Preserved actual schema-1 DDL in synthetic test fixture and added four Robolectric
+checks: validation/dedup, boundary pruning/late callbacks, upgrade preserving open
+session and dedup outcomes, and failed-upgrade rollback without record/schema loss.
+No VM tests/builds ran. New code needs Actions validation before main integration.
+FGS/fused callback/notification/geofence/map feasibility remain incomplete.

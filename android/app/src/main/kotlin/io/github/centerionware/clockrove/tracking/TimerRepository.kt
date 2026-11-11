@@ -26,6 +26,13 @@ class TimerRepository internal constructor(context: Context) {
     data class Job(val id: String, val name: String)
     data class Snapshot(val version: Long, val running: Session?, val jobs: List<Job>)
     data class Outcome(val version: Long, val conflict: String?)
+    data class LocationPoint(
+        val id: String, val sessionId: String,
+        val measuredUtcMillis: Long, val receivedUtcMillis: Long,
+        val latitude: Double, val longitude: Double, val accuracyMeters: Double,
+    )
+    enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION }
+
 
     @Synchronized
     fun snapshot(): Snapshot = readSnapshot(helper.readableDatabase)
@@ -81,7 +88,10 @@ class TimerRepository internal constructor(context: Context) {
             val version = if (conflict == null) before.version + 1 else before.version
             if (conflict == null) {
                 if (command.action != Action.START) {
-                    db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, before.running!!.id))
+                    val closing = requireNotNull(before.running)
+                    db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, closing.id))
+                    db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?",
+                        arrayOf<Any?>(closing.id, command.atUtcMillis))
                 }
                 if (command.action != Action.STOP) {
                     db.execSQL(
@@ -120,6 +130,57 @@ class TimerRepository internal constructor(context: Context) {
         return execute(Command(id, version, action, jobId, now, zone.id,
             zone.getOffset(now) / 1000, origin))
     }
+
+    /** Accept observations only for the session that requested them, never idle history. */
+    @Synchronized
+    fun recordLocation(point: LocationPoint): SampleResult {
+        if (point.id.isBlank() || point.sessionId.isBlank() ||
+            !point.latitude.isFinite() || point.latitude !in -90.0..90.0 ||
+            !point.longitude.isFinite() || point.longitude !in -180.0..180.0 ||
+            !point.accuracyMeters.isFinite() || point.accuracyMeters < 0 ||
+            point.measuredUtcMillis > point.receivedUtcMillis) return SampleResult.INVALID_SAMPLE
+        val db = helper.writableDatabase
+        var recorded = false
+        db.beginTransaction()
+        try {
+            db.rawQuery("SELECT * FROM location_points WHERE id=?", arrayOf(point.id)).use {
+                if (it.moveToFirst()) {
+                    val result = if (decodePoint(it) == point) SampleResult.DUPLICATE else SampleResult.ID_CONFLICT
+                    db.setTransactionSuccessful()
+                    return result
+                }
+            }
+            val active = readSnapshot(db).running
+            if (active == null || active.id != point.sessionId || point.measuredUtcMillis < active.startUtcMillis) {
+                db.setTransactionSuccessful()
+                return SampleResult.OUTSIDE_SESSION
+            }
+            db.execSQL("INSERT INTO location_points(id,session_id,measured_ms,received_ms,latitude,longitude,accuracy) VALUES (?,?,?,?,?,?,?)",
+                arrayOf<Any?>(point.id, point.sessionId, point.measuredUtcMillis, point.receivedUtcMillis,
+                    point.latitude, point.longitude, point.accuracyMeters))
+            db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
+            db.setTransactionSuccessful()
+            recorded = true
+        } finally { db.endTransaction() }
+        if (recorded) publishVersion(readSnapshot(db).version)
+        return SampleResult.RECORDED
+    }
+
+    @Synchronized
+    fun locationPoints(sessionId: String): List<LocationPoint> =
+        helper.readableDatabase.rawQuery(
+            "SELECT * FROM location_points WHERE session_id=? ORDER BY measured_ms,id", arrayOf(sessionId),
+        ).use { cursor -> buildList { while (cursor.moveToNext()) add(decodePoint(cursor)) } }
+
+    private fun decodePoint(cursor: android.database.Cursor) = LocationPoint(
+        cursor.getString(cursor.getColumnIndexOrThrow("id")),
+        cursor.getString(cursor.getColumnIndexOrThrow("session_id")),
+        cursor.getLong(cursor.getColumnIndexOrThrow("measured_ms")),
+        cursor.getLong(cursor.getColumnIndexOrThrow("received_ms")),
+        cursor.getDouble(cursor.getColumnIndexOrThrow("latitude")),
+        cursor.getDouble(cursor.getColumnIndexOrThrow("longitude")),
+        cursor.getDouble(cursor.getColumnIndexOrThrow("accuracy")),
+    )
 
     @Synchronized
     internal fun close() { listeners.clear(); helper.close() }
@@ -166,7 +227,7 @@ class TimerRepository internal constructor(context: Context) {
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 1) {
+    private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 2) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -176,9 +237,15 @@ class TimerRepository internal constructor(context: Context) {
             db.execSQL("CREATE UNIQUE INDEX one_open_session ON sessions((1)) WHERE end_ms IS NULL")
             db.execSQL("CREATE INDEX session_dates ON sessions(start_ms,end_ms)")
             db.execSQL("CREATE TABLE commands(id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,version INTEGER NOT NULL,conflict TEXT)")
+            createLocationTable(db)
+        }
+        private fun createLocationTable(db: SQLiteDatabase) {
+            db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
+            db.execSQL("CREATE INDEX location_session_date ON location_points(session_id,measured_ms)")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            error("No released upgrade path from $oldVersion to $newVersion")
+            check(oldVersion == 1 && newVersion == 2) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            createLocationTable(db)
         }
     }
 

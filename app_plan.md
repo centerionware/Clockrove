@@ -600,3 +600,14 @@ Play accepted versionCode 216549708 at 08:45:37 UTC after signed AAB build and
 verification with the permanent upload key. This proves upload/submission only;
 no tester installation/review/production availability claimed. New manual-controls
 merge 6713ddf is still in main validation 42989132915 for its subsequent delivery.
+
+### 2026-11-11 — native measured-location storage and migration slice
+
+Feature branch native-location-prototype adds schema-2 measured point storage,
+active-session binding, sample ID integrity, coordinate/accuracy/time validation,
+and transactional post-end pruning on timer stop/switch. Actual previous schema
+captured as fixed synthetic migration fixture. Four Robolectric tests cover
+validation/dedup, late/off-clock/pruned samples, preserved upgrade and failed
+migration rollback. These storage changes are unvalidated until Actions runs;
+no fused callbacks, foreground notification, device GPS or map success claimed.
+All builds/tests remain on GitHub, never the VM.
