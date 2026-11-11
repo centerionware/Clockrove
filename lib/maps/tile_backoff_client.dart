@@ -9,8 +9,12 @@ class TileBackoffState {
 
 /// No automatic retries: later visible-tile requests respect the server's pause.
 class TileBackoffClient extends http.BaseClient {
-  TileBackoffClient(this._inner, {DateTime Function()? now, TileBackoffState? state})
-    : _now = now ?? DateTime.now, _state = state ?? _sharedState;
+  TileBackoffClient(
+    this._inner, {
+    DateTime Function()? now,
+    TileBackoffState? state,
+  }) : _now = now ?? DateTime.now,
+       _state = state ?? _sharedState;
 
   static final _sharedState = TileBackoffState();
   final TileBackoffState _state;

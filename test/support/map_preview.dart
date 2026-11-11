@@ -7,22 +7,37 @@ import 'package:flutter/widgets.dart';
 
 Future<void> loadMapPreviewFonts() async {
   final sdk = Platform.environment['FLUTTER_ROOT'];
-  if (sdk == null) throw StateError('FLUTTER_ROOT must identify the pinned SDK');
+  if (sdk == null)
+    throw StateError('FLUTTER_ROOT must identify the pinned SDK');
   final text = FontLoader('Roboto');
-  for (final name in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
-    text.addFont(File('$sdk/bin/cache/artifacts/material_fonts/$name').readAsBytes().then(ByteData.sublistView));
+  for (final name in [
+    'Roboto-Regular.ttf',
+    'Roboto-Medium.ttf',
+    'Roboto-Bold.ttf',
+  ]) {
+    text.addFont(
+      File('$sdk/bin/cache/artifacts/material_fonts/$name')
+          .readAsBytes()
+          .then(ByteData.sublistView),
+    );
   }
   await text.load();
   final icons = FontLoader('MaterialIcons');
-  icons.addFont(File('$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf').readAsBytes().then(ByteData.sublistView));
+  icons.addFont(
+    File('$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
+        .readAsBytes()
+        .then(ByteData.sublistView),
+  );
   await icons.load();
 }
 
 Future<void> saveMapPreview(GlobalKey key, String name) async {
-  final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final boundary =
+      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
   final image = await boundary.toImage(pixelRatio: 2);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final directory = Directory('build/ui-preview')..createSync(recursive: true);
-  await File('${directory.path}/$name.png').writeAsBytes(bytes!.buffer.asUint8List());
+  await File('${directory.path}/$name.png')
+      .writeAsBytes(bytes!.buffer.asUint8List());
   image.dispose();
 }

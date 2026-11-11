@@ -40,16 +40,46 @@ void main() {
     },
   );
 
-  test('map action requires a measured time and finite complete coordinates', () {
-    expect(const TrackingStatus('precise', 'REQUESTING', true, true,
-      lastLatitude: 1, lastLongitude: 2).hasMapObservation, isFalse);
-    expect(TrackingStatus('precise', 'REQUESTING', true, true,
-      lastObservationUtc: DateTime.utc(2026), lastLatitude: double.nan,
-      lastLongitude: 2).hasMapObservation, isFalse);
-    expect(TrackingStatus('precise', 'REQUESTING', true, true,
-      lastObservationUtc: DateTime.utc(2026), lastLatitude: 1,
-      lastLongitude: 181).hasMapObservation, isFalse);
-  });
+  test(
+    'map action requires a measured time and finite complete coordinates',
+    () {
+      expect(
+        const TrackingStatus(
+          'precise',
+          'REQUESTING',
+          true,
+          true,
+          lastLatitude: 1,
+          lastLongitude: 2,
+        ).hasMapObservation,
+        isFalse,
+      );
+      expect(
+        TrackingStatus(
+          'precise',
+          'REQUESTING',
+          true,
+          true,
+          lastObservationUtc: DateTime.utc(2026),
+          lastLatitude: double.nan,
+          lastLongitude: 2,
+        ).hasMapObservation,
+        isFalse,
+      );
+      expect(
+        TrackingStatus(
+          'precise',
+          'REQUESTING',
+          true,
+          true,
+          lastObservationUtc: DateTime.utc(2026),
+          lastLatitude: 1,
+          lastLongitude: 181,
+        ).hasMapObservation,
+        isFalse,
+      );
+    },
+  );
 
   test(
     'restricted startup does not become a fabricated successful status',

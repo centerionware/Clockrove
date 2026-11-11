@@ -22,11 +22,16 @@ class TrackingStatus {
   final double? lastAccuracyMeters;
   final double? lastLatitude;
   final double? lastLongitude;
-  bool get hasMapObservation => lastObservationUtc != null &&
-      lastLatitude != null && lastLatitude!.isFinite &&
-      lastLatitude! >= -90 && lastLatitude! <= 90 &&
-      lastLongitude != null && lastLongitude!.isFinite &&
-      lastLongitude! >= -180 && lastLongitude! <= 180;
+  bool get hasMapObservation =>
+      lastObservationUtc != null &&
+      lastLatitude != null &&
+      lastLatitude!.isFinite &&
+      lastLatitude! >= -90 &&
+      lastLatitude! <= 90 &&
+      lastLongitude != null &&
+      lastLongitude!.isFinite &&
+      lastLongitude! >= -180 &&
+      lastLongitude! <= 180;
 }
 
 class TrackingApi {

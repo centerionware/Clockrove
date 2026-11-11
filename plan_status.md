@@ -713,3 +713,10 @@ status now returns the same latest observation's coordinates and clears on idle.
 HTTP policy, synthetic success/failure/navigation/zoom UI checks and native/codec
 checks added. CI map images use synthetic tiles; no live OSM/device proof inferred.
 Source validation and new visual review pending. No VM build/test/format/render.
+
+OSM source run 43003804914 failed at formatting before analysis/tests. Applied
+its reviewed Actions-generated source patch. Added responsive summary scrolling
+and a large-text landscape check while keeping map controls/attribution visible;
+enabled semantics in map accessibility checks. Dependency preparation 43002798859
+completed SUCCESS independently; new map behavior still awaits its own CI.
+No local build, formatter, tests or rendering ran.

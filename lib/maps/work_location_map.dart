@@ -9,11 +9,14 @@ import '../l10n/app_strings.dart';
 import 'tile_backoff_client.dart';
 
 /// A new provider per screen; tests supply synthetic tiles without public traffic.
-final workMapTilesProvider = Provider<TileProvider Function(http.Client)>((ref) {
+final workMapTilesProvider = Provider<TileProvider Function(http.Client)>((
+  ref,
+) {
   return (client) => NetworkTileProvider(
     httpClient: client,
     headers: const {
-      'User-Agent': 'Clockrove/0.1 (io.github.centerionware.clockrove; '
+      'User-Agent':
+          'Clockrove/0.1 (io.github.centerionware.clockrove; '
           '+https://github.com/centerionware/Clockrove)',
     },
     cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
@@ -77,9 +80,9 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
       // Keep an unavailable browser separate from map and timer state.
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.linkUnavailable)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(AppStrings.linkUnavailable)));
     }
   }
 
@@ -91,107 +94,153 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${AppStrings.lastSample} '
-                    '${MaterialLocalizations.of(context).formatShortDate(measured)} '
-                    '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(measured))}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (widget.accuracyMeters != null)
-                    Text('${widget.accuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}'),
-                  const SizedBox(height: 6),
-                  const Text(AppStrings.mapPrivacy),
-                ],
-              ),
-            ),
-            if (_failed)
-              Container(
-                color: colors.errorContainer,
-                padding: const EdgeInsets.all(16),
-                child: Text(AppStrings.mapUnavailable, style: TextStyle(color: colors.onErrorContainer)),
-              ),
-            Expanded(
-              child: Stack(
-                children: [
-                  FlutterMap(
-                    mapController: _controller,
-                    options: MapOptions(
-                      initialCenter: point,
-                      initialZoom: 15,
-                      minZoom: 2,
-                      maxZoom: 19,
-                      backgroundColor: colors.surfaceContainer,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      ),
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * 0.4,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'io.github.centerionware.clockrove',
-                        tileProvider: _tiles,
-                        panBuffer: 0,
-                        maxNativeZoom: 19,
-                        errorTileCallback: (_, _, _) => _tileFailed(),
-                      ),
-                      if (widget.accuracyMeters case final accuracy?)
-                        CircleLayer(circles: [
-                          CircleMarker(
-                            point: point,
-                            radius: accuracy,
-                            useRadiusInMeter: true,
-                            color: colors.primary.withValues(alpha: 0.12),
-                            borderColor: colors.primary.withValues(alpha: 0.5),
-                            borderStrokeWidth: 1,
-                          ),
-                        ]),
-                      MarkerLayer(markers: [
-                        Marker(
-                          point: point,
-                          width: 48,
-                          height: 48,
-                          child: Semantics(
-                            label: AppStrings.recordedLocation,
-                            child: Icon(Icons.location_on_rounded, color: colors.primary, size: 40),
+                      if (_failed)
+                        Container(
+                          color: colors.errorContainer,
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            AppStrings.mapUnavailable,
+                            style: TextStyle(color: colors.onErrorContainer),
                           ),
                         ),
-                      ]),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${AppStrings.lastSample} '
+                              '${MaterialLocalizations.of(context).formatShortDate(measured)} '
+                              '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(measured))}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            if (widget.accuracyMeters != null)
+                              Text(
+                                '${widget.accuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}',
+                              ),
+                            const SizedBox(height: 6),
+                            const Text(AppStrings.mapPrivacy),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  Positioned(
-                    right: 16,
-                    top: 16,
-                    child: Column(children: [
-                      IconButton.filledTonal(
-                        tooltip: AppStrings.zoomIn,
-                        onPressed: () => _controller.move(_controller.camera.center, (_controller.camera.zoom + 1).clamp(2, 19).toDouble()),
-                        icon: const Icon(Icons.add),
-                      ),
-                      const SizedBox(height: 8),
-                      IconButton.filledTonal(
-                        tooltip: AppStrings.zoomOut,
-                        onPressed: () => _controller.move(_controller.camera.center, (_controller.camera.zoom - 1).clamp(2, 19).toDouble()),
-                        icon: const Icon(Icons.remove),
-                      ),
-                    ]),
-                  ),
-                ],
+                ),
               ),
-            ),
-            // Attribution always stays visible, including when tiles fail.
-            ColoredBox(
-              color: colors.surface,
-              child: TextButton(onPressed: _attribution, child: const Text('© OpenStreetMap contributors')),
-            ),
-          ],
+              Expanded(
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _controller,
+                      options: MapOptions(
+                        initialCenter: point,
+                        initialZoom: 15,
+                        minZoom: 2,
+                        maxZoom: 19,
+                        backgroundColor: colors.surfaceContainer,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName:
+                              'io.github.centerionware.clockrove',
+                          tileProvider: _tiles,
+                          panBuffer: 0,
+                          maxNativeZoom: 19,
+                          errorTileCallback: (_, _, _) => _tileFailed(),
+                        ),
+                        if (widget.accuracyMeters case final accuracy?)
+                          CircleLayer(
+                            circles: [
+                              CircleMarker(
+                                point: point,
+                                radius: accuracy,
+                                useRadiusInMeter: true,
+                                color: colors.primary.withValues(alpha: 0.12),
+                                borderColor: colors.primary.withValues(
+                                  alpha: 0.5,
+                                ),
+                                borderStrokeWidth: 1,
+                              ),
+                            ],
+                          ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: point,
+                              width: 48,
+                              height: 48,
+                              child: Semantics(
+                                label: AppStrings.recordedLocation,
+                                child: Icon(
+                                  Icons.location_on_rounded,
+                                  color: colors.primary,
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      right: 16,
+                      top: 16,
+                      child: Column(
+                        children: [
+                          IconButton.filledTonal(
+                            tooltip: AppStrings.zoomIn,
+                            onPressed: () => _controller.move(
+                              _controller.camera.center,
+                              (_controller.camera.zoom + 1)
+                                  .clamp(2, 19)
+                                  .toDouble(),
+                            ),
+                            icon: const Icon(Icons.add),
+                          ),
+                          const SizedBox(height: 8),
+                          IconButton.filledTonal(
+                            tooltip: AppStrings.zoomOut,
+                            onPressed: () => _controller.move(
+                              _controller.camera.center,
+                              (_controller.camera.zoom - 1)
+                                  .clamp(2, 19)
+                                  .toDouble(),
+                            ),
+                            icon: const Icon(Icons.remove),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Attribution always stays visible, including when tiles fail.
+              ColoredBox(
+                color: colors.surface,
+                child: TextButton(
+                  onPressed: _attribution,
+                  child: const Text('© OpenStreetMap contributors'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

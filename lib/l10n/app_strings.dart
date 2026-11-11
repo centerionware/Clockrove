@@ -7,8 +7,10 @@ abstract final class AppStrings {
   static const recordedLocation = 'Last recorded work location';
   static const zoomIn = 'Zoom in';
   static const zoomOut = 'Zoom out';
-  static const mapPrivacy = 'Map requests share the viewed area with OpenStreetMap.';
-  static const mapUnavailable = 'Map tiles are unavailable. You can return to your timer at any time.';
+  static const mapPrivacy =
+      'Map requests share the viewed area with OpenStreetMap.';
+  static const mapUnavailable =
+      'Map tiles are unavailable. You can return to your timer at any time.';
   static const linkUnavailable = 'Could not open the link.';
   static const running = 'Clocked in';
   static const chooseJob = 'Choose a job below to start your workday.';

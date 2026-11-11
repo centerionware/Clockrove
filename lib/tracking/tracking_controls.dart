@@ -117,12 +117,16 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                     ),
                   if (value.hasMapObservation)
                     TextButton.icon(
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                        builder: (_) => WorkLocationMap(
-                          latitude: value.lastLatitude!, longitude: value.lastLongitude!,
-                          measuredUtc: value.lastObservationUtc!, accuracyMeters: value.lastAccuracyMeters,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => WorkLocationMap(
+                            latitude: value.lastLatitude!,
+                            longitude: value.lastLongitude!,
+                            measuredUtc: value.lastObservationUtc!,
+                            accuracyMeters: value.lastAccuracyMeters,
+                          ),
                         ),
-                      )),
+                      ),
                       icon: const Icon(Icons.map_outlined),
                       label: const Text(AppStrings.viewLocationMap),
                     ),
