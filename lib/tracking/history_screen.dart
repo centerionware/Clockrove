@@ -172,6 +172,26 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
     }
   }
 
+  Future<void> _pick(TextEditingController field, {required bool date}) async {
+    // This calendar value is an editor aid, never an observed timestamp. Native
+    // resolution still validates the chosen local time and any UTC ambiguity.
+    final value = DateTime.tryParse('${field.text.trim()}Z') ?? DateTime.now().toUtc();
+    DateTime? changed;
+    if (date) {
+      final selected = await showDatePicker(context: context, initialDate: value,
+        firstDate: DateTime(1), lastDate: DateTime(9999, 12, 31));
+      if (selected != null) changed = DateTime.utc(selected.year, selected.month, selected.day,
+        value.hour, value.minute, value.second, value.millisecond);
+    } else {
+      final selected = await showTimePicker(context: context, initialTime: TimeOfDay(hour: value.hour, minute: value.minute));
+      if (selected != null) changed = DateTime.utc(value.year, value.month, value.day,
+        selected.hour, selected.minute, value.second, value.millisecond);
+    }
+    if (!mounted || changed == null) return;
+    field.text = changed.toIso8601String().replaceAll('Z', '');
+    _changed(field.text);
+  }
+
   void _changed(String _) => setState(() {
     _reviewed = false; _starts = []; _ends = []; _selectedStart = null; _selectedEnd = null;
   });
@@ -292,7 +312,10 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
         TextFormField(controller: _zone, enabled: !_locked, onChanged: _changed, decoration: const InputDecoration(labelText: 'IANA timezone', helperText: 'For example America/New_York or UTC'), validator: (v) => v == null || v.trim().isEmpty ? 'Enter a timezone' : null),
         const SizedBox(height: 16),
         for (final field in [(_start, 'Start local time'), (_end, 'End local time')]) Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
-          controller: field.$1, enabled: !_locked, onChanged: _changed, decoration: InputDecoration(labelText: field.$2, helperText: 'YYYY-MM-DDTHH:mm:ss.SSS'),
+          controller: field.$1, enabled: !_locked, onChanged: _changed, decoration: InputDecoration(labelText: field.$2, helperText: 'YYYY-MM-DDTHH:mm:ss.SSS', suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton(tooltip: 'Choose ${field.$2.toLowerCase()} date', onPressed: _locked ? null : () => _pick(field.$1, date: true), icon: const Icon(Icons.calendar_today_outlined)),
+            IconButton(tooltip: 'Choose ${field.$2.toLowerCase()} clock time', onPressed: _locked ? null : () => _pick(field.$1, date: false), icon: const Icon(Icons.access_time)),
+          ])),
           validator: (v) => v != null && RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$').hasMatch(v.trim()) ? null : 'Enter the full date and time, including milliseconds',
         )),
         OutlinedButton(onPressed: _locked ? null : () => _resolve(), child: Text(_resolving ? 'Checking times…' : 'Review times and UTC offsets')),
