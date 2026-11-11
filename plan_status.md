@@ -1289,3 +1289,12 @@ year. The maximum calendar date now terminates before lexicographic year rollove
 Using the historical Sao Paulo 2015 transition keeps the fixture compatible with
 both old device tzdata and current rules. New checks await Actions. Reference:
 [Android ICU wall-time options](https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int)).
+
+Device-capture review found that connected-test teardown can uninstall the app
+before its app-specific external previews are pulled. Prepared direct invocation
+of the same AndroidJUnitRunner after building/installing the test APK, a test-only
+JUnit XML listener, nonzero/no-failure/no-skip assertions and mandatory PDF/PNG
+capture for each style on each API. No broad storage permission is introduced;
+test data remains app-specific and is captured before emulator cleanup. Actual
+runner support: [AndroidJUnitRunner listener](https://developer.android.com/reference/androidx/test/runner/AndroidJUnitRunner).
+This strengthens artifact/coverage evidence; updated Actions validation is pending.
