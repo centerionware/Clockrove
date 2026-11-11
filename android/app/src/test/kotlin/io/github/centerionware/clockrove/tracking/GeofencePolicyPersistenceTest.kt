@@ -127,6 +127,45 @@ class GeofencePolicyPersistenceTest {
         assertNull(repository.snapshot().running)
     }
 
+    @Test fun invalidClockEventsAndProviderFailuresHoldExpiryForExplicitReview() {
+        configure(grace = 1)
+        event("outside", OUTSIDE, 1100, "site")
+        val first = event("entry", INSIDE, 2000, "site").startedSessionId!!
+        event("exit", OUTSIDE, 3000, "site")
+        assertEquals("INVALID_GEOFENCE_EVENT", event("future-return", INSIDE, 5000, "site", received = 4000).conflict)
+        assertEquals(TimerRepository.DepartureResult.NEEDS_REVIEW, repository.finalizeDeparture(first, 100000))
+        assertNull(stop("manual-after-clock-error", 100100).conflict)
+        clock = 110000
+        assertNull(repository.acceptGeofenceReview("review-clock-error", repository.snapshot().version, job).conflict)
+        event("fresh-outside", OUTSIDE, 111000, "site")
+        val second = event("fresh-entry", INSIDE, 112000, "site").startedSessionId!!
+        event("fresh-exit", OUTSIDE, 113000, "site")
+        clock = 114000
+        assertEquals("PROVIDER_UNAVAILABLE", repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE).conflict)
+        assertEquals(TimerRepository.DepartureResult.NEEDS_REVIEW, repository.finalizeDeparture(second, 200000))
+        assertEquals(second, repository.snapshot().running!!.id)
+        assertNull(stop("manual-after-provider-error", 201000).conflict)
+    }
+
+    @Test fun freshFactsRecoverIdleFaultsAndTimelyReturnsWithoutExtraManualApproval() {
+        configure(grace = 1)
+        event("outside", OUTSIDE, 1100, "site")
+        clock = 1200
+        repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+        assertNull(event("inside-after-idle-fault", INSIDE, 1300, "site").startedSessionId)
+        event("fresh-outside", OUTSIDE, 1400, "site")
+        val session = event("fresh-entry", INSIDE, 1500, "site").startedSessionId!!
+        event("leave", OUTSIDE, 1600, "site")
+        clock = 1700
+        repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE)
+        assertEquals(setOf(job), repository.geofenceReviewJobs())
+        event("known-timely-return", INSIDE, 1800, "site")
+        assertNull(repository.pendingDeparture())
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+        assertEquals(session, repository.snapshot().running!!.id)
+    }
+
     @Test fun zeroGraceClosesAtExitAndAQualifiedLaterEntryStartsNewWork() {
         configure(grace = 0)
         event("outside", OUTSIDE, 1100, "site")
@@ -245,7 +284,8 @@ class GeofencePolicyPersistenceTest {
         event("in", INSIDE, 1300, "site")
         stop("manual-stop", 1400)
         val late = event("late", OUTSIDE, 1350, "site", received = 1500)
-        assertEquals("TRANSITION_NEEDS_REVIEW", late.conflict)
+        assertEquals("TRANSITION_IGNORED", late.conflict)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
         assertTrue(repository.automationPolicies().single().suppressed)
         assertNull(repository.snapshot().running)
         assertNull(manualStart("manual-overrides-review", 1600).conflict)

@@ -229,8 +229,7 @@ class TimerRepository internal constructor(context: Context,
         if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
             return DepartureResult.STALE_SESSION
         if (nowUtcMillis < candidate.deadlineUtcMillis) return DepartureResult.NOT_DUE
-        val running = readSnapshot(helper.readableDatabase).running!!
-        if (running.jobId in GeofenceStore.unresolvedJobs(helper.readableDatabase)) return DepartureResult.NEEDS_REVIEW
+        if (GeofenceStore.needsReview(helper.readableDatabase, sessionId)) return DepartureResult.NEEDS_REVIEW
         return changeDeparture {
             finalizeDepartureRows(it, candidate)
             DepartureResult.FINALIZED
@@ -250,6 +249,7 @@ class TimerRepository internal constructor(context: Context,
         return result
     }
 
+    internal enum class GeofenceProblem { REGISTRATION_UNAVAILABLE, LOCATION_PERMISSION_MISSING, PROVIDER_UNAVAILABLE, RECOVERY_UNCERTAIN }
     internal data class GeofenceOutcome(val version: Long, val startedSessionId: String? = null,
         val choices: Set<String> = emptySet(), val warnings: Set<String> = emptySet(),
         val conflict: String? = null, val replayed: Boolean = false,
@@ -331,7 +331,7 @@ class TimerRepository internal constructor(context: Context,
             geofenceCommandId(id) to eventDigest(org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name,
                 observedUtcMillis, org.json.JSONArray(registrationKeys.sorted()))).toString())
         } catch (_: Exception) {
-            return unavailableGeofenceReceipts(receivedUtcMillis)
+            return holdGeofenceForReview("GEOFENCE_RECEIPTS_UNAVAILABLE", receivedUtcMillis)
         }
         val (commandId, fingerprint) = identity
         val db = helper.writableDatabase
@@ -355,31 +355,40 @@ class TimerRepository internal constructor(context: Context,
             val invalid = presence == io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence.UNKNOWN ||
                 registrationKeys.isEmpty() || registrationKeys.size > 100 || observedUtcMillis > receivedUtcMillis
             if (invalid) {
-                result = GeofenceOutcome(before.version, conflict = "INVALID_GEOFENCE_EVENT")
+                changed = markGeofenceReviewRows(db, "INVALID_GEOFENCE_EVENT", receivedUtcMillis)
+                val version = if (changed) before.version + 1 else before.version
+                if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
+                result = GeofenceOutcome(version, conflict = "INVALID_GEOFENCE_EVENT")
             } else {
                 val observation = GeofenceStore.observe(db, registrationKeys, presence, observedUtcMillis, before.running?.id)
                 changed = observation.changed
                 val membership = observation.membership
-                var warning = if (membership.lateOrConflictingSites.isEmpty()) null else "TRANSITION_NEEDS_REVIEW"
-                membership.enteredJobs.forEach { jobId ->
-                    if (GeofenceStore.timelyEntryAfterFinalization(db, jobId, observedUtcMillis)) {
-                        GeofenceStore.conflict(db, jobId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION")
-                        warning = "TRANSITION_NEEDS_REVIEW"
-                        changed = true
+                var warning = if (membership.lateOrConflictingSites.isEmpty()) null else
+                    if (GeofenceStore.unresolvedJobs(db).isEmpty()) "TRANSITION_IGNORED" else "TRANSITION_NEEDS_REVIEW"
+                if (presence == io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence.INSIDE) {
+                    val policies = GeofenceStore.policies(db).associateBy { it.settings.jobId }
+                    GeofenceStore.sites(db, true).filter { it.registrationKey in registrationKeys &&
+                        observedUtcMillis >= policies.getValue(it.jobId).configuredUtcMillis }.map { it.jobId }.toSet().forEach { jobId ->
+                        GeofenceStore.timelyFinalizedSessions(db, jobId, observedUtcMillis).forEach { sessionId ->
+                            GeofenceStore.conflict(db, sessionId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION")
+                            warning = "TRANSITION_NEEDS_REVIEW"
+                            changed = true
+                        }
                     }
                 }
                 val running = before.running
                 val policy = GeofenceStore.policies(db).firstOrNull { it.settings.jobId == running?.jobId }
-                if (running != null && policy?.settings?.enabled == true &&
-                    running.jobId !in GeofenceStore.unresolvedJobs(db)) {
+                if (running != null && policy?.settings?.enabled == true) {
                     val candidate = pendingDeparture()
                     if (running.jobId in membership.enteredJobs && candidate != null &&
                         candidate.sessionId == running.id && observedUtcMillis >= candidate.detectedUtcMillis &&
                         observedUtcMillis < candidate.deadlineUtcMillis) {
                         db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(running.id))
+                        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id=?", arrayOf(running.id))
                         changed = true
                     }
-                    if (running.jobId in membership.departedJobs && policy.settings.automaticDeparture && pendingDeparture() == null) {
+                    if (!GeofenceStore.needsReview(db, running.id) &&
+                        running.jobId in membership.departedJobs && policy.settings.automaticDeparture && pendingDeparture() == null) {
                         val boundary = GeofenceStore.departureBoundary(db, running.jobId)
                         if (boundary != null && boundary > running.startUtcMillis) {
                             val deadline = Math.addExact(boundary, policy.settings.graceMinutes * 60_000L)
@@ -387,7 +396,7 @@ class TimerRepository internal constructor(context: Context,
                                 arrayOf<Any?>(running.id, boundary, deadline))
                             changed = true
                         } else {
-                            GeofenceStore.conflict(db, running.jobId, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY")
+                            GeofenceStore.conflict(db, running.id, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY")
                             warning = "TRANSITION_NEEDS_REVIEW"
                             changed = true
                         }
@@ -396,7 +405,7 @@ class TimerRepository internal constructor(context: Context,
                 val candidate = pendingDeparture()
                 if (candidate != null && receivedUtcMillis >= candidate.deadlineUtcMillis &&
                     readSnapshot(db).running?.id == candidate.sessionId &&
-                    readSnapshot(db).running!!.jobId !in GeofenceStore.unresolvedJobs(db)) {
+                    !GeofenceStore.needsReview(db, candidate.sessionId)) {
                     finalizeDepartureRows(db, candidate)
                     changed = true
                 }
@@ -414,8 +423,6 @@ class TimerRepository internal constructor(context: Context,
                         started = readSnapshot(db).running!!.id
                         changed = true
                     } else {
-                        GeofenceStore.conflict(db, selection.startJobId, observedUtcMillis, error)
-                        changed = true
                         conflict = error
                     }
                 }
@@ -433,23 +440,39 @@ class TimerRepository internal constructor(context: Context,
         return result
     }
 
-    private fun unavailableGeofenceReceipts(receivedUtcMillis: Long): GeofenceOutcome {
+    @Synchronized
+    internal fun geofenceProblem(problem: GeofenceProblem): GeofenceOutcome = holdGeofenceForReview(problem.name, wallClock())
+
+    private fun markGeofenceReviewRows(db: SQLiteDatabase, reason: String, at: Long): Boolean {
+        val before = readSnapshot(db)
+        val policies = GeofenceStore.policies(db).associateBy { it.settings.jobId }
+        val jobs = GeofenceStore.sites(db, true).map { it.jobId }.toMutableSet()
+        val candidate = pendingDeparture()
+        if (candidate != null) before.running?.let { jobs.add(it.jobId) }
+        jobs.forEach { GeofenceStore.suspendFacts(db, it, at) }
+        before.running?.let {
+            if (candidate != null || (it.jobId in jobs && policies[it.jobId]?.settings?.enabled == true &&
+                    policies[it.jobId]?.settings?.automaticDeparture == true)) {
+                GeofenceStore.conflict(db, it.id, at, reason)
+            }
+        }
+        return jobs.isNotEmpty()
+    }
+
+    private fun holdGeofenceForReview(reason: String, at: Long): GeofenceOutcome {
         val db = helper.writableDatabase
         val version: Long
         var changed = false
         db.beginTransaction()
         try {
             val before = readSnapshot(db)
-            val jobs = GeofenceStore.policies(db).filter { it.settings.enabled }.map { it.settings.jobId }.toMutableSet()
-            if (pendingDeparture() != null) before.running?.let { jobs.add(it.jobId) }
-            jobs.forEach { GeofenceStore.conflict(db, it, receivedUtcMillis, "GEOFENCE_RECEIPTS_UNAVAILABLE") }
-            changed = jobs.isNotEmpty()
+            changed = markGeofenceReviewRows(db, reason, at)
             version = if (changed) before.version + 1 else before.version
             if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
         if (changed) publishVersion(version)
-        return GeofenceOutcome(version, conflict = "GEOFENCE_RECEIPTS_UNAVAILABLE")
+        return GeofenceOutcome(version, conflict = reason)
     }
 
     private fun encodeGeofenceOutcome(value: GeofenceOutcome) = org.json.JSONObject().apply {
@@ -479,6 +502,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?", arrayOf<Any?>(closing.id, command.atUtcMillis))
         }
         if (command.action != Action.STOP) {
+            if (command.origin != Origin.GEOFENCE) GeofenceStore.manualStart(db, requireNotNull(command.jobId), command.atUtcMillis)
             db.execSQL("INSERT INTO sessions(id,job_id,start_ms,timezone,offset_seconds,origin) VALUES (?,?,?,?,?,?)",
                 arrayOf<Any?>(UUID.randomUUID().toString(), command.jobId, command.atUtcMillis,
                     command.timezone, command.offsetSeconds, command.origin.name))

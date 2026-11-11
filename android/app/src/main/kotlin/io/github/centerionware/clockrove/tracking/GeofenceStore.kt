@@ -23,7 +23,7 @@ internal object GeofenceStore {
         db.execSQL("CREATE TABLE work_sites(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 150 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
         db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
         db.execSQL("CREATE TABLE geofence_event_results(id TEXT PRIMARY KEY REFERENCES commands(id),payload TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE geofence_conflicts(job_id TEXT PRIMARY KEY REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE geofence_conflicts(session_id TEXT PRIMARY KEY REFERENCES sessions(id),job_id TEXT NOT NULL REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL)")
         db.execSQL("CREATE TABLE finalized_departures(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL)")
     }
 
@@ -122,6 +122,7 @@ internal object GeofenceStore {
 
     /** Caller runs this in the same transaction that commits the manual stop/switch. */
     fun manualStop(db: SQLiteDatabase, jobId: String, at: Long) {
+        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id IN (SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL)", arrayOf(jobId))
         val outside = policies(db).firstOrNull { it.settings.jobId == jobId }?.lastPresence == GeofenceMembership.Presence.OUTSIDE
         db.execSQL("UPDATE automation_policies SET suppressed=?,armed=?,manual_barrier_ms=CASE WHEN manual_barrier_ms IS NULL OR manual_barrier_ms<? THEN ? ELSE manual_barrier_ms END WHERE job_id=?",
             arrayOf<Any?>(if (outside) 0 else 1, if (outside) 1 else 0, at, at, jobId))
@@ -136,16 +137,31 @@ internal object GeofenceStore {
         return null
     }
 
+    fun needsReview(db: SQLiteDatabase, sessionId: String): Boolean = db.rawQuery(
+        "SELECT session_id FROM geofence_conflicts WHERE session_id=?", arrayOf(sessionId),
+    ).use { it.moveToFirst() }
+
+    fun manualStart(db: SQLiteDatabase, jobId: String, at: Long) {
+        db.execSQL("UPDATE automation_policies SET manual_barrier_ms=CASE WHEN manual_barrier_ms IS NULL OR manual_barrier_ms<? THEN ? ELSE manual_barrier_ms END WHERE job_id=?",
+            arrayOf<Any?>(at, at, jobId))
+    }
+
     fun unresolvedJobs(db: SQLiteDatabase): Set<String> = db.rawQuery(
-        "SELECT job_id FROM geofence_conflicts", null,
+        "SELECT DISTINCT job_id FROM geofence_conflicts", null,
     ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
 
-    fun conflict(db: SQLiteDatabase, jobId: String, at: Long, reason: String) {
-        // One current alert per job; accepting it removes the operational detail.
-        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(job_id,observed_ms,reason) VALUES (?,?,?)",
-            arrayOf<Any?>(jobId, at, reason))
-        db.execSQL("UPDATE geofence_conflicts SET observed_ms=?,reason=? WHERE job_id=? AND observed_ms<=?",
-            arrayOf<Any?>(at, reason, jobId, at))
+    fun conflict(db: SQLiteDatabase, sessionId: String, at: Long, reason: String) {
+        // Alerts concern recorded work, never a retained idle movement log.
+        db.execSQL("INSERT OR IGNORE INTO geofence_conflicts(session_id,job_id,observed_ms,reason) SELECT id,job_id,?,? FROM sessions WHERE id=?",
+            arrayOf<Any?>(at, reason, sessionId))
+        db.execSQL("UPDATE geofence_conflicts SET observed_ms=?,reason=? WHERE session_id=? AND observed_ms<=?",
+            arrayOf<Any?>(at, reason, sessionId, at))
+    }
+
+    fun suspendFacts(db: SQLiteDatabase, jobId: String, at: Long) {
+        db.execSQL("UPDATE work_sites SET presence='UNKNOWN',observed_ms=NULL WHERE job_id=?", arrayOf(jobId))
+        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',configured_ms=MAX(configured_ms,?) WHERE job_id=?",
+            arrayOf<Any?>(at, jobId))
     }
 
     fun observe(db: SQLiteDatabase, keys: Set<String>, presence: GeofenceMembership.Presence,
@@ -167,9 +183,17 @@ internal object GeofenceStore {
         val result = GeofenceMembership.apply(before, sites.map { GeofenceMembership.Site(it.registrationKey, it.jobId) },
             keys - barrierKeys - oldConfigKeys, presence, observed)
         val warnings = result.lateOrConflictingSites + barrierKeys
-        warnings.forEach { key -> sites.firstOrNull { it.registrationKey == key }?.let {
-            conflict(db, it.jobId, observed, "LATE_OR_CONFLICTING_TRANSITION")
-        } }
+        if (activeSessionId != null && warnings.isNotEmpty()) {
+            db.rawQuery("SELECT job_id,start_ms FROM sessions WHERE id=? AND end_ms IS NULL", arrayOf(activeSessionId)).use { active ->
+                if (active.moveToFirst()) {
+                    val jobId = active.getString(0)
+                    if (observed > active.getLong(1) && policyByJob[jobId]?.settings?.automaticDeparture == true &&
+                        sites.any { it.jobId == jobId && it.registrationKey in warnings - barrierKeys }) {
+                        conflict(db, activeSessionId, observed, "LATE_OR_CONFLICTING_TRANSITION")
+                    }
+                }
+            }
+        }
         result.state.sites.forEach { (key, value) ->
             db.execSQL("UPDATE work_sites SET presence=?,observed_ms=? WHERE registration_key=?",
                 arrayOf<Any?>(value.presence.name, value.observedUtcMillis, key))
@@ -198,8 +222,8 @@ internal object GeofenceStore {
         "SELECT MAX(s.observed_ms) FROM work_sites s JOIN automation_policies p ON p.job_id=s.job_id WHERE s.job_id=? AND s.enabled=1 AND p.enabled=1", arrayOf(jobId),
     ).use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
 
-    fun timelyEntryAfterFinalization(db: SQLiteDatabase, jobId: String, observed: Long): Boolean = db.rawQuery(
-        "SELECT d.session_id FROM finalized_departures d JOIN sessions s ON s.id=d.session_id WHERE s.job_id=? AND d.detected_ms<=? AND d.deadline_ms>? LIMIT 1",
+    fun timelyFinalizedSessions(db: SQLiteDatabase, jobId: String, observed: Long): Set<String> = db.rawQuery(
+        "SELECT d.session_id FROM finalized_departures d JOIN sessions s ON s.id=d.session_id WHERE s.job_id=? AND d.detected_ms<=? AND d.deadline_ms>?",
         arrayOf(jobId, observed.toString(), observed.toString()),
-    ).use { it.moveToFirst() }
+    ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
 }

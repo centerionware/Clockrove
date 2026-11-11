@@ -51,7 +51,7 @@ Event IDs and fingerprints are device-keyed HMAC-SHA256 digests, with a key held
 in Android Keystore. The event ledger retains neither raw off-clock event times
 nor site/choice identifiers; it is excluded from future user backup data. Current
 membership facts remain necessary for safe aggregation, while review state keeps
-one current alert per job and removes its operational detail on explicit acceptance.
+current alerts only for affected work sessions and removes its operational detail on explicit acceptance.
 This is data minimization, not a claim that the device or audit history is tamper-proof.
 Native unit tests inject a public synthetic HMAC fixture; they do not prove the
 Android Keystore provider. Key persistence across process death/upgrade and
@@ -63,7 +63,18 @@ control through Android's transaction API. Primary source:
 and [transaction dispatch](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-7.0.0_r1/core/java/android/database/sqlite/SQLiteSession.java#L865).
 
 If receipt-key access fails, the writer records current degraded review state and
-blocks automatic finalization, preserving a possibly unprocessed re-entry for
-manual review. Manual stop remains independent of the key. A synthetic provider
+blocks automatic finalization of affected work, preserving a possibly unprocessed
+re-entry for review. Manual stop remains independent of the key. A synthetic provider
 failure test covers this policy; actual device key/provider handling remains a
 physical validation requirement.
+
+Invalid event clocks and finite registration/permission/provider/recovery problem
+codes use the same review hold. Upcoming native adapters must report these faults
+through geofenceProblem rather than interpreting missing callbacks as departure.
+
+Idle faults reset/disarm current membership and recover through fresh outside and
+entry observations, without demanding history review when no work was affected.
+A new timely return cancels grace and clears uncertainty for that active session.
+Manual stop/switch resolves uncertainty for the session being explicitly closed,
+while alerts for older finalized work remain available for correction. Expiry is
+guarded per session so a historical alert cannot block newer manual work.

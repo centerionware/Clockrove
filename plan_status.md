@@ -857,3 +857,25 @@ minimized receipts and explicit review acceptance in native unit conditions.
 The additional unavailable-key expiry guard/test is a new source change and must
 pass a subsequent full Actions run before merge. Device Keystore, receiver and
 scheduler behavior are still unproven; no VM validation executed.
+
+Added a twelfth policy case for invalid event clocks and provider faults, with a
+finite native problem API for upcoming registration/permission/recovery adapters.
+Known processing uncertainty now holds automatic expiry for explicit review instead
+of losing a possible re-entry, while manual commands remain independent. This is
+new source beyond the previously successful run and still needs Actions validation.
+
+Refined recovery to avoid unnecessary approval loops: idle faults disarm current
+facts and recover on fresh outside/entry, and known timely re-entry clears current
+departure uncertainty automatically. Review alerts now reference affected work
+sessions, not an idle movement history. Manual stop resolves its current uncertainty;
+historical alerts cannot block expiry of a different manually started session.
+Added a thirteenth native policy case for automatic recovery with fresh facts.
+Provider/clock recovery additions still need the next full Actions run.
+
+Review semantics are now scoped to affected work-session IDs. Benign pre-manual
+callbacks do not create idle history or an approval loop. Idle provider faults
+reset/disarm facts, and fresh outside/entry recovers automatically; known timely
+re-entry clears active departure uncertainty. A historical alert cannot block a
+new manually started session's expiry. Explicit review acceptance still preserves
+recorded times and resets the job's automation context. Thirteen policy cases
+are prepared; all latest refinements await a new Actions run.
