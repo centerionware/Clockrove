@@ -4,4 +4,6 @@
     <string name="widget_idle">No timer running</string>
     <string name="widget_open">Open Clockrove</string>
     <string name="widget_stop">Clock out</string>
+    <string name="tracking_channel">Work location</string>
+    <string name="tracking_target">Location sampling targets ten minutes; delivery may vary.</string>
 </resources>
