@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
 import 'package:clockrove/l10n/app_strings.dart';
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/tracking/timer_api.dart';
@@ -82,7 +83,10 @@ void main() {
           timerApiProvider.overrideWithValue(api),
           trackingApiProvider.overrideWithValue(tracking),
         ],
-        child: MaterialApp(theme: ClockroveTheme.light(), home: const TimerScreen()),
+        child: MaterialApp(
+          theme: ClockroveTheme.light(),
+          home: const TimerScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -139,19 +143,33 @@ void main() {
     ]);
   });
   for (final dark in [false, true]) {
-    testWidgets('render clean timer preview ${dark ? "dark" : "light"}', (tester) async {
+    testWidgets('render clean timer preview ${dark ? "dark" : "light"}', (
+      tester,
+    ) async {
       await tester.runAsync(() async {
-        final library = await Isolate.resolvePackageUri(Uri.parse('package:flutter/material.dart'));
+        final library = await Isolate.resolvePackageUri(
+          Uri.parse('package:flutter/material.dart'),
+        );
         final sdk = File.fromUri(library!).parent.parent.parent.parent.path;
         final loader = FontLoader('Roboto');
-        for (final font in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
-          loader.addFont(File('$sdk/bin/cache/artifacts/material_fonts/$font')
-              .readAsBytes().then(ByteData.sublistView));
+        for (final font in [
+          'Roboto-Regular.ttf',
+          'Roboto-Medium.ttf',
+          'Roboto-Bold.ttf',
+        ]) {
+          loader.addFont(
+            File('$sdk/bin/cache/artifacts/material_fonts/$font')
+                .readAsBytes()
+                .then(ByteData.sublistView),
+          );
         }
         await loader.load();
         final icons = FontLoader('MaterialIcons');
-        icons.addFont(File('$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-            .readAsBytes().then(ByteData.sublistView));
+        icons.addFont(
+          File(
+            '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+          ).readAsBytes().then(ByteData.sublistView),
+        );
         await icons.load();
       });
       tester.view.physicalSize = const Size(420, 920);
@@ -165,24 +183,40 @@ void main() {
         JobSummary('north', 'Northside fit-out'),
         JobSummary('admin', 'Planning and admin'),
       ]);
-      api.running = RunningSession('preview', 'studio', 'Studio renovation',
-          DateTime.now().toUtc().subtract(const Duration(hours: 1, minutes: 23, seconds: 45)));
+      api.running = RunningSession(
+        'preview',
+        'studio',
+        'Studio renovation',
+        DateTime.now().toUtc().subtract(
+          const Duration(hours: 1, minutes: 23, seconds: 45),
+        ),
+      );
       final boundary = GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(
-        key: boundary,
-        child: ProviderScope(overrides: [
-          timerApiProvider.overrideWithValue(api),
-          trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
-        ], child: MaterialApp(theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
-            home: const TimerScreen())),
-      ));
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundary,
+          child: ProviderScope(
+            overrides: [
+              timerApiProvider.overrideWithValue(api),
+              trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
+            ],
+            child: MaterialApp(
+              theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
+              home: const TimerScreen(),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.runAsync(() async {
-        final render = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+        final render =
+            boundary.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
         final image = await render.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final directory = Directory('build/ui-preview')..createSync(recursive: true);
+        final directory = Directory('build/ui-preview')
+          ..createSync(recursive: true);
         await File('${directory.path}/clockrove-${dark ? "dark" : "light"}.png')
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
@@ -191,24 +225,35 @@ void main() {
     });
   }
 
-  testWidgets('large text keeps the jobs list usable without overflow', (tester) async {
+  testWidgets('large text keeps the jobs list usable without overflow', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final api = ScreenApi();
-    await tester.pumpWidget(ProviderScope(overrides: [
-      timerApiProvider.overrideWithValue(api),
-      trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
-    ], child: MaterialApp(theme: ClockroveTheme.light(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.8)), child: child!),
-        home: const TimerScreen())));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          timerApiProvider.overrideWithValue(api),
+          trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
+        ],
+        child: MaterialApp(
+          theme: ClockroveTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.8)),
+            child: child!,
+          ),
+          home: const TimerScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
     expect(tester.takeException(), isNull);
     expect(find.text(AppStrings.newJob), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-
 }

@@ -35,6 +35,8 @@ class _ElapsedDisplayState extends State<ElapsedDisplay>
 
   void _startRefresh() {
     _refresh?.cancel();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
     _refresh = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });

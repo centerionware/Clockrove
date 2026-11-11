@@ -554,3 +554,14 @@ Permission-flow PR #4 passed Actions 42993338165, including native lifecycle tes
 and merged exact tested d490aa0 as 0262d861a553e45ed87f4e6552132dd6949230cf.
 Visual changes isolated on modern-timer-ui; no unvalidated UI merged. No VM tests,
 formatter or build ran. Geofence/map/recovery/device feasibility remains open.
+
+### Modern UI validation correction
+
+Previous turn: progress (clean light/dark UI, display/accessibility/preview source
+and PR #5). Revalidated existing run 42994742872; it concluded FAILURE at formatting,
+so no previews were rendered. Downloaded and reviewed Actions formatter-source
+patch (artifact 13843147570), applied source-only corrections without running a
+VM formatter. Added a lifecycle guard so elapsed display refresh does not start
+when its widget is initially created while backgrounded. Display derives from
+native timestamps and never writes timer state. New CI run must prove formatting,
+analysis, layout/tests and generated previews; visual review remains outstanding.

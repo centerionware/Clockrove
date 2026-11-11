@@ -652,3 +652,8 @@ are shown. Added time-display/DST/long-session tests, large-text check and CI-on
 synthetic rendered previews for visual inspection; no rendering success claimed.
 Permission PR #4 passed Actions 42993338165 and merged at 0262d86. New visual work
 requires separate CI and preview inspection. No VM builds/tests/formatting.
+
+PR #5 run 42994742872 failed formatting before preview rendering. Applied reviewed
+Actions-generated source patch and guarded display refresh against initial
+background lifecycle state. No VM tests/build/format executed. New UI still needs
+CI success and actual light/dark preview inspection; no visual success claimed.

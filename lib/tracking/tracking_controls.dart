@@ -80,11 +80,21 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.location_on_outlined, size: 22, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 10),
-              Text(AppStrings.locationTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-            ]),
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 22,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  AppStrings.locationTitle,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             status.when(
               loading: () => const LinearProgressIndicator(),
@@ -100,19 +110,29 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                     Wrap(
                       spacing: 8,
                       children: [
-                        if (!const {'REQUESTING', 'START_REQUESTED', 'LOCATION_UNAVAILABLE'}.contains(value.service))
+                        if (!const {
+                          'REQUESTING',
+                          'START_REQUESTED',
+                          'LOCATION_UNAVAILABLE',
+                        }.contains(value.service))
                           TextButton(
                             onPressed: _busy ? null : _enable,
                             child: const Text(AppStrings.enableLocation),
                           ),
-                        if (const {'REQUESTING', 'START_REQUESTED', 'LOCATION_UNAVAILABLE'}.contains(value.service)) TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _run(
-                                  () => ref.read(trackingApiProvider).disable(),
-                                ),
-                          child: const Text(AppStrings.disableLocation),
-                        ),
+                        if (const {
+                          'REQUESTING',
+                          'START_REQUESTED',
+                          'LOCATION_UNAVAILABLE',
+                        }.contains(value.service))
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _run(
+                                    () =>
+                                        ref.read(trackingApiProvider).disable(),
+                                  ),
+                            child: const Text(AppStrings.disableLocation),
+                          ),
                         if (!value.notificationsAllowed)
                           TextButton(
                             onPressed: _busy

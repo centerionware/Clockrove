@@ -86,14 +86,20 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: colors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Text(
                   running == null ? AppStrings.idle : AppStrings.running,
-                  style: TextStyle(color: colors.primary, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -103,9 +109,15 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               const SizedBox(height: 16),
               const Text(AppStrings.chooseJob, textAlign: TextAlign.center),
             ] else ...[
-              Text(running.jobName, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                running.jobName,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 20),
-              Text(AppStrings.elapsed, style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                AppStrings.elapsed,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
               const SizedBox(height: 4),
               ElapsedDisplay(startUtc: running.startUtc),
               const SizedBox(height: 8),
@@ -115,10 +127,18 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               ),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: disabled ? null : () => ref.read(timerActionsProvider.notifier).submit(state, TimerAction.stop),
+                onPressed: disabled
+                    ? null
+                    : () => ref
+                          .read(timerActionsProvider.notifier)
+                          .submit(state, TimerAction.stop),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.stop_rounded, size: 20), SizedBox(width: 8), Text(AppStrings.clockOut)],
+                  children: [
+                    Icon(Icons.stop_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text(AppStrings.clockOut),
+                  ],
                 ),
               ),
             ],
@@ -140,9 +160,17 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: colors.primary, borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.timelapse_rounded, color: colors.onPrimary, size: 24),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: colors.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.timelapse_rounded,
+                color: colors.onPrimary,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(AppStrings.appName),
@@ -178,56 +206,113 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               data: (state) => ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                 children: [
-                  Text(AppStrings.workday, style: Theme.of(context).textTheme.headlineSmall),
+                  Text(
+                    AppStrings.workday,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                   const SizedBox(height: 4),
-                  Text(MaterialLocalizations.of(context).formatMediumDate(DateTime.now()),
-                      style: TextStyle(color: colors.onSurfaceVariant)),
+                  Text(
+                    MaterialLocalizations.of(context)
+                        .formatMediumDate(DateTime.now()),
+                    style: TextStyle(color: colors.onSurfaceVariant),
+                  ),
                   const SizedBox(height: 24),
                   _sessionCard(state, disabled),
-                  if (actions.working) const Padding(
-                    padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
-                  if (actions.pending != null && !actions.working) Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Card(child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text(AppStrings.uncertain),
-                        TextButton(onPressed: () => ref.read(timerActionsProvider.notifier).retry(),
-                            child: const Text(AppStrings.retry)),
-                      ]),
-                    )),
-                  ),
-                  if (actions.conflict != null) Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(actions.conflict == 'JOB_CREATE_FAILED'
-                        ? AppStrings.jobCreateFailed : AppStrings.commandConflict),
-                  ),
+                  if (actions.working)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (actions.pending != null && !actions.working)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(AppStrings.uncertain),
+                              TextButton(
+                                onPressed: () => ref
+                                    .read(timerActionsProvider.notifier)
+                                    .retry(),
+                                child: const Text(AppStrings.retry),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (actions.conflict != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        actions.conflict == 'JOB_CREATE_FAILED'
+                            ? AppStrings.jobCreateFailed
+                            : AppStrings.commandConflict,
+                      ),
+                    ),
                   const SizedBox(height: 28),
-                  Text(AppStrings.jobs, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    AppStrings.jobs,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 12),
                   Card(
                     child: Column(
                       children: [
                         for (final job in state.jobs) ...[
                           ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            leading: Icon(Icons.work_outline_rounded, color: colors.primary),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            leading: Icon(
+                              Icons.work_outline_rounded,
+                              color: colors.primary,
+                            ),
                             title: Text(job.name),
                             trailing: TextButton(
-                              onPressed: disabled || state.running?.jobId == job.id ? null
-                                  : () => ref.read(timerActionsProvider.notifier).submit(
-                                    state, state.running == null ? TimerAction.start : TimerAction.switchJob,
-                                    jobId: job.id),
-                              child: Text(state.running?.jobId == job.id ? AppStrings.running
-                                  : state.running == null ? AppStrings.clockIn : AppStrings.switchJob),
+                              onPressed:
+                                  disabled || state.running?.jobId == job.id
+                                  ? null
+                                  : () => ref
+                                        .read(timerActionsProvider.notifier)
+                                        .submit(
+                                          state,
+                                          state.running == null
+                                              ? TimerAction.start
+                                              : TimerAction.switchJob,
+                                          jobId: job.id,
+                                        ),
+                              child: Text(
+                                state.running?.jobId == job.id
+                                    ? AppStrings.running
+                                    : state.running == null
+                                    ? AppStrings.clockIn
+                                    : AppStrings.switchJob,
+                              ),
                             ),
                           ),
                           const Divider(indent: 16, endIndent: 16),
                         ],
                         ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          leading: Icon(Icons.add_circle_outline_rounded, color: colors.primary),
-                          title: Text(AppStrings.newJob, style: TextStyle(color: colors.primary, fontWeight: FontWeight.w600)),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          leading: Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: colors.primary,
+                          ),
+                          title: Text(
+                            AppStrings.newJob,
+                            style: TextStyle(
+                              color: colors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           enabled: !disabled,
                           onTap: disabled ? null : _newJob,
                         ),
