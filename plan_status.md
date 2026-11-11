@@ -20,17 +20,21 @@ iOS and future service remain deferred.
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
-| M3.1 Schema, migrations and typed contracts | Native schema/revision foundation verified; full contracts in progress | PR #19; Actions 43073787801 passed 127 native tests; business command/UI integration remains |
-| M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
-| M3.3 Jobs/sites/boards/session corrections/queries | Pending | Integrity and snapshot tests required |
-| M4.1 Manual tracker UI and history | Prototype controls merged; full history pending | Native-backed start/stop/switch, modern UI and map-outage journey pass Actions; corrections/history/full job management remain |
-| M4.2 Widgets/configuration/notification actions | Pending | Offline/recovery/accessibility journey required |
-| M5.1 Permissions/site editor/capacity/entry/departure | Pending | Both departure modes and suppression required |
-| M5.2 Grace/re-entry/late events/pruning/health/recovery | Pending | State-machine matrix and physical tests required |
-| M6.1 Boards and accessible moves | Pending | Preserve cards and calendar due dates |
-| M6.2 Date/list/totals/map/timezones | Pending | DST and filter agreement tests required |
+| M3.1 Schema, migrations and typed contracts | Schema 5 and business bridges verified; full contract in progress | PRs #19–28 merged; migration/revision, board, customer/billing, lifecycle and report/invoice commands checked in Actions; session corrections and backup contracts remain |
+| M3.2 IDs/revisions/tombstones/serialized commands | Business foundation verified; full milestone incomplete | Native serialized writer, revision ancestry, opaque receipts and job deletion fences exercised by migration/board/lifecycle/invoice tests; manual corrections and backup merge integrity remain |
+| M3.3 Jobs/sites/boards/session corrections/queries | Jobs/sites/boards/report queries implemented; corrections pending | PRs #16 and #19–28 on main; native integrity/concurrency/rollback tests pass; manual session CRUD/history still required |
+| M4.1 Manual tracker UI and history | Timer and job/business UI merged; full history pending | Native start/stop/switch, job board/settings/customer/report/archive/invoice views on main; session corrections/history still required |
+| M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
+| M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
+| M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition checks verified; recovery update/device proof pending | Departure/alarm/geofence tests on main; #17 monitoring retry/app-upgrade recovery awaits complete current-main validation; screen-off/OEM/reboot/GPS evidence remains |
+| M6.1 Boards and accessible moves | Implemented and merged; final integration checks pending | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 adds refreshed move-dialog regression |
+| M6.2 Date/list/totals/map/timezones | Implemented and merged; strengthened calendar checks pending | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks still under validation |
 | M6.3 Provider settings/secure credentials/tile policy | Pending | Outage must preserve manual functionality |
-| M6.4 CSV and document sharing | Pending | Escaping/formula/clipping tests required |
+| M6.4 CSV and document sharing | Implemented and merged; combined document acceptance pending | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; actual framework PDF tests pass in earlier run, final logo/pagination/viewer checks pending |
+| Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
+| Business iteration: archive/restore/delete | Implemented and merged; final settings integration pending | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
+| Business iteration: invoices and email | Implemented and merged; combined acceptance pending | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
+| Business iteration: logo and final document previews | Source prepared in #29; validation in progress | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; no final visual acceptance yet |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
@@ -1327,3 +1331,20 @@ API 24/35 export the real multipage PDFs and first/middle/last rendered pages.
 Device XML now requires the expected PDF (3), logo (4) and report-boundary (3)
 cases individually, preventing missing test classes from passing the gate.
 These strengthened checks remain pending in Actions.
+
+### Recovered artifact evidence and current task status
+
+Artifact downloads recovered. Inspected exact CI XML (no local test execution):
+- #26 / 43093219562: two actual PDF instrumentation cases on each of API 24
+  and API 35, four total, zero failures/errors/skips. This proves real framework
+  execution; that earlier capture still lacks retained page previews.
+- #27 / 43093223910 and #28 / 43093226704: 191 native cases each, zero
+  failures/errors/skips, including ten attachment/provider handoff and five
+  immutable invoice snapshot cases.
+- #29 earlier head 042216c / 43101008984: 198 native cases, zero
+  failures/errors/skips, including five logo-store and twelve reporting cases.
+  Actual framework/logo/viewer steps remain running; full run is not yet passed.
+
+Updated the task table to distinguish merged behavior from missing implementation
+and physical acceptance. Latest heads still requiring complete checks are #17
+4d3db27 (43101725472) and #29 ba22cb6 (43101862377). Play remains held.

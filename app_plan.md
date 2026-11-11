@@ -1218,3 +1218,16 @@ heads and UI remain under validation. Actual PDF checks moved from unsupported
 Robolectric PdfDocument to pinned Android emulator instrumentation in Actions.
 Logo import, document/provider/integrated report UI checks and release acceptance
 remain open. Play workflow 414395901 stays disabled; no partial release publishes.
+
+### Current combined-iteration validation evidence
+
+Recovered actual Actions artifacts after the service interruption. #26 run
+43093219562 contains two actual PDF instrumentation cases per API (24/35),
+zero failures/errors/skips. #27/#28 runs 43093223910/43093226704 each contain
+191 passing native cases. #29 earlier head 042216c / 43101008984 contains
+198 passing native cases, including logo-store and DST-report checks; its actual
+framework/logo/viewer sequence is still running. Six synthetic report/map views
+were reviewed in light/dark themes. Latest #29 adds all-style multipage captures
+and requires all ten expected device cases per API. Final exact-head checks,
+actual document visual acceptance and main validation remain required; no partial
+Play release is authorized. Task-level status is maintained in plan_status.md.
