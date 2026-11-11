@@ -18,6 +18,19 @@ unzip -oq "$RUNNER_TEMP/clockrove-emulator.zip" -d "$ANDROID_HOME"
 curl --fail --location --retry 3 https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip -o "$RUNNER_TEMP/clockrove-platform-tools.zip"
 echo "477254aa5f903c15cf51001717bdf347fb6b53e0  $RUNNER_TEMP/clockrove-platform-tools.zip" | sha1sum --check
 unzip -oq "$RUNNER_TEMP/clockrove-platform-tools.zip" -d "$ANDROID_HOME"
+# Archive extraction does not install the SDK package descriptor used by
+# avdmanager. Declare the exact verified emulator revision without resolving a
+# floating package through sdkmanager.
+cat > "$ANDROID_HOME/emulator/package.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:repository xmlns:ns2="http://schemas.android.com/repository/android/common/02" xmlns:ns3="http://schemas.android.com/repository/android/generic/02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <localPackage path="emulator" obsolete="false">
+    <type-details xsi:type="ns3:genericDetailsType"/>
+    <revision><major>37</major><minor>2</minor><micro>13</micro></revision>
+    <display-name>Android Emulator</display-name>
+  </localPackage>
+</ns2:repository>
+XML
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 "$ANDROID_HOME/emulator/emulator" -version | tee "$RUNNER_TEMP/clockrove-emulator-version.txt"
 grep -F 'Android emulator version 37.2.13' "$RUNNER_TEMP/clockrove-emulator-version.txt"
