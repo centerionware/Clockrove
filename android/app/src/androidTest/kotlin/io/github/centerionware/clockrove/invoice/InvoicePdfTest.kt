@@ -88,9 +88,16 @@ class InvoicePdfTest {
                 if (android.os.Build.VERSION.SDK_INT >= 35) {
                     File(root, "clockrove-invoice-${style.lowercase()}-multipage-extracted.txt").writeText(text.toString())
                     try {
-                        assertTrue(text.contains("USD 1250.00"))
-                        for (row in 1..130) assertTrue("Missing row $row in $style", text.contains("Install tiles — section $row"))
-                        assertTrue(text.contains("Long optional footer."))
+                        // Framework extraction can put a line break between
+                        // individual glyphs even though the page renders normally.
+                        // Keep their order and require each complete priced row.
+                        val compact = text.toString().filterNot { it.isWhitespace() }
+                        assertTrue(compact.contains("USD1250.00"))
+                        data.lines.forEachIndexed { index, line ->
+                            val pricedRow = (line.title + line.amount).filterNot { it.isWhitespace() }
+                            assertTrue("Missing priced row ${index + 1} in $style", compact.contains(pricedRow))
+                        }
+                        assertTrue(compact.contains("Longoptionalfooter."))
                     } catch (failure: AssertionError) {
                         // Preserve every failing page for comparison with the
                         // actual framework extraction; never synthesize a pass.

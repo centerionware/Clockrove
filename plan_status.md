@@ -1393,3 +1393,18 @@ the existing API-24 first/middle/last minimal captures; this does not explain th
 API-35 text mismatch or prove all styles/pages accepted. No production rendering
 change or weakened assertion is being substituted for the missing evidence.
 Play delivery remains disabled.
+
+Diagnostic head 1cc258e / 43106859741 retained the failing API-35 PDF, extracted
+text and all fifteen Minimal pages. Original-resolution review of page 4 shows
+rows 8–20 intact with their amounts. The actual extracted text splits "section 8"
+(and many subsequent glyphs) across individual lines; this is an extraction
+whitespace mismatch, not evidence of a missing rendered row. Normalize whitespace
+while still requiring every complete title together with its exact amount, plus
+total/footer. Including amounts also avoids a shorter row number accidentally
+matching a longer numbered title. Retain real PDF/render/coverage and failure
+capture gates. All three styles and corrected viewer still await fresh Actions.
+
+The independent session resolver's actual API-24/35 XML from 43105393744 confirms
+three calendar cases on each API passed, alongside the earlier two PDF cases per
+API. That run failed only formatting; the exact formatter patch is applied in
+#30 and its corrected run remains active. No VM tests or rendering ran.
