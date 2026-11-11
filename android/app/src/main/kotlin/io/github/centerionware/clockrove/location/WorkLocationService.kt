@@ -143,14 +143,25 @@ class WorkLocationService : Service() {
         }
         worker.shutdown()
         stopForeground(STOP_FOREGROUND_REMOVE)
-        if (health == "REQUESTING") health = "STOPPED"
+        if (health in setOf("REQUESTING", "START_REQUESTED", "STARTING", "LOCATION_UNAVAILABLE")) health = "STOPPED"
         super.onDestroy()
     }
 
     companion object {
         private const val CHANNEL = "clockrove-work-location"
         private const val NOTIFICATION = 101
+        internal fun markStartRequested() { health = "START_REQUESTED" }
+        internal fun markStartRestricted() { health = "START_RESTRICTED" }
+        private val healthListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
+        internal fun subscribeHealth(listener: (String) -> Unit): AutoCloseable {
+            healthListeners.add(listener)
+            listener(health)
+            return AutoCloseable { healthListeners.remove(listener) }
+        }
         @Volatile var health: String = "STOPPED"
-            private set
+            private set(value) {
+                field = value
+                healthListeners.forEach { try { it(value) } catch (_: Exception) { } }
+            }
     }
 }

@@ -2,6 +2,7 @@ import 'package:clockrove/l10n/app_strings.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:clockrove/tracking/timer_screen.dart';
+import 'package:clockrove/tracking/tracking_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,20 +51,61 @@ class ScreenApi extends TimerApi {
   }
 }
 
+class DeniedTrackingApi extends TrackingApi {
+  int enableCalls = 0;
+  @override
+  Stream<String> get health => const Stream<String>.empty();
+  @override
+  Future<TrackingStatus> status() async =>
+      const TrackingStatus('denied', 'STOPPED', true, false);
+  @override
+  Future<TrackingStatus> enable() async {
+    enableCalls++;
+    return status();
+  }
+}
+
 void main() {
   testWidgets('manual journey keeps New job last', (tester) async {
     final api = ScreenApi();
+    final tracking = DeniedTrackingApi();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [timerApiProvider.overrideWithValue(api)],
+        overrides: [
+          timerApiProvider.overrideWithValue(api),
+          trackingApiProvider.overrideWithValue(tracking),
+        ],
         child: const MaterialApp(home: TimerScreen()),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.idle), findsOneWidget);
+    await tester.ensureVisible(find.text(AppStrings.clockIn));
     await tester.tap(find.text(AppStrings.clockIn));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.clockOut), findsOneWidget);
+    await tester.ensureVisible(find.text(AppStrings.enableLocation));
+    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.pumpAndSettle();
+    expect(tracking.enableCalls, 0);
+    expect(find.text(AppStrings.locationPurpose), findsOneWidget);
+    await tester.tap(find.text(AppStrings.cancel));
+    await tester.pumpAndSettle();
+    expect(tracking.enableCalls, 0);
+    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppStrings.continueLabel));
+    await tester.pumpAndSettle();
+    expect(tracking.enableCalls, 1);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, AppStrings.clockOut),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.ensureVisible(find.text(AppStrings.newJob));
     await tester.tap(find.text(AppStrings.newJob));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Synthetic second');
@@ -72,11 +114,13 @@ void main() {
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
     expect((tiles.last.title! as Text).data, AppStrings.newJob);
     final second = find.widgetWithText(ListTile, 'Synthetic second');
+    await tester.ensureVisible(second);
     await tester.tap(
       find.descendant(of: second, matching: find.byType(TextButton)),
     );
     await tester.pumpAndSettle();
     expect(api.running!.jobId, 'job-b');
+    await tester.ensureVisible(find.text(AppStrings.clockOut));
     await tester.tap(find.text(AppStrings.clockOut));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.idle), findsOneWidget);

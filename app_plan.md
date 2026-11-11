@@ -625,3 +625,19 @@ Storage PR #2 passed complete Actions run 42990150091 and merged at d6e4d9c.
 Foreground service source is isolated on foreground-location-prototype for separate
 validation; no runtime/device proof yet. Automatic manual-controls delivery
 42989964414 accepted versionCode 216550241; this is not installation evidence.
+
+### 2026-11-11 — explicit location startup and degraded state
+
+Service PR #3 passed Actions 42991221956 and merged at a99faa9. Permission/start
+follow-up is isolated on location-permission-flow: visible activity request,
+fine/coarse and separate notification permissions, typed status and service-health
+invalidation, purpose dialog before native calls and independent location stop.
+Denied/restricted states preserve manual timing. New transport/permission-purpose
+UI checks are pending Actions; no physical callback/FGS success is claimed.
+No VM tests/builds/formatter ran. Geofence/map/recovery feasibility remains open.
+
+PR #4 run 42992333516 failed formatting; applied reviewed Actions-generated patch.
+Added native permission lifecycle tests and corrected concurrent enable/cancel
+handling and asynchronous storage-error completion. New code remains unvalidated
+until the next PR check; native test shadows are not physical-device evidence.
+No local formatter/build/test executed.
