@@ -17,7 +17,7 @@ iOS and future service remain deferred.
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
-| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; registration/suppression/scheduling/device evidence remain |
+| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; durable policy/suppression merged in PR #12 with 42 native tests; alarm adapter in progress; platform registration and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
@@ -899,3 +899,9 @@ repository, request one inexact wake, and use SQL-guarded candidate/session expi
 Private boot/clock-change receivers hold uncertain work. Seven API-24/API-35 test
 cases are prepared for CI; no VM tests/builds ran. Runtime geofence registration,
 permission/site/review UI and physical wake/recovery proof remain incomplete.
+
+Durable policy exact head 87f566c passed full Actions run 43020856586. Inspected
+JUnit XML: 42 native tests, zero failures/errors/skips, including fourteen new
+policy cases. PR #12 merged as 87539048b9c5f468f8f52ebec88aac38de981b8b.
+Dart/UI, Android build and release-version checks passed in that run. Alarm
+adapter additions remain separate and need their own CI; milestone 2 is incomplete.

@@ -41,10 +41,9 @@ silently reopening or manufacturing work. Explicit acceptGeofenceReview preserve
 recorded history, rotates registrations and waits for new qualified exit/entry;
 future correction UI must let the user review those existing boundaries first.
 
-This source layer has no platform geofence receiver/registration, background
-permission UI, alarm scheduling or review notification yet. Those adapters must
-join this boundary, use inexact scheduling and reconcile persisted deadlines on
-recovery. No exact-alarm permission or periodic GPS timer is justified by this
+Platform geofence receiver/registration, background permission UI and review
+notification remain pending. The departure wake-up adapter described below joins
+this boundary; platform registration must reconcile persisted state on recovery. No exact-alarm permission or periodic GPS timer is justified by this
 contract. Native unit tests do not prove Android delivery, ten-minute sampling,
 reboot/force-stop continuity, physical boundaries or a completed application.
 
