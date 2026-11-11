@@ -52,3 +52,10 @@ disable location, leave the app during the request, cancel the editor and simula
 an unavailable provider. The request must finish/cancel honestly; map/coordinate
 setup and manual timing must remain available. Actual accuracy/time shown must
 match the supplied fix. OSM requests require live network evidence, not CI tiles.
+
+After recovery retry/upgrade source is validated, disable then restore the location
+provider while automation is enabled. Retry site monitoring from the foreground;
+request submission must not be shown as registration success. With a pending
+departure and an active session, install a newer build signed with the same upload
+key: verify work/settings remain, uncertain expiry is held, and only previously
+enabled sites are requested again. This requires actual upgrade/device evidence.

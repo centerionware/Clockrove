@@ -41,7 +41,7 @@ class DepartureAlarmReceiver : BroadcastReceiver() {
 
 class DepartureRecoveryReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_TIME_CHANGED) return
+        if (intent.action !in setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_MY_PACKAGE_REPLACED)) return
         val pending = goAsync()
         DepartureRuntime.receive(context.applicationContext, intent, true) { pending.finish() }
     }

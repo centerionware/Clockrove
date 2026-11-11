@@ -147,6 +147,20 @@ class AutomationHostApiTest {
         assertTrue(repository.locationPoints("off-clock").isEmpty())
         assertEquals(2, cancelled)
     }
+    @Test fun monitoringRetryRequiresForegroundAndDoesNotStartATimerOrRequestPermission() {
+        val before = repository.snapshot()
+        visible = false
+        assertEquals("FOREGROUND_REQUIRED", messenger.invoke("retryMonitoring").error)
+        assertEquals(0, permissionChanges)
+        visible = true
+        val response = messenger.invoke("retryMonitoring")
+        assertTrue(response.finished)
+        assertNull(response.error)
+        assertEquals(1, permissionChanges)
+        assertNull(shadowOf(activity).lastRequestedPermission)
+        assertNull(shadowOf(activity).nextStartedService)
+        assertEquals(before, repository.snapshot())
+    }
     private class Response {
         @Volatile var finished = false
         var value: Any? = null

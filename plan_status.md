@@ -1146,6 +1146,13 @@ Prepared source requires Actions formatting/analyzer/tests and synthetic visual
 review. Logo import, PDF/style previews, report screens and lifecycle still remain;
 no combined release or complete invoice claim is made.
 
+### Monitoring retry and upgrade recovery continuation
+
+Rebased the pending explicit monitoring retry/app-upgrade recovery source onto
+current main without changing the combined next-release contract or publication
+hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
+Fresh exact-head Actions validation is required. This remains source-level recovery
+behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.
 ### Native job lifecycle — source prepared, unverified
 
 Prepared serialized archive/restore/delete commands. Archive requires clock-out;
@@ -1161,6 +1168,9 @@ reset, running guard, preferences, retained templates/customer, response-loss re
 capacity, rollback and duplicate concurrent delete. Actions/UI integration remain
 pending. Play publication is held; no VM validation ran.
 
+Lifecycle fdd33a8 passed the completed android check in 43085255507 (176 native
+tests, zero failures/errors/skips). Merged #25. This monitoring branch now includes
+that main source; exact combined validation is pending. Play delivery remains held.
 ### Immutable invoice/PDF source prepared
 
 Prepared stable numbered invoice snapshots using actual finalized hourly or
@@ -1226,3 +1236,9 @@ journeys passed. Reviewed six light/dark company/customer/billing previews. Merg
 Removed the customer action's heavy elevation in the next UI source revision to
 match existing flat surfaces. Integrated UI formatter artifact from 43086427014
 applied; remaining analyzer/test results are still being inspected.
+
+Monitoring recovery run 43094466938 completed with successful formatting, analysis,
+Flutter tests, Android build and native tests, but failed while exporting native
+results/previews during the GitHub Actions incident. Release tooling did not run;
+this is not a passed validation. Combined current main (834a7e4) into #17 for a
+fresh complete validation including actual PDF checks. No VM build/test ran.
