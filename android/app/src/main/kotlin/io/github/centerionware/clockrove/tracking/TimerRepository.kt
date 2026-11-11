@@ -22,7 +22,8 @@ class TimerRepository internal constructor(context: Context) {
         val origin: Origin,
     )
     data class Session(val id: String, val jobId: String, val startUtcMillis: Long, val jobName: String)
-    data class Snapshot(val version: Long, val running: Session?)
+    data class Job(val id: String, val name: String)
+    data class Snapshot(val version: Long, val running: Session?, val jobs: List<Job>)
     data class Outcome(val version: Long, val conflict: String?)
 
     @Synchronized
@@ -135,7 +136,10 @@ class TimerRepository internal constructor(context: Context) {
         val running = db.rawQuery("SELECT s.id,s.job_id,s.start_ms,j.name FROM sessions s JOIN jobs j ON j.id=s.job_id WHERE s.end_ms IS NULL", null).use {
             if (it.moveToFirst()) Session(it.getString(0), it.getString(1), it.getLong(2), it.getString(3)) else null
         }
-        return Snapshot(version, running)
+        val jobs = db.rawQuery("SELECT id,name FROM jobs WHERE archived=0 ORDER BY name,id", null).use {
+            buildList { while (it.moveToNext()) add(Job(it.getString(0), it.getString(1))) }
+        }
+        return Snapshot(version, running, jobs)
     }
 
     private class Store(context: Context) : SQLiteOpenHelper(context, "clockrove.db", null, 1) {

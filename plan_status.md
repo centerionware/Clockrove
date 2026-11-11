@@ -14,7 +14,7 @@ iOS and future service remain deferred.
 | M1.6 Install/pin compatible tools | Installed in Actions; build compatibility pending | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; Actions passed JDK/Flutter/Android SDK installation; Ruby/Fastlane deferred until publishing work |
 | M1.7 Android Flutter scaffold and lockfiles | Build verified in Actions | Agreed application ID; Actions locked resolution, formatting and analysis pass; debug APK built in run 42980838050 |
 | M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
-| M1.9 Create public repository | Private staging created; public gated | https://github.com/centerionware/Clockrove; verified private; terms review pending |
+| M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; public rights gated | Actions 42980838050 succeeded; no effective license/public visibility until owner review |
 | M2.1 SQLite/manual timer/widget/notification prototype | In progress | Native SQLite timer repository and five Robolectric tests added; Actions validation pending; UI/widget/notification integration remains |
 | M2.2 Location/geofences/departure/recovery prototype | Pending | Native callbacks required |
@@ -202,3 +202,28 @@ app commits, default/picker configuration, typed Flutter adapter, native trackin
 notification/service, and the rest of milestone 2 remain outstanding. New source
 requires a fresh Actions run; earlier running validation may be superseded by the
 new commit, because behavior changed, not because observation timed out.
+
+### Owner-authorized public visibility
+
+Owner explicitly instructed “make it public now.” Changed visibility with gh and
+verified isPrivate=false / visibility=PUBLIC for
+https://github.com/centerionware/Clockrove. This instruction authorizes publication
+now, overriding the earlier wait for terms review; it does not adopt the draft
+as an effective license. Source terms remain clearly labeled as a proposal.
+Previous turn was progress (native widget slice, sixth test, reviewed push).
+Run 42982039427 was cancelled by the new behavior commit, not by an observation
+timeout. Run 42982453742 validates 8a95ed3 and was confirmed live this turn.
+
+### 2026-11-11 — typed app/native timer adapter
+
+Previous turn was progress: explicit owner publication and verified public state.
+Revalidated run 42982453742: still live; no restart based on elapsed observation.
+Added TimerApi typed Dart adapter and Kotlin TimerHostApi, attached/detached with
+Flutter engine lifecycle. Native requests use a background task queue and existing
+serialized repository. Snapshots include eligible jobs; timestamps remain native.
+App commands refresh widgets; raw maps are confined to codec adapters. Three Dart
+transport tests cover UTC decoding, immutable job lists, response-loss retries,
+native-only timestamps/origin, stale conflicts and missing responses. These mocks
+prove codec semantics only. No VM validation ran. docs/TIMER_CONTRACT.md records
+wire/lifecycle semantics and outstanding event delivery. App controls/Riverpod,
+notification/location/geofence/map prototypes and physical proof remain unfinished.

@@ -12,8 +12,8 @@ The user explicitly requested this handoff after creating agent instructions and
 
 - Workspace: `/workspace/TimesheetTracker`; protected root `.git` remains untouched.
 - `scripts/git-local` uses ignored `.local/git` metadata with the intended origin.
-- `centerionware/Clockrove` exists privately for CI; public visibility awaits owner
-  review of `docs/SOURCE_TERMS_DRAFT.md`.
+- `centerionware/Clockrove` is public after explicit owner instruction on 2026-11-11.
+  `docs/SOURCE_TERMS_DRAFT.md` remains a proposal, not an adopted license.
 - User 1000's authenticated `gh` identity is `centerionware`.
 - Android Flutter scaffold, pubspec.lock and pinned Gradle wrapper are committed.
 - All builds/tests now run in GitHub Actions, per owner instruction. VM tool setup
@@ -470,3 +470,20 @@ reuse outcomes for retries. Sixth repository test covers retry/stale-tap safety.
 Idle widget opens the app; configuration, typed Flutter controls, complete refresh
 propagation, ongoing location notification/service, maps and physical validation
 remain incomplete. No VM validation ran; code awaits Actions and runtime evidence.
+
+### 2026-11-11 — explicit public publication authorization
+
+Owner instructed “make it public now.” gh changed the intended repository to
+PUBLIC and verified isPrivate=false at https://github.com/centerionware/Clockrove.
+This overrides the earlier publication wait. Draft terms remain draft; no license
+adoption is inferred from the visibility instruction. No build/test ran on VM.
+
+### 2026-11-11 — typed prototype bridge
+
+Added explicit Dart/Kotlin timer adapters with background native handling,
+engine lifecycle registration, eligible-job snapshots and widget refresh after app
+commands. Raw transport values stay inside adapters. Added three codec/retry tests
+for Actions; mocks do not prove device/native delivery. Full UI, event stream,
+notification/service/location/maps and physical feasibility still incomplete.
+Public repository state is reflected in README/status; draft terms remain draft.
+No VM builds/tests executed. See docs/TIMER_CONTRACT.md for contract details.

@@ -8,8 +8,8 @@ and actual validation in [plan_status.md](plan_status.md).
 ## Rights and contribution
 
 Proposed source-available personal-use and contribution terms await owner review
-in [docs/SOURCE_TERMS_DRAFT.md](docs/SOURCE_TERMS_DRAFT.md). No open-source license
-or public publication is implied. Read [CONTRIBUTING.md](CONTRIBUTING.md).
+in [docs/SOURCE_TERMS_DRAFT.md](docs/SOURCE_TERMS_DRAFT.md). The repository is public by explicit owner instruction; the draft is not an
+effective license and does not grant open-source rights. Read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Toolchain and setup
 
