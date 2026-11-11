@@ -32,6 +32,7 @@ android {
         applicationId = "io.github.centerionware.clockrove"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
@@ -76,6 +77,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.16.1")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
 
 // AGP 9 host-test packaging consumes Flutter's copied assets. Declare the producer

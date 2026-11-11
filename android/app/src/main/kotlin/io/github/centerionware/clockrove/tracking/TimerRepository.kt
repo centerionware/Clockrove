@@ -390,6 +390,21 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun deleteJob(id: String, version: Long, jobId: String): Outcome = boardChange(id, version, "JOB_DELETE", listOf(jobId)) { JobLifecycleStore.remove(it, jobId, wallClock()) }
 
+    @Synchronized
+    internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
+        boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
+            InvoiceStore.prepare(it, invoiceId, selection, wallClock())
+        }
+    @Synchronized
+    internal fun invoice(id: String): InvoiceStore.Record = InvoiceStore.read(helper.readableDatabase, id)
+    @Synchronized
+    internal fun cacheInvoicePdf(id: String, payload: String, bytes: ByteArray): Boolean {
+        require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))
+        val db = helper.writableDatabase
+        val values = android.content.ContentValues().apply { put("pdf", bytes) }
+        return db.update("invoices", values, "id=? AND payload=? AND pdf IS NULL", arrayOf(id, payload)) == 1
+    }
+
     private fun boardChange(id: String, version: Long, action: String, values: List<Any?>, change: (SQLiteDatabase) -> String?): Outcome =
         changeConfiguration(id, org.json.JSONArray(listOf(version, action) + values).toString(), version, change)
 
