@@ -791,3 +791,103 @@ documentation-only PR #11 run 43007883446 both completed SUCCESS independently.
 The only new changes after those runs are evidence text; application/workflow
 source is unchanged. Physical/device/provider gates and full app milestones remain
 incomplete. No VM validation executed.
+
+### Durable geofence policy and native event transaction source
+
+Previous goal turn: progress (OSM prototype merged after full CI and six-image
+review; formatter failure gate proven in Actions). Continued from clean main
+4a50778. Added isolated durable-geofence-policy source: schema 4 site inventory,
+settings/arming/suppression, registration generations, membership facts, persisted
+event outcomes and late-event review state. Configuration edits rotate registration
+IDs and clear obsolete candidates; labels preserve known geometry/facts. Manual
+stop/switch updates suppression in the same transaction. Eligible native events
+can start one job, require choice for multiple jobs, never switch an active job,
+and reconcile departure/re-entry with retrospective pruning and delayed wake.
+Raw Flutter timer commands still cannot claim geofence origin.
+
+Added ten minimum-API native tests covering enable-inside/exit-entry, recovery,
+manual suppression/explicit restart, overlapping sites and timestamp ordering,
+late re-entry review, zero grace, paid travel, ambiguous jobs, capacity/settings
+rollback, ID reuse, concurrent native exit/manual stop and fixed schema-3 upgrade
+plus failed-upgrade rollback. Existing schema 1/2 and command tests remain enabled.
+These changes await Actions. Platform geofence registration/receiver, background
+permissions, scheduler, health/provisional UI and physical-device proof are not
+included yet; source tests do not establish runtime automation. Full revisions,
+site UI and backup format remain later milestone work. No VM validation ran.
+
+Main evidence validation 43008859456 completed SUCCESS. OSM source bb2a9eb also
+completed Play internal delivery 43008466949; this is upload acceptance, not tester
+installation or physical behavior. New durable-policy source remains isolated
+until its own full Actions validation passes.
+
+Prepared an explicit native accept-current-history review action: it preserves
+session boundaries, resolves the alert and disarms/rotates registration state until
+new qualified exit/entry. Extended the late-reentry test to prove no silent history
+rewrite. Renamed requested inventory to sitesToRegister so it cannot be confused
+with actual Android registration success. Contract is in docs/GEOFENCE_CONTRACT.md.
+Initial run 43011366016 passed Android compilation and is running native checks;
+review-action additions need new validation. No VM tests/build/formatter ran.
+
+Initial policy run 43011366016 passed Android compilation and 37 of 38 native
+checks; the capacity rejection hit API-24 transaction dispatch of ROLLBACK TO.
+Confirmed the platform behavior in Android 7 DatabaseUtils/SQLiteSession source.
+Moved capacity checks before mutation within the same serialized transaction;
+kept rejection/key-preservation assertions and full migration rollback checks.
+Native JUnit XML will now be exported from Actions for precise failure diagnosis.
+
+Tightened idle-data retention before platform activation: event IDs/fingerprints
+are device-keyed HMAC-SHA256 receipts, persisted outcomes omit raw choice/warning
+IDs, and review state holds one current alert per job until explicit acceptance.
+Current membership facts remain; no historical raw off-clock event payload is
+retained. Unit tests inject a public synthetic HMAC fixture and inspect persisted
+receipts, so Android Keystore persistence is explicitly still a device gate.
+Review action, capacity correction and minimized receipts need the next full CI.
+No VM validation ran; automation is not exposed in the app yet.
+
+Added an eleventh native policy case for unavailable receipt keys: a possibly
+unprocessed re-entry blocks automatic expiry for review while manual clock-out
+still works. This is tested with a synthetic provider error, not a claimed Android
+Keystore hardware/provider result. Late-event acceptance preserves existing time
+history and disarms until fresh outside/entry facts. New source remains pending CI.
+
+Corrected policy run 43014180179 on 32ec72d completed SUCCESS: Dart/UI, Android
+compilation, 38 native tests (0 failures/errors/skips, XML artifact inspected),
+resource previews and release-version policy. This verifies the capacity correction,
+minimized receipts and explicit review acceptance in native unit conditions.
+The additional unavailable-key expiry guard/test is a new source change and must
+pass a subsequent full Actions run before merge. Device Keystore, receiver and
+scheduler behavior are still unproven; no VM validation executed.
+
+Added a twelfth policy case for invalid event clocks and provider faults, with a
+finite native problem API for upcoming registration/permission/recovery adapters.
+Known processing uncertainty now holds automatic expiry for explicit review instead
+of losing a possible re-entry, while manual commands remain independent. This is
+new source beyond the previously successful run and still needs Actions validation.
+
+Refined recovery to avoid unnecessary approval loops: idle faults disarm current
+facts and recover on fresh outside/entry, and known timely re-entry clears current
+departure uncertainty automatically. Review alerts now reference affected work
+sessions, not an idle movement history. Manual stop resolves its current uncertainty;
+historical alerts cannot block expiry of a different manually started session.
+Added a thirteenth native policy case for automatic recovery with fresh facts.
+Provider/clock recovery additions still need the next full Actions run.
+
+Review semantics are now scoped to affected work-session IDs. Benign pre-manual
+callbacks do not create idle history or an approval loop. Idle provider faults
+reset/disarm facts, and fresh outside/entry recovers automatically; known timely
+re-entry clears active departure uncertainty. A historical alert cannot block a
+new manually started session's expiry. Explicit review acceptance still preserves
+recorded times and resets the job's automation context. Thirteen policy cases
+are prepared; all latest refinements await a new Actions run.
+
+Separated registration-generation time from current-fact freshness. The late-entry
+case now includes an intervening idle provider fault: recovery must not hide a
+valid late re-entry relevant to a finalized work session. Configuration changes
+still invalidate obsolete keys; current facts after faults require fresh evidence.
+Latest recovery refinements remain isolated and unvalidated until the next CI run.
+
+Added a fourteenth policy case: a historical late-exit ambiguity survives later
+provider faults and manual clock-out, while a newer manually started session can
+still finalize normally. A sticky history-review flag prevents transient recovery
+from silently accepting ambiguous past work. Only explicit review resolves it.
+Latest source remains pending Actions; no VM validation executed.
