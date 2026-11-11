@@ -76,11 +76,16 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
     final status = ref.watch(trackingStatusProvider);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(AppStrings.locationTitle),
+            Row(children: [
+              Icon(Icons.location_on_outlined, size: 22, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 10),
+              Text(AppStrings.locationTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: 10),
             status.when(
               loading: () => const LinearProgressIndicator(),
               error: (error, stack) =>
@@ -95,11 +100,12 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                     Wrap(
                       spacing: 8,
                       children: [
-                        TextButton(
-                          onPressed: _busy ? null : _enable,
-                          child: const Text(AppStrings.enableLocation),
-                        ),
-                        TextButton(
+                        if (!const {'REQUESTING', 'START_REQUESTED', 'LOCATION_UNAVAILABLE'}.contains(value.service))
+                          TextButton(
+                            onPressed: _busy ? null : _enable,
+                            child: const Text(AppStrings.enableLocation),
+                          ),
+                        if (const {'REQUESTING', 'START_REQUESTED', 'LOCATION_UNAVAILABLE'}.contains(value.service)) TextButton(
                           onPressed: _busy
                               ? null
                               : () => _run(

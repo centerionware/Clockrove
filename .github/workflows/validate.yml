@@ -99,6 +99,14 @@ jobs:
           else
             echo 'No application behavior tests yet (milestone 1 scaffold).' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Export synthetic UI previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ui-previews
+          path: build/ui-preview/*.png
+          retention-days: 1
+          if-no-files-found: ignore
       - name: Validate Android build
         run: flutter build apk --debug --no-pub
       - name: Native unit tests

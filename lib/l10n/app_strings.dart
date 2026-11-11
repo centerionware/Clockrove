@@ -1,6 +1,11 @@
 /// English copy centralized for later localization.
 abstract final class AppStrings {
   static const appName = 'Clockrove';
+  static const workday = 'Your workday';
+  static const running = 'Clocked in';
+  static const chooseJob = 'Choose a job below to start your workday.';
+  static const elapsed = 'Elapsed this session';
+  static const checkDeviceTime = 'Check device time';
   static const locationTitle = 'Work location';
   static const locationPurpose =
       'Record location only while clocked in, targeting a sample about every ten '

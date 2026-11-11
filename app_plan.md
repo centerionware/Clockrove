@@ -641,3 +641,14 @@ Added native permission lifecycle tests and corrected concurrent enable/cancel
 handling and asynchronous storage-error completion. New code remains unvalidated
 until the next PR check; native test shadows are not physical-device evidence.
 No local formatter/build/test executed.
+
+### Owner-directed clean modern UI from prototype onward
+
+Owner explicitly requests clean modern UI now. Added isolated modern-timer-ui
+branch with consistent light/dark Material 3 theme, restrained forest/neutral
+palette, clear active timer hierarchy, timestamp-derived tabular elapsed display,
+readable content width and focused job/location controls. Only implemented actions
+are shown. Added time-display/DST/long-session tests, large-text check and CI-only
+synthetic rendered previews for visual inspection; no rendering success claimed.
+Permission PR #4 passed Actions 42993338165 and merged at 0262d86. New visual work
+requires separate CI and preview inspection. No VM builds/tests/formatting.
