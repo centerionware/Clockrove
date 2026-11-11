@@ -27,8 +27,9 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Continue milestone 2 with durable qualified geofence state, manual suppression,
-platform callbacks and departure scheduling/recovery. Stored-point OSM source,
+Continue milestone 2 by validating work-site/automation controls, permission and
+review journeys, then finish native recovery and device acceptance. Durable policy,
+Android geofence callbacks and inexact departure alarms are merged with CI evidence. Stored-point OSM source,
 network policy and synthetic UI tests passed; live OSM and optional secure runtime
 Google-key proof still need a device/network/key. Native physical tracking/widget
 acceptance remains unproven. All builds/tests/rendering stay in GitHub Actions.
@@ -983,3 +984,49 @@ ambiguous entries. No background permission request or automation activation UI
 has been added yet. Fifteen synthetic cases target API 24/35; they use fake
 platform completions and a public HMAC fixture, not real registration or Keystore
 proof. All source still requires Actions validation and device acceptance.
+
+### Milestone 2 — alarm evidence and automation controls source
+
+Alarm head c76e806 passed full Actions run 43022813646. Inspected native XML:
+56 tests, zero failures/errors/skips, including seven alarm cases on API 24 and
+35. PR #13 merged f845937ecf90838da0b1f7dc6c6da15e779e0bd4. Policy main
+validation 43021843305 and Play internal delivery 43022739286 also succeeded.
+Geofence adapter head e42b37e passed run 43023461269 with 86 native tests,
+zero failures/errors/skips (fifteen adapter cases on API 24/35). PR #14 was rebased
+onto merged alarm code; its new exact head d0ef67b needs final validation.
+
+Added unvalidated work-site UI source with native versioned save/remove/settings
+commands, background-purpose education, separate precise/background permission
+flows, measured pending-departure display and recorded-work review. Acceptance
+preserves shown history and explicitly resets pending automation. Command retries
+retain their original ID/version. The timer surface links to real site controls and
+shows pending/review state. Six native API cases target API 29/35; nine Dart/UI
+cases include light/dark site/editor/departure previews and large-text layout.
+All tests, formatting and rendering remain in Actions. These additions do not
+prove physical geofence/FGS/alarm delivery, nor complete milestones 2 or 5.
+
+Final geofence adapter run 43024844407 passed on exact head d0ef67b. Inspected
+JUnit XML: 86 tests, zero failures/errors/skips. PR #14 merged as
+edc7dddaa40c4218a766fbc6ad4befb2f42bcf04. Work-site/permission/review UI
+remains isolated in PR #15 and awaits formatting, behavior and visual validation.
+
+First controls run 43026170277 exported formatter corrections but stopped at
+eight Dart flow-control brace lints. Applied the Actions-generated patch and
+added braces; no local formatter/test/build executed. Behavior and previews
+remain pending the corrected full run.
+
+Controls run 43026618644 passed formatting/analyze and all Dart/UI checks;
+Android/native checks were still live at this observation. Reviewed the six new
+site/editor/departure and two changed timer previews in both themes (artifact
+13857262562): clear spacing, wrapping and consistent hierarchy. Review revealed
+a copy ambiguity: pending work held for review must not promise automatic expiry.
+Added conditional held-work copy and explicit year/seconds/UTC offset to review
+boundaries; these source refinements require the next CI. Coordinate editing is
+implemented; map-tap/current-position selection and full correction UI remain
+planned, along with physical acceptance. No VM builds/tests/rendering ran.
+
+Controls revision run 43027348013 passed formatting/analyze and 31/32 Dart/UI
+cases. The added held-departure copy assertion searched an off-screen, lazily
+unbuilt card after scrolling to the review action. The test now reveals the
+pending card before checking that copy, then reveals recorded boundaries and
+acceptance separately. Both assertions remain; a corrected Actions run is required.

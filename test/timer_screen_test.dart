@@ -6,6 +6,9 @@ import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import 'support/map_preview.dart';
+import 'support/automation_fixture.dart';
+
+import 'package:clockrove/automation/automation_api.dart';
 
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/tracking/timer_api.dart';
@@ -102,6 +105,7 @@ void main() {
       ProviderScope(
         overrides: [
           timerApiProvider.overrideWithValue(api),
+          automationApiProvider.overrideWithValue(FixtureAutomationApi()),
           trackingApiProvider.overrideWithValue(tracking),
         ],
         child: MaterialApp(
@@ -183,6 +187,7 @@ void main() {
       ProviderScope(
         overrides: [
           timerApiProvider.overrideWithValue(api),
+          automationApiProvider.overrideWithValue(FixtureAutomationApi()),
           trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
           workMapTilesProvider.overrideWithValue(
             (_) => SyntheticTiles(fail: true),
@@ -276,6 +281,7 @@ void main() {
           child: ProviderScope(
             overrides: [
               timerApiProvider.overrideWithValue(api),
+              automationApiProvider.overrideWithValue(FixtureAutomationApi()),
               trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
             ],
             child: MaterialApp(
@@ -332,6 +338,7 @@ void main() {
       ProviderScope(
         overrides: [
           timerApiProvider.overrideWithValue(api),
+          automationApiProvider.overrideWithValue(FixtureAutomationApi()),
           trackingApiProvider.overrideWithValue(DeniedTrackingApi()),
         ],
         child: MaterialApp(

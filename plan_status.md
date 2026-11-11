@@ -17,7 +17,7 @@ iOS and future service remain deferred.
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
-| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; durable policy/suppression merged in PR #12 with 42 native tests; alarm adapter in progress; platform registration and device evidence remain |
+| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
@@ -920,3 +920,44 @@ and a generic notification for ambiguous manual selection. Startup protects pend
 work before uncertain recovery; default idle state does not initialize Play Services.
 Fifteen API-24/API-35 cases are prepared with synthetic task completions/HMAC.
 Actions/device validation and site/permission/review/health UI remain outstanding.
+
+### M2 verified alarm merge; automation control UI prepared
+
+PR #13 merged f845937 after exact head c76e806 passed Actions 43022813646:
+56 native tests, zero failures/errors/skips; Dart/UI, build and version gates passed.
+Policy main run 43021843305 and Play internal delivery 43022739286 succeeded.
+PR #14 head e42b37e passed 43023461269 with 86 native tests (all clean). The
+rebased exact head d0ef67b remains under final Actions validation.
+
+Work-site editing, versioned settings, permission education/separate Android flows,
+provisional departure and explicit history-preserving review now have source.
+Retained command identity supports response-loss retries. Six native API cases on
+API 29/35 and nine Dart/UI cases are prepared, including six light/dark preview
+images. No VM validation ran. Source/UI acceptance and physical device evidence
+remain pending; M2/M5 are incomplete.
+
+Final geofence adapter run 43024844407 passed on exact head d0ef67b. Inspected
+JUnit XML: 86 tests, zero failures/errors/skips. PR #14 merged as
+edc7dddaa40c4218a766fbc6ad4befb2f42bcf04. Work-site/permission/review UI
+remains isolated in PR #15 and awaits formatting, behavior and visual validation.
+
+First controls run 43026170277 exported formatter corrections but stopped at
+eight Dart flow-control brace lints. Applied the Actions-generated patch and
+added braces; no local formatter/test/build executed. Behavior and previews
+remain pending the corrected full run.
+
+Controls run 43026618644 passed formatting/analyze and all Dart/UI checks;
+Android/native checks were still live at this observation. Reviewed the six new
+site/editor/departure and two changed timer previews in both themes (artifact
+13857262562): clear spacing, wrapping and consistent hierarchy. Review revealed
+a copy ambiguity: pending work held for review must not promise automatic expiry.
+Added conditional held-work copy and explicit year/seconds/UTC offset to review
+boundaries; these source refinements require the next CI. Coordinate editing is
+implemented; map-tap/current-position selection and full correction UI remain
+planned, along with physical acceptance. No VM builds/tests/rendering ran.
+
+Controls revision run 43027348013 passed formatting/analyze and 31/32 Dart/UI
+cases. The added held-departure copy assertion searched an off-screen, lazily
+unbuilt card after scrolling to the review action. The test now reveals the
+pending card before checking that copy, then reveals recorded boundaries and
+acceptance separately. Both assertions remain; a corrected Actions run is required.
