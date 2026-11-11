@@ -750,3 +750,65 @@ Native visual branch rebased onto that main; conflicts were evidence appendices
 only. Added public prototype device checklist and corrected outdated README and
 timer contract status. New combined-head Actions validation pending; device and
 runtime automation acceptance remain unproven. No production release submitted.
+
+### Native visual merge and default-map source
+
+Previous goal turn: progress (UI/refinement and departure/membership merges,
+reviewed native previews, accurate contributor/device handoff). Continued by
+polling the same live validation 43002359530; it concluded SUCCESS. Exact tested
+head a2eaea5 merged via PR #9 as f9207b5. Matching Android visual identity is on main;
+actual launcher/launch-transition device validation remains pending.
+
+Pinned flutter_map 8.3.2 / latlong2 0.10.1 / http 1.6.0 / url_launcher 6.3.2 and
+obtained Actions-resolved lockfile in 43002798859 / artifact 13846228897. New
+osm-map-prototype source adds a current stored-point map with measured timestamp,
+accuracy circle, always-visible attribution, proper User-Agent, cache policy and
+shared 429/503 backoff. Release manifest includes Internet permission. Native
+status now returns the same latest observation's coordinates and clears on idle.
+HTTP policy, synthetic success/failure/navigation/zoom UI checks and native/codec
+checks added. CI map images use synthetic tiles; no live OSM/device proof inferred.
+Source validation and new visual review pending. No VM build/test/format/render.
+
+OSM source run 43003804914 failed at formatting before analysis/tests. Applied
+its reviewed Actions-generated source patch. Added responsive summary scrolling
+and a large-text landscape check while keeping map controls/attribution visible;
+enabled semantics in map accessibility checks. Dependency preparation 43002798859
+completed SUCCESS independently; new map behavior still awaits its own CI.
+No local build, formatter, tests or rendering ran.
+
+OSM run 43004367001 required one additional formatter wrapping correction in the
+landscape test; applied its source patch. Added an actual TimerScreen journey
+through failed map decoding back to manual clock-out and updated synthetic
+tracking previews to include valid coordinates. No native/physical or live-tile
+success claimed. Next Actions run must pass analysis, all tests and visual review.
+
+OSM run 43004745776 stopped on import-group formatting in the new timer journey;
+applied its exact CI correction. Map point/accuracy ink now stays forest green
+with a white marker halo so standard light OSM tiles remain legible in dark mode.
+The marker is centered on the measured coordinate; no displaced pin tip. New
+validation remains required before merging. No VM validation executed.
+
+OSM run 43005218796 passed formatting, then analysis reported two redundant
+Dart typed-data imports provided by Flutter services. Removed only those imports;
+checks remain enabled. No map behavior/native/device success is inferred before
+the next full Actions run and rendered-image inspection. No VM validation ran.
+
+OSM run 43005707318 passed formatting/analysis and 20 Dart/UI checks, including
+the real timer-screen map-outage/manual-stop journey. Failed malformed Retry-After
+handling (Dart HttpDate throws HttpException) and two end-of-test accessibility
+handle cleanup checks. Corrected the exception type and moved semantic-handle
+disposal into test-body finally blocks; assertions remain active. Compact map
+controls use a horizontal arrangement and the large-text check now covers a
+320-high landscape viewport with full button bounds. CI exported six synthetic
+previews (artifact 13848461149); visual inspection pending. No native/device/live
+OSM success inferred; no VM validation ran.
+
+OSM run 43006137440 required two formatter wraps after the stronger cleanup/bounds
+checks; applied exact Actions patch. First map light/dark and location-card previews
+from artifact 13848461149 were visually inspected: restrained layout, readable
+measured metadata/attribution and consistent action styling. Tiles are synthetic.
+CI now continues independent behavior/build checks after collecting a formatter
+correction, with an explicit final Require clean formatting failure gate. Failed
+formatting cannot produce a successful validation or trigger Play delivery. This
+improves Actions-only feedback without disabling any checks or exposing secrets.
+New full map validation remains pending; no VM checks executed.

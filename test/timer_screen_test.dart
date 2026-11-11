@@ -2,6 +2,11 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/maps/work_location_map.dart';
+import 'package:flutter_map/flutter_map.dart';
+
+import 'support/map_preview.dart';
+
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
@@ -84,6 +89,8 @@ class PreviewTrackingApi extends TrackingApi {
       const Duration(minutes: 6),
     ),
     lastAccuracyMeters: 80,
+    lastLatitude: 51.5,
+    lastLongitude: -0.1,
   );
 }
 
@@ -161,6 +168,57 @@ void main() {
       TimerAction.switchJob,
       TimerAction.stop,
     ]);
+  });
+  testWidgets('map outage preserves the running timer and manual clock-out', (
+    tester,
+  ) async {
+    final api = ScreenApi();
+    api.running = RunningSession(
+      'map-outage-session',
+      'job-a',
+      'Synthetic first',
+      DateTime.now().toUtc().subtract(const Duration(minutes: 20)),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          timerApiProvider.overrideWithValue(api),
+          trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
+          workMapTilesProvider.overrideWithValue(
+            (_) => SyntheticTiles(fail: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: ClockroveTheme.light(),
+          home: const TimerScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text(AppStrings.viewLocationMap), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppStrings.viewLocationMap));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => precacheImage(
+        MemoryImage(Uint8List(0)),
+        tester.element(find.byType(FlutterMap)),
+        onError: (_, _) {},
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.mapUnavailable), findsOneWidget);
+    expect(api.running!.id, 'map-outage-session');
+    expect(api.intents, isEmpty);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppStrings.clockOut));
+    await tester.pumpAndSettle();
+    expect(api.running, isNull);
+    expect(api.intents, [TimerAction.stop]);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
   for (final dark in [false, true]) {
     testWidgets('render clean timer preview ${dark ? "dark" : "light"}', (

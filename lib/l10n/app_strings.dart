@@ -2,6 +2,16 @@
 abstract final class AppStrings {
   static const appName = 'Clockrove';
   static const workday = 'Your workday';
+  static const workLocationMap = 'Recorded location';
+  static const viewLocationMap = 'View on map';
+  static const recordedLocation = 'Last recorded work location';
+  static const zoomIn = 'Zoom in';
+  static const zoomOut = 'Zoom out';
+  static const mapPrivacy =
+      'Map requests share the viewed area with OpenStreetMap.';
+  static const mapUnavailable =
+      'Map tiles are unavailable. You can return to your timer at any time.';
+  static const linkUnavailable = 'Could not open the link.';
   static const running = 'Clocked in';
   static const chooseJob = 'Choose a job below to start your workday.';
   static const elapsed = 'Elapsed this session';
