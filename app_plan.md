@@ -719,3 +719,34 @@ Departure PR #7 passed rebased-head Actions 42999724652 and merged as
 b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Membership source was rebased onto
 that main commit; only append-only evidence sections needed conflict resolution.
 Combined-head validation pending. Main UI validation 42999610367 also succeeded.
+
+### Android visual identity follow-up
+
+Isolated native-visual-identity replaces starter launcher rasters with vector
+clock artwork, adaptive and monochrome layers, and matching light/dark launch
+backgrounds including API-31 system splash attributes. No new runtime dependency.
+Added an Actions-only native-resource rendering harness/artifact for image review;
+it does not establish real launcher masking or device launch transitions. Source
+and previews await CI. No VM rendering/build/test/formatter was run.
+
+Departure PR #7 passed rebased-head Actions 42999724652 and merged as
+b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Native visual source was rebased onto
+that main commit; only append-only evidence sections needed conflict resolution.
+New combined-head validation pending; no runtime automation/device proof inferred.
+
+Native visual run 43000557414 passed Dart/UI checks and Android APK compilation,
+then failed Kotlin test compilation: Robolectric getApplication has no type
+parameter. Removed the unsupported generic argument. Rendering remains unproven;
+all preview checks remain enabled. No VM tests/build/format/render were run.
+
+### Native visual review and combined main validation
+
+Corrected native visual run 43001359856 concluded SUCCESS: complete Dart/UI,
+Android debug build, native tests/resource rendering and release version-policy
+checks. Downloaded artifact 13845869738 and visually inspected all five PNGs:
+legacy/adaptive/themed mark and light/dark launch backgrounds. No VM rendering.
+Membership PR #8 passed exact-head run 43000880173 and merged at dc26e64.
+Native visual branch rebased onto that main; conflicts were evidence appendices
+only. Added public prototype device checklist and corrected outdated README and
+timer contract status. New combined-head Actions validation pending; device and
+runtime automation acceptance remain unproven. No production release submitted.

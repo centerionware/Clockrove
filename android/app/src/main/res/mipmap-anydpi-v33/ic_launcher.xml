@@ -1,0 +1,5 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/clockrove_green" />
+    <foreground android:drawable="@drawable/ic_clockrove_foreground" />
+    <monochrome android:drawable="@drawable/ic_clockrove_foreground" />
+</adaptive-icon>
