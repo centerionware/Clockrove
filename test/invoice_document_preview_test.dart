@@ -54,8 +54,8 @@ Future<void> _show(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
-          builder: (_, child) => MediaQuery(
-            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
             child: child!,
           ),
           home: const InvoiceScreen(invoiceId: 'synthetic-actual-document'),
@@ -112,8 +112,11 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final api = _ActualPage(await _page(tester, 'modern'));
       await _show(tester, api, scale: 2);
-      await tester.ensureVisible(find.text('Email invoice'));
-      await tester.tap(find.text('Email invoice'));
+      final email = find.widgetWithText(FilledButton, 'Email invoice');
+      await tester.ensureVisible(email);
+      await tester.pumpAndSettle();
+      expect(email.hitTestable(), findsOneWidget);
+      await tester.tap(email);
       await tester.pumpAndSettle();
       expect(api.emailCalls, 1);
       expect(find.textContaining('Email composer opened.'), findsOneWidget);
@@ -121,8 +124,11 @@ void main() {
         find.textContaining('press Send in your email app.'),
         findsOneWidget,
       );
-      await tester.ensureVisible(find.text('Save PDF'));
-      await tester.tap(find.text('Save PDF'));
+      final save = find.widgetWithText(OutlinedButton, 'Save PDF');
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
+      expect(save.hitTestable(), findsOneWidget);
+      await tester.tap(save);
       await tester.pumpAndSettle();
       expect(api.saveCalls, 1);
       expect(

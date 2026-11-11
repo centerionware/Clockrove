@@ -1348,3 +1348,14 @@ Artifact downloads recovered. Inspected exact CI XML (no local test execution):
 Updated the task table to distinguish merged behavior from missing implementation
 and physical acceptance. Latest heads still requiring complete checks are #17
 4d3db27 (43101725472) and #29 ba22cb6 (43101862377). Play remains held.
+
+Run 43101008984 completed actual Android instrumentation: ten cases on API 24
+and ten on API 35, zero failures/errors/skips. Inspected the retained actual
+single-page Minimal/Classic/Modern renders: distinct layouts, aspect-preserved
+logo, readable contacts/items and matching USD 1250.00 totals. Full run failed
+its viewer regression and the already-applied formatting correction. Viewer
+fixture review found it replaced MediaQuery with a new size-zero instance when
+changing text scale, collapsing the size-dependent controls area. Preserve the
+real viewport/insets via copyWith, then scroll and hit-test the whole button
+before tapping. New viewer captures and all-style long-document checks still
+require Actions; no local rendering or test execution ran.
