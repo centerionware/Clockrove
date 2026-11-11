@@ -45,7 +45,7 @@ class InvoicePdfTest {
                     val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
                     root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
-                        val text = page.textContents.joinToString(" ") { it.text }
+                        val text = PdfTextApi35.read(page)
                         assertTrue(text.contains("USD 1250.00")); assertTrue(text.contains("INV-000042")); assertTrue(text.contains("Synthetic Customer"))
                     }
                     File(root, "clockrove-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
@@ -59,4 +59,10 @@ class InvoicePdfTest {
         val data = fixture("MODERN", 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
         inspect(InvoicePdf.generate(data)) { renderer -> assertTrue(renderer.pageCount > 8); renderer.openPage(renderer.pageCount - 1).use { assertTrue(it.height > 0) } }
     }
+}
+
+/** Keep API-35-only types out of JUnit's eagerly reflected API-24 test class. */
+@android.annotation.TargetApi(35)
+private object PdfTextApi35 {
+    fun read(page: PdfRenderer.Page): String = page.textContents.joinToString(" ") { it.text }
 }
