@@ -95,6 +95,18 @@ class TrackingHostApiTest {
         assertEquals(before, repository.snapshot())
     }
 
+    @Test fun statusReturnsLatestActualSampleMetadata() {
+        val session = repository.snapshot().running!!.id
+        repository.recordLocation(TimerRepository.LocationPoint("later", session, 1800, 1900, 10.0, 20.0, 25.0))
+        repository.recordLocation(TimerRepository.LocationPoint("delivered-late", session, 1500, 2000, 10.1, 20.1, 40.0))
+        val response = messenger.invoke("status")
+        until { response.finished }
+        assertNull(response.error)
+        val status = response.value as Map<*, *>
+        assertEquals(1800L, (status["lastMeasuredMillis"] as Number).toLong())
+        assertEquals(25.0, (status["lastAccuracyMeters"] as Number).toDouble(), 0.0)
+    }
+
     private class Response {
         @Volatile var finished = false
         var value: Any? = null

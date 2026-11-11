@@ -20,6 +20,8 @@ void main() {
           'service': 'STOPPED',
           'working': true,
           'notificationsAllowed': false,
+          'lastMeasuredMillis': 1000,
+          'lastAccuracyMeters': 24.5,
         },
       );
       final status = await api.enable();
@@ -27,6 +29,9 @@ void main() {
       expect(status.working, isTrue);
       expect(status.notificationsAllowed, isFalse);
       expect(status.service, 'STOPPED');
+      expect(status.lastObservationUtc!.isUtc, isTrue);
+      expect(status.lastObservationUtc!.millisecondsSinceEpoch, 1000);
+      expect(status.lastAccuracyMeters, 24.5);
     },
   );
 

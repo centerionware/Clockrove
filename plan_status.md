@@ -582,3 +582,43 @@ was generated. Added frame settling after scroll operations (not tap suppression
 and explicit pinned FLUTTER_ROOT export/font lookup for CI rendering. Removed
 unsupported isolate lookup; preview assertions remain enabled. New source needs
 fresh Actions validation and image review. No VM tests/formatter/build ran.
+
+Current UI handle: run 42996201315 on dadb445, confirmed in_progress at pinned
+Android component installation. Preserve this run; no preview artifact yet.
+Main internal delivery 42995143199 has concluded SUCCESS independently. No visual
+approval or physical-device evidence inferred from that unrelated delivery.
+
+### First rendered modern UI review and measured-status refinement
+
+Run 42996201315 passed analysis and all Dart/UI checks, exported ui-previews
+artifact 13843514422, and is now completing native/release-tool checks. Downloaded
+and visually inspected both CI-rendered PNGs: clear timer/jobs hierarchy, readable
+forest/light and mint/dark contrast, restrained cards and no layout overflow.
+Debug ribbon remained in preview; removed it explicitly from app/preview wrappers
+and added scrolled location-panel captures for complete visual review. No VM
+rendering or tests were run; images came directly from Actions.
+
+Prepared real latest-sample measurement/accuracy in tracking status, with one
+serialized repository observation snapshot. Latest is selected by measured time,
+not callback arrival time. UI labels actual stored sample time and reported
+accuracy only when available. Added native out-of-order delivery metadata test
+and Dart UTC/accuracy decoding checks. Synthetic previews now include approximate
+location state with synthetic sample metadata; no real location data involved.
+New source remains pending CI and renewed preview inspection, not merged.
+
+Modern UI run 42996201315 completed SUCCESS with rendered visual review. Merged
+exact tested head dadb445 as 9e32c90bd8f4d604fdc6dee31e5d75c1f50e4cea. Both
+CI-only previews were inspected locally as images (not rendered/tested on VM).
+Baseline release builds do not show the debug ribbon seen in the initial test
+preview. Observation-status/debug-preview refinements remain isolated on
+measured-tracking-status for new CI review. docs/UI_DESIGN.md records the owner
+style requirement and reusable design standards for subsequent features.
+
+### Measured-status validation correction
+
+Previous turn: progress (modern UI merge/visual review and measured-status PR #6).
+Existing PR run 42997495311 concluded FAILURE at formatting. Downloaded/reviewed
+and applied its Actions-generated patch to three Dart source/test files. No VM
+formatter/build/test ran. New validation will cover actual sample metadata and
+clean/scrolled previews. Native departure-state follow-up is prepared locally,
+not included in this correction and not enabled at runtime.

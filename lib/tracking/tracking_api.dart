@@ -8,12 +8,16 @@ class TrackingStatus {
     this.permission,
     this.service,
     this.working,
-    this.notificationsAllowed,
-  );
+    this.notificationsAllowed, {
+    this.lastObservationUtc,
+    this.lastAccuracyMeters,
+  });
   final String permission;
   final String service;
   final bool working;
   final bool notificationsAllowed;
+  final DateTime? lastObservationUtc;
+  final double? lastAccuracyMeters;
 }
 
 class TrackingApi {
@@ -36,6 +40,13 @@ class TrackingApi {
       raw['service'] as String,
       raw['working'] as bool,
       raw['notificationsAllowed'] as bool,
+      lastObservationUtc: raw['lastMeasuredMillis'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              raw['lastMeasuredMillis'] as int,
+              isUtc: true,
+            ),
+      lastAccuracyMeters: (raw['lastAccuracyMeters'] as num?)?.toDouble(),
     );
   }
 }

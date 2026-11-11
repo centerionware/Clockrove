@@ -131,7 +131,9 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
         worker.execute {
             if (detached) return@execute
             try {
-                val running = repository.snapshot().running
+                val observation = repository.trackingObservation()
+                val running = observation.running
+                val last = observation.latest
                 val status = mapOf(
                     "permission" to when {
                         activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED -> "precise"
@@ -140,6 +142,8 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
                     },
                     "service" to WorkLocationService.health,
                     "working" to (running != null),
+                    "lastMeasuredMillis" to last?.measuredUtcMillis,
+                    "lastAccuracyMeters" to last?.accuracyMeters,
                     "notificationsAllowed" to activity.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
                 )
                 main.post {

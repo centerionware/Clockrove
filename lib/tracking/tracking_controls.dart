@@ -104,6 +104,16 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_description(value)),
+                  if (value.lastObservationUtc != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        '${AppStrings.lastSample} ${MaterialLocalizations.of(context).formatShortDate(value.lastObservationUtc!.toLocal())} '
+                        '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(value.lastObservationUtc!.toLocal()))}'
+                        '${value.lastAccuracyMeters == null ? "" : " · ${value.lastAccuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}"}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   if (value.permission == 'approximate')
                     const Text(AppStrings.locationApproximate),
                   if (value.working)
