@@ -268,3 +268,18 @@ creation and public plaintext AAB with one-day retention. SERVICE_ACCOUNT_JSON
 was not used. No Play upload, acceptance, store release or production readiness
 claimed. App compilation/signing occurred only in Actions; local activity was
 credential recovery/secret administration, not a VM build/test.
+
+### 2026-11-11 — resume native prototype after initial Play setup
+
+Previous turn: progress (successful signed setup AAB, key persistence and evidence).
+Current prototype validation still fails Dart test formatting in the last terminal
+run. Pending correction shortens test descriptions and makes Actions display the
+formatter diff when a check fails; no formatter runs on VM.
+
+Added committed-version subscriptions to native repository and event channel.
+Subscriptions replay current version; commits publish after transaction completion;
+retries/conflicts do not emit false changes. Native listener exceptions cannot
+change a durable command outcome. Engine detach/cancellation closes subscription
+and invalidates queued events. Dart receives typed version hints and re-queries
+snapshots. Added seventh native test for replay, commit-only delivery, unsubscribe
+and reconnect. Code/test validation is pending Actions; no device claim.

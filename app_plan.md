@@ -21,17 +21,18 @@ The user explicitly requested this handoff after creating agent instructions and
 - CI pins Flutter 3.47.9, Dart 3.13.7, Temurin 17.0.17+10, AGP 9.1.0,
   Kotlin 2.4.0, Gradle 9.3.1, API 24 minimum / 36 target, build tools 36.0.0,
   and NDK 28.2.13676358. Compatibility requires a successful Actions build.
-- No native behavior, physical-device evidence, signing, store upload or publication
-  is proven yet. Store setup is being handled by the owner.
+- Foundation debug build and signed setup AAB are proven in Actions. Current native
+  behavior and physical-device evidence are unproven. No store upload/publication
+  is confirmed. Store setup is being handled by the owner.
 - Optional ignored local skills remain supplements, never contributor dependencies.
 
 ### Next concrete action
 
-Inspect the existing Actions run 42980838050 on d6dbe94; SDK setup, lockfile,
-formatting and analysis have passed; debug APK compilation is in progress.
-Record its actual build/check results before advancing the native prototype.
-Continue independent implementation while public terms/device/store gates await
-external inputs. See `plan_status.md` for individual tasks and current evidence.
+Validate the native repository/widget/typed adapter and committed-version event
+changes in Actions. Correct the reported test formatting issue first. Then connect
+prototype manual controls and continue notification/location/map feasibility.
+The one-time initial AAB and permanent upload-key secrets have been delivered;
+that setup build does not establish finished-app readiness. See plan_status.md.
 
 ## 2. Product decisions
 
@@ -511,3 +512,13 @@ UPLOAD_STORE_PASSWORD, UPLOAD_KEY_ALIAS and UPLOAD_KEY_PASSWORD repository secre
 Temporary encrypted recovery artifact and bootstrap recipient secret deleted;
 remaining artifact includes AAB and public upload certificate only. Same permanent
 key must be used for future CI. No Play upload or finished-app release claimed.
+
+### 2026-11-11 — native committed-version propagation
+
+Added repository subscriptions, version replay on reconnect and event-channel
+invalidation hints. Events publish only after committed changes; failures/retries
+produce no false changes. Engine cleanup cancels subscriptions/queued delivery.
+Seventh repository test covers commit/replay/unsubscribe semantics. Corrected long
+Dart test descriptions flagged by Actions; formatter failures now print source
+diffs in CI for read-only diagnosis. No VM format/test/build executed. Validation
+for current prototype remains pending; no runtime/widget/device proof claimed.

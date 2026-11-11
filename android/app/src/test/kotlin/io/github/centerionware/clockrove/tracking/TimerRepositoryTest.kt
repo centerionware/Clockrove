@@ -93,6 +93,23 @@ class TimerRepositoryTest {
         assertEquals(current, repository.snapshot())
     }
 
+    @Test fun subscriptionsReplayCurrentVersionAndPublishOnlyCommittedChanges() {
+        val initial = repository.snapshot().version
+        val events = mutableListOf<Long>()
+        val subscription = repository.subscribe { events.add(it) }
+        val start = command("observed", TimerRepository.Action.START, 1000)
+        val result = repository.execute(start)
+        repository.execute(start)
+        repository.execute(command("invalid", TimerRepository.Action.STOP, 999))
+        assertEquals(listOf(initial, result.version), events)
+        subscription.close()
+        repository.execute(command("stop", TimerRepository.Action.STOP, 2000))
+        assertEquals(2, events.size)
+        val reconnected = mutableListOf<Long>()
+        repository.subscribe { reconnected.add(it) }.close()
+        assertEquals(listOf(repository.snapshot().version), reconnected)
+    }
+
     @Test fun automationCannotUseIncompletePrototypePolicy() {
         assertEquals("AUTOMATION_NOT_READY", repository.execute(command("geo", TimerRepository.Action.START, 1000,
             origin = TimerRepository.Origin.GEOFENCE)).conflict)

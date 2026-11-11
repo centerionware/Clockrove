@@ -15,10 +15,12 @@ not raw SQL or a second Dart timer/database.
   and reuse persisted outcomes. Reused IDs with different intents are rejected.
 - Outcomes carry original committed version or a conflict code. Storage and
   argument failures use sanitized platform errors. Unknown methods are rejected.
-- A reconnect/resume must query a fresh snapshot. Ongoing committed event delivery
-  is not implemented yet; callers must not invent state from a presumed success.
+- A reconnect/resume must query a fresh snapshot. The committed-version event stream replays the current version at subscription
+  and notifies after durable changes. Callers must not invent state from a
+  presumed success.
 
-The adapter refreshes widgets after completed calls. Widgets also refresh after
+The adapter refreshes widgets after completed calls and provides version
+invalidation hints on clockrove/timer/versions/v1. Widgets also refresh after
 their own command callbacks. Other native event sources must join this same
 boundary as implemented. No notification/location provider has been wired yet.
 

@@ -35,6 +35,12 @@ class TimerOutcome {
 class TimerApi {
   const TimerApi();
   static const _channel = MethodChannel('clockrove/timer/v1');
+  static const _versions = EventChannel('clockrove/timer/versions/v1');
+
+  /// Includes the current committed version on every stream reconnection.
+  /// Re-query snapshots; events are invalidation hints, never timer state.
+  Stream<int> get committedVersions =>
+      _versions.receiveBroadcastStream().cast<int>();
 
   Future<TimerSnapshot> snapshot() async {
     final raw = await _channel.invokeMapMethod<String, Object?>('snapshot');

@@ -8,6 +8,7 @@ import java.util.UUID
 /** Native prototype boundary. Callers share this instance; Flutter never writes SQL. */
 class TimerRepository internal constructor(context: Context) {
     private val helper = Store(context.applicationContext)
+    private val listeners = mutableSetOf<(Long) -> Unit>()
 
     enum class Action { START, STOP, SWITCH }
     enum class Origin { MANUAL, WIDGET, NOTIFICATION, GEOFENCE }
@@ -41,11 +42,20 @@ class TimerRepository internal constructor(context: Context) {
             db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
+        publishVersion(readSnapshot(db).version)
         return id
     }
 
     @Synchronized
     fun execute(command: Command): Outcome {
+        val before = readSnapshot(helper.readableDatabase).version
+        val outcome = executeTransaction(command)
+        val after = readSnapshot(helper.readableDatabase).version
+        if (after != before) publishVersion(after)
+        return outcome
+    }
+
+    private fun executeTransaction(command: Command): Outcome {
         require(command.id.isNotBlank())
         require(command.timezone.isNotBlank())
         require(command.offsetSeconds in -64800..64800)
@@ -112,7 +122,21 @@ class TimerRepository internal constructor(context: Context) {
     }
 
     @Synchronized
-    internal fun close() { helper.close() }
+    internal fun close() { listeners.clear(); helper.close() }
+
+    @Synchronized
+    fun subscribe(listener: (Long) -> Unit): AutoCloseable {
+        listeners.add(listener)
+        listener(readSnapshot(helper.readableDatabase).version)
+        return AutoCloseable { synchronized(this) { listeners.remove(listener) } }
+    }
+
+    private fun publishVersion(version: Long) {
+        // Subscriber failures must not turn a durable commit into an apparent failure.
+        listeners.toList().forEach { listener ->
+            try { listener(version) } catch (_: Exception) { }
+        }
+    }
 
     private fun validate(db: SQLiteDatabase, state: Snapshot, c: Command): String? {
         if (c.expectedVersion != state.version) return "STALE_STATE"

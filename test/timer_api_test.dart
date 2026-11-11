@@ -11,7 +11,7 @@ void main() {
 
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
-  test('native snapshots decode timestamps as UTC and preserve job IDs', () async {
+  test('snapshot preserves UTC and immutable job IDs', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {
       return {
         'version': 7,
@@ -34,7 +34,7 @@ void main() {
     expect(() => state.jobs.clear(), throwsUnsupportedError);
   });
 
-  test('lost response can retry the same intent without a Dart timestamp', () async {
+  test('response-loss retry preserves the original intent', () async {
     final calls = <MethodCall>[];
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
@@ -59,7 +59,7 @@ void main() {
     expect(payload.containsKey('origin'), isFalse);
   });
 
-  test('stale-state response remains a conflict and null response fails', () async {
+  test('stale and missing responses never look committed', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {
       return {'version': 9, 'conflict': 'STALE_STATE'};
     });

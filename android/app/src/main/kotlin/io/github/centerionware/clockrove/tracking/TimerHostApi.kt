@@ -3,6 +3,9 @@ package io.github.centerionware.clockrove.tracking
 import android.content.Context
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
+import android.os.Handler
+import android.os.Looper
 import io.github.centerionware.clockrove.widget.TimerWidget
 
 /** Versioned codec adapter. Raw transport values do not escape this boundary. */
@@ -12,7 +15,29 @@ class TimerHostApi(context: Context, messenger: BinaryMessenger) {
     private val channel = MethodChannel(messenger, "clockrove/timer/v1",
         io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val events = EventChannel(messenger, "clockrove/timer/versions/v1",
+        io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
+    private var subscription: AutoCloseable? = null
+    @Volatile private var generation = 0L
+
     init {
+        events.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                subscription?.close()
+                val current = ++generation
+                subscription = repository.subscribe { version ->
+                    mainHandler.post {
+                        if (current == generation) sink.success(version)
+                    }
+                }
+            }
+            override fun onCancel(arguments: Any?) {
+                ++generation
+                subscription?.close()
+                subscription = null
+            }
+        })
         channel.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
@@ -46,7 +71,13 @@ class TimerHostApi(context: Context, messenger: BinaryMessenger) {
         }
     }
 
-    fun detach() { channel.setMethodCallHandler(null) }
+    fun detach() {
+        ++generation
+        subscription?.close()
+        subscription = null
+        channel.setMethodCallHandler(null)
+        events.setStreamHandler(null)
+    }
 
     private fun encode(snapshot: TimerRepository.Snapshot): Map<String, Any?> = mapOf(
         "version" to snapshot.version,
