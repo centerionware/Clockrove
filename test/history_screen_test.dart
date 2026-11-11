@@ -80,7 +80,10 @@ Future<void> _show(WidgetTester tester, _History api, Widget screen, {bool dark 
   await tester.tap(find.text('Open')); await tester.pumpAndSettle();
 }
 Future<void> _reveal(WidgetTester tester, String label) async {
-  await tester.scrollUntilVisible(find.text(label), 200, scrollable: find.byType(Scrollable).first);
+  final scrollable = find.byType(Scrollable).first;
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.text(label), 200, scrollable: scrollable);
   await tester.pumpAndSettle();
 }
 void main() {

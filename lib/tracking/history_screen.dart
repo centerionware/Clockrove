@@ -175,7 +175,8 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
   Future<void> _pick(TextEditingController field, {required bool date}) async {
     // This calendar value is an editor aid, never an observed timestamp. Native
     // resolution still validates the chosen local time and any UTC ambiguity.
-    final value = DateTime.tryParse('${field.text.trim()}Z') ?? DateTime.now().toUtc();
+    final parsed = DateTime.tryParse('${field.text.trim()}Z');
+    final value = parsed != null && parsed.year >= 1 && parsed.year <= 9999 ? parsed : DateTime.now().toUtc();
     DateTime? changed;
     if (date) {
       final selected = await showDatePicker(context: context, initialDate: value,

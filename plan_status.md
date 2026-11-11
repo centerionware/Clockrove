@@ -23,7 +23,7 @@ iOS and future service remain deferred.
 | M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration passed #29; provider settings and backup contracts remain |
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections and queries verified; history UI pending | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
-| M4.1 Manual tracker UI and history | Timer and business UI merged; correction/history screens pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30, UI forms and full manual journey remain unfinished |
+| M4.1 Manual tracker UI and history | Timer/business UI merged; correction/history UI prepared, CI pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30; #32 adds forms/deleted-entry history, awaiting Actions and visual review; full manual journey remains unaccepted |
 | M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
@@ -1576,3 +1576,10 @@ job-scoped detail/audit reads honor job purge. Added query/transport tests, a re
 API-24/35 time-format/resolve round trip and UI loss/stale/gap/deletion/history/
 large-text cases plus six synthetic preview captures. All validation is pending
 in GitHub Actions; no local execution or completed M4 acceptance is claimed.
+
+History PR #32 is open as a draft. Exact head 71d23b6 is being validated in
+Actions 43121754750. Earlier run 43121577416 was cancelled only after its source
+was superseded. Additional local review bounds calendar-picker seed years and
+makes UI test scrolling independent of the previous scroll position; these
+changes must be included in the next validation head. Main delivery 43121445107
+is currently building with the permanent key; acceptance remains pending.
