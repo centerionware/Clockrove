@@ -219,7 +219,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   ),
                   const SizedBox(height: 24),
                   _sessionCard(state, disabled),
-                  if (state.running != null) AutomationNotice(jobId: state.running!.jobId, jobName: state.running!.jobName),
+                  if (state.running != null)
+                    AutomationNotice(
+                      jobId: state.running!.jobId,
+                      jobName: state.running!.jobName,
+                    ),
                   if (actions.working)
                     const Padding(
                       padding: EdgeInsets.only(top: 12),
@@ -276,8 +280,16 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                             ),
                             title: Text(job.name),
                             subtitle: JobSiteSubtitle(jobId: job.id),
-                            onTap: disabled ? null : () => Navigator.of(context).push(MaterialPageRoute<void>(
-                              builder: (_) => AutomationScreen(jobId: job.id, jobName: job.name))),
+                            onTap: disabled
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => AutomationScreen(
+                                        jobId: job.id,
+                                        jobName: job.name,
+                                      ),
+                                    ),
+                                  ),
                             trailing: TextButton(
                               onPressed:
                                   disabled || state.running?.jobId == job.id

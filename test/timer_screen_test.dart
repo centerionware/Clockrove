@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart';
 
 import 'support/map_preview.dart';
 import 'support/automation_fixture.dart';
+
 import 'package:clockrove/automation/automation_api.dart';
 
 import 'package:clockrove/app_theme.dart';
@@ -280,7 +281,7 @@ void main() {
           child: ProviderScope(
             overrides: [
               timerApiProvider.overrideWithValue(api),
-          automationApiProvider.overrideWithValue(FixtureAutomationApi()),
+              automationApiProvider.overrideWithValue(FixtureAutomationApi()),
               trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
             ],
             child: MaterialApp(

@@ -27,8 +27,9 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Continue milestone 2 with durable qualified geofence state, manual suppression,
-platform callbacks and departure scheduling/recovery. Stored-point OSM source,
+Continue milestone 2 by validating work-site/automation controls, permission and
+review journeys, then finish native recovery and device acceptance. Durable policy,
+Android geofence callbacks and inexact departure alarms are merged with CI evidence. Stored-point OSM source,
 network policy and synthetic UI tests passed; live OSM and optional secure runtime
 Google-key proof still need a device/network/key. Native physical tracking/widget
 acceptance remains unproven. All builds/tests/rendering stay in GitHub Actions.
@@ -1003,3 +1004,13 @@ shows pending/review state. Six native API cases target API 29/35; nine Dart/UI
 cases include light/dark site/editor/departure previews and large-text layout.
 All tests, formatting and rendering remain in Actions. These additions do not
 prove physical geofence/FGS/alarm delivery, nor complete milestones 2 or 5.
+
+Final geofence adapter run 43024844407 passed on exact head d0ef67b. Inspected
+JUnit XML: 86 tests, zero failures/errors/skips. PR #14 merged as
+edc7dddaa40c4218a766fbc6ad4befb2f42bcf04. Work-site/permission/review UI
+remains isolated in PR #15 and awaits formatting, behavior and visual validation.
+
+First controls run 43026170277 exported formatter corrections but stopped at
+eight Dart flow-control brace lints. Applied the Actions-generated patch and
+added braces; no local formatter/test/build executed. Behavior and previews
+remain pending the corrected full run.

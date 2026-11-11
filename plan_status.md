@@ -17,7 +17,7 @@ iOS and future service remain deferred.
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
-| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; durable policy/suppression merged in PR #12 with 42 native tests; alarm adapter in progress; platform registration and device evidence remain |
+| M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
@@ -935,3 +935,13 @@ Retained command identity supports response-loss retries. Six native API cases o
 API 29/35 and nine Dart/UI cases are prepared, including six light/dark preview
 images. No VM validation ran. Source/UI acceptance and physical device evidence
 remain pending; M2/M5 are incomplete.
+
+Final geofence adapter run 43024844407 passed on exact head d0ef67b. Inspected
+JUnit XML: 86 tests, zero failures/errors/skips. PR #14 merged as
+edc7dddaa40c4218a766fbc6ad4befb2f42bcf04. Work-site/permission/review UI
+remains isolated in PR #15 and awaits formatting, behavior and visual validation.
+
+First controls run 43026170277 exported formatter corrections but stopped at
+eight Dart flow-control brace lints. Applied the Actions-generated patch and
+added braces; no local formatter/test/build executed. Behavior and previews
+remain pending the corrected full run.
