@@ -82,27 +82,25 @@ class _Board extends ConsumerWidget {
     String destination,
     int position,
   ) async {
+    final api = ref.read(businessApiProvider);
     await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Move task'),
-        content: Text(
-          'Move “${card.title}” to ${board.columns.firstWhere((c) => c.id == destination).name}?',
-        ),
-        actions: [
-          BusinessCommand(
-            label: 'Move task',
-            create: () {
-              final id = newBusinessId();
-              return () => ref
-                  .read(businessApiProvider)
-                  .moveCard(id, board, card, destination, position);
-            },
-            onCommitted: () => Navigator.pop(context),
-          ),
-        ],
-      ),
+      context: context, barrierDismissible: false,
+      builder: (dialog) => Consumer(builder: (dialog, dialogRef, _) {
+        final latest = dialogRef.watch(boardProvider(board.jobId)).value ?? board;
+        final moving = latest.cards.where((c) => c.id == card.id).firstOrNull;
+        final target = latest.columns.where((c) => c.id == destination).firstOrNull;
+        final available = moving != null && target != null && !latest.archived;
+        final count = latest.inColumn(destination).where((c) => c.id != card.id).length;
+        return AlertDialog(
+          title: const Text('Move task'),
+          content: Text(moving != null && target != null && !latest.archived ? 'Move “${moving.title}” to ${target.name}?' : 'The task or destination is no longer available.'),
+          actions: [BusinessCommand(
+            label: 'Move task', enabled: available,
+            create: () { final id = newBusinessId(); return () => api.moveCard(id, latest, moving!, destination, position.clamp(0, count)); },
+            onCommitted: () => Navigator.pop(dialog),
+          )],
+        );
+      }),
     );
   }
 

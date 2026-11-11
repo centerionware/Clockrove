@@ -1254,3 +1254,9 @@ instrumented separately. Added native-eligible red deletion in job settings as
 well as the archive view and avoided creating a trailing page for a blank invoice
 footer. Exact updated checks remain pending. Emulator setup now also records the
 pinned package descriptor required by avdmanager; no device rendering claim yet.
+
+Integration review also keeps date/job controls available after a failed report
+query (so a selection can be narrowed), refreshes a move dialog's actual native
+snapshot before a fresh confirmation, and adds corresponding presentation
+regressions. Pending-command retries still retain the original captured operation.
+These source fixes await Actions; no VM checks ran.

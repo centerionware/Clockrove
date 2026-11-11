@@ -88,7 +88,7 @@ class _BusinessCommandState extends State<BusinessCommand> {
     'INVALID_JOB' => 'Check the job name, rate and customer email.',
     'JOB_UNAVAILABLE' ||
     'JOB_ARCHIVED' => 'This job is unavailable for editing.',
-    _ => 'The change could not be applied ($value). Your draft is kept.',
+    _ => 'The change could not be applied. Your draft is kept. Refresh the details and try again.',
   };
   @override
   Widget build(BuildContext context) => PopScope(

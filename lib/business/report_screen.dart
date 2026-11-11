@@ -225,16 +225,13 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                   skipLoadingOnReload: true,
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (_, _) => Center(
-                    child: TextButton(
-                      onPressed: () =>
-                          ref.invalidate(reportProvider(selection)),
-                      child: const Text(
-                        'Retry report · use a shorter date range if needed',
-                      ),
-                    ),
-                  ),
-                  data: (report) => ListView(
+                  error: (_, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text('This report is unavailable. Retry or choose a smaller selection.'),
+                  TextButton(onPressed: _range, child: const Text('Change dates')),
+                  TextButton(onPressed: _jobs, child: const Text('Choose jobs')),
+                  FilledButton(onPressed: () => ref.invalidate(reportProvider(selection)), child: const Text('Retry report')),
+                ]))),
+                data: (report) => ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
                       Wrap(
@@ -242,14 +239,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         runSpacing: 8,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: _range,
+                            onPressed: _invoicePending ? null : _range,
                             icon: const Icon(Icons.date_range),
                             label: Text(
                               '${selection.firstDate} – ${selection.lastDate}',
                             ),
                           ),
                           OutlinedButton.icon(
-                            onPressed: _jobs,
+                            onPressed: _invoicePending ? null : _jobs,
                             icon: const Icon(Icons.filter_list),
                             label: Text(
                               '${selection.jobs.length} job${selection.jobs.length == 1 ? '' : 's'}',
@@ -312,7 +309,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         crossAxisAlignment: WrapCrossAlignment.start,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: _exporting
+                            onPressed: _exporting || _invoicePending
                                 ? null
                                 : () => _csv(report, false),
                             icon: const Icon(Icons.file_download_outlined),
@@ -332,7 +329,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               ),
                             ),
                           OutlinedButton.icon(
-                            onPressed: _exporting || report.points.isEmpty
+                            onPressed: _exporting || _invoicePending || report.points.isEmpty
                                 ? null
                                 : () => _csv(report, true),
                             icon: const Icon(Icons.location_on_outlined),
