@@ -52,30 +52,34 @@ class TimerWidget : AppWidgetProvider() {
 
         private fun refresh(context: Context, manager: AppWidgetManager, ids: IntArray) {
             val snapshot = TimerRepository.get(context).snapshot()
+            ids.forEach { id -> manager.updateAppWidget(id, viewsFor(context, snapshot, id)) }
+        }
+
+        internal fun viewsFor(context: Context, snapshot: TimerRepository.Snapshot, id: Int): RemoteViews {
             val running = snapshot.running
-            ids.forEach { id ->
-                val views = RemoteViews(context.packageName, R.layout.timer_widget)
-                views.setTextViewText(R.id.widget_job, running?.jobName ?: context.getString(R.string.widget_idle))
-                views.setViewVisibility(R.id.widget_elapsed, if (running == null) android.view.View.GONE else android.view.View.VISIBLE)
-                if (running != null) {
-                    // RemoteViews chronometer handles display ticks; no persistent counter writer.
-                    val elapsed = (System.currentTimeMillis() - running.startUtcMillis).coerceAtLeast(0)
-                    views.setChronometer(R.id.widget_elapsed, SystemClock.elapsedRealtime() - elapsed, null, true)
-                }
-                views.setTextViewText(R.id.widget_action, context.getString(if (running == null) R.string.widget_open else R.string.widget_stop))
-                val tap = if (running == null) {
-                    PendingIntent.getActivity(context, id, Intent(context, MainActivity::class.java),
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                } else {
-                    val intent = Intent(context, TimerWidget::class.java).setAction(STOP)
-                        .setData(Uri.parse("clockrove://widget/$id/stop/${snapshot.version}"))
-                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra("version", snapshot.version)
-                    PendingIntent.getBroadcast(context, id, intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                }
-                views.setOnClickPendingIntent(R.id.widget_action, tap)
-                manager.updateAppWidget(id, views)
+            val views = RemoteViews(context.packageName, R.layout.timer_widget)
+            views.setTextViewText(R.id.widget_job, running?.jobName ?: context.getString(R.string.widget_idle))
+            val showElapsed = running != null && context.resources.configuration.fontScale <= 1.3f
+            views.setViewVisibility(R.id.widget_elapsed, if (showElapsed) android.view.View.VISIBLE else android.view.View.GONE)
+            if (running != null) {
+                // RemoteViews chronometer handles display ticks; no persistent counter writer.
+                val elapsed = (System.currentTimeMillis() - running.startUtcMillis).coerceAtLeast(0)
+                views.setChronometer(R.id.widget_elapsed, SystemClock.elapsedRealtime() - elapsed, null, showElapsed)
             }
+            views.setContentDescription(R.id.widget_action, context.getString(if (running == null) R.string.widget_open else R.string.widget_stop))
+            views.setImageViewResource(R.id.widget_action, if (running == null) R.drawable.ic_widget_open else R.drawable.ic_widget_stop)
+            val tap = if (running == null) {
+                PendingIntent.getActivity(context, id, Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            } else {
+                val intent = Intent(context, TimerWidget::class.java).setAction(STOP)
+                    .setData(Uri.parse("clockrove://widget/$id/stop/${snapshot.version}"))
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra("version", snapshot.version)
+                PendingIntent.getBroadcast(context, id, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            }
+            views.setOnClickPendingIntent(R.id.widget_action, tap)
+            return views
         }
     }
 }
