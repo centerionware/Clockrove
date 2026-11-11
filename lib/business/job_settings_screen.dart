@@ -17,7 +17,16 @@ class JobSettingsScreen extends ConsumerWidget {
     final job = ref.watch(jobPreferencesProvider(jobId));
     final business = ref.watch(businessSettingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Job settings'), actions: [IconButton(tooltip: 'Refresh job details and deletion eligibility', icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(jobPreferencesProvider(jobId)))]),
+      appBar: AppBar(
+        title: const Text('Job settings'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh job details and deletion eligibility',
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(jobPreferencesProvider(jobId)),
+          ),
+        ],
+      ),
       body: job.when(
         skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -309,17 +318,38 @@ class _JobFormState extends ConsumerState<_JobForm> {
               ref.invalidate(jobPreferencesProvider(widget.initial.id));
             },
           ),
-        if (data?.archived == true && data?.canDelete == true) Padding(padding: const EdgeInsets.only(top: 24), child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-          icon: const Icon(Icons.delete_forever_outlined), label: const Text('Permanently delete job'),
-          onPressed: () async {
-            final navigator = Navigator.of(context);
-            final container = ProviderScope.containerOf(context, listen: false);
-            final api = ref.read(lifecycleApiProvider);
-            final deleted = await confirmJobDeletion(context, api, data!.version, data.id, data.name);
-            if (deleted == true) { container.invalidate(archiveProvider); if (navigator.mounted) { navigator.popUntil((route) => route.isFirst); } }
-          },
-        )),
+        if (data?.archived == true && data?.canDelete == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              icon: const Icon(Icons.delete_forever_outlined),
+              label: const Text('Permanently delete job'),
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final container = ProviderScope.containerOf(
+                  context,
+                  listen: false,
+                );
+                final api = ref.read(lifecycleApiProvider);
+                final deleted = await confirmJobDeletion(
+                  context,
+                  api,
+                  data!.version,
+                  data.id,
+                  data.name,
+                );
+                if (deleted == true) {
+                  container.invalidate(archiveProvider);
+                  if (navigator.mounted) {
+                    navigator.popUntil((route) => route.isFirst);
+                  }
+                }
+              },
+            ),
+          ),
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: data?.archived != false

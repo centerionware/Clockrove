@@ -1260,3 +1260,12 @@ query (so a selection can be narrowed), refreshes a move dialog's actual native
 snapshot before a fresh confirmation, and adds corresponding presentation
 regressions. Pending-command retries still retain the original captured operation.
 These source fixes await Actions; no VM checks ran.
+
+Lifecycle head fdd33a8 has a successful completed `android` check in run
+43085255507 (GitHub's overall run status lagged). Downloaded XML confirms 176
+native tests, zero failures/errors/skips, including all ten lifecycle cases;
+merged #25 with the exact checked head. PDF instrumentation now boots API 24 and
+reaches the actual runner. Run 43090913550 found eager reflection of a generated
+API-35-only text lambda on API 24; isolated those types in a guarded helper,
+retaining real PDF text/render assertions. Fresh checks are pending. Applied the
+completed branding run's formatting artifact for settings deletion controls.
