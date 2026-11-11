@@ -918,5 +918,5 @@ requested sites from platform task success. Private callbacks use shared seriali
 work, precise/background permission guards, replay-safe location-service handoff
 and a generic notification for ambiguous manual selection. Startup protects pending
 work before uncertain recovery; default idle state does not initialize Play Services.
-Thirteen API-24/API-35 cases are prepared with synthetic task completions/HMAC.
+Fifteen API-24/API-35 cases are prepared with synthetic task completions/HMAC.
 Actions/device validation and site/permission/review/health UI remain outstanding.

@@ -171,6 +171,36 @@ class GeofencePlatformAdapterTest {
         assertEquals(2, calls.size)
     }
 
+    @Test fun newerProviderFailureCannotBeOverwrittenByAnOlderRegistrationSuccess() {
+        configure()
+        registry.reconcile()
+        registry.providerUnavailable()
+        calls[0].second(true)
+        assertEquals(GeofenceRegistrationController.Health.UNAVAILABLE, registry.health)
+        registry.reconcile()
+        assertEquals(1, calls.size)
+        registry.reconcile(force = true)
+        calls[1].second(true)
+        assertEquals(GeofenceRegistrationController.Health.READY, registry.health)
+    }
+
+    @Test fun permissionGapDuringInstallationHoldsWorkAndRequiresFreshRegistration() {
+        configure()
+        val session = startAndDepart()
+        registry.reconcile()
+        clock = 5000
+        allowed = false
+        registry.reconcile()
+        allowed = true
+        registry.reconcile()
+        calls[0].second(true)
+        assertEquals(2, calls.size)
+        assertEquals(GeofenceRegistrationController.Health.REGISTERING, registry.health)
+        assertEquals(TimerRepository.DepartureResult.NEEDS_REVIEW, repository.finalizeDeparture(session, 90000))
+        calls[1].second(true)
+        assertEquals(GeofenceRegistrationController.Health.READY, registry.health)
+    }
+
     @Test fun definiteCallbacksStartOnceAndReplayDoesNotRepeatLocationHandoff() {
         configure()
         event(GeofenceMembership.Presence.INSIDE, 1500)

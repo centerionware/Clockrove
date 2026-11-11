@@ -20,6 +20,8 @@ internal class GeofenceRegistrationController(
         private set
     private data class Request(val keys: List<String>, val permitted: Boolean)
     private var attempted: Request? = null
+    private var observedRequest: Request? = null
+    private var faultEpoch = 0L
     private var inFlight = false
     private var initial = true
     private var retry = false
@@ -33,6 +35,7 @@ internal class GeofenceRegistrationController(
     }
 
     fun providerUnavailable() {
+        faultEpoch++
         health = Health.UNAVAILABLE
         repository.geofenceProblem(TimerRepository.GeofenceProblem.PROVIDER_UNAVAILABLE)
     }
@@ -42,11 +45,13 @@ internal class GeofenceRegistrationController(
         val sites = repository.sitesToRegister()
         val allowed = permitted()
         val request = Request(sites.map { it.registrationKey }.sorted(), allowed)
-        if (inFlight) { retry = retry || force; return }
+        val changed = request != observedRequest
+        observedRequest = request
+        if (changed && sites.isNotEmpty() && !allowed)
+            repository.geofenceProblem(TimerRepository.GeofenceProblem.LOCATION_PERMISSION_MISSING)
+        if (inFlight) { retry = retry || force || request != attempted; return }
         if (request == attempted && !force) return
         attempted = request
-        if (sites.isNotEmpty() && !allowed)
-            repository.geofenceProblem(TimerRepository.GeofenceProblem.LOCATION_PERMISSION_MISSING)
         val target = if (allowed) sites else emptyList()
         val idleHealth = if (sites.isEmpty()) Health.IDLE else Health.PERMISSION_MISSING
         if (target.isEmpty() && !wasRequested()) { health = idleHealth; return }
@@ -54,12 +59,15 @@ internal class GeofenceRegistrationController(
         health = Health.REGISTERING
         // Persist only a cleanup hint, never coordinates, keys or a claim of success.
         if (target.isNotEmpty()) rememberRequested(true)
+        val epoch = faultEpoch
         platform.replace(target) { success ->
             inFlight = false
             val current = Request(repository.sitesToRegister().map { it.registrationKey }.sorted(), permitted())
             if (current != request || retry) {
                 retry = false
                 reconcile(force = true)
+            } else if (epoch != faultEpoch) {
+                health = Health.UNAVAILABLE
             } else if (success) {
                 rememberRequested(target.isNotEmpty())
                 health = if (target.isEmpty()) idleHealth else Health.READY

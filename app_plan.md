@@ -980,6 +980,6 @@ an alarm can finalize work. Callback/alarm work shares one native executor; even
 use measured time without retaining off-clock coordinates, honor replay outcomes,
 recheck the running session for FGS handoff and offer manual job selection for
 ambiguous entries. No background permission request or automation activation UI
-has been added yet. Thirteen synthetic cases target API 24/35; they use fake
+has been added yet. Fifteen synthetic cases target API 24/35; they use fake
 platform completions and a public HMAC fixture, not real registration or Keystore
 proof. All source still requires Actions validation and device acceptance.
