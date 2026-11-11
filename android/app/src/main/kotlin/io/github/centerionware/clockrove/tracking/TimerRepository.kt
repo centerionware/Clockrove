@@ -414,6 +414,27 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun deleteJob(id: String, version: Long, jobId: String): Outcome = boardChange(id, version, "JOB_DELETE", listOf(jobId)) { JobLifecycleStore.remove(it, jobId, wallClock()) }
 
+    internal data class SessionHistorySnapshot(val version: Long, val page: SessionHistoryStore.Page)
+    @Synchronized
+    internal fun sessionHistory(jobId: String, before: SessionHistoryStore.Cursor? = null, limit: Int = 200): SessionHistorySnapshot =
+        SessionHistorySnapshot(readSnapshot(helper.readableDatabase).version, SessionHistoryStore.read(helper.readableDatabase, jobId, before, limit))
+    @Synchronized
+    internal fun sessionRevisions(jobId: String, sessionId: String): List<SessionHistoryStore.Revision> =
+        SessionHistoryStore.revisions(helper.readableDatabase, jobId, sessionId)
+    @Synchronized
+    internal fun createManualSession(id: String, version: Long, value: SessionHistoryStore.Draft): Outcome =
+        boardChange(id, version, "SESSION_CREATE", listOf(value.id, value.jobId, value.start, value.end, value.timezone, value.offsetSeconds)) {
+            SessionHistoryStore.save(it, value, true, wallClock())
+        }
+    @Synchronized
+    internal fun correctSession(id: String, version: Long, value: SessionHistoryStore.Draft): Outcome =
+        boardChange(id, version, "SESSION_CORRECT", listOf(value.id, value.jobId, value.start, value.end, value.timezone, value.offsetSeconds)) {
+            SessionHistoryStore.save(it, value, false, wallClock())
+        }
+    @Synchronized
+    internal fun deleteSession(id: String, version: Long, sessionId: String): Outcome =
+        boardChange(id, version, "SESSION_DELETE", listOf(sessionId)) { SessionHistoryStore.remove(it, sessionId, wallClock()) }
+
     @Synchronized
     internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {

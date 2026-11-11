@@ -43,6 +43,21 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
+                mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
+            }
+            "sessionHistory" -> {
+                val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
+                val before = (raw as Map<*, *>?)?.let { Input(it).let { cursor -> SessionHistoryStore.Cursor(cursor.integer("start"), cursor.string("id")) } }
+                val snapshot = repository.sessionHistory(input.string("jobId"), before, if (input.value.containsKey("limit")) input.int("limit") else 200)
+                return mapOf("version" to snapshot.version, "entries" to snapshot.page.entries.map { entry -> mapOf(
+                    "id" to entry.id, "jobId" to entry.jobId, "start" to entry.start, "end" to entry.end, "timezone" to entry.timezone,
+                    "offsetSeconds" to entry.offsetSeconds, "origin" to entry.origin, "needsReview" to entry.needsReview) },
+                    "next" to snapshot.page.next?.let { mapOf("start" to it.start, "id" to it.id) })
+            }
+            "sessionRevisions" -> return repository.sessionRevisions(input.string("jobId"), input.string("sessionId")).map {
+                mapOf("id" to it.id, "changed" to it.changed, "origin" to it.origin, "deleted" to it.deleted, "payload" to it.payload, "parents" to it.parents)
+            }
             "board" -> { val s = repository.boardSnapshot(input.string("jobId")); return mapOf("version" to s.version, "jobId" to s.board.jobId, "name" to s.board.name,
                 "currency" to s.board.currency, "fractionDigits" to Currency.getInstance(s.board.currency).defaultFractionDigits, "archived" to s.board.archived,
                 "columns" to s.board.columns.map { mapOf("id" to it.id, "name" to it.name, "position" to it.position, "completed" to it.completed) },
@@ -58,11 +73,16 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString()) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "createManualSession", "correctSession", "deleteSession")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
         return when (call.method) {
+            "createManualSession", "correctSession" -> {
+                val draft = SessionHistoryStore.Draft(v.string("sessionId"), v.string("jobId"), v.integer("start"), v.integer("end"), v.string("timezone"), v.int("offsetSeconds"))
+                if (call.method == "createManualSession") repository.createManualSession(id, version, draft) else repository.correctSession(id, version, draft)
+            }
+            "deleteSession" -> repository.deleteSession(id, version, v.string("sessionId"))
             "saveColumn" -> repository.saveColumn(id, version, v.string("columnId"), v.string("jobId"), v.string("name"), v.bool("completed"))
             "reorderColumns" -> repository.reorderColumns(id, version, v.string("jobId"), v.strings("columnIds"))
             "removeColumn" -> repository.removeColumn(id, version, v.string("jobId"), v.string("columnId"), v.nullable("destinationId"))

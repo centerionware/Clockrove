@@ -1233,3 +1233,11 @@ retained app response-loss intent and strict integral timer versions. Covers ato
 board/revision creation, stale/duplicate requests, rollback and deleted-ID fences.
 Eight API-24/35 native cases plus retry/controller/codec journeys await Actions;
 remaining milestone-3/4/7 implementation and physical acceptance remain open.
+### Independent milestone-3 session history continuation
+
+Prepared native closed-session manual CRUD and history/revision queries through
+the serialized repository. Positive/half-open overlap and explicit timezone
+validation, transactional GPS pruning/deletion fences, immutable invoices and
+current-timer isolation have fourteen new API-24 cases awaiting Actions. No UI,
+bridge or full manual correction journey is claimed yet; Play remains held for
+the separately specified combined business iteration.
