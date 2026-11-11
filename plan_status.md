@@ -1265,3 +1265,9 @@ fresh complete validation including actual PDF checks. No VM build/test ran.
 PR #30 initially had no Actions run because its appended evidence conflicted with
 the newly merged recovery notes. Combined main 315bce1 and retained both histories
 to restore PR mergeability; fresh validation is required, not assumed passed.
+
+Added strict native transport for session commands, cursor history and revisions.
+Four API-24/35 bridge cases (eight executions) cover real dispatch round-trips,
+forged-origin isolation, malformed integer/cursor rejection, response-loss replay
+and stale-draft protection. Native bridge code is prepared; typed Flutter API/forms
+and successful CI evidence remain pending.
