@@ -6,15 +6,15 @@ iOS and future service remain deferred.
 
 | Task | Status | Evidence / next action |
 | --- | --- | --- |
-| M1.1 Verify GitHub identity and remote | Verified | Escalated network check: user 1000 (`agent`) authenticates as `centerionware`; GraphQL reports intended repository does not exist |
+| M1.1 Verify GitHub identity and remote | Verified | Escalated network check: user 1000 (`agent`) authenticates as `centerionware`; initially absent; private intended repository now created for CI |
 | M1.2 Resolve writable Git metadata | Implemented locally | `scripts/git-local` uses ignored `.local/git`; status and ignore checks succeed without modifying protected root `.git` |
 | M1.3 Preserve handoff | Preserved | AGENTS.md, app_plan.md and ignore rules retained |
 | M1.4 Draft source/contribution rights | Drafted; owner review required | docs/SOURCE_TERMS_DRAFT.md, CONTRIBUTING.md; no effective license adopted, no publication |
 | M1.5 README, architecture, dependency inventory | Drafted | docs/ARCHITECTURE.md and docs/DEPENDENCIES.md written; README setup commands recorded; Android compatibility pending |
 | M1.6 Install/pin compatible tools | In progress | Flutter 3.47.9 archive checksum verified; ARM64 Dart 3.13.7 checksum verified; CLI runs; copied Temurin 17.0.20.1+1 into ignored tools; SDK located; Gradle build running; Ruby/Fastlane deferred until publishing work |
 | M1.7 Android Flutter scaffold and lockfiles | Scaffolded, build incomplete | Agreed application ID; pubspec.lock resolved; format and analysis pass; initial build failed without JDK; JDK-configured retry running |
-| M1.8 Nonprivileged validation CI | Implemented, not run on GitHub | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
-| M1.9 Create public repository | Gated | Concrete terms need owner review before publication |
+| M1.8 Nonprivileged validation CI | Implemented; GitHub run in progress | .github/workflows/validate.yml; pinned actions/Flutter/JDK/SDK; no publishing secrets or artifact uploads |
+| M1.9 Create public repository | Private staging created; public gated | https://github.com/centerionware/Clockrove; verified private; terms review pending |
 | M1 acceptance | Incomplete | No Android build or CI evidence yet |
 | M2.1 SQLite/manual timer/widget/notification prototype | Pending | Depends on foundation |
 | M2.2 Location/geofences/departure/recovery prototype | Pending | Native callbacks required |
@@ -112,3 +112,16 @@ not passed. No further local build/test/analysis/format execution is authorized.
 AGENTS.md now records this constraint. Continue with local edits/reviews only and
 GitHub-hosted validation. A private intended repository will stage CI while the
 source terms await owner review; public visibility remains gated.
+
+Created centerionware/Clockrove privately and verified isPrivate=true. Reviewed all
+40 staged paths: source, docs, workflow, lockfile and Gradle wrapper only; no local
+skills, tools, credentials, runtime data or binaries. Pushed commit
+be442a3c417b8dc163e3845c24e4998894679b98 to main. GitHub Actions run
+https://github.com/centerionware/Clockrove/actions/runs/42980408630 is in_progress
+on that commit (authoritative API observation). All further build/test evidence
+must come from Actions. Private staging is not public source publication.
+
+Actions run 42980408630 failed before any build/test: setup-java rejected
+17.0.20.1+1 as invalid SemVer (four version components). Changed CI to exact
+Temurin 17.0.17+10; upstream x64 Linux metadata confirms this release exists.
+This is a CI configuration correction; no local build/test was run.

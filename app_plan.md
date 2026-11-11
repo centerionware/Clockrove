@@ -409,3 +409,13 @@ instructions and local-build portions of milestone acceptance; clean GitHub CI
 must prove build reproducibility. Local retry session 56789 was cancelled and
 closed with no APK success evidence; do not count it as passed. Intended repository
 may remain private for CI until concrete source terms review permits publication.
+
+Private staging repository created and verified at https://github.com/centerionware/Clockrove.
+Reviewed 40 staged public-safe source paths and pushed foundation commit
+be442a3c417b8dc163e3845c24e4998894679b98. GitHub validation run 42980408630 is
+in progress. Public visibility remains gated on owner terms review. No build/test
+will be run on the VM following the owner's instruction.
+
+First Actions run failed in setup-java before build/test because 17.0.20.1+1
+has unsupported SemVer notation. CI corrected to exact verified x64 Temurin
+17.0.17+10. No local validation used for the correction.

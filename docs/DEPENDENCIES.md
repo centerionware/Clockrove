@@ -10,7 +10,7 @@ Flutter archive SHA-256:
 Source: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
 
 Add runtime/transitive dependencies and their notices after dependency resolution.
-JDK selected: Eclipse Temurin 17.0.20.1+1 (GPLv2 with Classpath Exception).
+CI JDK selected: Eclipse Temurin 17.0.17+10 (GPLv2 with Classpath Exception).
 Gradle 9.3.1 (Apache-2.0), AGP 9.1.0 (Apache-2.0), Kotlin 2.4.0 (Apache-2.0).
 Gradle wrapper SHA-256: `b3a875ddc1f044746e1b1a55f645584505f4a10438c1afea9f15e92a7c42ec13`.
 Gradle distribution checksum is recorded in gradle-wrapper.properties.

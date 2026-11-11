@@ -22,7 +22,7 @@ source locally, push a reviewed change, then inspect the Validate workflow run.
 The workflow installs pinned tools, resolves the lockfile, and runs checks on
 GitHub-hosted ubuntu-24.04. Publishing is not configured.
 
-Selected JDK: Eclipse Temurin **17.0.20.1+1**. Android build compatibility is being validated.
+CI JDK: Eclipse Temurin **17.0.17+10** (exact setup-java-compatible pin). Android build compatibility is being validated.
 Do not interpret analysis success as Android build or device validation. Generated
 Gradle inputs select AGP 9.1.0, Kotlin 2.4.0 and Gradle 9.3.1; minimum SDK **24**, compile/target SDK **36**, build tools **36.0.0** and NDK
 **28.2.13676358** are pinned. API 24 follows the selected Flutter minimum;
