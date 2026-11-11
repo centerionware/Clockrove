@@ -750,3 +750,21 @@ Native visual branch rebased onto that main; conflicts were evidence appendices
 only. Added public prototype device checklist and corrected outdated README and
 timer contract status. New combined-head Actions validation pending; device and
 runtime automation acceptance remain unproven. No production release submitted.
+
+### Native visual merge and default-map source
+
+Previous goal turn: progress (UI/refinement and departure/membership merges,
+reviewed native previews, accurate contributor/device handoff). Continued by
+polling the same live validation 43002359530; it concluded SUCCESS. Exact tested
+head a2eaea5 merged via PR #9 as f9207b5. Matching Android visual identity is on main;
+actual launcher/launch-transition device validation remains pending.
+
+Pinned flutter_map 8.3.2 / latlong2 0.10.1 / http 1.6.0 / url_launcher 6.3.2 and
+obtained Actions-resolved lockfile in 43002798859 / artifact 13846228897. New
+osm-map-prototype source adds a current stored-point map with measured timestamp,
+accuracy circle, always-visible attribution, proper User-Agent, cache policy and
+shared 429/503 backoff. Release manifest includes Internet permission. Native
+status now returns the same latest observation's coordinates and clears on idle.
+HTTP policy, synthetic success/failure/navigation/zoom UI checks and native/codec
+checks added. CI map images use synthetic tiles; no live OSM/device proof inferred.
+Source validation and new visual review pending. No VM build/test/format/render.

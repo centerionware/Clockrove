@@ -11,6 +11,8 @@ class TrackingStatus {
     this.notificationsAllowed, {
     this.lastObservationUtc,
     this.lastAccuracyMeters,
+    this.lastLatitude,
+    this.lastLongitude,
   });
   final String permission;
   final String service;
@@ -18,6 +20,13 @@ class TrackingStatus {
   final bool notificationsAllowed;
   final DateTime? lastObservationUtc;
   final double? lastAccuracyMeters;
+  final double? lastLatitude;
+  final double? lastLongitude;
+  bool get hasMapObservation => lastObservationUtc != null &&
+      lastLatitude != null && lastLatitude!.isFinite &&
+      lastLatitude! >= -90 && lastLatitude! <= 90 &&
+      lastLongitude != null && lastLongitude!.isFinite &&
+      lastLongitude! >= -180 && lastLongitude! <= 180;
 }
 
 class TrackingApi {
@@ -47,6 +56,8 @@ class TrackingApi {
               isUtc: true,
             ),
       lastAccuracyMeters: (raw['lastAccuracyMeters'] as num?)?.toDouble(),
+      lastLatitude: (raw['lastLatitude'] as num?)?.toDouble(),
+      lastLongitude: (raw['lastLongitude'] as num?)?.toDouble(),
     );
   }
 }

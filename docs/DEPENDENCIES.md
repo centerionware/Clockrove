@@ -17,8 +17,8 @@ Gradle distribution checksum is recorded in gradle-wrapper.properties.
 Android API 24 minimum / 36 target, build-tools 36.0.0, NDK 28.2.13676358.
 Flutter lints 6.0.0 and transitive dependencies are pinned in pubspec.lock.
 
-Riverpod, typed adapter, crypto and publishing tool selection remain
-pending compatibility validation. No dependency license review is complete yet.
+Riverpod/typed adapters and pinned publishing tools are validated in Actions.
+Crypto selection and full dependency license review remain incomplete.
 
 CI Android command-line tools: 19.0, archive 13114758 (the upstream filename ends
 in `_latest.zip` but the build ID and checksum are fixed). SHA-256:
@@ -29,9 +29,18 @@ Native prototype test dependencies: JUnit 4.13.2 (EPL-1.0) and Robolectric 4.16.
 (MIT), test-only. Full transitive notice review remains a release gate.
 
 Prototype presentation: flutter_riverpod 3.0.3 / riverpod 3.0.3 (MIT). Exact
-transitive versions are in Actions-resolved pubspec.lock. UI controls are isolated
-on the prototype-controls feature branch until validation passes.
+transitive versions are in Actions-resolved pubspec.lock. Manual controls are merged after successful Actions validation.
 
 Native location prototype: Google Play services location 21.3.0, pinned Maven
 coordinate `com.google.android.gms:play-services-location:21.3.0`. Google SDK
 terms/third-party notices require review before release. No map key is involved.
+
+OSM prototype direct dependencies: flutter_map 8.3.2, latlong2 0.10.1, http 1.6.0,
+and url_launcher 6.3.2. Lockfile resolved in owner-only Actions run 43002798859
+(artifact 13846228897); new map source needs its own validation. Includes native
+path_provider/url_launcher adapters and transitive packages pinned in pubspec.lock.
+Their complete notices/terms still need the launch review.
+
+flutter_map 8.3.2 caching source was inspected: server freshness/ETag/Last-Modified,
+conditional refresh, and seven-day fallback for missing freshness metadata.
+Built-in cache is a best-effort OS cache, not an offline-download feature.

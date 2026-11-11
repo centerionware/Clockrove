@@ -144,6 +144,8 @@ class TrackingHostApi(private val activity: Activity, messenger: BinaryMessenger
                     "working" to (running != null),
                     "lastMeasuredMillis" to last?.measuredUtcMillis,
                     "lastAccuracyMeters" to last?.accuracyMeters,
+                    "lastLatitude" to last?.latitude,
+                    "lastLongitude" to last?.longitude,
                     "notificationsAllowed" to activity.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
                 )
                 main.post {

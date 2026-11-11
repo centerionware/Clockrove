@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_strings.dart';
+import '../maps/work_location_map.dart';
 import 'tracking_api.dart';
 
 class TrackingControls extends ConsumerStatefulWidget {
@@ -113,6 +114,17 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                         '${value.lastAccuracyMeters == null ? "" : " · ${value.lastAccuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}"}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
+                    ),
+                  if (value.hasMapObservation)
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => WorkLocationMap(
+                          latitude: value.lastLatitude!, longitude: value.lastLongitude!,
+                          measuredUtc: value.lastObservationUtc!, accuracyMeters: value.lastAccuracyMeters,
+                        ),
+                      )),
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text(AppStrings.viewLocationMap),
                     ),
                   if (value.permission == 'approximate')
                     const Text(AppStrings.locationApproximate),

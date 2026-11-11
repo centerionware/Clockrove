@@ -105,6 +105,16 @@ class TrackingHostApiTest {
         val status = response.value as Map<*, *>
         assertEquals(1800L, (status["lastMeasuredMillis"] as Number).toLong())
         assertEquals(25.0, (status["lastAccuracyMeters"] as Number).toDouble(), 0.0)
+        assertEquals(10.0, (status["lastLatitude"] as Number).toDouble(), 0.0)
+        assertEquals(20.0, (status["lastLongitude"] as Number).toDouble(), 0.0)
+        repository.execute(TimerRepository.Command("stop", repository.snapshot().version,
+            TimerRepository.Action.STOP, null, 3000, "Etc/UTC", 0, TimerRepository.Origin.MANUAL))
+        val idle = messenger.invoke("status")
+        until { idle.finished }
+        val idleStatus = idle.value as Map<*, *>
+        assertNull(idleStatus["lastMeasuredMillis"])
+        assertNull(idleStatus["lastLatitude"])
+        assertNull(idleStatus["lastLongitude"])
     }
 
     private class Response {

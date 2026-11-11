@@ -18,7 +18,7 @@ iOS and future service remain deferred.
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; registration/suppression/scheduling/device evidence remain |
-| M2.3 OSM and runtime Google-key experiment | Pending | Google-key proof needs user key and Android runtime |
+| M2.3 OSM and runtime Google-key experiment | OSM prototype source pending validation | Stored-point map and policy tests prepared; live default rendering and Google runtime-key proof still need device/network/owner key |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Pending | Follow prototype findings |
 | M3.2 IDs/revisions/tombstones/serialized commands | Pending | Transaction and concurrency tests required |
@@ -695,3 +695,21 @@ Native visual branch rebased onto that main; conflicts were evidence appendices
 only. Added public prototype device checklist and corrected outdated README and
 timer contract status. New combined-head Actions validation pending; device and
 runtime automation acceptance remain unproven. No production release submitted.
+
+### Native visual merge and default-map source
+
+Previous goal turn: progress (UI/refinement and departure/membership merges,
+reviewed native previews, accurate contributor/device handoff). Continued by
+polling the same live validation 43002359530; it concluded SUCCESS. Exact tested
+head a2eaea5 merged via PR #9 as f9207b5. Matching Android visual identity is on main;
+actual launcher/launch-transition device validation remains pending.
+
+Pinned flutter_map 8.3.2 / latlong2 0.10.1 / http 1.6.0 / url_launcher 6.3.2 and
+obtained Actions-resolved lockfile in 43002798859 / artifact 13846228897. New
+osm-map-prototype source adds a current stored-point map with measured timestamp,
+accuracy circle, always-visible attribution, proper User-Agent, cache policy and
+shared 429/503 backoff. Release manifest includes Internet permission. Native
+status now returns the same latest observation's coordinates and clears on idle.
+HTTP policy, synthetic success/failure/navigation/zoom UI checks and native/codec
+checks added. CI map images use synthetic tiles; no live OSM/device proof inferred.
+Source validation and new visual review pending. No VM build/test/format/render.
