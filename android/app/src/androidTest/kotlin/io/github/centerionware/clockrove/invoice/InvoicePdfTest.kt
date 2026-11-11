@@ -86,9 +86,23 @@ class InvoicePdfTest {
                     }
                 }
                 if (android.os.Build.VERSION.SDK_INT >= 35) {
-                    assertTrue(text.contains("USD 1250.00"))
-                    for (row in 1..130) assertTrue("Missing row $row in $style", text.contains("Install tiles — section $row"))
-                    assertTrue(text.contains("Long optional footer."))
+                    File(root, "clockrove-invoice-${style.lowercase()}-multipage-extracted.txt").writeText(text.toString())
+                    try {
+                        assertTrue(text.contains("USD 1250.00"))
+                        for (row in 1..130) assertTrue("Missing row $row in $style", text.contains("Install tiles — section $row"))
+                        assertTrue(text.contains("Long optional footer."))
+                    } catch (failure: AssertionError) {
+                        // Preserve every failing page for comparison with the
+                        // actual framework extraction; never synthesize a pass.
+                        for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                            val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                            try {
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                File(root, "clockrove-invoice-${style.lowercase()}-failure-page-${index + 1}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            } finally { bitmap.recycle() }
+                        }
+                        throw failure
+                    }
                 }
             }
         }

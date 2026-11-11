@@ -1379,3 +1379,17 @@ Monitoring recovery #17 head 4d3db27 passed full Actions 43101725472; inspected
 193 native cases, zero failures/errors/skips. Merged exact head to main as
 315bce1, then combined that source into #29 for final integration validation.
 Physical app-upgrade/recovery evidence remains separate. Play is still held.
+
+Combined head 12ea2b9 / 43103492055 passed formatting, analysis, Flutter tests,
+Android build and 200 native tests (inspected XML, zero failures/errors/skips).
+API 24 instrumentation passed all ten cases. API 35 failed the strengthened
+all-row PDF extraction assertion: "Missing row 8 in MINIMAL"; nine other device
+cases passed. The viewer step did not run, so combined acceptance remains open.
+
+Current failure gating stopped before retaining API-35 preview files. Capture
+documents before XML enforcement, preserve actual extracted text and render every
+page of a failing document for diagnosis, retaining all failure gates. Reviewed
+the existing API-24 first/middle/last minimal captures; this does not explain the
+API-35 text mismatch or prove all styles/pages accepted. No production rendering
+change or weakened assertion is being substituted for the missing evidence.
+Play delivery remains disabled.
