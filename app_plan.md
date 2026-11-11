@@ -1156,3 +1156,8 @@ Play delivery workflow 414395901 temporarily; verified GitHub state
 delivery only when the complete combined iteration is ready, then merge/publish
 from validated main. Production readiness remains disabled. Do not ship partial
 intermediate test builds while this hold is in effect.
+
+Compact-widget run 43071623833 built the Android app but native test compilation
+failed because the new widget fixtures used Dart snapshot argument ordering for
+the Kotlin type. Switched fixtures to named fields; all layout/state assertions
+remain. Corrected Actions validation is pending; no VM checks ran.

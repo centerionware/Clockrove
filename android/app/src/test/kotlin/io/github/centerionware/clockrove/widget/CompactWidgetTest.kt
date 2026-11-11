@@ -21,7 +21,7 @@ class CompactWidgetTest {
     @Test fun compactRunningAndIdleViewsKeepAnAccessibleActionWithinOneRow() {
         val app = RuntimeEnvironment.getApplication()
         for (running in listOf(false, true)) {
-            val state = TimerRepository.Snapshot(7, emptyList(), if (running)
+            val state = TimerRepository.Snapshot(version = 7, jobs = emptyList(), running = if (running)
                 TimerRepository.Session("synthetic-session", "synthetic-job", System.currentTimeMillis() - 60000,
                     "Synthetic long job name that must be ellipsized") else null)
             val root = TimerWidget.viewsFor(app, state, 100).apply(app, FrameLayout(app))
@@ -43,7 +43,7 @@ class CompactWidgetTest {
     @Test fun largeTextPrioritizesJobAndClockOutWithoutClippingAnElapsedSecondLine() {
         val app = RuntimeEnvironment.getApplication()
         val large = app.createConfigurationContext(Configuration(app.resources.configuration).apply { fontScale = 1.8f })
-        val state = TimerRepository.Snapshot(7, emptyList(), TimerRepository.Session("s", "j", 1000, "Synthetic work"))
+        val state = TimerRepository.Snapshot(version = 7, jobs = emptyList(), running = TimerRepository.Session("s", "j", 1000, "Synthetic work"))
         val root = TimerWidget.viewsFor(large, state, 100).apply(large, FrameLayout(large))
         assertEquals(View.GONE, root.findViewById<Chronometer>(R.id.widget_elapsed).visibility)
         assertEquals(large.getString(R.string.widget_stop), root.findViewById<ImageButton>(R.id.widget_action).contentDescription)

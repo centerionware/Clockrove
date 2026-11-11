@@ -1053,3 +1053,8 @@ re-enable automatic delivery only for the complete validated combined iteration.
 
 No new login/server/SMTP credential system, task timer, tax calculation or recurring
 billing is authorized by these features. Existing application scope remains active.
+
+Compact-widget run 43071623833 built the Android app but native test compilation
+failed because the new widget fixtures used Dart snapshot argument ordering for
+the Kotlin type. Switched fixtures to named fields; all layout/state assertions
+remain. Corrected Actions validation is pending; no VM checks ran.

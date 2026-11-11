@@ -53,7 +53,7 @@ class NativeVisualPreviewTest {
         val width = (160 * density).toInt()
         val height = (56 * density).toInt()
         for (running in listOf(false, true)) {
-            val state = io.github.centerionware.clockrove.tracking.TimerRepository.Snapshot(1, emptyList(),
+            val state = io.github.centerionware.clockrove.tracking.TimerRepository.Snapshot(version = 1, jobs = emptyList(), running =
                 if (running) io.github.centerionware.clockrove.tracking.TimerRepository.Session("synthetic", "synthetic-job",
                     System.currentTimeMillis() - 60000, "Studio renovation") else null)
             val view = io.github.centerionware.clockrove.widget.TimerWidget.viewsFor(app, state, 101)
