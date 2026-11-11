@@ -24,6 +24,7 @@ class JobCreationTest {
     @Before fun setup() {
         val app = RuntimeEnvironment.getApplication(); app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { now }); dispatch = TimerDispatch(repository)
+        repository.snapshot() // Open the lazy SQLite helper before direct fixture inspection.
     }
     @After fun close() { repository.close() }
     private fun create(command: String = "create", v: Long = version, job: String = "job", name: String = "Synthetic job") = repository.createJob(command, v, job, name)
@@ -99,8 +100,11 @@ class JobCreationTest {
         assertTrue(repository.snapshot().jobs.isEmpty())
         assertNull((dispatch.call(MethodCall("createJob", payload)) as TimerRepository.Outcome).conflict)
         val command = mapOf("id" to "start", "version" to version, "jobId" to "job", "action" to "START", "origin" to "GEOFENCE", "atUtcMillis" to Long.MAX_VALUE)
+        val before = System.currentTimeMillis()
         assertNull((dispatch.call(MethodCall("execute", command)) as TimerRepository.Outcome).conflict)
-        assertEquals(now, repository.snapshot().running!!.startUtcMillis)
+        val after = System.currentTimeMillis()
+        val captured = repository.snapshot().running!!.startUtcMillis
+        assertTrue(captured in minOf(before, after)..maxOf(before, after))
         inspect { db -> db.rawQuery("SELECT origin FROM sessions", null).use { it.moveToFirst(); assertEquals("MANUAL", it.getString(0)) } }
         val snapshot = dispatch.call(MethodCall("snapshot", null)) as Map<*, *>
         assertEquals(version, snapshot["version"]); assertNull(dispatch.call(MethodCall("unknown", null)))

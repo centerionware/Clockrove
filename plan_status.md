@@ -1326,3 +1326,12 @@ confirms 215 native tests and ten actual Android cases across API 24/35, all wit
 zero failures/errors/skips, including three calendar cases per API. Merged to
 main as 8bb533d. This branch now includes that source; fresh combined validation
 is required. History UI and full M3/M4 acceptance remain incomplete. Play is held.
+
+Job-command run 43108685907 passed Flutter checks and the Android build but
+reported four native failures (two fixture issues on each API): direct SQL
+inspection preceded the lazy helper's first open, and the timestamp assertion
+incorrectly expected the business-fixture clock to control native surface taps.
+Open storage via a normal snapshot before inspection and verify the tap's captured
+time against the actual native call window, still rejecting the caller's supplied
+Long.MAX_VALUE timestamp/automation origin. Production timestamp behavior is
+unchanged. Corrected combined-main validation remains pending.
