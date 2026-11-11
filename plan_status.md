@@ -1291,3 +1291,7 @@ Three actual-framework cases per API (24/35) are added to the instrumentation
 class list; these remain pending, without mocked ICU success. Flutter transport
 exposes the choices; forms and full milestone acceptance remain unfinished.
 Reference: https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int).
+
+Applied the exact formatter artifact from current wall-time run 43105393744 to
+the Flutter API and codec checks. Analysis/behavior/device results for this new
+source remain under validation. No VM formatter, test, build or rendering ran.

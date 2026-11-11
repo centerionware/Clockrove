@@ -101,14 +101,16 @@ class HistoryApi {
       'resolveSessionTime',
       {'localTime': localTime, 'timezone': timezone},
     ))!;
-    return List.unmodifiable(values.map((raw) {
-      final value = raw as Map<Object?, Object?>;
-      return HistoryTimeChoice(
-        value['instant'] as int,
-        value['offsetSeconds'] as int,
-        value['label'] as String,
-      );
-    }));
+    return List.unmodifiable(
+      values.map((raw) {
+        final value = raw as Map<Object?, Object?>;
+        return HistoryTimeChoice(
+          value['instant'] as int,
+          value['offsetSeconds'] as int,
+          value['label'] as String,
+        );
+      }),
+    );
   }
 
   Future<HistoryData> history(
@@ -140,17 +142,19 @@ class HistoryApi {
       'sessionRevisions',
       {'jobId': jobId, 'sessionId': sessionId},
     ))!;
-    return List.unmodifiable(values.map((raw) {
-      final value = raw as Map<Object?, Object?>;
-      return HistoryRevision(
-        id: value['id'] as String,
-        changed: value['changed'] as int,
-        origin: value['origin'] as String,
-        deleted: value['deleted'] as bool,
-        payload: value['payload'] as String?,
-        parents: (value['parents'] as List).cast<String>(),
-      );
-    }));
+    return List.unmodifiable(
+      values.map((raw) {
+        final value = raw as Map<Object?, Object?>;
+        return HistoryRevision(
+          id: value['id'] as String,
+          changed: value['changed'] as int,
+          origin: value['origin'] as String,
+          deleted: value['deleted'] as bool,
+          payload: value['payload'] as String?,
+          parents: (value['parents'] as List).cast<String>(),
+        );
+      }),
+    );
   }
 
   Future<TimerOutcome> _change(
