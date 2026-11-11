@@ -76,3 +76,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.16.1")
 }
+
+// AGP 9 host-test packaging consumes Flutter's copied assets. Declare the producer
+// explicitly so Gradle does not package stale/missing assets or reject the graph.
+tasks.configureEach {
+    val variant = Regex("^package(.+)UnitTestForUnitTest$").matchEntire(name)?.groupValues?.get(1)
+    if (variant != null) dependsOn("copyFlutterAssets$variant")
+}

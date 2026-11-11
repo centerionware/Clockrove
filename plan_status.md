@@ -331,3 +331,10 @@ device and store eligibility. No manual version bumps or per-release approvals.
 Workflows and Fastlane lanes are implemented but not yet executed/verified end to
 end; no internal upload acceptance or tester availability claimed. Existing native
 fix run 42986013201 is live in Android build stage; do not cancel it for this push.
+
+Native fix run 42986013201 completed: debug APK compiled successfully; native test
+execution blocked before tests by AGP 9 packageDebugUnitTestForUnitTest consuming
+copyFlutterAssetsDebug outputs without a declared dependency. Added the explicit
+variant-matched dependency in Gradle; this preserves host-test asset packaging and
+checks rather than bypassing them. New validation queues behind 42986580821 and
+will be eligible for automatic internal delivery only if all checks pass.

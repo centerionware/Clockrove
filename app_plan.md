@@ -553,3 +553,8 @@ of cancelling pushes. Production gate is one-time readiness, not per-release
 approval. Saved upload key is reused; credentials cleaned and no public binary
 artifacts in regular delivery. No actual internal/production upload proven yet.
 See docs/PLAY_DELIVERY.md and plan_status.md for operational status.
+
+Native run 42986013201 built debug APK but failed host-test task graph validation:
+AGP packaging lacked dependency on copyFlutterAssetsDebug. Added explicit producer
+dependency for variant host-test packaging. No test execution success or automatic
+internal upload is claimed. Subsequent validation must pass before Play delivery.
