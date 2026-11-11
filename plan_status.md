@@ -1150,6 +1150,13 @@ Prepared source requires Actions formatting/analyzer/tests and synthetic visual
 review. Logo import, PDF/style previews, report screens and lifecycle still remain;
 no combined release or complete invoice claim is made.
 
+### Monitoring retry and upgrade recovery continuation
+
+Rebased the pending explicit monitoring retry/app-upgrade recovery source onto
+current main without changing the combined next-release contract or publication
+hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
+Fresh exact-head Actions validation is required. This remains source-level recovery
+behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.
 ### Native job lifecycle — source prepared, unverified
 
 Prepared serialized archive/restore/delete commands. Archive requires clock-out;
@@ -1165,6 +1172,9 @@ reset, running guard, preferences, retained templates/customer, response-loss re
 capacity, rollback and duplicate concurrent delete. Actions/UI integration remain
 pending. Play publication is held; no VM validation ran.
 
+Lifecycle fdd33a8 passed the completed android check in 43085255507 (176 native
+tests, zero failures/errors/skips). Merged #25. This monitoring branch now includes
+that main source; exact combined validation is pending. Play delivery remains held.
 ### Immutable invoice/PDF source prepared
 
 Prepared stable numbered invoice snapshots using actual finalized hourly or
@@ -1359,3 +1369,13 @@ changing text scale, collapsing the size-dependent controls area. Preserve the
 real viewport/insets via copyWith, then scroll and hit-test the whole button
 before tapping. New viewer captures and all-style long-document checks still
 require Actions; no local rendering or test execution ran.
+Monitoring recovery run 43094466938 completed with successful formatting, analysis,
+Flutter tests, Android build and native tests, but failed while exporting native
+results/previews during the GitHub Actions incident. Release tooling did not run;
+this is not a passed validation. Combined current main (834a7e4) into #17 for a
+fresh complete validation including actual PDF checks. No VM build/test ran.
+
+Monitoring recovery #17 head 4d3db27 passed full Actions 43101725472; inspected
+193 native cases, zero failures/errors/skips. Merged exact head to main as
+315bce1, then combined that source into #29 for final integration validation.
+Physical app-upgrade/recovery evidence remains separate. Play is still held.

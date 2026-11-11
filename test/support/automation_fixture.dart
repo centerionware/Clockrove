@@ -17,6 +17,17 @@ class FixtureAutomationApi extends AutomationApi {
   int preciseRequests = 0;
   int backgroundRequests = 0;
   int settingsVisits = 0;
+  int monitoringRetries = 0;
+  String? monitoringHealth;
+  bool retryUnavailable = false;
+  @override
+  Future<void> retryMonitoring() async {
+    monitoringRetries++;
+    if (retryUnavailable) {
+      throw PlatformException(code: 'REGISTRATION_UNAVAILABLE');
+    }
+  }
+
   int positionRequests = 0;
   int positionCancellations = 0;
   Future<SitePosition> Function()? positionResult;
@@ -45,7 +56,7 @@ class FixtureAutomationApi extends AutomationApi {
     precise: precise,
     background: background,
     backgroundLabel: 'Allow all the time',
-    health: settings.enabled ? 'READY' : 'IDLE',
+    health: monitoringHealth ?? (settings.enabled ? 'READY' : 'IDLE'),
     armed: true,
     suppressed: false,
     working: departed != null,
