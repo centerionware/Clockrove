@@ -1,7 +1,8 @@
 /// English copy centralized for later localization.
 abstract final class AppStrings {
   static const appName = 'Clockrove';
-  static const prototype = 'Development build: location tracking is unavailable.';
+  static const prototype =
+      'Development build: location tracking is unavailable.';
   static const idle = 'Not clocked in';
   static const started = 'Started';
   static const jobs = 'Jobs';

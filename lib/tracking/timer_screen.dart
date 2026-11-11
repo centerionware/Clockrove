@@ -113,10 +113,9 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                 FilledButton(
                   onPressed: disabled
                       ? null
-                      : () => ref.read(timerActionsProvider.notifier).submit(
-                          state,
-                          TimerAction.stop,
-                        ),
+                      : () => ref
+                            .read(timerActionsProvider.notifier)
+                            .submit(state, TimerAction.stop),
                   child: const Text(AppStrings.clockOut),
                 ),
               ],
@@ -124,7 +123,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               if (actions.pending != null && !actions.working) ...[
                 const Text(AppStrings.uncertain),
                 TextButton(
-                  onPressed: () => ref.read(timerActionsProvider.notifier).retry(),
+                  onPressed: () =>
+                      ref.read(timerActionsProvider.notifier).retry(),
                   child: const Text(AppStrings.retry),
                 ),
               ],
@@ -145,13 +145,15 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   trailing: TextButton(
                     onPressed: disabled || state.running?.jobId == job.id
                         ? null
-                        : () => ref.read(timerActionsProvider.notifier).submit(
-                            state,
-                            state.running == null
-                                ? TimerAction.start
-                                : TimerAction.switchJob,
-                            jobId: job.id,
-                          ),
+                        : () => ref
+                              .read(timerActionsProvider.notifier)
+                              .submit(
+                                state,
+                                state.running == null
+                                    ? TimerAction.start
+                                    : TimerAction.switchJob,
+                                jobId: job.id,
+                              ),
                     child: Text(
                       state.running == null
                           ? AppStrings.clockIn

@@ -52,9 +52,10 @@ class TimerActions extends Notifier<TimerActionState> {
   }) async {
     if (state.working || state.pending != null) return;
     final random = Random.secure();
-    final id = List.generate(16, (_) => random.nextInt(256))
-        .map((value) => value.toRadixString(16).padLeft(2, '0'))
-        .join();
+    final id = List.generate(
+      16,
+      (_) => random.nextInt(256),
+    ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
     await _attempt(TimerIntent(id, displayed.version, action, jobId));
   }
 
@@ -67,12 +68,14 @@ class TimerActions extends Notifier<TimerActionState> {
   Future<void> _attempt(TimerIntent intent) async {
     state = TimerActionState(working: true, pending: intent);
     try {
-      final outcome = await ref.read(timerApiProvider).execute(
-        id: intent.id,
-        version: intent.version,
-        action: intent.action,
-        jobId: intent.jobId,
-      );
+      final outcome = await ref
+          .read(timerApiProvider)
+          .execute(
+            id: intent.id,
+            version: intent.version,
+            action: intent.action,
+            jobId: intent.jobId,
+          );
       if (!_active) return;
       state = TimerActionState(conflict: outcome.conflict);
     } catch (_) {
@@ -90,7 +93,9 @@ class TimerActions extends Notifier<TimerActionState> {
       await ref.read(timerApiProvider).createJob(name.trim());
       if (_active) state = const TimerActionState();
     } catch (_) {
-      if (_active) state = const TimerActionState(conflict: 'JOB_CREATE_FAILED');
+      if (_active) {
+        state = const TimerActionState(conflict: 'JOB_CREATE_FAILED');
+      }
     }
     if (_active) ref.invalidate(timerSnapshotProvider);
   }

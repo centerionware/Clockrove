@@ -379,3 +379,30 @@ can be applied from CI output without ever running a formatter on the VM. Earlie
 main run 42986580821 is terminal failure; corrected run 42986727241 is live.
 Feature dependency run remains live on its previous source; new controls require
 a new feature validation run rather than pretending that old run covered them.
+
+Dependency preparation run 42987027150 on e52b1fd completed SUCCESS. Retrieved logs:
+Android build passed; native testDebugUnitTest ran (not NO-SOURCE) and Gradle
+reported BUILD SUCCESSFUL (23s); release version allocation/tag checks passed and
+Fastfile syntax was OK. This source predates the new screen/controller and cannot
+validate those changes. It provides native repository/Robolectric and compilation
+evidence only, not real widget delivery or physical-location evidence.
+
+New controls are committed as 787916b in draft PR #1:
+https://github.com/centerionware/Clockrove/pull/1
+PR validation run 42987698700 is pending/in progress. Main run 42986727241 is still
+live in Android compilation; no automatic Play upload success yet. Do not merge
+PR until new UI/presentation checks pass. No VM checks executed.
+
+### Prototype review and first automatic publishing run
+
+Previous turn: progress (native prototype controls, tests and draft PR).
+Main corrected validation 42986727241 completed SUCCESS, triggering automatic
+Play delivery run 42988068348. Its source eligibility and Ruby tool install passed;
+JDK setup is active. No Play upload acceptance claimed yet.
+
+PR run 42987698700 completed FAILURE at formatting. Downloaded/reviewed its
+formatter-source-patch artifact and applied that Actions-generated source patch;
+no VM formatter ran. Added braces to keep the formatted conditional lint-safe.
+Added a screen journey test for start/create/switch/stop and New job ordering,
+using a controlled adapter (UI semantics only; native tests remain separate).
+Feature changes require fresh PR validation. No main merge or VM tests performed.

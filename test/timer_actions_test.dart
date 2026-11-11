@@ -76,20 +76,23 @@ void main() {
     expect(container.read(timerActionsProvider).working, isFalse);
   });
 
-  test('stale conflict re-queries authoritative state without retrying', () async {
-    final api = ControlledApi()
-      ..snapshotVersion = 9
-      ..outcome = const TimerOutcome(9, 'STALE_STATE');
-    final container = ProviderContainer(
-      overrides: [timerApiProvider.overrideWithValue(api)],
-    );
-    addTearDown(container.dispose);
-    final actions = container.read(timerActionsProvider.notifier);
-    await actions.submit(displayed, TimerAction.stop);
-    expect(container.read(timerActionsProvider).conflict, 'STALE_STATE');
-    expect(container.read(timerActionsProvider).pending, isNull);
-    await actions.retry();
-    expect(api.calls, hasLength(1));
-    expect((await container.read(timerSnapshotProvider.future)).version, 9);
-  });
+  test(
+    'stale conflict re-queries authoritative state without retrying',
+    () async {
+      final api = ControlledApi()
+        ..snapshotVersion = 9
+        ..outcome = const TimerOutcome(9, 'STALE_STATE');
+      final container = ProviderContainer(
+        overrides: [timerApiProvider.overrideWithValue(api)],
+      );
+      addTearDown(container.dispose);
+      final actions = container.read(timerActionsProvider.notifier);
+      await actions.submit(displayed, TimerAction.stop);
+      expect(container.read(timerActionsProvider).conflict, 'STALE_STATE');
+      expect(container.read(timerActionsProvider).pending, isNull);
+      await actions.retry();
+      expect(api.calls, hasLength(1));
+      expect((await container.read(timerSnapshotProvider.future)).version, 9);
+    },
+  );
 }

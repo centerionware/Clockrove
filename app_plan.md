@@ -567,3 +567,16 @@ location-unavailable state. Riverpod consumes native version invalidations and
 snapshots; uncertain commands retain IDs and block competing app intents pending
 retry. Added three presentation tests; physical/native/UI runtime proof pending.
 Branch remains separate from main until validated; no VM builds/tests/formatting.
+
+Actions dependency preparation 42987027150 on e52b1fd concluded success, including
+Android compilation, native test task, version-policy tests and Fastfile syntax.
+This validates the pre-controls branch's native repository tests and build only.
+New UI/controller commit 787916b is isolated in draft PR #1, validation 42987698700;
+its behavior is not covered by the earlier successful run. Main compilation and
+first automatic internal delivery remain in progress/unproven respectively.
+
+Main run 42986727241 passed all checks and automatically triggered Play delivery
+42988068348 (live; upload acceptance pending). PR #1 formatting failed in run
+42987698700; applied reviewed Actions-generated source patch and added prototype
+screen journey test. No VM formatter/test/build executed. New UI remains unmerged
+and unvalidated until the next PR run passes.
