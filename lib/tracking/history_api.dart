@@ -84,9 +84,33 @@ class HistoryRevision {
   final List<String> parents;
 }
 
+class HistoryTimeChoice {
+  const HistoryTimeChoice(this.instant, this.offsetSeconds, this.label);
+  final int instant, offsetSeconds;
+  final String label;
+}
+
 class HistoryApi {
   const HistoryApi();
   static const _channel = MethodChannel('clockrove/business/v1');
+  Future<List<HistoryTimeChoice>> resolve(
+    String localTime,
+    String timezone,
+  ) async {
+    final values = (await _channel.invokeListMethod<Object?>(
+      'resolveSessionTime',
+      {'localTime': localTime, 'timezone': timezone},
+    ))!;
+    return List.unmodifiable(values.map((raw) {
+      final value = raw as Map<Object?, Object?>;
+      return HistoryTimeChoice(
+        value['instant'] as int,
+        value['offsetSeconds'] as int,
+        value['label'] as String,
+      );
+    }));
+  }
+
   Future<HistoryData> history(
     String jobId, {
     HistoryCursor? before,

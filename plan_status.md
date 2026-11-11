@@ -1278,3 +1278,16 @@ Three codec checks cover preserved milliseconds/timezone context, cursor identit
 immutable revision parents and response-loss propagation without automatic duplicate
 submission. These verify transport only; the actual native storage cases remain
 separate. API source and new checks await Actions; history forms are unfinished.
+
+Earlier history head b2af063 / run 43103934067 passed its Android build and native
+unit step. Inspected XML confirms 215 native cases with zero failures/errors/skips,
+including all fourteen history and eight bridge executions. That full run subsequently completed successfully; newer
+Flutter API and wall-time resolver validation remain required.
+
+Prepared native strict wall-time resolution for the correction form: return both
+UTC/offset choices for a repeated local time, one for ordinary time and no choices
+for a clock gap/skipped date. Keep milliseconds and reject invalid dates/zones.
+Three actual-framework cases per API (24/35) are added to the instrumentation
+class list; these remain pending, without mocked ICU success. Flutter transport
+exposes the choices; forms and full milestone acceptance remain unfinished.
+Reference: https://developer.android.com/reference/android/icu/util/Calendar#setRepeatedWallTimeOption(int).

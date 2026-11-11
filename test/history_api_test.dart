@@ -65,6 +65,29 @@ void main() {
     expect(() => revision.parents.clear(), throwsUnsupportedError);
   });
 
+  test('wall-time choices preserve both offsets without choosing for the user', () async {
+    messenger.setMockMethodCallHandler(channel, (call) async => [
+      {
+        'instant': 1793511000123,
+        'offsetSeconds': -14400,
+        'label': '2026-11-01T01:30:00.123 -04:00',
+      },
+      {
+        'instant': 1793514600123,
+        'offsetSeconds': -18000,
+        'label': '2026-11-01T01:30:00.123 -05:00',
+      },
+    ]);
+    final choices = await const HistoryApi().resolve(
+      '2026-11-01T01:30:00.123',
+      'America/New_York',
+    );
+    expect(choices.length, 2);
+    expect(choices[1].instant - choices[0].instant, 3600000);
+    expect(choices.map((choice) => choice.offsetSeconds), [-14400, -18000]);
+    expect(() => choices.clear(), throwsUnsupportedError);
+  });
+
   test('unknown response propagates and explicit retry retains captured intent', () async {
     final calls = <MethodCall>[];
     messenger.setMockMethodCallHandler(channel, (call) async {

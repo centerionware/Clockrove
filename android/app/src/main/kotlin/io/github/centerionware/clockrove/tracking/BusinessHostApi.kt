@@ -43,6 +43,9 @@ internal class BusinessDispatch(private val repository: TimerRepository) {
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
+                mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
+            }
             "sessionHistory" -> {
                 val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
                 val before = (raw as Map<*, *>?)?.let { Input(it).let { cursor -> SessionHistoryStore.Cursor(cursor.integer("start"), cursor.string("id")) } }
