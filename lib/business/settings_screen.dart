@@ -39,7 +39,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       const SizedBox(height: 32), Text('Company & contact', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 16),
       _field(_name, 'Company name', length: 240), _field(_email, 'Company email', length: 254), _field(_phone, 'Phone', length: 120), _field(_address, 'Address', lines: 2), _field(_website, 'Website', length: 2000),
       const SizedBox(height: 16), Text('Invoice appearance', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 16),
-      DropdownButtonFormField<String>(initialValue: _style, decoration: const InputDecoration(labelText: 'Invoice style'), items: const [DropdownMenuItem(value: 'MINIMAL', child: Text('Minimal')), DropdownMenuItem(value: 'CLASSIC', child: Text('Classic')), DropdownMenuItem(value: 'MODERN', child: Text('Modern'))], onChanged: (v) { if (v != null) setState(() => _style = v); }),
+      DropdownButtonFormField<String>(initialValue: _style, decoration: const InputDecoration(labelText: 'Invoice style'), items: const [DropdownMenuItem(value: 'MINIMAL', child: Text('Minimal')), DropdownMenuItem(value: 'CLASSIC', child: Text('Classic')), DropdownMenuItem(value: 'MODERN', child: Text('Modern'))], onChanged: (v) { if (v != null) { setState(() => _style = v); } }),
       const SizedBox(height: 20), _field(_header, 'Optional invoice header', lines: 2), _field(_footer, 'Optional invoice footer', lines: 2),
       Text('Email draft', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 16),
       const Text('Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.'), const SizedBox(height: 16),
@@ -51,7 +51,34 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
 
 class CustomersScreen extends ConsumerWidget {
   const CustomersScreen({super.key});
-  @override Widget build(BuildContext context, WidgetRef ref) => Scaffold(appBar: AppBar(title: const Text('Customers')), floatingActionButton: FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CustomerEditor())), icon: const Icon(Icons.person_add_alt), label: const Text('Customer')), body: ref.watch(businessSettingsProvider).when(loading: () => const Center(child: CircularProgressIndicator()), error: (_, _) => Center(child: TextButton(onPressed: () => ref.invalidate(businessSettingsProvider), child: const Text('Retry customers'))), data: (data) => data.customers.isEmpty ? const Center(child: Text('Add a customer to keep billing details with your jobs.')) : ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 100), children: [for (final c in data.customers) Card(child: ListTile(leading: CircleAvatar(child: Icon(c.archived ? Icons.archive_outlined : Icons.person_outline)), title: Text(c.name), subtitle: Text([if (c.archived) 'Archived', if (c.email.isNotEmpty) c.email, if (c.phone.isNotEmpty) c.phone].join(' · ')), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => CustomerEditor(customer: c)))))]))));
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+    appBar: AppBar(title: const Text('Customers')),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CustomerEditor())),
+      icon: const Icon(Icons.person_add_alt), label: const Text('Customer'),
+    ),
+    body: ref.watch(businessSettingsProvider).when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(child: TextButton(onPressed: () => ref.invalidate(businessSettingsProvider), child: const Text('Retry customers'))),
+      data: (data) => data.customers.isEmpty
+        ? const Center(child: Text('Add a customer to keep billing details with your jobs.'))
+        : ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          children: [
+            for (final c in data.customers) Card(
+              child: ListTile(
+                leading: CircleAvatar(child: Icon(c.archived ? Icons.archive_outlined : Icons.person_outline)),
+                title: Text(c.name),
+                subtitle: Text([if (c.archived) 'Archived', if (c.email.isNotEmpty) c.email, if (c.phone.isNotEmpty) c.phone].join(' · ')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => CustomerEditor(customer: c))),
+              ),
+            ),
+          ],
+        ),
+    ),
+  );
 }
 class CustomerEditor extends ConsumerStatefulWidget {
   const CustomerEditor({super.key, this.customer});
