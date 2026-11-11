@@ -540,3 +540,16 @@ Native run 42985050236 failed Kotlin compilation on three mixed SQL argument
 arrays; explicit Any? arrays prepared, plus API-24 capture fix/eighth native test.
 Dart checks passed. Preparing pinned Ruby/Fastlane lockfile via Actions before
 publishing workflow activation. No VM validation or Play upload attempted.
+
+### Automatic main/internal and version-tag/production implementation
+
+Locked release tools resolved by successful Actions run 42986036667. Added Play
+delivery workflow, Fastlane lanes and automatic version policy tests. Main builds
+publish only after successful validation of exact main SHA; vX.Y.Z pins production
+versionName without pubspec editing and requires tested main ancestry/readiness.
+Store-wide code inspection plus time floor allocates increasing unique codes
+under a shared publishing queue, including reruns. Main validation queues instead
+of cancelling pushes. Production gate is one-time readiness, not per-release
+approval. Saved upload key is reused; credentials cleaned and no public binary
+artifacts in regular delivery. No actual internal/production upload proven yet.
+See docs/PLAY_DELIVERY.md and plan_status.md for operational status.

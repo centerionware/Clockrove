@@ -1,0 +1,44 @@
+require_relative 'versioning'
+require 'supply'
+
+def play_package
+  'io.github.centerionware.clockrove'
+end
+
+def play_key
+  ENV.fetch('PLAY_SERVICE_ACCOUNT_FILE')
+end
+
+lane :allocate_code do
+  client = Supply::Client.make_from_config(params: { json_key: play_key })
+  begin
+    client.begin_edit(package_name: play_package)
+    tracks = client.tracks.flat_map do |track|
+      Array(track.releases).flat_map { |release| Array(release.version_codes) }
+    end
+    code = ClockroveVersioning.next_code(client.aab_version_codes + client.apks_version_codes + tracks)
+    File.open(ENV.fetch('GITHUB_OUTPUT'), 'a') { |file| file.puts("code=#{code}") }
+    UI.message("Allocated Android versionCode #{code}")
+  ensure
+    client.abort_current_edit if client.current_edit
+  end
+end
+
+lane :deliver_play do
+  track = ENV.fetch('PLAY_TRACK')
+  UI.user_error!('Unsupported publishing track') unless %w[internal production].include?(track)
+  upload_to_play_store(
+    package_name: play_package,
+    json_key: play_key,
+    aab: File.expand_path('../build/app/outputs/bundle/release/app-release.aab', __dir__),
+    track: track,
+    release_status: 'completed',
+    skip_upload_metadata: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    skip_upload_changelogs: true,
+    changes_not_sent_for_review: false,
+    rescue_changes_not_sent_for_review: false
+  )
+  UI.success("Play #{track} upload/submission accepted; this does not prove review approval or availability")
+end

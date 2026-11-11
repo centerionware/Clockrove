@@ -311,3 +311,23 @@ Selected pinned release tools Ruby 3.3.6 / Bundler 2.5.23 / Fastlane 2.228.0;
 prepare-release-tools workflow resolves the committed Gemfile lock on Actions.
 No VM builds/tests/dependency resolution executed. Internal/production uploads are
 not yet proven; publication must wait for successful native validation and setup.
+
+### Automatic internal/tagged publishing implementation
+
+Actions prepare-release-tools run 42986036667 succeeded; retrieved and committed
+its Gemfile.lock (Ruby 3.3.6/Bundler 2.5.23/Fastlane 2.228.0). Prepared Play delivery
+triggered by successful main validation and v* tags, exact validated checkout,
+main ancestry, tag semantic checks and production readiness gate. Tags set build
+versionName; internal names use CI run/attempt; codes read all Play bundles/APKs
+and track releases, then choose max(history+1, seconds since 2020). Shared FIFO
+publishing queue covers allocation through upload; retries re-read history.
+
+Validation and publishing use queue:max, cancel-in-progress:false so pushes queue
+instead of superseding each other (GitHub supports up to 100 pending). Added pure
+Ruby version/tag/capacity/rerun tests to Actions validation. Upload uses the saved
+key and service account; no release binaries/credentials in public artifacts.
+Production remains blocked until one-time PRODUCTION_READY gate reflects feature,
+device and store eligibility. No manual version bumps or per-release approvals.
+Workflows and Fastlane lanes are implemented but not yet executed/verified end to
+end; no internal upload acceptance or tester availability claimed. Existing native
+fix run 42986013201 is live in Android build stage; do not cancel it for this push.

@@ -10,7 +10,8 @@ permissions:
 
 concurrency:
   group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   android:
@@ -73,5 +74,18 @@ jobs:
       - name: Native unit tests
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest
+      - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
+        with:
+          ruby-version: '3.3.6'
+          bundler: '2.5.23'
+      - name: Validate locked release tooling and version policy
+        env:
+          BUNDLE_FROZEN: 'true'
+          FASTLANE_OPT_OUT_USAGE: '1'
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+        run: |
+          bundle install --jobs 4 --retry 3
+          bundle exec ruby test/release_version_test.rb
+          bundle exec ruby -c fastlane/Fastfile
       - name: Publishing status
-        run: echo 'Publishing not configured. Validation only; no signing, upload or store submission.' >> "$GITHUB_STEP_SUMMARY"
+        run: echo 'Validation only. Successful main pushes trigger separate Play internal delivery; production tags remain readiness-gated.' >> "$GITHUB_STEP_SUMMARY"
