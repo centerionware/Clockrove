@@ -12,14 +12,10 @@ import java.io.File
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@RunWith(AndroidJUnit4::class)
 class InvoicePdfTest {
     private fun fixture(style: String, lines: Int = 3) = InvoiceStore.Snapshot("INV-000042", 1793534400000, style, "USD", 2,
         "Riverside Studio", "billing@example.test\n+1 555 0100\n12 Synthetic Street", "Synthetic Customer", "customer@example.test\n24 Synthetic Avenue",
@@ -33,7 +29,7 @@ class InvoicePdfTest {
     }
     private fun inspect(bytes: ByteArray, block: (PdfRenderer) -> Unit) {
         assertTrue(bytes.size > 1000); assertEquals("%PDF-", bytes.take(5).toByteArray().toString(Charsets.US_ASCII))
-        val file = File.createTempFile("synthetic-invoice", ".pdf", RuntimeEnvironment.getApplication().cacheDir)
+        val file = File.createTempFile("synthetic-invoice", ".pdf", InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
         try { file.writeBytes(bytes); ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use(block) } } finally { file.delete() }
     }
     @Test fun allThreeStylesProduceActualReadablePdfPagesWithLogoAndEqualTotals() {
@@ -46,8 +42,13 @@ class InvoicePdfTest {
                     val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     assertNotEquals(Color.TRANSPARENT, bitmap.getPixel(100,100)); images.add(bitmap.getPixel(10,10))
-                    val root = System.getenv("GITHUB_WORKSPACE")?.let { File(it, "build/native-ui-preview") } ?: File("build/native-ui-preview")
-                    root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
+                    val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
+                    root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
+                    if (android.os.Build.VERSION.SDK_INT >= 35) {
+                        val text = page.textContents.joinToString(" ") { it.text }
+                        assertTrue(text.contains("USD 1250.00")); assertTrue(text.contains("INV-000042")); assertTrue(text.contains("Synthetic Customer"))
+                    }
+                    File(root, "clockrove-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
                 }
             }
             assertEquals("1250.00", snapshot.total)

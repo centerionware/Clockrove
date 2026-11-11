@@ -25,7 +25,7 @@ class InvoiceProvider() : ContentProvider() {
     override fun getType(uri: Uri): String { record(uri); return "application/pdf" }
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         val invoice = record(uri); val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
-        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> "${invoice.number}.pdf"; OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray()) }
+        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> "${invoice.number}.pdf"; OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray<Any?>()) }
     }
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         if (mode != "r") throw FileNotFoundException("Read only")
