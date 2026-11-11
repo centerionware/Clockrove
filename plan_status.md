@@ -976,3 +976,8 @@ Seven API-24/35 controller cases, one API-29/35 bridge case, eight UI/map cases 
 one codec case are prepared but unrun. Two map previews plus updated site-editor
 previews will render in Actions. The form retains off-screen validators. No VM
 builds/tests/rendering ran. Native/device and final visual evidence remain pending.
+
+First site-selection run 43064678311 exported formatter changes, then stopped
+at an invalid const Semantics construction and an unused test import. Applied
+the Actions formatter patch, corrected both analyzer issues and retained all
+behavior assertions. No VM validation ran; corrected CI evidence is still needed.

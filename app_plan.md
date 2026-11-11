@@ -1052,3 +1052,8 @@ Seven native controller cases (API 24/35), one bridge case (API 29/35), eight UI
 cases and one Dart codec case are prepared. All builds, formatter, tests and preview
 rendering remain in Actions. Actual fused fixes, live OSM, device permissions and
 background tracking remain unproven; milestones 2 and 5 are incomplete.
+
+First site-selection run 43064678311 exported formatter changes, then stopped
+at an invalid const Semantics construction and an unused test import. Applied
+the Actions formatter patch, corrected both analyzer issues and retained all
+behavior assertions. No VM validation ran; corrected CI evidence is still needed.
