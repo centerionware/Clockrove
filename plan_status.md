@@ -1613,3 +1613,12 @@ Corrected history head ebfda2a is being validated in 43122948408. Applied its
 exact Actions formatter patch for the queued-refresh regression and real-I/O
 capture calls. Behavior/native/device results are still pending; the formatting
 correction requires an exact-head validation before merge. No VM execution ran.
+
+Run 43122948408 completed FAILURE: 90 Flutter cases passed, one failed; seven
+existing device-preview-only cases were deferred to the post-device invocation.
+The failed history retry case scrolled a pending save button outside the lazy
+list cache, discarding its captured command. Other history cases and eight
+preview captures passed. Preserve BusinessCommand state with native Flutter
+keep-alive while its outcome is unknown, releasing it after a known result. Keep
+the scroll-away/retry test unchanged to verify the actual defect is fixed.
+Android build/native/device stages did not run after this UI failure.

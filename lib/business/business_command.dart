@@ -22,14 +22,20 @@ class BusinessCommand extends StatefulWidget {
   State<BusinessCommand> createState() => _BusinessCommandState();
 }
 
-class _BusinessCommandState extends State<BusinessCommand> {
+class _BusinessCommandState extends State<BusinessCommand>
+    with AutomaticKeepAliveClientMixin<BusinessCommand> {
   Future<TimerOutcome> Function()? _pending;
+  // Lazy form lists may evict an offscreen button. Retain unknown operations
+  // until the original command has a known outcome and can safely be released.
+  @override
+  bool get wantKeepAlive => _pending != null;
   bool _busy = false;
   String? _message;
   Future<void> _submit() async {
     if (_busy) return;
     try {
       _pending ??= widget.create();
+      updateKeepAlive();
       widget.onPendingChanged?.call(true);
       setState(() {
         _busy = true;
@@ -42,6 +48,7 @@ class _BusinessCommandState extends State<BusinessCommand> {
         _busy = false;
         _message = result.committed ? null : _conflict(result.conflict);
       });
+      updateKeepAlive();
       widget.onPendingChanged?.call(false);
       if (result.committed) widget.onCommitted();
     } on FormatException catch (e) {
@@ -97,7 +104,9 @@ class _BusinessCommandState extends State<BusinessCommand> {
     _ => 'The change could not be applied. Your draft is kept. Refresh the details and try again.',
   };
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) {
+    super.build(context);
+    return PopScope(
     canPop: _pending == null,
     child: Column(
       mainAxisSize: MainAxisSize.min,
@@ -126,4 +135,5 @@ class _BusinessCommandState extends State<BusinessCommand> {
       ],
     ),
   );
+  }
 }
