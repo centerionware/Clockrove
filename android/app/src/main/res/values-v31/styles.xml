@@ -1,0 +1,8 @@
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/clockrove_background</item>
+        <item name="android:windowSplashScreenBackground">@color/clockrove_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_clockrove_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/clockrove_green</item>
+    </style>
+</resources>

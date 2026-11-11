@@ -664,3 +664,17 @@ Departure PR #7 passed rebased-head Actions 42999724652 and merged as
 b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Membership source was rebased onto
 that main commit; only append-only evidence sections needed conflict resolution.
 Combined-head validation pending. Main UI validation 42999610367 also succeeded.
+
+### Android visual identity follow-up
+
+Isolated native-visual-identity replaces starter launcher rasters with vector
+clock artwork, adaptive and monochrome layers, and matching light/dark launch
+backgrounds including API-31 system splash attributes. No new runtime dependency.
+Added an Actions-only native-resource rendering harness/artifact for image review;
+it does not establish real launcher masking or device launch transitions. Source
+and previews await CI. No VM rendering/build/test/formatter was run.
+
+Departure PR #7 passed rebased-head Actions 42999724652 and merged as
+b0d93f5eb4d3a56a6bfb5a36ff38f87d42df820b. Native visual source was rebased onto
+that main commit; only append-only evidence sections needed conflict resolution.
+New combined-head validation pending; no runtime automation/device proof inferred.

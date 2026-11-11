@@ -113,6 +113,14 @@ jobs:
       - name: Native unit tests
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest
+      - name: Export synthetic Android visual previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-ui-previews
+          path: build/native-ui-preview/*.png
+          retention-days: 1
+          if-no-files-found: ignore
       - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
         with:
           ruby-version: '3.3.6'
