@@ -1153,3 +1153,21 @@ current main without changing the combined next-release contract or publication
 hold. Prior Actions 43065982993 stopped at formatting; applied its source artifact.
 Fresh exact-head Actions validation is required. This remains source-level recovery
 behavior, not physical GPS/process/upgrade proof. Play delivery remains disabled.
+### Native job lifecycle — source prepared, unverified
+
+Prepared serialized archive/restore/delete commands. Archive requires clock-out;
+restore preserves preferences but rotates registrations and checks site capacity.
+Native deletion enforces thirty continuous elapsed UTC days, resets after restore/
+rearchive, rejects rollback/unknown archive dates and purges job-specific entities
+transactionally. Independent customers/templates remain, with deleted-job template
+provenance and historical private revision payloads cleared. Opaque command hashes
+preserve original outcome replay after personal fingerprints are purged; retained
+surface headers contain only version/action/opaque job ID/origin. This is logical
+data removal, not a forensic secure-erasure guarantee. Ten API-24 cases cover age,
+reset, running guard, preferences, retained templates/customer, response-loss replay,
+capacity, rollback and duplicate concurrent delete. Actions/UI integration remain
+pending. Play publication is held; no VM validation ran.
+
+Lifecycle fdd33a8 passed the completed android check in 43085255507 (176 native
+tests, zero failures/errors/skips). Merged #25. This monitoring branch now includes
+that main source; exact combined validation is pending. Play delivery remains held.
