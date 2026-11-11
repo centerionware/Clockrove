@@ -206,14 +206,15 @@ void main() {
         WorkReview('session', DateTime.utc(2026, 11, 11, 9), null, false),
       ];
     await _show(tester, api);
-    await _reveal(tester, 'Keep recorded times');
-    expect(find.textContaining('Still running'), findsOneWidget);
+    await _reveal(tester, 'Departure pending');
     expect(
       find.textContaining(
         'Automatic departure is paused while this work needs review',
       ),
       findsOneWidget,
     );
+    await _reveal(tester, 'Keep recorded times');
+    expect(find.textContaining('Still running'), findsOneWidget);
     final record = tester.widget<Text>(find.textContaining('Start:'));
     expect(record.data, contains('2026'));
     await tester.tap(find.text('Keep recorded times'));

@@ -1024,3 +1024,9 @@ Added conditional held-work copy and explicit year/seconds/UTC offset to review
 boundaries; these source refinements require the next CI. Coordinate editing is
 implemented; map-tap/current-position selection and full correction UI remain
 planned, along with physical acceptance. No VM builds/tests/rendering ran.
+
+Controls revision run 43027348013 passed formatting/analyze and 31/32 Dart/UI
+cases. The added held-departure copy assertion searched an off-screen, lazily
+unbuilt card after scrolling to the review action. The test now reveals the
+pending card before checking that copy, then reveals recorded boundaries and
+acceptance separately. Both assertions remain; a corrected Actions run is required.
