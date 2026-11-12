@@ -1745,3 +1745,11 @@ Merged #34 as c5e19d15a06ccd31e85455e5ab4782bcdf36a88d. Main validation and
 automatic internal delivery for this new merge must pass before claiming Play
 acceptance of the fix. The original crash was independently reproduced against
 unfixed source in 43128896688. No builds/tests ran on the VM.
+
+Prepared explicit physical-device regression steps for the delivered #34 settings
+fix, both template fields, INV-1000 progression and manual-history/timezone
+behavior in docs/DEVICE_VALIDATION.md. These are procedures, not device results.
+Local widget branch now includes fixed main c5e19d1 and all priority evidence;
+its former successful run predates this integration, so fresh combined checks
+are required before any widget merge. Priority main run 43131240701 is live;
+widget UI implementation/publication remains paused until internal delivery.
