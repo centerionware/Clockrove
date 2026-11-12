@@ -344,7 +344,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     bool decimal = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
-    child: TextFormField(
+    child: Semantics(identifier: 'quote-editor-${label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}', child: TextFormField(
       controller: controller,
       enabled: _enabled,
       maxLines: lines,
@@ -356,7 +356,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       decoration: InputDecoration(labelText: label),
       onChanged: (_) => setState(() {}),
       validator: validator ?? (value) => _bounded(value, limit),
-    ),
+    )),
   );
   Widget _line(_LineFields line, int index) => Card(
     child: Padding(

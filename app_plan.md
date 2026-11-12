@@ -56,8 +56,8 @@ fresh formatting, analysis and behavior/build/device checks.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
-Play delivery 43257957626 is running; no new store acceptance or owner installation
-claimed yet. Physical tracking/widgets/email journeys, provider settings, encrypted
+Play delivery 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC;
+review approval, availability and owner installation remain separate. Physical tracking/widgets/email journeys, provider settings, encrypted
 backup, rights/store/production gates remain open. All builds/tests use Actions.
 
 ## 2. Product decisions
@@ -2264,3 +2264,29 @@ Main 93673fb / 43254952365 passed full validation: 42 XML / 479 native and 8 XML
 50 actual Android, zero failures/errors/skips; downloaded results inspected. Play
 43257957626 is running. Backend 56307eb / 43255636714 has 47 XML / 553 native
 passed with no failures/errors/skips; current device/document gates remain live.
+
+### Backend acceptance and next actual quote UI gate
+
+56307eb / 43255636714 passed full Actions: 47 native XML / 553 tests and eight
+device XML / 52 actual Android, zero failures/errors/skips. Downloaded results
+inspected; real PDF/text/URI and actual-page viewer gates passed. This backend
+proof is separate from the newer preparation/history screens. UI head 8351815 /
+43258627074 stopped at a null-aware-element analyzer lint and formatting. Applied
+its exported source patch and lint correction; behavior/device gates did not run.
+
+Added a separate fresh-emulator QuoteBillingDeviceTest and Actions-only script,
+after retaining the prior financial evidence and resetting only the ephemeral
+app. Source journey creates/issues a real quote in Flutter, explicitly accepts
+it, creates uncompleted scope, edits actual quantity/current price on the board,
+moves the task to Done, reviews/cancels/prepares at accepted price, opens the
+actual PDF/history and checks duplicate exclusion. Also prepares independent
+performed work for the other two styles through real native commands, renders
+all three Android PDFs, checks API-35 exact text and private attachment bytes/
+To/CC. The script requires the named real XML case, nine UI captures and all
+three PDF/PNG/text outputs; expected total becomes 54 actual cases across APIs.
+Stable semantic field identifiers support real keyboard entry. This new gate is
+source pending Actions, not a claim that the journey or new screens passed.
+
+Main Play 43257957626 accepted 0.1.0-internal.28.1 / 216663874 at
+2026-11-12 16:29:35 UTC, built with the permanent key from main 93673fb.
+Owner installation/physical/email/availability acceptance remains separate.

@@ -77,7 +77,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_QUOTE_INVOICE_SOURCES' => 'Select completed tasks for task-rate work or finalized time for hourly work.',
     'QUOTE_INVOICE_MAPPING_REQUIRED' => 'Review and link this job’s scope to the accepted revision before preparing its invoice.',
     'QUOTE_INVOICE_SOURCES_CHANGED' => 'Selected work changed or was already invoiced. Refresh available work and review the remaining sources.',
-    'INVALID_REPORT_RANGE' => 'Review the date range and timezone, then refresh available work.',
+    'INVALID_REPORT_RANGE' =>
+      'Review the date range and timezone, then refresh available work.',
     'INVALID_QUOTE_SCOPE' => 'Review selected lines, task names and your private scope note. Your draft is kept.',
     'QUOTE_UNAVAILABLE' || 'QUOTE_LINE_UNAVAILABLE' => 'This issued quote or line is unavailable. Refresh its revision before planning.',
     'QUOTE_ACCEPTANCE_REQUIRED' => 'Record explicit local acceptance for this revision before planning work.',

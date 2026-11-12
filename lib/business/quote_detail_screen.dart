@@ -126,8 +126,18 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
   }
 
   Future<void> _invoiceQuote(QuoteRevision revision) async {
-    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => QuoteInvoiceScreen(quoteId: revision.id, revision: revision.revision)));
-    if (mounted) { _refresh(); }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => QuoteInvoiceScreen(
+          quoteId: revision.id,
+          revision: revision.revision,
+        ),
+      ),
+    );
+    if (mounted) {
+      _refresh();
+    }
   }
 
   void _document(QuoteRevision revision) => Navigator.push<void>(
@@ -334,7 +344,14 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       },
                       child: const Text('Review accepted revision scope'),
                     ),
-                  if (value.decision == 'ACCEPTED') OutlinedButton(onPressed: () { Navigator.pop(context); _invoiceQuote(value); }, child: const Text('Invoice actual work from revision')),
+                  if (value.decision == 'ACCEPTED')
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _invoiceQuote(value);
+                      },
+                      child: const Text('Invoice actual work from revision'),
+                    ),
                 ],
               ),
             );
@@ -435,8 +452,24 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                   icon: const Icon(Icons.playlist_add_check),
                   label: const Text('Plan accepted scope'),
                 ),
-              if (latest.decision == 'ACCEPTED') OutlinedButton.icon(onPressed: _eligible ? () => _invoiceQuote(latest) : null, icon: const Icon(Icons.receipt_long_outlined), label: const Text('Invoice actual work')),
-              OutlinedButton(onPressed: _pending ? null : () => Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => QuoteRelatedInvoicesScreen(quoteId: widget.id))), child: const Text('Related invoices')),
+              if (latest.decision == 'ACCEPTED')
+                OutlinedButton.icon(
+                  onPressed: _eligible ? () => _invoiceQuote(latest) : null,
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Invoice actual work'),
+                ),
+              OutlinedButton(
+                onPressed: _pending
+                    ? null
+                    : () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              QuoteRelatedInvoicesScreen(quoteId: widget.id),
+                        ),
+                      ),
+                child: const Text('Related invoices'),
+              ),
             ],
             const SizedBox(height: 16),
             if (draft != null || latest != null)
@@ -560,7 +593,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                 },
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
+                        Semantics(identifier: 'quote-decision-note', child: TextFormField(
                           controller: _note,
                           enabled: _eligible,
                           minLines: 2,
@@ -575,7 +608,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                             _decisionReview = null;
                             _noteError = null;
                           }),
-                        ),
+                        )),
                         OutlinedButton(
                           onPressed: _eligible && latest.decision == null
                               ? _reviewDecision

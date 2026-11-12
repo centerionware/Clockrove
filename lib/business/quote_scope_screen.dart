@@ -764,7 +764,7 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                   ),
                 ),
               for (final line in _group.lines) _line(line),
-              TextFormField(
+              Semantics(identifier: 'quote-scope-note', child: TextFormField(
                 controller: _note,
                 enabled: _enabled,
                 minLines: 2,
@@ -775,7 +775,7 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                   labelText: 'Private scope review note',
                 ),
                 onChanged: (_) => setState(_changed),
-              ),
+              )),
               OutlinedButton(
                 onPressed: _enabled && !_readFailed && _incompatible == null
                     ? _review

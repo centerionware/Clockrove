@@ -157,6 +157,7 @@ PY_DEVICE
   bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT

@@ -2912,3 +2912,12 @@ gates running. Preparation/history UI now implemented as source with explicit
 selection/policy/native-version review, preserved failed reads and stable unknown
 write identity. UI tests added; fresh Actions and real quote-to-invoice Android
 journey/PDF/provenance acceptance remain required before merging #39.
+
+Backend 56307eb / 43255636714 passed full Actions: 553 native / 52 actual
+Android, zero failures/errors/skips; XML inspected. New UI 8351815 / 43258627074
+stopped at null-aware-element lint/format; source patch/correction applied.
+Actual quote UI/invoice pipeline gate now added as source (one fresh emulator
+journey per API, three real accepted-price invoice PDFs/bytes/recipients); its
+54-case combined gate still needs Actions evidence. Main delivery 43257957626
+accepted internal.28.1 / 216663874 at 16:29:35 UTC; physical/store availability
+is not inferred. Quotes remain draft #39 pending complete fresh UI/device proof.
