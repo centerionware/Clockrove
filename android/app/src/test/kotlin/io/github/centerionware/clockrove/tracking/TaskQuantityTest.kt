@@ -62,6 +62,18 @@ class TaskQuantityTest {
         assertEquals(260000L, repository.taskTemplates().first { it.id == template.id }.quantityUnits)
         repository.close(); repository = TimerRepository(app, wallClock = { at })
         assertEquals(260000L, repository.boardSnapshot(job).board.cards.single().quantityUnits)
+        assertNull(repository.archiveJob("archive", version, job).conflict)
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use {
+            it.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf(job))
+        }
+        assertNull(repository.deleteJob("purge", version, job).conflict)
+        val retained = repository.taskTemplates().single { it.id == template.id }
+        assertEquals(260000L, retained.quantityUnits); assertEquals(500L, retained.priceMinor); assertNull(retained.sourceJobName)
+        val nextJob = repository.createJob("Synthetic next tile job")
+        val nextColumn = repository.boardSnapshot(nextJob).board.columns.first().id
+        assertNull(repository.copyTaskTemplate("copy-after-purge", version, template.id, "next-copy", nextJob, nextColumn, true).conflict)
+        val nextCopy = repository.boardSnapshot(nextJob).board.cards.single()
+        assertEquals(260000L, nextCopy.quantityUnits); assertEquals(500L, nextCopy.priceMinor); assertNull(nextCopy.completedMillis)
     }
     @Test fun quantityChangesArePartOfReceiptIdentityAndInvalidQuantityDoesNotWrite() {
         val before = repository.boardSnapshot(job)

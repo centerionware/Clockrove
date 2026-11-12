@@ -19,7 +19,7 @@ iOS and future service remain deferred.
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
-| M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
+| M2.4 Physical screen-off/battery validation | Pending owner device results | Owner identified Pixel 7 / Android 17 and verified main Settings saves after updating; screen-off/GPS/battery journeys remain unverified; docs/DEVICE_VALIDATION.md records the required checks |
 | M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration passed #29; provider settings and backup contracts remain |
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
@@ -2185,3 +2185,12 @@ exclusion, and reopening the retained PDF after a synthetic aged-archive purge.
 Strict separate XML requires one complete financial case plus seven captures on
 each API. The frozen DDL is packaged only in the test APK. This source is not yet
 executed; it does not constitute device acceptance or merge evidence.
+
+Goal-turn progress: pushed the actual financial journey as 50662d2 (queued run
+43173354558). Quantity head b4e547d / 43172649874 has passed analysis, Flutter,
+Android build and all 365 native tests (35 XML files; zero failures/errors/skips).
+Reviewed both CI-generated quantity editor captures: exactly one Unit price input,
+Quantity 26 and calculated USD 130.00 in light/dark themes. Actual device/PDF gates
+remain live. Extended the template regression to preserve quantity/unit price after
+aged job purge and copy them to a new job without completion history. No merge,
+new internal delivery or physical financial acceptance is claimed.
