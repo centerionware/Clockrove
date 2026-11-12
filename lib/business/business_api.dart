@@ -46,6 +46,29 @@ String money(String? minor, int digits) {
       : '${value.substring(0, value.length - digits)}.${value.substring(value.length - digits)}';
 }
 
+/// Quantities use four exact decimal places, with one represented as 10000.
+String parseTaskQuantity(String input) {
+  final value = input.trim();
+  if (!RegExp(r'^\d+(\.\d{1,4})?$').hasMatch(value)) {
+    throw const FormatException('Enter a quantity greater than 0, with up to 4 decimal places.');
+  }
+  final parts = value.split('.');
+  final units = BigInt.parse(parts[0]) * BigInt.from(10000) +
+      BigInt.parse((parts.length == 2 ? parts[1] : '').padRight(4, '0'));
+  if (units <= BigInt.zero || units > BigInt.parse('9223372036854775807')) {
+    throw const FormatException('Quantity must be greater than 0 and within the supported range.');
+  }
+  return units.toString();
+}
+
+String taskQuantity(String units) => money(units, 4)
+    .replaceFirst(RegExp(r'0+$'), '')
+    .replaceFirst(RegExp(r'\.$'), '');
+
+String? taskAmount(String? unitPriceMinor, String quantityUnits) =>
+    unitPriceMinor == null ? null :
+      ((BigInt.parse(unitPriceMinor) * BigInt.parse(quantityUnits) + BigInt.from(5000)) ~/ BigInt.from(10000)).toString();
+
 class BoardColumn {
   const BoardColumn(this.id, this.name, this.completed);
   final String id, name;
@@ -69,8 +92,10 @@ class TaskCard {
     this.dueDate,
     this.priceMinor,
     this.completedMillis,
+    this.quantityUnits = '10000',
   });
-  final String id, columnId, title, description, currency;
+  final String id, columnId, title, description, currency, quantityUnits;
+  String? get amountMinor => taskAmount(priceMinor, quantityUnits);
   final String? dueDate, priceMinor;
   final int position;
   final int? completedMillis;
@@ -86,6 +111,7 @@ class TaskCard {
     dueDate: v['dueDate'] as String?,
     priceMinor: v['priceMinor'] as String?,
     completedMillis: v['completedMillis'] as int?,
+    quantityUnits: v['quantityUnits'] as String? ?? '10000',
   );
 }
 
@@ -96,9 +122,10 @@ class TaskTemplate {
     this.description,
     this.priceMinor,
     this.currency,
-    this.source,
-  );
-  final String id, title, description, currency;
+    this.source, [
+    this.quantityUnits = '10000',
+  ]);
+  final String id, title, description, currency, quantityUnits;
   final String? priceMinor, source;
   factory TaskTemplate.decode(Map<Object?, Object?> v) => TaskTemplate(
     v['id'] as String,
@@ -107,6 +134,7 @@ class TaskTemplate {
     v['priceMinor'] as String?,
     v['currency'] as String,
     v['sourceJobName'] as String?,
+    v['quantityUnits'] as String? ?? '10000',
   );
 }
 
@@ -214,6 +242,7 @@ class BusinessApi {
         'dueDate': c.dueDate,
         'billable': c.billable,
         'priceMinor': c.priceMinor,
+        'quantityUnits': c.quantityUnits,
         'currency': c.currency,
       });
   Future<TimerOutcome> moveCard(

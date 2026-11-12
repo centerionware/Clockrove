@@ -462,14 +462,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           child: ListTile(
                             title: Text(task.title),
                             subtitle: Text(
-                              '${task.date}\n${report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY' ? 'Hourly job · task price kept separately' : 'Included in task billing'}',
+                              '${task.date}\n${report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY' ? 'Hourly job · task price kept separately' : 'Quantity ${taskQuantity(task.quantityUnits)} · included in task billing'}',
                             ),
                             trailing: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 140),
                               child: Text(
                                 task.price == null
                                     ? 'Price not set'
-                                    : '${task.currency} ${money(task.price, report.totals.firstWhere((t) => t.jobId == task.jobId).digits)}',
+                                    : '${task.currency} ${money(taskAmount(task.price, task.quantityUnits), report.totals.firstWhere((t) => t.jobId == task.jobId).digits)}',
                                 textAlign: TextAlign.end,
                               ),
                             ),

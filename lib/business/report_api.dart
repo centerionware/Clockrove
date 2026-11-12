@@ -105,9 +105,10 @@ class ReportTask {
     this.title,
     this.date,
     this.currency,
-    this.price,
-  );
-  final String id, jobId, title, date, currency;
+    this.price, [
+    this.quantityUnits = '10000',
+  ]);
+  final String id, jobId, title, date, currency, quantityUnits;
   final String? price;
   factory ReportTask.decode(Map<Object?, Object?> v) => ReportTask(
     v['id'] as String,
@@ -116,6 +117,7 @@ class ReportTask {
     v['completedLabel'] as String,
     v['currency'] as String,
     v['priceMinor'] as String?,
+    v['quantityUnits'] as String? ?? '10000',
   );
 }
 

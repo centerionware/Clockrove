@@ -209,6 +209,38 @@ void main() {
       expect(() => parseMoney(value, 2), throwsFormatException);
     }
   });
+  test('quantities are positive exact decimals and totals round half up', () {
+    expect(parseTaskQuantity('26'), '260000');
+    expect(parseTaskQuantity('26.125'), '261250');
+    expect(taskQuantity('261250'), '26.125');
+    expect(taskAmount('500', '260000'), '13000');
+    expect(taskAmount('1', '5000'), '1');
+    expect(taskAmount(null, '10000'), isNull);
+    for (final value in ['', '0', '-1', 'NaN', '1e2', '1,5', '1.00001', '922337203685477.5808']) {
+      expect(() => parseTaskQuantity(value), throwsFormatException);
+    }
+  });
+  testWidgets('one existing price field becomes unit price with quantity and calculated total', (tester) async {
+    await _show(tester);
+    await tester.tap(find.text('Install kitchen tiles'));
+    await tester.pumpAndSettle();
+    final price = find.widgetWithText(TextFormField, 'Unit price (USD)');
+    final quantity = find.widgetWithText(TextFormField, 'Quantity');
+    expect(price, findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Fixed price (USD)'), findsNothing);
+    expect(find.byType(TextFormField), findsNWidgets(4));
+    await tester.enterText(price, '5.00');
+    await tester.enterText(quantity, '26');
+    await tester.pumpAndSettle();
+    expect(find.text('Task total: USD 130.00'), findsOneWidget);
+    await tester.enterText(quantity, '0');
+    await tester.ensureVisible(find.text('Save task'));
+    await tester.tap(find.text('Save task'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quantity must be greater than 0 and within the supported range.'), findsOneWidget);
+    expect(find.text('Install kitchen tiles'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'real board screen exposes pricing, due dates and accessible moves',
     (tester) async {

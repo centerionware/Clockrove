@@ -174,8 +174,9 @@ class _Board extends ConsumerWidget {
                     ? 'Nonbillable'
                     : card.priceMinor == null
                     ? 'Price not set'
-                    : '${board.currency} ${money(card.priceMinor, board.digits)}',
+                    : '${board.currency} ${money(card.amountMinor, board.digits)}',
               ),
+              if (card.priceMinor != null) Text('${taskQuantity(card.quantityUnits)} × ${card.currency} ${money(card.priceMinor, board.digits)} each'),
               if (card.completedMillis != null) const Text('Completed'),
             ],
           ),
@@ -481,6 +482,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       ref.read(boardProvider(widget.jobId)).requireValue.digits,
     ),
   );
+  late final _quantity = TextEditingController(text: taskQuantity(widget.card?.quantityUnits ?? '10000'));
   late final _id = widget.card?.id ?? newBusinessId();
   late bool _billable = widget.card?.billable ?? true;
   late String? _due = widget.card?.dueDate;
@@ -489,7 +491,15 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     _title.dispose();
     _description.dispose();
     _price.dispose();
+    _quantity.dispose();
     super.dispose();
+  }
+
+  String _total(JobBoard board) {
+    try {
+      final total = taskAmount(parseMoney(_price.text, board.digits), parseTaskQuantity(_quantity.text));
+      return total == null ? 'Task total: unit price not set' : 'Task total: ${board.currency} ${money(total, board.digits)}';
+    } on FormatException { return 'Task total: check unit price and quantity'; }
   }
 
   Future<void> _pickDate() async {
@@ -547,8 +557,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _price,
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
-                        labelText: 'Fixed price (${board.currency})',
+                        labelText: 'Unit price (${board.currency})',
                         helperText: 'Blank: price not set. 0: explicitly free.',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -563,6 +574,19 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         }
                       },
                     ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _quantity,
+                      decoration: const InputDecoration(labelText: 'Quantity', helperText: 'How many units? Defaults to 1.'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(() {}),
+                      validator: (v) {
+                        try { parseTaskQuantity(v ?? ''); return null; }
+                        on FormatException catch (e) { return e.message; }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(_total(board), style: Theme.of(context).textTheme.titleMedium),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Billable task'),
@@ -602,6 +626,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                           currency: board.currency,
                           dueDate: _due,
                           priceMinor: parseMoney(_price.text, board.digits),
+                          quantityUnits: parseTaskQuantity(_quantity.text),
                         );
                         return () => ref
                             .read(businessApiProvider)
@@ -875,7 +900,7 @@ class _TemplatesState extends ConsumerState<_Templates> {
                       child: ListTile(
                         title: Text(task.title),
                         subtitle: Text(
-                          '${task.source ?? 'Saved template'} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
+                          '${task.source ?? 'Saved template'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
                         ),
                         onTap: () {
                           final board = ref

@@ -192,6 +192,8 @@ class WidgetConfigurationTest {
             db.execSQL("DROP TABLE invoice_coverage")
             db.execSQL("DROP TABLE job_tax_rates")
             db.execSQL("DROP TABLE billing_tax_settings")
+            db.execSQL("DROP TABLE task_quantities")
+            db.execSQL("DROP TABLE template_quantities")
             db.execSQL("UPDATE app_settings SET company_name='Synthetic migration company' WHERE id=1")
             db.version = 5
         }

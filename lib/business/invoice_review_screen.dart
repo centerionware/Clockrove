@@ -33,9 +33,15 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
     ),
   );
   Future<void> _reviewLegacy(InvoiceCoverageLink invoice) async {
-    await Navigator.push<bool>(context, MaterialPageRoute<bool>(builder: (_) => LegacyInvoiceScreen(invoiceId: invoice.invoiceId)));
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => LegacyInvoiceScreen(invoiceId: invoice.invoiceId),
+      ),
+    );
     if (mounted) _refresh();
   }
+
   String? _problem(String? value) => switch (value) {
     null => null,
     'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on the older invoices below before creating another invoice for this job.',

@@ -7,6 +7,17 @@ working agreement. Keep each slice independently reviewable.
 
 ## Ordered delivery
 
+Owner addition to this patch: task quantities and unit pricing are high priority
+within the first slice. Rename the existing price field to Unit price, without
+adding a second price input. Quantity defaults to 1 for existing/new tasks and
+supports positive decimal values with up to four fractional digits. Store exact
+scaled integer quantities; compute quantity × unit price with wide arithmetic and
+round once per task to currency precision before subtotal/tax. Reusable templates
+retain quantity as an editable default. Boards/reports show the resulting task
+total, and issued invoice lines freeze both quantity and unit price. Editing
+either later never re-bills a task already reserved by an invoice; additional work
+needs a new task or the explicit invoice correction policy.
+
 1. Invoice integrity foundation: source coverage, safe legacy migration, global/job
    tax percentage, immutable totals and invoice navigation.
 2. Payment history, partial/full payment, balance copies, receipts, accounting CC,

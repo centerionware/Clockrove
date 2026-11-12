@@ -142,6 +142,13 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 
 ### 3.4 Kanban
 
+- Owner priority for the current invoice patch: tasks have a positive decimal
+  quantity (default 1, up to four decimal places). Rename the existing price input
+  to **Unit price**; it remains the only price input. Task total is quantity × unit
+  price, rounded half up once per task to currency precision. Preserve old amounts
+  with quantity 1. Carry quantity through templates, boards, reports and immutable
+  invoice lines. Quantity/price edits never release an existing task invoice claim.
+
 - Each new job starts with To do, Doing, Done.
 - Add, rename, and reorder columns; keep at least one column.
 - Deleting a populated column requires selecting a destination for its cards before committing.

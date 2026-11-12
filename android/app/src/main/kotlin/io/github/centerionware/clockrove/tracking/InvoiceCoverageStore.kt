@@ -41,6 +41,7 @@ internal object InvoiceCoverageStore {
             db.execSQL("CREATE TRIGGER invoice_time_overlap_${event.lowercase()} BEFORE $event ON invoice_time_claims WHEN NEW.released_ms IS NULL AND EXISTS(SELECT 1 FROM invoice_time_claims c WHERE c.id<>NEW.id AND c.job_id=NEW.job_id AND c.released_ms IS NULL AND c.start_ms<NEW.end_ms AND c.end_ms>NEW.start_ms) BEGIN SELECT RAISE(ABORT,'Invoice time already claimed'); END")
         }
         BillingTaxStore.install(db, at)
+        TaskQuantityStore.install(db)
     }
 
     fun preview(db: SQLiteDatabase, source: ReportStore.Report): Preview {
@@ -84,7 +85,7 @@ internal object InvoiceCoverageStore {
             val selected = tasks.filter { it.jobId == total.jobId }
             val missing = selected.count { it.priceMinor == null || it.currency != total.currency }
             val amount = if (total.mode == "HOURLY") total.hourlyMinor?.let { ReportStore.hourlyAmount(duration, it) }
-                else if (missing > 0) null else selected.fold(BigInteger.ZERO) { sum, task -> sum.add(BigInteger.valueOf(requireNotNull(task.priceMinor))) }
+                else if (missing > 0) null else selected.fold(BigInteger.ZERO) { sum, task -> sum.add(TaskQuantityStore.amount(requireNotNull(task.priceMinor), task.quantityUnits)) }
             total.copy(durationMillis = duration, amountMinor = amount, missingPrices = missing)
         }
         return Preview(source.copy(intervals = intervals, tasks = tasks, totals = totals), excluded, legacy)

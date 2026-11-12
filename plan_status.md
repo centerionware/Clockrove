@@ -2150,3 +2150,14 @@ multiline if statements needed explicit braces. Applied that CI patch and wrappe
 the flagged blocks without changing their conditions or behavior. No new legacy
 screen tests/native/device checks ran past the failed analyzer gate. Renewed
 Actions evidence is required; the independent actual financial suite is next.
+
+
+Owner quantity priority (current invoice patch): the existing `price_minor` is the
+single unit price, renamed Unit price in the editor. No second price input is
+introduced. Quantity defaults to one for released tasks and templates, supports
+positive four-place exact decimals, and displays an extended total. Native reports
+and invoice previews use per-line half-up totals before subtotal tax. New issued
+lines freeze quantity and unit price; later edits keep the original source claim.
+Template quantities remain editable defaults after source deletion. Source and
+regressions are prepared; renewed GitHub Actions validation remains required.
+No VM build, test, formatter or rendering ran.

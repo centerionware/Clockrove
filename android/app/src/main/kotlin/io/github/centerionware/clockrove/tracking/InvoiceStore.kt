@@ -14,7 +14,7 @@ import org.json.JSONObject
 /** Immutable prepared invoice data; rendering is derived outside the write lock. */
 internal object InvoiceStore {
     data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?)
-    data class Line(val title: String, val detail: String, val amount: String)
+    data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null, val unitPriceMinor: String? = null)
     data class Snapshot(val number: String, val created: Long, val style: String, val currency: String, val digits: Int,
         val company: String, val companyContact: String, val customer: String, val customerContact: String,
         val job: String, val period: String, val basis: String, val header: String, val footer: String,
@@ -23,14 +23,14 @@ internal object InvoiceStore {
         fun encode(): String = JSONObject(mapOf("number" to number, "created" to created, "style" to style, "currency" to currency, "digits" to digits,
             "company" to company, "companyContact" to companyContact, "customer" to customer, "customerContact" to customerContact,
             "job" to job, "period" to period, "basis" to basis, "header" to header, "footer" to footer, "total" to total, "email" to email,
-            "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount)) }),
+            "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount, "quantityUnits" to it.quantityUnits, "unitPriceMinor" to it.unitPriceMinor)) }),
             "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount)).toString()
         companion object {
             fun decode(value: String): Snapshot { val v = JSONObject(value); val rows = v.getJSONArray("lines")
                 return Snapshot(v.getString("number"), v.getLong("created"), v.getString("style"), v.getString("currency"), v.getInt("digits"),
                     v.getString("company"), v.getString("companyContact"), v.getString("customer"), v.getString("customerContact"), v.getString("job"),
                     v.getString("period"), v.getString("basis"), v.getString("header"), v.getString("footer"), v.getString("total"), v.getString("email"),
-                    v.getString("subject"), v.getString("body"), (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount")) },
+                    v.getString("subject"), v.getString("body"), (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount"), if (row.isNull("quantityUnits")) null else row.getString("quantityUnits"), if (row.isNull("unitPriceMinor")) null else row.getString("unitPriceMinor")) },
                     if (v.isNull("subtotal")) null else v.getString("subtotal"),
                     if (v.isNull("taxRateUnits")) null else v.getInt("taxRateUnits"),
                     if (v.isNull("taxAmount")) null else v.getString("taxAmount"))
@@ -43,8 +43,11 @@ internal object InvoiceStore {
     fun billableLines(report: ReportStore.Report): List<Line> {
         val total = report.totals.single()
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
-        return if (total.mode == "TASK") report.tasks.map { Line(it.title, "Completed ${instant(it.completed, report.selection.timezone)}",
-            it.priceMinor?.takeIf { _ -> it.currency == total.currency }?.let { value -> amount(BigInteger.valueOf(value), digits) } ?: "") }
+        return if (total.mode == "TASK") report.tasks.map { task ->
+            val price = task.priceMinor?.takeIf { task.currency == total.currency }
+            Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(BigInteger.valueOf(it), digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
+                price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString())
+        }
         else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${total.hourlyMinor?.let { amount(BigInteger.valueOf(it), digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
             total.amountMinor?.let { amount(it, digits) }.orEmpty())) + report.intervals.map {
                 Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
@@ -84,7 +87,7 @@ internal object InvoiceStore {
             listOf(company.companyEmail, company.companyPhone, company.companyAddress, company.companyWebsite).filter { it.isNotBlank() }.joinToString("\n"),
             job.customer?.name.orEmpty(), listOf(job.customer?.address.orEmpty(), job.effectiveEmail, job.customer?.phone.orEmpty()).filter { it.isNotBlank() }.joinToString("\n"),
             job.settings.name, "${selection.firstDate} — ${selection.lastDate} · ${selection.timezone}",
-            if (total.mode == "TASK") "Completed billable tasks · fixed prices" else "Finalized time · hourly rate · total rounded half up to ${digits} decimal places",
+            if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · hourly rate · total rounded half up to ${digits} decimal places",
             company.invoiceHeader, company.invoiceFooter, formatted, job.effectiveEmail,
             InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
             subtotal, job.effectiveTaxUnits, amount(tax, digits))

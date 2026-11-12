@@ -19,7 +19,7 @@ internal object ReportStore {
     data class Excluded(val sessionId: String, val jobId: String, val start: Long, val end: Long?, val reason: String)
     data class Point(val id: String, val sessionId: String, val jobId: String, val jobName: String,
         val measured: Long, val latitude: Double, val longitude: Double, val accuracy: Double)
-    data class Task(val id: String, val jobId: String, val title: String, val completed: Long, val priceMinor: Long?, val currency: String)
+    data class Task(val id: String, val jobId: String, val title: String, val completed: Long, val priceMinor: Long?, val currency: String, val quantityUnits: Long = TaskQuantityStore.one)
     data class Total(val jobId: String, val jobName: String, val mode: String, val currency: String,
         val durationMillis: BigInteger, val hourlyMinor: Long?, val amountMinor: BigInteger?, val missingPrices: Int)
     data class Report(val selection: Selection, val days: List<Day>, val intervals: List<Interval>, val excluded: List<Excluded>,
@@ -87,15 +87,15 @@ internal object ReportStore {
                     } }
                 }
             } }
-            db.rawQuery("SELECT id,title,completed_ms,price_minor,currency FROM kanban_cards WHERE job_id=? AND billable=1 AND completed_ms>=? AND completed_ms<? ORDER BY completed_ms,id",
-                arrayOf(id, first.toString(), end.toString())).use { rows -> while (rows.moveToNext()) tasks.add(Task(rows.getString(0), id, rows.getString(1), rows.getLong(2), if (rows.isNull(3)) null else rows.getLong(3), rows.getString(4))) }
+            db.rawQuery("SELECT c.id,c.title,c.completed_ms,c.price_minor,c.currency,COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id WHERE c.job_id=? AND c.billable=1 AND c.completed_ms>=? AND c.completed_ms<? ORDER BY c.completed_ms,c.id",
+                arrayOf(id, first.toString(), end.toString())).use { rows -> while (rows.moveToNext()) tasks.add(Task(rows.getString(0), id, rows.getString(1), rows.getLong(2), if (rows.isNull(3)) null else rows.getLong(3), rows.getString(4), rows.getLong(5))) }
         }
         val totals = jobs.map { job ->
             val duration = intervals.filter { it.jobId == job.settings.id }.fold(BigInteger.ZERO) { value, interval -> value.add(BigInteger.valueOf(interval.end - interval.start)) }
             val selectedTasks = tasks.filter { it.jobId == job.settings.id }
             val missing = selectedTasks.count { it.priceMinor == null || it.currency != job.settings.currency }
             val amount = if (job.settings.billingMode == "HOURLY") job.effectiveHourlyMinor?.let { hourlyAmount(duration, it) }
-                else if (missing > 0) null else selectedTasks.fold(BigInteger.ZERO) { value, task -> value.add(BigInteger.valueOf(requireNotNull(task.priceMinor))) }
+                else if (missing > 0) null else selectedTasks.fold(BigInteger.ZERO) { value, task -> value.add(TaskQuantityStore.amount(requireNotNull(task.priceMinor), task.quantityUnits)) }
             Total(job.settings.id, job.settings.name, job.settings.billingMode, job.settings.currency, duration, job.effectiveHourlyMinor, amount, missing)
         }
         return Report(selection, days, intervals.sortedWith(compareBy({ it.start }, { it.sessionId })), excluded.sortedBy { it.start },
