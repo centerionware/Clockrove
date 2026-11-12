@@ -51,7 +51,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
     'TASK_PRICES_REQUIRED' =>
       'Set prices in this job’s currency for the unbilled completed tasks.',
     'INVOICE_TOO_LARGE' =>
-      'Choose a shorter date range before preparing this invoice.',
+      'Reduce the date range or shorten the invoice/email text, then try again.',
     'INVALID_TAX_RATE' =>
       'Correct the tax percentage in Settings or this job’s settings.',
     _ =>

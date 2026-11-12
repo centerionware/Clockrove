@@ -2271,3 +2271,19 @@ subtotal/tax/grand total; API 35 extraction checks every digit. Original suite c
 now requires 21 cases/API plus the separate financial case (44 total if successful),
 with ten financial captures/API and all six new wide PDF/PNG artifacts required.
 These additional checks are unvalidated source, not claimed device results.
+
+Added a byte-size guard for expanded immutable invoice payloads before committing
+a number or source claims. Wide exact prices and repeated amount tokens can grow
+a single SQLite cursor row too large; preparation now returns INVOICE_TOO_LARGE
+instead of truncating data or committing an unreadable invoice. A native regression
+uses a valid repeated template and 1024-digit price to require no invoice, number
+consumption or reservation. This new check remains unvalidated.
+
+Exact-money c5bf242 / 43178148571 passed build/Flutter/native: inspected 381 native
+cases with zero failures/errors/skips. Original API-24 suite passed 20 cases. The
+financial case reached the issued/repeat-exclusion journey, then a test-only
+waitFor queried a label twice while navigation refreshed the tree; its second
+lookup returned null at line 231 (reopened board before job tax settings). Retain
+the node found by the successful bounded poll rather than issuing another lookup.
+No assertion is removed. API 35 was not reached. New wide UI/PDF and payload-size
+cases still require fresh Actions evidence; formatting correction is being applied.

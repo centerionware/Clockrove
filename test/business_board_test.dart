@@ -208,7 +208,10 @@ void main() {
     expect(money('9007199254740993', 2), '90071992547409.93');
     expect(parseMoney('123', 0), '123');
     expect(parseMoney('92233720368547758.08', 2), '9223372036854775808');
-    expect(parseMoney('1234567890123456789012345678.90', 2), '123456789012345678901234567890');
+    expect(
+      parseMoney('1234567890123456789012345678.90', 2),
+      '123456789012345678901234567890',
+    );
     expect(() => parseMoney('1' * 1025, 0), throwsFormatException);
     expect(money('1', 3), '0.001');
     expect(money('-1', 2), '-0.01');
@@ -216,13 +219,7 @@ void main() {
       money('123456789012345678901234567890', 2),
       '1234567890123456789012345678.90',
     );
-    for (final value in [
-      '-1',
-      'NaN',
-      '1e2',
-      '1,00',
-      '1.001',
-    ]) {
+    for (final value in ['-1', 'NaN', '1e2', '1,00', '1.001']) {
       expect(() => parseMoney(value, 2), throwsFormatException);
     }
   });

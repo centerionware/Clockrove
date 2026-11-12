@@ -70,8 +70,9 @@ class InvoiceBillingDeviceTest {
         return automation.rootInActiveWindow?.let(::visit)
     }
     private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
-        until("Actual app never exposed $label") { find(label, editable) != null }
-        return requireNotNull(find(label, editable))
+        var found: AccessibilityNodeInfo? = null
+        until("Actual app never exposed $label") { found = find(label, editable); found != null }
+        return requireNotNull(found)
     }
     private fun click(label: String) {
         var node = waitFor(label)

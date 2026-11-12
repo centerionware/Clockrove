@@ -91,8 +91,13 @@ internal object InvoiceStore {
             company.invoiceHeader, company.invoiceFooter, formatted, job.effectiveEmail,
             InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
             subtotal, job.effectiveTaxUnits, amount(tax, digits))
+        // A single SQLite cursor row must remain readable even when exact prices
+        // or repeated template substitutions are very large. Reject before any
+        // number, source claim or immutable document is committed; never truncate.
+        val payload = snapshot.encode()
+        if (payload.toByteArray(Charsets.UTF_8).size > 1_000_000) return "INVOICE_TOO_LARGE"
         val logoId = db.rawQuery("SELECT logo_id FROM app_settings WHERE id=1", null).use { it.moveToFirst(); if (it.isNull(0)) null else it.getString(0) }
-        db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, total.jobId, job.customer?.id, number, at, snapshot.encode(), logoId))
+        db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, total.jobId, job.customer?.id, number, at, payload, logoId))
         InvoiceCoverageStore.reserve(db, id, report, at)
         db.execSQL("UPDATE app_settings SET next_invoice_number=? WHERE id=1", arrayOf<Any?>(sequence + 1))
         RevisionStore.snapshotRows(db, "invoices", "invoice", listOf("id", "job_id", "customer_id", "number", "created_ms", "payload", "logo_id"), at, "job_id", "id=?", arrayOf(id))

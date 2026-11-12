@@ -128,6 +128,19 @@ class MoneyPrecisionTest {
         assertNull(repository.saveCard("rollback", version, draft()).conflict)
         assertEquals(wide, repository.boardSnapshot(job).board.cards.single().priceMinor)
     }
+    @Test fun oversizedExactDocumentIsRejectedBeforeNumberOrSourceReservation() {
+        val large = BigInteger("1".repeat(1024))
+        assertNull(repository.saveBusinessSettings("long-body", version, repository.businessSnapshot().settings.copy(emailBody = "{amount}".repeat(1800))).conflict)
+        assertNull(repository.saveJobSettings("task-mode", version, repository.jobDetail(job).job.settings.copy(billingMode = "TASK")).conflict)
+        assertNull(repository.saveCard("large", version, draft(large)).conflict)
+        val before = version
+        assertEquals("INVOICE_TOO_LARGE", repository.prepareInvoice("prepare-large", before, "large-invoice", selection).conflict)
+        assertEquals(before, version); assertTrue(repository.invoices().invoices.isEmpty())
+        inspect { db ->
+            db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1000L, it.getLong(0)) }
+            db.rawQuery("SELECT COUNT(*) FROM invoice_task_claims", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        }
+    }
     @Test fun malformedMoneyIsRejectedByTransportDomainAndDatabaseWithoutChangingValues() {
         assertNull(repository.saveBusinessSettings("wide-rate", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = wide)).conflict)
         val before = repository.businessSnapshot()
