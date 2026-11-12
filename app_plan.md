@@ -64,18 +64,18 @@ analysis, Flutter behavior, debug build and 440 native cases. API 24 passed the
 one-page assertion. Its copy-only layout is corrected in source; the isolated
 payment UI journey and API 35 remain unverified for this increment.
 
-The current draft adds native confirmed unpaid cancellation and atomic
-credit-preserving replacement, strict lifecycle command/context bridge and source,
-rollback, migration-compatible, concurrency and exact-money regressions. Actions
-43210091600 stopped on a renderer Int/Float width mismatch, now corrected in
-source; ed94bfc had stopped on a removed ledger local variable reference. Native baseline 40259d7 / 43211073661 now passed 476 native cases
-(42 XML files inspected, zero failures/errors/skips), including 32 lifecycle and
-10 bridge cases; actual Android checks remain live. The newer zero-due guard and
-extended document cases still need their queued Actions result. Next: inspect this exact run, fix any
-failures, then finish the lifecycle editor/relationships, historical receipt routing,
-VOID/replacement documents and actual UI/PDF acceptance. Keep draft #37 unmerged
-until the complete payment milestone passes. Schema 8 remains unreleased and moves
-forward from released 7; preserve frozen fixtures, documents and prior money.
+The current draft implements native confirmed unpaid cancellation and atomic
+credit-preserving replacement, strict bridging, reviewed editor, retained invoice
+links and historical receipt ownership/VOID warnings. Source 99f57ac /
+43215957788 passed formatting, analysis, Flutter behavior, debug and 479 native
+cases (42 XML files inspected, zero failures/errors/skips). The actual Android
+gate stopped compiling a fixture with a missing InvoicePaymentStore import; it is
+now corrected in source. No device tests ran on that head. Next: validate the
+corrected source, inspect actual API-24/35 ledger/line/credit/VOID/editor/PDF results
+and required captures, fix failures and review the full milestone before merging
+#37. Schema 8 remains unreleased and moves forward from released 7; preserve frozen
+fixtures, source reservations, issued documents and prior money. Physical email
+client compatibility and Pixel tracking/widget acceptance remain separate.
 
 Then quotes, comments/supplies/actual costs and company reports. Provider settings,
 encrypted backup/transactional merge, physical tracking/recovery and full launch
@@ -1889,3 +1889,12 @@ actual Back-status helper also now polls the incoming detail route and scrolls
 until the real status is visible, rather than treating one transient false scroll
 action as proof of reaching the top during a route transition. All financial and
 status assertions remain. Revalidate this source; no formatter or tests ran on VM.
+
+99f57ac / 43215957788 passed formatting, analysis, Flutter behavior, debug build
+and 479 native cases (42 XML files inspected, zero failures/errors/skips; 34
+lifecycle executions). The Android gate then stopped compiling its test APK: the
+new fixture referenced InvoicePaymentStore without importing it. Added the missing
+import. No emulator cases or new actual-document acceptance ran on that head.
+Prior visual review covered actual 40259d7 short Classic paid-balance copies on
+both APIs, modern balance/correction and minimal correction; they remain readable
+and one page. New lifecycle editor/VOID/replacement captures still need fresh CI.

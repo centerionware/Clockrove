@@ -15,6 +15,7 @@ import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.invoice.InvoiceDocuments
 import io.github.centerionware.clockrove.tracking.BoardStore
 import io.github.centerionware.clockrove.tracking.BusinessStore
+import io.github.centerionware.clockrove.tracking.InvoicePaymentStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.ReportStore
 import io.github.centerionware.clockrove.tracking.TimerRepository
