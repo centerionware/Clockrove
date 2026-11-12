@@ -111,9 +111,8 @@ Future<void> _show(
           debugShowCheckedModeBanner: false,
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
           home: MediaQuery(
-            data: MediaQueryData.fromView(
-              tester.view,
-            ).copyWith(textScaler: TextScaler.linear(scale)),
+            data: MediaQueryData.fromView(tester.view)
+                .copyWith(textScaler: TextScaler.linear(scale)),
             child: const JobScreen(
               jobId: 'job',
               jobName: 'Riverside renovation',

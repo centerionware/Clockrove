@@ -35,7 +35,8 @@ installation/physical behavior is separate; production readiness remains unset.
 
 Finish M4 widget validation in #33: providers, responsive RemoteViews, scrolling
 collections, setup/picker/default-start and removal/restore integration are written.
-Complete the actual API-24/35 board/setup/timer journeys and capture review before
+Actual API-24/35 board/setup/timer journeys and capture review passed in
+43157030521; apply its formatter correction and pass the final exact-head run before
 merging and observing automatic main validation/internal delivery. Real launcher
 and tracking/recovery evidence, provider settings, encrypted backup/merge and
 full launch acceptance remain open. All builds/tests/rendering stay in Actions.

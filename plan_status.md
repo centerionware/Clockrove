@@ -24,7 +24,7 @@ iOS and future service remain deferred.
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
 | M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
-| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions implemented; combined actual checks ongoing | #33 includes Timer/Tasks/Combined, token-fenced setup/actions, scrolling due tasks and board entry; 272 native cases pass; API-24 full prior 19-case journey passed, expanded actual surface/capture checks remain; physical launcher/recovery acceptance open |
+| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions pass actual Android checks; final formatting rerun pending | #33 run 43157030521: 274 native and 20 actual tests on each API (24/35), zero failures/errors/skips; board/setup/scrolling/timer captures reviewed on both APIs; only formatting gate failed, Actions patch applied; exact final head/main delivery and physical launcher/recovery acceptance remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -1946,3 +1946,20 @@ metrics while overriding text scale; keep the pricing/editor assertions and the
 separate intentional zero-size regression. Applied the Actions formatter patch.
 No actual Android validation ran for that head after the Flutter test gate failed;
 the board workaround still needs full Actions and actual API-24/35 evidence.
+
+### Complete actual widget journeys pass on both Android versions
+
+3332465 / 43157030521 passed 101 Flutter cases (seven device-document previews
+intentionally deferred), Android build, 274 native cases and twenty actual cases
+on each API (24/35), with zero native/device failures/errors/skips. The separate
+actual-document viewer stage passed its seven cases. Actual framework tests prove
+scrolling through all thirty tasks, correct board entry and populated columns,
+all three providers, real setup save/cancel, repeated updates without duplicate
+rows and native clock-in/out without a Flutter screen or location permission.
+
+Reviewed run-specific board, scrolled Combined list, compact running timer and
+configuration captures from both APIs. The prior API-35 board red screen is absent.
+Only the required clean-format gate failed: applied its exact Actions-generated
+test-expression patch. Final exact-head validation and subsequent main/internal
+delivery remain required; physical launcher/GPS/email acceptance remains separate.
+No build, test or formatter ran on the VM.
