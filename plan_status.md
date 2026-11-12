@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-11. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-12. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. Android launch requires milestones 1–8;
 iOS and future service remain deferred.
 
@@ -1629,3 +1629,13 @@ light/dark themes. Text, timestamp precision, selected offsets, scrolling save
 actions and red deletion are legible. This is synthetic UI visual evidence, not
 a native history/device acceptance substitute. Current retry fix 386ce0d is
 being validated in 43123476933; exact-head native/device checks remain pending.
+
+### Priority: owner-reported main Settings save process crash
+
+Owner confirms main Settings Save exits to the Android home screen with an
+"app stopped working" message; job-settings Save does not crash. Paused widget
+implementation. Investigation branch is based on current main, excluding the
+unreleased widget schema. Added an actual Flutter/native-channel/SQLite Android
+settings-save/reopen journey and synthetic-emulator logcat capture to reproduce
+the process failure. No fix or reproduction is claimed before Actions evidence;
+no local builds/tests are permitted or performed.

@@ -74,7 +74,16 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
   adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
-  adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
+  clockrove_instrumentation_failed=false
+  if ! adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"; then
+    clockrove_instrumentation_failed=true
+  fi
+  # This emulator contains only synthetic fixtures. Preserve native crash and
+  # Flutter engine diagnostics even when a process crash prevents JUnit output.
+  adb -s emulator-5554 logcat -d -v threadtime > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/logcat.txt"
+  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-accessibility.txt" || true
+  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-screen.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-screen.png" || true
+  [[ "$clockrove_instrumentation_failed" == false ]]
   # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
   adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/" || true
@@ -91,6 +100,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
+    'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 1,
 }
 for classname, count in expected.items():
     actual = sum(case.attrib['classname'] == classname for case in root.findall('testcase'))

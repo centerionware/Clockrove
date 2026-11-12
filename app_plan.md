@@ -1291,3 +1291,10 @@ completed successfully using the permanent upload key; logs allocate versionCode
 at 2026-11-11 23:45:25 UTC. This satisfies the combined iteration's internal
 upload gate. Tester availability/installation, physical tracking/email behavior
 and production acceptance are not inferred. Production readiness stays unset.
+
+### Priority interruption: main Settings Save crash
+
+Owner reports an Android process crash saving main Settings, while job settings
+save normally. Prioritize reproduction/fix ahead of widget UI. Actual Flutter +
+native channel + SQLite save/reopen instrumentation and synthetic logcat capture
+are prepared for Actions, without assuming a cause from mocked form tests.
