@@ -2859,3 +2859,31 @@ Flutter transport/review/history and real-device/document acceptance remain open
 Large scope source review: remove repeated whole-board reads/snapshots from
 new-card append while preserving all changed-peer revisions on moves. The full
 2000-task replay/head-count regression remains; performance/behavior awaits Actions.
+
+### Main settings-field reveal recovery — source awaiting Actions
+
+Main 05ee6e7 / 43242962261 passed build/native checks and API-24 device cases,
+then failed API-35 payment setup locating Accounts receivable email. Downloaded
+13954879850 and reviewed failure.png/accessibility.txt: Settings is open at its
+top, with a vertical ScrollView and the target below the viewport; no app crash
+is shown. The old helper stopped scrolling after 35 attempts and then waited
+passively for a potentially offscreen field. Keep bounded active search/scrolling
+until the exact target appears, prefer the vertical form over editable scroll
+nodes, and wait for Billing defaults before entry. Preserve strict field/state,
+PDF/attachment and all required capture assertions. This focused test-only fix
+still requires full Actions proof before merge and new internal delivery.
+
+### Invoice navigation follow-up
+
+Source repair pending Actions: invoice history refresh/back navigation must use
+a synchronous setState callback. Actual quote run 43247145880 billing log caught
+the Future-return assertion; strengthened widget navigation test checks refresh
+and return without framework exceptions. #41 remains unmerged pending fresh full
+validation. The emulator also went offline; no successful device result inferred.
+
+#41 merged after exact b0b84b8 / 43251725288 full success (479 native / 50 actual
+Android, zero failures/errors/skips; artifacts and AR/invalid-precision/retained-PDF
+visuals inspected). Main 93673fb / 43254952365 validation running; new Play
+publication is unproven. Quote scope 202ceb1 / 43252783507: 47 XML / 539 native
+zero failures/errors/skips verified; actual-device gates running. Later native
+quote billing and board optimization source still require fresh Actions.

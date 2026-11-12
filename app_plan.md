@@ -51,9 +51,9 @@ reviewed actual-work invoice preparation/provenance, and real Android UI/documen
 acceptance. Native baseline bc57074 passed 537 cases in run 43247145880 (47 XML,
 zero failures/errors/skips). Its API-35 billing journey failed waiting for original
 PDF access; captured log also exposed invoice-list Future-returning setState.
-Maintenance PR #41 now includes the synchronous callback repair/navigation test
-and Settings reveal recovery; b0b84b8 is awaiting fresh Actions validation.
-Do not merge either branch or claim internal publication before current evidence.
+Maintenance PR #41 b0b84b8 passed full Actions 43251725288 and merged to
+93673fb at 16:05:59 UTC. Main Validate 43254952365 is running; internal
+publication remains unproven. Quote PR #39 remains draft until its full acceptance.
 Current scope UI/context/hash changes remain source pending Actions. Actual-work
 quote invoicing, physical device journeys, provider settings, encrypted backup,
 rights/store/production gates remain open. All builds/tests/rendering use Actions.
@@ -2153,3 +2153,42 @@ full peer snapshots after renumbering. The wide UTF-8 native scope test still
 creates/replays all 2000 real tasks and now checks every card has a revision head;
 it is not reduced to a mock or smaller limit. Fresh native/board/history Actions
 are required; no local benchmark or device performance claim is made.
+
+### Main API-35 settings reveal follow-up
+
+43242962261 failed the real payment setup AR-field lookup on API 35 after API 24
+passed. The reviewed capture shows Settings open at the top, not a crash. The
+focused settings-route-sync test fix keeps polling/scrolling the real vertical
+form through route readiness and waits for its Billing defaults body heading.
+All financial assertions remain intact. Validate before merge; no new internal
+publication is claimed from this failed main run.
+
+### Invoice list return/refresh assertion repair (source)
+
+Quote validation 43247145880 passed native build/tests (47 XML, 537 native
+cases, zero failures/errors/skips; downloaded results inspected) but failed the
+actual API-35 billing journey waiting for View original PDF. Its captured billing
+log independently exposed Flutter rejecting a Future-returning setState callback
+in InvoiceHistory._refresh after returning from invoice details. Correct the
+callback to return void and extend navigation coverage to explicit refresh and
+back navigation. This is a real source defect; it does not establish the sole
+cause of the later emulator offline/segmentation failure. Maintenance #41 carries
+the repair alongside the main Settings reveal recovery. Fresh Actions evidence
+and internal publication remain required. No VM build/test/format was run.
+
+### Maintenance merge and scope baseline evidence
+
+#41 exact b0b84b8 passed full Actions 43251725288: 42 native XML / 479 tests
+and 8 device XML / 50 actual Android tests across API 24/35, zero failures/errors/
+skips. Real PDF/text/private-attachment and actual-page viewer gates passed.
+Downloaded artifacts 13961465697 and 13961655711 inspected; reviewed AR Settings,
+retained invoice viewer and unchanged 30.001 input with its two-decimal error.
+Merged 93673fb2b05ac0adfef3a3ed94b5017d8558a6f9 at 16:05:59 UTC. Main
+43254952365 is running; no new Play acceptance claimed. This merge includes the
+same invoice-history repair already present in quotes. Both branch ledgers were
+preserved while resolving documentation-only merge conflicts.
+
+Scope 202ceb1 / 43252783507 passed formatting, analysis, Flutter behavior, build
+and native checks: downloaded 47 XML / 539 native tests, zero failures/errors/skips.
+Its Android device/PDF and viewer gates remain live. Native actual-work preparation
+and board append optimization are newer source, requiring their own fresh Actions.
