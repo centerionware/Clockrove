@@ -12,7 +12,6 @@ import android.widget.FrameLayout
 import android.widget.ListView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.tracking.BoardStore
 import io.github.centerionware.clockrove.tracking.TimerRepository
@@ -56,7 +55,7 @@ class WidgetHostDeviceTest {
         val manager = AppWidgetManager.getInstance(app)
         val host = AppWidgetHost(app, 913)
         val id = host.allocateAppWidgetId()
-        val activity = instrumentation.startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+        val activity = instrumentation.startActivitySync(Intent(app, WidgetTestHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as WidgetTestHostActivity
         var view: AppWidgetHostView? = null
         try {
             assertTrue("CI must grant widget binding before instrumentation", manager.bindAppWidgetIdIfAllowed(id, ComponentName(app, TimerWidget::class.java), options(132, 56)))
@@ -115,7 +114,7 @@ class WidgetHostDeviceTest {
     @Test fun threeProvidersAreDiscoverableAndOnlyTimerProviderRemainsCompactAtLargeSizes() {
         val manager = AppWidgetManager.getInstance(app)
         val host = AppWidgetHost(app, 914)
-        val activity = instrumentation.startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+        val activity = instrumentation.startActivitySync(Intent(app, WidgetTestHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as WidgetTestHostActivity
         val ids = mutableListOf<Int>()
         try {
             for (provider in TimerWidget.providers) {

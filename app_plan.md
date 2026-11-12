@@ -39,6 +39,11 @@ reconfiguration/removal and fresh combined checks before merging. Real launcher
 and tracking/recovery evidence, provider settings, encrypted backup/merge and
 full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
+Immediately after the current widget task is validated and merged, implement
+paid-invoice status and paid receipts, including the company/accounts-receivable
+CC rule below. This is the owner's next implementation priority; do not start it
+before the widget merge.
+
 ## 2. Product decisions
 
 | Item | Agreed behavior |
@@ -138,6 +143,32 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Offer separate GPS CSV with session ID, job ID/name, measured timestamp, latitude, longitude, accuracy. Include only points within the selection and finalized session boundaries.
 - Explain why active/pending sessions are excluded. Use UTF-8, consistent headers, correct quoting/newlines, and spreadsheet-formula protection for user-entered text.
 - Share/save exports through Android's document/share interfaces; do not require broad filesystem permissions.
+
+### 3.5a Paid invoices, receipts and accounting email copies
+
+- Next task immediately after the current widget merge: explicitly mark an invoice
+  paid and show its payment status. Persist this through the native serialized,
+  versioned command boundary; retain durable revision history and idempotent retries.
+- Generate a receipt from that invoice with a clear PAID marking and payment date.
+  Preserve the original invoice number, line items, totals and immutable prepared
+  document; a receipt must not allocate a second invoice number or silently alter
+  the original invoice. Reopening or sharing a receipt must not record payment twice.
+- Offer receipt email composition with the PDF attached through the default email
+  app. The user still presses Send. Creating/opening an email draft does not mark
+  an unpaid invoice paid and is not evidence that an email was sent or delivered.
+- Every invoice and receipt email draft must CC the company email from main
+  Settings, unless an optional accounts-receivable email is set there, in which
+  case CC that address instead of the primary company address. Validate this field
+  in Flutter and native settings without losing drafts or permitting crashes.
+- Apply the current accounting CC preference at email-draft creation, including
+  previously prepared invoices. Keep document contents immutable. Avoid duplicate
+  recipients; do not invent a CC address when both settings are empty. Preserve
+  existing subject/body template validation and safe PDF URI grants.
+- Acceptance requires transactional payment/migration/retry tests, original-number
+  and immutable-document preservation, correctly marked actual PDFs in all styles,
+  settings validation and CC precedence/fallback tests, and default-email intent
+  checks for recipient, CC, body and attachment. Actual mail-app acceptance remains
+  a physical-device check; no automatic sending or server is introduced.
 
 ### 3.6 Maps and privacy
 
@@ -305,6 +336,7 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 - Implement customizable boards and accessible card moves.
 - Build date selection, filtered list/totals, timezone handling and map history.
 - Add optional provider settings, credential handling, OSM attribution/caching, and CSV/document sharing.
+- Owner-prioritized next slice after widget merge: paid-invoice status, PAID receipts and accounting CC preference (section 3.5a).
 - Acceptance: board operations preserve cards; list/map/export filters agree; DST/range-boundary totals are correct; provider outage does not block local work; CSV formula/escaping tests pass.
 
 ### Milestone 7 — encrypted backup and safe merge
@@ -1412,3 +1444,20 @@ correctly failed: custom initial routes were accidentally combined with `home`,
 which Flutter rejects at startup. Replaced redundant `home` with an explicit `/`
 route and added full-app route construction plus actual board-render assertions.
 This failed run is not acceptance and no new widget build has been published.
+
+### Owner handoff: paid invoices and accounting copies next
+
+Owner explicitly schedules paid marking and invoice-derived PAID receipts as the
+next task after the current widget merge. All invoice/receipt email drafts CC the
+optional accounts-receivable email when set, otherwise the company primary email.
+This scope is planned, not implemented or validated. Current widget work continues.
+
+### Widget-host test lifecycle correction
+
+Actions 43138373244 passed Flutter startup regression, Android build and 272 native
+cases. Actual Settings save/reopen passed on API 24. The host test then detached
+a live Flutter view by replacing MainActivity content, provoking a Flutter JNI
+accessibility null-parent abort. Move the real AppWidgetHost into a native debug-only
+activity so Flutter lifecycle is preserved; this test activity is absent from
+release builds. Keep the actual service/collection/board/setup checks and strict
+zero-failure gates. This failed emulator run is not widget acceptance.

@@ -35,6 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
+| Next after widget merge: paid invoices, receipts and accounting CC | Planned; owner-prioritized next task | Mark invoices paid through native versioned commands; derive PAID receipts without changing original invoice/number; default-email PDF drafts CC optional accounts-receivable email, otherwise company primary email; settings validation, migrations, retry, PDF and intent evidence required |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
@@ -1801,3 +1802,17 @@ correctly failed: custom initial routes were accidentally combined with `home`,
 which Flutter rejects at startup. Replaced redundant `home` with an explicit `/`
 route and added full-app route construction plus actual board-render assertions.
 This failed run is not acceptance and no new widget build has been published.
+
+### Next task ordered by owner
+
+After current widgets are validated and merged, implement paid status and PAID
+invoice receipts. Add optional accounts-receivable email in main Settings; use it
+as CC for every invoice/receipt email when present, otherwise CC company email.
+Draft creation must never imply payment or email delivery. Section 3.5a contains
+the contract and acceptance checks. No payment/receipt implementation is claimed.
+
+Widget source ed791a3 passed Flutter/build/272 native cases in 43138373244.
+API-24 Settings save passed; the test host incorrectly replaced a live Flutter
+view and caused a native accessibility abort. Replace the test host with a native
+debug-only Activity and retain the actual collection/setup/board gates. No local
+build/test and no new widget publication occurred.
