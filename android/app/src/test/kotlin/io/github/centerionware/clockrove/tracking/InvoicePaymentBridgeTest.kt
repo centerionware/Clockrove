@@ -34,7 +34,7 @@ class InvoicePaymentBridgeTest {
         "received" to at - 1000, "timezone" to "UTC", "method" to "Transfer", "reference" to "Synthetic reference", "note" to "Private note")
     private fun change(method: String, id: String, values: Map<String, Any?>, expected: Any = version) =
         dispatch.call(MethodCall(method, mapOf("id" to id, "version" to expected, "value" to values))) as TimerRepository.Outcome
-    private fun read() = dispatch.call(MethodCall("invoicePayments", mapOf("invoiceId" to "invoice"))) as Map<*, *>
+    private fun read(invoice: String = "invoice") = dispatch.call(MethodCall("invoicePayments", mapOf("invoiceId" to invoice))) as Map<*, *>
     @Test fun contextAndCommandRoundTripExactBalanceTimeAccountingAndReceiptIdentity() {
         assertEquals("10750", read()["dueMinor"])
         val initial = version; val result = change("recordInvoicePayment", "record", payment(), initial)
@@ -74,4 +74,36 @@ class InvoicePaymentBridgeTest {
         val summary = repository.invoices().invoices.single()
         assertEquals("UNPAID", summary.status); assertEquals("10750", summary.dueMinor)
     }
+    @Test fun replacementBridgeRetainsCreditRelationshipsAndStrictStringAmounts() {
+        assertNull(change("recordInvoicePayment", "record", payment()).conflict)
+        val context = dispatch.call(MethodCall("invoiceLifecycleContext", mapOf("invoiceId" to "invoice"))) as Map<*, *>
+        assertEquals(75000, context["taxUnits"])
+        val original = (context["lines"] as List<*>).single() as Map<*, *>
+        assertEquals("10000", original["amountMinor"])
+        val line = original.entries.associate { it.key as String to it.value } + mapOf("amountMinor" to "12000", "unitPriceMinor" to "12000")
+        val values = mapOf<String, Any?>("invoiceId" to "invoice", "replacementId" to "replacement", "lines" to listOf(line), "taxUnits" to 100000,
+            "reason" to "Synthetic amount correction", "timezone" to "UTC", "confirmed" to true, "releaseClaimIds" to emptyList<String>(), "addedWork" to null)
+        try { change("replaceInvoice", "float-line", values + ("lines" to listOf(line + ("amountMinor" to 12000.0)))); fail("Floating line amount reached writer") } catch (_: IllegalArgumentException) { }
+        try { change("replaceInvoice", "float-tax", values + ("taxUnits" to 100000.0)); fail("Floating tax reached writer") } catch (_: IllegalArgumentException) { }
+        val before = version; val outcome = change("replaceInvoice", "replace", values, before)
+        assertNull(outcome.conflict); assertEquals(outcome, change("replaceInvoice", "replace", values, before))
+        assertEquals("VOID", read()["status"]); assertEquals("0", read()["dueMinor"])
+        assertEquals("replacement", (read()["void"] as Map<*, *>)["replacementId"])
+        val current = read("replacement")
+        assertEquals("invoice", current["replacesInvoiceId"]); assertEquals("3000", current["paidMinor"]); assertEquals("10200", current["dueMinor"])
+        val paid = (current["payments"] as List<*>).single() as Map<*, *>
+        assertEquals("invoice", paid["originalInvoiceId"]); assertEquals("replacement", paid["currentInvoiceId"])
+        assertEquals("replacement", ((read()["payments"] as List<*>).single() as Map<*, *>)["currentInvoiceId"])
+    }
+    @Test fun voidBridgeRequiresConfirmationAndRetainsSeparateCancellationCopy() {
+        val values = mapOf<String, Any?>("invoiceId" to "invoice", "reason" to "Synthetic invoice cancellation", "timezone" to "UTC", "confirmed" to false)
+        assertEquals("INVOICE_VOID_CONFIRMATION_REQUIRED", change("voidInvoice", "unconfirmed", values).conflict)
+        assertNull(change("voidInvoice", "void", values + ("confirmed" to true)).conflict)
+        assertEquals("VOID", read()["status"])
+        val info = read()["void"] as Map<*, *>
+        assertNull(info["replacementId"]); assertEquals("0", info["creditedMinor"]); assertEquals("10750", info["cancelledMinor"])
+        assertEquals("VOID", ((read()["copies"] as List<*>).single() as Map<*, *>)["kind"])
+        assertEquals("INVOICE_VOID", change("recordInvoicePayment", "late-payment", payment()).conflict)
+    }
+
 }

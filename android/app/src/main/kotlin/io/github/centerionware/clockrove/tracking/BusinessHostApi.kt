@@ -87,6 +87,15 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy, "paidMinor" to it.paidMinor, "dueMinor" to it.dueMinor, "status" to it.status, "digits" to it.digits,
                 "createdLabel" to ReportCsv.instant(it.created, java.util.TimeZone.getDefault().id)) }) }
             "invoicePayments" -> return invoicePayments(repository.invoicePaymentContext(input.string("invoiceId")))
+            "invoiceLifecycleContext" -> return repository.invoiceLifecycleContext(input.string("invoiceId")).let { state ->
+                mapOf("invoice" to invoicePayments(state.payment), "taxUnits" to state.payment.ledger.document.taxRateUnits,
+                    "lines" to state.payment.ledger.document.lines.mapIndexed { index, line -> mapOf("sourceIndex" to index,
+                        "title" to line.title, "detail" to line.detail, "amountMinor" to line.amount.takeIf { it.isNotBlank() }?.let { PaymentMath.parseMajor(it, state.payment.ledger.document.digits).toString() },
+                        "quantityUnits" to line.quantityUnits, "unitPriceMinor" to line.unitPriceMinor) },
+                    "claims" to state.claims.map { claim -> mapOf("id" to claim.id, "taskId" to claim.taskId, "sessionId" to claim.sessionId,
+                        "start" to claim.start, "end" to claim.end, "timezone" to claim.timezone,
+                        "label" to if (claim.taskId != null) "Task ${claim.taskId}" else "${ReportCsv.instant(requireNotNull(claim.start), requireNotNull(claim.timezone))} — ${ReportCsv.instant(requireNotNull(claim.end), requireNotNull(claim.timezone))} · ${claim.timezone}") })
+            }
             "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
             "legacyInvoiceContext" -> return legacyInvoiceContext(repository.legacyInvoiceContext(input.string("invoiceId")))
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
@@ -97,11 +106,23 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
         return when (call.method) {
+            "voidInvoice" -> repository.voidInvoice(id, version, InvoiceLifecycleStore.VoidDraft(v.string("invoiceId"), v.string("reason"), v.string("timezone"), v.bool("confirmed")))
+            "replaceInvoice" -> {
+                val lines = requireNotNull(v.value["lines"] as? List<*>).map { entry ->
+                    Input(requireNotNull(entry as? Map<*, *>)).let { line -> InvoiceLifecycleStore.LineEdit(line.int("sourceIndex"), line.string("title"), line.string("detail"), line.nullable("amountMinor"), line.nullable("quantityUnits"), line.nullable("unitPriceMinor")) }
+                }
+                val added = v.value["addedWork"].let { raw ->
+                    require(raw == null || raw is Map<*, *>)
+                    (raw as? Map<*, *>)?.let { Input(it).let { selection -> ReportStore.Selection(selection.string("firstDate"), selection.string("lastDate"), selection.string("timezone"), selection.strings("jobIds")) } }
+                }
+                repository.replaceInvoice(id, version, InvoiceLifecycleStore.ReplacementDraft(v.string("invoiceId"), v.string("replacementId"), lines,
+                    v.int("taxUnits"), v.string("reason"), v.string("timezone"), v.bool("confirmed"), v.strings("releaseClaimIds"), added))
+            }
             "createManualSession", "correctSession" -> {
                 val draft = SessionHistoryStore.Draft(v.string("sessionId"), v.string("jobId"), v.integer("start"), v.integer("end"), v.string("timezone"), v.int("offsetSeconds"))
                 if (call.method == "createManualSession") repository.createManualSession(id, version, draft) else repository.correctSession(id, version, draft)
@@ -142,7 +163,10 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "jobId" to ledger.invoice.jobId, "jobName" to document.job, "customer" to document.customer,
             "currency" to document.currency, "digits" to document.digits, "totalMinor" to ledger.balance.total.toString(),
             "paidMinor" to ledger.balance.paid.toString(), "dueMinor" to ledger.balance.collectibleDue.toString(), "status" to ledger.balance.status,
-            "collectedTaxMinor" to ledger.collectedTax?.toString(), "legacy" to context.legacy, "jobDeleted" to context.jobDeleted,
+            "collectedTaxMinor" to ledger.collectedTax?.toString(),
+            "replacesInvoiceId" to context.replacesInvoiceId,
+            "void" to context.voidInfo?.let { mapOf("replacementId" to it.replacementId, "creditedMinor" to it.credited, "cancelledMinor" to it.cancelled,
+                "created" to it.at, "createdLabel" to ReportCsv.instant(it.at, it.timezone), "timezone" to it.timezone, "reason" to it.reason) }, "legacy" to context.legacy, "jobDeleted" to context.jobDeleted,
             "accountingEmail" to context.accountingEmail, "customerEmail" to document.email,
             "now" to context.now, "timezone" to context.timezone, "localNow" to context.localNow.localTime,
             "nowOffsetSeconds" to context.localNow.offsetSeconds, "nowLabel" to context.localNow.label,

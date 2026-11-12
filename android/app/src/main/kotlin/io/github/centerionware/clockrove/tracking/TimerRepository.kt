@@ -513,7 +513,8 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PAYMENT_REVERSE", value.values()) { InvoicePaymentStore.reverse(it, value, wallClock()) }
     internal data class InvoicePaymentContext(val version: Long, val now: Long, val timezone: String,
         val localNow: SessionTime.Formatted, val accountingEmail: String, val legacy: Boolean, val jobDeleted: Boolean,
-        val ledger: InvoicePaymentStore.Snapshot, val copies: List<InvoiceCopyStore.Summary>)
+        val ledger: InvoicePaymentStore.Snapshot, val copies: List<InvoiceCopyStore.Summary>,
+        val voidInfo: InvoiceLifecycleStore.VoidInfo?, val replacesInvoiceId: String?)
     @Synchronized
     internal fun invoicePaymentContext(invoiceId: String): InvoicePaymentContext {
         val db = helper.readableDatabase
@@ -524,8 +525,13 @@ class TimerRepository internal constructor(context: Context,
         val legacy = db.rawQuery("SELECT state FROM invoice_coverage WHERE invoice_id=?", arrayOf(invoiceId)).use { !it.moveToFirst() || it.getString(0) == "LEGACY" }
         val deleted = db.rawQuery("SELECT 1 FROM jobs WHERE id=?", arrayOf(ledger.invoice.jobId)).use { !it.moveToFirst() }
         return InvoicePaymentContext(readSnapshot(db).version, now, timezone, SessionTime.format(now, timezone),
-            company.receivablesEmail.ifEmpty { company.companyEmail }, legacy, deleted, ledger, InvoiceCopyStore.list(db, invoiceId))
+            company.receivablesEmail.ifEmpty { company.companyEmail }, legacy, deleted, ledger, InvoiceCopyStore.list(db, invoiceId),
+            InvoiceLifecycleStore.voidInfo(db, invoiceId), db.rawQuery("SELECT invoice_id FROM invoice_voids WHERE replacement_id=?", arrayOf(invoiceId)).use { if (it.moveToFirst()) it.getString(0) else null })
     }
+    internal data class InvoiceLifecycleContext(val payment: InvoicePaymentContext, val claims: List<InvoiceLifecycleStore.Claim>)
+    @Synchronized
+    internal fun invoiceLifecycleContext(invoiceId: String): InvoiceLifecycleContext =
+        InvoiceLifecycleContext(invoicePaymentContext(invoiceId), InvoiceLifecycleStore.claims(helper.readableDatabase, invoiceId))
     @Synchronized
     internal fun prepareInvoiceBalanceCopy(id: String, version: Long, copyToken: String, invoiceId: String): Outcome =
         boardChange(id, version, "INVOICE_BALANCE_COPY", listOf(copyToken, invoiceId)) { InvoiceCopyStore.prepareBalance(it, copyToken, invoiceId, wallClock()) }

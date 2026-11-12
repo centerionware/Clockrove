@@ -2371,3 +2371,13 @@ layout needs less vertical space. Copy-only renderer source now uses a full-widt
 compact event-detail paragraph and less header spacing; original invoice layout
 and immutable copy payloads are unchanged. Preserve the one-page assertion and
 all complete-value checks. New validation is required.
+
+Lifecycle bridge source now exposes exact editable frozen rows, active claim IDs,
+predecessor/successor links, immutable cancellation details and each payment's
+current allocation. Strict void/replace commands preserve string amounts, integer
+versions/tax and explicit confirmation; two additional native bridge cases cover
+transport rejection and credit/relationship/cancellation-copy round trips. Native
+replacement build 43209333407 remains live; no new native result is claimed yet.
+Lifecycle editor UI and actual VOID/replacement PDF/interaction acceptance remain
+next. Financial UI must route original receipts to their original invoice and
+corrections to the current invoice, and must not offer collection on VOID records.
