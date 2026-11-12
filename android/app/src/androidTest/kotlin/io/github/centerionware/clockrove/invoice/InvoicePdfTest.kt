@@ -20,8 +20,8 @@ class InvoicePdfTest {
     private fun fixture(style: String, lines: Int = 3) = InvoiceStore.Snapshot("INV-000042", 1793534400000, style, "USD", 2,
         "Riverside Studio", "billing@example.test\n+1 555 0100\n12 Synthetic Street", "Synthetic Customer", "customer@example.test\n24 Synthetic Avenue",
         "Kitchen renovation", "2026-11-01 — 2026-11-30 · America/New_York", "Completed billable tasks · fixed prices", "Thank you for choosing Riverside Studio.",
-        "Payment details: synthetic fixture only.\nPlease include the invoice number in your reference.", "1250.00", "customer@example.test", "Invoice INV-000042", "Hello\nInvoice attached.",
-        (1..lines).map { InvoiceStore.Line("Install tiles — section $it", "Completed 2026-11-12 15:00:00.000 -05:00", "${if (it == 1) "1250.00" else "0.00"}") })
+        "Payment details: synthetic fixture only.\nPlease include the invoice number in your reference.", "1343.75", "customer@example.test", "Invoice INV-000042", "Hello\nInvoice attached.",
+        (1..lines).map { InvoiceStore.Line("Install tiles — section $it", "Completed 2026-11-12 15:00:00.000 -05:00", "${if (it == 1) "1250.00" else "0.00"}") }, subtotal = "1250.00", taxRateUnits = 75000, taxAmount = "93.75")
     private fun logo(): ByteArray {
         val b = Bitmap.createBitmap(160, 80, Bitmap.Config.ARGB_8888)
         Canvas(b).apply { drawColor(Color.WHITE); drawCircle(40f, 40f, 28f, Paint().apply { color = Color.rgb(23,107,85) }); drawText("RS", 78f, 50f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 24f }) }
@@ -46,12 +46,14 @@ class InvoicePdfTest {
                     root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
                         val text = PdfTextApi35.read(page)
-                        assertTrue(text.contains("USD 1250.00")); assertTrue(text.contains("INV-000042")); assertTrue(text.contains("Synthetic Customer"))
+                        val compact = text.filterNot { it.isWhitespace() }
+                        assertTrue(compact.contains("USD1343.75")); assertTrue(compact.contains("SubtotalUSD1250.00")); assertTrue(compact.contains("Tax(7.5%)USD93.75"))
+                        assertTrue(text.contains("INV-000042")); assertTrue(text.contains("Synthetic Customer"))
                     }
                     File(root, "clockrove-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
                 }
             }
-            assertEquals("1250.00", snapshot.total)
+            assertEquals("1343.75", snapshot.total)
         }
         assertEquals(3, images.distinct().size)
     }
@@ -92,7 +94,7 @@ class InvoicePdfTest {
                         // individual glyphs even though the page renders normally.
                         // Keep their order and require each complete priced row.
                         val compact = text.toString().filterNot { it.isWhitespace() }
-                        assertTrue(compact.contains("USD1250.00"))
+                        assertTrue(compact.contains("USD1343.75")); assertTrue(compact.contains("SubtotalUSD1250.00")); assertTrue(compact.contains("Tax(7.5%)USD93.75"))
                         data.lines.forEachIndexed { index, line ->
                             val pricedRow = (line.title + line.amount).filterNot { it.isWhitespace() }
                             assertTrue("Missing priced row ${index + 1} in $style", compact.contains(pricedRow))

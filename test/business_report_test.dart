@@ -270,7 +270,7 @@ void main() {
       expect(find.text('Delete permanently'), findsOneWidget);
       expect(
         find.textContaining(
-          'Independent reusable task templates and customers are kept.',
+          'Issued invoices and billing history are kept, along with reusable task templates and customers.',
         ),
         findsOneWidget,
       );

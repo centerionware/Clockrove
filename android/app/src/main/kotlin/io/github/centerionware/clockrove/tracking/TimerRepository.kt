@@ -824,7 +824,7 @@ class TimerRepository internal constructor(context: Context,
             GeofenceStore.createTables(db)
             BusinessSchema.install(db, now())
             WidgetConfigurationStore.install(db)
-            InvoiceCoverageStore.install(db)
+            InvoiceCoverageStore.install(db, now())
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -841,7 +841,7 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
-            if (oldVersion < 7) InvoiceCoverageStore.install(db)
+            if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
         }
     }
 

@@ -19,6 +19,7 @@ class CompanySettings {
     required this.invoiceStyle,
     required this.emailSubject,
     required this.emailBody,
+    this.defaultTaxUnits = 0,
   });
   final String currency,
       companyName,
@@ -32,6 +33,7 @@ class CompanySettings {
       emailSubject,
       emailBody;
   final int digits;
+  final int defaultTaxUnits;
   final String? defaultHourlyMinor;
   factory CompanySettings.decode(Map<Object?, Object?> v) => CompanySettings(
     currency: v['currency'] as String,
@@ -47,6 +49,7 @@ class CompanySettings {
     invoiceStyle: v['invoiceStyle'] as String,
     emailSubject: v['emailSubject'] as String,
     emailBody: v['emailBody'] as String,
+    defaultTaxUnits: v['defaultTaxUnits'] as int? ?? 0,
   );
   Map<String, Object?> encode() => {
     'currency': currency,
@@ -61,6 +64,7 @@ class CompanySettings {
     'invoiceStyle': invoiceStyle,
     'emailSubject': emailSubject,
     'emailBody': emailBody,
+    'defaultTaxUnits': defaultTaxUnits,
   };
 }
 
@@ -120,9 +124,13 @@ class JobPreferences {
     this.effectiveRate,
     this.customerId,
     this.emailOverride,
+    this.taxUnits,
+    this.effectiveTaxUnits = 0,
   });
   final int version, color, digits;
   final int? archivedMillis;
+  final int? taxUnits;
+  final int effectiveTaxUnits;
   final String id, name, mode, currency, effectiveEmail;
   final String? rate, effectiveRate, customerId, emailOverride;
   final bool archived;
@@ -145,6 +153,8 @@ class JobPreferences {
       effectiveRate: v['effectiveHourlyMinor'] as String?,
       customerId: s['customerId'] as String?,
       emailOverride: s['customerEmailOverride'] as String?,
+      taxUnits: s['taxUnits'] as int?,
+      effectiveTaxUnits: v['effectiveTaxUnits'] as int? ?? 0,
     );
   }
   Map<String, Object?> encode() => {
@@ -156,6 +166,7 @@ class JobPreferences {
     'hourlyRateMinor': rate,
     'customerId': customerId,
     'customerEmailOverride': emailOverride,
+    'taxUnits': taxUnits,
   };
 }
 

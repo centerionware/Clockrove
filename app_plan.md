@@ -42,7 +42,8 @@ Widget PR #33 merged as 8c2f3fd after final head 6cadef0 passed full Actions
 43158333007: 274 native and 40 actual API-24/35 cases with no failures/errors/skips;
 board, scrolling Combined, compact timer and setup captures reviewed on both APIs.
 Main validation 43159664866 passed with the same 274 native / 40 actual cases;
-automatic Play internal delivery 43160879953 is running and not yet accepted.
+Play delivery 43160879953 accepted 0.1.0-internal.22.1 / 216624221 at
+2026-11-12 05:27:54 UTC. Tester availability/installation remains separate.
 Real launcher/tracking/recovery evidence, provider settings, encrypted backup/merge
 and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 

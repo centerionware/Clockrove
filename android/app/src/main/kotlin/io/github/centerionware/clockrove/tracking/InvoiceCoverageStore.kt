@@ -11,7 +11,7 @@ internal object InvoiceCoverageStore {
     data class Preview(val report: ReportStore.Report, val excluded: List<Exclusion>, val legacy: List<Pair<String, String>>)
     private data class TimeClaim(val invoiceId: String, val number: String, val start: Long, val end: Long)
 
-    fun install(db: SQLiteDatabase) {
+    fun install(db: SQLiteDatabase, at: Long) {
         // Financial history survives job purge. Keep the opaque job identity and
         // frozen document; do not retain deleted job work/GPS to satisfy a FK.
         db.execSQL("CREATE TABLE invoices_retained(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,customer_id TEXT REFERENCES customers(id),number TEXT NOT NULL UNIQUE,created_ms INTEGER NOT NULL,payload TEXT NOT NULL,pdf BLOB,logo_id TEXT REFERENCES logo_assets(id))")
@@ -23,6 +23,10 @@ internal object InvoiceCoverageStore {
         // Old snapshots lack stable task IDs and exact source intervals. Never
         // guess identity from titles, prices, or today's mutable report.
         db.execSQL("INSERT INTO invoice_coverage(invoice_id,state) SELECT id,'LEGACY' FROM invoices")
+        db.rawQuery("SELECT id,job_id FROM invoices", null).use { rows -> while (rows.moveToNext()) {
+            RevisionStore.record(db, "invoice_coverage", rows.getString(0), rows.getString(1),
+                mapOf("invoice_id" to rows.getString(0), "state" to "LEGACY", "reviewed_ms" to null, "review_note" to ""), at, origin = "MIGRATION")
+        } }
         db.execSQL("CREATE TABLE invoice_task_claims(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),job_id TEXT NOT NULL,task_id TEXT NOT NULL,released_ms INTEGER CHECK(released_ms IS NULL OR released_ms>=0))")
         db.execSQL("CREATE UNIQUE INDEX invoice_active_task ON invoice_task_claims(task_id) WHERE released_ms IS NULL")
         db.execSQL("CREATE INDEX invoice_tasks_job ON invoice_task_claims(job_id,invoice_id)")
@@ -36,6 +40,7 @@ internal object InvoiceCoverageStore {
         for (event in listOf("INSERT", "UPDATE")) {
             db.execSQL("CREATE TRIGGER invoice_time_overlap_${event.lowercase()} BEFORE $event ON invoice_time_claims WHEN NEW.released_ms IS NULL AND EXISTS(SELECT 1 FROM invoice_time_claims c WHERE c.id<>NEW.id AND c.job_id=NEW.job_id AND c.released_ms IS NULL AND c.start_ms<NEW.end_ms AND c.end_ms>NEW.start_ms) BEGIN SELECT RAISE(ABORT,'Invoice time already claimed'); END")
         }
+        BillingTaxStore.install(db, at)
     }
 
     fun preview(db: SQLiteDatabase, source: ReportStore.Report): Preview {

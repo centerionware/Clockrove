@@ -10,26 +10,30 @@ internal object BusinessStore {
         val companyAddress: String = "", val companyWebsite: String = "", val invoiceHeader: String = "",
         val invoiceFooter: String = "", val invoiceStyle: String = "MODERN",
         val emailSubject: String = "Invoice {invoice_number} — {job_name}",
-        val emailBody: String = "Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}") {
-        fun values(): List<Any?> = listOf(currency, defaultHourlyMinor, companyName, companyEmail, companyPhone,
+        val emailBody: String = "Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}",
+        val defaultTaxUnits: Int = 0) {
+        fun storedValues(): List<Any?> = listOf(currency, defaultHourlyMinor, companyName, companyEmail, companyPhone,
             companyAddress, companyWebsite, invoiceHeader, invoiceFooter, invoiceStyle, emailSubject, emailBody)
+        // Retain released command fingerprints when the new preference is zero.
+        fun values(): List<Any?> = storedValues() + if (defaultTaxUnits == 0) emptyList() else listOf(defaultTaxUnits)
     }
     data class Customer(val id: String, val name: String, val email: String = "", val phone: String = "",
         val address: String = "", val notes: String = "", val archived: Boolean = false) {
         fun values(): List<Any?> = listOf(id, name, email, phone, address, notes, archived)
     }
     data class JobSettings(val id: String, val name: String, val colorArgb: Long, val billingMode: String,
-        val currency: String, val hourlyRateMinor: Long?, val customerId: String?, val customerEmailOverride: String?) {
-        fun values(): List<Any?> = listOf(id, name, colorArgb, billingMode, currency, hourlyRateMinor, customerId, customerEmailOverride)
+        val currency: String, val hourlyRateMinor: Long?, val customerId: String?, val customerEmailOverride: String?, val taxUnits: Int? = null) {
+        fun values(): List<Any?> = listOf(id, name, colorArgb, billingMode, currency, hourlyRateMinor, customerId, customerEmailOverride) +
+            if (taxUnits == null) emptyList() else listOf(taxUnits)
     }
     data class JobDetail(val settings: JobSettings, val archived: Boolean, val archivedMillis: Long?,
-        val customer: Customer?, val effectiveEmail: String, val effectiveHourlyMinor: Long?)
+        val customer: Customer?, val effectiveEmail: String, val effectiveHourlyMinor: Long?, val effectiveTaxUnits: Int = 0)
     val customerColumns = listOf("id", "name", "email", "phone", "address", "notes", "archived")
 
     fun settings(db: SQLiteDatabase): Settings = db.rawQuery("SELECT ${BusinessSchema.settingsColumns.drop(1).take(12).joinToString(",")} FROM app_settings WHERE id=1", null).use {
         check(it.moveToFirst())
         Settings(it.getString(0), if (it.isNull(1)) null else it.getLong(1), it.getString(2), it.getString(3),
-            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11))
+            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11), BillingTaxStore.defaultUnits(db))
     }
     fun customers(db: SQLiteDatabase): List<Customer> = db.rawQuery("SELECT ${customerColumns.joinToString(",")} FROM customers ORDER BY archived,name,id", null).use { rows ->
         buildList { while (rows.moveToNext()) add(Customer(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4), rows.getString(5), rows.getInt(6) != 0)) }
@@ -37,12 +41,12 @@ internal object BusinessStore {
     fun job(db: SQLiteDatabase, id: String): JobDetail = db.rawQuery("SELECT name,color_argb,billing_mode,currency,hourly_rate_minor,customer_id,customer_email_override,archived,archived_ms FROM jobs WHERE id=?", arrayOf(id)).use {
         require(it.moveToFirst()) { "JOB_UNAVAILABLE" }
         val value = JobSettings(id, it.getString(0), it.getLong(1), it.getString(2), it.getString(3),
-            if (it.isNull(4)) null else it.getLong(4), if (it.isNull(5)) null else it.getString(5), if (it.isNull(6)) null else it.getString(6))
+            if (it.isNull(4)) null else it.getLong(4), if (it.isNull(5)) null else it.getString(5), if (it.isNull(6)) null else it.getString(6), BillingTaxStore.jobUnits(db, id))
         val customer = value.customerId?.let { customerId -> customers(db).firstOrNull { c -> c.id == customerId } }
         val defaults = settings(db)
         JobDetail(value, it.getInt(7) != 0, if (it.isNull(8)) null else it.getLong(8), customer,
             value.customerEmailOverride ?: customer?.email.orEmpty(),
-            value.hourlyRateMinor ?: defaults.defaultHourlyMinor.takeIf { defaults.currency == value.currency })
+            value.hourlyRateMinor ?: defaults.defaultHourlyMinor.takeIf { defaults.currency == value.currency }, value.taxUnits ?: defaults.defaultTaxUnits)
     }
     fun validCurrency(value: String): Boolean = value.matches(Regex("[A-Z]{3}")) && try {
         Currency.getInstance(value).defaultFractionDigits in 0..4
@@ -52,6 +56,7 @@ internal object BusinessStore {
     private fun bounded(value: String, size: Int) = value.length <= size && !value.contains('\u0000')
 
     fun saveSettings(db: SQLiteDatabase, value: Settings, at: Long): String? {
+        if (!TaxRate.valid(value.defaultTaxUnits)) return "INVALID_TAX_RATE"
         if (!validCurrency(value.currency) || (value.defaultHourlyMinor != null && value.defaultHourlyMinor < 0) ||
             !bounded(value.companyName, 240) || !validEmail(value.companyEmail) || !bounded(value.companyPhone, 120) ||
             !bounded(value.companyAddress, 4000) || !bounded(value.companyWebsite, 2000) ||
@@ -61,7 +66,8 @@ internal object BusinessStore {
         if (!InvoiceEmailTemplate.valid(value.emailBody, subject = false)) return "INVALID_EMAIL_BODY"
         val columns = BusinessSchema.settingsColumns.drop(1).take(12)
         // Existing jobs keep their own currency; a new default never converts existing money.
-        db.execSQL("UPDATE app_settings SET ${columns.joinToString(",") { "$it=?" }} WHERE id=1", value.values().toTypedArray())
+        db.execSQL("UPDATE app_settings SET ${columns.joinToString(",") { "$it=?" }} WHERE id=1", value.storedValues().toTypedArray())
+        BillingTaxStore.saveDefault(db, value.defaultTaxUnits, at)
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)
         return null
     }
@@ -86,6 +92,7 @@ internal object BusinessStore {
         return null
     }
     fun saveJob(db: SQLiteDatabase, value: JobSettings, at: Long): String? {
+        if (value.taxUnits != null && !TaxRate.valid(value.taxUnits)) return "INVALID_TAX_RATE"
         val previous = db.rawQuery("SELECT archived,currency,customer_id FROM jobs WHERE id=?", arrayOf(value.id)).use {
             if (!it.moveToFirst()) return "JOB_UNAVAILABLE"
             Triple(it.getInt(0) != 0, it.getString(1), if (it.isNull(2)) null else it.getString(2))
@@ -102,6 +109,7 @@ internal object BusinessStore {
         }
         db.execSQL("UPDATE jobs SET name=?,color_argb=?,billing_mode=?,hourly_rate_minor=?,customer_id=?,customer_email_override=? WHERE id=?",
             arrayOf<Any?>(value.name.trim(), value.colorArgb, value.billingMode, value.hourlyRateMinor, value.customerId, value.customerEmailOverride, value.id))
+        BillingTaxStore.saveJob(db, value.id, value.taxUnits, at)
         RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, at, where = "id=?", args = arrayOf(value.id))
         return null
     }

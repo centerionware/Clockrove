@@ -45,4 +45,26 @@ class BusinessBridgeTest {
         try { change("reorderColumns", mapOf("jobId" to job, "columnIds" to listOf(123))); fail("Numeric ID accepted") } catch (_: IllegalArgumentException) {}
         assertTrue(repository.boardSnapshot(job).board.cards.isEmpty())
     }
+    @Test fun exactTaxUnitsRoundTripWithExplicitZeroJobOverride() {
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        assertNull((change("saveSettings", settings + ("defaultTaxUnits" to 75000)) as TimerRepository.Outcome).conflict)
+        val detail = dispatch.call(MethodCall("job", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals(75000, detail["effectiveTaxUnits"])
+        val jobSettings = (detail["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        assertNull((dispatch.call(MethodCall("saveJob", mapOf("id" to "job-tax", "version" to repository.snapshot().version,
+            "value" to jobSettings + ("taxUnits" to 0)))) as TimerRepository.Outcome).conflict)
+        val result = dispatch.call(MethodCall("job", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals(0, result["effectiveTaxUnits"]); assertEquals(0, (result["settings"] as Map<*, *>)["taxUnits"])
+        assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
+    }
+    @Test fun floatingStringAndBooleanTaxUnitsCannotReachTheNativeWriter() {
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        val before = repository.businessSnapshot()
+        for (bad in listOf<Any>(75000.0, "75000", true, Long.MAX_VALUE)) {
+            try { change("saveSettings", settings + ("defaultTaxUnits" to bad)); fail("Malformed units accepted") } catch (_: IllegalArgumentException) {}
+        }
+        assertEquals(before, repository.businessSnapshot())
+    }
 }

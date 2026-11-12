@@ -64,7 +64,7 @@ internal object JobLifecycleStore {
         listOf("location_points", "pending_departure", "finalized_departures", "geofence_conflicts").forEach { table ->
             db.execSQL("DELETE FROM $table WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(id))
         }
-        listOf("sessions", "kanban_cards", "kanban_columns", "work_sites", "automation_policies").forEach { table -> db.execSQL("DELETE FROM $table WHERE job_id=?", arrayOf(id)) }
+        listOf("sessions", "kanban_cards", "kanban_columns", "work_sites", "automation_policies", "job_tax_rates").forEach { table -> db.execSQL("DELETE FROM $table WHERE job_id=?", arrayOf(id)) }
         db.execSQL("DELETE FROM jobs WHERE id=?", arrayOf(id))
         val revision = RevisionStore.record(db, "job", id, id, mapOf("id" to id, "job_id" to id), now, deleted = true)
         db.execSQL("INSERT INTO job_deletions VALUES(?,?,?)", arrayOf<Any?>(id, revision, now))

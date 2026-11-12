@@ -24,7 +24,7 @@ iOS and future service remain deferred.
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
 | M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
-| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions merged and main verified; internal delivery running | #33 final head 6cadef0 passed full 43158333007 and merged 8c2f3fd; main 43159664866 has 274 native and 20 actual tests per API (24/35), zero failures/errors/skips; final board/setup/scrolling/timer captures reviewed; delivery 43160879953 and physical launcher/recovery acceptance remain |
+| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions merged, main verified and internal upload accepted | #33 final head 6cadef0 passed full 43158333007 and merged 8c2f3fd; main 43159664866 has 274 native and 20 actual tests per API (24/35), zero failures/errors/skips; final captures reviewed; delivery 43160879953 accepted internal.22.1 / 216624221; physical launcher/recovery acceptance remains |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, tax and payment lifecycle | Native coverage/retention source prepared; draft #35 under Actions; full slice incomplete | beec0cf / 43160987076 awaits results; schema-7 claims/legacy guard/retention and exact tax helper; preview, reconciliation, tax settings/PDF and invoice navigation remain; then partial/full payments, receipts, CC and credit-preserving void/replacement |
+| Next after widget merge: invoice integrity, tax and payment lifecycle | Native coverage/retention and tax integration source prepared; draft #35; full slice incomplete | beec0cf / 43160987076 stopped at stale deletion-warning assertion; corrected, tax settings/override/frozen totals/PDF source added; renewed Actions required; preview, reconciliation and invoice navigation remain; then payments, receipts, CC and credit-preserving void/replacement |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -45,7 +45,7 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Latest hotfix main 43131240701 and delivery 43132531984 succeeded for c5e19d1; Play accepted 0.1.0-internal.21.1 / 216609104; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Widget iteration upload verified; launch gates remain | Main 43159664866 and delivery 43160879953 succeeded for 8c2f3fd; Play accepted 0.1.0-internal.22.1 / 216624221; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -2027,3 +2027,32 @@ Widget main 8c2f3fd passed full 43159664866. Downloaded run-specific XML confirm
 Play internal delivery 43160879953 is active; do not claim accepted upload/version
 yet. Invoice foundation beec0cf is draft #35 with Actions 43160987076 active; no
 financial tests/builds are claimed passing until that run supplies results.
+
+### Widget internal delivery accepted; tax integration source prepared
+
+Play delivery 43160879953 successfully built and verified the signed bundle with
+the permanent upload key, allocated 0.1.0-internal.22.1 / 216624221, and accepted
+its internal upload at 2026-11-12 05:27:54 UTC. This is widget merge 8c2f3fd, not
+the unfinished invoice branch. Tester installation/availability remains separate.
+
+First invoice run 43160987076 stopped in Flutter tests: a deletion dialog assertion
+still expected the old reusable-template wording. Update it to assert retained
+invoices/billing history and templates/customers. Applied the CI-exported formatting
+for the existing command messages. Native coverage/migration checks did not run
+past that failed Flutter gate; no passing financial validation is claimed.
+
+Added source for global default tax and nullable per-job inheritance/override,
+including explicit 0%. SQLite stores checked integer percentage units in revisioned
+billing preference rows; save validation is authoritative and transactional. Native
+transport rejects floats/strings/booleans. Compatible zero/inherit command values
+retain released receipt fingerprints. Tax-bearing invoices freeze subtotal, rate,
+tax and grand total; email amount uses that total, and native PDF styles show the
+breakdown. Legacy invoices retain recorded totals and unknown tax, never today's
+rate. Both forms preserve invalid drafts with inline correction guidance.
+
+Prepared native tax persistence/calculation/inheritance/atomic rejection/immutability
+cases, strict bridge cases, decimal parsing and real form correction cases. Actual
+Android single/multipage PDFs for all three styles now assert 7.5% tax, subtotal
+1250.00, tax 93.75 and total 1343.75. Actions must build/test/render this source;
+preview, legacy reconciliation and retained invoice navigation still block merge.
+No VM build, test, formatter, dependency resolution or rendering was run.

@@ -52,6 +52,10 @@ class InvoiceCoverageMigrationTest {
         assertEquals(42L, repo.snapshot().version)
         val invoice = repo.invoice("legacy-invoice")
         assertEquals(originalPayload, invoice.payload); assertArrayEquals(originalPdf, invoice.pdf)
+        assertNull(InvoiceStore.Snapshot.decode(invoice.payload).taxRateUnits)
+        assertNull(InvoiceStore.Snapshot.decode(invoice.payload).taxAmount)
+        assertEquals(0, repo.businessSnapshot().settings.defaultTaxUnits)
+        assertNull(repo.jobDetail("legacy-job").job.settings.taxUnits)
         assertEquals("legacy-widget-token", repo.widgetSnapshot(17).configuration.token)
         assertEquals("legacy-point", repo.locationPoints("legacy-work").single().id)
         inspect { db ->

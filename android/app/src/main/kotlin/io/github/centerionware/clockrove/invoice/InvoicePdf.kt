@@ -12,6 +12,7 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import io.github.centerionware.clockrove.tracking.InvoiceStore
+import io.github.centerionware.clockrove.tracking.TaxRate
 import java.io.ByteArrayOutputStream
 
 /** Three native, paginated layouts. Render on a worker, outside repository writes. */
@@ -148,6 +149,12 @@ internal object InvoicePdf {
             space(12f)
         }
         fun total() {
+            if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {
+                ensure(145f)
+                space(8f)
+                text("Subtotal   ${data.currency} ${data.subtotal}", 11f)
+                text("Tax (${TaxRate.format(data.taxRateUnits)}%)   ${data.currency} ${data.taxAmount}", 11f)
+            }
             ensure(90f); space(12f)
             val box = RectF(margin, y, width - margin, y + 55)
             if (modern) canvas.drawRoundRect(box, 8f, 8f, Paint().apply { color = Color.rgb(232, 244, 238) })
