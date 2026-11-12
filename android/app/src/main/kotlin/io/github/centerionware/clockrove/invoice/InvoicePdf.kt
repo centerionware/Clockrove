@@ -123,7 +123,7 @@ internal object InvoicePdf {
                 canvas.translate(margin, y - top)
                 layout.draw(canvas)
                 canvas.restore()
-                y += segmentHeight + 5
+                y += segmentHeight + if (classic) 3 else 5
                 firstLine = lastLine + 1
                 if (firstLine < layout.lineCount) next()
             }
@@ -144,9 +144,9 @@ internal object InvoicePdf {
             }
             text(value.title, 11f, true, 352)
             text(value.detail, 9f, available = 352)
-            space(8f)
+            space(if (classic) 4f else 8f)
             canvas.drawLine(margin, y, width - margin, y, Paint().apply { color = Color.rgb(222, 228, 224); strokeWidth = .5f })
-            space(12f)
+            space(if (classic) 8f else 12f)
         }
         fun total() {
             if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {

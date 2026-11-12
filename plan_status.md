@@ -2082,3 +2082,32 @@ loss and navigation cases are prepared. Legacy coverage reconciliation is still
 missing; this slice must remain a draft until that reviewed journey and final
 native/device/PDF/visual checks pass. No new source is claimed validated by writing
 it. All builds/tests/formatting/rendering remain Actions-only.
+
+### Preview checks pass; Classic pagination correction and native legacy review prepared
+
+647f941 / 43163572642 passed 106 Flutter cases and 329 native cases, zero native
+failures/errors/skips, including the preview, retention and corrected rollback/
+logo cases. Actual API 24 ran twenty cases: nineteen passed, while the three-style
+short PDF case produced two pages for Classic. Minimal's one-page tax PDF was
+captured and reviewed; Classic was the next style in the preserved loop. API 35
+and actual-document viewer stages did not run after that failed device gate.
+Applied the run's formatter patch. Adjust Classic text/row gaps while preserving
+font sizes/content and the one-page assertion; preserve failing PDF/first/last
+captures before future assertions. This adjustment awaits actual Android proof.
+
+Prepared native explicit legacy coverage reconciliation and typed transport. It
+requires a review note, confirmation and selected task identities/exact UTC ranges
+with IANA timezone context; empty mappings need a separate acknowledgment. It does
+not infer sources from titles/prices or change original documents, amounts, tax,
+payments, numbering or work completion. Task ownership, overlapping ranges and
+existing reservations are guarded before writes; review/claims/revisions/receipts
+commit together. Original outcome replay survives review completion and job purge.
+
+Legacy ranges can reserve removed historical work. A live entry overlapping any
+active job reservation cannot be shifted out of its already-billed portion, even
+when the reservation lacks the original session ID. Native context shows current
+incomplete/completed tasks and existing invoice ownership links. Prepared twelve
+API-24/35 legacy validation/rollback/concurrency/replay/transport cases plus a Dart
+immutable-intent/codec case. The user-facing source/time editor and its integrated
+journey remain unfinished; no reconciliation acceptance or full-slice completion
+is claimed. All new source awaits Actions; no VM validation/rendering ran.

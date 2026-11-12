@@ -514,6 +514,13 @@ class TimerRepository internal constructor(context: Context,
         return InvoiceBillingPreview(readSnapshot(db).version, InvoiceCoverageStore.preview(db, ReportStore.read(db, selection)),
             BusinessStore.job(db, selection.jobIds.single()).effectiveTaxUnits)
     }
+    internal data class LegacyInvoiceContext(val version: Long, val context: LegacyInvoiceStore.Context)
+    @Synchronized
+    internal fun legacyInvoiceContext(invoiceId: String): LegacyInvoiceContext = LegacyInvoiceContext(
+        readSnapshot(helper.readableDatabase).version, LegacyInvoiceStore.context(helper.readableDatabase, invoiceId))
+    @Synchronized
+    internal fun reconcileInvoiceCoverage(id: String, version: Long, value: LegacyInvoiceStore.Draft): Outcome =
+        boardChange(id, version, "INVOICE_COVERAGE_RECONCILE", value.values()) { LegacyInvoiceStore.reconcile(it, value, wallClock()) }
     @Synchronized
     internal fun invoice(id: String): InvoiceStore.Record = InvoiceStore.read(helper.readableDatabase, id)
     @Synchronized

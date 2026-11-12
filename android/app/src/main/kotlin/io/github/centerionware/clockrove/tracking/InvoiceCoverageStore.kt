@@ -30,7 +30,7 @@ internal object InvoiceCoverageStore {
         db.execSQL("CREATE TABLE invoice_task_claims(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),job_id TEXT NOT NULL,task_id TEXT NOT NULL,released_ms INTEGER CHECK(released_ms IS NULL OR released_ms>=0))")
         db.execSQL("CREATE UNIQUE INDEX invoice_active_task ON invoice_task_claims(task_id) WHERE released_ms IS NULL")
         db.execSQL("CREATE INDEX invoice_tasks_job ON invoice_task_claims(job_id,invoice_id)")
-        db.execSQL("CREATE TABLE invoice_time_claims(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),job_id TEXT NOT NULL,session_id TEXT NOT NULL,start_ms INTEGER NOT NULL CHECK(typeof(start_ms)='integer'),end_ms INTEGER NOT NULL CHECK(typeof(end_ms)='integer' AND end_ms>start_ms),released_ms INTEGER CHECK(released_ms IS NULL OR released_ms>=0))")
+        db.execSQL("CREATE TABLE invoice_time_claims(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),job_id TEXT NOT NULL,session_id TEXT NOT NULL,start_ms INTEGER NOT NULL CHECK(typeof(start_ms)='integer'),end_ms INTEGER NOT NULL CHECK(typeof(end_ms)='integer' AND end_ms>start_ms),timezone TEXT NOT NULL,released_ms INTEGER CHECK(released_ms IS NULL OR released_ms>=0))")
         db.execSQL("CREATE INDEX invoice_active_time ON invoice_time_claims(job_id,start_ms,end_ms) WHERE released_ms IS NULL")
         for (table in listOf("invoice_task_claims", "invoice_time_claims")) {
             for (event in listOf("INSERT", "UPDATE")) {
@@ -95,14 +95,20 @@ internal object InvoiceCoverageStore {
         db.execSQL("INSERT INTO invoice_coverage(invoice_id,state) VALUES(?,'COMPLETE')", arrayOf(invoiceId))
         val total = report.totals.single()
         if (total.mode == "TASK") report.tasks.forEach { task ->
-            val id = UUID.randomUUID().toString()
-            db.execSQL("INSERT INTO invoice_task_claims(id,invoice_id,job_id,task_id) VALUES(?,?,?,?)", arrayOf(id, invoiceId, total.jobId, task.id))
-            RevisionStore.snapshotRows(db, "invoice_task_claims", "invoice_task_claim", listOf("id", "invoice_id", "job_id", "task_id", "released_ms"), at, "job_id", "id=?", arrayOf(id))
+            reserveTask(db, invoiceId, total.jobId, task.id, at)
         } else report.intervals.forEach { interval ->
-            val id = UUID.randomUUID().toString()
-            db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(id, invoiceId, total.jobId, interval.sessionId, interval.start, interval.end))
-            RevisionStore.snapshotRows(db, "invoice_time_claims", "invoice_time_claim", listOf("id", "invoice_id", "job_id", "session_id", "start_ms", "end_ms", "released_ms"), at, "job_id", "id=?", arrayOf(id))
+            reserveTime(db, invoiceId, total.jobId, interval.sessionId, interval.start, interval.end, report.selection.timezone, at)
         }
         RevisionStore.record(db, "invoice_coverage", invoiceId, total.jobId, mapOf("invoice_id" to invoiceId, "state" to "COMPLETE", "reviewed_ms" to null, "review_note" to ""), at)
+    }
+    fun reserveTask(db: SQLiteDatabase, invoiceId: String, jobId: String, taskId: String, at: Long) {
+        val id = UUID.randomUUID().toString()
+        db.execSQL("INSERT INTO invoice_task_claims(id,invoice_id,job_id,task_id) VALUES(?,?,?,?)", arrayOf(id, invoiceId, jobId, taskId))
+        RevisionStore.snapshotRows(db, "invoice_task_claims", "invoice_task_claim", listOf("id", "invoice_id", "job_id", "task_id", "released_ms"), at, "job_id", "id=?", arrayOf(id))
+    }
+    fun reserveTime(db: SQLiteDatabase, invoiceId: String, jobId: String, sessionId: String, start: Long, end: Long, timezone: String, at: Long) {
+        val id = UUID.randomUUID().toString()
+        db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms,timezone) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, invoiceId, jobId, sessionId, start, end, timezone))
+        RevisionStore.snapshotRows(db, "invoice_time_claims", "invoice_time_claim", listOf("id", "invoice_id", "job_id", "session_id", "start_ms", "end_ms", "timezone", "released_ms"), at, "job_id", "id=?", arrayOf(id))
     }
 }

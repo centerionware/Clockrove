@@ -86,6 +86,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy,
                 "createdLabel" to ReportCsv.instant(it.created, java.util.TimeZone.getDefault().id)) }) }
             "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
+            "legacyInvoiceContext" -> return legacyInvoiceContext(repository.legacyInvoiceContext(input.string("invoiceId")))
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
             "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
             "companyLogo" -> { val s = repository.logo(); return mapOf("version" to s.version, "id" to s.id, "width" to s.width, "height" to s.height, "png" to s.bytes) }
@@ -94,7 +95,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -121,6 +122,11 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "applyLogo" -> repository.applyLogo(id, version, v.string("token")) { logoLoader(v.string("token")) }
             "removeLogo" -> repository.removeLogo(id, version)
             "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
+            "reconcileInvoiceCoverage" -> {
+                val raw = requireNotNull(v.value["spans"] as? List<*>); require(raw.size <= 1000)
+                val spans = raw.map { entry -> Input(requireNotNull(entry as? Map<*, *>)).let { span -> LegacyInvoiceStore.Span(span.integer("start"), span.integer("end"), span.string("timezone")) } }
+                repository.reconcileInvoiceCoverage(id, version, LegacyInvoiceStore.Draft(v.string("invoiceId"), v.strings("taskIds"), spans, v.string("note"), v.bool("confirmed"), v.bool("noSources")))
+            }
             "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride"), if (v.value["taxUnits"] == null) null else v.int("taxUnits")))
             else -> error("Unreachable")
         }
@@ -146,6 +152,16 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "excluded" to preview.excluded.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "title" to it.title,
                 "detail" to if (it.taskId != null) "Previously invoiced task" else "${ReportCsv.instant(requireNotNull(it.start), report.selection.timezone)} — ${ReportCsv.instant(requireNotNull(it.end), report.selection.timezone)}") },
             "legacy" to preview.legacy.map { mapOf("invoiceId" to it.first, "number" to it.second) })
+    }
+    private fun legacyInvoiceContext(s: TimerRepository.LegacyInvoiceContext): Map<String, Any?> {
+        val c = s.context; val zone = java.util.TimeZone.getDefault().id
+        return mapOf("version" to s.version, "invoiceId" to c.invoiceId, "number" to c.number, "jobId" to c.jobId,
+            "jobName" to c.jobName, "total" to c.total, "currency" to c.currency, "period" to c.period, "legacy" to c.legacy,
+            "jobDeleted" to c.jobDeleted, "note" to c.note, "reviewed" to c.reviewed, "timezone" to zone,
+            "tasks" to c.tasks.map { mapOf("id" to it.id, "title" to it.title,
+                "completedLabel" to it.completed?.let { stamp -> ReportCsv.instant(stamp, zone) }, "invoiceId" to it.invoiceId, "number" to it.number) },
+            "reservedTimes" to c.reservedTimes.map { mapOf("start" to it.start, "end" to it.end, "timezone" to it.timezone,
+                "startLabel" to ReportCsv.instant(it.start, it.timezone), "endLabel" to ReportCsv.instant(it.end, it.timezone), "invoiceId" to it.invoiceId, "number" to it.number) })
     }
     private fun report(s: TimerRepository.ReportSnapshot): Map<String, Any?> {
         val r = s.report

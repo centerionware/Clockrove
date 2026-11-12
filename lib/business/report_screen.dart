@@ -483,15 +483,24 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
 }
 
 class _InvoiceButton extends StatelessWidget {
-  const _InvoiceButton({required this.selection, required this.onPendingChanged});
+  const _InvoiceButton({
+    required this.selection,
+    required this.onPendingChanged,
+  });
   final ReportSelection selection;
   final ValueChanged<bool> onPendingChanged;
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
     label: const Text('PDF invoice'),
     icon: const Icon(Icons.receipt_long_outlined),
-    onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
-      builder: (_) => InvoiceReviewScreen(selection: selection, onPendingChanged: onPendingChanged),
-    )),
+    onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InvoiceReviewScreen(
+          selection: selection,
+          onPendingChanged: onPendingChanged,
+        ),
+      ),
+    ),
   );
 }

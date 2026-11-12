@@ -116,10 +116,10 @@ class InvoiceCoverageTest {
         inspect { db ->
             db.execSQL("INSERT INTO invoices(id,job_id,number,created_ms,payload) SELECT 'other',job_id,'INV-1001',created_ms,payload FROM invoices WHERE id='first'")
             try {
-                db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms) VALUES('overlap','other',?,'one',?,?)", arrayOf<Any?>(job, midnight + 1, midnight + hour + 1))
+                db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms,timezone) VALUES('overlap','other',?,'one',?,?,'UTC')", arrayOf<Any?>(job, midnight + 1, midnight + hour + 1))
                 fail("Overlapping time claim accepted")
             } catch (_: android.database.SQLException) {}
-            db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms) VALUES('touching','other',?,'later',?,?)", arrayOf<Any?>(job, midnight + hour, midnight + 2 * hour))
+            db.execSQL("INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms,timezone) VALUES('touching','other',?,'later',?,?,'UTC')", arrayOf<Any?>(job, midnight + hour, midnight + 2 * hour))
             try {
                 db.execSQL("INSERT INTO invoice_task_claims(id,invoice_id,job_id,task_id) VALUES('wrong-job','first','other-job','task')")
                 fail("Cross-job task claim accepted")

@@ -68,8 +68,8 @@ internal object SessionHistoryStore {
             if (previous == null) return "SESSION_UNAVAILABLE"
             if (previous.end == null) return "STOP_SESSION_BEFORE_EDIT"
             if (previous.jobId != draft.jobId) return "SESSION_JOB_IMMUTABLE"
-            if (db.rawQuery("SELECT id FROM invoice_time_claims WHERE session_id=? AND released_ms IS NULL AND (start_ms<? OR end_ms>?) LIMIT 1",
-                arrayOf(draft.id, draft.start.toString(), draft.end.toString())).use { it.moveToFirst() }) return "INVOICED_SESSION_BOUNDARY"
+            if (db.rawQuery("SELECT id FROM invoice_time_claims WHERE job_id=? AND released_ms IS NULL AND start_ms<? AND end_ms>? AND (MAX(start_ms,?)<? OR MIN(end_ms,?)>?) LIMIT 1",
+                arrayOf(draft.jobId, previous.end.toString(), previous.start.toString(), previous.start.toString(), draft.start.toString(), previous.end.toString(), draft.end.toString())).use { it.moveToFirst() }) return "INVOICED_SESSION_BOUNDARY"
         }
         if (db.rawQuery("SELECT id FROM sessions WHERE id!=? AND start_ms<? AND (end_ms IS NULL OR end_ms>?) LIMIT 1",
             arrayOf(draft.id, draft.end.toString(), draft.start.toString())).use { it.moveToFirst() }) return "OVERLAP"

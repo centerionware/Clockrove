@@ -200,13 +200,21 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
     final api = ref.read(reportApiProvider), job = widget.jobId;
     return job == null ? api.allInvoices() : api.invoices(job);
   }
+
   late Future<List<PreparedInvoice>> _data = _load();
   void _refresh() => setState(() => _data = _load());
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.jobId == null ? 'Invoices' : 'Job invoices'), actions: [
-      IconButton(tooltip: 'Refresh invoices', onPressed: _refresh, icon: const Icon(Icons.refresh)),
-    ]),
+    appBar: AppBar(
+      title: Text(widget.jobId == null ? 'Invoices' : 'Job invoices'),
+      actions: [
+        IconButton(
+          tooltip: 'Refresh invoices',
+          onPressed: _refresh,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
     body: FutureBuilder<List<PreparedInvoice>>(
       future: _data,
       builder: (context, data) {
@@ -223,7 +231,11 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
         }
         if (data.data!.isEmpty) {
           return Center(
-            child: Text(widget.jobId == null ? 'No invoices yet. Create one from a job report.' : 'No invoices prepared for this job.'),
+            child: Text(
+              widget.jobId == null
+                  ? 'No invoices yet. Create one from a job report.'
+                  : 'No invoices prepared for this job.',
+            ),
           );
         }
         return ListView(
@@ -235,10 +247,12 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                   title: Text(invoice.number),
                   subtitle: Text(
                     [
-                      if (invoice.jobName.isNotEmpty) '${invoice.jobName}${invoice.jobDeleted ? ' · job deleted' : ''}',
+                      if (invoice.jobName.isNotEmpty)
+                        '${invoice.jobName}${invoice.jobDeleted ? ' · job deleted' : ''}',
                       if (invoice.customer.isNotEmpty) invoice.customer,
                       '${invoice.currency} ${invoice.total}',
-                      if (invoice.createdLabel.isNotEmpty) 'Issued ${invoice.createdLabel}',
+                      if (invoice.createdLabel.isNotEmpty)
+                        'Issued ${invoice.createdLabel}',
                       if (invoice.legacy) 'Billed work needs review',
                     ].join('\n'),
                   ),

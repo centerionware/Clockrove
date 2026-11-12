@@ -36,14 +36,21 @@ class InvoicePdfTest {
         val images = mutableListOf<Int>()
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
             val snapshot = fixture(style); val bytes = InvoicePdf.generate(snapshot, logo())
+            val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
+            root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
             inspect(bytes) { renderer ->
-                assertEquals(1, renderer.pageCount)
+                if (renderer.pageCount != 1) for (index in setOf(0, renderer.pageCount - 1)) renderer.openPage(index).use { page ->
+                    val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                    try {
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        File(root, "clockrove-invoice-${style.lowercase()}-failure-page-${index + 1}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    } finally { bitmap.recycle() }
+                }
+                assertEquals("Short $style invoice should fit on one page", 1, renderer.pageCount)
                 renderer.openPage(0).use { page ->
                     val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     assertNotEquals(Color.TRANSPARENT, bitmap.getPixel(100,100)); images.add(bitmap.getPixel(10,10))
-                    val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
-                    root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
                         val text = PdfTextApi35.read(page)
                         val compact = text.filterNot { it.isWhitespace() }

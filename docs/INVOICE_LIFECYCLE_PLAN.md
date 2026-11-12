@@ -64,6 +64,22 @@ Migrate existing invoice coverage conservatively. Older snapshots without stable
 source identity require review/reconciliation; never infer task identity from
 amount/title or silently allow ambiguous work to be billed again.
 
+Legacy review opens the original PDF and shows the job's current tasks and existing
+invoice reservations, without automatically selecting tasks by title or price.
+The user can link a task even if its current completion state changed; linking
+must not alter completion, price or timekeeping. Covered time is entered as exact
+bounds with an IANA timezone and explicit repeated-time choice; invalid/gap times
+are rejected. These manual reservations may cover work whose source entry was
+removed. Existing reservations cannot be released or reassigned by reconciliation.
+
+Require a review note and confirmation against the original document. An empty
+mapping requires a separate explicit acknowledgment that no source records can
+be linked and a reason, retained in audit history. Uncertainty stays unresolved
+until the user reviews it; never choose this acknowledgment automatically. Commit
+source claims, review state and ancestry atomically with a replayable command.
+Do not change the original invoice/PDF/number/total/tax, fabricate work, record a
+payment or allocate a new number. Reconciliation is separate from void/replacement.
+
 ## Tax percentages and exact totals
 
 Main Settings has a default tax percentage, initially 0%. Job Settings has an
