@@ -2205,3 +2205,21 @@ invoice listing returns metadata without private provenance payloads/notes. Adde
 bridge source coverage for quantity/price differences, exact subtotal/tax/total,
 strict boolean/integer types, same-operation replay and post-prepare exclusion.
 Flutter transport and preparation/history UI remain next; fresh Actions required.
+
+### Flutter actual-work invoice transport and document review
+
+Typed immutable Flutter request/source/policy/calculation/history models now match
+the native quote invoice contracts. Totals remain native canonical strings; write
+commands send no client money. Added source channel tests for captured lists,
+1000-digit total preservation, exact source/policy identity and paged metadata
+history. Preparation errors now describe changed sources and missing revision
+links. These additions still require Actions formatting/analysis/behavior checks;
+the preparation UI and related-invoice navigation are not yet connected.
+
+Reviewed older genuine Android artifacts from 43242100858: all three revision-2
+quote styles show subtotal 411.00, tax 30.83, total 441.83; API-24 modern revision-1
+shows 385.00 + 28.88 = 413.88. Reviewed first/last pages of the 1000-digit quote
+variant in all three API-35 styles: amounts wrap through pagination without
+visible clipping/overlap; terms/notes remain readable. These are that older
+renderer's documents, not acceptance of newer source or of its previously failing
+Flutter viewer stage. Current fresh document/viewer run remains required.

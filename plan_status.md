@@ -2891,3 +2891,9 @@ quote billing and board optimization source still require fresh Actions.
 Quote actual-work bridge: native context/calculation/preparation and metadata-only
 paged history contracts implemented as source, with strict-type/exact-total/replay
 coverage added. Not yet validated; Flutter preparation transport/UI remain open.
+
+Flutter quote invoice API/models and exact-string/immutable-source/pagination
+source tests added; Actions formatting/analyze/behavior pending. Preparation UI
+and related-invoice navigation remain the next implementation work. Older real
+43242100858 revision-2/all-style wide first/last pages and API-24 normal modern
+quote visuals reviewed; this does not substitute for fresh current-head acceptance.
