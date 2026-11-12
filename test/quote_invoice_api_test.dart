@@ -19,7 +19,7 @@ void main() {
       if (call.method == 'calculateQuoteInvoice') { return {'version': 7, 'problem': null, 'subtotalMinor': wide, 'taxMinor': '0', 'totalMinor': wide, 'taxUnits': 0, 'currency': 'USD', 'digits': 2, 'customer': 'Synthetic customer', 'email': 'customer@example.test'}; }
       return {'version': 8, 'conflict': null};
     });
-    final api = const QuoteInvoiceApi(); final calculation = await api.calculate(request, choices);
+    const api = QuoteInvoiceApi(); final calculation = await api.calculate(request, choices);
     expect(calculation.total, wide); expect(calculation.subtotal, wide); expect(calculation.version, 7);
     expect((await api.prepare('operation', calculation.version, 'invoice', request, choices)).committed, isTrue);
     final arguments = calls.last.arguments as Map; expect(arguments['id'], 'operation'); expect(arguments['version'], 7);

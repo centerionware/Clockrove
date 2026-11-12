@@ -2223,3 +2223,17 @@ variant in all three API-35 styles: amounts wrap through pagination without
 visible clipping/overlap; terms/notes remain readable. These are that older
 renderer's documents, not acceptance of newer source or of its previously failing
 Flutter viewer stage. Current fresh document/viewer run remains required.
+
+### Full scope/document baseline accepted in Actions
+
+Exact 202ceb158dfbbd20ef94b4739a6fbfe9ff231588 passed full 43252783507.
+Downloaded 13961252326: 47 XML / 539 native tests, zero failures/errors/skips.
+Downloaded 13960723873: 8 XML / 52 actual Android tests across API 24/35, zero
+failures/errors/skips. Genuine quote/invoice PDF generation, API-35 exact text,
+private attachment identity and actual-page Flutter viewer gates passed, including
+the previously failing landscape/cancellation snackbar case. Reviewed all six
+light/dark quote viewer captures in 13960648664: three styles, historical revision
+notice, toolbar and retained pages are clear. This validates the scope baseline
+and document behavior; newer native actual-work billing/optimization and Flutter
+invoice transport source remain under separate validation. No quote UI emulator
+issue/accept/plan/work/invoice journey or complete milestone is claimed yet.

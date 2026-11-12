@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
-| Follow-on: quotes | Native baseline 537 cases verified; accepted-scope UI/context source pending Actions; actual-work invoicing remains | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Follow-on: quotes | Scope/document baseline full Actions verified; actual-work invoicing source and UI integration pending | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -2897,3 +2897,9 @@ source tests added; Actions formatting/analyze/behavior pending. Preparation UI
 and related-invoice navigation remain the next implementation work. Older real
 43242100858 revision-2/all-style wide first/last pages and API-24 normal modern
 quote visuals reviewed; this does not substitute for fresh current-head acceptance.
+
+Scope/document baseline 202ceb1 / 43252783507 passed full Actions: 539 native
+and 52 actual Android tests, zero failures/errors/skips; downloaded XML and all
+six light/dark actual quote viewer captures inspected. Real PDF/text/private URI
+and landscape/cancellation viewer gates passed. Newer actual-work backend and
+Flutter invoice API require fresh checks; preparation UI/device journey remain.
