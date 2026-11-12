@@ -16,12 +16,15 @@ class WidgetTasksService : RemoteViewsService() {
         private var items: List<WidgetTasksStore.Task> = emptyList()
         private var today = ""
         private var failed = false
+        private var filtered = false
         override fun onCreate() = Unit
         override fun onDestroy() { items = emptyList() }
         override fun onDataSetChanged() {
             try {
                 if (!TimerWidget.owned(this@WidgetTasksService, id)) { items = emptyList(); failed = false; return }
-                val data = TimerRepository.get(this@WidgetTasksService).widgetTasks(id)
+                val repository = TimerRepository.get(this@WidgetTasksService)
+                filtered = repository.widgetSnapshot(id).configuration.jobId != null
+                val data = repository.widgetTasks(id)
                 items = data.items; today = data.today; failed = false
             } catch (_: Exception) { items = emptyList(); failed = true }
         }
@@ -32,7 +35,7 @@ class WidgetTasksService : RemoteViewsService() {
             val item = items.getOrNull(position) ?: return null
             val date = if (item.due < today) "Overdue · ${item.due}" else if (item.due == today) "Today" else item.due
             views.setTextViewText(R.id.widget_task_title, item.title)
-            views.setTextViewText(R.id.widget_task_detail, "${item.jobName} · $date")
+            views.setTextViewText(R.id.widget_task_detail, if (filtered) date else "${item.jobName} · $date")
             views.setTextColor(R.id.widget_task_detail, if (item.due < today) 0xFFFFB4AB.toInt() else 0xFFCBD5E1.toInt())
             views.setContentDescription(R.id.widget_task_row, "${item.title}, ${item.jobName}, $date. Open job board")
             views.setOnClickFillInIntent(R.id.widget_task_row, Intent().putExtra("jobId", item.jobId).putExtra("taskId", item.id))

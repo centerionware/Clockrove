@@ -1791,3 +1791,13 @@ Added native date/filter/large-collection and size checks plus Flutter lost-repl
 and unavailable-default checks. Prior combined foundation run 43133758021 passed;
 this new source still requires its own Actions and launcher evidence. No local
 builds or tests were run. Physical launcher acceptance remains open.
+
+### Widget emulator iteration: real startup regression caught
+
+Actions 43136781343 passed format/analyze/Flutter, Android build and 272 native
+cases (zero failures/errors/skips). API 24 real host scrolling, all three providers
+and task PendingIntent handoff passed. Existing Settings UI and new setup UI
+correctly failed: custom initial routes were accidentally combined with `home`,
+which Flutter rejects at startup. Replaced redundant `home` with an explicit `/`
+route and added full-app route construction plus actual board-render assertions.
+This failed run is not acceptance and no new widget build has been published.

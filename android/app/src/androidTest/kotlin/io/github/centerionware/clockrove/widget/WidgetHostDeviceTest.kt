@@ -79,7 +79,10 @@ class WidgetHostDeviceTest {
             TimerWidget.refreshAll(app)
             until("Expanded Combined must bind all 30 tasks through RemoteViewsService") { view!!.findViewById<ListView>(R.id.widget_tasks)?.count == 30 }
             instrumentation.runOnMainSync { view!!.findViewById<ListView>(R.id.widget_tasks).setSelection(29) }
-            until("Task collection must scroll to its final row") { view!!.findViewById<ListView>(R.id.widget_tasks)?.lastVisiblePosition == 29 }
+            until("Task collection must load and scroll to its final row") {
+                val list = view!!.findViewById<ListView>(R.id.widget_tasks)
+                list.lastVisiblePosition == 29 && list.getChildAt(list.childCount - 1)?.findViewById<android.widget.TextView>(R.id.widget_task_title)?.text == "Synthetic due task 29"
+            }
             val file = File(app.getExternalFilesDir(null), "widget-combined.png")
             instrumentation.runOnMainSync {
                 val bitmap = android.graphics.Bitmap.createBitmap(view!!.width, view!!.height, android.graphics.Bitmap.Config.ARGB_8888)
@@ -99,6 +102,8 @@ class WidgetHostDeviceTest {
                 assertEquals(job, opened!!.intent.getStringExtra("jobId"))
                 assertEquals("widget-device-card-29", opened.intent.getStringExtra("taskId"))
                 assertTrue((opened as WidgetBoardActivity).getInitialRoute().contains(job))
+                clickText("Synthetic widget board", false)
+                clickText("To do", false)
                 instrumentation.runOnMainSync { opened.finish() }
             } finally { instrumentation.removeMonitor(monitor) }
             assertNull("Task tap must never start a timer", repository.snapshot().running)
@@ -129,7 +134,7 @@ class WidgetHostDeviceTest {
             instrumentation.runOnMainSync { host.stopListening(); host.deleteHost(); activity.finish() }
         }
     }
-    private fun clickText(label: String) {
+    private fun clickText(label: String, click: Boolean = true) {
         var found: android.view.accessibility.AccessibilityNodeInfo? = null
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
             if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
@@ -142,6 +147,7 @@ class WidgetHostDeviceTest {
             if (found == null) SystemClock.sleep(100)
         }
         var node = found ?: throw AssertionError("Actual widget setup did not show $label")
+        if (!click) return
         while (!node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)) {
             node = node.parent ?: throw AssertionError("Could not click $label")
         }

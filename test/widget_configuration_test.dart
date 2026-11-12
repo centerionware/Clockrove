@@ -1,3 +1,4 @@
+import 'package:clockrove/main.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:clockrove/widgets/widget_configuration_screen.dart';
@@ -16,6 +17,20 @@ class _Timer extends TimerApi {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('Full app starts directly in widget setup with one initial route', (tester) async {
+    tester.binding.platformDispatcher.defaultRouteNameTestValue = '/widget-configuration';
+    addTearDown(tester.binding.platformDispatcher.clearDefaultRouteNameTestValue);
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(widgetChannel, (call) async => {'jobId': null, 'taskOnly': false});
+    addTearDown(() => messenger.setMockMethodCallHandler(widgetChannel, null));
+    await tester.pumpWidget(ProviderScope(overrides: [timerApiProvider.overrideWithValue(_Timer())], child: const ClockroveApp()));
+    await tester.pumpAndSettle();
+    expect(find.byType(WidgetConfigurationScreen), findsOneWidget);
+    expect(find.text('Synthetic work'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(navigator.canPop(), false);
+  });
   testWidgets(
     'Widget save retries the same command after a lost response and locks its choice',
     (tester) async {

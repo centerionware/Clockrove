@@ -18,7 +18,7 @@ class ClockroveApp extends StatelessWidget {
     title: AppStrings.appName,
     theme: ClockroveTheme.light(),
     darkTheme: ClockroveTheme.dark(),
-    home: const TimerScreen(),
+    routes: {'/': (_) => const TimerScreen()},
     onGenerateInitialRoutes: (name) {
       final uri = Uri.parse(name);
       final Widget screen;
