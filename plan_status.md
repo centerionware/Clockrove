@@ -2651,3 +2651,21 @@ used null bindings for page one. Source now selects a fixed unfiltered first-pag
 query and a separate fixed keyset clause with entirely non-null bindings for later
 pages. Pagination/order/expiry assertions remain unchanged. Real-device quote PDF
 and new Dart adapter evidence still require the corrected current head in Actions.
+
+### Quote Dart correction and actual-page viewer source
+
+cb25103 / 43233491212 stopped at analysis: unnecessary typed_data import and one
+missing brace block. Downloaded formatter artifact 13950784702 and applied its
+API/test source patch; removed the import and wrapped the reported condition.
+All formatting ran in Actions. This failed run provides no new Flutter/native
+or Android PDF acceptance.
+
+New quote document screen source previews a specific revision, displays the
+estimate/historical notice, allows zoom/page navigation and private email/save/share.
+The responsive toolbar scrolls independently for landscape/large text and reports
+email-draft creation and save cancellation honestly. It is not yet linked from
+quote navigation. Added six theme/style viewer captures and large-text handoff
+checks using genuine API-35 quote-rendered PNGs in the post-device Actions gate;
+no synthetic image is presented as PDF proof. New screen/test formatting and all
+current gates remain pending. Quote list/editor, explicit issue/decision/revision
+navigation and reviewed scope conversion still remain.
