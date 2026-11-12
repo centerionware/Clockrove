@@ -156,6 +156,46 @@ a fully settled copy is prominently PAID with zero due. Reopening/resending any
 copy neither records another payment nor allocates another invoice number.
 Keep old receipts as historical records when later corrections occur.
 
+### Native payment arithmetic and event allocation
+
+The next implementation uses canonical minor-unit strings up to 4096 digits for
+issued totals/payments, independent of the 1024-digit source-price limit. A task's
+quantity and a multi-line subtotal can grow beyond its source price. This is a
+bounded-text policy, not fixed-width arithmetic. Plain major-unit invoice amounts
+are parsed exactly against their frozen currency digits (0–4); excess fractional
+digits, exponents, signs, grouping, leading zeros and malformed input are rejected.
+A zero-total invoice has an explicit Nothing due state and cannot accept payment.
+
+For known tax T, grand total G and cumulative effective paid P, allocate collected
+tax as roundHalfUp(P × T / G), with zero when G is zero. Each payment or reversal
+books the difference between allocations before and after that event. Net-sales
+change is cash change minus tax change. Consequently splitting a payment cannot
+lose tax cents and full settlement collects exactly the frozen tax. Unknown legacy
+tax remains unknown. Do not independently round tax on every payment.
+
+A replacement does not create cash. Recompute cumulative tax against the new
+frozen total/tax and book the difference as a dated accounting reclassification,
+with an equal opposite net-sales change. Preserve prior payment receipt dates and
+historical allocation events; never rewrite earlier reports using today's ratio.
+A later reversal applies to the current allocation destination and books its
+current cumulative tax difference. Retain the original payment ID through chains.
+
+Payment persistence will use schema 8 with immutable payment/reversal/transfer and
+allocation-event identities, original invoice ownership, current destination, and
+revision ancestry. Financial rows reference retained invoice identities rather
+than mutable job rows; job purging must retain their revision payloads too.
+Commands must atomically write payment, allocation, event, receipt intent and
+version outcome. Unknown-response retries reuse all IDs and the unchanged draft.
+Install tables without decoding every historical invoice payload; validate a
+frozen document when it is actually opened or changed. This section and the
+PaymentMath source/tests do not implement the ledger or user-facing payments yet.
+
+For replacements, v7 invoice lines lack stable source IDs even though coverage
+claims do have IDs. Never infer a line-to-task association from its title, price or
+array order. Keep the full old claim bundle by default; partial source release
+requires an explicit reviewed mapping. New issued lines may carry stable IDs and
+source links, while old/deleted-job documents retain conservative coverage.
+
 ## Void and replace without losing money
 
 Fully paid invoices cannot be voided. Unpaid invoices may be explicitly voided

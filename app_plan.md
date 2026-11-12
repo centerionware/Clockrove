@@ -50,8 +50,9 @@ and locked release-policy checks. Native/device XML inspected; all six wide and
 explicit-zero job tax and retained invoice. Values wrap without clipping; API-35
 extraction verifies complete repeated monetary values. No VM validation ran.
 
-Main validation 43185844256 is live. Internal upload/Play acceptance for f935485 is
-not yet proven. Latest verified delivery remains widget internal.22.1 / 216624221
+Main validation 43185844256 failed the API-35 existing widget scroll test;
+focused PR #36 is under Actions validation 43188818216. Internal upload for
+f935485 has not started. Latest verified delivery remains widget internal.22.1 / 216624221
 (43160879953); production readiness remains unset.
 
 Continue the immediate next milestone in `.local/invoice-payments`, branch
@@ -62,6 +63,11 @@ Use the exact monetary contract above and docs/INVOICE_LIFECYCLE_PLAN.md. Schema
 is now on main: subsequent financial persistence changes need a forward migration,
 not edits to the released v5/v6 schema or the completed schema-7 installation.
 Verify main/internal delivery alongside independent work on this milestone.
+PaymentMath now prepares exact extended-total parsing, balance eligibility and
+cumulative tax allocation/reversal math, with seven focused regression cases.
+Actions validation is required. Ledger, migration, UI and document/email behavior
+are not implemented by that arithmetic slice; the lifecycle plan specifies
+schema-8 events and conservative legacy source mapping.
 
 Then follow the ordered plan for quotes, task comments/supplies/actual costs and
 main-menu company reports. Provider settings, encrypted backup/transactional merge,
