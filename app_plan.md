@@ -1898,3 +1898,15 @@ import. No emulator cases or new actual-document acceptance ran on that head.
 Prior visual review covered actual 40259d7 short Classic paid-balance copies on
 both APIs, modern balance/correction and minimal correction; they remain readable
 and one page. New lifecycle editor/VOID/replacement captures still need fresh CI.
+
+60fe554 / 43218156299 passed formatting/analysis/Flutter/debug and 479 native
+cases (42 XML files inspected, zero failures/errors/skips). API 24 then passed
+original/billing/all-style copies; the payment journey completed its earlier
+partial/full/correction/deleted-job steps before the new correction expansion
+lookup failed. Its actual PNG/tree show the control is visible with Android 7's
+spoken label "Correct this invoice, Collapsed". The helper now accepts only the
+exact label or exact known ", Collapsed"/", Expanded" accessibility suffixes; all
+value, status, source, credit and document assertions remain. API 35 was not reached.
+Added physical acceptance procedures for quantities, pasted-value rejection,
+payments, company/AR CC in the real email app, corrected credit and source releases.
+No physical/device success is inferred from those instructions. Fresh CI required.

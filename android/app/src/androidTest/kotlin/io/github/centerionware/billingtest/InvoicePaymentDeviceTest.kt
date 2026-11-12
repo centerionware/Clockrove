@@ -70,7 +70,10 @@ class InvoicePaymentDeviceTest {
             if (editable && node.isVisibleToUser && fieldId != null && node.viewIdResourceName == fieldId) return editableNode(node)
             for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it)?.let { found -> return found } }
             fun matches(value: CharSequence?) = value?.toString()?.let {
-                if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
+                if (editable) it.contains(label) else it.lineSequence().any { line ->
+                    val spoken = line.trim()
+                    spoken == label || spoken == "$label, Collapsed" || spoken == "$label, Expanded"
+                }
             } == true
             val hintMatches = editable && android.os.Build.VERSION.SDK_INT >= 26 && matches(node.hintText)
             if (node.isVisibleToUser && (!editable || node.isEditable) && (matches(node.text) || matches(node.contentDescription) || hintMatches)) return node
