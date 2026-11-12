@@ -68,6 +68,7 @@ class _Documents extends ReportApi {
     previewed.add((invoice: id, copy: copyId));
     throw StateError('Actual PDF validation runs on Android');
   }
+
   @override
   Future<void> emailCopy(String id, String copyId) async {
     emailed.add(copyId);
@@ -122,29 +123,90 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('transferred payment receipt opens its original invoice owner', (tester) async {
+  testWidgets('transferred payment receipt opens its original invoice owner', (
+    tester,
+  ) async {
     final api = _Payments(), documents = _Documents();
-    api.current = paymentFixture(invoiceId: 'replacement', paid: '3000', due: '7750', status: 'PARTIALLY_PAID', payments: const [
-      InvoicePayment(id: 'payment', originalInvoiceId: 'original', currentInvoiceId: 'replacement', amount: '3000', currency: 'USD',
-        received: 1793494799000, timezone: 'UTC', offsetSeconds: 0, receivedLabel: 'Synthetic received date', method: '', reference: '', note: '', recorded: 1793494800000),
-    ]);
-    await _show(tester, api, const InvoiceDetailScreen(invoiceId: 'replacement'), documents: documents);
-    await _reveal(tester, 'Open receipt'); await tester.tap(find.text('Open receipt')); await tester.pumpAndSettle();
-    expect(documents.previewed.single, (invoice: 'original', copy: 'receipt-payment'));
+    api.current = paymentFixture(
+      invoiceId: 'replacement',
+      paid: '3000',
+      due: '7750',
+      status: 'PARTIALLY_PAID',
+      payments: const [
+        InvoicePayment(
+          id: 'payment',
+          originalInvoiceId: 'original',
+          currentInvoiceId: 'replacement',
+          amount: '3000',
+          currency: 'USD',
+          received: 1793494799000,
+          timezone: 'UTC',
+          offsetSeconds: 0,
+          receivedLabel: 'Synthetic received date',
+          method: '',
+          reference: '',
+          note: '',
+          recorded: 1793494800000,
+        ),
+      ],
+    );
+    await _show(
+      tester,
+      api,
+      const InvoiceDetailScreen(invoiceId: 'replacement'),
+      documents: documents,
+    );
+    await _reveal(tester, 'Open receipt');
+    await tester.tap(find.text('Open receipt'));
+    await tester.pumpAndSettle();
+    expect(documents.previewed.single, (
+      invoice: 'original',
+      copy: 'receipt-payment',
+    ));
     expect(find.text('Retry PDF preview'), findsOneWidget);
   });
-  testWidgets('void invoice offers its cancellation copy and never collection actions', (tester) async {
-    final api = _Payments(), documents = _Documents();
-    api.current = paymentFixture(paid: '0', due: '0', status: 'VOID', cancellation:
-      const InvoiceCancellation('replacement', '3000', '7750', 'Synthetic cancellation date', 'Private correction reason'));
-    await _show(tester, api, const InvoiceDetailScreen(invoiceId: 'invoice'), documents: documents);
-    expect(find.text('Record payment'), findsNothing); expect(find.text('Mark paid'), findsNothing);
-    expect(find.text('Paid to date'), findsNothing); expect(find.text('Credit transferred'), findsOneWidget);
-    await _reveal(tester, 'Send latest copy');
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Send latest copy')).onPressed, isNull);
-    await _reveal(tester, 'Email cancellation copy'); await tester.tap(find.text('Email cancellation copy')); await tester.pumpAndSettle();
-    expect(documents.emailed, ['void-invoice']); expect(documents.previewed.single.invoice, 'invoice');
-  });
+  testWidgets(
+    'void invoice offers its cancellation copy and never collection actions',
+    (tester) async {
+      final api = _Payments(), documents = _Documents();
+      api.current = paymentFixture(
+        paid: '0',
+        due: '0',
+        status: 'VOID',
+        cancellation: const InvoiceCancellation(
+          'replacement',
+          '3000',
+          '7750',
+          'Synthetic cancellation date',
+          'Private correction reason',
+        ),
+      );
+      await _show(
+        tester,
+        api,
+        const InvoiceDetailScreen(invoiceId: 'invoice'),
+        documents: documents,
+      );
+      expect(find.text('Record payment'), findsNothing);
+      expect(find.text('Mark paid'), findsNothing);
+      expect(find.text('Paid to date'), findsNothing);
+      expect(find.text('Credit transferred'), findsOneWidget);
+      await _reveal(tester, 'Send latest copy');
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Send latest copy'),
+            )
+            .onPressed,
+        isNull,
+      );
+      await _reveal(tester, 'Email cancellation copy');
+      await tester.tap(find.text('Email cancellation copy'));
+      await tester.pumpAndSettle();
+      expect(documents.emailed, ['void-invoice']);
+      expect(documents.previewed.single.invoice, 'invoice');
+    },
+  );
   testWidgets(
     'partial payment validates exact amount, preserves invalid input and records frozen currency',
     (tester) async {

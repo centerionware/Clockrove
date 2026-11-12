@@ -112,6 +112,22 @@ class InvoicePaymentDeviceTest {
             SystemClock.sleep(120)
         }
     }
+    private fun revealDetailStatus(label: String) {
+        waitFor("Refresh invoice details")
+        until("Actual invoice detail never exposed $label after Back") {
+            if (find(label) != null) true else {
+                fun scroll(node: AccessibilityNodeInfo): Boolean {
+                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
+                    return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                }
+                // The incoming route can expose its app bar before scrolling is
+                // enabled. Keep polling the real route rather than treating one
+                // transient false action as proof that it is already at the top.
+                automation.rootInActiveWindow?.let(::scroll)
+                false
+            }
+        }
+    }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
         if (keyboardVisible()) {
@@ -226,7 +242,7 @@ class InvoicePaymentDeviceTest {
             assertArrayEquals(arrayOf("accounts@example.test"), mail.getStringArrayExtra(Intent.EXTRA_CC))
             app.contentResolver.openInputStream(InvoiceDocuments.uri(app, partial))!!.use { assertArrayEquals(partial.pdf, it.readBytes()) }
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            waitFor("Refresh invoice details"); scrollToStart(); waitFor("Partially paid"); capture("partial-balance")
+            revealDetailStatus("Partially paid"); capture("partial-balance")
             reveal("Mark paid"); click("Mark paid")
             assertEquals("77.50", waitFor("Payment amount (USD)", true).text.toString())
             reveal("Confirm payment"); click("Confirm payment")
@@ -237,7 +253,7 @@ class InvoicePaymentDeviceTest {
             assertEquals("PAID", InvoiceStore.Snapshot.decode(paid.payload).statement!!.status)
             assertEquals("0.00", InvoiceStore.Snapshot.decode(paid.payload).statement!!.due)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            waitFor("Refresh invoice details"); scrollToStart(); waitFor("Paid"); reveal("Correct payment"); click("Correct payment")
+            revealDetailStatus("Paid"); reveal("Correct payment"); click("Correct payment")
             waitFor("Reverse the recorded payment of USD 30.00.")
             enter("Reason for correction", "Corrected duplicate transfer entry")
             reveal("Confirm reversal"); click("Confirm reversal")
@@ -307,7 +323,7 @@ class InvoicePaymentDeviceTest {
             reveal("Email historical copy")
             assertArrayEquals(originalReceipt.pdf, repository.invoiceCopy("receipt-correction-credit").pdf)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            waitFor("Refresh invoice details"); scrollToStart(); reveal("Open original invoice"); click("Open original invoice")
+            revealDetailStatus("Partially paid"); reveal("Open original invoice"); click("Open original invoice")
             waitFor("Voided"); capture("void-balance")
             assertEquals(BigInteger.ZERO, repository.invoicePayments("correction-invoice").second.balance.due)
             reveal("Cancellation copy"); click("Cancellation copy")

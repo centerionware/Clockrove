@@ -23,8 +23,12 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   String? _notice;
   Future<InvoicePage> _preview(int page) async {
     final api = ref.read(reportApiProvider), copy = widget.copyId;
-    final result = await (copy == null ? api.preview(widget.invoiceId, page) : api.previewCopy(widget.invoiceId, copy, page));
-    if (mounted && result.notice != _notice) setState(() => _notice = result.notice);
+    final result = await (copy == null
+        ? api.preview(widget.invoiceId, page)
+        : api.previewCopy(widget.invoiceId, copy, page));
+    if (mounted && result.notice != _notice) {
+      setState(() => _notice = result.notice);
+    }
     return result;
   }
 
@@ -100,7 +104,11 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(
-        widget.copyId == null ? 'Prepared invoice' : widget.copyId!.startsWith('void-') ? 'Cancellation copy' : 'Saved payment copy',
+        widget.copyId == null
+            ? 'Prepared invoice'
+            : widget.copyId!.startsWith('void-')
+            ? 'Cancellation copy'
+            : 'Saved payment copy',
       ),
       actions: [
         IconButton(
@@ -133,9 +141,17 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                   Text(
                     widget.copyId == null
                         ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
-                        : widget.copyId!.startsWith('void-') ? 'This copy records the invoice cancellation and credit transferred to a replacement. No payment is due on the cancelled invoice.' : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
+                        : widget.copyId!.startsWith('void-')
+                        ? 'This copy records the invoice cancellation and credit transferred to a replacement. No payment is due on the cancelled invoice.'
+                        : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
                   ),
-                  if (_notice != null) Text(_notice!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  if (_notice != null)
+                    Text(
+                      _notice!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -150,7 +166,11 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                         onPressed: _busy ? null : () => _handoff('email'),
                         icon: const Icon(Icons.email_outlined),
                         label: Text(
-                          _notice != null ? 'Email historical copy' : widget.copyId == null ? 'Email invoice' : 'Email copy',
+                          _notice != null
+                              ? 'Email historical copy'
+                              : widget.copyId == null
+                              ? 'Email invoice'
+                              : 'Email copy',
                         ),
                       ),
                       OutlinedButton.icon(

@@ -205,7 +205,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 decimal: true,
               ),
               maxLength: 32,
-            maxLengthEnforcement: MaxLengthEnforcement.none,
+              maxLengthEnforcement: MaxLengthEnforcement.none,
               decoration: InputDecoration(
                 labelText: 'Job tax (%)',
                 helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',

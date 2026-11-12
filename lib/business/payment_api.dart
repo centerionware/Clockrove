@@ -66,14 +66,23 @@ class InvoiceCopy {
 }
 
 class InvoiceCancellation {
-  const InvoiceCancellation(this.replacementId, this.credit, this.cancelled,
-      this.createdLabel, this.reason);
+  const InvoiceCancellation(
+    this.replacementId,
+    this.credit,
+    this.cancelled,
+    this.createdLabel,
+    this.reason,
+  );
   final String? replacementId;
   final String credit, cancelled, createdLabel, reason;
-  factory InvoiceCancellation.decode(Map<Object?, Object?> v) => InvoiceCancellation(
-    v['replacementId'] as String?, v['creditedMinor'] as String,
-    v['cancelledMinor'] as String, v['createdLabel'] as String, v['reason'] as String,
-  );
+  factory InvoiceCancellation.decode(Map<Object?, Object?> v) =>
+      InvoiceCancellation(
+        v['replacementId'] as String?,
+        v['creditedMinor'] as String,
+        v['cancelledMinor'] as String,
+        v['createdLabel'] as String,
+        v['reason'] as String,
+      );
 }
 
 class InvoicePayments {
@@ -142,7 +151,9 @@ class InvoicePayments {
     status: v['status'] as String,
     collectedTax: v['collectedTaxMinor'] as String?,
     replacesInvoiceId: v['replacesInvoiceId'] as String?,
-    cancellation: v['void'] == null ? null : InvoiceCancellation.decode(v['void'] as Map<Object?, Object?>),
+    cancellation: v['void'] == null
+        ? null
+        : InvoiceCancellation.decode(v['void'] as Map<Object?, Object?>),
     legacy: v['legacy'] as bool,
     jobDeleted: v['jobDeleted'] as bool,
     accountingEmail: v['accountingEmail'] as String,

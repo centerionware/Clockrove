@@ -1881,3 +1881,11 @@ being saved. All new UI/format/handoff/interaction evidence remains pending.
 The intermediate ad3f06b run's live Android stage is superseded by this concrete
 Back-synchronization/editor/actual-flow source, not treated as a timeout failure;
 its inspected 477 native results remain the accepted baseline.
+
+Editor source 3f1265f / 43215477299 stopped at analysis with five required-brace
+lint findings; behavior/build/native/device gates did not run. Applied only the
+Actions-exported formatter patch and corrected all five reported branches. The
+actual Back-status helper also now polls the incoming detail route and scrolls
+until the real status is visible, rather than treating one transient false scroll
+action as proof of reaching the top during a route transition. All financial and
+status assertions remain. Revalidate this source; no formatter or tests ran on VM.

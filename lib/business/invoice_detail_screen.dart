@@ -55,7 +55,11 @@ class _InvoiceDetail extends ConsumerStatefulWidget {
 class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
   String? _copyToken;
   bool _pendingCopy = false;
-  Future<void> _open([String? copyId, bool compose = false, String? ownerInvoiceId]) async {
+  Future<void> _open([
+    String? copyId,
+    bool compose = false,
+    String? ownerInvoiceId,
+  ]) async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
@@ -87,8 +91,12 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
 
   Future<void> _correction(bool replace) async {
     final id = widget.data.invoiceId;
-    final result = await Navigator.push<InvoiceLifecycleResult>(context,
-      MaterialPageRoute<InvoiceLifecycleResult>(builder: (_) => InvoiceLifecycleEditor(invoiceId: id, replace: replace)));
+    final result = await Navigator.push<InvoiceLifecycleResult>(
+      context,
+      MaterialPageRoute<InvoiceLifecycleResult>(
+        builder: (_) => InvoiceLifecycleEditor(invoiceId: id, replace: replace),
+      ),
+    );
     if (!mounted || result == null) return;
     ref.invalidate(invoicePaymentsProvider(id));
     if (result.replacementId != null) {
@@ -97,8 +105,14 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
       await _open('void-$id');
     }
   }
+
   Future<void> _related(String id) async {
-    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => InvoiceDetailScreen(invoiceId: id)));
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InvoiceDetailScreen(invoiceId: id),
+      ),
+    );
     if (mounted) ref.invalidate(invoicePaymentsProvider(widget.data.invoiceId));
   }
 
@@ -161,9 +175,14 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _amount('Invoice total', data.total),
-                    if (data.cancellation == null) _amount('Paid to date', data.paid) else ...[
+                    if (data.cancellation == null)
+                      _amount('Paid to date', data.paid)
+                    else ...[
                       _amount('Credit transferred', data.cancellation!.credit),
-                      _amount('Cancelled unpaid balance', data.cancellation!.cancelled),
+                      _amount(
+                        'Cancelled unpaid balance',
+                        data.cancellation!.cancelled,
+                      ),
                     ],
                     _amount('Balance due', data.due, prominent: true),
                     if (data.collectedTax != null)
@@ -216,17 +235,60 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               },
             ),
             const SizedBox(height: 8),
-            Text(voided ? 'This invoice is void. No payment is due on it.' : 'Prepare the current balance and open an email draft with its PDF attached.'),
+            Text(
+              voided ? 'This invoice is void. No payment is due on it.' : 'Prepare the current balance and open an email draft with its PDF attached.',
+            ),
             if (voided) ...[
-              OutlinedButton.icon(onPressed: eligible ? () => _open('void-${data.invoiceId}', true) : null, icon: const Icon(Icons.description_outlined), label: const Text('Email cancellation copy')),
-              if (data.cancellation?.replacementId != null) TextButton(onPressed: eligible ? () => _related(data.cancellation!.replacementId!) : null, child: const Text('Open replacement invoice')),
-              if (data.cancellation != null) ExpansionTile(title: const Text('Cancellation history'), children: [Text(data.cancellation!.createdLabel), Text('Internal reason: ${data.cancellation!.reason}')]),
+              OutlinedButton.icon(
+                onPressed: eligible
+                    ? () => _open('void-${data.invoiceId}', true)
+                    : null,
+                icon: const Icon(Icons.description_outlined),
+                label: const Text('Email cancellation copy'),
+              ),
+              if (data.cancellation?.replacementId != null)
+                TextButton(
+                  onPressed: eligible
+                      ? () => _related(data.cancellation!.replacementId!)
+                      : null,
+                  child: const Text('Open replacement invoice'),
+                ),
+              if (data.cancellation != null)
+                ExpansionTile(
+                  title: const Text('Cancellation history'),
+                  children: [
+                    Text(data.cancellation!.createdLabel),
+                    Text('Internal reason: ${data.cancellation!.reason}'),
+                  ],
+                ),
             ],
-            if (data.replacesInvoiceId != null) TextButton(onPressed: eligible ? () => _related(data.replacesInvoiceId!) : null, child: const Text('Open original invoice')),
-            if (correctable) ExpansionTile(title: const Text('Correct this invoice'), children: [
-              if (data.paid == '0') TextButton.icon(onPressed: eligible ? () => _correction(false) : null, style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), icon: const Icon(Icons.block_outlined), label: const Text('Void unpaid invoice')),
-              TextButton.icon(onPressed: eligible ? () => _correction(true) : null, icon: const Icon(Icons.edit_outlined), label: const Text('Void & replace')),
-            ]),
+            if (data.replacesInvoiceId != null)
+              TextButton(
+                onPressed: eligible
+                    ? () => _related(data.replacesInvoiceId!)
+                    : null,
+                child: const Text('Open original invoice'),
+              ),
+            if (correctable)
+              ExpansionTile(
+                title: const Text('Correct this invoice'),
+                children: [
+                  if (data.paid == '0')
+                    TextButton.icon(
+                      onPressed: eligible ? () => _correction(false) : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      icon: const Icon(Icons.block_outlined),
+                      label: const Text('Void unpaid invoice'),
+                    ),
+                  TextButton.icon(
+                    onPressed: eligible ? () => _correction(true) : null,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Void & replace'),
+                  ),
+                ],
+              ),
             TextButton.icon(
               onPressed: eligible ? () => _open() : null,
               icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -317,13 +379,24 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         children: [
                           TextButton(
                             onPressed: eligible
-                                ? () => _open('receipt-${payment.id}', false, payment.originalInvoiceId)
+                                ? () => _open(
+                                    'receipt-${payment.id}',
+                                    false,
+                                    payment.originalInvoiceId,
+                                  )
                                 : null,
                             child: const Text('Open receipt'),
                           ),
                           if (payment.allocatedInvoiceId != data.invoiceId)
-                            TextButton(onPressed: eligible ? () => _related(payment.allocatedInvoiceId) : null, child: const Text('Open current invoice')),
-                          if (!voided && payment.reversalId == null && payment.allocatedInvoiceId == data.invoiceId)
+                            TextButton(
+                              onPressed: eligible
+                                  ? () => _related(payment.allocatedInvoiceId)
+                                  : null,
+                              child: const Text('Open current invoice'),
+                            ),
+                          if (!voided &&
+                              payment.reversalId == null &&
+                              payment.allocatedInvoiceId == data.invoiceId)
                             TextButton(
                               onPressed: eligible
                                   ? () => _payment(reversal: payment)

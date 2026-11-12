@@ -129,11 +129,15 @@ class _BusinessCommandState extends State<BusinessCommand>
     'PAID_INVOICE_CANNOT_VOID' => 'A fully paid invoice cannot be voided or replaced. Its receipts remain in history.',
     'PARTIAL_INVOICE_REQUIRES_REPLACEMENT' => 'Use Void & replace so the existing payment credit moves to a new invoice.',
     'REPLACEMENT_BELOW_CREDIT' => 'The replacement total cannot be less than the existing payment credit. Your draft is kept.',
-    'INVOICE_VOID_CONFIRMATION_REQUIRED' => 'Review and confirm the invoice correction before continuing.',
+    'INVOICE_VOID_CONFIRMATION_REQUIRED' =>
+      'Review and confirm the invoice correction before continuing.',
     'INVOICE_VOID_REASON_REQUIRED' => 'Explain the correction in 10 to 4000 characters. The reason stays internal.',
-    'INVALID_REPLACEMENT_LINES' || 'INVALID_REPLACEMENT_AMOUNT' || 'INVALID_REPLACEMENT' => 'Review the included lines, quantities and exact prices. New work must come from actual unbilled records.',
+    'INVALID_REPLACEMENT_LINES' ||
+    'INVALID_REPLACEMENT_AMOUNT' ||
+    'INVALID_REPLACEMENT' => 'Review the included lines, quantities and exact prices. New work must come from actual unbilled records.',
     'INVALID_RELEASED_CLAIMS' || 'INVALID_REPLACEMENT_SOURCES' => 'Some work reservations changed. Refresh and review the work to retain or release.',
-    'INVALID_INVOICE_VOID' => 'Refresh the invoice and review its correction details.',
+    'INVALID_INVOICE_VOID' =>
+      'Refresh the invoice and review its correction details.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',
