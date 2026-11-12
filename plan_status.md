@@ -2056,3 +2056,29 @@ Android single/multipage PDFs for all three styles now assert 7.5% tax, subtotal
 1250.00, tax 93.75 and total 1343.75. Actions must build/test/render this source;
 preview, legacy reconciliation and retained invoice navigation still block merge.
 No VM build, test, formatter, dependency resolution or rendering was run.
+
+### Tax/coverage checks ran; review and retained-invoice navigation prepared
+
+a9c17bd / 43162233917 passed analysis, 105 Flutter cases (seven actual-document
+previews deferred), and Android build. Native XML contains 325 cases, three
+failures and no errors/skips. All new coverage/migration/tax/bridge cases passed.
+Two JobCreation rollback cases assumed settings were the only initial revisions;
+capture the complete initial revision count instead and require rollback to it.
+LogoStore's purge case expected a retained invoice logo to disappear; require the
+original bytes/reference to remain. Actual Android PDF/widget stages did not run
+past those failures. Applied the run's exported formatter patch to its source.
+
+Added native billing preview using the same unbilled lines, exact subtotal/tax/
+total and validation as preparation. It allocates no numbers or claims, exposes
+existing-invoice links for excluded work and hides unproven totals while legacy
+coverage is unresolved. The separate Review invoice route requires Create invoice
+before allocation and keeps the pending command/key across version-before-reply
+reloads or read failures. Reports/CSV still describe all selected work.
+
+Added main-menu Invoices and richer per-job/all-job lists, including frozen job/
+customer/issued date, removed-job marking and retained PDF navigation. Native
+preview equivalence/no-allocation and removed-job index checks plus UI response-
+loss and navigation cases are prepared. Legacy coverage reconciliation is still
+missing; this slice must remain a draft until that reviewed journey and final
+native/device/PDF/visual checks pass. No new source is claimed validated by writing
+it. All builds/tests/formatting/rendering remain Actions-only.

@@ -90,8 +90,7 @@ class _BusinessCommandState extends State<BusinessCommand>
     'NO_BILLABLE_ITEMS' => 'No unbilled finalized work or completed billable tasks remain in these dates. Previously invoiced work is excluded.',
     'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on this job’s older invoices before preparing another invoice.',
     'INVOICED_SESSION_BOUNDARY' => 'This edit would move already invoiced work. Keep billed times within the entry and review the original invoice before changing them.',
-    'INVALID_TAX_RATE' =>
-      'Enter a tax percentage from 0 to 100, with up to four decimal places. Your draft is kept.',
+    'INVALID_TAX_RATE' => 'Enter a tax percentage from 0 to 100, with up to four decimal places. Your draft is kept.',
     'INVALID_LOGO' =>
       'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
     'LOGO_IMPORT_EXPIRED' =>

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'business_api.dart';
-import 'business_command.dart';
+import 'invoice_review_screen.dart';
 import 'invoice_screen.dart';
 import 'report_api.dart';
 import 'report_map.dart';
@@ -340,7 +340,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               width: 180,
                               child: _InvoiceButton(
                                 selection: selection,
-                                report: report,
                                 onPendingChanged: (value) {
                                   if (mounted) {
                                     setState(() => _invoicePending = value);
@@ -483,39 +482,16 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
   }
 }
 
-class _InvoiceButton extends ConsumerStatefulWidget {
-  const _InvoiceButton({
-    required this.selection,
-    required this.report,
-    required this.onPendingChanged,
-  });
+class _InvoiceButton extends StatelessWidget {
+  const _InvoiceButton({required this.selection, required this.onPendingChanged});
   final ReportSelection selection;
-  final WorkReport report;
   final ValueChanged<bool> onPendingChanged;
   @override
-  ConsumerState<_InvoiceButton> createState() => _InvoiceButtonState();
-}
-
-class _InvoiceButtonState extends ConsumerState<_InvoiceButton> {
-  String? _invoiceId;
-  @override
-  Widget build(BuildContext context) => BusinessCommand(
-    label: 'PDF invoice',
-    onPendingChanged: widget.onPendingChanged,
-    create: () {
-      final id = newBusinessId();
-      final invoiceId = newBusinessId();
-      _invoiceId = invoiceId;
-      final version = widget.report.version;
-      final selection = widget.selection;
-      final api = ref.read(reportApiProvider);
-      return () => api.prepare(id, version, invoiceId, selection);
-    },
-    onCommitted: () => Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        builder: (_) => InvoiceScreen(invoiceId: _invoiceId!),
-      ),
-    ),
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    label: const Text('PDF invoice'),
+    icon: const Icon(Icons.receipt_long_outlined),
+    onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
+      builder: (_) => InvoiceReviewScreen(selection: selection, onPendingChanged: onPendingChanged),
+    )),
   );
 }

@@ -496,13 +496,24 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
             InvoiceStore.prepare(it, invoiceId, selection, wallClock())
         }
-    internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String)
+    internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
+        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
     @Synchronized
-    internal fun invoices(jobId: String): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
-        helper.readableDatabase.rawQuery("SELECT id,number,created_ms,payload FROM invoices WHERE job_id=? ORDER BY created_ms DESC,id", arrayOf(jobId)).use { rows -> buildList {
-            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style)) }
+    internal fun invoices(jobId: String? = null): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
+        helper.readableDatabase.rawQuery("SELECT i.id,i.number,i.created_ms,i.payload,i.job_id,j.id,c.state FROM invoices i LEFT JOIN jobs j ON j.id=i.job_id LEFT JOIN invoice_coverage c ON c.invoice_id=i.id ${if (jobId == null) "" else "WHERE i.job_id=?"} ORDER BY i.created_ms DESC,i.id",
+            if (jobId == null) null else arrayOf(jobId)).use { rows -> buildList {
+            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
+                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY")) }
         } })
+    internal data class InvoiceBillingPreview(val version: Long, val preview: InvoiceCoverageStore.Preview, val taxUnits: Int)
+    @Synchronized
+    internal fun invoiceBillingPreview(selection: ReportStore.Selection): InvoiceBillingPreview {
+        require(selection.jobIds.size == 1) { "INVALID_INVOICE" }
+        val db = helper.readableDatabase
+        return InvoiceBillingPreview(readSnapshot(db).version, InvoiceCoverageStore.preview(db, ReportStore.read(db, selection)),
+            BusinessStore.job(db, selection.jobIds.single()).effectiveTaxUnits)
+    }
     @Synchronized
     internal fun invoice(id: String): InvoiceStore.Record = InvoiceStore.read(helper.readableDatabase, id)
     @Synchronized

@@ -75,11 +75,14 @@ class JobCreationTest {
         } finally { pool.shutdownNow() }
     }
     @Test fun seedFailureRollsBackJobRevisionsVersionAndReceiptThenRetryCanCommit() {
+        repository.snapshot()
+        val revisionsBefore = inspect { db -> db.rawQuery("SELECT COUNT(*) FROM entity_revisions", null).use { it.moveToFirst(); it.getInt(0) } }
         inspect { it.execSQL("CREATE TRIGGER fail_board BEFORE INSERT ON kanban_columns BEGIN SELECT RAISE(ABORT,'synthetic failure'); END") }
         try { create(); fail("Creation succeeded") } catch (_: android.database.SQLException) {}
         assertEquals(0L, version); assertTrue(repository.snapshot().jobs.isEmpty())
         inspect { db ->
-            for (table in listOf("commands", "entity_revisions", "kanban_columns")) db.rawQuery("SELECT COUNT(*) FROM $table${if (table == "entity_revisions") " WHERE kind!='settings'" else ""}", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
+            for (table in listOf("commands", "kanban_columns")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
+            db.rawQuery("SELECT COUNT(*) FROM entity_revisions", null).use { it.moveToFirst(); assertEquals(revisionsBefore, it.getInt(0)) }
             db.execSQL("DROP TRIGGER fail_board")
         }
         assertNull(create().conflict)

@@ -81,7 +81,8 @@ class LogoStoreTest {
         inspect { db -> db.rawQuery("SELECT id FROM logo_assets", null).use { it.moveToFirst(); assertEquals(original.id, it.getString(0)); assertFalse(it.moveToNext()) } }
         repository.archiveJob("archive", version, job); now += JobLifecycleStore.retentionMillis
         assertNull(repository.deleteJob("delete", version, job).conflict)
-        inspect { db -> db.rawQuery("SELECT COUNT(*) FROM logo_assets", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) } }
+        assertArrayEquals(original.bytes, repository.invoice("invoice").logo)
+        inspect { db -> db.rawQuery("SELECT id FROM logo_assets", null).use { it.moveToFirst(); assertEquals(original.id, it.getString(0)); assertFalse(it.moveToNext()) } }
     }
     @Test fun failedLogoRevisionRollsBackAssetSettingsVersionAndReceipt() {
         val before = repository.logo(); val asset = asset(0xff176b55.toInt())

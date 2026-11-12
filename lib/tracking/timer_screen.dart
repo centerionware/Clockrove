@@ -10,6 +10,7 @@ import '../business/job_screen.dart';
 import '../business/settings_screen.dart';
 import '../business/report_screen.dart';
 import '../business/archive_screen.dart';
+import '../business/invoice_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 
@@ -193,6 +194,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   'settings' => const SettingsScreen(),
                   'customers' => const CustomersScreen(),
                   'reports' => const ReportScreen(),
+                  'invoices' => const InvoiceHistory(),
                   _ => const ArchiveScreen(),
                 },
               ),
@@ -201,6 +203,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               PopupMenuItem(value: 'settings', child: Text('Settings')),
               PopupMenuItem(value: 'customers', child: Text('Customers')),
               PopupMenuItem(value: 'reports', child: Text('Reports')),
+              PopupMenuItem(value: 'invoices', child: Text('Invoices')),
               PopupMenuItem(value: 'archive', child: Text('Archived jobs')),
             ],
           ),

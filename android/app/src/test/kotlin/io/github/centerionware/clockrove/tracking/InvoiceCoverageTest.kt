@@ -168,6 +168,10 @@ class InvoiceCoverageTest {
         now += JobLifecycleStore.retentionMillis
         assertNull(repository.deleteJob("purge", version, job).conflict)
         assertEquals(original, repository.invoice("first"))
+        val retained = repository.invoices().invoices.single()
+        assertEquals("first", retained.id); assertEquals(job, retained.jobId)
+        assertTrue(retained.jobDeleted); assertFalse(retained.legacy)
+        assertEquals("Synthetic covered work", retained.jobName)
         inspect { db ->
             db.rawQuery("SELECT COUNT(*) FROM invoice_time_claims WHERE job_id=?", arrayOf(job)).use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
             db.rawQuery("SELECT payload,deleted FROM entity_revisions WHERE kind='invoice' AND entity_id='first'", null).use {

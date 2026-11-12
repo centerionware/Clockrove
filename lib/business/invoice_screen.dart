@@ -189,29 +189,31 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
 }
 
 class InvoiceHistory extends ConsumerStatefulWidget {
-  const InvoiceHistory({super.key, required this.jobId});
-  final String jobId;
+  const InvoiceHistory({super.key, this.jobId});
+  final String? jobId;
   @override
   ConsumerState<InvoiceHistory> createState() => _InvoiceHistoryState();
 }
 
 class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
-  late Future<List<PreparedInvoice>> _data = ref
-      .read(reportApiProvider)
-      .invoices(widget.jobId);
+  Future<List<PreparedInvoice>> _load() {
+    final api = ref.read(reportApiProvider), job = widget.jobId;
+    return job == null ? api.allInvoices() : api.invoices(job);
+  }
+  late Future<List<PreparedInvoice>> _data = _load();
+  void _refresh() => setState(() => _data = _load());
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Prepared invoices')),
+    appBar: AppBar(title: Text(widget.jobId == null ? 'Invoices' : 'Job invoices'), actions: [
+      IconButton(tooltip: 'Refresh invoices', onPressed: _refresh, icon: const Icon(Icons.refresh)),
+    ]),
     body: FutureBuilder<List<PreparedInvoice>>(
       future: _data,
       builder: (context, data) {
         if (data.hasError) {
           return Center(
             child: TextButton(
-              onPressed: () => setState(
-                () =>
-                    _data = ref.read(reportApiProvider).invoices(widget.jobId),
-              ),
+              onPressed: _refresh,
               child: const Text('Retry invoices'),
             ),
           );
@@ -220,8 +222,8 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
           return const Center(child: CircularProgressIndicator());
         }
         if (data.data!.isEmpty) {
-          return const Center(
-            child: Text('No invoices prepared for this job.'),
+          return Center(
+            child: Text(widget.jobId == null ? 'No invoices yet. Create one from a job report.' : 'No invoices prepared for this job.'),
           );
         }
         return ListView(
@@ -232,7 +234,13 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                 child: ListTile(
                   title: Text(invoice.number),
                   subtitle: Text(
-                    '${invoice.currency} ${invoice.total} · ${invoice.style.toLowerCase()}',
+                    [
+                      if (invoice.jobName.isNotEmpty) '${invoice.jobName}${invoice.jobDeleted ? ' · job deleted' : ''}',
+                      if (invoice.customer.isNotEmpty) invoice.customer,
+                      '${invoice.currency} ${invoice.total}',
+                      if (invoice.createdLabel.isNotEmpty) 'Issued ${invoice.createdLabel}',
+                      if (invoice.legacy) 'Billed work needs review',
+                    ].join('\n'),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(

@@ -40,16 +40,32 @@ internal object InvoiceStore {
     fun amount(value: BigInteger, digits: Int): String = BigDecimal(value, digits).toPlainString()
     private fun instant(value: Long, zone: String): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS XXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
     private fun duration(value: BigInteger): String = "${BigDecimal(value, 3).stripTrailingZeros().toPlainString()} seconds"
+    fun billableLines(report: ReportStore.Report): List<Line> {
+        val total = report.totals.single()
+        val digits = Currency.getInstance(total.currency).defaultFractionDigits
+        return if (total.mode == "TASK") report.tasks.map { Line(it.title, "Completed ${instant(it.completed, report.selection.timezone)}",
+            it.priceMinor?.takeIf { _ -> it.currency == total.currency }?.let { value -> amount(BigInteger.valueOf(value), digits) } ?: "") }
+        else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${total.hourlyMinor?.let { amount(BigInteger.valueOf(it), digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
+            total.amountMinor?.let { amount(it, digits) }.orEmpty())) + report.intervals.map {
+                Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
+            }
+    }
+    fun coverageProblem(preview: InvoiceCoverageStore.Preview): String? {
+        val report = preview.report; val total = report.totals.single()
+        if (preview.legacy.isNotEmpty()) return "LEGACY_INVOICE_REVIEW_REQUIRED"
+        if (total.mode == "HOURLY" && report.intervals.isEmpty() || total.mode == "TASK" && report.tasks.isEmpty()) return "NO_BILLABLE_ITEMS"
+        if (total.amountMinor == null) return if (total.mode == "HOURLY") "HOURLY_RATE_REQUIRED" else "TASK_PRICES_REQUIRED"
+        if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
+        return null
+    }
     fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long): String? {
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         val preview = InvoiceCoverageStore.preview(db, ReportStore.read(db, selection))
-        if (preview.legacy.isNotEmpty()) return "LEGACY_INVOICE_REVIEW_REQUIRED"
+        coverageProblem(preview)?.let { return it }
         val report = preview.report
         val total = report.totals.single()
-        if (total.mode == "HOURLY" && report.intervals.isEmpty() || total.mode == "TASK" && report.tasks.isEmpty()) return "NO_BILLABLE_ITEMS"
-        if (total.amountMinor == null) return if (total.mode == "HOURLY") "HOURLY_RATE_REQUIRED" else "TASK_PRICES_REQUIRED"
-        if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
+        val amountMinor = requireNotNull(total.amountMinor)
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
         if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
         if (!InvoiceEmailTemplate.valid(company.emailBody, false)) return "INVALID_EMAIL_BODY"
@@ -58,12 +74,10 @@ internal object InvoiceStore {
         if (sequence == Long.MAX_VALUE) return "INVOICE_SEQUENCE_EXHAUSTED"
         val number = "INV-$sequence"
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
-        val tax = TaxRate.amount(total.amountMinor, job.effectiveTaxUnits)
-        val subtotal = amount(total.amountMinor, digits)
-        val formatted = amount(total.amountMinor.add(tax), digits)
-        val lines = if (total.mode == "TASK") report.tasks.map { Line(it.title, "Completed ${instant(it.completed, selection.timezone)}", amount(BigInteger.valueOf(requireNotNull(it.priceMinor)), digits)) }
-            else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${amount(BigInteger.valueOf(requireNotNull(total.hourlyMinor)), digits)} ${total.currency}/hour", subtotal)) +
-                report.intervals.map { Line(it.date, "${instant(it.start, selection.timezone)} — ${instant(it.end, selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "") }
+        val tax = TaxRate.amount(amountMinor, job.effectiveTaxUnits)
+        val subtotal = amount(amountMinor, digits)
+        val formatted = amount(amountMinor.add(tax), digits)
+        val lines = billableLines(report)
         val values = mapOf("company_name" to company.companyName, "customer_name" to job.customer?.name.orEmpty(), "job_name" to job.settings.name,
             "invoice_number" to number, "amount" to formatted, "currency" to total.currency)
         val snapshot = Snapshot(number, at, company.invoiceStyle, total.currency, digits, company.companyName,

@@ -156,28 +156,41 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('invalid global tax keeps the draft and corrected percentage saves exactly', (tester) async {
-    final api = _SettingsApi();
-    await _show(tester, api, const SettingsScreen());
-    await _reveal(tester, 'Default tax (%)');
-    await tester.enterText(find.widgetWithText(TextField, 'Default tax (%)'), '100.0001');
-    await _reveal(tester, 'Save settings');
-    await tester.tap(find.text('Save settings'));
-    await tester.pumpAndSettle();
-    expect(api.savedSettings, isNull);
-    await _reveal(tester, 'Default tax (%)');
-    final field = tester.widget<TextField>(find.widgetWithText(TextField, 'Default tax (%)'));
-    expect(field.controller!.text, '100.0001');
-    expect(field.decoration!.errorText, contains('between 0 and 100'));
-    await tester.enterText(find.widgetWithText(TextField, 'Default tax (%)'), '7.5');
-    await _reveal(tester, 'Save settings');
-    await tester.tap(find.text('Save settings'));
-    await tester.pumpAndSettle();
-    expect(api.savedSettings!.defaultTaxUnits, 75000);
-    expect(api.savedSettings!.companyName, _SettingsApi.company.companyName);
-    expect(tester.takeException(), isNull);
-  });
-  testWidgets('job tax can explicitly override a nonzero default with zero', (tester) async {
+  testWidgets(
+    'invalid global tax keeps the draft and corrected percentage saves exactly',
+    (tester) async {
+      final api = _SettingsApi();
+      await _show(tester, api, const SettingsScreen());
+      await _reveal(tester, 'Default tax (%)');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Default tax (%)'),
+        '100.0001',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings, isNull);
+      await _reveal(tester, 'Default tax (%)');
+      final field = tester.widget<TextField>(
+        find.widgetWithText(TextField, 'Default tax (%)'),
+      );
+      expect(field.controller!.text, '100.0001');
+      expect(field.decoration!.errorText, contains('between 0 and 100'));
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Default tax (%)'),
+        '7.5',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings!.defaultTaxUnits, 75000);
+      expect(api.savedSettings!.companyName, _SettingsApi.company.companyName);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('job tax can explicitly override a nonzero default with zero', (
+    tester,
+  ) async {
     final api = _SettingsApi();
     await _show(tester, api, const JobSettingsScreen(jobId: 'job'));
     await _reveal(tester, 'Use default tax rate');
@@ -191,7 +204,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.savedJob, isNull);
     await _reveal(tester, 'Job tax (%)');
-    expect(tester.widget<TextField>(find.widgetWithText(TextField, 'Job tax (%)')).decoration!.errorText, isNotNull);
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Job tax (%)'))
+          .decoration!
+          .errorText,
+      isNotNull,
+    );
     await tester.enterText(find.widgetWithText(TextField, 'Job tax (%)'), '0');
     await _reveal(tester, 'Save job settings');
     await tester.tap(find.text('Save job settings'));

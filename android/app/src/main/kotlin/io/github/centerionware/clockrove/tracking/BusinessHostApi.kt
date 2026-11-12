@@ -82,7 +82,10 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                     "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency) }) }
             "templates" -> return repository.taskTemplates(input.string("search")).map { mapOf("id" to it.id, "title" to it.title, "description" to it.description,
                 "priceMinor" to it.priceMinor?.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName) }
-            "invoices" -> { val s = repository.invoices(input.string("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style) }) }
+            "invoices" -> { val s = repository.invoices(input.nullable("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style,
+                "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy,
+                "createdLabel" to ReportCsv.instant(it.created, java.util.TimeZone.getDefault().id)) }) }
+            "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
             "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
             "companyLogo" -> { val s = repository.logo(); return mapOf("version" to s.version, "id" to s.id, "width" to s.width, "height" to s.height, "png" to s.bytes) }
@@ -129,6 +132,21 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     private fun customer(v: BusinessStore.Customer): Map<String, Any?> = mapOf("customerId" to v.id, "name" to v.name, "email" to v.email, "phone" to v.phone, "address" to v.address, "notes" to v.notes, "archived" to v.archived)
     private fun job(v: BusinessStore.JobSettings): Map<String, Any?> = mapOf("jobId" to v.id, "name" to v.name, "colorArgb" to v.colorArgb, "billingMode" to v.billingMode,
         "currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits, "hourlyRateMinor" to v.hourlyRateMinor?.toString(), "customerId" to v.customerId, "customerEmailOverride" to v.customerEmailOverride, "taxUnits" to v.taxUnits)
+    private fun invoiceBillingPreview(s: TimerRepository.InvoiceBillingPreview): Map<String, Any?> {
+        val preview = s.preview; val report = preview.report; val total = report.totals.single()
+        val digits = Currency.getInstance(total.currency).defaultFractionDigits
+        val subtotal = total.amountMinor?.takeIf { preview.legacy.isEmpty() }
+        val tax = subtotal?.takeIf { TaxRate.valid(s.taxUnits) }?.let { TaxRate.amount(it, s.taxUnits) }
+        val problem = if (!TaxRate.valid(s.taxUnits)) "INVALID_TAX_RATE" else InvoiceStore.coverageProblem(preview)
+        return mapOf("version" to s.version, "jobId" to total.jobId, "jobName" to total.jobName, "currency" to total.currency,
+            "taxUnits" to s.taxUnits, "subtotal" to subtotal?.let { InvoiceStore.amount(it, digits) },
+            "tax" to tax?.let { InvoiceStore.amount(it, digits) }, "total" to tax?.let { InvoiceStore.amount(requireNotNull(subtotal).add(it), digits) },
+            "problem" to problem, "mode" to total.mode,
+            "lines" to (if (problem == "INVOICE_TOO_LARGE") emptyList() else InvoiceStore.billableLines(report)).map { mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount) },
+            "excluded" to preview.excluded.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "title" to it.title,
+                "detail" to if (it.taskId != null) "Previously invoiced task" else "${ReportCsv.instant(requireNotNull(it.start), report.selection.timezone)} — ${ReportCsv.instant(requireNotNull(it.end), report.selection.timezone)}") },
+            "legacy" to preview.legacy.map { mapOf("invoiceId" to it.first, "number" to it.second) })
+    }
     private fun report(s: TimerRepository.ReportSnapshot): Map<String, Any?> {
         val r = s.report
         return mapOf("version" to s.version, "timezone" to r.selection.timezone, "workCsv" to ReportCsv.work(r), "gpsCsv" to ReportCsv.gps(r),

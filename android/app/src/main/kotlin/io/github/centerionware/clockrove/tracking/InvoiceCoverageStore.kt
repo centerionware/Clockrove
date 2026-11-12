@@ -7,7 +7,7 @@ import java.util.UUID
 /** Durable source reservations, independent of mutable/deletable work rows. */
 internal object InvoiceCoverageStore {
     data class Exclusion(val invoiceId: String, val number: String, val taskId: String? = null,
-        val sessionId: String? = null, val start: Long? = null, val end: Long? = null)
+        val sessionId: String? = null, val start: Long? = null, val end: Long? = null, val title: String = "Finalized work")
     data class Preview(val report: ReportStore.Report, val excluded: List<Exclusion>, val legacy: List<Pair<String, String>>)
     private data class TimeClaim(val invoiceId: String, val number: String, val start: Long, val end: Long)
 
@@ -76,7 +76,7 @@ internal object InvoiceCoverageStore {
             }
             source.tasks.filter { it.jobId == job }.forEach { task ->
                 val owner = taskClaims[task.id]
-                if (owner == null) tasks.add(task) else if (total.mode == "TASK") excluded.add(Exclusion(owner.first, owner.second, taskId = task.id))
+                if (owner == null) tasks.add(task) else if (total.mode == "TASK") excluded.add(Exclusion(owner.first, owner.second, taskId = task.id, title = task.title))
             }
         }
         val totals = source.totals.map { total ->
