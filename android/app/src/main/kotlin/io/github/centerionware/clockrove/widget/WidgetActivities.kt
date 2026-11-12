@@ -15,7 +15,8 @@ class WidgetBoardActivity : MainActivity() {
     override fun getInitialRoute(): String {
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
         val job = intent.getStringExtra("jobId")
-        val active = if (TimerWidget.owned(this, id)) TimerRepository.get(this).snapshot().jobs.firstOrNull { it.id == job } else null
+        val active = try { if (TimerWidget.owned(this, id)) TimerRepository.get(this).snapshot().jobs.firstOrNull { it.id == job } else null }
+            catch (_: Exception) { null }
         return if (active == null) "/widget-unavailable" else android.net.Uri.Builder().path("/widget-board")
             .appendQueryParameter("job", active.id).appendQueryParameter("name", active.name).build().toString()
     }

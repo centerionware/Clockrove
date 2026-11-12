@@ -107,7 +107,7 @@ open class TimerWidget : AppWidgetProvider() {
                 }
                 return views
         }
-        internal fun hasTaskRoom(width: Int, height: Int, fontScale: Float): Boolean = width >= 180 && height >= 64 + (100 * fontScale.coerceAtLeast(1f)).toInt()
+        internal fun hasTaskRoom(width: Int, height: Int, fontScale: Float): Boolean = width >= 180 && height >= 64 + (120 * fontScale.coerceAtLeast(1f)).toInt()
         internal fun configureIntent(context: Context, id: Int): PendingIntent = PendingIntent.getActivity(context, id,
             Intent(context, WidgetConfigurationActivity::class.java).setData(Uri.parse("clockrove://widget/$id/configure"))
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

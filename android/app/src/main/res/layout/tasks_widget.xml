@@ -3,7 +3,7 @@
     android:background="@drawable/widget_background" android:padding="8dp">
     <LinearLayout android:id="@+id/widget_timer_container" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:orientation="vertical" />
-    <TextView android:id="@+id/widget_tasks_title" android:layout_width="match_parent" android:layout_height="48dp"
+    <TextView android:id="@+id/widget_tasks_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
         android:gravity="center_vertical" android:textSize="14sp" android:textStyle="bold" android:textColor="#FFFFFF"
         android:maxLines="2" android:ellipsize="end" android:contentDescription="Task filter and widget settings" />
     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">

@@ -64,17 +64,29 @@ class WidgetHostDeviceTest {
             instrumentation.runOnMainSync {
                 host.startListening()
                 view = host.createView(activity, id, manager.getAppWidgetInfo(id))
-                activity.setContentView(view, android.view.ViewGroup.LayoutParams(-1, -1))
+                val container = FrameLayout(activity)
+                val density = activity.resources.displayMetrics.density
+                container.addView(view, FrameLayout.LayoutParams((132 * density).toInt(), (56 * density).toInt()))
+                activity.setContentView(container)
             }
             TimerWidget.refreshAll(app)
             until("Compact Combined must omit task list") { view!!.findViewById<View>(R.id.widget_action) != null && view!!.findViewById<View>(R.id.widget_tasks) == null }
+            instrumentation.runOnMainSync {
+                val density = activity.resources.displayMetrics.density
+                view!!.layoutParams = FrameLayout.LayoutParams((300 * density).toInt(), (340 * density).toInt())
+            }
             manager.updateAppWidgetOptions(id, options(300, 340))
             TimerWidget.refreshAll(app)
             until("Expanded Combined must bind all 30 tasks through RemoteViewsService") { view!!.findViewById<ListView>(R.id.widget_tasks)?.count == 30 }
             instrumentation.runOnMainSync { view!!.findViewById<ListView>(R.id.widget_tasks).setSelection(29) }
             until("Task collection must scroll to its final row") { view!!.findViewById<ListView>(R.id.widget_tasks)?.lastVisiblePosition == 29 }
             val file = File(app.getExternalFilesDir(null), "widget-combined.png")
-            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap -> file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }; bitmap.recycle() }
+            instrumentation.runOnMainSync {
+                val bitmap = android.graphics.Bitmap.createBitmap(view!!.width, view!!.height, android.graphics.Bitmap.Config.ARGB_8888)
+                view!!.draw(android.graphics.Canvas(bitmap))
+                file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+            }
             val monitor = instrumentation.addMonitor(WidgetBoardActivity::class.java.name, null, false)
             try {
                 instrumentation.runOnMainSync {
@@ -117,4 +129,48 @@ class WidgetHostDeviceTest {
             instrumentation.runOnMainSync { host.stopListening(); host.deleteHost(); activity.finish() }
         }
     }
+    private fun clickText(label: String) {
+        var found: android.view.accessibility.AccessibilityNodeInfo? = null
+        fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
+            if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
+            for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { match -> return match } }
+            return null
+        }
+        val deadline = SystemClock.uptimeMillis() + 30000
+        while (found == null && SystemClock.uptimeMillis() < deadline) {
+            found = instrumentation.uiAutomation.rootInActiveWindow?.let(::visit)
+            if (found == null) SystemClock.sleep(100)
+        }
+        var node = found ?: throw AssertionError("Actual widget setup did not show $label")
+        while (!node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)) {
+            node = node.parent ?: throw AssertionError("Could not click $label")
+        }
+    }
+    @Test fun actualFlutterConfigurationSavesBindingAndCancelKeepsIt() {
+        val repository = TimerRepository.get(app)
+        val job = repository.createJob("Widget setup choice")
+        val manager = AppWidgetManager.getInstance(app)
+        val host = AppWidgetHost(app, 915)
+        val id = host.allocateAppWidgetId()
+        var activity: WidgetConfigurationActivity? = null
+        try {
+            assertTrue(manager.bindAppWidgetIdIfAllowed(id, ComponentName(app, TimerOnlyWidget::class.java), options(132, 56)))
+            val intent = Intent(app, WidgetConfigurationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            activity = instrumentation.startActivitySync(intent) as WidgetConfigurationActivity
+            clickText("Widget setup choice")
+            clickText("Save widget")
+            until("Actual widget setup must commit and close") { activity!!.isFinishing && repository.widgetSnapshot(id).configuration.jobId == job }
+            val binding = repository.widgetSnapshot(id).configuration
+            activity = instrumentation.startActivitySync(intent) as WidgetConfigurationActivity
+            clickText("Choose each time")
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            until("Cancel must close widget setup") { activity!!.isFinishing }
+            assertEquals(binding, repository.widgetSnapshot(id).configuration)
+            assertNull(repository.snapshot().running)
+        } finally {
+            repository.removeWidgetConfigurations(listOf(id))
+            instrumentation.runOnMainSync { activity?.finish(); host.deleteHost() }
+        }
+    }
+
 }
