@@ -2978,3 +2978,20 @@ but asserted a duration without its combined source label; exact combined text
 assertion corrected. No calculation/write guard removed. Clear input focus before
 first-page preview. Its fresh formatter patch and API-24 IME visibility correction
 are ready for the next complete Actions run; native race/device proof stays pending.
+
+### Quote actual-work journey: API-35 bottom safe-area defect
+
+Latest e4738aa / Actions run 43264537323 attempt 2: formatting, analysis, Flutter
+behavior, Android build and all 561 native tests passed (47 XML; zero failures,
+errors or skips). API 24 completed all 27 actual-device cases, including the full
+Flutter quote issue/accept/scope/task completion/invoice journey and three actual
+invoice PDFs. API 35 completed its preceding 26 cases, then the quote journey
+failed at “View original PDF.” Inspected artifact 13966703563: accessibility
+reported the button at y=1864–1920, under the system navigation bar beginning at
+y=1794, while the invoice detail was at maximum scroll. The UI already attempted
+to reveal it; the bottom inset was too small on edge-to-edge API 35. Changed the
+detail ListView bottom padding from `MediaQuery.padding` to `viewPadding` to
+reserve the physical navigation inset. This is a source fix only; fresh Actions
+must prove full API-24/35 and generated-document gates before marking Q10/Q11
+complete or merging #39. Existing assertions remain strict; no build/test ran on
+the VM.

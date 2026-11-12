@@ -160,7 +160,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             24,
             24,
             24,
-            24 + MediaQuery.paddingOf(context).bottom,
+            24 + MediaQuery.viewPaddingOf(context).bottom,
           ),
           children: [
             Text(data.jobName, style: Theme.of(context).textTheme.titleLarge),

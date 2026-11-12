@@ -46,13 +46,16 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Complete the active quote milestone in draft PR #39: preparation/history UI,
-real Android issue/accept/plan/work/invoice journey, document provenance acceptance,
-and full fresh exact-head Actions before merge. Scope/document baseline 202ceb1
-passed full 43252783507 (539 native / 52 actual Android). Backend 56307eb reached
-real-device gates after 553 native tests passed in 43255636714; its device/viewer
-results remain pending. New Flutter invoice API/UI source is newer and requires
-fresh formatting, analysis and behavior/build/device checks.
+Complete the active quote milestone in draft PR #39, then proceed to the next
+ordered plan milestone. Latest head e4738aa / run 43264537323 attempt 2 passed
+formatting, analysis, Flutter behavior, Android build and all 561 native tests.
+API 24 completed the quote issue/accept/scope/actual-work/invoice journey and
+generated all three actual-work invoice styles. API 35 exposed a real bottom-inset
+bug on invoice detail: at maximum scroll, “View original PDF” remains under the
+system navigation bar. The detail page now reserves `viewPadding.bottom`; fresh
+exact-head Actions must confirm the fix, API 35 document/text/viewer acceptance,
+and all prior gates before #39 is merged. No device/document acceptance is inferred
+from the failed API-35 attempt.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
