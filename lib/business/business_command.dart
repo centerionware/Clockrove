@@ -69,6 +69,19 @@ class _BusinessCommandState extends State<BusinessCommand>
   }
 
   String _conflict(String? value) => switch (value) {
+    'INVALID_MONEY' => 'Enter an exact nonnegative price within the supported length. Your draft is kept.',
+    'INVALID_CURRENCY' => 'Choose a supported currency. Your draft is kept.',
+    'CUSTOMER_UNAVAILABLE' => 'This customer is unavailable. Choose another customer or clear the selection.',
+    'EMAIL_TOO_LARGE' => 'The expanded email is too long. Shorten the email template or document details.',
+    'INVALID_QUOTE' || 'INVALID_QUOTE_LINE' => 'Review the quote title and line descriptions. Your draft is kept.',
+    'INVALID_QUOTE_DATE' => 'Enter a real validity date as YYYY-MM-DD, or leave it blank. Your draft is kept.',
+    'QUOTE_TOO_LARGE' => 'This quote is too large. Shorten its details or split its scope into separate quotes.',
+    'QUOTE_CONFIRMATION_REQUIRED' => 'Review the quote before confirming issue.',
+    'QUOTE_DRAFT_UNAVAILABLE' => 'This draft was already issued or is no longer available. Refresh the quote.',
+    'QUOTE_REVISION_CHANGED' => 'A newer revision exists. Refresh and review it before recording a decision.',
+    'QUOTE_ALREADY_DECIDED' => 'This revision already has a local decision. Its recorded history is retained.',
+    'QUOTE_SEQUENCE_EXHAUSTED' || 'QUOTE_REVISION_EXHAUSTED' => 'The quote numbering limit was reached. Existing documents are retained.',
+    'INVALID_QUOTE_DECISION' => 'Confirm the revision and add a note describing the local acceptance or decline.',
     'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',

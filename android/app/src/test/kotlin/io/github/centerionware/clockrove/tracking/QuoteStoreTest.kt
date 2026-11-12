@@ -93,7 +93,7 @@ class QuoteStoreTest {
             original.copy(lines = listOf(line.copy(unitPrice = "1.25"))), original.copy(lines = listOf(line.copy(unitPrice = "9".repeat(1025)))))
         val before = version
         for ((index, value) in invalid.withIndex()) {
-            try { repository.saveQuote("invalid-$index", before, value); fail("Invalid draft accepted") } catch (_: IllegalArgumentException) { }
+            assertNotNull(repository.saveQuote("invalid-$index", before, value).conflict)
             assertEquals(before, version); assertEquals(0, count("quotes")); assertEquals(1000L, sequence())
         }
     }
@@ -192,5 +192,26 @@ class QuoteStoreTest {
         assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
         assertEquals(2, repository.quote("quote").latest!!.revision); assertEquals("Q-1000", repository.quote("quote").latest!!.number)
         assertEquals(Long.MAX_VALUE, sequence())
+    }
+    @Test fun revisionsKeepFrozenCurrencyPrecisionRatherThanReinterpretingMinorUnits() {
+        issue()
+        // Synthetic historical precision, deliberately different from today's
+        // platform USD default, proves the frozen contract rather than ISO policy.
+        val historical = JSONObject(repository.quote("quote").latest!!.payload)
+            .put("draft", JSONObject(draft("frozen").encode())).put("number", "Q-9000")
+            .put("digits", 3).put("subtotal", "32.500").put("tax", "2.438").put("total", "34.938")
+            .put("subject", "Synthetic historical quote").put("body", "Synthetic historical quote")
+        inspect { db ->
+            db.execSQL("INSERT INTO quotes VALUES('frozen','Q-9000',?)", arrayOf(at))
+            db.execSQL("INSERT INTO quote_revisions VALUES('frozen',1,NULL,NULL,?,NULL,?)", arrayOf<Any?>(historical.toString(), at))
+        }
+        assertEquals(3, repository.quoteCurrencyDigits("frozen", "USD"))
+        assertEquals(0, repository.quoteCurrencyDigits("frozen", "JPY"))
+        assertNull(repository.saveQuote("save-frozen", version, draft("frozen")).conflict)
+        assertEquals("34.938", repository.quotes().page.entries.single { it.id == "frozen" }.total)
+        assertNull(repository.issueQuote("issue-frozen", version, "frozen", true).conflict)
+        val revision = JSONObject(repository.quote("frozen").latest!!.payload)
+        assertEquals(3, revision.getInt("digits")); assertEquals("34.938", revision.getString("total"))
+        assertEquals("1.250", InvoiceStore.Snapshot.decode(repository.quoteDocument("frozen", 2).payload).lines.single().detail.substringAfter("× ").substringBefore(" USD"))
     }
 }

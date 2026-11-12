@@ -50,4 +50,13 @@ class QuoteBridgeTest {
         try { command("issueQuote", "bad-confirm", mapOf("quoteId" to "quote", "confirmed" to 1)); fail("Boolean required") } catch (_: IllegalArgumentException) { }
         assertNull(context()["latest"])
     }
+    @Test fun currencyPrecisionComesFromNativeCurrencyWithoutChangingState() {
+        val before = version
+        for ((currency, digits) in listOf("USD" to 2, "JPY" to 0, "KWD" to 3, "BIF" to 0)) {
+            val result = dispatch.call(MethodCall("currencyPrecision", mapOf("currency" to currency))) as Map<*, *>
+            assertEquals(currency, result["currency"]); assertEquals(digits, result["digits"])
+        }
+        try { dispatch.call(MethodCall("currencyPrecision", mapOf("currency" to "INVALID"))); fail("Currency validation required") } catch (_: IllegalArgumentException) { }
+        assertEquals(before, version)
+    }
 }

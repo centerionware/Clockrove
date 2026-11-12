@@ -223,6 +223,8 @@ class QuoteApi {
   const QuoteApi();
   static const _channel = MethodChannel('clockrove/business/v1');
   static const _documents = MethodChannel('clockrove/documents/v1');
+  Future<int> precision(String currency, {String? quoteId}) async =>
+      (await _channel.invokeMapMethod<Object?, Object?>('currencyPrecision', {'currency': currency, 'quoteId': quoteId}))!['digits'] as int;
   Future<QuoteData> read(String id) async => QuoteData.decode(
     (await _channel.invokeMapMethod<Object?, Object?>('quoteContext', {
       'quoteId': id,

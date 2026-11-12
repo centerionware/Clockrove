@@ -2681,3 +2681,26 @@ template expansions with an explicit QUOTE prefix. Added native regression check
 that old revision email content remains unchanged. This later source still needs
 its own complete Actions run. #40 / 43231269977 remains live at its actual Android
 step; no successful main validation or new Play acceptance has been observed.
+
+### Quote document native proof and draft-editor source
+
+ef3ddcd / 43234622742 passed Android build and 509 native cases. Downloaded
+artifact 13951494219: 46 XML files, zero failures/errors/skips, including quote
+pagination/bridge/cache/private-provider cases. Android test compilation then
+failed before emulators because CopyPdfTextApi35 was file-private. Shared that
+test-only helper internally; no real quote PDF result is claimed yet. The earlier
+formatter correction was already applied to source.
+
+New editor source separates editable save from issue, with one unit-price field,
+quantity/estimated hours, native currency precision, effective linked-job tax,
+customer/job selection, explicit currency change with cleared prices, validity,
+printed terms/notes and exact totals. It preserves field values through refresh
+and captures one immutable command for unknown-reply retries. Native invalid
+content is now a known pre-write command conflict so it cannot strand an editable
+draft as an unknown result. UI capture validates controller values even when lazy
+form fields are offscreen. Native historical precision remains frozen across
+same-currency revisions; new precision and frozen-unit regressions are pending.
+Two widget source cases cover unknown-reply lock/retry identity and retained
+fractional input for native zero-decimal currency. These editor/native changes
+still require formatting, analysis and full Actions proof. Quote list/detail,
+issue/decision/revision navigation and accepted-scope conversion remain required.

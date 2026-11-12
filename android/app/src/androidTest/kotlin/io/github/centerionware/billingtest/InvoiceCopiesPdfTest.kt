@@ -184,6 +184,6 @@ class InvoiceCopiesPdfTest {
 
 /** Isolate API-35-only reflection from Android 7. */
 @android.annotation.TargetApi(35)
-private object CopyPdfTextApi35 {
+internal object CopyPdfTextApi35 {
     fun read(page: PdfRenderer.Page): String = page.textContents.joinToString(" ") { it.text }
 }

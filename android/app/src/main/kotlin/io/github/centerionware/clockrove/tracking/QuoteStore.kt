@@ -41,6 +41,12 @@ internal object QuoteStore {
         val status: String, val hasDraft: Boolean, val jobId: String?, val customer: String)
     data class Page(val entries: List<Summary>, val next: Cursor?)
     data class RevisionSummary(val revision: Int, val created: Long, val decision: String?)
+    fun currencyDigits(db: SQLiteDatabase, id: String?, currency: String): Int {
+        require(BusinessStore.validCurrency(currency)) { "INVALID_CURRENCY" }
+        val issued = id?.let { latest(db, it) }?.let { JSONObject(it.payload) }
+        val frozen = issued?.takeIf { it.getJSONObject("draft").getString("currency") == currency }?.getInt("digits")
+        return (frozen ?: Currency.getInstance(currency).defaultFractionDigits).also { require(it in 0..4) { "INVALID_CURRENCY" } }
+    }
 
     fun revision(db: SQLiteDatabase, id: String, revision: Int): Revision? {
         require(revision > 0) { "INVALID_QUOTE_REVISION" }
@@ -70,7 +76,7 @@ internal object QuoteStore {
             val validUntil = source.validUntil
             val status = if (draft != null) "DRAFT" else issued!!.decision ?: if (validUntil != null && validUntil < today) "EXPIRED" else "ISSUED"
             Summary(key.id, issued?.number, key.created, source.title, source.currency,
-                if (draft != null) InvoiceStore.amount(totals(draft).total, Currency.getInstance(draft.currency).defaultFractionDigits) else frozen!!.getString("total"),
+                if (draft != null) InvoiceStore.amount(totals(draft).total, currencyDigits(db, key.id, draft.currency)) else frozen!!.getString("total"),
                 validUntil, issued?.revision, status, draft != null, source.jobId,
                 if (draft != null) draft.customerId?.let { id -> BusinessStore.customers(db).firstOrNull { it.id == id }?.name }.orEmpty() else frozen!!.getString("customer"))
         }
@@ -118,9 +124,13 @@ internal object QuoteStore {
         if (it.moveToFirst()) Draft.decode(it.getString(0)) else null
     }
     fun save(db: SQLiteDatabase, value: Draft, at: Long): String? {
-        totals(value)
-        val payload = value.encode()
-        require(payload.toByteArray(Charsets.UTF_8).size <= 1_000_000) { "QUOTE_TOO_LARGE" }
+        if (at < 0) return "INVALID_CLOCK"
+        // All validation is before any write. A known invalid draft returns a
+        // command conflict so the editor remains editable, not an unknown reply.
+        val payload = try {
+            totals(value)
+            value.encode().also { require(it.toByteArray(Charsets.UTF_8).size <= 1_000_000) { "QUOTE_TOO_LARGE" } }
+        } catch (failure: IllegalArgumentException) { return failure.message?.takeIf { it.matches(Regex("[A-Z_]+")) } ?: "INVALID_QUOTE" }
         if (value.customerId != null && BusinessStore.customers(db).none { it.id == value.customerId }) return "CUSTOMER_UNAVAILABLE"
         if (value.jobId != null && !db.rawQuery("SELECT id FROM jobs WHERE id=?", arrayOf(value.jobId)).use { it.moveToFirst() }) return "JOB_UNAVAILABLE"
         db.execSQL("INSERT OR IGNORE INTO quotes VALUES(?,NULL,?)", arrayOf<Any?>(value.id, at))
@@ -150,7 +160,7 @@ internal object QuoteStore {
         val sequence = db.rawQuery("SELECT next_number FROM quote_counter WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
         if (previous == null && sequence == Long.MAX_VALUE) return "QUOTE_SEQUENCE_EXHAUSTED"
         val number = previous?.number ?: "Q-$sequence"
-        val digits = Currency.getInstance(draft.currency).defaultFractionDigits
+        val digits = currencyDigits(db, id, draft.currency)
         val values = mapOf("company_name" to company.companyName, "customer_name" to customer?.name.orEmpty(),
             "job_name" to draft.title, "invoice_number" to "$number revision $revision", "amount" to InvoiceStore.amount(total.total, digits), "currency" to draft.currency)
         val defaultBody = BusinessStore.Settings(company.currency).emailBody
@@ -159,7 +169,7 @@ internal object QuoteStore {
         val subject = if (company.emailSubject == BusinessStore.Settings(company.currency).emailSubject)
             "Quote $number · Revision $revision — " + draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
             else "Quote · " + InvoiceEmailTemplate.expand(company.emailSubject, values, true)
-        require(subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size <= 100_000) { "EMAIL_TOO_LARGE" }
+        if (subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size > 100_000) return "EMAIL_TOO_LARGE"
         val frozen = JSONObject(mapOf("draft" to JSONObject(draft.encode()), "number" to number, "revision" to revision,
             "created" to at, "digits" to digits, "subtotal" to InvoiceStore.amount(total.subtotal, digits),
             "tax" to InvoiceStore.amount(total.tax, digits), "total" to InvoiceStore.amount(total.total, digits),
@@ -168,7 +178,7 @@ internal object QuoteStore {
             "companyEmail" to company.companyEmail, "companyPhone" to company.companyPhone, "companyAddress" to company.companyAddress,
             "companyWebsite" to company.companyWebsite, "style" to company.invoiceStyle, "header" to company.invoiceHeader, "footer" to company.invoiceFooter,
             "subject" to subject, "body" to body)).toString()
-        require(frozen.toByteArray(Charsets.UTF_8).size <= 1_000_000) { "QUOTE_TOO_LARGE" }
+        if (frozen.toByteArray(Charsets.UTF_8).size > 1_000_000) return "QUOTE_TOO_LARGE"
         val logo = db.rawQuery("SELECT logo_id FROM app_settings WHERE id=1", null).use { it.moveToFirst(); if (it.isNull(0)) null else it.getString(0) }
         if (previous == null) {
             db.execSQL("UPDATE quotes SET number=? WHERE id=?", arrayOf(number, id))

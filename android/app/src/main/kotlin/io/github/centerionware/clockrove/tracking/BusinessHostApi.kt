@@ -49,6 +49,10 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "currencyPrecision" -> {
+                val currency = input.string("currency"); require(BusinessStore.validCurrency(currency))
+                return mapOf("currency" to currency, "digits" to repository.quoteCurrencyDigits(input.nullable("quoteId"), currency))
+            }
             "quotes" -> {
                 val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
                 val before = (raw as? Map<*, *>)?.let { Input(it).let { cursor -> QuoteStore.Cursor(cursor.integer("created"), cursor.string("id")) } }

@@ -1989,3 +1989,15 @@ private content URIs retain exact revision ownership and accounting CC. The new
 actual quote PDF/text/attachment gate requires nine quote variants per API and
 52 actual tests in total. No passing current document result or UI/conversion
 completion is claimed; follow Actions and review genuine captured pages next.
+
+### Quote editor and retained precision source
+
+509 native tests passed for ef3ddcd in 43234622742 (46 downloaded XML, zero
+failures/errors/skips). Actual test compilation failed at the file-private PDF
+text helper, now shared internally. No real quote pages are accepted yet.
+The quote draft editor source adds editable quantities/unit prices, estimated
+hours, native/frozen currency precision, exact tax totals, customer/job links,
+validity and printed terms/notes. Save remains separate from issue, and unknown
+reply retries retain one immutable command. Pre-write invalid drafts return known
+conflicts. Widget/native regressions await Actions; full quote navigation and
+reviewed conversion remain unfinished.
