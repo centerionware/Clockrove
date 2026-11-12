@@ -32,7 +32,8 @@ The owner-requested combined internal iteration in
 43117726325 and merged via #29 as cb2efc9. Play delivery is active again;
 main validation 43120365067 and Play delivery 43121445107 passed. Play accepted
 0.1.0-internal.19.1 (216603660) from cb2efc9. Production readiness remains
-unset. Finish manual-history PR #32 checks, then continue widget configuration.
+unset. Manual-history #32 passed 43123810250 and merged as 863c9a0.
+Follow its main validation/internal delivery and continue widget configuration.
 Physical GPS/launcher/recovery/email evidence, provider settings, encrypted
 backup/merge and full launch acceptance remain unfinished. All builds/tests and
 rendering remain in GitHub Actions.
@@ -1291,3 +1292,35 @@ completed successfully using the permanent upload key; logs allocate versionCode
 at 2026-11-11 23:45:25 UTC. This satisfies the combined iteration's internal
 upload gate. Tester availability/installation, physical tracking/email behavior
 and production acceptance are not inferred. Production readiness stays unset.
+
+### M4 widget configuration repository contract prepared
+
+Prepared schema 6 device-local widget bindings through the serialized native
+repository. Each widget keeps picker mode or an active default job and a fresh
+configuration token. Archived/deleted defaults remain distinguishable from a
+chosen picker without retaining job names or private work. Widget IDs/bindings
+are device-local and must not be included in future portable backup/merge.
+
+Versioned configuration commands retain original outcomes. A guarded native
+widget-start command replays committed duplicate taps, fences replaced/deleted
+bindings, rejects stale global versions and cannot switch another running job.
+Widget removal is transactional and idempotent. Schema-5 migration preserves
+existing work/settings/boards/receipts and has a rollback case. Twenty-two
+API-24/35 native executions are prepared, pending Actions. The launcher activity,
+RemoteViews integration and physical configuration journey remain unfinished;
+this contract does not mark M4 widgets accepted.
+
+Platform references: Android widget configuration lifecycle
+https://developer.android.com/develop/ui/views/appwidgets/configuration and
+foreground-service widget interaction exemptions
+https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start.
+
+### Manual history UI accepted in Actions and merged
+
+Exact #32 head 6c0f4df passed 43123810250. Inspected XML confirms 242 native
+cases plus fourteen actual Android cases per API (24/35), zero failures/errors/
+skips. Eight final history captures match reviewed original-resolution views.
+Pending BusinessCommand controls survive eviction from lazy lists and retry
+their original captured intent; the unchanged lost-response/scroll regression
+passes. Merged as 863c9a0; main validation and its internal upload remain pending.
+M4 widget configuration and physical manual/recovery acceptance are still open.

@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-11. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-12. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. Android launch requires milestones 1–8;
 iOS and future service remain deferred.
 
@@ -22,9 +22,9 @@ iOS and future service remain deferred.
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
 | M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration passed #29; provider settings and backup contracts remain |
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
-| M3.3 Jobs/sites/boards/session corrections/queries | Native corrections and queries verified; history UI pending | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
-| M4.1 Manual tracker UI and history | Timer/business UI merged; correction/history UI prepared, CI pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30; #32 adds forms/deleted-entry history, awaiting Actions and visual review; full manual journey remains unaccepted |
-| M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
+| M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
+| M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
+| M4.2 Widgets/configuration/notification actions | Compact widget verified; native configuration contract prepared, launcher/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -1629,3 +1629,34 @@ light/dark themes. Text, timestamp precision, selected offsets, scrolling save
 actions and red deletion are legible. This is synthetic UI visual evidence, not
 a native history/device acceptance substitute. Current retry fix 386ce0d is
 being validated in 43123476933; exact-head native/device checks remain pending.
+
+### M4 per-widget configuration contract — source prepared
+
+Prepared native schema 6 device-local picker/default bindings and unique tokens,
+versioned/idempotent configuration commands and a guarded widget-start boundary.
+Replaced/removed bindings cannot start work; duplicate committed taps cannot
+restart after clock-out, and another running job is never silently switched.
+Archived/deleted defaults remain explicitly unavailable instead of changing to a
+picker silently. Bindings retain only an opaque job ID, with no job name/history,
+and are excluded from the future portable backup contract.
+
+Eleven API-24/35 native cases (twenty-two executions) cover independent persistent
+widgets, response replay/stale state/invalid drafts, native clock and widget
+origin without Flutter/GPS, archive/restore/purge, duplicate callbacks, competing
+widgets, ID reuse, schema-5 preservation and migration rollback. New-schema
+expectations are updated; all checks await Actions. Launcher configuration,
+RemoteViews/start integration, reconfiguration/removal wiring and actual launcher
+evidence remain unfinished. No local builds/tests ran or M4 acceptance claimed.
+
+### Manual history exact-head acceptance and merge
+
+PR #32 head 6c0f4df passed full Actions 43123810250. Inspected run-specific XML
+contains 242 native cases and fourteen actual cases on each Android API (24/35),
+zero failures/errors/skips. Eight exact-head history PNGs match the reviewed
+light/dark list/editor/offsets/change views. The unchanged scroll-away retry
+regression passes with pending-command keep-alive. No VM tests/builds ran.
+
+Merged #32 as 863c9a0ce8f508886df7b3b2955d52904b0e8b85. Its main checks and
+subsequent automatic internal delivery are separate and still pending. Full M4
+widget configuration, physical launcher/history/recovery acceptance and the
+remaining provider/backup/launch gates are not complete.

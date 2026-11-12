@@ -123,6 +123,42 @@ class TimerRepository internal constructor(context: Context,
             zone.getOffset(now) / 1000, origin))
     }
 
+    internal data class WidgetSnapshot(val state: Snapshot, val configuration: WidgetConfigurationStore.Configuration) {
+        val defaultJob: Job? get() = configuration.jobId?.let { id -> state.jobs.firstOrNull { it.id == id } }
+        val missingDefault: Boolean get() = configuration.jobId != null && defaultJob == null
+    }
+    @Synchronized
+    internal fun widgetSnapshot(widgetId: Int): WidgetSnapshot = WidgetSnapshot(readSnapshot(helper.readableDatabase),
+        WidgetConfigurationStore.read(helper.readableDatabase, widgetId))
+    @Synchronized
+    internal fun saveWidgetConfiguration(id: String, version: Long, widgetId: Int, jobId: String?): Outcome =
+        boardChange(id, version, "WIDGET_CONFIGURATION", listOf(widgetId, jobId)) { WidgetConfigurationStore.save(it, widgetId, jobId) }
+    @Synchronized
+    internal fun removeWidgetConfigurations(widgetIds: List<Int>) {
+        val db = helper.writableDatabase
+        var changed = false
+        db.beginTransaction()
+        try {
+            changed = WidgetConfigurationStore.remove(db, widgetIds)
+            if (changed) db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        if (changed) publishVersion(readSnapshot(db).version)
+    }
+    /** Re-check the binding inside the same serialized boundary as timer writes. */
+    @Synchronized
+    internal fun startConfiguredWidget(widgetId: Int, version: Long, token: String, jobId: String): Outcome {
+        require(widgetId > 0 && version >= 0 && token.isNotBlank() && token.length <= 128 && jobId.isNotBlank()) { "INVALID_WIDGET" }
+        val id = "widget-start-$widgetId-$token-$version"
+        val previous = helper.readableDatabase.rawQuery("SELECT id FROM commands WHERE id=?", arrayOf(id)).use { it.moveToFirst() }
+        // A duplicate callback still returns its durable original outcome after
+        // configuration changes or clock-out; it must never start new work.
+        if (previous) return executeFromSurface(id, version, Action.START, jobId, Origin.WIDGET)
+        val binding = WidgetConfigurationStore.read(helper.readableDatabase, widgetId)
+        if (binding.token != token || binding.jobId != jobId) return Outcome(readSnapshot(helper.readableDatabase).version, "WIDGET_CONFIGURATION_CHANGED")
+        return executeFromSurface(id, version, Action.START, jobId, Origin.WIDGET)
+    }
+
     /** Accept observations only for the session that requested them, never idle history. */
     @Synchronized
     fun recordLocation(point: LocationPoint): SampleResult {
@@ -765,7 +801,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 5) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 6) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -779,6 +815,7 @@ class TimerRepository internal constructor(context: Context,
             createDepartureTable(db)
             GeofenceStore.createTables(db)
             BusinessSchema.install(db, now())
+            WidgetConfigurationStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -789,11 +826,12 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..4 && newVersion == 5) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..5 && newVersion == 6) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
+            if (oldVersion < 6) WidgetConfigurationStore.install(db)
         }
     }
 
