@@ -1634,3 +1634,20 @@ Debug builds now forward bounded Flutter error type/stack only to local Android
 logcat for CI diagnosis, preserving normal presentation and excluding field/widget
 dumps; release error handling is unchanged. Apply Actions-generated formatting,
 finish removed-widget setup as cancelled, and revalidate the full source.
+
+### 2026-11-12 widget adapter diagnosis
+
+PR #38 head 68a8c7f / 43192676395 reproduced empty binding on API 24, resize 3.
+Native factory diagnostics show all 30 rows loaded and no disposal before failure;
+the host never attaches its adapter. Thus factory clearing was not the observed
+cause. Android 7 RemoteViewsAdapter's pre-connection notify branch updates metadata
+without calling the connection callback that attaches the adapter (AOSP source:
+https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/android-7.0.0_r1/core/java/android/widget/RemoteViewsAdapter.java).
+That path matches the captured adapter=null/count=0 and loaded factory.
+
+Replace immediate collection notifications with an adapter URI containing the
+committed version, widget configuration token and local calendar day. Changed work
+and date rollover get fresh data without racing initial attachment. Keep atomic
+factory snapshots, three resize cycles and exact scroll/tap checks; add a live
+committed-title edit assertion and native revision/day/DST identity regression.
+The revised head needs full Actions proof before merge; internal upload stays held.

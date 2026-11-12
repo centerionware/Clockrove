@@ -100,6 +100,13 @@ class WidgetHostDeviceTest {
                     until("Compact Combined must remove the collection on resize $cycle") { view!!.findViewById<View>(R.id.widget_tasks) == null }
                 }
             }
+            assertNull(repository.saveCard("widget-live-edit", repository.snapshot().version,
+                BoardStore.Draft("widget-device-card-00", job, column.id, "Synthetic revised due task", dueDate = date, currency = board.currency)).conflict)
+            TimerWidget.refreshAll(app)
+            until("A committed task edit must replace the remote adapter data without another resize") {
+                val list = view!!.findViewById<ListView>(R.id.widget_tasks)
+                list?.count == 30 && list.getChildAt(0)?.findViewById<android.widget.TextView>(R.id.widget_task_title)?.text == "Synthetic revised due task"
+            }
             var nextScrollRequest = 0L
             until("Task collection must load and scroll to its final row") {
                 val list = view!!.findViewById<ListView>(R.id.widget_tasks)
