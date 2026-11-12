@@ -32,6 +32,18 @@ class BusinessBridgeTest {
         assertEquals("9007199254740993", task["priceMinor"]); assertEquals(outcome.version, snapshot["version"])
         assertEquals(3, (snapshot["columns"] as List<*>).size)
     }
+    @Test fun exactQuantitiesRoundTripAndMalformedInputsCannotReachWriter() {
+        val before = repository.boardSnapshot(job)
+        for (bad in listOf<Any?>(null, 260000L, 26.0, "0", "-1", "1.5", "0260000", "9223372036854775808")) {
+            try { change("saveCard", card("500") + ("quantityUnits" to bad)); fail("Malformed quantity accepted") } catch (_: IllegalArgumentException) {}
+        }
+        assertEquals(before, repository.boardSnapshot(job))
+        assertNull((change("saveCard", card("500") + ("quantityUnits" to "260000")) as TimerRepository.Outcome).conflict)
+        val board = dispatch.call(MethodCall("board", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals("260000", ((board["cards"] as List<*>).single() as Map<*, *>)["quantityUnits"])
+        val templates = dispatch.call(MethodCall("templates", mapOf("search" to ""))) as List<*>
+        assertEquals("260000", (templates.single() as Map<*, *>)["quantityUnits"])
+    }
     @Test fun floatingVersionsAndNoncanonicalMoneyCannotReachTheWriter() {
         for (price in listOf<Any>(12.0, 12L, "1.20", "-1", "01", "9223372036854775808")) {
             try { change("saveCard", card(price)); fail("Invalid money accepted") } catch (_: IllegalArgumentException) {}

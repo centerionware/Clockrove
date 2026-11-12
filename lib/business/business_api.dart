@@ -50,24 +50,34 @@ String money(String? minor, int digits) {
 String parseTaskQuantity(String input) {
   final value = input.trim();
   if (!RegExp(r'^\d+(\.\d{1,4})?$').hasMatch(value)) {
-    throw const FormatException('Enter a quantity greater than 0, with up to 4 decimal places.');
+    throw const FormatException(
+      'Enter a quantity greater than 0, with up to 4 decimal places.',
+    );
   }
   final parts = value.split('.');
-  final units = BigInt.parse(parts[0]) * BigInt.from(10000) +
+  final units =
+      BigInt.parse(parts[0]) * BigInt.from(10000) +
       BigInt.parse((parts.length == 2 ? parts[1] : '').padRight(4, '0'));
   if (units <= BigInt.zero || units > BigInt.parse('9223372036854775807')) {
-    throw const FormatException('Quantity must be greater than 0 and within the supported range.');
+    throw const FormatException(
+      'Quantity must be greater than 0 and within the supported range.',
+    );
   }
   return units.toString();
 }
 
-String taskQuantity(String units) => money(units, 4)
-    .replaceFirst(RegExp(r'0+$'), '')
-    .replaceFirst(RegExp(r'\.$'), '');
+String taskQuantity(String units) => money(
+  units,
+  4,
+).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
 
 String? taskAmount(String? unitPriceMinor, String quantityUnits) =>
-    unitPriceMinor == null ? null :
-      ((BigInt.parse(unitPriceMinor) * BigInt.parse(quantityUnits) + BigInt.from(5000)) ~/ BigInt.from(10000)).toString();
+    unitPriceMinor == null
+    ? null
+    : ((BigInt.parse(unitPriceMinor) * BigInt.parse(quantityUnits) +
+                  BigInt.from(5000)) ~/
+              BigInt.from(10000))
+          .toString();
 
 class BoardColumn {
   const BoardColumn(this.id, this.name, this.completed);

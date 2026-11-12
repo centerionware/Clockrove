@@ -2161,3 +2161,12 @@ lines freeze quantity and unit price; later edits keep the original source claim
 Template quantities remain editable defaults after source deletion. Source and
 regressions are prepared; renewed GitHub Actions validation remains required.
 No VM build, test, formatter or rendering ran.
+
+94fd7c7 / 43169835589 passed Flutter behavior, Android build, native, actual
+API-24/35 and document-viewer gates; only its final formatter gate failed. Its
+exported patch was already included in the quantity commit. Quantity head
+d52e35f / 43171494802 passed analysis and Flutter behavior; native/device gates
+are still pending. Applied its CI-produced formatting correction; added strict
+quantity transport, frozen-v6 default-one migration, save-payload and light/dark
+editor capture coverage. Updated the old task-invoice basis assertion for unit
+pricing. These additional changes require their own Actions run.

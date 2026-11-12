@@ -65,6 +65,21 @@ class InvoiceCoverageMigrationTest {
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }
     }
+    @Test fun releasedTasksAndTemplatesKeepTheirSinglePriceAndDefaultToOneUnit() {
+        inspect { db ->
+            db.execSQL("INSERT INTO kanban_columns VALUES('done','legacy-job','Done',0,1)")
+            db.execSQL("INSERT INTO task_templates VALUES('template','Synthetic tile','',500,'USD','legacy-job','tile')")
+            db.execSQL("INSERT INTO kanban_cards(id,job_id,column_id,title,position,completed_ms,price_minor,currency,template_id) VALUES('tile','legacy-job','done','Synthetic tile',0,1793494800000,500,'USD','template')")
+        }
+        val repo = open()
+        val card = repo.boardSnapshot("legacy-job").board.cards.single()
+        assertEquals(500L, card.priceMinor); assertEquals(10000L, card.quantityUnits)
+        val template = repo.taskTemplates().single()
+        assertEquals(500L, template.priceMinor); assertEquals(10000L, template.quantityUnits)
+        val task = repo.report(ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf("legacy-job"))).report.tasks.single()
+        assertEquals(10000L, task.quantityUnits); assertEquals(500L, task.priceMinor)
+        assertEquals(originalPayload, repo.invoice("legacy-invoice").payload)
+    }
     @Test fun ambiguousLegacyCoverageBlocksNewBillingWithoutInventingClaimsOrNumbers() {
         val repo = open()
         val result = repo.prepareInvoice("new-invoice", 42, "new-invoice", ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf("legacy-job")))

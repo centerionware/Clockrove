@@ -63,7 +63,7 @@ class InvoiceSnapshotTest {
         assertNull(prepare("free").conflict)
         val data = InvoiceStore.Snapshot.decode(repository.invoice("invoice").payload)
         assertEquals("INV-1000", data.number); assertEquals(InvoiceStore.amount(java.math.BigInteger.ZERO, data.digits), data.total)
-        assertEquals(1, data.lines.size); assertTrue(data.basis.contains("fixed prices"))
+        assertEquals(1, data.lines.size); assertTrue(data.basis.contains("quantity × unit price"))
     }
     @Test fun invoiceIdReuseIsRejectedAndConflictingGenerationIsRollbackSafe() {
         assertNull(prepare().conflict); assertEquals("INVOICE_ID_EXISTS", prepare("reused").conflict)
