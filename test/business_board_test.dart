@@ -282,7 +282,10 @@ void main() {
       find.widgetWithText(TextFormField, 'Unit price (USD)'),
       '5.00',
     );
-    await tester.enterText(find.widgetWithText(TextFormField, 'Quantity'), '26');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantity'),
+      '26',
+    );
     await tester.ensureVisible(find.text('Save task'));
     await tester.tap(find.text('Save task'));
     await tester.pumpAndSettle();
@@ -390,8 +393,11 @@ void main() {
         find.widgetWithText(TextFormField, 'Unit price (USD)'),
         '5.00',
       );
-      await tester.enterText(find.widgetWithText(TextFormField, 'Quantity'), '26');
-      await tester.testTextInput.hide();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Quantity'),
+        '26',
+      );
+      tester.testTextInput.hide();
       await tester.pumpAndSettle();
       expect(find.text('Task total: USD 130.00'), findsOneWidget);
       await tester.runAsync(

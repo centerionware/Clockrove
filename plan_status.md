@@ -2170,3 +2170,7 @@ are still pending. Applied its CI-produced formatting correction; added strict
 quantity transport, frozen-v6 default-one migration, save-payload and light/dark
 editor capture coverage. Updated the old task-invoice basis assertion for unit
 pricing. These additional changes require their own Actions run.
+
+4477887 / 43172132517 stopped at analysis: the new capture used await on the
+synchronous test keyboard hide call. Removed that await and applied the exported
+CI formatter patch. No quantity native/device success is claimed from this run.
