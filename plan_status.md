@@ -2592,3 +2592,21 @@ today/timezone. Draft edits retain their issued number and prior acceptance;
 expiry projections do not mutate history. Added pagination, retained historical
 read, immutable number, changed-retry identity and exhausted-sequence cases.
 Actions proof for this increment remains pending.
+
+### Quote foundation native evidence and main delivery blocker
+
+First quote storage head 1213cc5 / Validate 43230233087 passed formatting,
+analysis, Flutter behavior, Android build and native tests. Downloaded artifact
+13950276507: 44 XML files, 495 tests, zero failures/errors/skips. This includes
+12 quote-store and four frozen-v8 migration executions across API 24/35.
+Actual-device gates remain live, and the later strict bridge/paged-history head
+3962104 still requires its own complete run 43231015416. Superseded queued
+bridge-only run 43230575471 was cancelled after newer source queued validation;
+the running first foundation run was retained for its evidence.
+
+Main 43229082487 is terminal failure at initial API-24 payment amount lookup.
+Actual failure.png/accessibility.txt show the form open but scrolled past the
+amount during incoming-route semantics. Focused test-only #40 / 0c9175c waits for
+the real payment form and amount before scrolling; Validate 43231269977 is live.
+Play 43230903575 was skipped because main validation failed. New internal delivery
+is not accepted; last proven acceptance remains internal.25.1 / 216642056.

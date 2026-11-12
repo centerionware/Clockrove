@@ -1986,3 +1986,12 @@ fixture covers upgrade/rollback independently from the current installer.
 Native tests are source only until Actions passes. No quote UI, PDF, email,
 conversion or full milestone acceptance is claimed. Implement these dependent
 parts next, preserving the same serialized command and source-coverage boundary.
+
+### First quote storage validation evidence
+
+1213cc5 / 43230233087 passed Android build and 495 native cases (44 downloaded
+XML files; zero failures/errors/skips), including the quote storage and frozen-v8
+upgrade/rollback cases. Later bridge and paged-history source 3962104 requires
+43231015416; actual-device/full milestone gates remain pending. Main financial
+validation failed at a UI-test transition; focused #40 / 43231269977 runs the
+real-form wait correction. Automatic delivery was skipped, not published.
