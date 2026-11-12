@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, quantity, tax and payment lifecycle | Legacy editor behavior checked; quantities under Actions; real financial UI journey prepared; draft #35 | 94fd7c7 / 43169835589 passed behavior/native/device/viewer gates; formatting-only failure patched. Quantity validation 43172649874 remains live. Independent actual financial journey must pass on both APIs before merge; then payments, receipts, CC and credit-preserving void/replacement |
+| Next after widget merge: invoice integrity, quantity, tax and payment lifecycle | Legacy editor behavior checked; quantities under Actions; real financial UI journey prepared; draft #35 | 94fd7c7 / 43169835589 passed behavior/native/device/viewer gates; formatting-only failure patched. Quantity 43172649874 passed all gates (365 native / 40 actual Android); financial journey run 43174102042 is live. Independent actual financial journey must pass on both APIs before merge; then payments, receipts, CC and credit-preserving void/replacement |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2194,3 +2194,25 @@ Quantity 26 and calculated USD 130.00 in light/dark themes. Actual device/PDF ga
 remain live. Extended the template regression to preserve quantity/unit price after
 aged job purge and copy them to a new job without completion history. No merge,
 new internal delivery or physical financial acceptance is claimed.
+
+Quantity b4e547d / 43172649874 completed successfully. Downloaded and inspected all
+35 native XML files: 365 tests, zero failures/errors/skips; each actual Android XML
+contains 20 cases with zero failures/errors/skips (40 total). Formatting, analysis,
+Flutter behavior, debug build, actual-document viewer and release-policy gates all
+passed. Light/dark single-price quantity editor captures reviewed above. This run
+does not include the new actual financial journey or extended purge/template case.
+Latest pushed head 6c0222d is live in 43174102042; superseded queued 50662d2 run
+43173354558 was cancelled before execution. Keep this financial slice unmerged
+until its dedicated journey is proven on both APIs.
+
+Prepared additional actual tax-form coverage in the same financial journey: main
+Settings enters/saves 7.5% through the real UI instead of seeding the native tax
+value; job Settings rejects 101 without a write, saves explicit zero, restores
+default inheritance, and verifies the issued invoice stays frozen. Added both
+tax-form captures to the required artifact list. Source only until Actions runs.
+
+Clarified the next payment milestone's precision contract: quantity-extended totals
+can exceed 64-bit minor units, so payments/credits/balances must retain arbitrary
+precision and canonical string storage/transport rather than narrowing issued
+amounts. Required conservation cases include large partial payments and transferred
+credits. No payment implementation or payment acceptance is claimed.

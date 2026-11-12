@@ -38,7 +38,9 @@ class InvoiceBillingDeviceTest {
             if (predicate()) return
             SystemClock.sleep(100)
         }
-        diagnostic(); throw AssertionError(description)
+        val failure = AssertionError(description)
+        try { diagnostic() } catch (diagnosticFailure: Throwable) { failure.addSuppressed(diagnosticFailure) }
+        throw failure
     }
     private fun find(label: String, editable: Boolean = false): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
@@ -47,7 +49,8 @@ class InvoiceBillingDeviceTest {
             fun matches(value: CharSequence?) = value?.toString()?.let {
                 if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
             } == true
-            if (node.isVisibleToUser && (!editable || node.isEditable) && (matches(node.text) || matches(node.contentDescription))) return node
+            val hintMatches = editable && android.os.Build.VERSION.SDK_INT >= 26 && matches(node.hintText)
+            if (node.isVisibleToUser && (!editable || node.isEditable) && (matches(node.text) || matches(node.contentDescription) || hintMatches)) return node
             return null
         }
         return automation.rootInActiveWindow?.let(::visit)
@@ -75,6 +78,16 @@ class InvoiceBillingDeviceTest {
             SystemClock.sleep(150)
         }
         waitFor(label, editable)
+    }
+    private fun scrollToStart() {
+        repeat(12) {
+            fun scroll(node: AccessibilityNodeInfo): Boolean {
+                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
+                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+            }
+            if (automation.rootInActiveWindow?.let(::scroll) != true) return
+            SystemClock.sleep(120)
+        }
     }
     private fun enter(label: String, value: String) {
         reveal(label, true)
@@ -149,10 +162,12 @@ class InvoiceBillingDeviceTest {
         val repository = TimerRepository.get(app)
         assertTrue(repository.legacyInvoiceContext("legacy-invoice").context.legacy)
         assertEquals(10000L, repository.boardSnapshot(job).board.cards.first().quantityUnits)
-        assertNull(repository.saveBusinessSettings("financial-tax", repository.snapshot().version,
-            repository.businessSnapshot().settings.copy(defaultTaxUnits = 75000)).conflict)
         try {
-            launch(); click("App settings and customers"); click("Invoices"); click("INV-1000")
+            launch(); click("App settings and customers"); click("Settings"); waitFor("Billing defaults")
+            enter("Default tax (%)", "7.5"); capture("global-tax-settings")
+            reveal("Save settings"); click("Save settings")
+            until("Actual main Settings did not save tax") { repository.businessSnapshot().settings.defaultTaxUnits == 75000 }
+            waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
             waitFor("Review billed work")
             reveal("Previously installed tile"); click("Previously installed tile")
             until("Covered task checkbox did not become checked") { find("Previously installed tile")?.isChecked == true }
@@ -193,6 +208,26 @@ class InvoiceBillingDeviceTest {
             capture("already-billed")
             assertEquals(1002L, sequence()); assertEquals(2, repository.invoices(job).invoices.size)
 
+            closeActivities(); launch(); reveal(jobName); click(jobName); waitFor("Task board")
+            click("Job settings"); waitFor("Job settings"); reveal("Use default tax rate"); click("Use default tax rate")
+            enter("Job tax (%)", "101")
+            val beforeInvalidTax = repository.jobDetail(job)
+            reveal("Save job settings"); click("Save job settings")
+            scrollToStart(); reveal("Tax percentage must be between 0 and 100.")
+            assertEquals(beforeInvalidTax, repository.jobDetail(job))
+            scrollToStart(); reveal("Job tax (%)", true)
+            assertTrue("Invalid tax draft was lost", waitFor("Job tax (%)", true).text?.toString()?.contains("101") == true)
+            enter("Job tax (%)", "0"); capture("job-tax-override")
+            reveal("Save job settings"); click("Save job settings")
+            until("Explicit zero tax override did not persist") { repository.jobDetail(job).job.settings.taxUnits == 0 }
+            assertEquals(0, repository.jobDetail(job).job.effectiveTaxUnits)
+            assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
+            waitFor("Task board"); click("Job settings"); waitFor("Job settings")
+            reveal("Use default tax rate"); click("Use default tax rate")
+            reveal("Save job settings"); click("Save job settings")
+            until("Default tax inheritance was not restored") { repository.jobDetail(job).job.settings.taxUnits == null }
+            assertEquals(75000, repository.jobDetail(job).job.effectiveTaxUnits)
+            assertEquals(frozen, InvoiceStore.Snapshot.decode(repository.invoice(issued.id).payload))
             closeActivities()
             assertNull(repository.archiveJob("financial-archive", repository.snapshot().version, job).conflict)
             // Synthetic archive age only; production retention is still enforced by deleteJob.
@@ -205,7 +240,8 @@ class InvoiceBillingDeviceTest {
             capture("retained-invoice")
             assertEquals(frozen, InvoiceStore.Snapshot.decode(repository.invoice(issued.id).payload))
         } catch (failure: Throwable) {
-            diagnostic(); throw failure
+            try { diagnostic() } catch (diagnosticFailure: Throwable) { failure.addSuppressed(diagnosticFailure) }
+            throw failure
         } finally { closeActivities() }
     }
 }

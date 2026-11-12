@@ -57,10 +57,11 @@ plan for quotes, task comments/supplies/costs and main-menu business reports.
 Draft #35 legacy editor head 94fd7c7 passed behavior/build/native/API-24/35 and
 actual-document viewer gates in 43169835589; only formatting failed, and the exact
 CI correction is applied. Owner priority quantities reuse the single existing
-price as Unit price and default to 1. Quantity head b4e547d is under validation
-in 43172649874. An independent actual Flutter-to-native legacy review -> quantity
-save -> unbilled tax invoice -> repeat exclusion -> retained PDF journey is now
-prepared for both Android APIs, but has not run yet. Do not merge this slice from
+price as Unit price and default to 1. Quantity head b4e547d passed full
+43172649874: 365 native and 40 actual Android cases without failures/errors/skips,
+plus actual-document viewer checks. An independent actual Flutter-to-native legacy
+review -> quantity save -> unbilled tax invoice -> repeat exclusion -> retained PDF
+journey is now in 6c0222d / live 43174102042, but has not run yet. Do not merge this slice from
 native/storage or synthetic presentation evidence alone.
 
 ## 2. Product decisions

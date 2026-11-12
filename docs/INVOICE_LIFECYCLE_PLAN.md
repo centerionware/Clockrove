@@ -130,6 +130,15 @@ and optional method/reference/note. Default date to today. Allow several partial
 payments and a final payment. Show original total, each payment, total paid and
 remaining balance; currency changes in main Settings must not reinterpret them.
 
+Quantity × unit price can produce an invoice total larger than a signed 64-bit
+minor-unit integer. Keep payment, allocation, credit and remaining-balance math in
+arbitrary-precision integers too. Transport/store these amounts as canonical
+minor-unit decimal strings with native validation and the document's frozen
+currency precision; never narrow an issued total to SQLite INTEGER, Long, double
+or a JavaScript number. Bound user input to supported document amounts and reject
+malformed values without changing the ledger. Include large-total partial-payment,
+rounding, replacement-credit and tax-allocation conservation regressions.
+
 Use native serialized/versioned commands, durable IDs and idempotent receipts.
 Prevent duplicate recording and stale/concurrent overpayment. For the first
 version, payment cannot exceed the remaining balance. Unknown responses retain
