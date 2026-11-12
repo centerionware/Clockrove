@@ -79,10 +79,23 @@ class WidgetHostDeviceTest {
             manager.updateAppWidgetOptions(id, options(300, 340))
             TimerWidget.refreshAll(app)
             until("Expanded Combined must bind all 30 tasks through RemoteViewsService") { view!!.findViewById<ListView>(R.id.widget_tasks)?.count == 30 }
-            instrumentation.runOnMainSync { view!!.findViewById<ListView>(R.id.widget_tasks).setSelection(29) }
+            var nextScrollRequest = 0L
             until("Task collection must load and scroll to its final row") {
                 val list = view!!.findViewById<ListView>(R.id.widget_tasks)
-                list.lastVisiblePosition == 29 && list.getChildAt(list.childCount - 1)?.findViewById<android.widget.TextView>(R.id.widget_task_title)?.text == "Synthetic due task 29"
+                val loaded = list != null && list.lastVisiblePosition == 29 &&
+                    list.getChildAt(list.childCount - 1)?.findViewById<android.widget.TextView>(R.id.widget_task_title)?.text == "Synthetic due task 29"
+                // A RemoteViews adapter can expose its count before resize layout
+                // and asynchronous reapply finish. A selection sent then can be
+                // discarded. Drive the current, laid-out collection until its
+                // actual final row is rendered; retain the same bounded deadline.
+                val now = SystemClock.uptimeMillis()
+                if (!loaded && list != null && list.count == 30 && list.height > 0 &&
+                    !list.isLayoutRequested && now >= nextScrollRequest) {
+                    android.util.Log.i("ClockroveWidgetTest", "Scroll final row: first=${list.firstVisiblePosition}, last=${list.lastVisiblePosition}, children=${list.childCount}, height=${list.height}")
+                    list.setSelection(29)
+                    nextScrollRequest = now + 500
+                }
+                loaded
             }
             val file = File(app.getExternalFilesDir(null), "widget-combined.png")
             instrumentation.runOnMainSync {
