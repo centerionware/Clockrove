@@ -33,10 +33,12 @@ class WidgetConfigurationActivity : MainActivity() {
             api.setMethodCallHandler { call, result ->
                 try {
                     val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
-                    require(TimerWidget.owned(this, widgetId))
+                    require(widgetId > 0)
+                    val owned = TimerWidget.owned(this, widgetId)
                     val repository = TimerRepository.get(this)
                     when (call.method) {
                         "configuration" -> {
+                            require(owned)
                             val snapshot = repository.widgetSnapshot(widgetId)
                             val taskOnly = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)?.provider?.className == TaskListWidget::class.java.name
                             result.success(mapOf("widgetId" to widgetId, "jobId" to snapshot.configuration.jobId,
@@ -48,12 +50,15 @@ class WidgetConfigurationActivity : MainActivity() {
                             val rawVersion = args["version"]; require(rawVersion is Int || rawVersion is Long)
                             val version = (rawVersion as Number).toLong(); require(version >= 0)
                             val job = args["jobId"]; require(job == null || job is String)
-                            val outcome = repository.saveWidgetConfiguration(id, version, widgetId, job as String?)
+                            val outcome = repository.saveWidgetConfiguration(id, version, widgetId, job as String?, available = owned)
                             TimerWidget.refreshAll(this)
                             result.success(mapOf("version" to outcome.version, "conflict" to outcome.conflict))
                         }
-                        "finish" -> runOnUiThread {
-                            setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)); result.success(null); finish()
+                        "finish" -> {
+                            require(owned)
+                            runOnUiThread {
+                                setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)); result.success(null); finish()
+                            }
                         }
                         else -> result.notImplemented()
                     }

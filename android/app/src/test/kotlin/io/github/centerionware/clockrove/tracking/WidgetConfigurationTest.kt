@@ -159,6 +159,23 @@ class WidgetConfigurationTest {
         try { repository.removeWidgetConfigurations(listOf(2, 0)); fail("Malformed removal accepted") } catch (_: IllegalArgumentException) {}
         assertEquals(other, repository.widgetSnapshot(2).configuration)
     }
+    @Test fun platformRemovalResolvesSaveRetriesWithoutResurrectingOrReconfiguringReusedIds() {
+        val captured = version
+        val committed = repository.saveWidgetConfiguration("lost-save", captured, 1, job)
+        assertNull(committed.conflict)
+        repository.removeWidgetConfigurations(listOf(1))
+        assertEquals(committed, repository.saveWidgetConfiguration("lost-save", captured, 1, job, available = false))
+        assertNull(repository.widgetSnapshot(1).configuration.token)
+        val before = version
+        val unavailable = repository.saveWidgetConfiguration("removed-save", before, 2, job, available = false)
+        assertEquals("WIDGET_UNAVAILABLE", unavailable.conflict)
+        assertEquals(before, version)
+        assertNull(repository.widgetSnapshot(2).configuration.token)
+        assertNull(save(2, null).conflict)
+        val replacement = repository.widgetSnapshot(2).configuration
+        assertEquals(unavailable, repository.saveWidgetConfiguration("removed-save", before, 2, job, available = true))
+        assertEquals(replacement, repository.widgetSnapshot(2).configuration)
+    }
     @Test fun versionFiveUpgradePreservesWorkReceiptsSettingsAndBoardWithoutCreatingBindings() {
         val captured = version
         assertNull(repository.execute(TimerRepository.Command("old-start", captured, TimerRepository.Action.START,

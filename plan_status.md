@@ -1898,3 +1898,21 @@ the actual clock-out broadcast. Also publish final bindings before creating host
 views so the test never clicks a cached pre-configuration version. Full 20-case
 checks on both APIs remain pending. Launcher descriptions now distinguish all
 three widget choices. No test/build ran on the VM and no widget release is claimed.
+
+### Actual API-24 surface journey passed; API-35 reapply and pending-form bugs fixed in source
+
+bea20be / 43150196358 passed all 20 actual API-24 cases, including real native
+clock-in/out with denied location, WIDGET origin, no samples, and separate task
+job context. API 35 caught a real RemoteViews reapply bug: addView appended timer
+rows instead of replacing them. Clear the container before adding its one timer;
+repeat real updates and assert exactly one row.
+
+API-35 setup also exposed a commit-version-before-response race: timer snapshot
+reload replaced the form, disposing its pending BusinessCommand before the save
+reply and leaving controls locked. Keep prior data during reload/read failure,
+key the pending command, and add deterministic delayed-read/reply Flutter cases.
+Move platform widget-availability checks inside the native save command after
+receipt replay so widget removal resolves an original save without resurrecting
+bindings; fresh unavailable writes return a known conflict. Added native retry/
+removal checks. Preserve per-test screenshots and require actual board window
+focus; the column assertion stays required. New source awaits Actions.

@@ -103,6 +103,8 @@ for clockrove_api in 24 35; do
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-board.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-board.png" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-failure.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-failure.png" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-timer-running.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-timer-running.png" || true
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures/" || true
   [[ "$clockrove_instrumentation_failed" == false ]]
   # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"

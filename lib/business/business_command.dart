@@ -74,6 +74,7 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
     'INVALID_TIMEZONE' =>
       'Check the timezone and choose the intended UTC offset.',
+    'WIDGET_UNAVAILABLE' => 'This widget was removed. Close setup and add a new widget from your launcher.',
     'SESSION_UNAVAILABLE' => 'This work entry was removed. Your draft is kept.',
     'STOP_SESSION_BEFORE_EDIT' => 'Clock out before changing this work entry.',
     'CURRENCY_MISMATCH' =>

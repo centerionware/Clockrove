@@ -23,6 +23,7 @@ import java.io.File
 /** Actual framework host, remote service, scrolling and PendingIntent handoff. Not a launcher mock. */
 @RunWith(AndroidJUnit4::class)
 class WidgetHostDeviceTest {
+    @get:org.junit.Rule val caseName = org.junit.rules.TestName()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext
     private fun until(description: String, predicate: () -> Boolean) {
@@ -104,12 +105,14 @@ class WidgetHostDeviceTest {
                 assertEquals(job, boardActivity.intent.getStringExtra("jobId"))
                 assertEquals("widget-device-card-29", boardActivity.intent.getStringExtra("taskId"))
                 assertTrue(boardActivity.getInitialRoute().contains(job))
+                until("Task tap must focus the actual board window") { boardActivity.hasWindowFocus() }
                 clickText("Synthetic widget board", false)
                 clickText("Task board", false)
                 clickText("0 of 30 tasks complete", false)
-                instrumentation.uiAutomation.waitForIdle(300, 3000)
-                captureSetup("board")
                 clickText("To do", false)
+                instrumentation.uiAutomation.waitForIdle(300, 3000)
+                SystemClock.sleep(300)
+                captureSetup("board")
             } finally { instrumentation.runOnMainSync { opened?.finish() }; instrumentation.removeMonitor(monitor) }
             assertNull("Task tap must never start a timer", repository.snapshot().running)
         } finally {
@@ -141,7 +144,8 @@ class WidgetHostDeviceTest {
     }
     private fun captureSetup(kind: String = "setup") {
         instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-            File(app.getExternalFilesDir(null), "widget-$kind.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            val directory = File(app.getExternalFilesDir(null), "widget-captures").apply { mkdirs() }
+            File(directory, "${caseName.methodName}-$kind.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
     }
@@ -245,7 +249,7 @@ class WidgetHostDeviceTest {
                 container.addView(taskView, FrameLayout.LayoutParams((300 * density).toInt(), (340 * density).toInt()).apply { topMargin = (72 * density).toInt() })
                 activity.setContentView(container)
             }
-            TimerWidget.refreshAll(app)
+            repeat(3) { TimerWidget.refreshAll(app) }
             until("Configured clock-in control must be rendered") {
                 view!!.findViewById<android.widget.ImageButton>(R.id.widget_action)?.contentDescription == "Clock in to Synthetic native timer"
             }
@@ -263,6 +267,10 @@ class WidgetHostDeviceTest {
                 taskView!!.findViewById<android.widget.TextView>(R.id.widget_job)?.text == "Synthetic native timer" &&
                     taskView!!.findViewById<android.widget.TextView>(R.id.widget_tasks_title)?.text == "Due soon · Synthetic task scope"
             }
+            instrumentation.runOnMainSync {
+                assertEquals("Repeated updates must keep exactly one timer row", 1,
+                    taskView!!.findViewById<android.widget.LinearLayout>(R.id.widget_timer_container).childCount)
+            }
             until("Clock-in must refresh the widget to clock-out") {
                 view!!.findViewById<android.widget.ImageButton>(R.id.widget_action)?.contentDescription == app.getString(R.string.widget_stop)
             }
@@ -275,6 +283,10 @@ class WidgetHostDeviceTest {
             SystemClock.sleep(10)
             instrumentation.runOnMainSync { assertTrue(view!!.findViewById<View>(R.id.widget_action).performClick()) }
             until("Actual widget broadcast must clock out without Flutter or GPS") { repository.snapshot().running == null }
+            until("Clock-out must refresh both widget defaults without appending rows") {
+                taskView!!.findViewById<android.widget.TextView>(R.id.widget_job)?.text == "Synthetic task scope" &&
+                    taskView!!.findViewById<android.widget.LinearLayout>(R.id.widget_timer_container)?.childCount == 1
+            }
             val entry = repository.sessionHistory(job).page.entries.single()
             assertEquals("WIDGET", entry.origin)
             assertTrue((entry.end ?: entry.start) > entry.start)

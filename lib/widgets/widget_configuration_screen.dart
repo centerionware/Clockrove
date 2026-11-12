@@ -60,6 +60,8 @@ class _WidgetConfigurationScreenState
             ),
           ),
           data: (config) => state.when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, _) => Center(
               child: FilledButton(
@@ -78,6 +80,10 @@ class _WidgetConfigurationScreenState
               return ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
+                  if (state.hasError) ...[
+                    const Text('Could not refresh jobs. Your selection and current operation are kept.'),
+                    TextButton(onPressed: () => ref.invalidate(timerSnapshotProvider), child: const Text('Retry jobs')),
+                  ],
                   Text(
                     tasksOnly ? 'Choose which jobs appear in your task list.' : 'Choose a default job for one-tap clock-in, or choose a job each time.',
                     style: Theme.of(context).textTheme.titleMedium,
@@ -123,6 +129,7 @@ class _WidgetConfigurationScreenState
                     FilledButton(onPressed: _finish, child: const Text('Done'))
                   else
                     BusinessCommand(
+                      key: const ValueKey('widget-save'),
                       label: 'Save widget',
                       enabled: !missing,
                       onPendingChanged: (pending) =>

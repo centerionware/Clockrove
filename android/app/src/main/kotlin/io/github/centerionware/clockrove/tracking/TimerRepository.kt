@@ -135,8 +135,12 @@ class TimerRepository internal constructor(context: Context,
         WidgetTasksStore.read(helper.readableDatabase, WidgetConfigurationStore.read(helper.readableDatabase, widgetId).jobId, now, timezone)
 
     @Synchronized
-    internal fun saveWidgetConfiguration(id: String, version: Long, widgetId: Int, jobId: String?): Outcome =
-        boardChange(id, version, "WIDGET_CONFIGURATION", listOf(widgetId, jobId)) { WidgetConfigurationStore.save(it, widgetId, jobId) }
+    internal fun saveWidgetConfiguration(id: String, version: Long, widgetId: Int, jobId: String?, available: Boolean = true): Outcome =
+        // Receipt replay precedes current platform availability; removing a widget
+        // cannot strand a lost save response or resurrect its deleted binding.
+        boardChange(id, version, "WIDGET_CONFIGURATION", listOf(widgetId, jobId)) {
+            if (!available) "WIDGET_UNAVAILABLE" else WidgetConfigurationStore.save(it, widgetId, jobId)
+        }
     @Synchronized
     internal fun removeWidgetConfigurations(widgetIds: List<Int>) {
         val db = helper.writableDatabase

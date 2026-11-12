@@ -88,6 +88,9 @@ open class TimerWidget : AppWidgetProvider() {
         internal fun viewsForSize(context: Context, bound: TimerRepository.WidgetSnapshot, id: Int, provider: Class<out TimerWidget>, width: Int, height: Int): RemoteViews {
                 val tasks = provider == TaskListWidget::class.java || (provider == TimerWidget::class.java && hasTaskRoom(width, height, context.resources.configuration.fontScale))
                 val views = if (!tasks) viewsFor(context, bound.state, id, bound) else RemoteViews(context.packageName, R.layout.tasks_widget).apply {
+                    // Reapply must replace its one timer row, never append to the
+                    // existing RemoteViews hierarchy on every committed update.
+                    removeAllViews(R.id.widget_timer_container)
                     if (provider == TaskListWidget::class.java) setViewVisibility(R.id.widget_timer_container, View.GONE)
                     else addView(R.id.widget_timer_container, viewsFor(context, bound.state, id, bound))
                     val taskTitle = bound.defaultJob?.let { "Due soon · ${it.name}" } ?: if (bound.missingDefault) "Job unavailable · configure" else "Due soon · all jobs"
@@ -125,7 +128,7 @@ open class TimerWidget : AppWidgetProvider() {
                 views.setChronometer(R.id.widget_elapsed, SystemClock.elapsedRealtime() - elapsed, null, showElapsed)
             }
             views.setContentDescription(R.id.widget_action, if (running != null) context.getString(R.string.widget_stop) else if (bound?.defaultJob != null) "Clock in to ${bound.defaultJob!!.name}" else context.getString(R.string.widget_open))
-            views.setImageViewResource(R.id.widget_action, if (running == null) R.drawable.ic_widget_open else R.drawable.ic_widget_stop)
+            views.setImageViewResource(R.id.widget_action, if (running != null) R.drawable.ic_widget_stop else if (bound?.defaultJob != null) R.drawable.ic_widget_start else R.drawable.ic_widget_open)
             val tap = if (running == null) {
                 val intent = Intent(context, WidgetStartActivity::class.java).setData(Uri.parse("clockrove://widget/$id/start/${snapshot.version}/${bound?.configuration?.token}"))
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra("version", snapshot.version)
