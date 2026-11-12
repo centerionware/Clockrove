@@ -70,13 +70,13 @@ internal object InvoiceDocuments {
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
             putExtra(Intent.EXTRA_STREAM, uri)
-            clipData = ClipData.newRawUri("Invoice PDF", uri)
+            clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
     fun share(context: Context, record: InvoiceStore.Record, notice: String? = null): Intent {
         val uri = uri(context, record)
-        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri("Invoice PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
     fun preview(context: Context, record: InvoiceStore.Record, index: Int): Map<String, Any> {
         require(index >= 0)

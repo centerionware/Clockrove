@@ -2631,3 +2631,12 @@ text and private attachment checks. Copies gate now requires all three named
 cases and 33 genuine PDF/PNG pairs per API (nine new quote variants), giving 52
 actual cases overall. These are required pending gates, not completed evidence.
 Quote UI, reviewed scope mapping and the complete milestone remain unfinished.
+
+Quote UI adapter source now defines immutable line/draft models, frozen revision
+reads, keyset pages, explicit issue/decision commands and revision-specific
+preview/email/share/save calls. Money and quantities stay strings; the Dart live
+total uses the pinned exact decimal task product and BigInt tax. Source tests
+cover estimated hours, fractional units/half-up boundary, 1000-digit arithmetic,
+invalid precision/range, immutable draft capture and exact channel transport.
+Formatting/analysis/test evidence must come from the upcoming Actions run; quote
+screens and reviewed scope conversion are still required.
