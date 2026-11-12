@@ -44,6 +44,8 @@ android {
     }
 
     testOptions { unitTests.isIncludeAndroidResources = true }
+    // Frozen released DDL is packaged only in the instrumentation APK.
+    sourceSets.getByName("androidTest").assets.srcDir("src/test/resources")
 
     signingConfigs {
         if (signingReady) {

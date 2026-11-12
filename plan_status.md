@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, tax and payment lifecycle | Native foundation/legacy writer and documents pass behavior checks; UI reconciliation source awaiting Actions; draft #35 | 9c72416 / 43165815309: 353 native, 40 actual Android and 7 viewer cases pass; formatting-only failure patched; new legacy editor/UI/captures and real financial UI journey remain before merge; then payments, receipts, CC and credit-preserving void/replacement |
+| Next after widget merge: invoice integrity, quantity, tax and payment lifecycle | Legacy editor behavior checked; quantities under Actions; real financial UI journey prepared; draft #35 | 94fd7c7 / 43169835589 passed behavior/native/device/viewer gates; formatting-only failure patched. Quantity validation 43172649874 remains live. Independent actual financial journey must pass on both APIs before merge; then payments, receipts, CC and credit-preserving void/replacement |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2174,3 +2174,14 @@ pricing. These additional changes require their own Actions run.
 4477887 / 43172132517 stopped at analysis: the new capture used await on the
 synchronous test keyboard hide call. Removed that await and applied the exported
 CI formatter patch. No quantity native/device success is claimed from this run.
+
+Prepared the independent real Android financial journey in a separate test package
+and instrumentation process after the standard 20 cases/API. The Actions script
+retains and checks the original XML/PDF/widget evidence before clearing only its
+ephemeral emulator's app data. A frozen v6 database and real generated legacy PDF
+exercise production migration and the actual Flutter UI: explicit old-task review,
+unit-price/quantity save, unbilled subtotal/tax, new immutable invoice, repeat-billing
+exclusion, and reopening the retained PDF after a synthetic aged-archive purge.
+Strict separate XML requires one complete financial case plus seven captures on
+each API. The frozen DDL is packaged only in the test APK. This source is not yet
+executed; it does not constitute device acceptance or merge evidence.

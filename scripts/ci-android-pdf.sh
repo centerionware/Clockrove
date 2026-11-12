@@ -136,6 +136,9 @@ PY_DEVICE
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
   done
+  # All original XML/PDF/widget evidence has been pulled before clearing the
+  # ephemeral emulator for the independently numbered financial journey.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
   adb -s emulator-5554 emu kill || true
   wait "$clockrove_emulator_pid" || true
   trap - EXIT
