@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +11,22 @@ import 'tracking/timer_screen.dart';
 import 'business/job_screen.dart';
 import 'widgets/widget_configuration_screen.dart';
 
-void main() => runApp(const ProviderScope(child: ClockroveApp()));
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    final present = FlutterError.onError;
+    FlutterError.onError = (details) {
+      // Debug CI diagnostics contain only type/stack, never field values or a
+      // widget dump. Release builds retain the normal Flutter error handler.
+      unawaited(const MethodChannel('clockrove/debug/v1').invokeMethod<void>(
+        'flutterError',
+        {'type': details.exception.runtimeType.toString(), 'stack': details.stack?.toString() ?? ''},
+      ).catchError((Object _) {}));
+      present?.call(details);
+    };
+  }
+  runApp(const ProviderScope(child: ClockroveApp()));
+}
 
 class ClockroveApp extends StatelessWidget {
   const ClockroveApp({super.key});

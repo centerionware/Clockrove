@@ -1575,3 +1575,23 @@ receipt replay so widget removal resolves an original save without resurrecting
 bindings; fresh unavailable writes return a known conflict. Added native retry/
 removal checks. Preserve per-test screenshots and require actual board window
 focus; the column assertion stays required. New source awaits Actions.
+
+### Board-body failure identified as a real framework assertion
+
+4b1951a / 43153617082 passed the new Flutter save-race regressions, native checks
+and all 20 actual API-24 cases. API 35 passed native clock-in/out, repeated-update
+row count, separate task scope and setup save/cancel; only the board-body check
+failed. Its preserved per-test screenshot shows a real `_InactiveElements.remove`
+assertion in the board, not merely missing accessibility labels. Keep that test.
+
+The board's width-only LayoutBuilder was building tooltip/overlay-bearing cards
+during layout. Replace it with a normal build-phase Builder and window-relative
+MediaQuery width; give vertical columns independent scroll controllers. Similar
+upstream OverlayPortal/layout failures are documented at
+https://github.com/flutter/flutter/issues/180569 and
+https://github.com/flutter/flutter/issues/183168. This is an evidence-informed
+workaround, not a claim that the app's first stack has already proven that cause.
+Debug builds now forward bounded Flutter error type/stack only to local Android
+logcat for CI diagnosis, preserving normal presentation and excluding field/widget
+dumps; release error handling is unchanged. Apply Actions-generated formatting,
+finish removed-widget setup as cancelled, and revalidate the full source.

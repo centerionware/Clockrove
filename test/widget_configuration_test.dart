@@ -16,7 +16,8 @@ class _Timer extends TimerApi {
   Completer<TimerSnapshot>? heldRead;
   @override
   Stream<int> get committedVersions => events;
-  TimerSnapshot get value => TimerSnapshot(version, const [JobSummary('job', 'Synthetic work')], null);
+  TimerSnapshot get value =>
+      TimerSnapshot(version, const [JobSummary('job', 'Synthetic work')], null);
   @override
   Future<TimerSnapshot> snapshot() async {
     reads++;
@@ -27,62 +28,80 @@ class _Timer extends TimerApi {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   for (final readFails in [false, true]) {
-    testWidgets('Committed version before save response retains widget setup (refresh error: $readFails)', (tester) async {
-      final events = StreamController<int>();
-      addTearDown(events.close);
-      final timer = _Timer(events.stream);
-      final reply = Completer<Map<String, Object?>>();
-      final reload = Completer<TimerSnapshot>();
-      final calls = <Map<Object?, Object?>>[];
-      var finished = false;
-      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(widgetChannel, (call) async {
-        if (call.method == 'configuration') {
-          return {'jobId': null, 'taskOnly': false};
-        }
-        if (call.method == 'finish') {
-          finished = true;
+    testWidgets(
+      'Committed version before save response retains widget setup (refresh error: $readFails)',
+      (tester) async {
+        final events = StreamController<int>();
+        addTearDown(events.close);
+        final timer = _Timer(events.stream);
+        final reply = Completer<Map<String, Object?>>();
+        final reload = Completer<TimerSnapshot>();
+        final calls = <Map<Object?, Object?>>[];
+        var finished = false;
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(widgetChannel, (call) async {
+          if (call.method == 'configuration') {
+            return {'jobId': null, 'taskOnly': false};
+          }
+          if (call.method == 'finish') {
+            finished = true;
+            return null;
+          }
+          if (call.method == 'save') {
+            calls.add(Map<Object?, Object?>.of(call.arguments as Map));
+            timer.version = 13;
+            timer.heldRead = reload;
+            events.add(13);
+            return reply.future;
+          }
           return null;
+        });
+        addTearDown(
+          () => messenger.setMockMethodCallHandler(widgetChannel, null),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [timerApiProvider.overrideWithValue(timer)],
+            child: const MaterialApp(home: WidgetConfigurationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Synthetic work'));
+        await tester.pump();
+        await tester.tap(find.text('Save widget'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(timer.reads, greaterThanOrEqualTo(2));
+        expect(find.byType(RadioListTile<String>), findsNWidgets(2));
+        expect(
+          tester
+              .widget<RadioListTile<String>>(
+                find.byType(RadioListTile<String>).last,
+              )
+              .enabled,
+          false,
+        );
+        if (readFails) {
+          reload.completeError(StateError('Synthetic refresh unavailable'));
+        } else {
+          reload.complete(timer.value);
         }
-        if (call.method == 'save') {
-          calls.add(Map<Object?, Object?>.of(call.arguments as Map));
-          timer.version = 13;
-          timer.heldRead = reload;
-          events.add(13);
-          return reply.future;
-        }
-        return null;
-      });
-      addTearDown(() => messenger.setMockMethodCallHandler(widgetChannel, null));
-      await tester.pumpWidget(ProviderScope(overrides: [timerApiProvider.overrideWithValue(timer)], child: const MaterialApp(home: WidgetConfigurationScreen())));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Synthetic work'));
-      await tester.pump();
-      await tester.tap(find.text('Save widget'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(timer.reads, greaterThanOrEqualTo(2));
-      expect(find.byType(RadioListTile<String>), findsNWidgets(2));
-      expect(tester.widget<RadioListTile<String>>(find.byType(RadioListTile<String>).last).enabled, false);
-      if (readFails) {
-        reload.completeError(StateError('Synthetic refresh unavailable'));
-      } else {
-        reload.complete(timer.value);
-      }
-      timer.heldRead = null;
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byType(RadioListTile<String>), findsNWidgets(2));
-      reply.complete({'version': 13, 'conflict': null});
-      await tester.pumpAndSettle();
-      expect(calls, hasLength(1));
-      expect(calls.single['version'], 12);
-      expect(calls.single['jobId'], 'job');
-      expect(finished, true);
-      expect(find.text('Done'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
+        timer.heldRead = null;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(RadioListTile<String>), findsNWidgets(2));
+        reply.complete({'version': 13, 'conflict': null});
+        await tester.pumpAndSettle();
+        expect(calls, hasLength(1));
+        expect(calls.single['version'], 12);
+        expect(calls.single['jobId'], 'job');
+        expect(finished, true);
+        expect(find.text('Done'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
   }
   testWidgets(
     'Full app starts directly in widget setup with one initial route',

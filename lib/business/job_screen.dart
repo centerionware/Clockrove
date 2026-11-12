@@ -262,8 +262,13 @@ class _Board extends ConsumerWidget {
           child: Text('Archived job · board is read-only'),
         ),
       Expanded(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
+        // This is a full-page board. Build tooltip-bearing cards during build,
+        // rather than reparenting their overlay portals from a layout callback.
+        child: Builder(
+          builder: (context) {
+            final windowWidth = MediaQuery.sizeOf(context).width;
+            if (windowWidth <= 40) return const SizedBox.shrink();
+            return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Row(
@@ -273,8 +278,8 @@ class _Board extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: SizedBox(
-                      width: constraints.maxWidth < 400
-                          ? constraints.maxWidth - 40
+                      width: windowWidth < 400
+                          ? windowWidth - 40
                           : 320,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -308,6 +313,7 @@ class _Board extends ConsumerWidget {
                             ),
                             Expanded(
                               child: ListView(
+                                primary: false,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                 ),
@@ -441,7 +447,8 @@ class _Board extends ConsumerWidget {
                   ),
               ],
             ),
-          ),
+          );
+          },
         ),
       ),
     ],

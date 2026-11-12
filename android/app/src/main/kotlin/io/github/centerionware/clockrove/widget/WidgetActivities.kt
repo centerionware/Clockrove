@@ -54,11 +54,13 @@ class WidgetConfigurationActivity : MainActivity() {
                             TimerWidget.refreshAll(this)
                             result.success(mapOf("version" to outcome.version, "conflict" to outcome.conflict))
                         }
-                        "finish" -> {
-                            require(owned)
-                            runOnUiThread {
-                                setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)); result.success(null); finish()
-                            }
+                        "finish" -> runOnUiThread {
+                            // A removed widget has no launcher configuration to
+                            // finish; close cleanly without reporting it added.
+                            setResult(if (owned) Activity.RESULT_OK else Activity.RESULT_CANCELED,
+                                Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
+                            result.success(null)
+                            finish()
                         }
                         else -> result.notImplemented()
                     }

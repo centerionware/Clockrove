@@ -125,6 +125,29 @@ Future<void> _show(
 }
 
 void main() {
+  testWidgets('Board waits for initial window metrics then renders its cards', (tester) async {
+    final size = ValueNotifier<Size>(Size.zero);
+    addTearDown(size.dispose);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [timerApiProvider.overrideWithValue(_Timer()), businessApiProvider.overrideWithValue(_BoardApi())],
+      child: MaterialApp(home: ValueListenableBuilder<Size>(
+        valueListenable: size,
+        builder: (context, value, _) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(size: value),
+          child: const JobScreen(jobId: 'job', jobName: 'Synthetic'),
+        ),
+      )),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('To do'), findsNothing);
+    size.value = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(find.text('To do'), findsOneWidget);
+    expect(find.text('Install kitchen tiles'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('move dialog reflects native version refresh before confirming', (
     tester,
   ) async {

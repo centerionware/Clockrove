@@ -81,8 +81,13 @@ class _WidgetConfigurationScreenState
                 padding: const EdgeInsets.all(24),
                 children: [
                   if (state.hasError) ...[
-                    const Text('Could not refresh jobs. Your selection and current operation are kept.'),
-                    TextButton(onPressed: () => ref.invalidate(timerSnapshotProvider), child: const Text('Retry jobs')),
+                    const Text(
+                      'Could not refresh jobs. Your selection and current operation are kept.',
+                    ),
+                    TextButton(
+                      onPressed: () => ref.invalidate(timerSnapshotProvider),
+                      child: const Text('Retry jobs'),
+                    ),
                   ],
                   Text(
                     tasksOnly ? 'Choose which jobs appear in your task list.' : 'Choose a default job for one-tap clock-in, or choose a job each time.',

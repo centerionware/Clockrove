@@ -11,6 +11,7 @@ open class MainActivity : FlutterActivity() {
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
     private var businessApi: io.github.centerionware.clockrove.tracking.BusinessHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
+    private var debugApi: io.flutter.plugin.common.MethodChannel? = null
     private var visible = false
 
     override fun onStart() {
@@ -29,6 +30,21 @@ open class MainActivity : FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            debugApi = io.flutter.plugin.common.MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "clockrove/debug/v1").also { api ->
+                api.setMethodCallHandler { call, result ->
+                    if (call.method != "flutterError") result.notImplemented()
+                    else {
+                        val args = call.arguments as? Map<*, *>
+                        val kind = (args?.get("type") as? String).orEmpty().take(128)
+                        val stack = (args?.get("stack") as? String).orEmpty().take(16000)
+                        android.util.Log.e("ClockroveDebug", "Flutter debug error type: $kind")
+                        stack.chunked(3000).forEach { android.util.Log.e("ClockroveDebug", it) }
+                        result.success(null)
+                    }
+                }
+            }
+        }
         documentApi = io.github.centerionware.clockrove.invoice.DocumentHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         businessApi = io.github.centerionware.clockrove.tracking.BusinessHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         timerApi = TimerHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
@@ -36,6 +52,8 @@ open class MainActivity : FlutterActivity() {
         automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        debugApi?.setMethodCallHandler(null)
+        debugApi = null
         documentApi?.detach()
         documentApi = null
         businessApi?.detach()
