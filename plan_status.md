@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, tax and payment lifecycle | Native coverage/retention and tax integration source prepared; draft #35; full slice incomplete | beec0cf / 43160987076 stopped at stale deletion-warning assertion; corrected, tax settings/override/frozen totals/PDF source added; renewed Actions required; preview, reconciliation and invoice navigation remain; then payments, receipts, CC and credit-preserving void/replacement |
+| Next after widget merge: invoice integrity, tax and payment lifecycle | Native foundation/legacy writer and documents pass behavior checks; UI reconciliation source awaiting Actions; draft #35 | 9c72416 / 43165815309: 353 native, 40 actual Android and 7 viewer cases pass; formatting-only failure patched; new legacy editor/UI/captures and real financial UI journey remain before merge; then payments, receipts, CC and credit-preserving void/replacement |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2111,3 +2111,36 @@ API-24/35 legacy validation/rollback/concurrency/replay/transport cases plus a D
 immutable-intent/codec case. The user-facing source/time editor and its integrated
 journey remain unfinished; no reconciliation acceptance or full-slice completion
 is claimed. All new source awaits Actions; no VM validation/rendering ran.
+
+### Native legacy reconciliation and tax PDFs pass; full review UI source prepared
+
+9c72416 / 43165815309 passed analysis, 107 Flutter cases, Android build, 353 native
+cases, twenty actual Android cases per API (24/35), all seven actual-document
+viewer cases and release-policy checks. Native/device XML has no failures/errors/
+skips; the seven general-stage document skips passed in the dedicated stage.
+Only the clean-format gate failed. Applied its exact CI patch, then restored the
+two new draft-display fields without running a formatter locally. Reviewed the
+actual one-page tax PDF for every style on both APIs: all six captures retain
+subtotal/tax/grand total, priced rows, branding and footer, including Classic.
+
+Prepared the complete legacy review form and covered-time dialog. Invoice lists
+and blocked billing previews now open it. No sources are preselected; existing
+reservations have read-only invoice links. Tasks can be searched/selected without
+changing their work state. Exact times use calendar/time pickers or full input,
+native IANA resolution, explicit repeated-time offsets, gap rejection and overlap
+checks. Pending ranges can be edited/removed; stored reservations cannot.
+
+A private note, original-document confirmation and separate empty-source
+acknowledgment are required. The keyed form/command survives native completion
+before reply or refresh failure, locks editing/navigation while outcome is unknown,
+and replays one immutable intent. Confirmation dismisses the keyboard; save remains
+available in a fixed footer. Separating invoice history from the PDF viewer keeps
+navigation dependencies direct. Removed-job invoices still open read-only PDFs.
+
+Prepared presentation cases for both refresh outcomes, missing-source validation,
+repeated/gap/reserved times and CI light/dark captures with large text. These are
+unvalidated source, not mocked native acceptance. The next required proof is the
+actual Flutter legacy-selection/save -> unbilled-tax review -> new invoice ->
+retained document journey, isolated from first-number regression fixtures, on
+API 24 and 35 through Actions. No merge or invoice release is claimed yet.
+No VM builds/tests/formatting/dependency resolution/rendering ran.

@@ -91,7 +91,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on this job’s older invoices before preparing another invoice.',
     'INVOICED_SESSION_BOUNDARY' => 'This edit would move already invoiced work. Keep billed times within the entry and review the original invoice before changing them.',
     'INVALID_TAX_RATE' => 'Enter a tax percentage from 0 to 100, with up to four decimal places. Your draft is kept.',
-    'LEGACY_CONFIRMATION_REQUIRED' => 'Confirm that you checked the covered work against the original invoice.',
+    'LEGACY_CONFIRMATION_REQUIRED' =>
+      'Confirm that you checked the covered work against the original invoice.',
     'LEGACY_REVIEW_NOTE_REQUIRED' => 'Add a review note of 10 to 4000 characters explaining which work the original invoice covers.',
     'LEGACY_SOURCE_CHOICE_REQUIRED' => 'Select covered tasks or time, or explicitly confirm there are no source records to link.',
     'INVOICE_SOURCE_UNAVAILABLE' => 'A selected task is no longer available in this job. Refresh and review your selection.',
@@ -99,7 +100,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_COVERED_TIME' => 'Review covered time boundaries and timezones. Ranges must be positive, non-overlapping and at most 3660 days each.',
     'INVALID_INVOICE_SOURCES' => 'Review the selected tasks and time ranges. Repeated sources are not allowed.',
     'INVOICE_ALREADY_RECONCILED' => 'This invoice’s source coverage was already reviewed. Return to the invoice list and refresh.',
-    'INVOICE_UNAVAILABLE' => 'This invoice is unavailable. Refresh the invoice list.',
+    'INVOICE_UNAVAILABLE' =>
+      'This invoice is unavailable. Refresh the invoice list.',
     'INVALID_LOGO' =>
       'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
     'LOGO_IMPORT_EXPIRED' =>

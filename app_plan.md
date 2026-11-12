@@ -54,6 +54,13 @@ invoice navigation. Then add unpaid/partial/paid lifecycle, receipts, atomic
 void/replacement and company/accounts-receivable CC. Follow the ordered detailed
 plan for quotes, task comments/supplies/costs and main-menu business reports.
 
+Draft #35 native head 9c72416 passed behavior/build/document checks in 43165815309:
+353 native and 40 actual Android cases without failures/errors/skips, plus seven
+actual-document viewer cases. Only formatting failed; its patch is applied.
+The legacy task/time review screen is now written but awaits its own UI checks,
+captures and a real Flutter-to-native reconciliation/invoice journey in Actions.
+Do not merge this slice from native/storage or synthetic presentation evidence alone.
+
 ## 2. Product decisions
 
 | Item | Agreed behavior |

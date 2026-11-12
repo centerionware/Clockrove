@@ -10,7 +10,7 @@ import '../business/job_screen.dart';
 import '../business/settings_screen.dart';
 import '../business/report_screen.dart';
 import '../business/archive_screen.dart';
-import '../business/invoice_screen.dart';
+import '../business/invoice_history_screen.dart';
 import 'tracking_controls.dart';
 import 'elapsed_display.dart';
 

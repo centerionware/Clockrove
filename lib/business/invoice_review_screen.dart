@@ -6,6 +6,7 @@ import 'business_command.dart';
 import 'invoice_screen.dart';
 import 'report_api.dart';
 import 'tax_rate.dart';
+import 'legacy_invoice_screen.dart';
 
 class InvoiceReviewScreen extends ConsumerStatefulWidget {
   const InvoiceReviewScreen({
@@ -31,6 +32,10 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
       builder: (_) => InvoiceScreen(invoiceId: invoice.invoiceId),
     ),
   );
+  Future<void> _reviewLegacy(InvoiceCoverageLink invoice) async {
+    await Navigator.push<bool>(context, MaterialPageRoute<bool>(builder: (_) => LegacyInvoiceScreen(invoiceId: invoice.invoiceId)));
+    if (mounted) _refresh();
+  }
   String? _problem(String? value) => switch (value) {
     null => null,
     'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on the older invoices below before creating another invoice for this job.',
@@ -199,7 +204,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                           title: Text(invoice.number),
                           subtitle: const Text('Source coverage needs review'),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: _pending ? null : () => _open(invoice),
+                          onTap: _pending ? null : () => _reviewLegacy(invoice),
                         ),
                     ],
                     if (data.excluded.isNotEmpty) ...[
