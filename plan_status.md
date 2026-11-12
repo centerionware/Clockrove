@@ -2394,3 +2394,12 @@ width conversion; preserve exact content and the one-page check. Added late
 VOID-copy failure injection to prove rollback after credit has already moved,
 and cancellation immutability/retention across a subsequent job purge. These new
 cases still require Actions evidence; no native lifecycle success is claimed.
+
+Actual Android document test source now extends every invoice style through
+partial-payment replacement: immutable VOID copy, new invoice with credited
+payments at issue, final settlement receipt, frozen old PDF/receipt bytes, exact
+API-35 extraction and actual To/CC/private attachment reads. The Actions copy gate
+requires all 24 PDF/PNG pairs per API, including nine new lifecycle captures, while
+retaining the short-document one-page and 1000-digit completeness assertions.
+These are prepared cases, not acceptance; current 40259d7 / 43211073661 is live
+on the preceding source and the extended document cases need their own run.

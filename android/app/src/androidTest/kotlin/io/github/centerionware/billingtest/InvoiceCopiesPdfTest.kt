@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.invoice.InvoiceDocuments
 import io.github.centerionware.clockrove.tracking.BoardStore
+import io.github.centerionware.clockrove.tracking.InvoiceLifecycleStore
 import io.github.centerionware.clockrove.tracking.InvoicePaymentStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.ReportStore
@@ -28,7 +29,7 @@ class InvoiceCopiesPdfTest {
     private val repository get() = TimerRepository.get(app)
     private val createdJobs = mutableListOf<String>()
     private val version get() = repository.snapshot().version
-    private fun render(invoiceId: String, copyId: String, name: String, expected: List<String>): InvoiceStore.Record {
+    private fun render(invoiceId: String, copyId: String?, name: String, expected: List<String>): InvoiceStore.Record {
         val record = InvoiceDocuments.ensure(repository, invoiceId, copyId)
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
@@ -133,6 +134,32 @@ class InvoiceCopiesPdfTest {
                 assertEquals(partial.payload, repository.invoiceCopy("receipt-$token-first").payload)
                 assertArrayEquals(paid.pdf, repository.invoiceCopy("receipt-$token-final").pdf)
                 assertEquals(original.payload, repository.invoice(id).payload); assertArrayEquals(original.pdf, repository.invoice(id).pdf)
+                val replacementId = "replacement-$token"
+                val source = InvoiceStore.Snapshot.decode(original.payload)
+                val edits = source.lines.mapIndexed { index, line -> InvoiceLifecycleStore.LineEdit(index, line.title, line.detail,
+                    "12000", line.quantityUnits, "12000") }
+                assertNull(repository.replaceInvoice("copy-pdf-replace-$token", version, InvoiceLifecycleStore.ReplacementDraft(id, replacementId, edits,
+                    100000, "PRIVATE REPLACEMENT REASON", "UTC", true)).conflict)
+                val voided = render(id, "void-$id", "clockrove-void-$token",
+                    listOf("CredittransferredUSD77.50", "BALANCEDUEUSD0.00", "Cancelledunpaidbalance", "30.00"))
+                assertEquals("VOID", InvoiceStore.Snapshot.decode(voided.payload).statement!!.status)
+                assertFalse(voided.payload.contains("PRIVATE REPLACEMENT REASON"))
+                val replacement = render(replacementId, null, "clockrove-replacement-$token",
+                    listOf("CreditatissueUSD77.50", "BALANCEDUEUSD54.50", "USD132.00", "120.00USDeach"))
+                assertEquals("PARTIALLY_PAID", InvoiceStore.Snapshot.decode(replacement.payload).statement!!.status)
+                val replacementEmail = InvoiceDocuments.email(app, replacement, repository.businessSnapshot().settings)
+                assertArrayEquals(arrayOf("customer@example.test"), replacementEmail.getStringArrayExtra(android.content.Intent.EXTRA_EMAIL))
+                assertArrayEquals(arrayOf("accounts@example.test"), replacementEmail.getStringArrayExtra(android.content.Intent.EXTRA_CC))
+                assertTrue(replacementEmail.getStringExtra(android.content.Intent.EXTRA_TEXT)!!.contains("Balance due at issue: 54.50 USD"))
+                for (copy in listOf(voided, replacement)) app.contentResolver.openInputStream(InvoiceDocuments.uri(app, copy))!!.use { assertArrayEquals(copy.pdf, it.readBytes()) }
+                pay(replacementId, "$token-replacement-final", BigInteger.valueOf(5450))
+                render(replacementId, "receipt-$token-replacement-final", "clockrove-replacement-paid-$token",
+                    listOf("PaidtodateUSD132.00", "BALANCEDUEUSD0.00", "54.50"))
+                assertEquals(BigInteger.valueOf(13200), repository.invoicePayments(replacementId).second.balance.paid)
+                assertEquals(BigInteger.valueOf(1200), repository.invoicePayments(replacementId).second.collectedTax)
+                assertEquals(original.payload, repository.invoice(id).payload); assertArrayEquals(original.pdf, repository.invoice(id).pdf)
+                assertArrayEquals(paid.pdf, repository.invoiceCopy("receipt-$token-final").pdf)
+                assertEquals(replacement.payload, repository.invoice(replacementId).payload)
                 val wide = BigInteger("1234567890".repeat(100))
                 val wideId = invoice(style, "wide-$token", wide, 260000)
                 val paidMinor = wide.multiply(BigInteger.valueOf(13))

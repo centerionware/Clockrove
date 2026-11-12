@@ -39,7 +39,7 @@ assert cases[0].attrib['name'] == 'nativePaymentsProduceAllStylePartialPaidBalan
 print('Verified actual Android immutable financial copies:', root.attrib)
 PY_DEVICE
 for clockrove_copy_style in minimal classic modern; do
-  for clockrove_copy_kind in receipt-partial receipt-paid balance-paid payment-correction receipt-wide; do
+  for clockrove_copy_kind in receipt-partial receipt-paid balance-paid payment-correction receipt-wide void replacement replacement-paid; do
     test -s "$clockrove_copy_previews/clockrove-$clockrove_copy_kind-$clockrove_copy_style.pdf"
     test -s "$clockrove_copy_previews/clockrove-$clockrove_copy_kind-$clockrove_copy_style.png"
   done
