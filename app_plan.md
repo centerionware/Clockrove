@@ -47,17 +47,17 @@ explicit business rule, separate from numerical precision loss.
 ### Next concrete action
 
 Complete the active quote milestone in draft PR #39, then proceed to the next
-ordered plan milestone. Latest head e4738aa / run 43264537323 attempt 2 passed
-formatting, analysis, Flutter behavior, Android build and all 561 native tests.
-Run 43269368364 on 19bbac6 passed formatting, analysis, Flutter behavior, Android
-build and all 561 native tests. Its API-24 quote journey advanced past the previous
-“View original PDF” bottom-inset failure, then exposed focus restoration reopening
-the keyboard after invoice review confirmation and obscuring “Prepare reviewed
-invoice.” The flow now unfocuses before opening the review dialog, with a device
-assertion that the keyboard is closed before preparation. Fresh exact-head Actions
-must still confirm the inset fix on both APIs, API 24/35 actual-work documents and
-viewer acceptance, and all prior gates before #39 is merged. API 35 has not yet run
-this journey on the safe-area fix; no full device/document acceptance is inferred.
+ordered plan milestone. Latest head c4ac90d / run 43272288322 passed formatting,
+analysis, Flutter behavior, Android build and all 561 native tests. API 24 passed
+the full actual quote issue/accept/plan/complete/invoice journey, duplicate
+exclusion, three real invoice PDFs, and viewer checks. API 35 passed its preceding
+26 device cases, then failed before entering Unit price: the field had focus and
+the IME was open, but the test checked for ACTION_SET_TEXT during Android's
+transient pre-IME semantics state. The helper now waits for the IME transition,
+re-reveals the field, then requires the text action and exact value as before.
+Fresh exact-head Actions must confirm both APIs, all generated documents, and
+remaining quote acceptance before #39 is merged. This is a test synchronization
+correction, not evidence that the API-35 journey now passes.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic

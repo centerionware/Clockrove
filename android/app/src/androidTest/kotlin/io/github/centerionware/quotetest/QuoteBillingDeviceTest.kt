@@ -150,17 +150,22 @@ class QuoteBillingDeviceTest {
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-        until("Focused field did not expose text entry for $label") {
-            find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
-        }
-        // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
-        // acknowledgement can otherwise precede the keyboard opening and hiding.
+        // Focus and keyboard visibility settle separately on Android 15. Do not
+        // inspect the transient pre-IME semantics node for text actions: it can
+        // be focused yet omit ACTION_SET_TEXT until the input connection opens.
         until("Keyboard did not open for $label") { keyboardVisible() }
         // The IME can occlude the field's semantics bounds (including its
         // counter) after focus. Actively reveal it again instead of waiting
         // passively for a node outside the resized viewport.
         reveal(label, true)
-        val node = waitFor(label, true)
+        var editable: AccessibilityNodeInfo? = null
+        until("Focused field did not expose text entry for $label") {
+            editable = find(label, true)?.takeIf { node ->
+                node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
+            }
+            editable != null
+        }
+        val node = requireNotNull(editable)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
         until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }

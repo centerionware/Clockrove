@@ -3006,3 +3006,18 @@ device test asserts the keyboard is closed before preparation. API 35 did not ru
 the quote journey in this attempt because the serial API-24 gate failed first.
 Fresh CI must still prove both APIs, invoice PDF/text/viewer outputs, and all
 remaining quote acceptance before these tasks are complete.
+
+### Quote IME synchronization: API-35 field entry
+
+Head c4ac90d / Actions run 43272288322 passed formatting, analysis, Flutter
+behavior, Android build and 561 native tests (47 XML, zero failures/errors/skips).
+Downloaded actual-device results show API 24 passed the full quote issue,
+acceptance, scope planning, task completion, invoice and duplicate-exclusion
+journey, including three generated invoice PDFs and the detail viewer. API 35
+passed its preceding 26 device cases, then failed at the first unit-price entry.
+Its capture shows the field focused with the numeric IME open; the accessibility
+dump contains the surrounding fields but the test timed out checking
+ACTION_SET_TEXT before waiting for the IME transition. Updated the helper to wait
+for keyboard visibility, reveal the field again, then wait for its text action
+before entering and asserting the exact value. This is a test timing fix awaiting
+fresh Actions evidence, not a passing API-35 result. No build or test ran on the VM.
