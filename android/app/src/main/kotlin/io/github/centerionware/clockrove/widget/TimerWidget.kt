@@ -27,13 +27,14 @@ open class TimerWidget : AppWidgetProvider() {
         // Launcher IDs are device-local. Restored widgets safely return to picker
         // instead of applying a stale binding or ever starting work on restore.
         val pending = goAsync()
-        worker.execute { try { TimerRepository.get(context).removeWidgetConfigurations((oldIds.toList() + newIds.toList()).distinct()); refreshAll(context) } finally { pending.finish() } }
+        worker.execute { try { TimerRepository.get(context).removeWidgetConfigurations(oldIds.filter { it !in newIds }.distinct()); refreshAll(context) } catch (_: Exception) { refreshAll(context) } finally { pending.finish() } }
     }
     override fun onDeleted(context: Context, ids: IntArray) {
         val pending = goAsync()
-        worker.execute { try { TimerRepository.get(context).removeWidgetConfigurations(ids.toList()); refreshAll(context) } finally { pending.finish() } }
+        worker.execute { try { TimerRepository.get(context).removeWidgetConfigurations(ids.toList()); refreshAll(context) } catch (_: Exception) { refreshAll(context) } finally { pending.finish() } }
     }
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action in setOf(Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_DATE_CHANGED)) { update(context); return }
         if (intent.action != STOP) { super.onReceive(context, intent); return }
         val pending = goAsync()
         worker.execute {
@@ -43,7 +44,7 @@ open class TimerWidget : AppWidgetProvider() {
                 if (owned(context, id) && version >= 0) TimerRepository.get(context).executeFromSurface(
                     "widget-stop-$id-$version", version, TimerRepository.Action.STOP, null, TimerRepository.Origin.WIDGET)
                 refreshAll(context)
-            } finally { pending.finish() }
+            } catch (_: Exception) { refreshAll(context) } finally { pending.finish() }
         }
     }
     companion object {
@@ -57,18 +58,40 @@ open class TimerWidget : AppWidgetProvider() {
             val manager = AppWidgetManager.getInstance(context)
             val repository = TimerRepository.get(context)
             providers.forEach { provider -> manager.getAppWidgetIds(ComponentName(context, provider)).forEach { id ->
+                try {
                 val bound = repository.widgetSnapshot(id)
                 val options = manager.getAppWidgetOptions(id)
-                val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
-                val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 56)
-                val large = hasTaskRoom(width, height, context.resources.configuration.fontScale)
-                val tasks = provider == TaskListWidget::class.java || (provider == TimerWidget::class.java && large)
+                val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
+                val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 56)
+                val maxWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth)
+                val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight)
+                val portrait = viewsForSize(context, bound, id, provider, minWidth, maxHeight)
+                val landscape = viewsForSize(context, bound, id, provider, maxWidth, minHeight)
+                val views = RemoteViews(landscape, portrait)
+                manager.updateAppWidget(id, views)
+                if (provider != TimerOnlyWidget::class.java) manager.notifyAppWidgetViewDataChanged(id, R.id.widget_tasks)
+                } catch (_: Exception) {
+                    // A failed refresh must not crash an already committed timer/settings command.
+                    val unavailable = RemoteViews(context.packageName, R.layout.timer_widget).apply {
+                        setTextViewText(R.id.widget_job, "Widget unavailable · open app")
+                        setViewVisibility(R.id.widget_elapsed, View.GONE)
+                        setImageViewResource(R.id.widget_action, R.drawable.ic_widget_open)
+                        setContentDescription(R.id.widget_action, context.getString(R.string.widget_open))
+                        setOnClickPendingIntent(R.id.widget_action, PendingIntent.getActivity(context, id,
+                            Intent(context, WidgetPickerActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+                    }
+                    try { manager.updateAppWidget(id, unavailable) } catch (_: RuntimeException) { /* Host removed this widget. */ }
+                }
+            } }
+        }
+        internal fun viewsForSize(context: Context, bound: TimerRepository.WidgetSnapshot, id: Int, provider: Class<out TimerWidget>, width: Int, height: Int): RemoteViews {
+                val tasks = provider == TaskListWidget::class.java || (provider == TimerWidget::class.java && hasTaskRoom(width, height, context.resources.configuration.fontScale))
                 val views = if (!tasks) viewsFor(context, bound.state, id, bound) else RemoteViews(context.packageName, R.layout.tasks_widget).apply {
                     if (provider == TaskListWidget::class.java) setViewVisibility(R.id.widget_timer_container, View.GONE)
                     else addView(R.id.widget_timer_container, viewsFor(context, bound.state, id, bound))
-                    setTextViewText(R.id.widget_tasks_title, bound?.defaultJob?.name ?: if (bound?.missingDefault == true) "Job unavailable · configure" else "Due soon · all jobs")
+                    setTextViewText(R.id.widget_tasks_title, bound.defaultJob?.name ?: if (bound.missingDefault) "Job unavailable · configure" else "Due soon · all jobs")
                     setOnClickPendingIntent(R.id.widget_tasks_title, configureIntent(context, id))
-                    setTextViewText(R.id.widget_tasks_empty, if (bound?.missingDefault == true) "Choose an active job in widget settings" else "No tasks due in the next 7 days")
+                    setTextViewText(R.id.widget_tasks_empty, if (bound.missingDefault) "Choose an active job in widget settings" else "No tasks due in the next 7 days")
                     val adapter = Intent(context, WidgetTasksService::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                         .setData(Uri.parse("clockrove://widget/$id/tasks"))
                     setRemoteAdapter(R.id.widget_tasks, adapter)
@@ -82,9 +105,7 @@ open class TimerWidget : AppWidgetProvider() {
                     // The timer's title also provides configuration on launchers without a reconfigure menu.
                     if (!tasks) views.setOnClickPendingIntent(R.id.widget_job, configureIntent(context, id))
                 }
-                manager.updateAppWidget(id, views)
-                if (tasks) manager.notifyAppWidgetViewDataChanged(id, R.id.widget_tasks)
-            } }
+                return views
         }
         internal fun hasTaskRoom(width: Int, height: Int, fontScale: Float): Boolean = width >= 180 && height >= 64 + (100 * fontScale.coerceAtLeast(1f)).toInt()
         internal fun configureIntent(context: Context, id: Int): PendingIntent = PendingIntent.getActivity(context, id,
@@ -100,7 +121,7 @@ open class TimerWidget : AppWidgetProvider() {
                 val elapsed = (System.currentTimeMillis() - running.startUtcMillis).coerceAtLeast(0)
                 views.setChronometer(R.id.widget_elapsed, SystemClock.elapsedRealtime() - elapsed, null, showElapsed)
             }
-            views.setContentDescription(R.id.widget_action, if (running != null) context.getString(R.string.widget_stop) else if (bound?.defaultJob != null) "Clock in to ${bound?.defaultJob!!.name}" else context.getString(R.string.widget_open))
+            views.setContentDescription(R.id.widget_action, if (running != null) context.getString(R.string.widget_stop) else if (bound?.defaultJob != null) "Clock in to ${bound.defaultJob!!.name}" else context.getString(R.string.widget_open))
             views.setImageViewResource(R.id.widget_action, if (running == null) R.drawable.ic_widget_open else R.drawable.ic_widget_stop)
             val tap = if (running == null) {
                 val intent = Intent(context, WidgetStartActivity::class.java).setData(Uri.parse("clockrove://widget/$id/start/${snapshot.version}/${bound?.configuration?.token}"))

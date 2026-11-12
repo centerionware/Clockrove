@@ -26,6 +26,11 @@
             android:exported="false" android:foregroundServiceType="location" />
         <receiver android:name=".widget.TimerWidget" android:label="Clockrove Combined" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/timer_widget_info" />
         </receiver>
         <receiver android:name=".widget.TimerOnlyWidget" android:label="Clockrove Timer" android:exported="false">
