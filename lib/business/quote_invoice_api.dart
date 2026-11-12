@@ -46,6 +46,7 @@ class QuoteInvoiceContext {
       historical = value['historical'] as bool? ?? false,
       mode = value['mode'] as String? ?? '', currency = value['currency'] as String? ?? '', digits = value['digits'] as int? ?? 0,
       jobName = value['jobName'] as String? ?? '', archived = value['archived'] as bool? ?? false,
+      currentContact = value['currentContact'] as String? ?? '', estimatedHours = value['estimatedHoursUnits'] as String? ?? '0',
       currentCustomer = value['currentCustomer'] as String? ?? '', currentEmail = value['currentEmail'] as String? ?? '',
       currentTax = value['currentTaxUnits'] as int? ?? 0, currentRate = value['currentHourlyMinor'] as String?, acceptedRate = value['acceptedHourlyMinor'] as String?,
       tasks = List.unmodifiable((value['tasks'] as List? ?? const []).map((v) => QuoteInvoiceTask(v as Map<Object?, Object?>))),
@@ -60,7 +61,7 @@ class QuoteInvoiceContext {
   final String? problem, currentRate, acceptedRate;
   final QuoteRevision? issued;
   final bool historical, archived;
-  final String mode, currency, jobName, currentCustomer, currentEmail;
+  final String mode, currency, jobName, currentCustomer, currentEmail, currentContact, estimatedHours;
   final List<QuoteInvoiceTask> tasks;
   final List<QuoteInvoiceTime> times;
   final List<QuoteInvoiceExclusion> excluded, legacy;
@@ -94,9 +95,9 @@ class QuoteInvoiceCalculation {
 
 class QuoteRelatedInvoice {
   QuoteRelatedInvoice(Map<Object?, Object?> value)
-    : id = value['invoiceId'] as String, number = value['number'] as String, revision = value['revision'] as int,
+    : id = value['invoiceId'] as String, number = value['number'] as String, createdLabel = value['createdLabel'] as String? ?? 'Creation date unavailable', revision = value['revision'] as int,
       originalId = value['originalInvoiceId'] as String, created = value['created'] as int;
-  final String id, number, originalId;
+  final String id, number, originalId, createdLabel;
   final int revision, created;
 }
 

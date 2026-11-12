@@ -111,6 +111,8 @@ class QuoteRevision {
   String get subtotal => _frozen['subtotal'] as String;
   String get tax => _frozen['tax'] as String;
   String get customer => _frozen['customer'] as String;
+  String get email => _frozen['email'] as String? ?? '';
+  String get customerAddress => _frozen['customerAddress'] as String? ?? '';
   int get digits => _frozen['digits'] as int;
 }
 

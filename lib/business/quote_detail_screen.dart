@@ -8,6 +8,8 @@ import 'quote_api.dart';
 import 'quote_document_screen.dart';
 import 'quote_editor.dart';
 import 'quote_scope_screen.dart';
+import 'quote_invoice_screen.dart';
+import 'quote_related_invoices_screen.dart';
 
 class QuoteDetailScreen extends ConsumerWidget {
   const QuoteDetailScreen({super.key, required this.quoteId});
@@ -121,6 +123,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     if (mounted) {
       _refresh();
     }
+  }
+
+  Future<void> _invoiceQuote(QuoteRevision revision) async {
+    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => QuoteInvoiceScreen(quoteId: revision.id, revision: revision.revision)));
+    if (mounted) { _refresh(); }
   }
 
   void _document(QuoteRevision revision) => Navigator.push<void>(
@@ -327,6 +334,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       },
                       child: const Text('Review accepted revision scope'),
                     ),
+                  if (value.decision == 'ACCEPTED') OutlinedButton(onPressed: () { Navigator.pop(context); _invoiceQuote(value); }, child: const Text('Invoice actual work from revision')),
                 ],
               ),
             );
@@ -427,6 +435,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                   icon: const Icon(Icons.playlist_add_check),
                   label: const Text('Plan accepted scope'),
                 ),
+              if (latest.decision == 'ACCEPTED') OutlinedButton.icon(onPressed: _eligible ? () => _invoiceQuote(latest) : null, icon: const Icon(Icons.receipt_long_outlined), label: const Text('Invoice actual work')),
+              OutlinedButton(onPressed: _pending ? null : () => Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => QuoteRelatedInvoicesScreen(quoteId: widget.id))), child: const Text('Related invoices')),
             ],
             const SizedBox(height: 16),
             if (draft != null || latest != null)

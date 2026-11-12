@@ -46,17 +46,19 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Complete the active quote milestone in draft PR #39: accepted-scope planning,
-reviewed actual-work invoice preparation/provenance, and real Android UI/document
-acceptance. Native baseline bc57074 passed 537 cases in run 43247145880 (47 XML,
-zero failures/errors/skips). Its API-35 billing journey failed waiting for original
-PDF access; captured log also exposed invoice-list Future-returning setState.
-Maintenance PR #41 b0b84b8 passed full Actions 43251725288 and merged to
-93673fb at 16:05:59 UTC. Main Validate 43254952365 is running; internal
-publication remains unproven. Quote PR #39 remains draft until its full acceptance.
-Current scope UI/context/hash changes remain source pending Actions. Actual-work
-quote invoicing, physical device journeys, provider settings, encrypted backup,
-rights/store/production gates remain open. All builds/tests/rendering use Actions.
+Complete the active quote milestone in draft PR #39: preparation/history UI,
+real Android issue/accept/plan/work/invoice journey, document provenance acceptance,
+and full fresh exact-head Actions before merge. Scope/document baseline 202ceb1
+passed full 43252783507 (539 native / 52 actual Android). Backend 56307eb reached
+real-device gates after 553 native tests passed in 43255636714; its device/viewer
+results remain pending. New Flutter invoice API/UI source is newer and requires
+fresh formatting, analysis and behavior/build/device checks.
+
+Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
+50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
+Play delivery 43257957626 is running; no new store acceptance or owner installation
+claimed yet. Physical tracking/widgets/email journeys, provider settings, encrypted
+backup, rights/store/production gates remain open. All builds/tests use Actions.
 
 ## 2. Product decisions
 
@@ -2237,3 +2239,28 @@ notice, toolbar and retained pages are clear. This validates the scope baseline
 and document behavior; newer native actual-work billing/optimization and Flutter
 invoice transport source remain under separate validation. No quote UI emulator
 issue/accept/plan/work/invoice journey or complete milestone is claimed yet.
+
+### Actual-work preparation/history UI (source)
+
+Added accepted-revision entry to actual-work invoicing and related invoice history.
+The form chooses a mapped job and real dates/timezone, displays accepted/current
+customer/contact/tax/prices plus estimated/actual quantities or duration, and
+requires selected eligible work and a private review note. Hourly time allocation
+and historical acceptance require explicit acknowledgement. Native calculation
+version/totals are reviewed before a separate write. No source is selected by
+default. Failed refreshes preserve drafts and block review; unavailable selected
+IDs require an explicit clear. Unknown outcomes retain the same operation/invoice
+ID/request/choices and lock edits/back navigation until a known result.
+
+Related invoice history pages metadata, keeps old rows on failed reads, retries
+the same failed cursor/refresh and opens original/replacement invoice detail.
+Creation labels come from native formatting instead of parsing arbitrary stored
+epochs in Dart. Private provenance notes/payloads are not in the history list.
+Added UI source tests for review cancellation, identical response-loss retry,
+failed-refresh selection/note preservation, version-change rejection and history
+page/refresh retries. Fresh Actions and native real-device journey remain required.
+
+Main 93673fb / 43254952365 passed full validation: 42 XML / 479 native and 8 XML /
+50 actual Android, zero failures/errors/skips; downloaded results inspected. Play
+43257957626 is running. Backend 56307eb / 43255636714 has 47 XML / 553 native
+passed with no failures/errors/skips; current device/document gates remain live.

@@ -102,7 +102,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 val before = (raw as Map<*, *>?)?.let { Input(it).let { cursor -> cursor.integer("created") to cursor.string("invoiceId") } }
                 val limit = if (input.value.containsKey("limit")) input.int("limit") else 20
                 val rows = repository.quoteInvoices(input.string("quoteId"), before, limit)
-                return mapOf("invoices" to rows.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "revision" to it.revision, "originalInvoiceId" to it.originalInvoiceId, "created" to it.created) },
+                return mapOf("invoices" to rows.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "revision" to it.revision, "originalInvoiceId" to it.originalInvoiceId, "created" to it.created, "createdLabel" to ReportCsv.instant(it.created, "UTC")) },
                     "next" to rows.lastOrNull()?.takeIf { rows.size == limit }?.let { mapOf("created" to it.created, "invoiceId" to it.invoiceId) })
             }
             "quoteScope" -> return repository.quoteScope(input.string("quoteId")).let { (version, bindings) ->
@@ -258,6 +258,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         return mapOf("version" to state.version, "problem" to state.result.problem, "issued" to quoteRevision(context.issued),
             "historical" to context.historical, "mode" to job.settings.billingMode, "currency" to context.agreement.currency, "digits" to context.digits,
             "jobName" to job.settings.name, "archived" to job.archived, "currentCustomer" to job.customer?.name.orEmpty(), "currentEmail" to job.effectiveEmail,
+            "currentContact" to listOf(job.customer?.address.orEmpty(), job.effectiveEmail, job.customer?.phone.orEmpty()).filter { it.isNotBlank() }.joinToString("\n"),
+            "estimatedHoursUnits" to context.lines.filter { it.kind == "HOURS" }.fold(java.math.BigInteger.ZERO) { sum, line -> sum.add(java.math.BigInteger(line.quantity)) }.toString(),
             "currentTaxUnits" to job.effectiveTaxUnits, "currentHourlyMinor" to job.effectiveHourlyMinor?.toString(), "acceptedHourlyMinor" to context.acceptedRate?.toString(),
             "tasks" to context.tasks.map { mapOf("taskId" to it.actual.id, "title" to it.actual.title, "lineId" to it.accepted.id,
                 "actualQuantityUnits" to it.actual.quantityUnits.toString(), "estimatedQuantityUnits" to it.accepted.quantity,
