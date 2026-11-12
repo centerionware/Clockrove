@@ -8,6 +8,7 @@ environment:
   flutter: '3.47.9'
 
 dependencies:
+  decimal: 3.2.6
   flutter_map: 8.3.2
   latlong2: 0.10.1
   http: 1.6.0

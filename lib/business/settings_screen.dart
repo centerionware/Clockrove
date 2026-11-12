@@ -192,22 +192,25 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           ),
         ),
         const SizedBox(height: 20),
-        TextField(
-          controller: _tax,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          maxLength: 32,
-          decoration: InputDecoration(
-            labelText: 'Default tax (%)',
-            helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',
-            helperMaxLines: 3,
-            errorText: _taxError,
-            errorMaxLines: 3,
+        Semantics(
+          identifier: 'default-tax-percent',
+          child: TextField(
+            controller: _tax,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            maxLength: 32,
+            decoration: InputDecoration(
+              labelText: 'Default tax (%)',
+              helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',
+              helperMaxLines: 3,
+              errorText: _taxError,
+              errorMaxLines: 3,
+            ),
+            onChanged: (_) {
+              if (_taxError != null) {
+                setState(() => _taxError = taxPercentError(_tax.text));
+              }
+            },
           ),
-          onChanged: (_) {
-            if (_taxError != null) {
-              setState(() => _taxError = taxPercentError(_tax.text));
-            }
-          },
         ),
         const SizedBox(height: 32),
         Text(

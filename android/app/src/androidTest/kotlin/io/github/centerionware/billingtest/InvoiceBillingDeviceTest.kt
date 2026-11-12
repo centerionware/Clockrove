@@ -43,8 +43,22 @@ class InvoiceBillingDeviceTest {
         throw failure
     }
     private fun find(label: String, editable: Boolean = false): AccessibilityNodeInfo? {
+        val fieldId = when (label) {
+            "Why this work belongs to the invoice" -> "legacy-invoice-review-note"
+            "Default tax (%)" -> "default-tax-percent"
+            "Job tax (%)" -> "job-tax-percent"
+            "Unit price (USD)" -> "task-unit-price"
+            "Quantity" -> "task-quantity"
+            else -> null
+        }
+        fun editableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (node.isEditable && node.className?.toString() == "android.widget.EditText") return node
+            for (i in 0 until node.childCount) node.getChild(i)?.let { editableNode(it)?.let { found -> return found } }
+            return null
+        }
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
             if (!node.refresh()) return null
+            if (editable && node.isVisibleToUser && fieldId != null && node.viewIdResourceName == fieldId) return editableNode(node)
             for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it)?.let { found -> return found } }
             fun matches(value: CharSequence?) = value?.toString()?.let {
                 if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
@@ -91,6 +105,11 @@ class InvoiceBillingDeviceTest {
     }
     private fun enter(label: String, value: String) {
         reveal(label, true)
+        val field = waitFor(label, true)
+        assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        until("Focused field did not expose text entry for $label") {
+            find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        }
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))

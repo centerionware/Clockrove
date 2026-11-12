@@ -567,44 +567,50 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       maxLength: 20000,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _price,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        labelText: 'Unit price (${board.currency})',
-                        helperText: 'Blank: price not set. 0: explicitly free.',
+                    Semantics(
+                      identifier: 'task-unit-price',
+                      child: TextFormField(
+                        controller: _price,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: 'Unit price (${board.currency})',
+                          helperText: 'Blank: price not set. 0: explicitly free.',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (v) {
+                          try {
+                            parseMoney(v ?? '', board.digits);
+                            return null;
+                          } on FormatException catch (e) {
+                            return e.message;
+                          }
+                        },
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (v) {
-                        try {
-                          parseMoney(v ?? '', board.digits);
-                          return null;
-                        } on FormatException catch (e) {
-                          return e.message;
-                        }
-                      },
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _quantity,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        helperText: 'How many units? Defaults to 1.',
+                    Semantics(
+                      identifier: 'task-quantity',
+                      child: TextFormField(
+                        controller: _quantity,
+                        decoration: const InputDecoration(
+                          labelText: 'Quantity',
+                          helperText: 'How many units? Defaults to 1.',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                        validator: (v) {
+                          try {
+                            parseTaskQuantity(v ?? '');
+                            return null;
+                          } on FormatException catch (e) {
+                            return e.message;
+                          }
+                        },
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (_) => setState(() {}),
-                      validator: (v) {
-                        try {
-                          parseTaskQuantity(v ?? '');
-                          return null;
-                        } on FormatException catch (e) {
-                          return e.message;
-                        }
-                      },
                     ),
                     const SizedBox(height: 16),
                     Text(

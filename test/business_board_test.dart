@@ -208,6 +208,8 @@ void main() {
     expect(money('9007199254740993', 2), '90071992547409.93');
     expect(parseMoney('123', 0), '123');
     expect(money('1', 3), '0.001');
+    expect(money('-1', 2), '-0.01');
+    expect(money('123456789012345678901234567890', 2), '1234567890123456789012345678.90');
     for (final value in [
       '-1',
       'NaN',
@@ -225,6 +227,9 @@ void main() {
     expect(taskQuantity('261250'), '26.125');
     expect(taskAmount('500', '260000'), '13000');
     expect(taskAmount('1', '5000'), '1');
+    expect(taskAmount('1', '4999'), '0');
+    expect(taskAmount('1', '1'), '0');
+    expect(taskAmount('9223372036854775807', '9223372036854775807'), '8507059173023461584739690778423250');
     expect(taskAmount(null, '10000'), isNull);
     for (final value in [
       '',

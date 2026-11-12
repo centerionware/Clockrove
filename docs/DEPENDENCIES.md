@@ -44,3 +44,12 @@ Their complete notices/terms still need the launch review.
 flutter_map 8.3.2 caching source was inspected: server freshness/ETag/Last-Modified,
 conditional refresh, and seven-day fallback for missing freshness metadata.
 Built-in cache is a best-effort OS cache, not an offline-download feature.
+
+Exact money: `decimal: 3.2.6` is selected (Apache-2.0), parsed from strings;
+resolution and its application lockfile must be generated in Actions before use is
+validated. Avoid `intl` numeric formatters for money; decimal shifts/fixed currency
+formatting and exact integer totals preserve precision. Native Android uses the
+platform `java.math.BigDecimal`/`BigInteger` libraries with explicit currency rounding.
+Primary references: [decimal package](https://pub.dev/packages/decimal/versions/3.2.6),
+[author source](https://github.com/a14n/dart-decimal),
+[BigDecimal exact arithmetic](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html).

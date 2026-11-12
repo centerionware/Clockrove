@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:decimal/decimal.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,26 +27,18 @@ String? parseMoney(String input, int digits) {
   if (fraction.length > digits) {
     throw FormatException('This currency allows $digits decimal places.');
   }
-  final minor =
-      BigInt.parse(parts[0]) * BigInt.from(10).pow(digits) +
-      BigInt.parse(
-        fraction.padRight(digits, '0').isEmpty
-            ? '0'
-            : fraction.padRight(digits, '0'),
-      );
+  // Precision was validated above: shifting produces an exact integer, so
+  // toBigInt cannot discard a fractional minor unit.
+  final minor = Decimal.parse(value).shift(digits).toBigInt();
   if (minor > BigInt.parse('9223372036854775807')) {
     throw const FormatException('Amount is too large.');
   }
   return minor.toString();
 }
 
-String money(String? minor, int digits) {
-  if (minor == null) return '';
-  final value = BigInt.parse(minor).toString().padLeft(digits + 1, '0');
-  return digits == 0
-      ? value
-      : '${value.substring(0, value.length - digits)}.${value.substring(value.length - digits)}';
-}
+String money(String? minor, int digits) => minor == null
+    ? ''
+    : Decimal.parse(minor).shift(-digits).toStringAsFixed(digits);
 
 /// Quantities use four exact decimal places, with one represented as 10000.
 String parseTaskQuantity(String input) {
@@ -71,12 +65,13 @@ String taskQuantity(String units) => money(
   4,
 ).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
 
+/// Exact decimal product; HALF_UP happens once, at the task's minor-unit boundary.
 String? taskAmount(String? unitPriceMinor, String quantityUnits) =>
     unitPriceMinor == null
     ? null
-    : ((BigInt.parse(unitPriceMinor) * BigInt.parse(quantityUnits) +
-                  BigInt.from(5000)) ~/
-              BigInt.from(10000))
+    : (Decimal.parse(unitPriceMinor) * Decimal.parse(quantityUnits).shift(-4))
+          .round()
+          .toBigInt()
           .toString();
 
 class BoardColumn {

@@ -25,6 +25,20 @@ The user explicitly requested this handoff after creating agent instructions and
   uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
 
+### Exact money contract (owner priority, 2026-11-12)
+
+All money input, persistence, transport and calculations use canonical decimal
+strings and arbitrary-precision decimal/integer libraries, never binary floating
+point or fixed-width money arithmetic. Use pinned Dart `decimal` and native
+`java.math.BigDecimal`/`BigInteger`; parse strings directly. Remove current 64-bit
+rate/unit-price limits through a conservative migration preserving released values,
+issued documents, source claims and command receipts. Reject malformed/excess
+currency precision explicitly; never silently round input. Quantity and tax math
+stay exact until the documented currency boundary: half-up once per task line,
+hourly total and invoice-subtotal tax. Payments, credits and balances conserve each
+minor unit and never narrow large invoice totals. Pin/lock new dependencies through
+Actions only, and verify migration, large amounts, tiny fractions and conservation.
+
 ### Next concrete action
 
 Priority settings fix #34 is delivered internally. Main c5e19d1 passed

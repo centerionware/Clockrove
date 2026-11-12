@@ -195,23 +195,26 @@ class _JobFormState extends ConsumerState<_JobForm> {
               : null,
         ),
         if (!_inheritTax)
-          TextField(
-            controller: _tax,
-            readOnly: data?.archived ?? true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            maxLength: 32,
-            decoration: InputDecoration(
-              labelText: 'Job tax (%)',
-              helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',
-              helperMaxLines: 3,
-              errorText: _taxError,
-              errorMaxLines: 3,
+          Semantics(
+            identifier: 'job-tax-percent',
+            child: TextField(
+              controller: _tax,
+              readOnly: data?.archived ?? true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              maxLength: 32,
+              decoration: InputDecoration(
+                labelText: 'Job tax (%)',
+                helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',
+                helperMaxLines: 3,
+                errorText: _taxError,
+                errorMaxLines: 3,
+              ),
+              onChanged: (_) {
+                if (_taxError != null) {
+                  setState(() => _taxError = taxPercentError(_tax.text));
+                }
+              },
             ),
-            onChanged: (_) {
-              if (_taxError != null) {
-                setState(() => _taxError = taxPercentError(_tax.text));
-              }
-            },
           ),
         const SizedBox(height: 32),
         Text(

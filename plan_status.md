@@ -2216,3 +2216,25 @@ can exceed 64-bit minor units, so payments/credits/balances must retain arbitrar
 precision and canonical string storage/transport rather than narrowing issued
 amounts. Required conservation cases include large partial payments and transferred
 credits. No payment implementation or payment acceptance is claimed.
+
+6c0222d / 43174102042 passed build/native and the original 20 API-24 cases, then
+failed the new journey while locating the visible review-note field. Captured
+XML/tree/PNG show the selected legacy checkbox and an EditText with no label/hint
+on API 24. Inspection of the pinned Flutter engine confirms hints are only exposed
+from API 28. Added stable semantic field identifiers and focus-before-entry in the
+actual test, retaining all actual writes/assertions. API 35 was not reached.
+
+Owner money priority: audit finds exact BigInt/BigInteger totals, but released
+rate/unit-price inputs/storage still use Long limits. Added an explicit exact-money
+contract before implementation: pinned Dart decimal plus native arbitrary precision,
+canonical decimal text, lossless migration/receipts and deliberate currency rounding
+only. Removing these limits is required before this financial patch merges. No
+unbounded-money implementation or success is claimed yet.
+
+Selected decimal 3.2.6 from its primary package/author references and adapted Dart
+money parsing, formatting and quantity products to string-parsed Decimal, with
+explicit half-up only at the task minor-unit boundary. Added very large totals,
+half-cent neighbors and signed formatting cases. Native BigInteger calculations
+remain exact. This is not yet resolved or validated: use owner-only Actions
+prepare_dependencies to produce pubspec.lock, never resolve on this VM. Existing
+64-bit rate/unit-price storage/input limits remain until the exact-money migration.

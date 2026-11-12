@@ -362,23 +362,26 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       label: const Text('Add covered time'),
                     ),
                     _heading('Review note'),
-                    TextField(
-                      controller: _note,
-                      readOnly: !_editable,
-                      maxLength: 4000,
-                      minLines: 3,
-                      maxLines: 6,
-                      decoration: InputDecoration(
-                        labelText: 'Why this work belongs to the invoice',
-                        helperText: 'Private audit note; never added to the customer PDF.',
-                        errorText: _noteError,
-                        errorMaxLines: 3,
+                    Semantics(
+                      identifier: 'legacy-invoice-review-note',
+                      child: TextField(
+                        controller: _note,
+                        readOnly: !_editable,
+                        maxLength: 4000,
+                        minLines: 3,
+                        maxLines: 6,
+                        decoration: InputDecoration(
+                          labelText: 'Why this work belongs to the invoice',
+                          helperText: 'Private audit note; never added to the customer PDF.',
+                          errorText: _noteError,
+                          errorMaxLines: 3,
+                        ),
+                        onChanged: (_) {
+                          if (_noteError != null) {
+                            setState(() => _noteError = null);
+                          }
+                        },
                       ),
-                      onChanged: (_) {
-                        if (_noteError != null) {
-                          setState(() => _noteError = null);
-                        }
-                      },
                     ),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
