@@ -496,6 +496,18 @@ class TimerRepository internal constructor(context: Context,
     internal fun quote(id: String): QuoteContext = QuoteContext(readSnapshot(helper.readableDatabase).version,
         QuoteStore.draft(helper.readableDatabase, id), QuoteStore.latest(helper.readableDatabase, id))
     @Synchronized
+    internal fun quoteRevision(id: String, revision: Int): QuoteStore.Revision? = QuoteStore.revision(helper.readableDatabase, id, revision)
+    @Synchronized
+    internal fun quoteHistory(id: String, before: Int? = null, limit: Int = 20): List<QuoteStore.RevisionSummary> =
+        QuoteStore.history(helper.readableDatabase, id, before, limit)
+    internal data class QuoteIndex(val version: Long, val today: String, val timezone: String, val page: QuoteStore.Page)
+    @Synchronized
+    internal fun quotes(before: QuoteStore.Cursor? = null, limit: Int = 20): QuoteIndex {
+        val db = helper.readableDatabase; val zone = java.util.TimeZone.getDefault()
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = zone }.format(java.util.Date(wallClock()))
+        return QuoteIndex(readSnapshot(db).version, today, zone.id, QuoteStore.index(db, today, before, limit))
+    }
+    @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized

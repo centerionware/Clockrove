@@ -35,6 +35,46 @@ internal object QuoteStore {
     data class Totals(val subtotal: BigInteger, val tax: BigInteger, val total: BigInteger)
     data class Revision(val quoteId: String, val revision: Int, val number: String, val payload: String,
         val created: Long, val decision: String?, val decisionNote: String?)
+    data class Cursor(val created: Long, val id: String)
+    data class Summary(val id: String, val number: String?, val created: Long, val title: String,
+        val currency: String, val total: String, val validUntil: String?, val revision: Int?,
+        val status: String, val hasDraft: Boolean, val jobId: String?, val customer: String)
+    data class Page(val entries: List<Summary>, val next: Cursor?)
+    data class RevisionSummary(val revision: Int, val created: Long, val decision: String?)
+
+    fun revision(db: SQLiteDatabase, id: String, revision: Int): Revision? {
+        require(revision > 0) { "INVALID_QUOTE_REVISION" }
+        return db.rawQuery("SELECT q.number,r.payload,r.created_ms,d.decision,d.note FROM quote_revisions r JOIN quotes q ON q.id=r.quote_id LEFT JOIN quote_decisions d ON d.quote_id=r.quote_id AND d.revision=r.revision WHERE r.quote_id=? AND r.revision=?", arrayOf(id, revision.toString())).use {
+            if (!it.moveToFirst()) null else Revision(id, revision, it.getString(0), it.getString(1), it.getLong(2), if (it.isNull(3)) null else it.getString(3), if (it.isNull(4)) null else it.getString(4))
+        }
+    }
+    fun history(db: SQLiteDatabase, id: String, before: Int? = null, limit: Int = 20): List<RevisionSummary> {
+        require(limit in 1..50 && (before == null || before > 0)) { "INVALID_QUOTE_PAGE" }
+        return db.rawQuery("SELECT r.revision,r.created_ms,d.decision FROM quote_revisions r LEFT JOIN quote_decisions d ON d.quote_id=r.quote_id AND d.revision=r.revision WHERE r.quote_id=? AND r.revision<? ORDER BY r.revision DESC LIMIT ?",
+            arrayOf(id, (before?.toLong() ?: (Int.MAX_VALUE.toLong() + 1)).toString(), limit.toString())).use { rows -> buildList {
+                while (rows.moveToNext()) add(RevisionSummary(rows.getInt(0), rows.getLong(1), if (rows.isNull(2)) null else rows.getString(2)))
+            } }
+    }
+    fun index(db: SQLiteDatabase, today: String, before: Cursor? = null, limit: Int = 20): Page {
+        require(validDate(today) && limit in 1..50 && (before == null || before.created >= 0 && ids.matches(before.id))) { "INVALID_QUOTE_PAGE" }
+        // Metadata only: a valid draft plus issued document can exceed one cursor window.
+        val keys = db.rawQuery("SELECT id,created_ms FROM quotes WHERE (? IS NULL OR created_ms<? OR (created_ms=? AND id<?)) ORDER BY created_ms DESC,id DESC LIMIT ?",
+            arrayOf(before?.id, before?.created?.toString(), before?.created?.toString(), before?.id, (limit + 1).toString())).use { rows -> buildList {
+                while (rows.moveToNext()) add(Cursor(rows.getLong(1), rows.getString(0)))
+            } }
+        val summaries = keys.take(limit).map { key ->
+            val draft = draft(db, key.id); val issued = latest(db, key.id)
+            val frozen = issued?.let { JSONObject(it.payload) }
+            val source = draft ?: Draft.decode(requireNotNull(frozen).getJSONObject("draft").toString())
+            val validUntil = source.validUntil
+            val status = if (draft != null) "DRAFT" else issued!!.decision ?: if (validUntil != null && validUntil < today) "EXPIRED" else "ISSUED"
+            Summary(key.id, issued?.number, key.created, source.title, source.currency,
+                if (draft != null) InvoiceStore.amount(totals(draft).total, Currency.getInstance(draft.currency).defaultFractionDigits) else frozen!!.getString("total"),
+                validUntil, issued?.revision, status, draft != null, source.jobId,
+                if (draft != null) draft.customerId?.let { id -> BusinessStore.customers(db).firstOrNull { it.id == id }?.name }.orEmpty() else frozen!!.getString("customer"))
+        }
+        return Page(summaries, keys.takeIf { it.size > limit }?.get(limit - 1))
+    }
 
     fun totals(draft: Draft): Totals {
         require(ids.matches(draft.id) && draft.lines.size in 1..2000 && draft.lines.map { it.id }.toSet().size == draft.lines.size) { "INVALID_QUOTE" }
@@ -62,6 +102,7 @@ internal object QuoteStore {
         db.execSQL("INSERT INTO quote_counter VALUES(1,1000)")
         // Job IDs deliberately survive a purged job, just like invoice identities.
         db.execSQL("CREATE TABLE quotes(id TEXT PRIMARY KEY NOT NULL,number TEXT UNIQUE,created_ms INTEGER NOT NULL)")
+        db.execSQL("CREATE TRIGGER quote_identity_immutable BEFORE UPDATE OF id,number,created_ms ON quotes WHEN OLD.number IS NOT NULL BEGIN SELECT RAISE(ABORT,'Issued quote identity is immutable'); END")
         db.execSQL("CREATE TABLE quote_drafts(quote_id TEXT PRIMARY KEY NOT NULL REFERENCES quotes(id),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,updated_ms INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE quote_revisions(quote_id TEXT NOT NULL REFERENCES quotes(id),revision INTEGER NOT NULL CHECK(revision>0),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,logo_id TEXT REFERENCES logo_assets(id),created_ms INTEGER NOT NULL,PRIMARY KEY(quote_id,revision))")
         db.execSQL("CREATE TABLE quote_decisions(quote_id TEXT NOT NULL,revision INTEGER NOT NULL,decision TEXT NOT NULL CHECK(decision IN('ACCEPTED','DECLINED')),note TEXT NOT NULL,recorded_ms INTEGER NOT NULL,PRIMARY KEY(quote_id,revision),FOREIGN KEY(quote_id,revision) REFERENCES quote_revisions(quote_id,revision))")

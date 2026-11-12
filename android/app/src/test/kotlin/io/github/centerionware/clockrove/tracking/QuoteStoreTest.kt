@@ -37,6 +37,7 @@ class QuoteStoreTest {
         val value = draft(); val before = version
         val saved = repository.saveQuote("save", before, value)
         assertNull(saved.conflict); assertEquals(saved, repository.saveQuote("save", before, value))
+        assertEquals("COMMAND_ID_REUSED", repository.saveQuote("save", before, value.copy(title = "Changed retry")).conflict)
         assertEquals(value, repository.quote(value.id).draft); assertNull(repository.quote(value.id).latest)
         assertEquals(1000L, sequence())
         val initial = version
@@ -69,6 +70,7 @@ class QuoteStoreTest {
             db.rawQuery("SELECT decision FROM quote_decisions WHERE revision=1", null).use { it.moveToFirst(); assertEquals("ACCEPTED", it.getString(0)) }
             try { db.execSQL("UPDATE quote_revisions SET payload='changed'"); fail("immutable") } catch (_: android.database.SQLException) { }
             try { db.execSQL("DELETE FROM quote_decisions"); fail("immutable") } catch (_: android.database.SQLException) { }
+            try { db.execSQL("UPDATE quotes SET number='Q-9999'"); fail("immutable number") } catch (_: android.database.SQLException) { }
         }
     }
     @Test fun quantitiesEstimatedHoursWideTotalsAndHalfCentBoundariesStayExact() {
@@ -143,5 +145,52 @@ class QuoteStoreTest {
         }
         assertNull(repository.issueQuote("interrupted", before, "other", true).conflict)
         assertEquals("Q-1001", repository.quote("other").latest!!.number)
+    }
+    @Test fun quotePagesUseStableKeysAndExpiryIsDerivedWithoutWriting() {
+        for (id in listOf("alpha", "bravo", "charlie")) issue(draft(id).copy(validUntil = "2026-11-01"))
+        val initial = version
+        val first = repository.quotes(limit = 2)
+        assertEquals(listOf("charlie", "bravo"), first.page.entries.map { it.id }); assertNotNull(first.page.next)
+        val second = repository.quotes(first.page.next, 2)
+        assertEquals(listOf("alpha"), second.page.entries.map { it.id }); assertNull(second.page.next)
+        inspect { db ->
+            val onDate = QuoteStore.index(db, "2026-11-01")
+            assertTrue(onDate.entries.all { it.status == "ISSUED" })
+            val expired = QuoteStore.index(db, "2026-11-02")
+            assertTrue(expired.entries.all { it.status == "EXPIRED" })
+        }
+        assertEquals(initial, version)
+        assertNull(repository.decideQuote("accept", version, "alpha", 1, "ACCEPTED", "Explicit local acceptance", true).conflict)
+        inspect { db -> assertEquals("ACCEPTED", QuoteStore.index(db, "2026-11-02").entries.single { it.id == "alpha" }.status) }
+        assertNull(repository.saveQuote("edit", version, draft("alpha")).conflict)
+        val editing = repository.quotes().page.entries.single { it.id == "alpha" }
+        assertTrue(editing.hasDraft); assertEquals("DRAFT", editing.status); assertEquals("Q-1000", editing.number)
+        assertEquals("ACCEPTED", repository.quoteRevision("alpha", 1)!!.decision)
+    }
+    @Test fun revisionHistoryReadsOldDocumentsAndPaginatesWithoutReplacingThem() {
+        issue()
+        val first = repository.quoteRevision("quote", 1)!!
+        for (revision in 2..3) {
+            assertNull(repository.saveQuote("save-$revision", version, draft().copy(title = "Revision $revision")).conflict)
+            assertNull(repository.issueQuote("issue-$revision", version, "quote", true).conflict)
+        }
+        assertEquals(listOf(3, 2), repository.quoteHistory("quote", limit = 2).map { it.revision })
+        assertEquals(listOf(1), repository.quoteHistory("quote", before = 2, limit = 2).map { it.revision })
+        assertEquals(first, repository.quoteRevision("quote", 1)); assertNull(repository.quoteRevision("quote", 4))
+        try { repository.quotes(limit = 51); fail("Page limit required") } catch (_: IllegalArgumentException) { }
+        try { repository.quoteHistory("quote", before = 0); fail("Positive revision cursor required") } catch (_: IllegalArgumentException) { }
+    }
+    @Test fun exhaustedNumberSequenceRejectsNewIssueWithoutPreventingExistingRevisions() {
+        issue()
+        inspect { it.execSQL("UPDATE quote_counter SET next_number=?", arrayOf(Long.MAX_VALUE)) }
+        assertNull(repository.saveQuote("new", version, draft("new")).conflict)
+        val before = version
+        assertEquals("QUOTE_SEQUENCE_EXHAUSTED", repository.issueQuote("new-issue", before, "new", true).conflict)
+        assertEquals(before, version); assertNotNull(repository.quote("new").draft); assertNull(repository.quote("new").latest)
+        assertEquals(Long.MAX_VALUE, sequence())
+        assertNull(repository.saveQuote("revise", version, draft()).conflict)
+        assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
+        assertEquals(2, repository.quote("quote").latest!!.revision); assertEquals("Q-1000", repository.quote("quote").latest!!.number)
+        assertEquals(Long.MAX_VALUE, sequence())
     }
 }

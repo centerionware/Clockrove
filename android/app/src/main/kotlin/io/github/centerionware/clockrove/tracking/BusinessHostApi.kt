@@ -49,11 +49,24 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "quotes" -> {
+                val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
+                val before = (raw as? Map<*, *>)?.let { Input(it).let { cursor -> QuoteStore.Cursor(cursor.integer("created"), cursor.string("id")) } }
+                val state = repository.quotes(before, if (input.value.containsKey("limit")) input.int("limit") else 20)
+                return mapOf("version" to state.version, "today" to state.today, "timezone" to state.timezone,
+                    "next" to state.page.next?.let { mapOf("created" to it.created, "id" to it.id) },
+                    "entries" to state.page.entries.map { entry -> mapOf("quoteId" to entry.id, "number" to entry.number,
+                        "created" to entry.created, "title" to entry.title, "currency" to entry.currency, "total" to entry.total,
+                        "validUntil" to entry.validUntil, "revision" to entry.revision, "status" to entry.status,
+                        "hasDraft" to entry.hasDraft, "jobId" to entry.jobId, "customer" to entry.customer) })
+            }
+            "quoteRevision" -> return repository.quoteRevision(input.string("quoteId"), input.int("revision"))?.let(::quoteRevision)
+                ?: mapOf("unavailable" to true)
+            "quoteHistory" -> return repository.quoteHistory(input.string("quoteId"), if (input.value["before"] == null) null else input.int("before"),
+                if (input.value.containsKey("limit")) input.int("limit") else 20).map { mapOf("revision" to it.revision, "created" to it.created, "decision" to it.decision) }
             "quoteContext" -> return repository.quote(input.string("quoteId")).let { state ->
                 mapOf("version" to state.version, "draftJson" to state.draft?.encode(),
-                    "latest" to state.latest?.let { revision -> mapOf("quoteId" to revision.quoteId,
-                        "revision" to revision.revision, "number" to revision.number, "payload" to revision.payload,
-                        "created" to revision.created, "decision" to revision.decision, "decisionNote" to revision.decisionNote) })
+                    "latest" to state.latest?.let(::quoteRevision))
             }
             "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
                 mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
@@ -173,6 +186,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             else -> error("Unreachable")
         }
     }
+    private fun quoteRevision(revision: QuoteStore.Revision): Map<String, Any?> = mapOf("quoteId" to revision.quoteId,
+        "revision" to revision.revision, "number" to revision.number, "payload" to revision.payload,
+        "created" to revision.created, "decision" to revision.decision, "decisionNote" to revision.decisionNote)
     private fun invoicePayments(context: TimerRepository.InvoicePaymentContext): Map<String, Any?> {
         val ledger = context.ledger; val document = ledger.document
         return mapOf("version" to context.version, "invoiceId" to ledger.invoice.id, "number" to document.number,

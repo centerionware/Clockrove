@@ -2585,3 +2585,10 @@ and context reads. Money and quantities must be strings; tax/revision/version
 must be integers and confirmation a boolean. Native bridge cases reject numeric
 money, numeric quantities, fractional tax/version and invalid confirmation types
 before writes. This source still awaits Actions and does not expose a quote UI.
+
+Quote source now includes bounded keyset pages, explicit historical revision reads,
+revision-history pages, and calendar-date expiry projection labeled with native
+today/timezone. Draft edits retain their issued number and prior acceptance;
+expiry projections do not mutate history. Added pagination, retained historical
+read, immutable number, changed-retry identity and exhausted-sequence cases.
+Actions proof for this increment remains pending.
