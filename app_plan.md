@@ -2192,3 +2192,16 @@ Scope 202ceb1 / 43252783507 passed formatting, analysis, Flutter behavior, build
 and native checks: downloaded 47 XML / 539 native tests, zero failures/errors/skips.
 Its Android device/PDF and viewer gates remain live. Native actual-work preparation
 and board append optimization are newer source, requiring their own fresh Actions.
+
+### Actual-work quote channel contracts (source)
+
+Added strict quoteInvoiceContext, calculateQuoteInvoice, prepareQuoteInvoice and
+paged quoteInvoices channel contracts. Context includes actual/estimated task
+quantities, accepted/current prices/rates, current party/tax, exact eligible time
+slices, unfinalized and coverage exclusions, and legacy review blockers. Native
+calculation returns versioned canonical minor-unit totals and the chosen frozen
+party; the write accepts source IDs/policies, never client-computed money. Related
+invoice listing returns metadata without private provenance payloads/notes. Added
+bridge source coverage for quantity/price differences, exact subtotal/tax/total,
+strict boolean/integer types, same-operation replay and post-prepare exclusion.
+Flutter transport and preparation/history UI remain next; fresh Actions required.

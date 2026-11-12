@@ -2887,3 +2887,7 @@ visuals inspected). Main 93673fb / 43254952365 validation running; new Play
 publication is unproven. Quote scope 202ceb1 / 43252783507: 47 XML / 539 native
 zero failures/errors/skips verified; actual-device gates running. Later native
 quote billing and board optimization source still require fresh Actions.
+
+Quote actual-work bridge: native context/calculation/preparation and metadata-only
+paged history contracts implemented as source, with strict-type/exact-total/replay
+coverage added. Not yet validated; Flutter preparation transport/UI remain open.

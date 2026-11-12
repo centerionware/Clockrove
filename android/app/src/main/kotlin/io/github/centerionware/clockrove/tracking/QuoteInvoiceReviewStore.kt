@@ -58,6 +58,7 @@ internal object QuoteInvoiceReviewStore {
             else if (missing > 0) null else actualTasks.fold(BigInteger.ZERO) { sum, task -> sum.add(TaskQuantityStore.amount(requireNotNull(task.priceMinor), task.quantityUnits)) }
         val currentTotal = coverage.report.totals.single().copy(durationMillis = duration, amountMinor = currentAmount, missingPrices = missing)
         val eligible = coverage.report.copy(tasks = actualTasks, intervals = actualIntervals, points = emptyList(), totals = listOf(currentTotal))
+        if (actualTasks.size > 2000 || actualIntervals.size > 5000) return Read("INVOICE_TOO_LARGE")
         val context = Context(issued, agreement, digits, job, coverage.copy(report = eligible), tasks, lines,
             if (kind == "HOURS") MoneyMath.parse(lines.first().unitPrice) else null,
             QuoteStore.latest(db, request.quoteId)?.revision != request.revision)

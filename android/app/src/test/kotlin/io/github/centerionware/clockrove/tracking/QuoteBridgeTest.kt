@@ -83,4 +83,39 @@ class QuoteBridgeTest {
         assertNull(repository.boardSnapshot("planned-job").board.cards.single().completedMillis)
         assertNull(repository.snapshot().running)
     }
+    @Test fun actualQuoteInvoiceChannelReviewsExactActualsAndPreparesWithoutClientAmounts() {
+        assertNull(command("saveQuote", "save", draft()).conflict)
+        assertNull(command("issueQuote", "issue", mapOf("quoteId" to "quote", "confirmed" to true)).conflict)
+        assertNull(command("decideQuote", "accept", mapOf("quoteId" to "quote", "revision" to 1, "decision" to "ACCEPTED", "note" to "Explicit synthetic acceptance", "confirmed" to true)).conflict)
+        val plan = QuoteScopeStore.Draft("quote", 1, "planned-job", listOf(QuoteScopeStore.Item("line", "planned-task", "Install tile")), "Explicit actual scope review", true, "Synthetic work")
+        assertNull(repository.applyQuoteScope("plan", version, plan).conflict)
+        val done = repository.boardSnapshot("planned-job").board.columns.single { it.completed }.id
+        assertNull(repository.saveCard("complete", version, BoardStore.Draft("planned-task", "planned-job", done, "Actual tile", priceMinor = java.math.BigInteger("999"), currency = "USD", quantityUnits = 300000)).conflict)
+        val request = mapOf("quoteId" to "quote", "revision" to 1, "jobId" to "planned-job", "firstDate" to "2026-01-01", "lastDate" to "2026-12-31", "timezone" to "UTC")
+        val choices = mapOf("taskIds" to listOf("planned-task"), "times" to emptyList<Any>(), "currentPrices" to false, "currentTax" to false, "currentParty" to false,
+            "note" to "Explicit review of actual source work", "confirmed" to true, "historicalReviewed" to false)
+        val available = dispatch.call(MethodCall("quoteInvoiceContext", request)) as Map<*, *>
+        assertNull(available["problem"])
+        val task = (available["tasks"] as List<*>).single() as Map<*, *>
+        assertEquals("300000", task["actualQuantityUnits"]); assertEquals("260000", task["estimatedQuantityUnits"])
+        assertEquals("1250", task["acceptedUnitPriceMinor"]); assertEquals("999", task["currentUnitPriceMinor"])
+        val review = dispatch.call(MethodCall("calculateQuoteInvoice", mapOf("request" to request, "choices" to choices))) as Map<*, *>
+        assertNull(review["problem"]); assertEquals("37500", review["subtotalMinor"])
+        assertEquals("2813", review["taxMinor"]); assertEquals("40313", review["totalMinor"])
+        val initial = version
+        try { dispatch.call(MethodCall("calculateQuoteInvoice", mapOf("request" to request, "choices" to choices + ("currentPrices" to 1)))); fail("Boolean policy required") } catch (_: IllegalArgumentException) { }
+        try { dispatch.call(MethodCall("calculateQuoteInvoice", mapOf("request" to request, "choices" to choices + ("times" to listOf(mapOf("sessionId" to "session", "start" to 1.0, "end" to 2L)))))); fail("Exact integer timestamps required") } catch (_: IllegalArgumentException) { }
+        assertEquals(initial, version)
+        val value = mapOf("invoiceId" to "quoted-invoice", "request" to request, "choices" to choices)
+        val result = command("prepareQuoteInvoice", "prepare", value, initial)
+        assertNull(result.conflict); assertEquals(result, command("prepareQuoteInvoice", "prepare", value, initial))
+        assertEquals("403.13", InvoiceStore.Snapshot.decode(repository.invoice("quoted-invoice").payload).total)
+        val history = dispatch.call(MethodCall("quoteInvoices", mapOf("quoteId" to "quote"))) as Map<*, *>
+        val summary = (history["invoices"] as List<*>).single() as Map<*, *>
+        assertEquals("INV-1000", summary["number"]); assertEquals("quoted-invoice", summary["invoiceId"])
+        assertFalse(summary.containsKey("payload")); assertFalse(summary.containsKey("note"))
+        val after = dispatch.call(MethodCall("quoteInvoiceContext", request)) as Map<*, *>
+        assertTrue((after["tasks"] as List<*>).isEmpty()); assertEquals(1, (after["excluded"] as List<*>).size)
+    }
+
 }
