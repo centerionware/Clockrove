@@ -2926,3 +2926,9 @@ Additional native quote billing source regressions added: missing current price,
 frozen versus explicitly current customer/contact, and zero/three-decimal currency
 invoice totals. Fresh Actions required; prior 553-case proof does not cover these
 new cases.
+
+6b32e7b / 43260662958: new invoice review/history UI behavior tests passed;
+overall 152 passed / one quote-detail offscreen-finder failure / 14 document-only
+skips. Existing command-identity assertions kept; test now scrolls to and checks
+the enabled issued-document button after retry. Actions formatter patch applied;
+Android build/native/device gates did not run on this failed head.

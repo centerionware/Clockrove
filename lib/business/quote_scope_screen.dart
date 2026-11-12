@@ -764,18 +764,21 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                   ),
                 ),
               for (final line in _group.lines) _line(line),
-              Semantics(identifier: 'quote-scope-note', child: TextFormField(
-                controller: _note,
-                enabled: _enabled,
-                minLines: 2,
-                maxLines: 5,
-                maxLength: 2000,
-                maxLengthEnforcement: MaxLengthEnforcement.none,
-                decoration: const InputDecoration(
-                  labelText: 'Private scope review note',
+              Semantics(
+                identifier: 'quote-scope-note',
+                child: TextFormField(
+                  controller: _note,
+                  enabled: _enabled,
+                  minLines: 2,
+                  maxLines: 5,
+                  maxLength: 2000,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  decoration: const InputDecoration(
+                    labelText: 'Private scope review note',
+                  ),
+                  onChanged: (_) => setState(_changed),
                 ),
-                onChanged: (_) => setState(_changed),
-              )),
+              ),
               OutlinedButton(
                 onPressed: _enabled && !_readFailed && _incompatible == null
                     ? _review

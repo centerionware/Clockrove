@@ -169,7 +169,15 @@ void main() {
       expect(api.issues, hasLength(2));
       expect(api.issues[1], api.issues[0]);
       expect(find.text('Retry same operation'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('Open issued quote'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Open issued quote'), findsOneWidget);
+      final openIssued = find.widgetWithText(FilledButton, 'Open issued quote');
+      expect(tester.widget<FilledButton>(openIssued).onPressed, isNotNull);
       expect(tester.takeException(), isNull);
     },
   );

@@ -557,28 +557,39 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                         _changed(source: true);
                       }),
               ),
-              Semantics(identifier: 'quote-invoice-first', child: TextFormField(
-                controller: _first,
-                enabled: _enabled,
-                decoration: const InputDecoration(
-                  labelText: 'First date (YYYY-MM-DD)',
+              Semantics(
+                identifier: 'quote-invoice-first',
+                child: TextFormField(
+                  controller: _first,
+                  enabled: _enabled,
+                  decoration: const InputDecoration(
+                    labelText: 'First date (YYYY-MM-DD)',
+                  ),
+                  onChanged: (_) => setState(() => _changed(source: true)),
                 ),
-                onChanged: (_) => setState(() => _changed(source: true)),
-              )),
-              Semantics(identifier: 'quote-invoice-last', child: TextFormField(
-                controller: _last,
-                enabled: _enabled,
-                decoration: const InputDecoration(
-                  labelText: 'Last date (YYYY-MM-DD)',
+              ),
+              Semantics(
+                identifier: 'quote-invoice-last',
+                child: TextFormField(
+                  controller: _last,
+                  enabled: _enabled,
+                  decoration: const InputDecoration(
+                    labelText: 'Last date (YYYY-MM-DD)',
+                  ),
+                  onChanged: (_) => setState(() => _changed(source: true)),
                 ),
-                onChanged: (_) => setState(() => _changed(source: true)),
-              )),
-              Semantics(identifier: 'quote-invoice-zone', child: TextFormField(
-                controller: _zone,
-                enabled: _enabled,
-                decoration: const InputDecoration(labelText: 'Report timezone'),
-                onChanged: (_) => setState(() => _changed(source: true)),
-              )),
+              ),
+              Semantics(
+                identifier: 'quote-invoice-zone',
+                child: TextFormField(
+                  controller: _zone,
+                  enabled: _enabled,
+                  decoration: const InputDecoration(
+                    labelText: 'Report timezone',
+                  ),
+                  onChanged: (_) => setState(() => _changed(source: true)),
+                ),
+              ),
               OutlinedButton(
                 onPressed: _enabled && _job != null ? _load : null,
                 child: const Text('Load available work'),
@@ -780,18 +791,21 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                     '${data.unfinalized.length} active, provisional or review-needed time entries excluded. Finalize/review the actual work before invoicing.',
                   ),
               ],
-              Semantics(identifier: 'quote-invoice-note', child: TextFormField(
-                controller: _note,
-                enabled: _enabled,
-                minLines: 2,
-                maxLines: 5,
-                maxLength: 2000,
-                maxLengthEnforcement: MaxLengthEnforcement.none,
-                decoration: const InputDecoration(
-                  labelText: 'Private invoice review note',
+              Semantics(
+                identifier: 'quote-invoice-note',
+                child: TextFormField(
+                  controller: _note,
+                  enabled: _enabled,
+                  minLines: 2,
+                  maxLines: 5,
+                  maxLength: 2000,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  decoration: const InputDecoration(
+                    labelText: 'Private invoice review note',
+                  ),
+                  onChanged: (_) => setState(_changed),
                 ),
-                onChanged: (_) => setState(_changed),
-              )),
+              ),
               OutlinedButton(
                 onPressed: _ready && _context!.legacy.isEmpty ? _review : null,
                 child: const Text('Review actual-work invoice'),

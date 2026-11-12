@@ -593,22 +593,25 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                 },
                         ),
                         const SizedBox(height: 12),
-                        Semantics(identifier: 'quote-decision-note', child: TextFormField(
-                          controller: _note,
-                          enabled: _eligible,
-                          minLines: 2,
-                          maxLines: 5,
-                          maxLength: 2000,
-                          maxLengthEnforcement: MaxLengthEnforcement.none,
-                          decoration: InputDecoration(
-                            labelText: 'Private decision note',
-                            errorText: _noteError,
+                        Semantics(
+                          identifier: 'quote-decision-note',
+                          child: TextFormField(
+                            controller: _note,
+                            enabled: _eligible,
+                            minLines: 2,
+                            maxLines: 5,
+                            maxLength: 2000,
+                            maxLengthEnforcement: MaxLengthEnforcement.none,
+                            decoration: InputDecoration(
+                              labelText: 'Private decision note',
+                              errorText: _noteError,
+                            ),
+                            onChanged: (_) => setState(() {
+                              _decisionReview = null;
+                              _noteError = null;
+                            }),
                           ),
-                          onChanged: (_) => setState(() {
-                            _decisionReview = null;
-                            _noteError = null;
-                          }),
-                        )),
+                        ),
                         OutlinedButton(
                           onPressed: _eligible && latest.decision == null
                               ? _reviewDecision

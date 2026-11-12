@@ -2300,3 +2300,15 @@ explicit current-party choice, and exact zero/three-decimal JPY/KWD invoice
 subtotal/tax/total boundaries. All use real repository/storage commands and shared
 claims; no local tests were run. These tests are newer than the 553-case backend
 proof and need fresh Actions alongside the preparation UI journey.
+
+### New invoice UI behavior gate and quote-detail test readiness
+
+6b32e7b / 43260662958 passed analysis and all new quote invoice review/history
+behavior tests (cancelled review, identical lost-reply operation/invoice/source
+retry, failed-read draft/selection preservation, changed-version refusal and
+history cursor retry). Overall Flutter suite stopped with 152 passed / one failed
+/ 14 document-only skips: the existing quote-detail test looked for an offscreen
+lazy-list document button after its successful retry. Preserve its command count/
+identity assertions, scroll back to the document button and assert it is enabled.
+Applied Actions-generated semantic-wrapper formatting. No Android build/device
+result is inferred from this behavior-stage failure. Fresh validation required.
