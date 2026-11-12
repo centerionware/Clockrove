@@ -2640,3 +2640,14 @@ cover estimated hours, fractional units/half-up boundary, 1000-digit arithmetic,
 invalid precision/range, immutable draft capture and exact channel transport.
 Formatting/analysis/test evidence must come from the upcoming Actions run; quote
 screens and reviewed scope conversion are still required.
+
+### Quote first-page null binding corrected from Actions evidence
+
+3962104 / 43231015416 passed formatting, analysis, Flutter behavior and Android
+build, then ran 505 native cases: 503 passed, two API-24/35 executions of the new
+first-page test failed. Downloaded artifact 13950813526; XML reports Android
+SQLiteProgram rejects null string selection bindings. The optional cursor query
+used null bindings for page one. Source now selects a fixed unfiltered first-page
+query and a separate fixed keyset clause with entirely non-null bindings for later
+pages. Pagination/order/expiry assertions remain unchanged. Real-device quote PDF
+and new Dart adapter evidence still require the corrected current head in Actions.

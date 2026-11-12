@@ -58,8 +58,9 @@ internal object QuoteStore {
     fun index(db: SQLiteDatabase, today: String, before: Cursor? = null, limit: Int = 20): Page {
         require(validDate(today) && limit in 1..50 && (before == null || before.created >= 0 && ids.matches(before.id))) { "INVALID_QUOTE_PAGE" }
         // Metadata only: a valid draft plus issued document can exceed one cursor window.
-        val keys = db.rawQuery("SELECT id,created_ms FROM quotes WHERE (? IS NULL OR created_ms<? OR (created_ms=? AND id<?)) ORDER BY created_ms DESC,id DESC LIMIT ?",
-            arrayOf(before?.id, before?.created?.toString(), before?.created?.toString(), before?.id, (limit + 1).toString())).use { rows -> buildList {
+        val where = if (before == null) "" else "WHERE created_ms<? OR (created_ms=? AND id<?)"
+        val args = if (before == null) arrayOf((limit + 1).toString()) else arrayOf(before.created.toString(), before.created.toString(), before.id, (limit + 1).toString())
+        val keys = db.rawQuery("SELECT id,created_ms FROM quotes $where ORDER BY created_ms DESC,id DESC LIMIT ?", args).use { rows -> buildList {
                 while (rows.moveToNext()) add(Cursor(rows.getLong(1), rows.getString(0)))
             } }
         val summaries = keys.take(limit).map { key ->
