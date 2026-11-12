@@ -1971,3 +1971,18 @@ contains the same probe and is superseded by this specific correction. Complete
 financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
 48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
 captures per API. No VM build/test ran.
+
+### Quotes: native estimate foundation in progress
+
+After merged payments #37, the next ordered milestone starts on `quotes`.
+Schema 9 source adds editable quote drafts, independent issue-time Q-1000
+numbering, immutable issued revisions and explicit local acceptance/decline
+against a specific latest revision. Item and estimated-hour quantities use exact
+scaled units and arbitrary-precision prices/totals with the existing documented
+currency rounding. Quote commands never create sessions, completed tasks,
+invoices, source reservations or payments. Issued customer/company/style/tax/logo
+snapshots and revision ancestry survive edits and job purging. A frozen schema-8
+fixture covers upgrade/rollback independently from the current installer.
+Native tests are source only until Actions passes. No quote UI, PDF, email,
+conversion or full milestone acceptance is claimed. Implement these dependent
+parts next, preserving the same serialized command and source-coverage boundary.

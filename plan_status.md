@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
-| Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Follow-on: quotes | Native estimate foundation under implementation; Actions pending | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -2565,3 +2565,16 @@ BigInteger/BigDecimal string parsing. Excess currency precision rejects with the
 draft kept; bounded input rejects rather than overflow/clamp/truncate. Exact
 products round only at the documented currency boundary. Quotes remain the next
 implementation milestone, using the same money contract.
+
+### Quotes native foundation — source awaiting Actions
+
+Schema 9 adds separate draft/revision/decision storage, issue-time Q-1000
+numbering and frozen exact monetary/customer/company/style/logo snapshots.
+Repository commands serialize save/issue/decision with global versions and durable
+retry receipts. New API-24/35 native cases cover no financial/work side effects,
+revisions/acceptance, half-cent and 1000-digit arithmetic, invalid input,
+concurrent issue, late rollback, retained customer/logo/job provenance, frozen-v8
+migration and failed migration rollback. The older schema fixtures stay unchanged.
+Current source is not validated; UI, revision navigation, expiry display, actual
+three-style PDF/private email handoff, accepted-scope mapping and invoice review
+remain required before quote milestone completion. No VM build/test ran.

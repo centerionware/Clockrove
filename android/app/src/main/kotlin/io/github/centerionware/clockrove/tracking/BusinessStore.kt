@@ -88,7 +88,7 @@ internal object BusinessStore {
     }
     fun removeCustomer(db: SQLiteDatabase, id: String, at: Long): String? {
         if (customers(db).none { it.id == id }) return "CUSTOMER_UNAVAILABLE"
-        val used = db.rawQuery("SELECT id FROM jobs WHERE customer_id=? UNION ALL SELECT id FROM invoices WHERE customer_id=? LIMIT 1", arrayOf(id, id)).use { it.moveToFirst() }
+        val used = db.rawQuery("SELECT id FROM jobs WHERE customer_id=? UNION ALL SELECT id FROM invoices WHERE customer_id=? UNION ALL SELECT quote_id FROM quote_drafts WHERE customer_id=? UNION ALL SELECT quote_id FROM quote_revisions WHERE customer_id=? LIMIT 1", arrayOf(id, id, id, id)).use { it.moveToFirst() }
         if (used) return "CUSTOMER_IN_USE"
         db.execSQL("DELETE FROM customers WHERE id=?", arrayOf(id))
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='customer' AND entity_id=?", arrayOf(id))

@@ -491,6 +491,19 @@ class TimerRepository internal constructor(context: Context,
     internal fun deleteSession(id: String, version: Long, sessionId: String): Outcome =
         boardChange(id, version, "SESSION_DELETE", listOf(sessionId)) { SessionHistoryStore.remove(it, sessionId, wallClock()) }
 
+    internal data class QuoteContext(val version: Long, val draft: QuoteStore.Draft?, val latest: QuoteStore.Revision?)
+    @Synchronized
+    internal fun quote(id: String): QuoteContext = QuoteContext(readSnapshot(helper.readableDatabase).version,
+        QuoteStore.draft(helper.readableDatabase, id), QuoteStore.latest(helper.readableDatabase, id))
+    @Synchronized
+    internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
+        boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
+    @Synchronized
+    internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean): Outcome =
+        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) { QuoteStore.issue(it, quoteId, confirmed, wallClock()) }
+    @Synchronized
+    internal fun decideQuote(id: String, version: Long, quoteId: String, revision: Int, decision: String, note: String, confirmed: Boolean): Outcome =
+        boardChange(id, version, "QUOTE_DECIDE", listOf(quoteId, revision, decision, note, confirmed)) { QuoteStore.decide(it, quoteId, revision, decision, note, confirmed, wallClock()) }
     @Synchronized
     internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
@@ -886,7 +899,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 8) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 9) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -903,6 +916,7 @@ class TimerRepository internal constructor(context: Context,
             WidgetConfigurationStore.install(db)
             InvoiceCoverageStore.install(db, now())
             InvoicePaymentStore.install(db)
+            QuoteStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -913,7 +927,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..7 && newVersion == 8) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..8 && newVersion == 9) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -921,6 +935,7 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
             if (oldVersion < 8) InvoicePaymentStore.install(db)
+            if (oldVersion < 9) QuoteStore.install(db)
         }
     }
 
