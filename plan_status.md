@@ -24,7 +24,7 @@ iOS and future service remain deferred.
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
 | M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
-| M4.2 Widgets/configuration/notification actions | Compact widget verified; native configuration contract prepared, launcher/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
+| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions implemented; combined actual checks ongoing | #33 includes Timer/Tasks/Combined, token-fenced setup/actions, scrolling due tasks and board entry; 272 native cases pass; API-24 full prior 19-case journey passed, expanded actual surface/capture checks remain; physical launcher/recovery acceptance open |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -1884,3 +1884,17 @@ journey through real PendingIntents and two widgets, asserting native WIDGET
 origin, positive duration, no location history, and separate task-filter context.
 The required actual widget class count becomes four per API (20 total per API).
 All builds/tests remain Actions-only; full acceptance is still pending.
+
+### Actual board capture and native clock-in observation
+
+43148476659 passed 272 native cases; API-24 task binding, scrolling, actual board
+rendering/column lookup, provider layouts, setup save/cancel and Settings passed.
+Reviewed the separate actual board image: populated To do cards and Doing column
+render correctly. The new native action case reached WidgetStartActivity and
+committed its configured job, but incorrectly expected ActivityMonitor.getHits()
+to count a PendingIntent launch. Observe the matched activity directly (as the
+board test already does), assert no resumed Flutter screen, then continue through
+the actual clock-out broadcast. Also publish final bindings before creating host
+views so the test never clicks a cached pre-configuration version. Full 20-case
+checks on both APIs remain pending. Launcher descriptions now distinguish all
+three widget choices. No test/build ran on the VM and no widget release is claimed.

@@ -7,4 +7,4 @@
     android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
     android:configure="io.github.centerionware.clockrove.widget.WidgetConfigurationActivity"
     android:widgetFeatures="reconfigurable|configuration_optional"
-    android:description="@string/widget_description" />
+    android:description="@string/tasks_widget_description" />

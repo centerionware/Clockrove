@@ -33,9 +33,10 @@ Priority settings fix #34 is delivered internally. Main c5e19d1 passed
 245 native / 32 actual Android passing results are recorded below. Tester
 installation/physical behavior is separate; production readiness remains unset.
 
-Resume M4 widget configuration in #33: the local branch includes fixed main.
-Complete launcher configuration UI, RemoteViews/default-start/picker integration,
-reconfiguration/removal and fresh combined checks before merging. Real launcher
+Finish M4 widget validation in #33: providers, responsive RemoteViews, scrolling
+collections, setup/picker/default-start and removal/restore integration are written.
+Complete the actual API-24/35 board/setup/timer journeys and capture review before
+merging and observing automatic main validation/internal delivery. Real launcher
 and tracking/recovery evidence, provider settings, encrypted backup/merge and
 full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
@@ -131,7 +132,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Deleting a populated column requires selecting a destination for its cards before committing.
 - Cards have title, description, optional due date, and position. Support moving/reordering by drag and accessible menu actions.
 - Card due dates are calendar dates, not UTC instants. Preserve them across timezone changes.
-- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. No team assignments or task timers; comments do not introduce an account system.
+- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. No task attachments, team assignments or task timers; comments do not introduce an account system.
 
 ### 3.5 Calendar, list, map, and CSV
 
@@ -1542,3 +1543,17 @@ journey through real PendingIntents and two widgets, asserting native WIDGET
 origin, positive duration, no location history, and separate task-filter context.
 The required actual widget class count becomes four per API (20 total per API).
 All builds/tests remain Actions-only; full acceptance is still pending.
+
+### Actual board capture and native clock-in observation
+
+43148476659 passed 272 native cases; API-24 task binding, scrolling, actual board
+rendering/column lookup, provider layouts, setup save/cancel and Settings passed.
+Reviewed the separate actual board image: populated To do cards and Doing column
+render correctly. The new native action case reached WidgetStartActivity and
+committed its configured job, but incorrectly expected ActivityMonitor.getHits()
+to count a PendingIntent launch. Observe the matched activity directly (as the
+board test already does), assert no resumed Flutter screen, then continue through
+the actual clock-out broadcast. Also publish final bindings before creating host
+views so the test never clicks a cached pre-configuration version. Full 20-case
+checks on both APIs remain pending. Launcher descriptions now distinguish all
+three widget choices. No test/build ran on the VM and no widget release is claimed.

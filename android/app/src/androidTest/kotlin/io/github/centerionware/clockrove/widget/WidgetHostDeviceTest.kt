@@ -232,6 +232,9 @@ class WidgetHostDeviceTest {
             assertNull(repository.saveWidgetConfiguration("native-timer-binding", repository.snapshot().version, id, job).conflict)
             assertTrue(manager.bindAppWidgetIdIfAllowed(taskWidgetId, ComponentName(app, TimerWidget::class.java), options(300, 340)))
             assertNull(repository.saveWidgetConfiguration("native-task-scope-binding", repository.snapshot().version, taskWidgetId, taskJob).conflict)
+            // Publish the final configuration version before creating host views;
+            // a cached earlier binding must not be the action this test clicks.
+            TimerWidget.refreshAll(app)
             instrumentation.runOnMainSync {
                 host.startListening()
                 view = host.createView(activity, id, manager.getAppWidgetInfo(id))
@@ -247,9 +250,15 @@ class WidgetHostDeviceTest {
                 view!!.findViewById<android.widget.ImageButton>(R.id.widget_action)?.contentDescription == "Clock in to Synthetic native timer"
             }
             instrumentation.runOnMainSync { assertTrue(view!!.findViewById<View>(R.id.widget_action).performClick()) }
+            val started = instrumentation.waitForMonitorWithTimeout(start, 30000)
+            assertTrue("PendingIntent must launch the native start activity", started is WidgetStartActivity)
             until("Actual widget PendingIntent must start its configured native job") { repository.snapshot().running?.jobId == job }
-            assertEquals(1, start.hits)
-            assertEquals(0, picker.hits)
+            assertNull(picker.waitForActivityWithTimeout(100))
+            instrumentation.runOnMainSync {
+                val resumed = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                assertTrue("Native widget action must not open a Flutter screen", resumed.none { it is io.github.centerionware.clockrove.MainActivity })
+            }
             until("Combined must distinguish its task filter from another running job") {
                 taskView!!.findViewById<android.widget.TextView>(R.id.widget_job)?.text == "Synthetic native timer" &&
                     taskView!!.findViewById<android.widget.TextView>(R.id.widget_tasks_title)?.text == "Due soon · Synthetic task scope"
@@ -270,7 +279,7 @@ class WidgetHostDeviceTest {
             assertEquals("WIDGET", entry.origin)
             assertTrue((entry.end ?: entry.start) > entry.start)
             assertTrue(repository.locationPoints(entry.id).isEmpty())
-            assertEquals(0, picker.hits)
+            assertNull(picker.waitForActivityWithTimeout(100))
         } finally {
             val current = repository.snapshot()
             if (current.running?.jobId == job) repository.executeFromSurface("native-widget-test-cleanup-$job", current.version, TimerRepository.Action.STOP, null, TimerRepository.Origin.MANUAL)
