@@ -204,7 +204,7 @@ class WidgetConfigurationTest {
         assertEquals("Synthetic migration company", repository.businessSnapshot().settings.companyName)
         assertNull(repository.executeFromSurface("old-start", captured, TimerRepository.Action.START, job, TimerRepository.Origin.MANUAL).conflict)
         assertNull(repository.widgetSnapshot(1).configuration.token)
-        inspect { assertEquals(7, it.version) }
+        inspect { assertEquals(8, it.version) }
     }
     @Test fun failedVersionFiveUpgradeRollsBackWithoutReplacingExistingState() {
         assertNull(save(1).conflict)

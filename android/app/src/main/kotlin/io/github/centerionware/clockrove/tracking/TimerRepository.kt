@@ -496,6 +496,15 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
             InvoiceStore.prepare(it, invoiceId, selection, wallClock())
         }
+    @Synchronized
+    internal fun invoicePayments(invoiceId: String): Pair<Long, InvoicePaymentStore.Snapshot> =
+        readSnapshot(helper.readableDatabase).version to InvoicePaymentStore.read(helper.readableDatabase, invoiceId)
+    @Synchronized
+    internal fun recordInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Draft): Outcome =
+        boardChange(id, version, "INVOICE_PAYMENT", value.values()) { InvoicePaymentStore.record(it, value, wallClock()) }
+    @Synchronized
+    internal fun reverseInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Reversal): Outcome =
+        boardChange(id, version, "INVOICE_PAYMENT_REVERSE", value.values()) { InvoicePaymentStore.reverse(it, value, wallClock()) }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
         val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
@@ -827,7 +836,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 7) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 8) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -843,6 +852,7 @@ class TimerRepository internal constructor(context: Context,
             BusinessSchema.install(db, now())
             WidgetConfigurationStore.install(db)
             InvoiceCoverageStore.install(db, now())
+            InvoicePaymentStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -853,13 +863,14 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..6 && newVersion == 7) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..7 && newVersion == 8) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
+            if (oldVersion < 8) InvoicePaymentStore.install(db)
         }
     }
 

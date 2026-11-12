@@ -63,11 +63,15 @@ Use the exact monetary contract above and docs/INVOICE_LIFECYCLE_PLAN.md. Schema
 is now on main: subsequent financial persistence changes need a forward migration,
 not edits to the released v5/v6 schema or the completed schema-7 installation.
 Verify main/internal delivery alongside independent work on this milestone.
-PaymentMath now prepares exact extended-total parsing, balance eligibility and
+PaymentMath prepares exact extended-total parsing, balance eligibility and
 cumulative tax allocation/reversal math, with seven focused regression cases.
-Actions validation is required. Ledger, migration, UI and document/email behavior
-are not implemented by that arithmetic slice; the lifecycle plan specifies
-schema-8 events and conservative legacy source mapping.
+Schema-8 native payment/destination/reversal/event storage and serialized commands
+are now prepared, including financial revision retention on job purge and eight
+API-24/35 native ledger cases. A one-time Actions export will freeze the released
+schema-7 fixture before independent forward-migration tests are added. The focused
+widget scroll change from #36 is carried into this draft's validation. All new
+ledger/migration checks require Actions evidence. Payment UI, PDFs/email CC and
+void/replacement are not implemented or accepted by this native source increment.
 
 Then follow the ordered plan for quotes, task comments/supplies/actual costs and
 main-menu company reports. Provider settings, encrypted backup/transactional merge,
