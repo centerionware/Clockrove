@@ -70,4 +70,15 @@ class QuoteDocumentTest {
         assertArrayEquals(bytes, repository.quoteDocument("quote", 1).pdf)
         assertTrue(InvoiceDocuments.historicalNotice(repository, cached)!!.contains("current issued revision is 2"))
     }
+    @Test fun revisedQuoteRetainsCustomTemplatesWithAnExplicitEstimatePrefix() {
+        assertNull(repository.saveBusinessSettings("templates", version, repository.businessSnapshot().settings.copy(
+            emailSubject = "For {customer_name}: {invoice_number}", emailBody = "Scope for {job_name}: {amount} {currency} — {company_name}")).conflict)
+        assertNull(repository.saveQuote("revise", version, draft()).conflict)
+        assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
+        val snapshot = InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload)
+        assertEquals("Quote · For Synthetic customer: Q-1000 revision 2", snapshot.subject)
+        assertEquals("QUOTE — estimate, not an invoice.\n\nScope for Synthetic estimate: 349.38 USD — Original company", snapshot.body)
+        val original = InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 1).payload)
+        assertTrue(original.subject.startsWith("Quote Q-1000 · Revision 1"))
+    }
 }

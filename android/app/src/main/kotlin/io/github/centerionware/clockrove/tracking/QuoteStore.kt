@@ -156,7 +156,9 @@ internal object QuoteStore {
         val defaultBody = BusinessStore.Settings(company.currency).emailBody
         val body = if (company.emailBody == defaultBody) "Hello ${customer?.name.orEmpty()},\n\nPlease find quote $number, revision $revision attached.\nEstimated total: ${InvoiceStore.amount(total.total, digits)} ${draft.currency}\n\n${company.companyName}"
             else "QUOTE — estimate, not an invoice.\n\n" + InvoiceEmailTemplate.expand(company.emailBody, values, false)
-        val subject = "Quote $number · Revision $revision — " + draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
+        val subject = if (company.emailSubject == BusinessStore.Settings(company.currency).emailSubject)
+            "Quote $number · Revision $revision — " + draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
+            else "Quote · " + InvoiceEmailTemplate.expand(company.emailSubject, values, true)
         require(subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size <= 100_000) { "EMAIL_TOO_LARGE" }
         val frozen = JSONObject(mapOf("draft" to JSONObject(draft.encode()), "number" to number, "revision" to revision,
             "created" to at, "digits" to digits, "subtotal" to InvoiceStore.amount(total.subtotal, digits),

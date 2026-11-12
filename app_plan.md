@@ -46,58 +46,41 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Invoice foundation #35 merged f935485 after full Actions 43182854787 (383 native /
-44 actual Android, zero failures/errors/skips), including exact strings/money,
-quantity/unit pricing, tax, coverage and retained invoices. XML and wide/1000-digit
-PDF/UI captures were reviewed. Widget #36 corrected scroll scheduling, but main
-then exposed initial adapter binding. #38 corrected the early-notification race
-with revision/token/local-day adapter identity. Final c1595c7 passed 43195277559:
-385 native / 44 actual Android, zero failures/errors/skips, three resize cycles,
-live edit, exact final-row rendering and real board tap on both APIs. XML/logs and
-widget captures reviewed. Merged 1c358bc at 2026-11-12 10:07:02 UTC. Main 43197481528 passed 385 native /
-44 actual Android (downloaded XML, zero failures/errors/skips), and Play delivery
-43199258376 accepted 0.1.0-internal.25.1 / 216642056 at 10:25:48 UTC using the
-permanent key. Tester availability/physical upgrade remain separate. No VM
-builds/tests ran.
+Prioritize financial validation fix #40 (`payment-route-sync`, 0c9175c,
+Actions 43231269977). #37 exact head 4825869 passed 479 native / 50 actual
+Android cases, zero failures/errors/skips in downloaded XML, then merged as
+1492081. Main 43229082487 failed a payment UI-test transition: captured screen
+and accessibility show the incoming form open but scrolled past the amount.
+#40 waits for the real form and editable amount before scrolling. Its actual
+device gate is live; merge only after current validation passes, then observe
+main and automatic internal delivery. Play 43230903575 was skipped. Last proven
+Play acceptance remains internal.25.1 / 216642056 in 43199258376. No new internal
+publication or physical tester upgrade is claimed.
 
-Continue the immediate payment milestone in `.local/invoice-payments`, draft #37.
-Baseline c21ef87 / 43201426802 passed 434 native and 46 actual Android cases,
-zero failures/errors/skips, with immutable receipt/correction/balance copies and
-all-style wide PDFs. Subsequent UI source 7d414ee / 43207931777 passed formatting,
-analysis, Flutter behavior, debug build and 440 native cases. API 24 passed the
-21 original cases plus billing; the short Classic balance copy then failed its
-one-page assertion. Its copy-only layout is corrected in source; the isolated
-payment UI journey and API 35 remain unverified for this increment.
+Quotes are the next ordered feature milestone in draft #39, `quotes` in
+`.local/invoice-payments`. First storage head 1213cc5 passed all gates in
+43230233087; downloaded 44 native XML files prove 495 cases with no failures,
+errors or skips. Later 3962104 ran 505 native cases with two first-page failures:
+Android rejects null string selection bindings. Source now uses separate fixed
+first-page/keyset queries, preserving the pagination tests. Schema 9 remains
+unreleased; the frozen schema-8 fixture preserves the merged financial boundary.
 
-The complete financial baseline 29fbe8b / 43220345571 passed all Actions gates:
-479 native and 48 actual Android cases, zero failures/errors/skips. Downloaded and
-inspected 42 native/eight device XML files and 15 UI captures per API. Real
-receipt/VOID/credited-replacement PDFs and key lifecycle UI captures were reviewed;
-remaining full current-head visual review is required. Schema 8 includes confirmed
-unpaid cancellation, atomic credit-preserving replacement, exact balances, reviewed
-editor, retained links, original-owner receipts and historical VOID warnings.
+Current quote source includes exact item/estimated-hour drafts, Q-1000 issue-time
+numbering, immutable revisions/decisions and retained links, paged reads, three-style
+revision PDFs, bounded immutable caches, private preview/email/save/share and a
+revision-specific Flutter viewer. Corrected custom subject/body preservation and
+both template guards apply. The new gate requires nine quote PDF variants/API,
+52 actual cases overall and real-page light/dark/large-text viewer checks. Current
+source still needs full Actions validation and genuine page review. ef3ddcd /
+43234622742 passed analysis and Flutter behavior; its Actions formatter patch
+was applied to source. Its Android build/native/device gates remain pending.
 
-Final 4825869 / 43224532785 attempt 2 passed every Actions gate: 479 native
-and 50 actual Android cases on API 24/35, zero failures/errors/skips in downloaded
-42 native/eight device XML files. All 16 UI captures per API and genuine all-style
-PDF/PNG/text/private-attachment gates passed. The actual storage regression
-reproduced the old API-24 cursor failure and verified complete original/copy/logo
-bytes through the bounded reader. Its opaque bytes are not PDF render evidence.
-Reviewed final API-24/35 editor/confirmation captures, API-35 invalid precision,
-balances and historical receipt, plus current replacement/VOID/settled PDFs across
-all three styles. Attempt 1 failed downloading the emulator (HTTP/2 error 92),
-before device tests; retry on the same commit succeeded.
-
-#37 merged 1492081 at 2026-11-12 13:37:28 UTC. Main Validate 43229082487 is queued;
-new main validation and automatic internal delivery remain pending. Schema 8
-upgrades released 7 conservatively. Physical email-client compatibility and Pixel
-tracking/widget acceptance remain separate. No VM builds/tests ran.
-
-Then quotes, comments/supplies/actual costs and company reports. Provider settings,
-encrypted backup/transactional merge, physical tracking/recovery and full launch
-acceptance remain open. Owner Pixel 7 / Android 17 main Settings Save confirmation
-is recorded; exact App info version was not transcribed, and financial/widget/GPS
-physical acceptance remains separate.
+Continue quote list/editor, explicit issue/accept/decline and revision navigation,
+then reviewed accepted-scope mapping to actual jobs/tasks and covered invoices.
+These user-facing requirements are incomplete; do not merge scaffolding as the
+completed quote milestone. Then comments/supplies/actual costs and company reports.
+Provider settings, encrypted backup/transactional merge, physical tracking/recovery
+and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
 ## 2. Product decisions
 

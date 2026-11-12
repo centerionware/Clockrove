@@ -2669,3 +2669,15 @@ checks using genuine API-35 quote-rendered PNGs in the post-device Actions gate;
 no synthetic image is presented as PDF proof. New screen/test formatting and all
 current gates remain pending. Quote list/editor, explicit issue/decision/revision
 navigation and reviewed scope conversion still remain.
+
+### Quote current-head validation and template preservation follow-up
+
+ef3ddcd / 43234622742 passed analysis and the Flutter behavior gate, including
+quote money/model/channel tests. Native/device/document viewer gates remain live.
+Downloaded Actions formatter artifact 13950469584 and applied its two-file viewer
+source correction; no VM formatter ran. Source review also corrected custom quote
+subjects: default subjects use quote wording; custom subjects and bodies retain
+template expansions with an explicit QUOTE prefix. Added native regression checks
+that old revision email content remains unchanged. This later source still needs
+its own complete Actions run. #40 / 43231269977 remains live at its actual Android
+step; no successful main validation or new Play acceptance has been observed.
