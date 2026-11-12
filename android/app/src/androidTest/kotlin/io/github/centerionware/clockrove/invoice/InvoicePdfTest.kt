@@ -32,6 +32,36 @@ class InvoicePdfTest {
         val file = File.createTempFile("synthetic-invoice", ".pdf", InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
         try { file.writeBytes(bytes); ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use(block) } } finally { file.delete() }
     }
+    @Test fun wideMoneyRemainsCompleteInAllActualPdfStyles() {
+        val subtotal = "26000000000000000000.00"
+        val tax = "1950000000000000000.00"
+        val total = "27950000000000000000.00"
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+        for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
+            val snapshot = fixture(style).copy(subtotal = subtotal, taxAmount = tax, total = total,
+                lines = listOf(InvoiceStore.Line("Synthetic exact quantity", "26 × 1000000000000000000.00 USD each", subtotal, "260000", "100000000000000000000")))
+            val bytes = InvoicePdf.generate(snapshot, logo())
+            File(root, "clockrove-wide-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
+            inspect(bytes) { renderer ->
+                val text = StringBuilder()
+                for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                    if (android.os.Build.VERSION.SDK_INT >= 35) text.append(PdfTextApi35.read(page))
+                    if (index == 0) {
+                        val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                        try {
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            File(root, "clockrove-wide-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        } finally { bitmap.recycle() }
+                    }
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 35) {
+                    val compact = text.toString().filterNot { it.isWhitespace() }
+                    for (amount in listOf(subtotal, tax, total)) assertTrue("Wide $style amount was truncated: $amount", compact.contains(amount))
+                    assertTrue(compact.contains("1000000000000000000.00USDeach"))
+                }
+            }
+        }
+    }
     @Test fun allThreeStylesProduceActualReadablePdfPagesWithLogoAndEqualTotals() {
         val images = mutableListOf<Int>()
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {

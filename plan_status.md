@@ -2255,3 +2255,19 @@ immutability, purge/reuse, exact released fingerprints, opaque retries, rollback
 and canonical DB guards; extended wide transport and frozen-v6 migration checks.
 These native source changes remain unvalidated; no merge or delivery is claimed.
 No VM tests/builds/formatting/dependency resolution/rendering ran.
+
+1e51563 owner preparation 43176748417 passed the full actual financial journey on
+both APIs: inspected four XML files, 20 original + 1 financial case per API, zero
+failures/errors/skips (42 total). Main/default and job tax forms, explicit source
+review, quantity save, taxed invoice, repeat exclusion and retained PDF all ran
+through real Flutter/native storage. Only its final formatting gate failed; the
+exported correction is applied in c5bf242. This proves the pre-money-migration
+journey, not the newer exact-money storage. c5bf242 / 43178148571 is still live.
+
+Added exact-money device acceptance to the next head: save/reopen a wide unit price
+through the real task editor and require the exact extended board total before
+returning to the normal invoice fixture. Each native PDF style must render a wide
+subtotal/tax/grand total; API 35 extraction checks every digit. Original suite count
+now requires 21 cases/API plus the separate financial case (44 total if successful),
+with ten financial captures/API and all six new wide PDF/PNG artifacts required.
+These additional checks are unvalidated source, not claimed device results.

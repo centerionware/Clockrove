@@ -40,6 +40,6 @@ assert cases[0].attrib['classname'] == 'io.github.centerionware.billingtest.Invo
 assert cases[0].attrib['name'] == 'realLegacyReviewQuantityTaxBillingExclusionAndRetainedPdfJourney'
 print('Verified actual Android financial journey:', root.attrib)
 PY_DEVICE
-for clockrove_billing_capture in global-tax-settings job-tax-override legacy-selection quantity-editor quantity-board unbilled-tax-review issued-invoice already-billed retained-invoice; do
+for clockrove_billing_capture in wide-money-board global-tax-settings job-tax-override legacy-selection quantity-editor quantity-board unbilled-tax-review issued-invoice already-billed retained-invoice; do
   test -s "$clockrove_billing_results/billing-captures/$clockrove_billing_capture.png"
 done

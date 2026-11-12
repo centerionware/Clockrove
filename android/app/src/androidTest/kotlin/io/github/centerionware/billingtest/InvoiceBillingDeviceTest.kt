@@ -202,7 +202,15 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName)
             waitFor("Task board"); reveal("Install 1 sq ft tile"); click("Install 1 sq ft tile")
-            waitFor("Edit task"); enter("Unit price (USD)", "5.00"); enter("Quantity", "26")
+            waitFor("Edit task"); enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            reveal("Save task"); click("Save task")
+            until("Wide unit price was narrowed during actual UI save") {
+                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.priceMinor == java.math.BigInteger("100000000000000000000")
+            }
+            waitFor("Task board"); waitFor("USD 26000000000000000000.00"); capture("wide-money-board")
+            click("Install 1 sq ft tile"); waitFor("Edit task"); reveal("Unit price (USD)", true)
+            assertTrue("Wide unit price did not reopen exactly", waitFor("Unit price (USD)", true).text?.toString()?.contains("1000000000000000000.00") == true)
+            enter("Unit price (USD)", "5.00")
             reveal("Save task"); capture("quantity-editor"); click("Save task")
             until("Actual task editor did not commit quantity and unit price") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) }
