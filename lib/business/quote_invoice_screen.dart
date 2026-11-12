@@ -539,10 +539,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 label: const Text('Review accepted scope'),
               ),
               const SizedBox(height: 12),
-              Text(
-                'Mapped job',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+              Text('Mapped job', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: ValueKey('invoice-job/$_job'),
@@ -577,9 +574,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _first,
                   enabled: _enabled,
-                  decoration: const InputDecoration(
-                    hintText: 'YYYY-MM-DD',
-                  ),
+                  decoration: const InputDecoration(hintText: 'YYYY-MM-DD'),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
@@ -594,9 +589,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _last,
                   enabled: _enabled,
-                  decoration: const InputDecoration(
-                    hintText: 'YYYY-MM-DD',
-                  ),
+                  decoration: const InputDecoration(hintText: 'YYYY-MM-DD'),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
