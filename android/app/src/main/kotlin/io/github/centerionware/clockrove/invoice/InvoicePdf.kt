@@ -165,7 +165,7 @@ internal object InvoicePdf {
                 canvas.drawText(value.amount, width - margin - 8 - amount.measureText(value.amount), y + 12, amount)
             }
             text(value.title, 11f, true, 352)
-            text(if (compact) value.detail.replace("\n", " · ") else value.detail, 9f, available = if (compact) width - margin * 2 else 352f)
+            text(if (compact) value.detail.replace("\n", " · ") else value.detail, 9f, available = if (compact) (width - margin * 2).toInt() else 352)
             if (value.amount.isNotBlank() && !fitsColumn) {
                 // Exact values must never overlap descriptions or disappear off-page.
                 text("Amount (${data.currency}) ${value.amount}", 11f, true)

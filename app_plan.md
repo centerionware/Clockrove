@@ -56,15 +56,24 @@ permanent key. Tester availability/physical upgrade remain separate. No VM
 builds/tests ran.
 
 Continue the immediate payment milestone in `.local/invoice-payments`, draft #37.
-Baseline 811fb7d / 43193679201 passed all 414 native cases, formatting, analysis,
-Flutter behavior and debug build; its device stage met the now-fixed old widget
-binding failure. This verifies schema-8 ledger/AR/CC and frozen v5/v7 migration
-baseline. New source adds immutable receipt/correction/balance copies, frozen
-payment-time labels/offsets, separate private document handoff and all-style actual
-receipt/wide-PDF cases. Bring in merged #38, validate the new copy source and review
-its artifacts. Payment bridge/UI and credit-preserving void/replacement remain
-unfinished; do not merge the draft as a completed feature. Subsequent persistence
-uses schema 8 forward from released 7, preserving frozen fixtures and prior money.
+Baseline c21ef87 / 43201426802 passed 434 native and 46 actual Android cases,
+zero failures/errors/skips, with immutable receipt/correction/balance copies and
+all-style wide PDFs. Subsequent UI source 7d414ee / 43207931777 passed formatting,
+analysis, Flutter behavior, debug build and 440 native cases. API 24 passed the
+21 original cases plus billing; the short Classic balance copy then failed its
+one-page assertion. Its copy-only layout is corrected in source; the isolated
+payment UI journey and API 35 remain unverified for this increment.
+
+The current draft adds native confirmed unpaid cancellation and atomic
+credit-preserving replacement, strict lifecycle command/context bridge and source,
+rollback, migration-compatible, concurrency and exact-money regressions. Actions
+43210091600 stopped on a renderer Int/Float width mismatch, now corrected in
+source; ed94bfc had stopped on a removed ledger local variable reference. No new lifecycle native
+or actual document success is claimed yet. Next: inspect this exact run, fix any
+failures, then finish the lifecycle editor/relationships, historical receipt routing,
+VOID/replacement documents and actual UI/PDF acceptance. Keep draft #37 unmerged
+until the complete payment milestone passes. Schema 8 remains unreleased and moves
+forward from released 7; preserve frozen fixtures, documents and prior money.
 
 Then quotes, comments/supplies/actual costs and company reports. Provider settings,
 encrypted backup/transactional merge, physical tracking/recovery and full launch
@@ -1793,3 +1802,10 @@ ledger read still referenced the removed local `total` for tax allocation. Sourc
 now uses `balance.total`; no arithmetic policy changed. Native lifecycle tests and
 actual replacement/VOID documents have not passed. Superseded queued/intermediate
 commits share this identified compile error; validate the corrected head in Actions.
+
+551a748 / 43210091600 also stopped at native compilation: the full-width copy
+paragraph passed a Float width to the existing Int layout API. Corrected the
+width conversion; preserve exact content and the one-page check. Added late
+VOID-copy failure injection to prove rollback after credit has already moved,
+and cancellation immutability/retention across a subsequent job purge. These new
+cases still require Actions evidence; no native lifecycle success is claimed.

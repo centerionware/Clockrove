@@ -189,6 +189,43 @@ class InvoiceLifecycleTest {
         }
         assertNull(repository.replaceInvoice("replace", initial, replacement()).conflict)
     }
+    @Test fun lateCancellationCopyFailureRollsBackAlreadyTransferredCreditAndAllHistory() {
+        payment(); val initial = version
+        val oldReceipt = repository.invoiceCopy("receipt-payment").payload
+        val revisions = count("entity_revisions")
+        inspect { it.execSQL("CREATE TRIGGER fail_void_copy BEFORE INSERT ON invoice_copies WHEN NEW.kind='VOID' BEGIN SELECT RAISE(ABORT,'Synthetic late copy failure'); END") }
+        try { repository.replaceInvoice("replace", initial, replacement()); fail("Expected late rollback") } catch (_: android.database.sqlite.SQLiteException) { }
+        assertEquals(initial, version); assertEquals(1001L, nextNumber()); assertEquals(revisions, count("entity_revisions"))
+        assertEquals(1, count("invoices")); assertEquals(1, count("invoice_payment_events")); assertEquals(0, count("invoice_voids"))
+        assertEquals("PARTIALLY_PAID", ledger().balance.status); assertEquals(n(3000), ledger().balance.paid)
+        assertEquals("invoice", ledger().payments.single().currentInvoiceId)
+        assertEquals(oldReceipt, repository.invoiceCopy("receipt-payment").payload)
+        inspect { db ->
+            assertEquals(1, InvoiceLifecycleStore.claims(db, "invoice").size)
+            db.rawQuery("SELECT COUNT(*) FROM commands WHERE id='replace'", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            db.execSQL("DROP TRIGGER fail_void_copy")
+        }
+        assertNull(repository.replaceInvoice("replace", initial, replacement()).conflict)
+    }
+    @Test fun cancellationRecordAndFinancialRevisionRemainImmutableThroughJobPurge() {
+        payment()
+        assertNull(repository.replaceInvoice("replace", version, replacement()).conflict)
+        val cancellation = repository.invoiceCopy("void-invoice").payload
+        inspect { db ->
+            for (sql in listOf("UPDATE invoice_voids SET reason='rewritten'", "DELETE FROM invoice_voids")) {
+                try { db.execSQL(sql); fail("Cancellation history must be immutable") } catch (_: android.database.sqlite.SQLiteException) { }
+            }
+        }
+        assertNull(repository.archiveJob("archive", version, job).conflict)
+        inspect { it.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf(job)) }
+        assertNull(repository.deleteJob("delete", version, job).conflict)
+        assertEquals(cancellation, repository.invoiceCopy("void-invoice").payload)
+        assertEquals("VOID", ledger().balance.status); assertEquals(n(3000), ledger("replacement").balance.paid)
+        inspect { db ->
+            db.rawQuery("SELECT COUNT(*) FROM entity_revisions WHERE kind='invoice_void' AND payload IS NOT NULL", null).use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
+        }
+    }
     @Test fun concurrentReplacementCommandsProduceOneSuccessorAndOneCreditAllocation() {
         payment(); val initial = version
         val pool = Executors.newFixedThreadPool(2); val start = CountDownLatch(1)
