@@ -131,6 +131,10 @@ class TimerRepository internal constructor(context: Context,
     internal fun widgetSnapshot(widgetId: Int): WidgetSnapshot = WidgetSnapshot(readSnapshot(helper.readableDatabase),
         WidgetConfigurationStore.read(helper.readableDatabase, widgetId))
     @Synchronized
+    internal fun widgetTasks(widgetId: Int, now: Long = wallClock(), timezone: String = java.util.TimeZone.getDefault().id): WidgetTasksStore.Tasks =
+        WidgetTasksStore.read(helper.readableDatabase, WidgetConfigurationStore.read(helper.readableDatabase, widgetId).jobId, now, timezone)
+
+    @Synchronized
     internal fun saveWidgetConfiguration(id: String, version: Long, widgetId: Int, jobId: String?): Outcome =
         boardChange(id, version, "WIDGET_CONFIGURATION", listOf(widgetId, jobId)) { WidgetConfigurationStore.save(it, widgetId, jobId) }
     @Synchronized

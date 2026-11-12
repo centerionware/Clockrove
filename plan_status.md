@@ -1768,3 +1768,26 @@ M4 widget UI/integration work can resume. Local widget source incorporates fixed
 main plus retained milestone evidence; new combined checks are required. Full
 application acceptance is still incomplete (widgets, physical tracking/recovery,
 providers, encrypted backup/merge and launch/store gates).
+
+### Expanded responsive widget iteration — in progress
+
+Owner added Timer, Tasks and Combined widget types. Combined must show only
+timers when compact, add a scrollable due list when space permits, and open a
+task's actual job board when tapped. Task-only lists support all active jobs or
+one selected job; overdue and next-seven-calendar-day incomplete tasks are
+included, archived/completed work excluded. Configuration, native start/stop,
+reconfiguration/removal/restore and stale choices remain part of this iteration.
+The source contract is prepared, but launcher UI/collections/responsive behavior
+and physical acceptance are not yet implemented or claimed.
+
+### Responsive widgets source prepared for Actions
+
+Implemented three native providers, compact/expanded Combined layout, scrollable
+due-task collection, per-widget active-job/picker filtering and Flutter setup with
+immutable command retries. Task taps enter the corresponding board through a
+separate activity; native clock-in/out preserves serialized timer ownership.
+Restored launcher IDs deliberately reset to picker mode without starting work.
+Added native date/filter/large-collection and size checks plus Flutter lost-reply
+and unavailable-default checks. Prior combined foundation run 43133758021 passed;
+this new source still requires its own Actions and launcher evidence. No local
+builds or tests were run. Physical launcher acceptance remains open.

@@ -5,7 +5,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.github.centerionware.clockrove.tracking.TimerHostApi
 import io.github.centerionware.clockrove.location.TrackingHostApi
 
-class MainActivity : FlutterActivity() {
+open class MainActivity : FlutterActivity() {
     private var timerApi: TimerHostApi? = null
     private var trackingApi: TrackingHostApi? = null
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null

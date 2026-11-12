@@ -24,10 +24,30 @@
         <receiver android:name=".location.NotificationStopReceiver" android:exported="false" />
         <service android:name=".location.WorkLocationService"
             android:exported="false" android:foregroundServiceType="location" />
-        <receiver android:name=".widget.TimerWidget" android:exported="false">
+        <receiver android:name=".widget.TimerWidget" android:label="Clockrove Combined" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/timer_widget_info" />
         </receiver>
+        <receiver android:name=".widget.TimerOnlyWidget" android:label="Clockrove Timer" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/timer_only_widget_info" />
+        </receiver>
+        <receiver android:name=".widget.TaskListWidget" android:label="Clockrove Tasks" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tasks_widget_info" />
+        </receiver>
+        <service android:name=".widget.WidgetTasksService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <activity android:name=".widget.WidgetConfigurationActivity" android:exported="true" android:theme="@style/LaunchTheme" android:hardwareAccelerated="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
+        </activity>
+        <activity android:name=".widget.WidgetBoardActivity" android:exported="false" android:theme="@style/LaunchTheme" android:hardwareAccelerated="true">
+            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
+        </activity>
+        <activity android:name=".widget.WidgetPickerActivity" android:exported="false" android:theme="@style/LaunchTheme" android:hardwareAccelerated="true">
+            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
+        </activity>
+        <activity android:name=".widget.WidgetStartActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <provider
             android:name=".invoice.InvoiceProvider"
             android:authorities="${applicationId}.invoices"

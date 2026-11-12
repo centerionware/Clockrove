@@ -1,0 +1,15 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:background="@drawable/widget_background" android:padding="8dp">
+    <LinearLayout android:id="@+id/widget_timer_container" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical" />
+    <TextView android:id="@+id/widget_tasks_title" android:layout_width="match_parent" android:layout_height="48dp"
+        android:gravity="center_vertical" android:textSize="14sp" android:textStyle="bold" android:textColor="#FFFFFF"
+        android:maxLines="2" android:ellipsize="end" android:contentDescription="Task filter and widget settings" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <ListView android:id="@+id/widget_tasks" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:divider="@android:color/transparent" android:dividerHeight="4dp" />
+        <TextView android:id="@+id/widget_tasks_empty" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#CBD5E1" android:textSize="14sp" android:padding="8dp" />
+    </FrameLayout>
+</LinearLayout>

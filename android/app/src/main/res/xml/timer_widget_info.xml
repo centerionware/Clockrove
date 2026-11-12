@@ -3,6 +3,8 @@
     android:minWidth="110dp" android:minHeight="56dp"
     android:minResizeWidth="110dp" android:minResizeHeight="56dp"
     android:targetCellWidth="2" android:targetCellHeight="1"
-    android:initialLayout="@layout/timer_widget" android:updatePeriodMillis="0"
+    android:initialLayout="@layout/timer_widget" android:updatePeriodMillis="1800000"
     android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
+    android:configure="io.github.centerionware.clockrove.widget.WidgetConfigurationActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_description" />

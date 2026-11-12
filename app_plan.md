@@ -80,10 +80,12 @@ Exact-source-license wording, the name check, and store identity/account setup a
 
 ### 3.2 Home-screen widget and ongoing notification
 
+- Provide Timer, Tasks and Combined widget types. Combined uses a compact timer-only layout when small and adds a scrollable due-task list when large enough. Task taps open the corresponding job board without starting work.
+- Task lists include overdue work and the next seven calendar days in the current device timezone, excluding completed tasks and archived jobs. A task widget can show all active jobs or one selected job. Keep empty, missing-job and stale-task states explicit.
 - Each widget chooses a default job or picker mode.
 - When idle, default-job mode starts that job. Picker mode opens the app to active jobs, with **New job** last.
 - If the default job was archived or removed, open the picker with an explanation.
-- When a timer is running, every widget shows the actual running job and offers clock-out, regardless of its configured default.
+- When a timer is running, Timer and Combined widgets show the actual running job and offers clock-out, regardless of its configured default.
 - An Android ongoing foreground-service notification shows the active job and clock-out action while location tracking is active.
 - All actions enter the same serialized native command path. Deduplicate repeated taps and callbacks using command IDs and committed state; do not trust a widget's stale snapshot.
 - Refresh widgets after committed changes, restore, configuration changes, and recovery. Display elapsed time from timestamps, not a counter that must wake every second.
@@ -1377,3 +1379,26 @@ versionCode 216609104 at 2026-11-12 01:17:19 UTC. Settings crash correction, bot
 template guards and INV-1000 numbering are delivered to the internal track.
 This does not establish tester installation or physical device acceptance.
 Resume widget implementation; production readiness remains unset.
+
+### Owner-expanded M4 widget scope
+
+Owner requests responsive combined widgets plus separate timer-only and task-list
+widgets. Small combined widgets retain only timer controls; larger widgets add a
+scrollable native due-task collection. Task taps open the correct board. Implement
+all three alongside default/picker configuration, engine-independent timer actions
+and stale/deleted-job handling. Initial due window is today plus six subsequent
+calendar days and all overdue tasks, excluding completed/archived work. Native
+collections and size-aware layouts must be verified, not represented by mock
+success. Physical launcher behavior remains a separate acceptance gate.
+
+### Responsive widgets source prepared for Actions
+
+Implemented three native providers, compact/expanded Combined layout, scrollable
+due-task collection, per-widget active-job/picker filtering and Flutter setup with
+immutable command retries. Task taps enter the corresponding board through a
+separate activity; native clock-in/out preserves serialized timer ownership.
+Restored launcher IDs deliberately reset to picker mode without starting work.
+Added native date/filter/large-collection and size checks plus Flutter lost-reply
+and unavailable-default checks. Prior combined foundation run 43133758021 passed;
+this new source still requires its own Actions and launcher evidence. No local
+builds or tests were run. Physical launcher acceptance remains open.
