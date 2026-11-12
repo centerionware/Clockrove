@@ -70,7 +70,7 @@ internal object InvoicePaymentStore {
         } }
         require(payments.all { it.currency == document.currency }) { "INVALID_PAYMENT_CURRENCY" }
         val balance = balance(db, invoiceId, document)
-        return Snapshot(invoice, document, balance, PaymentMath.collectedTax(total, tax, balance.paid), payments)
+        return Snapshot(invoice, document, balance, PaymentMath.collectedTax(balance.total, tax, balance.paid), payments)
     }
 
     fun record(db: SQLiteDatabase, value: Draft, at: Long): String? {

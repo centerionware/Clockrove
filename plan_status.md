@@ -2381,3 +2381,9 @@ replacement build 43209333407 remains live; no new native result is claimed yet.
 Lifecycle editor UI and actual VOID/replacement PDF/interaction acceptance remain
 next. Financial UI must route original receipts to their original invoice and
 corrections to the current invoice, and must not offer collection on VOID records.
+
+Replacement ed94bfc / 43209333407 stopped at native compilation: a refactored
+ledger read still referenced the removed local `total` for tax allocation. Source
+now uses `balance.total`; no arithmetic policy changed. Native lifecycle tests and
+actual replacement/VOID documents have not passed. Superseded queued/intermediate
+commits share this identified compile error; validate the corrected head in Actions.
