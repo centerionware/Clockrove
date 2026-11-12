@@ -2562,3 +2562,24 @@ kill-after grace, every boot property call, an overall boot deadline and shutdow
 it also captures emulator diagnostics on success/failure. Financial assertions,
 required cases and UI captures are unchanged. Validate the corrected script in
 Actions before merging or claiming publication. No VM build/test ran.
+
+### Main settings-field reveal recovery — source awaiting Actions
+
+Main 05ee6e7 / 43242962261 passed build/native checks and API-24 device cases,
+then failed API-35 payment setup locating Accounts receivable email. Downloaded
+13954879850 and reviewed failure.png/accessibility.txt: Settings is open at its
+top, with a vertical ScrollView and the target below the viewport; no app crash
+is shown. The old helper stopped scrolling after 35 attempts and then waited
+passively for a potentially offscreen field. Keep bounded active search/scrolling
+until the exact target appears, prefer the vertical form over editable scroll
+nodes, and wait for Billing defaults before entry. Preserve strict field/state,
+PDF/attachment and all required capture assertions. This focused test-only fix
+still requires full Actions proof before merge and new internal delivery.
+
+### Invoice navigation follow-up
+
+Source repair pending Actions: invoice history refresh/back navigation must use
+a synchronous setState callback. Actual quote run 43247145880 billing log caught
+the Future-return assertion; strengthened widget navigation test checks refresh
+and return without framework exceptions. #41 remains unmerged pending fresh full
+validation. The emulator also went offline; no successful device result inferred.

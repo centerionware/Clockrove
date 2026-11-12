@@ -1978,3 +1978,25 @@ before instrumentation. The exact blocked probe is not proven by its log.
 Bound all startup property probes and preserve emulator logs in device artifacts;
 retain all financial/device gates. #40 still needs a successful current-head run
 before merge, main validation and automatic internal delivery.
+
+### Main API-35 settings reveal follow-up
+
+43242962261 failed the real payment setup AR-field lookup on API 35 after API 24
+passed. The reviewed capture shows Settings open at the top, not a crash. The
+focused settings-route-sync test fix keeps polling/scrolling the real vertical
+form through route readiness and waits for its Billing defaults body heading.
+All financial assertions remain intact. Validate before merge; no new internal
+publication is claimed from this failed main run.
+
+### Invoice list return/refresh assertion repair (source)
+
+Quote validation 43247145880 passed native build/tests (47 XML, 537 native
+cases, zero failures/errors/skips; downloaded results inspected) but failed the
+actual API-35 billing journey waiting for View original PDF. Its captured billing
+log independently exposed Flutter rejecting a Future-returning setState callback
+in InvoiceHistory._refresh after returning from invoice details. Correct the
+callback to return void and extend navigation coverage to explicit refresh and
+back navigation. This is a real source defect; it does not establish the sole
+cause of the later emulator offline/segmentation failure. Maintenance #41 carries
+the repair alongside the main Settings reveal recovery. Fresh Actions evidence
+and internal publication remain required. No VM build/test/format was run.
