@@ -51,6 +51,11 @@ class InvoiceBlobStorageDeviceTest {
                     val message = failure.message.orEmpty()
                     if (!message.contains("too big", true) && !message.contains("CursorWindow", true)) throw failure
                     cursorRejected = true
+                } catch (failure: IllegalStateException) {
+                    // API 24 can report an empty oversized window at getBlob,
+                    // rather than throwing SQLiteBlobTooBigException at fill.
+                    if (!failure.message.orEmpty().startsWith("Couldn't read row 0, col 0 from CursorWindow.")) throw failure
+                    cursorRejected = true
                 }
                 if (Build.VERSION.SDK_INT == 24) assertTrue("Stock Android 7 must reproduce the oversized cursor row", cursorRejected)
                 val record = InvoiceStore.read(db, "original")

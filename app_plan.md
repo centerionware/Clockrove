@@ -64,17 +64,22 @@ analysis, Flutter behavior, debug build and 440 native cases. API 24 passed the
 one-page assertion. Its copy-only layout is corrected in source; the isolated
 payment UI journey and API 35 remain unverified for this increment.
 
-The current draft implements native confirmed unpaid cancellation and atomic
-credit-preserving replacement, strict bridging, reviewed editor, retained invoice
-links and historical receipt ownership/VOID warnings. Source 99f57ac /
-43215957788 passed formatting, analysis, Flutter behavior, debug and 479 native
-cases (42 XML files inspected, zero failures/errors/skips). The actual Android
-gate stopped compiling a fixture with a missing InvoicePaymentStore import; it is
-now corrected in source. No device tests ran on that head. Next: validate the
-corrected source, inspect actual API-24/35 ledger/line/credit/VOID/editor/PDF results
-and required captures, fix failures and review the full milestone before merging
-#37. Schema 8 remains unreleased and moves forward from released 7; preserve frozen
-fixtures, source reservations, issued documents and prior money. Physical email
+The complete financial baseline 29fbe8b / 43220345571 passed all Actions gates:
+479 native and 48 actual Android cases, zero failures/errors/skips. Downloaded and
+inspected 42 native/eight device XML files and 15 UI captures per API. Real
+receipt/VOID/credited-replacement PDFs and key lifecycle UI captures were reviewed;
+remaining full current-head visual review is required. Schema 8 includes confirmed
+unpaid cancellation, atomic credit-preserving replacement, exact balances, reviewed
+editor, retained links, original-owner receipts and historical VOID warnings.
+
+Current source adds bounded descriptor reads for PDF/logo bytes exceeding the
+cursor window and a separate actual storage regression (opaque bytes, never PDF
+render proof), plus navigation-bar inset padding and a required editor-field
+capture. Validate both pending increments before merging #37: 50 actual cases,
+16 UI captures per API and the genuine all-style PDF/text/private attachment gates
+are now required. Continue the existing Actions handles, inspect failures and
+review final captures; do not infer acceptance from the older green baseline.
+Schema 8 remains unreleased and upgrades released 7 conservatively. Physical email
 client compatibility and Pixel tracking/widget acceptance remain separate.
 
 Then quotes, comments/supplies/actual costs and company reports. Provider settings,
@@ -1943,3 +1948,15 @@ to all three financial scrolling screens. Added a required actual editor-fields
 capture (16 UI captures per API now). Fresh reader/inset current-head acceptance
 remains required; the native-only BLOB boundary case remains separate from genuine
 PDF rendering. No new merge, Play upload or physical acceptance is claimed.
+
+The bounded-reader source e3a29e7 / 43221972322 passed app/native gates, then its
+actual storage test reproduced the legacy cursor failure on API 24 at the explicit
+old-query probe: IllegalStateException "Couldn't read row 0, col 0 from CursorWindow".
+The probe had only expected SQLiteException; fixed-reader assertions were not
+reached. Accept that exact additional platform exception/message at the old probe
+only, preserving mandatory byte-identity, bounds, null/small and real PDF checks.
+No positive large-reader acceptance is claimed yet. The queued inset increment
+contains the same probe and is superseded by this specific correction. Complete
+financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
+48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
+captures per API. No VM build/test ran.

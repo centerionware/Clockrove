@@ -37,7 +37,7 @@ iOS and future service remain deferred.
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
-| Immediate next: payments, receipts, CC and void/replacement | Source implemented in draft #37; current native/Flutter verified, full device/document acceptance pending | 99f57ac / 43215957788 passed formatting/analysis/Flutter/debug and 479 native cases, zero failures/errors/skips (42 XML files inspected). Device test APK hit a missing fixture import, now corrected; no emulator cases ran on that head. Reviewed editor, immutable retries, partial/full receipts, CC, atomic credit-preserving replacement/VOID and historical routing are prepared; actual 15 UI captures and 24 all-style PDF pairs per API still require current-head acceptance/review |
+| Immediate next: payments, receipts, CC and void/replacement | Complete financial baseline validated; final storage/inset follow-ups under CI in draft #37 | 29fbe8b / 43220345571 passed all gates, 479 native / 48 actual Android, zero failures/errors/skips; 42 native/eight device XML inspected and required captures downloaded. Reviewed all API-24 lifecycle PDF variants and key API-35 lifecycle UI. Bounded large-BLOB reads, separate real storage regression and navigation inset correction now require current-head 50 actual cases/16 UI captures per API and final visual review before merge |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2526,3 +2526,15 @@ to all three financial scrolling screens. Added a required actual editor-fields
 capture (16 UI captures per API now). Fresh reader/inset current-head acceptance
 remains required; the native-only BLOB boundary case remains separate from genuine
 PDF rendering. No new merge, Play upload or physical acceptance is claimed.
+
+The bounded-reader source e3a29e7 / 43221972322 passed app/native gates, then its
+actual storage test reproduced the legacy cursor failure on API 24 at the explicit
+old-query probe: IllegalStateException "Couldn't read row 0, col 0 from CursorWindow".
+The probe had only expected SQLiteException; fixed-reader assertions were not
+reached. Accept that exact additional platform exception/message at the old probe
+only, preserving mandatory byte-identity, bounds, null/small and real PDF checks.
+No positive large-reader acceptance is claimed yet. The queued inset increment
+contains the same probe and is superseded by this specific correction. Complete
+financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
+48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
+captures per API. No VM build/test ran.
