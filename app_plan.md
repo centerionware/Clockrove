@@ -27,19 +27,17 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-Settings crash fix #34 passed exact-head Actions 43129744209 and merged as
-c5e19d1. Actual unfixed-source crash reproduction 43128896688 confirms the
-InvoiceEmailTemplate initializer failure. Inspected final results: 245 native
-cases and sixteen actual Android cases per API (24/35), zero failures/errors/
-skips, including Settings save/reopen, both-template rejection/correction and
-INV-1000 invoice preparation/expanded email. Follow the new main validation and
-automatic internal delivery before claiming Play acceptance of the fix.
+Priority settings fix #34 is delivered internally. Main c5e19d1 passed
+43131240701, and Play delivery 43132531984 accepted 0.1.0-internal.21.1 /
+216609104 at 2026-11-12 01:17:19 UTC. Original crash reproduction and the
+245 native / 32 actual Android passing results are recorded below. Tester
+installation/physical behavior is separate; production readiness remains unset.
 
-Widget #33 remains paused for priority delivery. Its local branch now includes
-the fixed main source and requires fresh combined checks before merging. Keep the full application goal: widget setup,
-physical GPS/launcher/recovery/email evidence, provider settings, encrypted
-backup/merge and launch acceptance remain unfinished. Production readiness is
-unset. All builds/tests/rendering run only in GitHub Actions.
+Resume M4 widget configuration in #33: the local branch includes fixed main.
+Complete launcher configuration UI, RemoteViews/default-start/picker integration,
+reconfiguration/removal and fresh combined checks before merging. Real launcher
+and tracking/recovery evidence, provider settings, encrypted backup/merge and
+full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
 ## 2. Product decisions
 
@@ -1369,3 +1367,13 @@ failures/errors/skips. Actual Settings save/reopen and native invoice creation
 with INV-1000 and correct expanded subject/body pass. Merged #34 as
 c5e19d15a06ccd31e85455e5ab4782bcdf36a88d. Its main validation and Play upload
 are separate and pending; production readiness stays unset.
+
+### Priority hotfix internal delivery accepted
+
+Main c5e19d1 passed 43131240701; run-specific XML confirms 245 native cases and
+32 actual Android cases, zero failures/errors/skips. Play delivery 43132531984
+succeeded with the permanent key and accepted versionName 0.1.0-internal.21.1 /
+versionCode 216609104 at 2026-11-12 01:17:19 UTC. Settings crash correction, both
+template guards and INV-1000 numbering are delivered to the internal track.
+This does not establish tester installation or physical device acceptance.
+Resume widget implementation; production readiness remains unset.

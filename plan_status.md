@@ -33,7 +33,7 @@ iOS and future service remain deferred.
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
-| Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix validated and merged; internal upload pending | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
+| Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
@@ -41,7 +41,7 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Main 43120365067 and delivery 43121445107 succeeded for cb2efc9; Play accepted 0.1.0-internal.19.1 / 216603660; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Latest hotfix main 43131240701 and delivery 43132531984 succeeded for c5e19d1; Play accepted 0.1.0-internal.21.1 / 216609104; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -1753,3 +1753,18 @@ Local widget branch now includes fixed main c5e19d1 and all priority evidence;
 its former successful run predates this integration, so fresh combined checks
 are required before any widget merge. Priority main run 43131240701 is live;
 widget UI implementation/publication remains paused until internal delivery.
+
+### Priority hotfix delivery accepted; M4 work resumes
+
+Main validation 43131240701 succeeded for c5e19d1. Inspected main artifacts
+contain 245 native tests and 32 actual Android tests, zero failures/errors/skips.
+Signed delivery 43132531984 succeeded; inspected logs allocate versionCode
+216609104, build 0.1.0-internal.21.1 and confirm Play internal acceptance at
+2026-11-12 01:17:19 UTC. The priority settings crash, both-template guards and
+INV-1000 numbering are delivered internally. Actual tester installation and
+physical phone retest remain separate, and production readiness is unset.
+
+M4 widget UI/integration work can resume. Local widget source incorporates fixed
+main plus retained milestone evidence; new combined checks are required. Full
+application acceptance is still incomplete (widgets, physical tracking/recovery,
+providers, encrypted backup/merge and launch/store gates).
