@@ -47,16 +47,23 @@ Android cases across API 24/35, zero failures/errors/skips. Exact decimal-string
 money, quantity with one Unit price input, tax and retained invoice coverage are
 merged. Native/device XML and wide/1000-digit PDF captures were reviewed.
 
-Main validation 43185844256 failed the existing API-35 widget collection scroll
-case before financial instrumentation; API 24 passed all 22 actual cases. The
-failure screenshot shows the expanded collection still on rows 0–2, while source
-ordering is due date then zero-padded card ID. Its one-shot setSelection followed
-count readiness without waiting for asynchronous resize/reapply layout. A focused
-test change drives the current laid-out list within the same 30-second deadline,
-logs scroll state, and retains exact final-row and real PendingIntent board checks.
-This change needs full Actions evidence; no local builds/tests ran. Internal upload
-for f935485 has not started. Latest accepted delivery remains internal.22.1 /
-216624221 (43160879953), not this invoice slice.
+Main validation 43185844256 failed the API-35 scroll case. Focused #36 passed
+43188818216 (383 native / 44 actual Android, zero failures/errors/skips; both final
+row captures reviewed), merged d4df7bd at 09:19:31 UTC. Main 43190458383 then failed
+API-24 expanded-list binding: its screenshot shows the task title and empty-state
+message before the scroll step. No new Play upload has started.
+
+Investigate the separate factory lifecycle: old onDestroy clears its rows while
+resize/reapply can have callbacks across Binder adapters, and four mutable fields
+were published separately. The focused source change publishes one immutable,
+volatile snapshot, serializes dataset loads and lets factory disposal release its
+rows without clearing in-flight reads. Bounded lifecycle/count diagnostics contain
+no task/job content. Exact causation remains to be confirmed by actual Android
+logs; this is source hardening, not a claim the empty binding is already fixed.
+The actual host case now verifies its native source has 30 tasks, performs three
+compact/expanded cycles and retains full collection/scroll/final-row/board-tap
+assertions on both APIs. Full Actions evidence is required, no VM validation runs.
+Latest accepted delivery remains internal.22.1 / 216624221 (43160879953).
 
 After validation/merge and verified main/internal delivery, continue the immediate
 next milestone: payments and partial/full balances, immutable updated copies and
@@ -1627,3 +1634,20 @@ Debug builds now forward bounded Flutter error type/stack only to local Android
 logcat for CI diagnosis, preserving normal presentation and excluding field/widget
 dumps; release error handling is unchanged. Apply Actions-generated formatting,
 finish removed-widget setup as cancelled, and revalidate the full source.
+
+### 2026-11-12 widget adapter diagnosis
+
+PR #38 head 68a8c7f / 43192676395 reproduced empty binding on API 24, resize 3.
+Native factory diagnostics show all 30 rows loaded and no disposal before failure;
+the host never attaches its adapter. Thus factory clearing was not the observed
+cause. Android 7 RemoteViewsAdapter's pre-connection notify branch updates metadata
+without calling the connection callback that attaches the adapter (AOSP source:
+https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/android-7.0.0_r1/core/java/android/widget/RemoteViewsAdapter.java).
+That path matches the captured adapter=null/count=0 and loaded factory.
+
+Replace immediate collection notifications with an adapter URI containing the
+committed version, widget configuration token and local calendar day. Changed work
+and date rollover get fresh data without racing initial attachment. Keep atomic
+factory snapshots, three resize cycles and exact scroll/tap checks; add a live
+committed-title edit assertion and native revision/day/DST identity regression.
+The revised head needs full Actions proof before merge; internal upload stays held.

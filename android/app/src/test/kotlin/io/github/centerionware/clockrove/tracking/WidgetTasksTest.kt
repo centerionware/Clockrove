@@ -46,6 +46,17 @@ class WidgetTasksTest {
         assertEquals(listOf("other"), repository.widgetTasks(1, utc("2026-11-12T12:00:00"), "UTC").items.map { it.id })
         assertNull(repository.snapshot().running)
     }
+    @Test fun collectionIdentityRefreshesCommittedEditsAndLocalDateWithoutStartingTimers() {
+        val before = repository.widgetSnapshot(1)
+        val first = io.github.centerionware.clockrove.widget.TimerWidget.taskAdapterUri(before, 1, "2026-11-12")
+        assertEquals(first, io.github.centerionware.clockrove.widget.TimerWidget.taskAdapterUri(before, 1, "2026-11-12"))
+        assertNotEquals(first, io.github.centerionware.clockrove.widget.TimerWidget.taskAdapterUri(before, 1, "2026-11-13"))
+        card("new-due-task", "2026-11-12")
+        assertNotEquals(first, io.github.centerionware.clockrove.widget.TimerWidget.taskAdapterUri(repository.widgetSnapshot(1), 1, "2026-11-12"))
+        assertEquals("2026-03-07", WidgetTasksStore.localDate(utc("2026-03-08T04:30:00"), "America/New_York"))
+        assertEquals("2027-01-01", WidgetTasksStore.localDate(utc("2026-12-31T16:00:00"), "Asia/Tokyo"))
+        assertNull(repository.snapshot().running)
+    }
     @Test fun horizonUsesDeviceCalendarAcrossDstAndYearBoundaryAndNeverTruncatesToOnePage() {
         val instant = utc("2026-03-08T04:30:00") // Still March 7 in New York, before spring forward.
         val ny = repository.widgetTasks(1, instant, "America/New_York")
