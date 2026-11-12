@@ -35,7 +35,10 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: paid invoices, receipts and accounting CC | Planned; owner-prioritized next task | Prevent duplicate task/hourly billing with transactional source-coverage claims and safe legacy reconciliation; mark invoices paid through native versioned commands; derive PAID receipts without changing original invoice/number; default-email PDF drafts CC optional accounts-receivable email, otherwise company primary email; settings validation, migrations, retry, PDF and intent evidence required |
+| Next after widget merge: invoice integrity, tax and payment lifecycle | Planned; owner-prioritized next iteration | docs/INVOICE_LIFECYCLE_PLAN.md: exclusive source claims; global/per-job tax; partial/full payments and balance copies; receipts; CC preference; atomic unpaid/partial void-and-replace with credit conservation |
+| Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
+| Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
@@ -1823,3 +1826,14 @@ does not yet keep source claims; this is planned work after the widget merge.
 Cover overlapping dates/timezones, concurrent preparation, task IDs, partial UTC
 intervals, edits, response-loss retries, empty billable remainder and safe legacy
 invoice reconciliation. Payment/receipt/resend must retain original coverage.
+
+### Detailed owner roadmap after current widgets
+
+Added docs/INVOICE_LIFECYCLE_PLAN.md and linked it from the product contract. It
+plans partial/full payments and balance copies, exclusive billing claims, void and
+replacement with preserved partial credit, quotes, Kanban comments/supplies and
+actual expense records, company reports, and main/job tax percentages. Tax on a
+100.00 subtotal at 7.5% is 7.50; issued totals remain immutable and tax is separated
+from revenue/profit. No planned financial feature is marked implemented.
+Current widget source is still under Actions; finish/merge it before starting
+the invoice iteration. No local builds/tests were run.

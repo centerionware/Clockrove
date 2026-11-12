@@ -40,8 +40,9 @@ and tracking/recovery evidence, provider settings, encrypted backup/merge and
 full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
 Immediately after the current widget task is validated and merged, implement
-paid-invoice status and paid receipts, including the company/accounts-receivable
-CC rule below. This is the owner's next implementation priority; do not start it
+invoice coverage/tax and unpaid/partial/paid lifecycle, receipts, void/replacement
+and company/accounts-receivable CC. Follow with quotes, task comments/supplies/costs
+and business reports from the main menu. This is the owner's next implementation priority; do not start it
 before the widget merge.
 
 ## 2. Product decisions
@@ -130,7 +131,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Deleting a populated column requires selecting a destination for its cards before committing.
 - Cards have title, description, optional due date, and position. Support moving/reordering by drag and accessible menu actions.
 - Card due dates are calendar dates, not UTC instants. Preserve them across timezone changes.
-- No attachments, team assignments, comments, or task timers at launch.
+- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. No team assignments or task timers; comments do not introduce an account system.
 
 ### 3.5 Calendar, list, map, and CSV
 
@@ -144,45 +145,44 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Explain why active/pending sessions are excluded. Use UTF-8, consistent headers, correct quoting/newlines, and spreadsheet-formula protection for user-entered text.
 - Share/save exports through Android's document/share interfaces; do not require broad filesystem permissions.
 
-### 3.5a Paid invoices, receipts and accounting email copies
+### 3.5a Billing lifecycle, quotes and business reports
 
-- Next task immediately after the current widget merge: explicitly mark an invoice
-  paid and show its payment status. Persist this through the native serialized,
-  versioned command boundary; retain durable revision history and idempotent retries.
-- Prevent duplicate billing at native invoice preparation, for unpaid and paid
-  invoices alike. Atomically claim task IDs and the exact half-open UTC portions
-  of hourly work included in each invoice. Overlapping date selections, changed
-  report timezones, concurrent preparations, retries, or subsequent job/work edits
-  must not charge the same work twice. Bill only unclaimed work; explain exclusions
-  and link to its existing invoice. No remaining billable work must consume no
-  invoice number and create no extra invoice.
-- Claims remain attached to the original invoice when it is marked paid or shared
-  again. A receipt references the same claims and never creates new charges.
-  Changes/removal of work or invoice display must not silently release claims.
-  Migrate existing invoice coverage safely; where old snapshots lack stable source
-  identity, require explicit reconciliation rather than guess or permit duplicate
-  billing. Include concurrent/overlapping-range, partial-interval, paid/unpaid,
-  retry, edited-source and legacy-migration cases in acceptance tests.
-- Generate a receipt from that invoice with a clear PAID marking and payment date.
-  Preserve the original invoice number, line items, totals and immutable prepared
-  document; a receipt must not allocate a second invoice number or silently alter
-  the original invoice. Reopening or sharing a receipt must not record payment twice.
-- Offer receipt email composition with the PDF attached through the default email
-  app. The user still presses Send. Creating/opening an email draft does not mark
-  an unpaid invoice paid and is not evidence that an email was sent or delivered.
-- Every invoice and receipt email draft must CC the company email from main
-  Settings, unless an optional accounts-receivable email is set there, in which
-  case CC that address instead of the primary company address. Validate this field
-  in Flutter and native settings without losing drafts or permitting crashes.
-- Apply the current accounting CC preference at email-draft creation, including
-  previously prepared invoices. Keep document contents immutable. Avoid duplicate
-  recipients; do not invent a CC address when both settings are empty. Preserve
-  existing subject/body template validation and safe PDF URI grants.
-- Acceptance requires transactional payment/migration/retry tests, original-number
-  and immutable-document preservation, correctly marked actual PDFs in all styles,
-  settings validation and CC precedence/fallback tests, and default-email intent
-  checks for recipient, CC, body and attachment. Actual mail-app acceptance remains
-  a physical-device check; no automatic sending or server is introduced.
+The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
+After current widgets are validated and merged, implement invoice integrity/tax,
+then payments (including partial), receipts, accounting CC and void/replacement.
+Quotes follow; then task comments, labor/supplies classification and actual costs;
+then a main-menu Reports icon with useful business/tax-preparation summaries.
+
+- Bill each task and exact UTC portion of work only once, for unpaid and paid
+  invoices alike. Native transactional source claims, safe legacy reconciliation,
+  transparent exclusions and response-loss/concurrency tests are required.
+- Derive unpaid/partially-paid/paid from an auditable payment ledger. Updated
+  copies retain the original invoice number and total, showing payments and balance.
+  Receipts never create another charge/payment or invoice number.
+- Void only unpaid/partially-paid invoices. Partial payments require atomic Void &
+  replace: prefill lines, preserve the original VOID document, transfer source
+  claims and paid credit to the new invoice, and never count transferred credit
+  as new cash. Fully paid invoices cannot be voided. No credit may be discarded.
+- Main Settings has default tax percentage and per-job inherit/override, including
+  explicit 0%. Entering 7.5 adds 7.5% of subtotal, rounded once in minor units.
+  Freeze subtotal/rate/tax/total on issued invoices and quotes; existing documents
+  are unchanged by later settings. Separate tax collected from revenue/profit.
+- Main Settings has optional accounts-receivable email. Invoice/receipt/quote
+  email drafts CC it when set, otherwise company primary email. Fill default-email
+  To/CC/subject/body/PDF safely; the user sends. Keep both template guards.
+- Quotes have their own Q-1000 sequence, immutable issued revisions and explicit
+  local acceptance. Converting reviewed quote scope never fabricates work or
+  bypasses source coverage. Quotes/estimates are not revenue or invoice payments.
+- Task comments are private chronological records. A simple Supplies toggle
+  classifies charges; actual costs are recorded separately. Labor revenue is
+  not automatically profit; materials markup can contribute to profit.
+- Reports show invoiced sales, cash receipts, tax, outstanding balances, labor/
+  supplies/unclassified charges, actual costs and estimated profit/margins. Clearly
+  distinguish cash/invoice dates, missing costs and currencies; preserve drilldowns,
+  corrections and replacement history. Do not guess jurisdiction-specific tax rules.
+- Every slice requires native transaction/migration/retry checks, real PDF and
+  intent evidence in Actions. Physical email behavior and full acceptance remain
+  separate. Plan status is not implementation evidence.
 
 ### 3.6 Maps and privacy
 
@@ -200,7 +200,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 
 ### 3.7 Encrypted backup and merge restore
 
-- Export a versioned password-encrypted archive of jobs, sites, automation settings, boards/cards, sessions, location points, revisions, and deletion markers.
+- Export a versioned password-encrypted archive of jobs, sites, automation settings, boards/cards/comments, sessions, location points, invoices/coverage/payments/receipts/replacements, quotes, expenses, revisions, and deletion markers.
 - Use a maintained implementation of authenticated encryption (AES-256-GCM) and a salted memory-hard password KDF (Argon2id). Pin a compatible library and parameters after testing on the minimum supported device. Store version/KDF parameters in a bounded authenticated envelope; reject excessive attacker-supplied work factors before deriving keys. Do not invent cryptographic primitives.
 - Exclude map keys, caches, device widget configuration, and live automation registration state. No password recovery; explain this before export.
 - Stop timers before restore. Backups may contain an open/provisional session captured at backup time; require an explicit close-time choice or omission during preview. Never turn it into a live timer automatically or invent an end time.
@@ -1484,3 +1484,14 @@ without a source-coverage ledger, so this remains explicit next-task work rather
 than an existing guarantee. Implement native transactional task/interval claims,
 legacy reconciliation, transparent exclusions and tests alongside paid receipts.
 The original invoice is reused for resends and receipt generation.
+
+### Owner roadmap expanded while widget checks continue
+
+Recorded partial payments and unchanged-original balance copies; Q-1000 quotes
+and reviewed conversion; unpaid/partially-paid void/replacement with conserved
+credit; task comments and supplies classification with separate actual costs;
+main-menu company reporting; default tax percent with explicit per-job override.
+The detailed plan in docs/INVOICE_LIFECYCLE_PLAN.md defines order, states, exact
+money/tax arithmetic, native coverage/payment invariants, correction examples,
+PDF/email behavior, migrations, backup dependencies and acceptance checks. These
+features are planned, not implemented. Current widgets remain the active task.

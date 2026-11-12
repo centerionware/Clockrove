@@ -76,9 +76,20 @@ for clockrove_api in 24 35; do
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
   adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
+  # Stream diagnostics while tests run, so a cancelled/hung run retains its last
+  # framework state instead of losing everything before the final logcat pull.
+  adb -s emulator-5554 logcat -v threadtime > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/logcat.txt" &
+  clockrove_logcat_pid=$!
   clockrove_instrumentation_failed=false
-  if ! adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"; then
+  if ! timeout 300 adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"; then
     clockrove_instrumentation_failed=true
+  fi
+  kill "$clockrove_logcat_pid" 2>/dev/null || true
+  wait "$clockrove_logcat_pid" 2>/dev/null || true
+  if [[ "$clockrove_instrumentation_failed" == true ]]; then
+    timeout 20 adb -s emulator-5554 shell dumpsys activity activities > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/activities.txt" || true
+    timeout 20 adb -s emulator-5554 shell dumpsys appwidget > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widgets.txt" || true
+    timeout 20 adb -s emulator-5554 exec-out screencap -p > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-timeout.png" || true
   fi
   # This emulator contains only synthetic fixtures. Preserve native crash and
   # Flutter engine diagnostics even when a process crash prevents JUnit output.
