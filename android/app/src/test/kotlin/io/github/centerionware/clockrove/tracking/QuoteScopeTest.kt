@@ -60,6 +60,7 @@ class QuoteScopeTest {
         assertEquals("COMMAND_ID_REUSED", repository.applyQuoteScope("wide-scope", before, value.copy(note = "Different reviewed scope note")).conflict)
         inspect { db -> db.rawQuery("SELECT length(fingerprint) FROM commands WHERE id='wide-scope'", null).use { it.moveToFirst(); assertTrue(it.getInt(0) < 256) } }
         assertEquals(2000, count("kanban_cards"))
+        inspect { db -> db.rawQuery("SELECT COUNT(*) FROM entity_heads WHERE kind='card'", null).use { it.moveToFirst(); assertEquals(2000, it.getInt(0)) } }
         assertEquals(0, count("invoice_task_claims")); assertEquals(0, count("sessions"))
     }
     @Test fun estimatedHoursCreateNonbillableChecklistAndExactJobRateButNeverWorkedTime() {

@@ -2855,3 +2855,7 @@ shared invoice/coverage writer, accepted/current prices/tax/party selection and
 retained paginated quote links copied through replacements. Source tests cover
 credit/claim conservation, purge and late-write/schema rollback. Fresh Actions,
 Flutter transport/review/history and real-device/document acceptance remain open.
+
+Large scope source review: remove repeated whole-board reads/snapshots from
+new-card append while preserving all changed-peer revisions on moves. The full
+2000-task replay/head-count regression remains; performance/behavior awaits Actions.

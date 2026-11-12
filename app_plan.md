@@ -2142,3 +2142,14 @@ provenance-write rollback (including number/revisions/claims/receipt), and late
 schema-install rollback preserving released financial data. This native source
 still needs Actions. Flutter preparation review/transport/history navigation and
 actual-device/PDF acceptance remain required before quote milestone completion.
+
+### Large planning-group write review
+
+Source review found BoardStore.saveCard loading and snapshotting the entire board
+on every new-card append, making a 2000-line quote group perform quadratic peer
+work. Read the existing card by ID, count destination rows for append position,
+and snapshot only that card when no peers changed. Cross-column moves retain
+full peer snapshots after renumbering. The wide UTF-8 native scope test still
+creates/replays all 2000 real tasks and now checks every card has a revision head;
+it is not reduced to a mock or smaller limit. Fresh native/board/history Actions
+are required; no local benchmark or device performance claim is made.

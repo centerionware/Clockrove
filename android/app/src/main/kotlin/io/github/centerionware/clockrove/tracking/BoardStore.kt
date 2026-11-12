@@ -25,7 +25,7 @@ internal object BoardStore {
     fun columns(db: SQLiteDatabase, jobId: String): List<Column> = db.rawQuery("SELECT id,job_id,name,position,completed FROM kanban_columns WHERE job_id=? ORDER BY position,id", arrayOf(jobId)).use { rows ->
         buildList { while (rows.moveToNext()) add(Column(rows.getString(0), rows.getString(1), rows.getString(2), rows.getInt(3), rows.getInt(4) != 0)) }
     }
-    fun cards(db: SQLiteDatabase, jobId: String): List<Card> = db.rawQuery("SELECT ${cardColumns.joinToString(",") { if (it == "price_minor") "CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(c.price_minor AS TEXT) END" else "c.$it" }},COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id LEFT JOIN card_money m ON m.id=c.id WHERE c.job_id=? ORDER BY c.column_id,c.position,c.id", arrayOf(jobId)).use { rows ->
+    fun cards(db: SQLiteDatabase, jobId: String, id: String? = null): List<Card> = db.rawQuery("SELECT ${cardColumns.joinToString(",") { if (it == "price_minor") "CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(c.price_minor AS TEXT) END" else "c.$it" }},COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id LEFT JOIN card_money m ON m.id=c.id WHERE c.job_id=?${if (id == null) "" else " AND c.id=?"} ORDER BY c.column_id,c.position,c.id", if (id == null) arrayOf(jobId) else arrayOf(jobId, id)).use { rows ->
         buildList { while (rows.moveToNext()) add(Card(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4),
             if (rows.isNull(5)) null else rows.getString(5), rows.getInt(6), if (rows.isNull(7)) null else rows.getLong(7), rows.getInt(8) != 0,
             if (rows.isNull(9)) null else MoneyMath.parse(rows.getString(9)), rows.getString(10), if (rows.isNull(11)) null else rows.getString(11), rows.getLong(12))) }
@@ -101,9 +101,9 @@ internal object BoardStore {
         val destination = columns(db, value.jobId).firstOrNull { it.id == value.columnId } ?: return "COLUMN_UNAVAILABLE"
         val previousJob = db.rawQuery("SELECT job_id FROM kanban_cards WHERE id=?", arrayOf(value.id)).use { if (it.moveToFirst()) it.getString(0) else null }
         if (previousJob != null && previousJob != value.jobId) return "TASK_JOB_IMMUTABLE"
-        val previous = cards(db, value.jobId).firstOrNull { it.id == value.id }
+        val previous = cards(db, value.jobId, value.id).firstOrNull()
         val templateId = previous?.templateId ?: UUID.randomUUID().toString()
-        val position = if (previous?.columnId == destination.id) previous.position else ordered(db, destination.id).size
+        val position = if (previous?.columnId == destination.id) previous.position else db.rawQuery("SELECT COUNT(*) FROM kanban_cards WHERE column_id=?", arrayOf(destination.id)).use { it.moveToFirst(); it.getInt(0) }
         val completion = if (destination.completed) previous?.completedMillis ?: at else null
         if (previous?.templateId == null) db.execSQL("INSERT INTO task_templates(id,title,description,price_minor,currency,source_job_id,source_card_id) VALUES(?,?,?,?,?,?,?)",
             arrayOf<Any?>(templateId, value.title.trim(), value.description, MoneyMath.legacy(value.priceMinor), value.currency, value.jobId, value.id))
@@ -119,7 +119,10 @@ internal object BoardStore {
         MoneyStore.save(db, "template_money", templateId, null, value.priceMinor, at)
         previous?.takeIf { it.columnId != value.columnId }?.let { positions(db, ordered(db, it.columnId)) }
         RevisionStore.snapshotRows(db, "task_templates", "template", templateColumns, at, where = "id=?", args = arrayOf(templateId))
-        snapshotCards(db, value.jobId, at)
+        // Appending or editing within one column changes only this card. A
+        // column move also renumbers peers, whose revisions must be recorded.
+        if (previous == null || previous.columnId == destination.id) RevisionStore.snapshotRows(db, "kanban_cards", "card", cardColumns, at, "job_id", "id=?", arrayOf(value.id))
+        else snapshotCards(db, value.jobId, at)
         return null
     }
     fun moveCard(db: SQLiteDatabase, jobId: String, id: String, destinationId: String, position: Int, at: Long): String? {
