@@ -2578,3 +2578,10 @@ migration and failed migration rollback. The older schema fixtures stay unchange
 Current source is not validated; UI, revision navigation, expiry display, actual
 three-style PDF/private email handoff, accepted-scope mapping and invoice review
 remain required before quote milestone completion. No VM build/test ran.
+
+Quote foundation 1213cc5 is under Actions 43230233087 in draft #39.
+The next source adds strict native channel commands for quote save/issue/decision
+and context reads. Money and quantities must be strings; tax/revision/version
+must be integers and confirmation a boolean. Native bridge cases reject numeric
+money, numeric quantities, fractional tax/version and invalid confirmation types
+before writes. This source still awaits Actions and does not expose a quote UI.

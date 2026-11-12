@@ -49,6 +49,12 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "quoteContext" -> return repository.quote(input.string("quoteId")).let { state ->
+                mapOf("version" to state.version, "draftJson" to state.draft?.encode(),
+                    "latest" to state.latest?.let { revision -> mapOf("quoteId" to revision.quoteId,
+                        "revision" to revision.revision, "number" to revision.number, "payload" to revision.payload,
+                        "created" to revision.created, "decision" to revision.decision, "decisionNote" to revision.decisionNote) })
+            }
             "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
                 mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
             }
@@ -106,11 +112,21 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice")
+        val supported = setOf("saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
         return when (call.method) {
+            "saveQuote" -> {
+                val rows = requireNotNull(v.value["lines"] as? List<*>); require(rows.size in 1..2000)
+                val lines = rows.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { line ->
+                    QuoteStore.Line(line.string("lineId"), line.string("title"), line.string("detail"), line.string("kind"), line.string("quantityUnits"), line.string("unitPriceMinor"))
+                } }
+                repository.saveQuote(id, version, QuoteStore.Draft(v.string("quoteId"), v.nullable("customerId"), v.nullable("jobId"),
+                    v.string("title"), v.string("currency"), v.int("taxUnits"), lines, v.nullable("validUntil"), v.string("terms"), v.string("notes")))
+            }
+            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"))
+            "decideQuote" -> repository.decideQuote(id, version, v.string("quoteId"), v.int("revision"), v.string("decision"), v.string("note"), v.bool("confirmed"))
             "voidInvoice" -> repository.voidInvoice(id, version, InvoiceLifecycleStore.VoidDraft(v.string("invoiceId"), v.string("reason"), v.string("timezone"), v.bool("confirmed")))
             "replaceInvoice" -> {
                 val lines = requireNotNull(v.value["lines"] as? List<*>).map { entry ->
