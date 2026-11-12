@@ -68,8 +68,10 @@ The current draft adds native confirmed unpaid cancellation and atomic
 credit-preserving replacement, strict lifecycle command/context bridge and source,
 rollback, migration-compatible, concurrency and exact-money regressions. Actions
 43210091600 stopped on a renderer Int/Float width mismatch, now corrected in
-source; ed94bfc had stopped on a removed ledger local variable reference. No new lifecycle native
-or actual document success is claimed yet. Next: inspect this exact run, fix any
+source; ed94bfc had stopped on a removed ledger local variable reference. Native baseline 40259d7 / 43211073661 now passed 476 native cases
+(42 XML files inspected, zero failures/errors/skips), including 32 lifecycle and
+10 bridge cases; actual Android checks remain live. The newer zero-due guard and
+extended document cases still need their queued Actions result. Next: inspect this exact run, fix any
 failures, then finish the lifecycle editor/relationships, historical receipt routing,
 VOID/replacement documents and actual UI/PDF acceptance. Keep draft #37 unmerged
 until the complete payment milestone passes. Schema 8 remains unreleased and moves
@@ -1825,3 +1827,15 @@ credited/cancelled split remain retained. This prevents a future native consumer
 from accidentally collecting a cancelled predecessor by reading the ordinary due
 field. Added a direct pure arithmetic regression and kept the native/index/bridge
 zero-due assertions. This follow-up requires Actions validation too.
+
+### Verified native lifecycle checkpoint
+
+40259d7 / 43211073661 passed formatting, analysis, Flutter behavior, debug build
+and 476 native tests. Downloaded/inspected 42 native XML files: zero failures,
+errors or skips; InvoiceLifecycleTest has 32 executions and InvoicePaymentBridgeTest
+has 10 across API 24/35. This validates native cancellation/replacement, ordered
+zero-cash credit/tax changes, command replay/concurrency, early/late rollback,
+coverage/legacy/retained history and bridge baseline. Real Android stage remains
+live. Subsequent 7d84a5b adds the single ordinary due-field guard and all-style
+actual lifecycle PDFs; those additions do not inherit acceptance from this older
+head. Lifecycle editor/relationships and complete physical acceptance remain open.

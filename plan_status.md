@@ -37,7 +37,7 @@ iOS and future service remain deferred.
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
-| Immediate next: payments, receipts, CC and void/replacement | Draft #37; baseline ledger/copies verified, new UI/layout and lifecycle source under validation | c21ef87 / 43201426802 passed 434 native / 46 actual Android. 7d414ee / 43207931777 passed Flutter/debug/440 native; API-24 copy one-page assertion failed before payment UI/API35. Layout corrected; native atomic cancellation/replacement/strict bridge prepared. 551a748 / 43210091600 found an Int/Float renderer compile mismatch, now corrected alongside late-rollback/purge regressions; new Actions evidence required. Lifecycle editor, actual VOID/replacement PDFs/UI and full increment acceptance remain open |
+| Immediate next: payments, receipts, CC and void/replacement | Draft #37; native lifecycle baseline verified, full UI/document acceptance pending | c21ef87 / 43201426802 passed 434 native / 46 actual Android. 7d414ee / 43207931777 passed Flutter/debug/440 native; API-24 copy one-page assertion failed before payment UI/API35. Layout corrected; native atomic cancellation/replacement/strict bridge prepared. 40259d7 / 43211073661 passed 476 native cases (42 XML files, zero failures/errors/skips), including 32 lifecycle and 10 bridge cases. Actual Android stage remains live; newer zero-due guard and extended lifecycle PDFs remain under validation. Lifecycle editor, actual VOID/replacement PDFs/UI and full increment acceptance remain open |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2410,3 +2410,15 @@ credited/cancelled split remain retained. This prevents a future native consumer
 from accidentally collecting a cancelled predecessor by reading the ordinary due
 field. Added a direct pure arithmetic regression and kept the native/index/bridge
 zero-due assertions. This follow-up requires Actions validation too.
+
+### Verified native lifecycle checkpoint
+
+40259d7 / 43211073661 passed formatting, analysis, Flutter behavior, debug build
+and 476 native tests. Downloaded/inspected 42 native XML files: zero failures,
+errors or skips; InvoiceLifecycleTest has 32 executions and InvoicePaymentBridgeTest
+has 10 across API 24/35. This validates native cancellation/replacement, ordered
+zero-cash credit/tax changes, command replay/concurrency, early/late rollback,
+coverage/legacy/retained history and bridge baseline. Real Android stage remains
+live. Subsequent 7d84a5b adds the single ordinary due-field guard and all-style
+actual lifecycle PDFs; those additions do not inherit acceptance from this older
+head. Lifecycle editor/relationships and complete physical acceptance remain open.
