@@ -2296,3 +2296,13 @@ Extended the actual all-style wide-money case with 1000-digit values, first/last
 page captures and API-35 extraction of complete labelled row/subtotal/total values.
 Only exact known page headers/footers are removed before joining text across pages;
 monetary digits are never normalized or discarded. These changes need fresh CI.
+
+7374335 / 43179838708 passed 383 native cases, zero failures/errors/skips, and the
+21 original API-24 cases including wide-money PDF rendering. The financial case
+entered the exact large price but lost the Quantity field during keyboard/inset
+reflow between lookup and focus (tree/PNG confirm the focused price and hidden
+quantity). Its test helper now dismisses only a visible IME with real Back, waits
+for dismissal, confirms entered values and closes the keyboard between fields.
+Interactive-window inspection supplies that visibility check; all native financial
+assertions remain. Also fixes captures that could show the preceding invalid draft
+before a queued input update painted. API 35 was not reached in this run.

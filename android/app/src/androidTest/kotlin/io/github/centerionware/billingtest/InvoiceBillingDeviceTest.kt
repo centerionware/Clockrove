@@ -104,7 +104,16 @@ class InvoiceBillingDeviceTest {
             SystemClock.sleep(120)
         }
     }
+    private fun hideKeyboard() {
+        fun visible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        if (visible()) {
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            until("Keyboard did not close after Back") { !visible() }
+            automation.waitForIdle(250, 3000)
+        }
+    }
     private fun enter(label: String, value: String) {
+        hideKeyboard()
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
@@ -114,6 +123,8 @@ class InvoiceBillingDeviceTest {
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
+        until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }
+        hideKeyboard()
     }
     private fun capture(name: String) {
         automation.waitForIdle(200, 3000)
@@ -123,6 +134,7 @@ class InvoiceBillingDeviceTest {
     }
     private fun diagnostic() {
         val dump = StringBuilder()
+        automation.windows.forEach { dump.append("Window ").append(it).append('\n') }
         fun describe(node: AccessibilityNodeInfo, depth: Int) {
             if (dump.length > 200000 || depth > 50) return
             dump.append(" ".repeat(depth)).append(node).append('\n')
@@ -142,7 +154,8 @@ class InvoiceBillingDeviceTest {
     }
     private fun launch() {
         automation.serviceInfo = automation.serviceInfo.apply {
-            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         waitFor("App settings and customers")
