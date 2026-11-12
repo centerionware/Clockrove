@@ -46,9 +46,9 @@ internal object InvoiceStore {
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
         if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
         if (!InvoiceEmailTemplate.valid(company.emailBody, false)) return "INVALID_EMAIL_BODY"
-        val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
+        val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0).coerceAtLeast(1000) }
         if (sequence == Long.MAX_VALUE) return "INVOICE_SEQUENCE_EXHAUSTED"
-        val number = "INV-${sequence.toString().padStart(6, '0')}"
+        val number = "INV-$sequence"
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
         val formatted = amount(total.amountMinor, digits)
         val lines = if (total.mode == "TASK") report.tasks.map { Line(it.title, "Completed ${instant(it.completed, selection.timezone)}", amount(BigInteger.valueOf(requireNotNull(it.priceMinor)), digits)) }

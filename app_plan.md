@@ -1305,3 +1305,8 @@ never bypass the native transaction guard. Use a bounded literal scanner rather
 than user-driven regex initialization, and refuse malformed stored templates
 before invoice-number allocation. Validation/reproduction evidence is pending
 in the priority settings-crash branch; see plan_status.md.
+
+Owner refinement: new invoice numbering starts at 1000 (INV-1000) and advances
+automatically. Existing prepared invoices keep their numbers/content. Older
+unconsumed counters below 1000 use a floor at allocation; higher counters never
+reset. Invalid template validation must not consume or advance the sequence.

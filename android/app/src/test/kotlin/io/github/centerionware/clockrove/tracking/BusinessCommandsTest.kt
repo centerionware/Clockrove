@@ -59,7 +59,7 @@ class BusinessCommandsTest {
         }
         repository.close(); repository = TimerRepository(RuntimeEnvironment.getApplication())
         assertEquals("MODERN", settings.invoiceStyle); assertEquals("Synthetic Co", settings.companyName)
-        inspect { db -> db.rawQuery("SELECT next_invoice_number,logo_id FROM app_settings", null).use { it.moveToFirst(); assertEquals(1, it.getInt(0)); assertTrue(it.isNull(1)) } }
+        inspect { db -> db.rawQuery("SELECT next_invoice_number,logo_id FROM app_settings", null).use { it.moveToFirst(); assertEquals(1000, it.getInt(0)); assertTrue(it.isNull(1)) } }
     }
     @Test fun malformedSettingsDoNotPartiallyWriteOrChangeVersion() {
         val before = repository.businessSnapshot()

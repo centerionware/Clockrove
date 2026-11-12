@@ -1,5 +1,10 @@
 const emailTemplatePlaceholders = {
-  'company_name', 'customer_name', 'job_name', 'invoice_number', 'amount', 'currency',
+  'company_name',
+  'customer_name',
+  'job_name',
+  'invoice_number',
+  'amount',
+  'currency',
 };
 
 /// Mirrors the native grammar for immediate field feedback. Native validation
@@ -10,7 +15,10 @@ String? emailTemplateError(String value, {required bool subject}) {
     return '$field is too long. Shorten it and try again.';
   }
   if (value.contains('\u0000') ||
-      (subject && value.codeUnits.any((c) => c < 32 || c == 127 || c >= 128 && c <= 159))) {
+      (subject &&
+          value.codeUnits.any(
+            (c) => c < 32 || c == 127 || c >= 128 && c <= 159,
+          ))) {
     return subject
         ? 'Email subject template must be one line without control characters.'
         : 'Email body template contains an unsupported control character.';
@@ -25,7 +33,9 @@ String? emailTemplateError(String value, {required bool subject}) {
       if (end < 0) {
         return '$field has an unfinished placeholder. Close it with }.';
       }
-      if (!emailTemplatePlaceholders.contains(value.substring(index + 1, end))) {
+      if (!emailTemplatePlaceholders.contains(
+        value.substring(index + 1, end),
+      )) {
         return '$field has an unknown placeholder. Choose one of the supported placeholders above.';
       }
       index = end + 1;

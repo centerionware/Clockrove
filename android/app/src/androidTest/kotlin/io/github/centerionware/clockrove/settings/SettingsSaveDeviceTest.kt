@@ -83,9 +83,9 @@ class SettingsSaveDeviceTest {
             assertFalse(InvoiceEmailTemplate.valid(invalid, true))
         }
         assertFalse(InvoiceEmailTemplate.valid("Invoice\n{invoice_number}", true))
-        val values = mapOf("customer_name" to "Synthetic \$1 \\ customer", "invoice_number" to "INV-000001",
+        val values = mapOf("customer_name" to "Synthetic \$1 \\ customer", "invoice_number" to "INV-1000",
             "amount" to "125.00", "currency" to "USD", "company_name" to "Synthetic company {customer_name}")
-        assertEquals("Hello Synthetic \$1 \\ customer,\nInvoice INV-000001: 125.00 USD\nSynthetic company {customer_name}",
+        assertEquals("Hello Synthetic \$1 \\ customer,\nInvoice INV-1000: 125.00 USD\nSynthetic company {customer_name}",
             InvoiceEmailTemplate.expand(body, values, false))
         val repository = TimerRepository.get(instrumentation.targetContext)
         val before = repository.businessSnapshot()

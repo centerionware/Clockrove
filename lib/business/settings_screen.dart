@@ -93,7 +93,11 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     padding: const EdgeInsets.only(bottom: 16),
     child: TextField(
       controller: c,
-      decoration: InputDecoration(labelText: label, errorText: error, errorMaxLines: 4),
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: error,
+        errorMaxLines: 4,
+      ),
       onChanged: onChanged,
       minLines: lines,
       maxLines: lines == 1 ? 1 : lines + 4,
@@ -112,9 +116,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   void _validateTemplates() {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
-    setState(() { _subjectError = subject; _bodyError = body; });
+    setState(() {
+      _subjectError = subject;
+      _bodyError = body;
+    });
     if (subject != null || body != null) {
-      throw const FormatException('Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.');
+      throw const FormatException(
+        'Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.',
+      );
     }
   }
 
@@ -222,8 +231,21 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           'Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.',
         ),
         const SizedBox(height: 16),
-        _field(_subject, 'Email subject template', length: 500, error: _subjectError, onChanged: _templateChanged),
-        _field(_body, 'Email body template', lines: 5, length: 20000, error: _bodyError, onChanged: _templateChanged),
+        _field(
+          _subject,
+          'Email subject template',
+          length: 500,
+          error: _subjectError,
+          onChanged: _templateChanged,
+        ),
+        _field(
+          _body,
+          'Email body template',
+          lines: 5,
+          length: 20000,
+          error: _bodyError,
+          onChanged: _templateChanged,
+        ),
         BusinessCommand(
           label: 'Save settings',
           enabled: current != null && !_logoBusy,

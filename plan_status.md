@@ -1665,3 +1665,14 @@ actual tree identified that harness issue; trim the labels and retain the full
 save/reopen gate. Its result is not evidence that the original crash was
 reproduced. Add a safely caught legacy-pattern compilation check on real Android
 to establish the platform mismatch directly. New checks await Actions.
+
+Owner requests the first invoice number 1000. Updated new-database defaults and
+the atomic allocator's legacy floor to produce INV-1000, INV-1001, etc. Higher
+existing sequences continue, and stored invoice records are never renumbered.
+Number/file-name/rollback assertions and a low/high legacy counter regression
+are prepared; validation remains pending alongside the priority crash guard.
+
+Dispatched corrected UI lookup against unfixed app source on branch
+settings-crash-baseline (2cdf329), run 43128896688, to verify the original Android
+process failure independently of the proposed fix. This diagnostic branch is
+not a release candidate and must not be merged. No failure result is assumed.
