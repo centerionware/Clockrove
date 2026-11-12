@@ -59,4 +59,20 @@ class QuoteBridgeTest {
         try { dispatch.call(MethodCall("currencyPrecision", mapOf("currency" to "INVALID"))); fail("Currency validation required") } catch (_: IllegalArgumentException) { }
         assertEquals(before, version)
     }
+    @Test fun reviewedScopeChannelCreatesUncompletedWorkAndReturnsRetainedBinding() {
+        assertNull(command("saveQuote", "save", draft()).conflict)
+        assertNull(command("issueQuote", "issue", mapOf("quoteId" to "quote", "confirmed" to true)).conflict)
+        assertNull(command("decideQuote", "accept", mapOf("quoteId" to "quote", "revision" to 1, "decision" to "ACCEPTED", "note" to "Explicit synthetic acceptance", "confirmed" to true)).conflict)
+        val value = mapOf("quoteId" to "quote", "revision" to 1, "jobId" to "planned-job", "newJobName" to "Synthetic planned job",
+            "items" to listOf(mapOf("lineId" to "line", "taskId" to "planned-task", "title" to "Plan tile installation", "existing" to false)),
+            "note" to "Explicit review of planned task scope", "confirmed" to true, "historicalReviewed" to false, "jobDifferencesReviewed" to false)
+        val initial = version
+        val result = command("applyQuoteScope", "scope", value, initial)
+        assertNull(result.conflict); assertEquals(result, command("applyQuoteScope", "scope", value, initial))
+        val state = dispatch.call(MethodCall("quoteScope", mapOf("quoteId" to "quote"))) as Map<*, *>
+        val binding = (state["bindings"] as List<*>).single() as Map<*, *>
+        assertEquals("line", binding["lineId"]); assertEquals("planned-job", binding["jobId"]); assertEquals("planned-task", binding["taskId"])
+        assertNull(repository.boardSnapshot("planned-job").board.cards.single().completedMillis)
+        assertNull(repository.snapshot().running)
+    }
 }

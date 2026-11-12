@@ -2060,3 +2060,22 @@ Merged with exact-head guard as 05ee6e76063172866ec8a1f48c9128c6eb069c0e at
 delivery remains pending. Last proven Play acceptance is still internal.25.1 /
 216642056. Brought main into the quote branch, preserving both validation ledgers.
 No VM builds/tests/formatting/rendering ran.
+
+### Quote planning conversion source and first actual document proof
+
+f442e97 / 43242100858 passed 517 native / 52 actual Android cases with zero
+failures/errors/skips in downloaded XML. All nine real quote document variants
+per API passed native render/text/private-attachment gates; three normal API-35
+styles were visually reviewed. The final landscape viewer failed queued Save
+cancellation feedback, now corrected without changing the assertion. Full current
+validation and remaining visual review are pending.
+
+Reviewed planning-conversion source now retains quote-line/revision/task identity,
+creates uncompleted fixed-item plans or hourly nonbillable checklists, and can
+explicitly link existing work without modifying it. Repeats/revisions reuse the
+original binding, including after purge; template copies carry no quote history.
+Compatible billing groups respect the existing one-mode-per-job contract. Native
+source cases cover retry/concurrency/rollback/retention and schema failure. This
+is not full conversion acceptance: UI and actual eligible-work invoicing with
+retained agreement prices/tax, explicit estimate/actual differences and exclusive
+coverage/provenance remain required. Never bill estimated hours automatically.

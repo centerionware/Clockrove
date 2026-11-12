@@ -24,6 +24,12 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   bool _busy = false;
   Future<InvoicePage> _load(int page) =>
       ref.read(quoteApiProvider).preview(widget.quoteId, widget.revision, page);
+  void _feedback(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _action(String action) async {
     if (_busy) {
       return;
@@ -34,50 +40,23 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       if (action == 'email') {
         await api.email(widget.quoteId, widget.revision);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Email draft opened. Review the quote and press Send in your email app.',
-              ),
-            ),
-          );
+          _feedback('Email draft opened. Review the quote and press Send in your email app.');
         }
       } else if (action == 'share') {
         await api.share(widget.quoteId, widget.revision);
       } else {
         final saved = await api.savePdf(widget.quoteId, widget.revision);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                saved
-                    ? 'Quote PDF saved.'
-                    : 'Save cancelled. Your issued quote is retained.',
-              ),
-            ),
-          );
+          _feedback(saved ? 'Quote PDF saved.' : 'Save cancelled. Your issued quote is retained.');
         }
       }
     } on PlatformException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              error.message ??
-                  'The document could not be opened. Try saving the PDF.',
-            ),
-          ),
-        );
+        _feedback(error.message ?? 'The document could not be opened. Try saving the PDF.');
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'The quote could not be shared. Its issued revision is retained.',
-            ),
-          ),
-        );
+        _feedback('The quote could not be shared. Its issued revision is retained.');
       }
     } finally {
       if (mounted) {
@@ -85,7 +64,6 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       }
     }
   }
-
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(

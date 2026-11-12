@@ -2779,3 +2779,37 @@ Merged with exact-head guard as 05ee6e76063172866ec8a1f48c9128c6eb069c0e at
 delivery remains pending. Last proven Play acceptance is still internal.25.1 /
 216642056. Brought main into the quote branch, preserving both validation ledgers.
 No VM builds/tests/formatting/rendering ran.
+
+### Quote document/navigation evidence and reviewed planning conversion source
+
+f442e97 / 43242100858 passed formatting, analysis, Flutter behavior, build,
+517 native and 52 actual API-24/35 cases. Downloaded native artifact 13954384676
+(46 XML) and device artifact 13956368052 (eight XML): zero failures/errors/skips.
+All nine real quote PDF variants per API rendered with exact text/attachment checks.
+Reviewed all three genuine API-35 normal quote pages from 13956667591: descriptions,
+26 units at 12.50, 1.5 estimated hours at 40.00, subtotal 385.00, tax 28.88 and
+estimated total 413.88 are readable and correct. Full viewer gate failed only its
+landscape Save-cancel message assertion: the older email snackbar was still
+visible while the new feedback queued. Current source replaces prior feedback;
+the assertion is unchanged. Full corrected-head gate and remaining visual review
+are required; no completed quote milestone or release is claimed.
+
+Native planning conversion source adds immutable quote-line/task bindings and
+accepted-revision links in unreleased schema 9. Only explicit accepted revisions
+can create or link scope. Fixed items copy exact quantities/unit prices into open
+planning tasks; estimated-hour scope creates nonbillable checklists and a frozen
+exact job rate, never sessions/completion/invoices/claims/payments. Each reviewed
+group targets one compatible hourly/task job; mixed kinds/different hourly rates
+require explicit compatible groups. Existing-task linking leaves source work
+unchanged. Prior mappings are reused across commands/revisions, retained after
+job purge and cannot resurrect deleted identities. Old revisions/job-setting
+differences require explicit review; task templates contain no quote history.
+
+Repository/channel source plus native cases cover retry, concurrency, partial
+failure rollback, existing completed work, revised agreement links, hours with
+1000-digit rates, retained purge ancestry and late schema-install rollback.
+This new source has not passed Actions. Conversion UI, native actual-work quote
+invoice preview/preparation, accepted-price/tax retention, estimate/actual difference
+review and invoice provenance still remain. Ordinary/quoted billing must share
+exclusive coverage; estimated hours never become worked time. All build/test and
+render work remains in Actions.

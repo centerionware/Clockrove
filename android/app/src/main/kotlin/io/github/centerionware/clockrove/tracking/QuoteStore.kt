@@ -120,6 +120,7 @@ internal object QuoteStore {
         db.execSQL("CREATE TABLE quote_pdfs(id TEXT PRIMARY KEY NOT NULL,quote_id TEXT NOT NULL,revision INTEGER NOT NULL,bytes BLOB NOT NULL,UNIQUE(quote_id,revision),FOREIGN KEY(quote_id,revision) REFERENCES quote_revisions(quote_id,revision))")
         db.execSQL("CREATE TRIGGER quote_pdf_immutable BEFORE UPDATE ON quote_pdfs BEGIN SELECT RAISE(ABORT,'Issued quote PDF is immutable'); END")
         db.execSQL("CREATE TRIGGER quote_pdf_retained BEFORE DELETE ON quote_pdfs BEGIN SELECT RAISE(ABORT,'Issued quote PDF is retained'); END")
+        QuoteScopeStore.install(db)
         for (table in listOf("quote_revisions", "quote_decisions")) for (event in listOf("UPDATE", "DELETE")) {
             db.execSQL("CREATE TRIGGER ${table}_immutable_${event.lowercase()} BEFORE $event ON $table BEGIN SELECT RAISE(ABORT,'Issued quote history is immutable'); END")
         }
@@ -208,7 +209,7 @@ internal object QuoteStore {
             v.getString("company"), listOf("companyEmail", "companyPhone", "companyAddress", "companyWebsite").map { v.getString(it) }.filter { it.isNotEmpty() }.joinToString("\n"),
             v.getString("customer"), listOf(v.getString("email"), v.getString("customerAddress")).filter { it.isNotEmpty() }.joinToString("\n"), draft.title,
             draft.validUntil?.let { "Valid until $it (calendar date)" } ?: "No expiry date set",
-            "Estimate only · no payment due · quantities and estimated hours are not recorded work",
+            "Estimate only · not an invoice · no payment due",
             v.getString("header"), listOf(draft.terms.takeIf { it.isNotEmpty() }?.let { "Terms\n$it" }, draft.notes.takeIf { it.isNotEmpty() }?.let { "Notes\n$it" }, v.getString("footer")).filterNotNull().filter { it.isNotEmpty() }.joinToString("\n\n"),
             v.getString("total"), v.getString("email"), v.getString("subject"), v.getString("body"), lines,
             v.getString("subtotal"), draft.taxUnits, v.getString("tax"))

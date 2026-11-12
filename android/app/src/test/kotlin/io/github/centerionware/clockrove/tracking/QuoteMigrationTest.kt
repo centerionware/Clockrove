@@ -70,4 +70,16 @@ class QuoteMigrationTest {
             db.rawQuery("SELECT version FROM state", null).use { it.moveToFirst(); assertEquals(42L, it.getLong(0)) }
         }
     }
+    @Test fun lateScopeSchemaFailureRollsBackQuoteTablesAndKeepsExistingPayments() {
+        inspect { it.execSQL("CREATE TABLE quote_scope_lines(marker TEXT)") }
+        val repo = TimerRepository(app, wallClock = { at }).also { repository = it }
+        try { repo.snapshot(); fail("Conflicting scope table must not be overwritten") } catch (_: android.database.SQLException) { }
+        inspect { db ->
+            assertEquals(8, db.version)
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name IN('quotes','quote_counter','quote_drafts','quote_revisions','quote_decisions','quote_pdfs','quote_scope_revisions')", null).use { assertFalse(it.moveToFirst()) }
+            db.rawQuery("PRAGMA table_info(quote_scope_lines)", null).use { assertTrue(it.moveToFirst()); assertEquals("marker", it.getString(1)); assertFalse(it.moveToNext()) }
+            db.rawQuery("SELECT amount_minor FROM invoice_payments", null).use { it.moveToFirst(); assertEquals("3000", it.getString(0)) }
+            db.rawQuery("SELECT metadata,pdf FROM invoice_copies", null).use { it.moveToFirst(); assertEquals("synthetic frozen metadata", it.getString(0)); assertArrayEquals("%PDF-receipt".toByteArray(), it.getBlob(1)) }
+        }
+    }
 }

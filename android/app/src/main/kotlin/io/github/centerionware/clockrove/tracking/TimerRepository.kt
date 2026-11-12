@@ -524,6 +524,12 @@ class TimerRepository internal constructor(context: Context,
         return QuoteIndex(readSnapshot(db).version, today, zone.id, QuoteStore.index(db, today, before, limit, status))
     }
     @Synchronized
+    internal fun applyQuoteScope(id: String, version: Long, value: QuoteScopeStore.Draft): Outcome =
+        boardChange(id, version, "QUOTE_SCOPE_APPLY", value.values()) { QuoteScopeStore.apply(it, value, wallClock()) }
+    @Synchronized
+    internal fun quoteScope(id: String): Pair<Long, List<QuoteScopeStore.Binding>> =
+        readSnapshot(helper.readableDatabase).version to QuoteScopeStore.bindings(helper.readableDatabase, id)
+    @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized
