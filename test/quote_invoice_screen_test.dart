@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:clockrove/app_theme.dart';
+
 import 'package:clockrove/business/quote_api.dart';
 import 'package:clockrove/business/quote_invoice_api.dart';
 import 'package:clockrove/business/quote_invoice_screen.dart';
@@ -8,6 +10,8 @@ import 'package:clockrove/tracking/timer_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/map_preview.dart';
 
 Map<String, Object?> _issued({bool hourly = false}) => {
   'quoteId': 'quote',
@@ -207,8 +211,11 @@ Future<void> _reach(WidgetTester tester, Finder target) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _show(WidgetTester tester, _Invoices api) async {
-  tester.view.physicalSize = const Size(900, 1400);
+Future<void> _show(WidgetTester tester, _Invoices api, {
+  Size size = const Size(900, 1400), bool dark = false,
+  double textScale = 1, GlobalKey? boundary,
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -220,6 +227,11 @@ Future<void> _show(WidgetTester tester, _Invoices api) async {
         quoteInvoiceApiProvider.overrideWithValue(api),
       ],
       child: MaterialApp(
+        theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: RepaintBoundary(key: boundary, child: child!),
+        ),
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
@@ -395,5 +407,31 @@ void main() {
     expect(api.calls, isEmpty);
     expect(tester.takeException(), isNull);
   });
+
+  for (final dark in [false, true]) {
+    testWidgets('quote invoice phone review remains scrollable at large text in ${dark ? 'dark' : 'light'} theme', (tester) async {
+      await tester.runAsync(loadMapPreviewFonts);
+      final key = GlobalKey();
+      final api = _Invoices();
+      await _show(tester, api, size: const Size(390, 844), dark: dark, textScale: 1.8, boundary: key);
+      final list = tester.state<ScrollableState>(find.byType(Scrollable).first);
+      list.position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => saveMapPreview(key, 'quote-invoice-setup-${dark ? 'dark' : 'light'}'));
+      await _reach(tester, find.text('Review actual-work invoice'));
+      await tester.tap(find.text('Review actual-work invoice'));
+      await tester.pumpAndSettle();
+      expect(find.text('Prepare this invoice?'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Invoice total USD 403.13'), 180,
+        scrollable: find.descendant(of: find.byType(AlertDialog), matching: find.byType(Scrollable)).first);
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => saveMapPreview(key, 'quote-invoice-review-${dark ? 'dark' : 'light'}'));
+      expect(api.calls, isEmpty);
+      await tester.tap(find.text('Keep editing'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
 }

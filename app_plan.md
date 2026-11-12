@@ -2323,3 +2323,15 @@ explicit quote allocation; reviewed total reflects one actual hour, not the
 1.5-hour estimate, and cancelling creates no command. Estimated-hour display trims
 unused fractional zeros. This additional source needs Actions; no claim of actual
 Android quote journey acceptance is made before its named device case passes.
+
+### Current native proof and final quote acceptance checks
+
+046fcf6 / 43261516779 passed Android build/instrumentation compilation and native
+tests: downloaded 47 XML / 559 tests, zero failures/errors/skips. This includes
+missing current price, frozen/current party and JPY/KWD exact invoice boundaries.
+Its actual device/document gate is live. Added a further real repository race
+between ordinary and accepted-quote preparation of the same task: one invoice,
+one source claim/number, correct winner price, and identical retries of both known
+outcomes. Added light/dark 390×844 phone layout tests at 1.8 text scale with
+Actions-generated setup/confirmation previews, explicitly synthetic UI fixtures
+that do not establish native financial success. Both new checks need fresh Actions.

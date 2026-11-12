@@ -337,4 +337,28 @@ class QuoteScopeTest {
         assertEquals(1, count("jobs")); assertEquals(1, count("kanban_cards")); assertEquals(1, count("quote_scope_lines"))
         assertEquals(0, count("sessions")); assertEquals(0, count("invoices"))
     }
+    @Test fun concurrentOrdinaryAndQuoteInvoicesReserveActualWorkOnceAndReplayBothOutcomes() {
+        completedQuoteWork()
+        val initial = version; val gate = CountDownLatch(1); val pool = Executors.newFixedThreadPool(2)
+        val draft = QuoteInvoiceStore.Draft("quote-race", actualRequest(), actualChoices(listOf("scope-task")))
+        val outcomes: List<TimerRepository.Outcome>
+        try {
+            val quoted = pool.submit<TimerRepository.Outcome> { gate.await(); repository.prepareQuoteInvoice("prepare-quoted", initial, draft) }
+            val ordinary = pool.submit<TimerRepository.Outcome> { gate.await(); repository.prepareInvoice("prepare-ordinary", initial, "ordinary-race", draft.request.selection) }
+            gate.countDown(); outcomes = listOf(quoted.get(15, TimeUnit.SECONDS), ordinary.get(15, TimeUnit.SECONDS))
+            assertEquals(1, outcomes.count { it.conflict == null }); assertEquals(1, outcomes.count { it.conflict == "STALE_STATE" })
+        } finally { pool.shutdownNow() }
+        assertEquals(outcomes[0], repository.prepareQuoteInvoice("prepare-quoted", initial, draft))
+        assertEquals(outcomes[1], repository.prepareInvoice("prepare-ordinary", initial, "ordinary-race", draft.request.selection))
+        assertEquals(1, count("invoices")); assertEquals(1, count("invoice_task_claims")); assertEquals(0, count("invoice_payments"))
+        val quotedWon = outcomes[0].conflict == null
+        val record = repository.invoice(if (quotedWon) "quote-race" else "ordinary-race")
+        val snapshot = InvoiceStore.Snapshot.decode(record.payload)
+        assertEquals(if (quotedWon) "349.38" else "279.22", snapshot.total)
+        assertEquals(if (quotedWon) "1250" else "999", snapshot.lines.single().unitPriceMinor)
+        assertEquals(if (quotedWon) 1 else 0, count("quote_invoice_links"))
+        inspect { db -> db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001L, it.getLong(0)) } }
+        assertEquals("NO_BILLABLE_ITEMS", repository.prepareInvoice("after-race", version, "after-race", draft.request.selection).conflict)
+    }
+
 }

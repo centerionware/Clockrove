@@ -2937,3 +2937,8 @@ Android build/native/device gates did not run on this failed head.
 Android build. Additional hourly allocation/estimate-versus-actual UI regression
 added as source; fresh Actions still required. Native real-journey/PDF gate remains
 unverified until actual emulator execution succeeds.
+
+046fcf6 / 43261516779: Android/instrumentation build and 559 native tests
+verified (47 downloaded XML, zero failures/errors/skips). Actual journey gate
+running. Ordinary-versus-quote concurrent source race and large-text light/dark
+phone review previews added as source; new checks require fresh Actions.
