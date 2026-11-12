@@ -1970,3 +1970,11 @@ but early forward-scroll actions passed the top field during its transition.
 scrolls. Keep the full financial gates; validate and merge this focused test fix
 before claiming a new internal delivery. No app crash or store upload is proven
 by this failed run. See plan_status.md for artifact evidence.
+
+### Focused payment-fix CI startup follow-up
+
+43231269977 ended cancelled at the job time limit during emulator startup,
+before instrumentation. The exact blocked probe is not proven by its log.
+Bound all startup property probes and preserve emulator logs in device artifacts;
+retain all financial/device gates. #40 still needs a successful current-head run
+before merge, main validation and automatic internal delivery.
