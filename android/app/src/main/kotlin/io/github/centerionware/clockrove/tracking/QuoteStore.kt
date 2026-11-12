@@ -61,12 +61,16 @@ internal object QuoteStore {
                 while (rows.moveToNext()) add(RevisionSummary(rows.getInt(0), rows.getLong(1), if (rows.isNull(2)) null else rows.getString(2)))
             } }
     }
-    fun index(db: SQLiteDatabase, today: String, before: Cursor? = null, limit: Int = 20): Page {
+    fun index(db: SQLiteDatabase, today: String, before: Cursor? = null, limit: Int = 20, status: String? = null): Page {
         require(validDate(today) && limit in 1..50 && (before == null || before.created >= 0 && ids.matches(before.id))) { "INVALID_QUOTE_PAGE" }
         // Metadata only: a valid draft plus issued document can exceed one cursor window.
-        val where = if (before == null) "" else "WHERE created_ms<? OR (created_ms=? AND id<?)"
-        val args = if (before == null) arrayOf((limit + 1).toString()) else arrayOf(before.created.toString(), before.created.toString(), before.id, (limit + 1).toString())
-        val keys = db.rawQuery("SELECT id,created_ms FROM quotes $where ORDER BY created_ms DESC,id DESC LIMIT ?", args).use { rows -> buildList {
+        require(status == null || status in setOf("DRAFT", "ISSUED", "ACCEPTED", "DECLINED", "EXPIRED")) { "INVALID_QUOTE_PAGE" }
+        val cursor = if (before == null) "" else "AND (q.created_ms<? OR (q.created_ms=? AND q.id<?))"
+        val state = "CASE WHEN d.quote_id IS NOT NULL THEN 'DRAFT' WHEN c.decision IS NOT NULL THEN c.decision WHEN r.valid_until IS NOT NULL AND r.valid_until<? THEN 'EXPIRED' ELSE 'ISSUED' END"
+        val args = mutableListOf(status.orEmpty(), today, status.orEmpty())
+        if (before != null) args.addAll(listOf(before.created.toString(), before.created.toString(), before.id))
+        args.add((limit + 1).toString())
+        val keys = db.rawQuery("SELECT q.id,q.created_ms FROM quotes q LEFT JOIN quote_drafts d ON d.quote_id=q.id LEFT JOIN quote_revisions r ON r.quote_id=q.id AND r.revision=(SELECT MAX(x.revision) FROM quote_revisions x WHERE x.quote_id=q.id) LEFT JOIN quote_decisions c ON c.quote_id=r.quote_id AND c.revision=r.revision WHERE (?='' OR $state=?) $cursor ORDER BY q.created_ms DESC,q.id DESC LIMIT ?", args.toTypedArray()).use { rows -> buildList {
                 while (rows.moveToNext()) add(Cursor(rows.getLong(1), rows.getString(0)))
             } }
         val summaries = keys.take(limit).map { key ->
@@ -110,8 +114,8 @@ internal object QuoteStore {
         // Job IDs deliberately survive a purged job, just like invoice identities.
         db.execSQL("CREATE TABLE quotes(id TEXT PRIMARY KEY NOT NULL,number TEXT UNIQUE,created_ms INTEGER NOT NULL)")
         db.execSQL("CREATE TRIGGER quote_identity_immutable BEFORE UPDATE OF id,number,created_ms ON quotes WHEN OLD.number IS NOT NULL BEGIN SELECT RAISE(ABORT,'Issued quote identity is immutable'); END")
-        db.execSQL("CREATE TABLE quote_drafts(quote_id TEXT PRIMARY KEY NOT NULL REFERENCES quotes(id),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,updated_ms INTEGER NOT NULL)")
-        db.execSQL("CREATE TABLE quote_revisions(quote_id TEXT NOT NULL REFERENCES quotes(id),revision INTEGER NOT NULL CHECK(revision>0),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,logo_id TEXT REFERENCES logo_assets(id),created_ms INTEGER NOT NULL,PRIMARY KEY(quote_id,revision))")
+        db.execSQL("CREATE TABLE quote_drafts(quote_id TEXT PRIMARY KEY NOT NULL REFERENCES quotes(id),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,updated_ms INTEGER NOT NULL,valid_until TEXT)")
+        db.execSQL("CREATE TABLE quote_revisions(quote_id TEXT NOT NULL REFERENCES quotes(id),revision INTEGER NOT NULL CHECK(revision>0),customer_id TEXT,job_id TEXT,payload TEXT NOT NULL,logo_id TEXT REFERENCES logo_assets(id),created_ms INTEGER NOT NULL,valid_until TEXT,PRIMARY KEY(quote_id,revision))")
         db.execSQL("CREATE TABLE quote_decisions(quote_id TEXT NOT NULL,revision INTEGER NOT NULL,decision TEXT NOT NULL CHECK(decision IN('ACCEPTED','DECLINED')),note TEXT NOT NULL,recorded_ms INTEGER NOT NULL,PRIMARY KEY(quote_id,revision),FOREIGN KEY(quote_id,revision) REFERENCES quote_revisions(quote_id,revision))")
         db.execSQL("CREATE TABLE quote_pdfs(id TEXT PRIMARY KEY NOT NULL,quote_id TEXT NOT NULL,revision INTEGER NOT NULL,bytes BLOB NOT NULL,UNIQUE(quote_id,revision),FOREIGN KEY(quote_id,revision) REFERENCES quote_revisions(quote_id,revision))")
         db.execSQL("CREATE TRIGGER quote_pdf_immutable BEFORE UPDATE ON quote_pdfs BEGIN SELECT RAISE(ABORT,'Issued quote PDF is immutable'); END")
@@ -134,7 +138,7 @@ internal object QuoteStore {
         if (value.customerId != null && BusinessStore.customers(db).none { it.id == value.customerId }) return "CUSTOMER_UNAVAILABLE"
         if (value.jobId != null && !db.rawQuery("SELECT id FROM jobs WHERE id=?", arrayOf(value.jobId)).use { it.moveToFirst() }) return "JOB_UNAVAILABLE"
         db.execSQL("INSERT OR IGNORE INTO quotes VALUES(?,NULL,?)", arrayOf<Any?>(value.id, at))
-        db.execSQL("INSERT OR REPLACE INTO quote_drafts VALUES(?,?,?,?,?)", arrayOf<Any?>(value.id, value.customerId, value.jobId, payload, at))
+        db.execSQL("INSERT OR REPLACE INTO quote_drafts VALUES(?,?,?,?,?,?)", arrayOf<Any?>(value.id, value.customerId, value.jobId, payload, at, value.validUntil))
         RevisionStore.record(db, "quote_draft", value.id, value.jobId, mapOf("id" to value.id, "payload" to payload), at)
         return null
     }
@@ -184,7 +188,7 @@ internal object QuoteStore {
             db.execSQL("UPDATE quotes SET number=? WHERE id=?", arrayOf(number, id))
             db.execSQL("UPDATE quote_counter SET next_number=? WHERE id=1", arrayOf(sequence + 1))
         }
-        db.execSQL("INSERT INTO quote_revisions VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, revision, draft.customerId, draft.jobId, frozen, logo, at))
+        db.execSQL("INSERT INTO quote_revisions VALUES(?,?,?,?,?,?,?,?)", arrayOf<Any?>(id, revision, draft.customerId, draft.jobId, frozen, logo, at, draft.validUntil))
         db.execSQL("DELETE FROM quote_drafts WHERE quote_id=?", arrayOf(id))
         RevisionStore.record(db, "quote_revision", "$id:$revision", draft.jobId, mapOf("quote_id" to id, "revision" to revision, "payload" to frozen, "logo_id" to logo), at)
         RevisionStore.record(db, "quote_draft", id, draft.jobId, mapOf("id" to id), at, deleted = true)

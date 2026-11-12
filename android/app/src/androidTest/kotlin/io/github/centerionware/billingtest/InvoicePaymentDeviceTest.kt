@@ -225,6 +225,11 @@ class InvoicePaymentDeviceTest {
             waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
             waitFor("Unpaid"); capture("unpaid")
             reveal("Record payment"); click("Record payment")
+            // The route can be visible before its first editable semantics node.
+            // Do not send forward-scroll actions during that transition: they
+            // move the incoming form past the amount before it can be found.
+            waitFor("Refresh invoice balance")
+            waitFor("Payment amount (USD)", true)
             enter("Payment amount (USD)", "30.001")
             reveal("Confirm payment"); click("Confirm payment")
             reveal("This currency allows 2 decimal places.")

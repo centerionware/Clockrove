@@ -203,7 +203,7 @@ class QuoteStoreTest {
             .put("subject", "Synthetic historical quote").put("body", "Synthetic historical quote")
         inspect { db ->
             db.execSQL("INSERT INTO quotes VALUES('frozen','Q-9000',?)", arrayOf(at))
-            db.execSQL("INSERT INTO quote_revisions VALUES('frozen',1,NULL,NULL,?,NULL,?)", arrayOf<Any?>(historical.toString(), at))
+            db.execSQL("INSERT INTO quote_revisions(quote_id,revision,customer_id,job_id,payload,logo_id,created_ms) VALUES('frozen',1,NULL,NULL,?,NULL,?)", arrayOf<Any?>(historical.toString(), at))
         }
         assertEquals(3, repository.quoteCurrencyDigits("frozen", "USD"))
         assertEquals(0, repository.quoteCurrencyDigits("frozen", "JPY"))
@@ -213,5 +213,30 @@ class QuoteStoreTest {
         val revision = JSONObject(repository.quote("frozen").latest!!.payload)
         assertEquals(3, revision.getInt("digits")); assertEquals("34.938", revision.getString("total"))
         assertEquals("1.250", InvoiceStore.Snapshot.decode(repository.quoteDocument("frozen", 2).payload).lines.single().detail.substringAfter("× ").substringBefore(" USD"))
+    }
+    @Test fun statusFiltersApplyBeforePaginationAndKeepExpirySeparateFromDecisions() {
+        issue(draft("alpha")); issue(draft("bravo")); issue(draft("charlie").copy(validUntil = "2026-10-01"))
+        assertNull(repository.decideQuote("accept-alpha", version, "alpha", 1, "ACCEPTED", "Explicit local acceptance", true).conflict)
+        assertNull(repository.decideQuote("decline-bravo", version, "bravo", 1, "DECLINED", "Explicit local decline", true).conflict)
+        assertNull(repository.saveQuote("save-delta", version, draft("delta")).conflict)
+        issue(draft("echo"))
+        val before = version
+        inspect { db ->
+            for ((status, id) in listOf("ACCEPTED" to "alpha", "DECLINED" to "bravo", "EXPIRED" to "charlie", "DRAFT" to "delta", "ISSUED" to "echo")) {
+                val page = QuoteStore.index(db, "2026-11-02", limit = 1, status = status)
+                assertEquals(listOf(id), page.entries.map { it.id }); assertNull(page.next)
+                assertEquals(status, page.entries.single().status)
+            }
+        }
+        assertEquals(before, version)
+        issue(draft("zulu"))
+        assertNull(repository.decideQuote("accept-zulu", version, "zulu", 1, "ACCEPTED", "Explicit local acceptance", true).conflict)
+        val first = repository.quotes(limit = 1, status = "ACCEPTED").page
+        assertEquals(listOf("zulu"), first.entries.map { it.id }); assertNotNull(first.next)
+        val second = repository.quotes(first.next, 1, "ACCEPTED").page
+        assertEquals(listOf("alpha"), second.entries.map { it.id }); assertNull(second.next)
+        assertNull(repository.decideQuote("accept-expired", version, "charlie", 1, "ACCEPTED", "Explicit review of expired validity", true).conflict)
+        assertTrue(repository.quotes(status = "EXPIRED").page.entries.isEmpty())
+        assertEquals("ACCEPTED", repository.quotes(status = "ACCEPTED").page.entries.single { it.id == "charlie" }.status)
     }
 }

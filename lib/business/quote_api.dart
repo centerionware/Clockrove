@@ -8,6 +8,11 @@ import '../tracking/timer_providers.dart';
 import 'business_api.dart';
 import 'report_api.dart';
 
+String quoteStatus(String value) => switch (value) {
+  'DRAFT' => 'Draft', 'ISSUED' => 'Issued', 'ACCEPTED' => 'Accepted locally',
+  'DECLINED' => 'Declined locally', 'EXPIRED' => 'Expired', _ => 'Quote',
+};
+
 class QuoteLine {
   const QuoteLine(
     this.id,
@@ -106,10 +111,12 @@ class QuoteRevision {
 }
 
 class QuoteData {
-  const QuoteData(this.version, this.draft, this.latest);
+  const QuoteData(this.version, this.draft, this.latest, {this.draftDigits, this.today = '', this.timezone = '', this.draftCustomer = '', this.draftEmail = '', this.draftCompany = '', this.draftStyle = ''});
   final int version;
   final QuoteDraft? draft;
   final QuoteRevision? latest;
+  final int? draftDigits;
+  final String today, timezone, draftCustomer, draftEmail, draftCompany, draftStyle;
   factory QuoteData.decode(Map<Object?, Object?> value) => QuoteData(
     value['version'] as int,
     value['draftJson'] == null
@@ -120,6 +127,8 @@ class QuoteData {
     value['latest'] == null
         ? null
         : QuoteRevision(value['latest'] as Map<Object?, Object?>),
+    draftDigits: value['draftDigits'] as int?, today: value['today'] as String? ?? '', timezone: value['timezone'] as String? ?? '',
+    draftCustomer: value['draftCustomer'] as String? ?? '', draftEmail: value['draftEmail'] as String? ?? '', draftCompany: value['draftCompany'] as String? ?? '', draftStyle: value['draftStyle'] as String? ?? '',
   );
 }
 
@@ -230,9 +239,10 @@ class QuoteApi {
       'quoteId': id,
     }))!,
   );
-  Future<QuotePage> page({QuoteCursor? before}) async => QuotePage(
+  Future<QuotePage> page({QuoteCursor? before, String? status}) async => QuotePage(
     (await _channel.invokeMapMethod<Object?, Object?>('quotes', {
       'before': before?.encode(),
+            'status': status,
       'limit': 20,
     }))!,
   );

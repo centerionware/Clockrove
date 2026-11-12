@@ -46,13 +46,15 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Prioritize financial validation fix #40 (`payment-route-sync`, 0c9175c,
-Actions 43231269977). #37 exact head 4825869 passed 479 native / 50 actual
+Prioritize financial validation fix #40 (`payment-route-sync`, 658fce0,
+Actions 43239688776). #37 exact head 4825869 passed 479 native / 50 actual
 Android cases, zero failures/errors/skips in downloaded XML, then merged as
 1492081. Main 43229082487 failed a payment UI-test transition: captured screen
 and accessibility show the incoming form open but scrolled past the amount.
-#40 waits for the real form and editable amount before scrolling. Its actual
-device gate is live; merge only after current validation passes, then observe
+#40 waits for the real form and editable amount before scrolling. Its previous
+run was cancelled at the workflow limit during emulator startup; no instrumentation
+started. Startup probes are now bounded and emulator logs retained. Current CI
+is live; merge only after current validation passes, then observe
 main and automatic internal delivery. Play 43230903575 was skipped. Last proven
 Play acceptance remains internal.25.1 / 216642056 in 43199258376. No new internal
 publication or physical tester upgrade is claimed.
@@ -2001,3 +2003,24 @@ validity and printed terms/notes. Save remains separate from issue, and unknown
 reply retries retain one immutable command. Pre-write invalid drafts return known
 conflicts. Widget/native regressions await Actions; full quote navigation and
 reviewed conversion remain unfinished.
+
+### Quote navigation and review source
+
+The Quotes main-menu entry now connects native status-filtered keyset pages to
+creation/editing, exact issue review, explicit local acceptance/decline and
+revision-specific PDF/history navigation. Native quote context returns coherent
+currency precision, party/style metadata and calendar today/timezone for review.
+Filters operate before pagination; calendar expiry remains separate from explicit
+decisions. Schema 9 is still unreleased; date metadata is part of its new tables.
+Pending issue/decision controls remain mounted across committed-version events so
+lost replies reuse the original intent. Source widget tests cover issue review
+cancellation/response loss and explicit decision review. These new screens and
+filters need full Actions/device validation; accepted-scope conversion remains.
+
+014f75f / 43237357264 passed analysis and 140 Flutter tests, then the zero-decimal
+editor test failed its exact error assertion. The editor previously threw a
+generic summary as soon as Form.validate returned false. It now also validates all
+controller values before choosing that summary, preserving the exact money error;
+the original assertion is retained. Applied the Actions formatting patch to the
+unchanged editor/test/common command files. Current source also incorporates #40's
+route wait and bounded startup diagnostics without weakening any device gate.

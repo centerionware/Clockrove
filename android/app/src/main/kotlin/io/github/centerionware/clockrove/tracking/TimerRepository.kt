@@ -491,10 +491,20 @@ class TimerRepository internal constructor(context: Context,
     internal fun deleteSession(id: String, version: Long, sessionId: String): Outcome =
         boardChange(id, version, "SESSION_DELETE", listOf(sessionId)) { SessionHistoryStore.remove(it, sessionId, wallClock()) }
 
-    internal data class QuoteContext(val version: Long, val draft: QuoteStore.Draft?, val latest: QuoteStore.Revision?)
+    internal data class QuoteContext(val version: Long, val draft: QuoteStore.Draft?, val latest: QuoteStore.Revision?,
+        val draftDigits: Int?, val today: String, val timezone: String,
+        val draftCustomer: String, val draftEmail: String, val draftCompany: String, val draftStyle: String)
     @Synchronized
-    internal fun quote(id: String): QuoteContext = QuoteContext(readSnapshot(helper.readableDatabase).version,
-        QuoteStore.draft(helper.readableDatabase, id), QuoteStore.latest(helper.readableDatabase, id))
+    internal fun quote(id: String): QuoteContext {
+        val db = helper.readableDatabase; val draft = QuoteStore.draft(db, id)
+        val zone = java.util.TimeZone.getDefault()
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = zone }.format(java.util.Date(wallClock()))
+        val customer = draft?.customerId?.let { customerId -> BusinessStore.customers(db).firstOrNull { it.id == customerId } }
+        val company = draft?.let { BusinessStore.settings(db) }
+        return QuoteContext(readSnapshot(db).version, draft, QuoteStore.latest(db, id),
+            draft?.let { QuoteStore.currencyDigits(db, id, it.currency) }, today, zone.id,
+            customer?.name.orEmpty(), customer?.email.orEmpty(), company?.companyName.orEmpty(), company?.invoiceStyle.orEmpty())
+    }
     @Synchronized
     internal fun quoteRevision(id: String, revision: Int): QuoteStore.Revision? = QuoteStore.revision(helper.readableDatabase, id, revision)
     @Synchronized
@@ -508,10 +518,10 @@ class TimerRepository internal constructor(context: Context,
         QuoteStore.history(helper.readableDatabase, id, before, limit)
     internal data class QuoteIndex(val version: Long, val today: String, val timezone: String, val page: QuoteStore.Page)
     @Synchronized
-    internal fun quotes(before: QuoteStore.Cursor? = null, limit: Int = 20): QuoteIndex {
+    internal fun quotes(before: QuoteStore.Cursor? = null, limit: Int = 20, status: String? = null): QuoteIndex {
         val db = helper.readableDatabase; val zone = java.util.TimeZone.getDefault()
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = zone }.format(java.util.Date(wallClock()))
-        return QuoteIndex(readSnapshot(db).version, today, zone.id, QuoteStore.index(db, today, before, limit))
+        return QuoteIndex(readSnapshot(db).version, today, zone.id, QuoteStore.index(db, today, before, limit, status))
     }
     @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =

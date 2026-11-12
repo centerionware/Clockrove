@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
-| Follow-on: quotes | Native estimate foundation under implementation; Actions pending | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Follow-on: quotes | Native documents/editor/navigation under validation; reviewed conversion pending | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -2704,3 +2704,29 @@ Two widget source cases cover unknown-reply lock/retry identity and retained
 fractional input for native zero-decimal currency. These editor/native changes
 still require formatting, analysis and full Actions proof. Quote list/detail,
 issue/decision/revision navigation and accepted-scope conversion remain required.
+
+### Quotes connected navigation and reviewed commands — source pending Actions
+
+Added main-menu Quotes navigation, native status filters before keyset pagination,
+coherent draft-party/currency/calendar context, new/edit draft flow, issue review,
+local acceptance/decline with private notes and explicit revision confirmation,
+revision history/older-page navigation and retained quote PDF access. Unknown
+issue/decision controls remain mounted across committed version events; source
+widget cases verify cancelled reviews write nothing and response-loss retries
+keep the same captured issue intent. New native cases cover filtered older pages,
+expiry and explicit decisions. Accepted-scope/job/task/invoice mapping still remains.
+
+014f75f / 43237357264 passed analysis and ran 140 passing Flutter tests with one
+failure: exact zero-decimal error text was not exposed by the generic invalid-form
+summary. Controller capture now validates even after Form.validate reports invalid,
+so the precise money error is returned; retain the original test assertion and
+input-retention checks. Downloaded formatter artifact 13952887623 and applied its
+unchanged editor/test/common-command source hunks. New API/navigation source still
+requires its own formatting/analysis/full validation. No VM build/test/formatter ran.
+
+Focused #40 run 43231269977 ended cancelled at the 45-minute job limit. Its log
+stopped during API-24 startup after adb daemon creation; no instrumentation began.
+Current head 658fce0 / 43239688776 bounds startup/wait/property/shutdown probes and
+retains emulator logs; it is live. The quote branch incorporates the same startup
+script and initial payment-form wait. Required device cases and financial assertions
+are unchanged. No new main validation or Play acceptance is claimed.

@@ -56,7 +56,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "quotes" -> {
                 val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
                 val before = (raw as? Map<*, *>)?.let { Input(it).let { cursor -> QuoteStore.Cursor(cursor.integer("created"), cursor.string("id")) } }
-                val state = repository.quotes(before, if (input.value.containsKey("limit")) input.int("limit") else 20)
+                val state = repository.quotes(before, if (input.value.containsKey("limit")) input.int("limit") else 20, input.nullable("status"))
                 return mapOf("version" to state.version, "today" to state.today, "timezone" to state.timezone,
                     "next" to state.page.next?.let { mapOf("created" to it.created, "id" to it.id) },
                     "entries" to state.page.entries.map { entry -> mapOf("quoteId" to entry.id, "number" to entry.number,
@@ -69,7 +69,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "quoteHistory" -> return repository.quoteHistory(input.string("quoteId"), if (input.value["before"] == null) null else input.int("before"),
                 if (input.value.containsKey("limit")) input.int("limit") else 20).map { mapOf("revision" to it.revision, "created" to it.created, "decision" to it.decision) }
             "quoteContext" -> return repository.quote(input.string("quoteId")).let { state ->
-                mapOf("version" to state.version, "draftJson" to state.draft?.encode(),
+                mapOf("version" to state.version, "draftJson" to state.draft?.encode(), "draftDigits" to state.draftDigits, "today" to state.today, "timezone" to state.timezone,
+                    "draftCustomer" to state.draftCustomer, "draftEmail" to state.draftEmail, "draftCompany" to state.draftCompany, "draftStyle" to state.draftStyle,
                     "latest" to state.latest?.let(::quoteRevision))
             }
             "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
