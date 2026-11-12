@@ -57,15 +57,27 @@ for clockrove_api in 24 35; do
   echo no | "$avdmanager" create avd --force --name "clockrove-pdf-$clockrove_api" --package "system-images;android-$clockrove_api;default;x86_64" --device pixel_2
   "$ANDROID_HOME/emulator/emulator" -avd "clockrove-pdf-$clockrove_api" -port 5554 -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 -feature -Vulkan > "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" 2>&1 &
   clockrove_emulator_pid=$!
-  trap 'kill "$clockrove_emulator_pid" 2>/dev/null || true' EXIT
-  timeout 180 adb -s emulator-5554 wait-for-device
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
+  clockrove_cleanup_emulator() {
+    cp "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/emulator.log" || true
+    kill "$clockrove_emulator_pid" 2>/dev/null || true
+    for clockrove_shutdown_attempt in $(seq 1 10); do
+      kill -0 "$clockrove_emulator_pid" 2>/dev/null || break
+      sleep 1
+    done
+    kill -KILL "$clockrove_emulator_pid" 2>/dev/null || true
+  }
+  trap clockrove_cleanup_emulator EXIT
+  timeout --kill-after=5s 180s adb -s emulator-5554 wait-for-device
   clockrove_booted=false
-  for clockrove_attempt in $(seq 1 120); do
-    if [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; then clockrove_booted=true; break; fi
+  clockrove_boot_deadline=$((SECONDS + 240))
+  while (( SECONDS < clockrove_boot_deadline )); do
+    kill -0 "$clockrove_emulator_pid" 2>/dev/null || break
+    if [[ "$(timeout --kill-after=5s 10s adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; then clockrove_booted=true; break; fi
     sleep 2
   done
   [[ "$clockrove_booted" == true ]]
-  [[ "$(adb -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" == "$clockrove_api" ]]
+  [[ "$(timeout --kill-after=5s 10s adb -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" == "$clockrove_api" ]]
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
@@ -145,7 +157,7 @@ PY_DEVICE
   bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
-  adb -s emulator-5554 emu kill || true
-  wait "$clockrove_emulator_pid" || true
+  timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
+  clockrove_cleanup_emulator
   trap - EXIT
 done

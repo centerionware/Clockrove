@@ -2538,3 +2538,27 @@ contains the same probe and is superseded by this specific correction. Complete
 financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
 48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
 captures per API. No VM build/test ran.
+
+### Main payment journey synchronization failure — 2026-11-12
+
+Main Validate 43229082487 on merged 1492081 failed its API-24 payment UI journey
+at initial amount entry. Downloaded artifact 13949183965 and reviewed failure.png
+and accessibility.txt: the app is on Record payment, scrolled to its bottom,
+without a crash. The helper began forward scrolling while the incoming route's
+amount semantics was not yet exposed, moving past the top field. Add explicit
+waits for the real payment refresh action and editable amount before entry starts;
+retain all exact amount, state, PDF and capture assertions. The prior PR pass does
+not prove main validation or publication. Internal delivery remains blocked until
+main passes. This test-only correction awaits Actions; no VM build/test ran.
+
+### Payment-fix workflow startup timeout — 2026-11-12
+
+#40 head 0c9175c / 43231269977 is terminal cancelled at the 45-minute job limit.
+Its app build/native gate passed; no actual instrumentation started. Full log
+shows the API-24 image verified, AVD created and adb daemon started at 14:00:21,
+then cancellation at 14:36:27. Available artifacts contain no emulator log, so
+which startup probe stalled is unproven. Source bounds wait-for-device with a
+kill-after grace, every boot property call, an overall boot deadline and shutdown;
+it also captures emulator diagnostics on success/failure. Financial assertions,
+required cases and UI captures are unchanged. Validate the corrected script in
+Actions before merging or claiming publication. No VM build/test ran.
