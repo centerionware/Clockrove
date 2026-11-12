@@ -267,7 +267,9 @@ class _Board extends ConsumerWidget {
         child: Builder(
           builder: (context) {
             final windowWidth = MediaQuery.sizeOf(context).width;
-            if (windowWidth <= 40) return const SizedBox.shrink();
+            if (windowWidth <= 40) {
+              return const SizedBox.shrink();
+            }
             return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
