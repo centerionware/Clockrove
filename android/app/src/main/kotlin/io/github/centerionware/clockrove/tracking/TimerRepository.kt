@@ -555,6 +555,11 @@ class TimerRepository internal constructor(context: Context,
     internal fun quoteActualReview(request: QuoteInvoiceReviewStore.Request): QuoteActualReview =
         QuoteActualReview(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.read(helper.readableDatabase, request))
     @Synchronized
+    internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft): Outcome =
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) { QuoteInvoiceStore.prepare(it, value, wallClock()) }
+    @Synchronized
+    internal fun quoteInvoices(id: String, before: Pair<Long, String>? = null, limit: Int = 20): List<QuoteInvoiceStore.Summary> = QuoteInvoiceStore.links(helper.readableDatabase, id, before, limit)
+    @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized

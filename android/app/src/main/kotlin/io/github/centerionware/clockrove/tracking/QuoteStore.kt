@@ -121,6 +121,7 @@ internal object QuoteStore {
         db.execSQL("CREATE TRIGGER quote_pdf_immutable BEFORE UPDATE ON quote_pdfs BEGIN SELECT RAISE(ABORT,'Issued quote PDF is immutable'); END")
         db.execSQL("CREATE TRIGGER quote_pdf_retained BEFORE DELETE ON quote_pdfs BEGIN SELECT RAISE(ABORT,'Issued quote PDF is retained'); END")
         QuoteScopeStore.install(db)
+        QuoteInvoiceStore.install(db)
         for (table in listOf("quote_revisions", "quote_decisions")) for (event in listOf("UPDATE", "DELETE")) {
             db.execSQL("CREATE TRIGGER ${table}_immutable_${event.lowercase()} BEFORE $event ON $table BEGIN SELECT RAISE(ABORT,'Issued quote history is immutable'); END")
         }

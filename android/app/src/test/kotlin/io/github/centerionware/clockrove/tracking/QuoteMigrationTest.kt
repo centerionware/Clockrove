@@ -47,7 +47,7 @@ class QuoteMigrationTest {
         assertNull(repo.quote("not-created").latest)
         inspect { db ->
             assertEquals(9, db.version)
-            for (table in listOf("quotes", "quote_drafts", "quote_revisions", "quote_decisions")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            for (table in listOf("quotes", "quote_drafts", "quote_revisions", "quote_decisions", "quote_scope_lines", "quote_scope_revisions", "quote_invoice_links")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
             db.rawQuery("SELECT next_number FROM quote_counter", null).use { it.moveToFirst(); assertEquals(1000L, it.getLong(0)) }
             db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001L, it.getLong(0)) }
             db.rawQuery("SELECT payload,pdf FROM invoices", null).use { it.moveToFirst(); assertEquals("synthetic frozen document", it.getString(0)); assertArrayEquals("%PDF-frozen".toByteArray(), it.getBlob(1)) }
@@ -82,4 +82,17 @@ class QuoteMigrationTest {
             db.rawQuery("SELECT metadata,pdf FROM invoice_copies", null).use { it.moveToFirst(); assertEquals("synthetic frozen metadata", it.getString(0)); assertArrayEquals("%PDF-receipt".toByteArray(), it.getBlob(1)) }
         }
     }
+    @Test fun lateInvoiceOriginSchemaFailureRollsBackScopeAndRetainsReleasedFinancialData() {
+        inspect { it.execSQL("CREATE TABLE quote_invoice_links(marker TEXT)") }
+        val repo = TimerRepository(app, wallClock = { at }).also { repository = it }
+        try { repo.snapshot(); fail("Conflicting origin table must not be overwritten") } catch (_: android.database.SQLException) { }
+        inspect { db ->
+            assertEquals(8, db.version)
+            db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name IN('quotes','quote_counter','quote_drafts','quote_revisions','quote_decisions','quote_pdfs','quote_scope_lines','quote_scope_revisions')", null).use { assertFalse(it.moveToFirst()) }
+            db.rawQuery("PRAGMA table_info(quote_invoice_links)", null).use { assertTrue(it.moveToFirst()); assertEquals("marker", it.getString(1)); assertFalse(it.moveToNext()) }
+            db.rawQuery("SELECT amount_minor FROM invoice_payments", null).use { it.moveToFirst(); assertEquals("3000", it.getString(0)) }
+            db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001L, it.getLong(0)) }
+        }
+    }
+
 }

@@ -2849,3 +2849,9 @@ command/UI/provenance write yet. Exact task/session selection and accepted/curre
 price/tax calculations must pass fresh Actions before integration. Scope head
 202ceb1 / 43252783507 passed Flutter formatting/analysis/behavior and reached
 Android build; native/device outcomes remain pending.
+
+Quote preparation/provenance: native source now includes one serialized command,
+shared invoice/coverage writer, accepted/current prices/tax/party selection and
+retained paginated quote links copied through replacements. Source tests cover
+credit/claim conservation, purge and late-write/schema rollback. Fresh Actions,
+Flutter transport/review/history and real-device/document acceptance remain open.

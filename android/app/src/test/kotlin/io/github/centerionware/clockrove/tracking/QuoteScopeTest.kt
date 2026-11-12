@@ -168,6 +168,64 @@ class QuoteScopeTest {
         assertEquals("JOB_UNAVAILABLE", repository.quoteActualReview(request.copy(revision = 2)).result.problem)
         assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims"))
     }
+    private fun completedQuoteWork() {
+        quote(); assertNull(repository.applyQuoteScope("scope", version, scope()).conflict)
+        val done = repository.boardSnapshot("scope-job").board.columns.single { it.completed }.id
+        assertNull(repository.saveCard("complete", version, BoardStore.Draft("scope-task", "scope-job", done, "Actual tile installation", priceMinor = BigInteger("999"), currency = "USD", quantityUnits = 260000)).conflict)
+    }
+    @Test fun quoteInvoiceSharesExclusiveClaimsAndPreservesOriginAcrossPaidReplacementAndJobPurge() {
+        completedQuoteWork()
+        val draft = QuoteInvoiceStore.Draft("quoted", actualRequest(), actualChoices(listOf("scope-task")))
+        val before = version
+        val outcome = repository.prepareQuoteInvoice("prepare-quote", before, draft)
+        assertNull(outcome.conflict); assertEquals(outcome, repository.prepareQuoteInvoice("prepare-quote", before, draft))
+        assertEquals("COMMAND_ID_REUSED", repository.prepareQuoteInvoice("prepare-quote", before, draft.copy(invoiceId = "different")).conflict)
+        val original = repository.invoice("quoted"); val document = InvoiceStore.Snapshot.decode(original.payload)
+        assertEquals("349.38", document.total); assertEquals("325.00", document.subtotal)
+        assertEquals("1250", document.lines.single().unitPriceMinor); assertEquals("260000", document.lines.single().quantityUnits)
+        assertTrue(document.basis.contains("Q-1000")); assertTrue(document.lines.single().detail.contains("Revision 1"))
+        assertFalse(original.payload.contains(draft.choices.note))
+        val origin = inspect { QuoteInvoiceStore.origin(it, "quoted")!! }
+        assertEquals("quoted", origin.originalInvoiceId)
+        assertTrue(origin.payload.contains("scope-task")); assertTrue(origin.payload.contains("ORIGINAL_ISSUE_PROVENANCE"))
+        assertEquals("NO_BILLABLE_ITEMS", repository.prepareInvoice("ordinary", version, "ordinary", draft.request.selection).conflict)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", repository.prepareQuoteInvoice("again", version, draft.copy(invoiceId = "another")).conflict)
+        assertNull(repository.recordInvoicePayment("payment", version, InvoicePaymentStore.Draft("payment", "quoted", "10000", "USD", at, "UTC")).conflict)
+        val line = document.lines.single()
+        val replacement = InvoiceLifecycleStore.ReplacementDraft("quoted", "replacement", listOf(InvoiceLifecycleStore.LineEdit(0, line.title, line.detail, "39000", "260000", "1500")), 75000, "Explicit correction of agreed unit price", "UTC", true)
+        assertNull(repository.replaceInvoice("replace", version, replacement).conflict)
+        val nextOrigin = inspect { QuoteInvoiceStore.origin(it, "replacement")!! }
+        assertEquals(origin.payload, nextOrigin.payload); assertEquals("quoted", nextOrigin.originalInvoiceId)
+        val balance = repository.invoicePayments("replacement").second.balance
+        assertEquals(BigInteger("10000"), balance.paid); assertEquals(BigInteger("31925"), balance.due)
+        assertEquals(setOf("quoted", "replacement"), repository.quoteInvoices("quote").map { it.invoiceId }.toSet())
+        assertNull(repository.recordInvoicePayment("final", version, InvoicePaymentStore.Draft("final", "replacement", "31925", "USD", at, "UTC")).conflict)
+        assertEquals("PAID_INVOICE_CANNOT_VOID", repository.voidInvoice("void-paid", version, InvoiceLifecycleStore.VoidDraft("replacement", "Attempted paid cancellation", "UTC", true)).conflict)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", repository.prepareQuoteInvoice("paid-again", version, draft.copy(invoiceId = "third")).conflict)
+        assertNull(repository.archiveJob("archive", version, "scope-job").conflict)
+        at += 31L * 86400000
+        assertNull(repository.deleteJob("purge", version, "scope-job").conflict)
+        assertEquals(origin.payload, inspect { QuoteInvoiceStore.origin(it, "replacement")!!.payload })
+        assertEquals(2, repository.quoteInvoices("quote").size)
+        assertEquals(original.payload, repository.invoice("quoted").payload)
+        inspect { db -> db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) } }
+    }
+    @Test fun quoteInvoiceLateProvenanceFailureRollsBackInvoiceNumberClaimsRevisionAndReceipt() {
+        completedQuoteWork()
+        val draft = QuoteInvoiceStore.Draft("quoted", actualRequest(), actualChoices(listOf("scope-task")))
+        val before = version; val revisions = count("entity_revisions")
+        inspect { it.execSQL("CREATE TRIGGER reject_quote_invoice BEFORE INSERT ON quote_invoice_links BEGIN SELECT RAISE(ABORT,'Synthetic provenance failure'); END") }
+        try { repository.prepareQuoteInvoice("prepare-quote", before, draft); fail("Expected full rollback") } catch (_: android.database.SQLException) { }
+        assertEquals(before, version); assertEquals(revisions, count("entity_revisions"))
+        assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims")); assertEquals(0, count("quote_invoice_links"))
+        inspect { db ->
+            db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1000L, it.getLong(0)) }
+            db.rawQuery("SELECT id FROM commands WHERE id='prepare-quote'", null).use { assertFalse(it.moveToFirst()) }
+            db.execSQL("DROP TRIGGER reject_quote_invoice")
+        }
+        assertNull(repository.prepareQuoteInvoice("prepare-quote", before, draft).conflict)
+        assertEquals("INV-1000", repository.invoice("quoted").number)
+    }
     @Test fun interruptedMappingRollsBackJobTasksTemplatesMoneyAncestryAndCommand() {
         quote(); val before = version
         val revisions = count("entity_revisions")

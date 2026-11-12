@@ -2122,3 +2122,23 @@ Actions 43252783507 passed formatting, analysis and Flutter behavior gates for
 202ceb1 (including scope review/cancel/unknown-reply/failed-refresh tests) and is
 building Android. The new native review source is newer and still needs Actions;
 this is not completed quote invoice preparation/provenance or milestone acceptance.
+
+### Quote invoice preparation and original-issue provenance (source)
+
+Added the serialized native prepareQuoteInvoice command on top of authoritative
+actual-work review. InvoiceStore now shares its existing immutable snapshot/number/
+coverage write path with reviewed quote reports; ordinary invoices retain their
+prior behavior. Accepted prices/tax and accepted party contact/email are defaults;
+current choices are explicit. Customer documents carry quote number/revision, not
+private review notes. A retained indexed quote_invoice_links table stores private
+original-issue source/line/policy provenance; listing is metadata-only keyset
+pagination. Replacement chains copy their original origin without interpreting
+its old amounts as current charges. Job purge retains the links and revisions.
+Schema 9 remains unreleased; frozen schema_v8.json was not modified.
+
+Added source regressions for exact task billing, shared ordinary/quote exclusions,
+replay identity, partial-payment replacement credit, paid refusal, job purge, late
+provenance-write rollback (including number/revisions/claims/receipt), and late
+schema-install rollback preserving released financial data. This native source
+still needs Actions. Flutter preparation review/transport/history navigation and
+actual-device/PDF acceptance remain required before quote milestone completion.
