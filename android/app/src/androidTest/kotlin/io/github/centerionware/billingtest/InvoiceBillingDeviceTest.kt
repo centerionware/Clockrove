@@ -104,11 +104,11 @@ class InvoiceBillingDeviceTest {
             SystemClock.sleep(120)
         }
     }
+    private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
-        fun visible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-        if (visible()) {
+        if (keyboardVisible()) {
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            until("Keyboard did not close after Back") { !visible() }
+            until("Keyboard did not close after Back") { !keyboardVisible() }
             automation.waitForIdle(250, 3000)
         }
     }
@@ -120,6 +120,9 @@ class InvoiceBillingDeviceTest {
         until("Focused field did not expose text entry for $label") {
             find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
         }
+        // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
+        // acknowledgement can otherwise precede the keyboard opening and hiding.
+        until("Keyboard did not open for $label") { keyboardVisible() }
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))

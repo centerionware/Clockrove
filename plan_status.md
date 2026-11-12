@@ -2306,3 +2306,9 @@ for dismissal, confirms entered values and closes the keyboard between fields.
 Interactive-window inspection supplies that visibility check; all native financial
 assertions remain. Also fixes captures that could show the preceding invalid draft
 before a queued input update painted. API 35 was not reached in this run.
+
+Tightened the same input-helper correction: wait for the actual IME to open after
+field focus before SET_TEXT, then confirm the exact value and dismiss it. Otherwise
+a fast text-action acknowledgment could race the keyboard's later appearance and
+skip dismissal. This is actual UI synchronization, not a replacement of native
+saves or any financial assertion. No app-money behavior changed in this follow-up.
