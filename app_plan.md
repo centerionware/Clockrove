@@ -1525,3 +1525,20 @@ were visible, but the column subtree was absent from cached accessibility nodes.
 Refresh virtual nodes and retain a separate actual board screenshot before the
 unchanged column assertion; later setup screenshots must not overwrite failure
 evidence. Full API-35 board acceptance remains open, not assumed from its header.
+
+### Collection publication and native timer-surface checks
+
+43146802062 retained all assertions and caught an intermittent first-bind task
+collection failure on API 24 before board capture. Source review identified
+concurrent widget refresh callers that could publish stale size/state after a
+newer refresh. Serialize refresh publication; load the remote factory on creation
+as well as dataset change; key adapters by per-widget configuration token. Return
+task filtering metadata in the same native read as its rows. These are source
+corrections awaiting Actions, not an assertion that this failed run passed.
+
+Also retain the configured task job's visible/accessible label when a different
+job is running. Added an actual denied-location, no-Flutter-screen clock-in/out
+journey through real PendingIntents and two widgets, asserting native WIDGET
+origin, positive duration, no location history, and separate task-filter context.
+The required actual widget class count becomes four per API (20 total per API).
+All builds/tests remain Actions-only; full acceptance is still pending.

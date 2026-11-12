@@ -17,14 +17,14 @@ class WidgetTasksService : RemoteViewsService() {
         private var today = ""
         private var failed = false
         private var filtered = false
-        override fun onCreate() = Unit
+        override fun onCreate() = onDataSetChanged()
         override fun onDestroy() { items = emptyList() }
         override fun onDataSetChanged() {
             try {
                 if (!TimerWidget.owned(this@WidgetTasksService, id)) { items = emptyList(); failed = false; return }
                 val repository = TimerRepository.get(this@WidgetTasksService)
-                filtered = repository.widgetSnapshot(id).configuration.jobId != null
                 val data = repository.widgetTasks(id)
+                filtered = data.jobId != null
                 items = data.items; today = data.today; failed = false
             } catch (_: Exception) { items = emptyList(); failed = true }
         }

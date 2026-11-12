@@ -54,6 +54,7 @@ open class TimerWidget : AppWidgetProvider() {
         internal fun owned(context: Context, id: Int): Boolean = id > 0 && providers.any {
             id in AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, it))
         }
+        @Synchronized
         fun refreshAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val repository = TimerRepository.get(context)
@@ -89,11 +90,13 @@ open class TimerWidget : AppWidgetProvider() {
                 val views = if (!tasks) viewsFor(context, bound.state, id, bound) else RemoteViews(context.packageName, R.layout.tasks_widget).apply {
                     if (provider == TaskListWidget::class.java) setViewVisibility(R.id.widget_timer_container, View.GONE)
                     else addView(R.id.widget_timer_container, viewsFor(context, bound.state, id, bound))
-                    setTextViewText(R.id.widget_tasks_title, (if (provider == TaskListWidget::class.java) bound.defaultJob?.let { "Due soon · ${it.name}" } else bound.defaultJob?.let { "Due soon" }) ?: if (bound.missingDefault) "Job unavailable · configure" else "Due soon · all jobs")
+                    val taskTitle = bound.defaultJob?.let { "Due soon · ${it.name}" } ?: if (bound.missingDefault) "Job unavailable · configure" else "Due soon · all jobs"
+                    setTextViewText(R.id.widget_tasks_title, taskTitle)
+                    setContentDescription(R.id.widget_tasks_title, "$taskTitle. Change widget settings")
                     setOnClickPendingIntent(R.id.widget_tasks_title, configureIntent(context, id))
                     setTextViewText(R.id.widget_tasks_empty, if (bound.missingDefault) "Choose an active job in widget settings" else "No tasks due in the next 7 days")
                     val adapter = Intent(context, WidgetTasksService::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                        .setData(Uri.parse("clockrove://widget/$id/tasks"))
+                        .setData(Uri.parse("clockrove://widget/$id/tasks/${bound.configuration.token ?: "picker"}"))
                     setRemoteAdapter(R.id.widget_tasks, adapter)
                     setEmptyView(R.id.widget_tasks, R.id.widget_tasks_empty)
                     val template = Intent(context, WidgetBoardActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)

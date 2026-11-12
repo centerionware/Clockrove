@@ -10,7 +10,7 @@ import java.util.Locale
 /** Calendar dates are local dates, never a fixed 168-hour approximation across DST. */
 internal object WidgetTasksStore {
     data class Task(val id: String, val jobId: String, val jobName: String, val title: String, val due: String)
-    data class Tasks(val today: String, val through: String, val items: List<Task>)
+    data class Tasks(val today: String, val through: String, val items: List<Task>, val jobId: String?)
     fun read(db: SQLiteDatabase, jobId: String?, now: Long, timezone: String): Tasks {
         require(timezone in java.util.TimeZone.getAvailableIDs().toSet())
         val calendar = GregorianCalendar(TimeZone.getTimeZone(timezone), Locale.ROOT).apply {
@@ -26,6 +26,6 @@ internal object WidgetTasksStore {
         val items = db.rawQuery("SELECT c.id,c.job_id,j.name,c.title,c.due_date FROM kanban_cards c JOIN jobs j ON j.id=c.job_id WHERE j.archived=0 AND c.completed_ms IS NULL AND c.due_date IS NOT NULL AND c.due_date<=?$filter ORDER BY c.due_date,c.id", args).use { cursor ->
             buildList { while (cursor.moveToNext()) add(Task(cursor.getString(0), cursor.getString(1), cursor.getString(2), cursor.getString(3), cursor.getString(4))) }
         }
-        return Tasks(today, through, items)
+        return Tasks(today, through, items, jobId)
     }
 }

@@ -33,7 +33,7 @@ class WidgetHostDeviceTest {
             if (success) return
             SystemClock.sleep(100)
         }
-        captureSetup()
+        captureSetup("failure")
         throw AssertionError(description)
     }
     private fun options(width: Int, height: Int) = Bundle().apply {
@@ -208,6 +208,75 @@ class WidgetHostDeviceTest {
         } finally {
             repository.removeWidgetConfigurations(listOf(id))
             instrumentation.runOnMainSync { activity?.finish(); host.deleteHost() }
+        }
+    }
+
+    @Test fun actualTimerActionsWorkWithoutFlutterOrLocationPermission() {
+        val repository = TimerRepository.get(app)
+        assertNull(repository.snapshot().running)
+        assertEquals(android.content.pm.PackageManager.PERMISSION_DENIED, app.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION))
+        assertEquals(android.content.pm.PackageManager.PERMISSION_DENIED, app.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION))
+        val job = repository.createJob("Synthetic native timer")
+        val taskJob = repository.createJob("Synthetic task scope")
+        val manager = AppWidgetManager.getInstance(app)
+        val host = AppWidgetHost(app, 916)
+        val id = host.allocateAppWidgetId()
+        val taskWidgetId = host.allocateAppWidgetId()
+        val activity = instrumentation.startActivitySync(Intent(app, WidgetTestHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as WidgetTestHostActivity
+        val picker = instrumentation.addMonitor(WidgetPickerActivity::class.java.name, null, false)
+        val start = instrumentation.addMonitor(WidgetStartActivity::class.java.name, null, false)
+        var view: AppWidgetHostView? = null
+        var taskView: AppWidgetHostView? = null
+        try {
+            assertTrue(manager.bindAppWidgetIdIfAllowed(id, ComponentName(app, TimerOnlyWidget::class.java), options(132, 56)))
+            assertNull(repository.saveWidgetConfiguration("native-timer-binding", repository.snapshot().version, id, job).conflict)
+            assertTrue(manager.bindAppWidgetIdIfAllowed(taskWidgetId, ComponentName(app, TimerWidget::class.java), options(300, 340)))
+            assertNull(repository.saveWidgetConfiguration("native-task-scope-binding", repository.snapshot().version, taskWidgetId, taskJob).conflict)
+            instrumentation.runOnMainSync {
+                host.startListening()
+                view = host.createView(activity, id, manager.getAppWidgetInfo(id))
+                val container = FrameLayout(activity)
+                val density = activity.resources.displayMetrics.density
+                container.addView(view, FrameLayout.LayoutParams((132 * density).toInt(), (56 * density).toInt()))
+                taskView = host.createView(activity, taskWidgetId, manager.getAppWidgetInfo(taskWidgetId))
+                container.addView(taskView, FrameLayout.LayoutParams((300 * density).toInt(), (340 * density).toInt()).apply { topMargin = (72 * density).toInt() })
+                activity.setContentView(container)
+            }
+            TimerWidget.refreshAll(app)
+            until("Configured clock-in control must be rendered") {
+                view!!.findViewById<android.widget.ImageButton>(R.id.widget_action)?.contentDescription == "Clock in to Synthetic native timer"
+            }
+            instrumentation.runOnMainSync { assertTrue(view!!.findViewById<View>(R.id.widget_action).performClick()) }
+            until("Actual widget PendingIntent must start its configured native job") { repository.snapshot().running?.jobId == job }
+            assertEquals(1, start.hits)
+            assertEquals(0, picker.hits)
+            until("Combined must distinguish its task filter from another running job") {
+                taskView!!.findViewById<android.widget.TextView>(R.id.widget_job)?.text == "Synthetic native timer" &&
+                    taskView!!.findViewById<android.widget.TextView>(R.id.widget_tasks_title)?.text == "Due soon · Synthetic task scope"
+            }
+            until("Clock-in must refresh the widget to clock-out") {
+                view!!.findViewById<android.widget.ImageButton>(R.id.widget_action)?.contentDescription == app.getString(R.string.widget_stop)
+            }
+            instrumentation.runOnMainSync {
+                val bitmap = android.graphics.Bitmap.createBitmap(view!!.width, view!!.height, android.graphics.Bitmap.Config.ARGB_8888)
+                view!!.draw(android.graphics.Canvas(bitmap))
+                File(app.getExternalFilesDir(null), "widget-timer-running.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+            }
+            SystemClock.sleep(10)
+            instrumentation.runOnMainSync { assertTrue(view!!.findViewById<View>(R.id.widget_action).performClick()) }
+            until("Actual widget broadcast must clock out without Flutter or GPS") { repository.snapshot().running == null }
+            val entry = repository.sessionHistory(job).page.entries.single()
+            assertEquals("WIDGET", entry.origin)
+            assertTrue((entry.end ?: entry.start) > entry.start)
+            assertTrue(repository.locationPoints(entry.id).isEmpty())
+            assertEquals(0, picker.hits)
+        } finally {
+            val current = repository.snapshot()
+            if (current.running?.jobId == job) repository.executeFromSurface("native-widget-test-cleanup-$job", current.version, TimerRepository.Action.STOP, null, TimerRepository.Origin.MANUAL)
+            repository.removeWidgetConfigurations(listOf(id, taskWidgetId))
+            instrumentation.runOnMainSync { host.stopListening(); host.deleteHost(); activity.finish() }
+            instrumentation.removeMonitor(picker); instrumentation.removeMonitor(start)
         }
     }
 
