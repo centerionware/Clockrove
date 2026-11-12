@@ -2513,3 +2513,16 @@ PdfDocument/PdfRenderer/text/attachment cases remain separate and required. The
 copy gate now requires exactly those two named actual cases per API (50 combined
 actual cases expected for the complete workflow). This follow-up needs Actions
 proof; 29fbe8b's existing UI validation continues separately.
+
+29fbe8b / 43220345571 passed the actual Android stage: downloaded/inspected 42
+native XML files (479 cases) and eight device XML files (48 cases), zero failures/
+errors/skips. All 15 UI captures per API were produced. The complete workflow then succeeded, including actual-document viewer and
+locked release tooling/version policy. Reviewed all nine API-24 VOID/replacement/settled
+replacement PDF captures from 60fe554, plus 29fbe8b API-35 correction confirmation,
+credited balance and original-owner historical receipt: exact values, warnings
+and retained identities are legible. Capture review found a bottom correction CTA
+partly behind Android's navigation bar; source now adds the system bottom inset
+to all three financial scrolling screens. Added a required actual editor-fields
+capture (16 UI captures per API now). Fresh reader/inset current-head acceptance
+remains required; the native-only BLOB boundary case remains separate from genuine
+PDF rendering. No new merge, Play upload or physical acceptance is claimed.

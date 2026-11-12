@@ -301,7 +301,12 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
           ],
         ),
         body: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             Text(data.number, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),

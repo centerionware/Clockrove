@@ -301,6 +301,7 @@ class InvoicePaymentDeviceTest {
             reveal("Void & replace"); click("Void & replace")
             enter("Unit price (USD)", "120.00"); enter("Replacement tax (%)", "10")
             enter("Internal correction reason", "Synthetic corrected tile unit price")
+            scrollToStart(); reveal("Unit price (USD)", true); capture("replacement-editor")
             reveal("Review correction"); click("Review correction")
             waitFor("Void and replace INV-1001?"); waitFor("Remaining balance: USD 102.00"); capture("replacement-review")
             click("Keep editing")
