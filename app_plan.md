@@ -41,49 +41,35 @@ Actions only, and verify migration, large amounts, tiny fractions and conservati
 
 ### Next concrete action
 
-Owner priority: complete the exact-money migration and its regressions described
-in docs/MONEY_PRECISION_PLAN.md, together with the real tax/quantity/legacy-invoice
-UI journey. Decimal 3.2.6 is selected; the application lockfile is generated only in
-Actions. Monetary rate/unit-price fields and persistence are now prepared as
-BigInteger/canonical TEXT, but their fresh validation is still required before merge.
+Invoice foundation PR #35 merged as f935485127930ac499f08f01f23b2e59d79627f3.
+Final head eb74c74 passed full Actions 43182854787: 383 native and 44 actual
+Android cases across API 24/35, zero failures/errors/skips. Exact decimal-string
+money, quantity with one Unit price input, tax and retained invoice coverage are
+merged. Native/device XML and wide/1000-digit PDF captures were reviewed.
 
+Main validation 43185844256 failed the existing API-35 widget collection scroll
+case before financial instrumentation; API 24 passed all 22 actual cases. The
+failure screenshot shows the expanded collection still on rows 0–2, while source
+ordering is due date then zero-padded card ID. Its one-shot setSelection followed
+count readiness without waiting for asynchronous resize/reapply layout. A focused
+test change drives the current laid-out list within the same 30-second deadline,
+logs scroll state, and retains exact final-row and real PendingIntent board checks.
+This change needs full Actions evidence; no local builds/tests ran. Internal upload
+for f935485 has not started. Latest accepted delivery remains internal.22.1 /
+216624221 (43160879953), not this invoice slice.
 
-Priority settings fix #34 is delivered internally. Main c5e19d1 passed
-43131240701, and Play delivery 43132531984 accepted 0.1.0-internal.21.1 /
-216609104 at 2026-11-12 01:17:19 UTC. Original crash reproduction and the
-245 native / 32 actual Android passing results are recorded below. Tester
-installation/physical behavior is separate; production readiness remains unset.
+After validation/merge and verified main/internal delivery, continue the immediate
+next milestone: payments and partial/full balances, immutable updated copies and
+receipts, company/accounts-receivable CC, and atomic unpaid/partial void-and-replace
+with conserved original payment credit. Follow docs/INVOICE_LIFECYCLE_PLAN.md and
+the exact money contract above. Schema 7 is on main; new persistence requires a
+forward migration. Then quotes, comments/supplies/costs and company reports.
+Provider settings, encrypted backup/transactional merge, physical tracking/recovery
+and full launch acceptance remain open.
 
-Owner physical feedback on 2026-11-12: Pixel 7 / Android 17 saves main Settings
-without crashing and appears to work after updating to the latest available build
-immediately before testing. Latest verified delivery is internal.21.1 / 216609104;
-this verifies the reported Save journey, not the full physical acceptance matrix.
-
-Widget PR #33 merged as 8c2f3fd after final head 6cadef0 passed full Actions
-43158333007: 274 native and 40 actual API-24/35 cases with no failures/errors/skips;
-board, scrolling Combined, compact timer and setup captures reviewed on both APIs.
-Main validation 43159664866 passed with the same 274 native / 40 actual cases;
-Play delivery 43160879953 accepted 0.1.0-internal.22.1 / 216624221 at
-2026-11-12 05:27:54 UTC. Tester availability/installation remains separate.
-Real launcher/tracking/recovery evidence, provider settings, encrypted backup/merge
-and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
-
-Implement the owner's next business iteration in the invoice-integrity worktree
-from merged main: exclusive invoice source claims and conservative legacy review,
-global/per-job tax with immutable issued totals, retained financial records and
-invoice navigation. Then add unpaid/partial/paid lifecycle, receipts, atomic
-void/replacement and company/accounts-receivable CC. Follow the ordered detailed
-plan for quotes, task comments/supplies/costs and main-menu business reports.
-
-Draft #35 legacy editor head 94fd7c7 passed behavior/build/native/API-24/35 and
-actual-document viewer gates in 43169835589; only formatting failed, and the exact
-CI correction is applied. Owner priority quantities reuse the single existing
-price as Unit price and default to 1. Quantity head b4e547d passed full
-43172649874: 365 native and 40 actual Android cases without failures/errors/skips,
-plus actual-document viewer checks. An independent actual Flutter-to-native legacy
-review -> quantity save -> unbilled tax invoice -> repeat exclusion -> retained PDF
-journey is now in 6c0222d / live 43174102042, but has not run yet. Do not merge this slice from
-native/storage or synthetic presentation evidence alone.
+Owner physical feedback remains Pixel 7 / Android 17: main Settings saves without
+crashing after updating to the latest available build. Exact App info version was
+not transcribed. Financial/widget/GPS physical acceptance remains separate.
 
 ## 2. Product decisions
 
