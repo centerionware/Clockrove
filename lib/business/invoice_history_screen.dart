@@ -22,12 +22,25 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
   void _refresh() => setState(() => _data = _load());
   Future<void> _open(PreparedInvoice invoice) async {
     if (invoice.legacy && !invoice.jobDeleted) {
-      await Navigator.push<bool>(context, MaterialPageRoute<bool>(builder: (_) => LegacyInvoiceScreen(invoiceId: invoice.id)));
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute<bool>(
+          builder: (_) => LegacyInvoiceScreen(invoiceId: invoice.id),
+        ),
+      );
       if (mounted) _refresh();
     } else {
-      if (mounted) await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => InvoiceScreen(invoiceId: invoice.id)));
+      if (mounted) {
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => InvoiceScreen(invoiceId: invoice.id),
+          ),
+        );
+      }
     }
   }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -78,7 +91,10 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                       '${invoice.currency} ${invoice.total}',
                       if (invoice.createdLabel.isNotEmpty)
                         'Issued ${invoice.createdLabel}',
-                      if (invoice.legacy) invoice.jobDeleted ? 'Historical source records unavailable' : 'Billed work needs review',
+                      if (invoice.legacy)
+                        invoice.jobDeleted
+                            ? 'Historical source records unavailable'
+                            : 'Billed work needs review',
                     ].join('\n'),
                   ),
                   trailing: const Icon(Icons.chevron_right),

@@ -2144,3 +2144,9 @@ actual Flutter legacy-selection/save -> unbilled-tax review -> new invoice ->
 retained document journey, isolated from first-number regression fixtures, on
 API 24 and 35 through Actions. No merge or invoice release is claimed yet.
 No VM builds/tests/formatting/dependency resolution/rendering ran.
+
+956f5da / 43169321012 stopped at analysis after exporting formatter output: twelve
+multiline if statements needed explicit braces. Applied that CI patch and wrapped
+the flagged blocks without changing their conditions or behavior. No new legacy
+screen tests/native/device checks ran past the failed analyzer gate. Renewed
+Actions evidence is required; the independent actual financial suite is next.
