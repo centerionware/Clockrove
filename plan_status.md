@@ -1847,3 +1847,13 @@ and task-count subtitle. Match the exact visible semantic line and always finish
 the monitored board activity, including failed assertions. The run then stalled
 attaching post-test logcat; retain the continuous stream and bound fixture pulls.
 No passing full emulator acceptance or widget publication is claimed yet.
+
+### Actual widget choice verification strengthened
+
+43143381176 passed Flutter/build/native checks and API-24 Settings, actual task
+scrolling/board rendering and all providers. Setup intermittently left the picker
+selected: pinned Flutter AccessibilityBridge acknowledges ACTION_CLICK even when
+the addressed node has no TAP semantic action. Require a clickable target, search
+children before merged ancestors, and verify the actual checked choice before
+Save/Back. Keep the native binding and cancel assertions; do not count a transport
+acknowledgement as user selection or acceptance. Full Actions rerun is required.

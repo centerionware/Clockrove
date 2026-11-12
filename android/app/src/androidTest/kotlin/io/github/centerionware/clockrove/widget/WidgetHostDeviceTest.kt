@@ -33,6 +33,7 @@ class WidgetHostDeviceTest {
             if (success) return
             SystemClock.sleep(100)
         }
+        captureSetup()
         throw AssertionError(description)
     }
     private fun options(width: Int, height: Int) = Bundle().apply {
@@ -140,13 +141,13 @@ class WidgetHostDeviceTest {
             bitmap.recycle()
         }
     }
-    private fun clickText(label: String, click: Boolean = true) {
+    private fun clickText(label: String, click: Boolean = true, checked: Boolean = false) {
         var found: android.view.accessibility.AccessibilityNodeInfo? = null
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
             // Flutter may merge a ListTile's title and subtitle into one label.
             fun matches(value: CharSequence?) = value?.toString()?.lineSequence()?.any { it.trim() == label } == true
-            if (node.isVisibleToUser && (matches(node.text) || matches(node.contentDescription))) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { match -> return match } }
+            if (node.isVisibleToUser && (!checked || node.isChecked) && (matches(node.text) || matches(node.contentDescription))) return node
             return null
         }
         val deadline = SystemClock.uptimeMillis() + 30000
@@ -167,7 +168,10 @@ class WidgetHostDeviceTest {
         }
         var node = found ?: throw AssertionError("Actual widget setup did not show $label")
         if (!click) return
-        while (!node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)) {
+        while (true) {
+            // Flutter's bridge acknowledges ACTION_CLICK even without a TAP
+            // semantic action; acknowledgement alone does not prove a control tap.
+            if (node.isClickable && node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)) return
             node = node.parent ?: throw AssertionError("Could not click $label")
         }
     }
@@ -183,12 +187,14 @@ class WidgetHostDeviceTest {
             val intent = Intent(app, WidgetConfigurationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
             activity = instrumentation.startActivitySync(intent) as WidgetConfigurationActivity
             clickText("Widget setup choice")
+            clickText("Widget setup choice", click = false, checked = true)
             captureSetup()
             clickText("Save widget")
             until("Actual widget setup must commit and close") { activity!!.isFinishing && repository.widgetSnapshot(id).configuration.jobId == job }
             val binding = repository.widgetSnapshot(id).configuration
             activity = instrumentation.startActivitySync(intent) as WidgetConfigurationActivity
             clickText("Choose each time")
+            clickText("Choose each time", click = false, checked = true)
             instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             until("Cancel must close widget setup") { activity!!.isFinishing }
             assertEquals(binding, repository.widgetSnapshot(id).configuration)
