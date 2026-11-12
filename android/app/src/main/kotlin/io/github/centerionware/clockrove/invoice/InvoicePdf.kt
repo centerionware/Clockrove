@@ -57,14 +57,14 @@ internal object InvoicePdf {
                 snapshot.lines.forEach { flow.line(it) }
                 flow.total()
                 snapshot.statement?.let {
-                    flow.text("Paid to date   ${snapshot.currency} ${it.paid}", 12f, bold = true)
+                    flow.text("${if (it.kind == "VOID") "Credit transferred" else if (it.kind == "REPLACEMENT") "Credit at issue" else "Paid to date"}   ${snapshot.currency} ${it.paid}", 12f, bold = true)
                     flow.text("BALANCE DUE   ${snapshot.currency} ${it.due}", 16f, bold = true)
                     flow.space(8f)
                     if (it.events.isNotEmpty()) {
                         if (it.kind == "BALANCE") flow.text("PAYMENTS AND CREDITS", 12f, bold = true)
                         it.events.forEach { event -> flow.line(event, compact = true) }
                     }
-                    flow.text("Saved payment record for ${snapshot.number}. Balances reflect the recorded date.", 9f)
+                    flow.text(if (it.kind == "VOID") "This invoice is cancelled. Do not pay this invoice." else "Saved payment record for ${snapshot.number}. Balances reflect the recorded date.", 9f)
                 }
                 if (snapshot.footer.isNotBlank()) {
                     flow.space(20f)
@@ -92,7 +92,7 @@ internal object InvoicePdf {
             check(pageNumber <= 200) { "INVOICE_TOO_LARGE" }
             page = document.startPage(PdfDocument.PageInfo.Builder(width, height, pageNumber).create())
             canvas.drawColor(if (classic) Color.rgb(253, 252, 248) else Color.WHITE)
-            val heading = when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; else -> "INVOICE" }
+            val heading = when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; "VOID" -> "VOID INVOICE"; else -> "INVOICE" }
             if (modern) {
                 canvas.drawRect(0f, 0f, width.toFloat(), 84f, Paint().apply { color = ink })
                 canvas.drawText(heading, margin, 43f, paint(25f, true, Color.WHITE))

@@ -38,6 +38,7 @@ internal object LegacyInvoiceStore {
 
     /** Must run inside the versioned writer transaction, after receipt replay. */
     fun reconcile(db: SQLiteDatabase, value: Draft, at: Long): String? {
+        if (InvoiceLifecycleStore.voidInfo(db, value.invoiceId) != null) return "INVOICE_VOID"
         if (!value.confirmed) return "LEGACY_CONFIRMATION_REQUIRED"
         if (at < 0) return "INVALID_CLOCK"
         val note = value.note.trim()

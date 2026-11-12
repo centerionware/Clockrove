@@ -52,7 +52,7 @@ internal object InvoiceCoverageStore {
         val tasks = mutableListOf<ReportStore.Task>()
         source.totals.forEach { total ->
             val job = total.jobId
-            db.rawQuery("SELECT i.id,i.number FROM invoices i LEFT JOIN invoice_coverage c ON c.invoice_id=i.id WHERE i.job_id=? AND (c.invoice_id IS NULL OR c.state='LEGACY') ORDER BY i.created_ms,i.id", arrayOf(job)).use { rows ->
+            db.rawQuery("SELECT i.id,i.number FROM invoices i LEFT JOIN invoice_coverage c ON c.invoice_id=i.id WHERE i.job_id=? AND (c.invoice_id IS NULL OR c.state='LEGACY') AND NOT EXISTS(SELECT 1 FROM invoice_voids v WHERE v.invoice_id=i.id) ORDER BY i.created_ms,i.id", arrayOf(job)).use { rows ->
                 while (rows.moveToNext()) legacy.add(rows.getString(0) to rows.getString(1))
             }
             val claims = db.rawQuery("SELECT c.invoice_id,i.number,c.start_ms,c.end_ms FROM invoice_time_claims c JOIN invoices i ON i.id=c.invoice_id WHERE c.job_id=? AND c.released_ms IS NULL AND c.start_ms<? AND c.end_ms>? ORDER BY c.start_ms,c.end_ms,c.id",

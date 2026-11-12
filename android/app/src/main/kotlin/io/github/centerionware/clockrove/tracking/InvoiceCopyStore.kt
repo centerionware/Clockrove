@@ -9,13 +9,13 @@ internal object InvoiceCopyStore {
     private val token = Regex("[A-Za-z0-9_-]{1,100}")
     data class Summary(val id: String, val kind: String, val created: Long, val version: Long, val paid: String, val due: String)
     fun install(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE invoice_copies(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),kind TEXT NOT NULL CHECK(kind IN('BALANCE','RECEIPT','CORRECTION')),created_ms INTEGER NOT NULL CHECK(created_ms>=0),command_version INTEGER NOT NULL CHECK(command_version>0),metadata TEXT NOT NULL,pdf BLOB)")
+        db.execSQL("CREATE TABLE invoice_copies(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),kind TEXT NOT NULL CHECK(kind IN('BALANCE','RECEIPT','CORRECTION','VOID')),created_ms INTEGER NOT NULL CHECK(created_ms>=0),command_version INTEGER NOT NULL CHECK(command_version>0),metadata TEXT NOT NULL,pdf BLOB)")
         db.execSQL("CREATE INDEX invoice_copy_history ON invoice_copies(invoice_id,command_version,id)")
         db.execSQL("CREATE TRIGGER invoice_copy_immutable BEFORE UPDATE OF id,invoice_id,kind,created_ms,command_version,metadata ON invoice_copies BEGIN SELECT RAISE(ABORT,'Financial copy is immutable'); END")
         db.execSQL("CREATE TRIGGER invoice_copy_retained BEFORE DELETE ON invoice_copies BEGIN SELECT RAISE(ABORT,'Financial copy is retained'); END")
     }
     fun id(kind: String, value: String): String {
-        require(kind in setOf("BALANCE", "RECEIPT", "CORRECTION") && token.matches(value)) { "INVALID_INVOICE_COPY" }
+        require(kind in setOf("BALANCE", "RECEIPT", "CORRECTION", "VOID") && token.matches(value)) { "INVALID_INVOICE_COPY" }
         return "${kind.lowercase(java.util.Locale.ROOT)}-$value"
     }
     fun list(db: SQLiteDatabase, invoiceId: String): List<Summary> = db.rawQuery("SELECT id,kind,created_ms,command_version,metadata FROM invoice_copies WHERE invoice_id=? ORDER BY command_version DESC,id", arrayOf(invoiceId)).use { rows -> buildList {
@@ -35,11 +35,22 @@ internal object InvoiceCopyStore {
         db.execSQL("INSERT INTO invoice_copies(id,invoice_id,kind,created_ms,command_version,metadata) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(copyId, invoice.id, kind, at, version, metadata))
         RevisionStore.record(db, "invoice_copy", copyId, invoice.jobId, values, at)
     }
+    /** Freeze cancellation independently from the unchanged original invoice/PDF. */
+    fun retainVoid(db: SQLiteDatabase, before: InvoicePaymentStore.Snapshot, replacementId: String?, at: Long) {
+        val copyId = id("VOID", before.invoice.id)
+        val version = db.rawQuery("SELECT version FROM state WHERE id=1", null).use { check(it.moveToFirst()); Math.addExact(it.getLong(0), 1L) }
+        val values = mapOf("id" to copyId, "invoice_id" to before.invoice.id, "kind" to "VOID", "created_ms" to at, "command_version" to version,
+            "paid_minor" to before.balance.paid.toString(), "due_minor" to "0", "cancelled_minor" to before.balance.due.toString(), "replacement_id" to replacementId)
+        db.execSQL("INSERT INTO invoice_copies(id,invoice_id,kind,created_ms,command_version,metadata) VALUES(?,?,'VOID',?,?,?)",
+            arrayOf<Any?>(copyId, before.invoice.id, at, version, JSONObject(values).toString()))
+        RevisionStore.record(db, "invoice_copy", copyId, before.invoice.jobId, values, at)
+    }
     fun prepareBalance(db: SQLiteDatabase, copyToken: String, invoiceId: String, at: Long): String? {
         if (!token.matches(copyToken) || !token.matches(invoiceId) || at < 0) return "INVALID_INVOICE_COPY"
         val copyId = id("BALANCE", copyToken)
         if (db.rawQuery("SELECT 1 FROM invoice_copies WHERE id=?", arrayOf(copyId)).use { it.moveToFirst() }) return "INVOICE_COPY_ID_EXISTS"
         val state = InvoicePaymentStore.read(db, invoiceId)
+        if (state.balance.voided) return "INVOICE_VOID"
         retain(db, "BALANCE", copyToken, state.invoice, state.balance, at)
         return null
     }
@@ -55,6 +66,19 @@ internal object InvoiceCopyStore {
         val paid = PaymentMath.parseMinor(row.metadata.getString("paid_minor"))
         val due = PaymentMath.parseMinor(row.metadata.getString("due_minor"))
         val total = PaymentMath.parseMajor(document.total, document.digits)
+        if (row.kind == "VOID") {
+            val cancelled = PaymentMath.parseMinor(row.metadata.getString("cancelled_minor"))
+            require(due == BigInteger.ZERO && paid.add(cancelled) == total) { "INVALID_INVOICE_COPY" }
+            val replacementId = if (row.metadata.isNull("replacement_id")) null else row.metadata.getString("replacement_id")
+            val replacementNumber = replacementId?.let { InvoiceStore.read(db, it).number }
+            val detail = replacementNumber?.let { "Replaced by $it. Existing payments were transferred; no new cash received." }
+                ?: "Cancelled. No payment is due on this invoice."
+            val statement = InvoiceStore.Statement("VOID", "VOID", row.created, InvoiceStore.amount(paid, document.digits),
+                InvoiceStore.amount(BigInteger.ZERO, document.digits), listOf(InvoiceStore.Line("Cancelled unpaid balance", detail, InvoiceStore.amount(cancelled, document.digits))), copyId)
+            val copy = document.copy(subject = "Voided invoice · ${document.number}",
+                body = "Invoice ${document.number} is VOID. $detail\nOriginal total: ${document.total} ${document.currency}\nCredit transferred: ${statement.paid} ${document.currency}\nBalance due: ${statement.due} ${document.currency}\nCopy reference: $copyId", statement = statement)
+            return original.copy(payload = copy.encode(), pdf = row.pdf, copyId = copyId, documentKind = "VOID")
+        }
         val balance = PaymentMath.balance(total, paid)
         require(balance.due == due) { "INVALID_INVOICE_COPY" }
         val eventId = if (row.metadata.isNull("event_id")) null else row.metadata.getString("event_id")

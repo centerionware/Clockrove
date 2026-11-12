@@ -24,8 +24,10 @@ internal object PaymentMath {
         return parseMinor(minor)
     }
 
-    data class Balance(val total: BigInteger, val paid: BigInteger, val due: BigInteger) {
+    data class Balance(val total: BigInteger, val paid: BigInteger, val due: BigInteger, val voided: Boolean = false) {
+        val collectibleDue: BigInteger get() = if (voided) BigInteger.ZERO else due
         val status: String get() = when {
+            voided -> "VOID"
             total.signum() == 0 -> "NOTHING_DUE"
             due.signum() == 0 -> "PAID"
             paid.signum() == 0 -> "UNPAID"

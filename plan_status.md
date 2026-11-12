@@ -2337,3 +2337,26 @@ remain paused. Dispose the ProviderScope first, then close the stream; preserve
 all exact-money, command identity, retry and navigation assertions. This is a
 test-lifecycle correction, not evidence of a passed behavior/native/device gate.
 Fresh Actions validation is required; no local builds or tests ran.
+
+### Native void/replacement source checkpoint (2026-11-12)
+
+Prior turn made progress: pushed 7d414ee to correct paused-stream test cleanup and
+updated draft #37 with accurate scope. Actions 43207931777 now passed formatting,
+analysis, Flutter behavior, debug build and native unit gates; actual Android
+document/payment journey remains live. Do not treat the whole run as passed.
+
+New native source prepares confirmed/audited unpaid cancellation and atomic
+replacement with edited existing rows, explicit owned-claim release and additions
+from actual unbilled work. The default keeps the entire old claim bundle; old line
+titles/prices are never used to guess source identity. Original documents remain
+unchanged, cancelled predecessors have no collectible balance, and unresolved
+legacy coverage stays unresolved on successors. Replacement freezes existing
+credit at issue. Positive fully paid invoices reject void/replacement; a zero-total
+Nothing due invoice may be cancelled to release reservations. Below-credit totals
+are rejected. Transfers preserve payment IDs/dates and emit zero-cash, ordered
+credit/tax/sales adjustments; corrections follow the current allocation. Cancellation
+copies are separate immutable intents. Native regressions cover concurrency, replay,
+rollback, exact wide/split money, source ownership, hourly intervals, legacy and
+retained deleted-job history. Source only: new Actions validation, lifecycle bridge/
+editor UI, actual replacement/VOID PDFs and physical email acceptance remain open.
+This is still draft #37, not a completed or published payment milestone.

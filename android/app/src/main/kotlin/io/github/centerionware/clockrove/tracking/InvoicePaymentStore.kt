@@ -31,6 +31,7 @@ internal object InvoicePaymentStore {
         db.execSQL("CREATE TABLE invoice_payment_events(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),payment_id TEXT NOT NULL REFERENCES invoice_payments(id),kind TEXT NOT NULL CHECK(kind IN('PAYMENT','REVERSAL','TRANSFER')),effective_ms INTEGER NOT NULL CHECK(effective_ms>=0),recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0),command_version INTEGER NOT NULL CHECK(command_version>0),ordinal INTEGER NOT NULL CHECK(ordinal>=0),payload TEXT NOT NULL,UNIQUE(command_version,ordinal))")
         db.execSQL("CREATE INDEX invoice_payment_event_order ON invoice_payment_events(invoice_id,command_version,ordinal)")
         InvoiceCopyStore.install(db)
+        InvoiceLifecycleStore.install(db)
         for (table in listOf("invoice_payments", "invoice_payment_reversals", "invoice_payment_events")) {
             for (event in listOf("UPDATE", "DELETE")) db.execSQL("CREATE TRIGGER ${table}_immutable_${event.lowercase()} BEFORE $event ON $table BEGIN SELECT RAISE(ABORT,'Financial event is immutable'); END")
         }
@@ -45,7 +46,8 @@ internal object InvoicePaymentStore {
     }
     data class Payment(val id: String, val originalInvoiceId: String, val amount: BigInteger, val currency: String,
         val received: Long, val timezone: String, val method: String, val reference: String, val note: String,
-        val recorded: Long, val reversalId: String?, val reversalNote: String?, val offsetSeconds: Int, val receivedLabel: String)
+        val recorded: Long, val reversalId: String?, val reversalNote: String?, val offsetSeconds: Int, val receivedLabel: String,
+        val currentInvoiceId: String)
     data class Snapshot(val invoice: InvoiceStore.Record, val document: InvoiceStore.Snapshot,
         val balance: PaymentMath.Balance, val collectedTax: BigInteger?, val payments: List<Payment>)
 
@@ -57,19 +59,18 @@ internal object InvoicePaymentStore {
                 paid = paid.add(PaymentMath.parseMinor(rows.getString(0)))
             }
         }
-        return PaymentMath.balance(PaymentMath.parseMajor(document.total, document.digits), paid)
+        return PaymentMath.balance(PaymentMath.parseMajor(document.total, document.digits), paid).copy(voided = InvoiceLifecycleStore.voidInfo(db, invoiceId) != null)
     }
     fun read(db: SQLiteDatabase, invoiceId: String): Snapshot {
         val invoice = InvoiceStore.read(db, invoiceId)
         val document = InvoiceStore.Snapshot.decode(invoice.payload)
-        val total = PaymentMath.parseMajor(document.total, document.digits)
         val tax = document.taxAmount?.let { PaymentMath.parseMajor(it, document.digits) }
-        val payments = db.rawQuery("SELECT p.id,p.original_invoice_id,p.amount_minor,p.currency,p.received_ms,p.timezone,p.method,p.reference,p.note,p.recorded_ms,r.id,r.note,p.offset_seconds,p.received_label FROM payment_destinations d JOIN invoice_payments p ON p.id=d.payment_id LEFT JOIN invoice_payment_reversals r ON r.payment_id=p.id WHERE d.invoice_id=? ORDER BY p.received_ms,p.recorded_ms,p.id", arrayOf(invoiceId)).use { rows -> buildList {
-            while (rows.moveToNext()) add(Payment(rows.getString(0), rows.getString(1), PaymentMath.parseMinor(rows.getString(2)), rows.getString(3), rows.getLong(4), rows.getString(5), rows.getString(6), rows.getString(7), rows.getString(8), rows.getLong(9), if (rows.isNull(10)) null else rows.getString(10), if (rows.isNull(11)) null else rows.getString(11), rows.getInt(12), rows.getString(13)))
+        val payments = db.rawQuery("SELECT p.id,p.original_invoice_id,p.amount_minor,p.currency,p.received_ms,p.timezone,p.method,p.reference,p.note,p.recorded_ms,r.id,r.note,p.offset_seconds,p.received_label,d.invoice_id FROM payment_destinations d JOIN invoice_payments p ON p.id=d.payment_id LEFT JOIN invoice_payment_reversals r ON r.payment_id=p.id WHERE d.invoice_id=? OR p.original_invoice_id=? OR EXISTS(SELECT 1 FROM invoice_payment_events e WHERE e.invoice_id=? AND e.payment_id=p.id) ORDER BY p.received_ms,p.recorded_ms,p.id", arrayOf(invoiceId, invoiceId, invoiceId)).use { rows -> buildList {
+            while (rows.moveToNext()) add(Payment(rows.getString(0), rows.getString(1), PaymentMath.parseMinor(rows.getString(2)), rows.getString(3), rows.getLong(4), rows.getString(5), rows.getString(6), rows.getString(7), rows.getString(8), rows.getLong(9), if (rows.isNull(10)) null else rows.getString(10), if (rows.isNull(11)) null else rows.getString(11), rows.getInt(12), rows.getString(13), rows.getString(14)))
         } }
         require(payments.all { it.currency == document.currency }) { "INVALID_PAYMENT_CURRENCY" }
-        val paid = payments.filter { it.reversalId == null }.fold(BigInteger.ZERO) { sum, payment -> sum.add(payment.amount) }
-        return Snapshot(invoice, document, PaymentMath.balance(total, paid), PaymentMath.collectedTax(total, tax, paid), payments)
+        val balance = balance(db, invoiceId, document)
+        return Snapshot(invoice, document, balance, PaymentMath.collectedTax(total, tax, balance.paid), payments)
     }
 
     fun record(db: SQLiteDatabase, value: Draft, at: Long): String? {
@@ -79,6 +80,7 @@ internal object InvoicePaymentStore {
         if (amount.signum() <= 0) return "INVALID_PAYMENT_AMOUNT"
         if (db.rawQuery("SELECT 1 FROM invoice_payments WHERE id=?", arrayOf(value.id)).use { it.moveToFirst() }) return "PAYMENT_ID_EXISTS"
         val before = read(db, value.invoiceId)
+        if (before.balance.voided) return "INVOICE_VOID"
         if (value.currency != before.document.currency) return "PAYMENT_CURRENCY_MISMATCH"
         if (amount > before.balance.due) return "PAYMENT_EXCEEDS_BALANCE"
         val after = PaymentMath.receive(before.balance.total, before.balance.paid, amount)
@@ -96,7 +98,8 @@ internal object InvoicePaymentStore {
             value.effective !in 0..at || value.timezone !in zones || value.note.trim().length < 10 || !text(value.note, 4000)) return "INVALID_PAYMENT_REVERSAL"
         if (db.rawQuery("SELECT 1 FROM invoice_payment_reversals WHERE id=?", arrayOf(value.id)).use { it.moveToFirst() }) return "REVERSAL_ID_EXISTS"
         val before = read(db, value.invoiceId)
-        val payment = before.payments.singleOrNull { it.id == value.paymentId } ?: return "PAYMENT_UNAVAILABLE_OR_MOVED"
+        if (before.balance.voided) return "INVOICE_VOID"
+        val payment = before.payments.singleOrNull { it.id == value.paymentId && it.currentInvoiceId == value.invoiceId } ?: return "PAYMENT_UNAVAILABLE_OR_MOVED"
         if (payment.reversalId != null) return "PAYMENT_ALREADY_REVERSED"
         if (value.effective < payment.received) return "REVERSAL_BEFORE_PAYMENT"
         val after = PaymentMath.balance(before.balance.total, before.balance.paid.subtract(payment.amount))
@@ -107,17 +110,21 @@ internal object InvoicePaymentStore {
         return null
     }
 
-    private fun event(db: SQLiteDatabase, id: String, paymentId: String, before: Snapshot, after: PaymentMath.Balance,
-        kind: String, effective: Long, timezone: String, at: Long, cashChange: BigInteger) {
+    internal fun event(db: SQLiteDatabase, id: String, paymentId: String, before: Snapshot, after: PaymentMath.Balance,
+        kind: String, effective: Long, timezone: String, at: Long, cashChange: BigInteger, ordinal: Int = 0,
+        creditChange: BigInteger = BigInteger.ZERO, otherInvoiceId: String? = null) {
+        val allocationChange = after.paid.subtract(before.balance.paid)
+        require(cashChange.add(creditChange) == allocationChange) { "INVALID_PAYMENT_EVENT" }
         val tax = before.document.taxAmount?.let { PaymentMath.parseMajor(it, before.document.digits) }
         val taxChange = PaymentMath.taxChange(after.total, tax, before.balance.paid, after.paid)
         val commandVersion = db.rawQuery("SELECT version FROM state WHERE id=1", null).use { check(it.moveToFirst()); Math.addExact(it.getLong(0), 1L) }
-        val values = mapOf("command_version" to commandVersion, "ordinal" to 0, "invoice_id" to before.invoice.id, "payment_id" to paymentId, "kind" to kind,
+        val values = mapOf("command_version" to commandVersion, "ordinal" to ordinal, "invoice_id" to before.invoice.id, "payment_id" to paymentId, "kind" to kind,
             "total_minor" to after.total.toString(), "before_paid_minor" to before.balance.paid.toString(), "paid_minor" to after.paid.toString(),
-            "due_minor" to after.due.toString(), "cash_change_minor" to cashChange.toString(), "tax_change_minor" to taxChange?.toString(),
-            "sales_change_minor" to taxChange?.let { cashChange.subtract(it).toString() }, "currency" to before.document.currency,
+            "due_minor" to after.due.toString(), "cash_change_minor" to cashChange.toString(),
+            "credit_change_minor" to creditChange.toString(), "other_invoice_id" to otherInvoiceId, "tax_change_minor" to taxChange?.toString(),
+            "sales_change_minor" to taxChange?.let { allocationChange.subtract(it).toString() }, "currency" to before.document.currency,
             "effective_ms" to effective, "timezone" to timezone, "offset_seconds" to TimeZone.getTimeZone(timezone).getOffset(effective) / 1000, "time_label" to timeLabel(effective, timezone), "recorded_ms" to at)
-        db.execSQL("INSERT INTO invoice_payment_events VALUES(?,?,?,?,?,?,?,?,?)", arrayOf<Any?>("$kind-$id", before.invoice.id, paymentId, kind, effective, at, commandVersion, 0, org.json.JSONObject(values).toString()))
+        db.execSQL("INSERT INTO invoice_payment_events VALUES(?,?,?,?,?,?,?,?,?)", arrayOf<Any?>("$kind-$id", before.invoice.id, paymentId, kind, effective, at, commandVersion, ordinal, org.json.JSONObject(values).toString()))
         RevisionStore.record(db, "invoice_payment_event", "$kind-$id", before.invoice.jobId, values, at)
     }
 
