@@ -54,7 +54,8 @@ Main validation 43185844256 failed the API-35 existing widget scroll test.
 Focused PR #36 passed 43188818216 (383 native / 44 actual Android, all zero
 failures/errors/skips; both final-row captures reviewed) and merged d4df7bd at
 2026-11-12 09:19:31 UTC. Main validation 43190458383 failed API-24 initial expanded widget task binding;
-its captured empty list and factory lifecycle need investigation. Internal upload
+PR #38 factory snapshot/disposal hardening and three-cycle resize checks are
+under Actions 43192676395; exact cause still needs device evidence. Internal upload
 for the invoice foundation has not started. Latest verified delivery remains widget internal.22.1 / 216624221
 (43160879953); production readiness remains unset.
 
@@ -1658,3 +1659,8 @@ with only platform-owned android_metadata omitted. New 7→8 preservation/rollba
 cases are prepared; the one-time generator/export step is removed. AR/CC and
 ordered ledger additions also require the next Actions run. Main/internal delivery
 remains held by the separately investigated widget binding failure.
+
+PR #37 had documentation merge conflicts after #36 landed, so its b9869b2 push
+did not schedule pull-request Actions. Resolved those conflicts by retaining the
+newer payment checkpoint and consolidating duplicate status rows; validation must
+run on the merged branch head. No validation is inferred from that missing run.
