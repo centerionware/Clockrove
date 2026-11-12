@@ -1495,3 +1495,13 @@ The detailed plan in docs/INVOICE_LIFECYCLE_PLAN.md defines order, states, exact
 money/tax arithmetic, native coverage/payment invariants, correction examples,
 PDF/email behavior, migrations, backup dependencies and acceptance checks. These
 features are planned, not implemented. Current widgets remain the active task.
+
+### Real widget setup passed; board lookup and diagnostic retrieval corrected
+
+Partial API-24 evidence from 43140436576 confirms actual main Settings save, real
+widget configuration save/cancel and all provider renders passed. The remaining
+assertion expected a standalone `To do` label, while Flutter merges column title
+and task-count subtitle. Match the exact visible semantic line and always finish
+the monitored board activity, including failed assertions. The run then stalled
+attaching post-test logcat; retain the continuous stream and bound fixture pulls.
+No passing full emulator acceptance or widget publication is claimed yet.

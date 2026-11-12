@@ -90,21 +90,22 @@ class WidgetHostDeviceTest {
                 bitmap.recycle()
             }
             val monitor = instrumentation.addMonitor(WidgetBoardActivity::class.java.name, null, false)
+            var opened: android.app.Activity? = null
             try {
                 instrumentation.runOnMainSync {
                     val list = view!!.findViewById<ListView>(R.id.widget_tasks)
                     val child = list.getChildAt(list.childCount - 1)
                     assertTrue(list.performItemClick(child, 29, list.adapter.getItemId(29)))
                 }
-                val opened = instrumentation.waitForMonitorWithTimeout(monitor, 30000)
+                opened = instrumentation.waitForMonitorWithTimeout(monitor, 30000)
                 assertNotNull("Task PendingIntent must open actual board activity", opened)
-                assertEquals(job, opened!!.intent.getStringExtra("jobId"))
-                assertEquals("widget-device-card-29", opened.intent.getStringExtra("taskId"))
-                assertTrue((opened as WidgetBoardActivity).getInitialRoute().contains(job))
+                val boardActivity = opened as WidgetBoardActivity
+                assertEquals(job, boardActivity.intent.getStringExtra("jobId"))
+                assertEquals("widget-device-card-29", boardActivity.intent.getStringExtra("taskId"))
+                assertTrue(boardActivity.getInitialRoute().contains(job))
                 clickText("Synthetic widget board", false)
                 clickText("To do", false)
-                instrumentation.runOnMainSync { opened.finish() }
-            } finally { instrumentation.removeMonitor(monitor) }
+            } finally { instrumentation.runOnMainSync { opened?.finish() }; instrumentation.removeMonitor(monitor) }
             assertNull("Task tap must never start a timer", repository.snapshot().running)
         } finally {
             repository.removeWidgetConfigurations(listOf(id))
@@ -142,7 +143,9 @@ class WidgetHostDeviceTest {
     private fun clickText(label: String, click: Boolean = true) {
         var found: android.view.accessibility.AccessibilityNodeInfo? = null
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
-            if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
+            // Flutter may merge a ListTile's title and subtitle into one label.
+            fun matches(value: CharSequence?) = value?.toString()?.lineSequence()?.any { it.trim() == label } == true
+            if (node.isVisibleToUser && (matches(node.text) || matches(node.contentDescription))) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { match -> return match } }
             return null
         }

@@ -1837,3 +1837,13 @@ actual expense records, company reports, and main/job tax percentages. Tax on a
 from revenue/profit. No planned financial feature is marked implemented.
 Current widget source is still under Actions; finish/merge it before starting
 the invoice iteration. No local builds/tests were run.
+
+### Real widget setup passed; board lookup and diagnostic retrieval corrected
+
+Partial API-24 evidence from 43140436576 confirms actual main Settings save, real
+widget configuration save/cancel and all provider renders passed. The remaining
+assertion expected a standalone `To do` label, while Flutter merges column title
+and task-count subtitle. Match the exact visible semantic line and always finish
+the monitored board activity, including failed assertions. The run then stalled
+attaching post-test logcat; retain the continuous stream and bound fixture pulls.
+No passing full emulator acceptance or widget publication is claimed yet.
