@@ -32,8 +32,33 @@ class BusinessBridgeTest {
         assertEquals("9007199254740993", task["priceMinor"]); assertEquals(outcome.version, snapshot["version"])
         assertEquals(3, (snapshot["columns"] as List<*>).size)
     }
+    @Test fun exactQuantitiesRoundTripAndMalformedInputsCannotReachWriter() {
+        val before = repository.boardSnapshot(job)
+        for (bad in listOf<Any?>(null, 260000L, 26.0, "0", "-1", "1.5", "0260000", "9223372036854775808")) {
+            try { change("saveCard", card("500") + ("quantityUnits" to bad)); fail("Malformed quantity accepted") } catch (_: IllegalArgumentException) {}
+        }
+        assertEquals(before, repository.boardSnapshot(job))
+        assertNull((change("saveCard", card("500") + ("quantityUnits" to "260000")) as TimerRepository.Outcome).conflict)
+        val board = dispatch.call(MethodCall("board", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals("260000", ((board["cards"] as List<*>).single() as Map<*, *>)["quantityUnits"])
+        val templates = dispatch.call(MethodCall("templates", mapOf("search" to ""))) as List<*>
+        assertEquals("260000", (templates.single() as Map<*, *>)["quantityUnits"])
+    }
+    @Test fun widePricesAndDefaultRatesRoundTripAsStringsBeyondFixedWidth() {
+        val exact = "1234567890123456789012345678901234567890"
+        assertNull((change("saveCard", card(exact)) as TimerRepository.Outcome).conflict)
+        val board = dispatch.call(MethodCall("board", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals(exact, ((board["cards"] as List<*>).single() as Map<*, *>)["priceMinor"])
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        assertNull((dispatch.call(MethodCall("saveSettings", mapOf("id" to "wide-default", "version" to repository.snapshot().version,
+            "value" to settings + ("defaultHourlyMinor" to exact)))) as TimerRepository.Outcome).conflict)
+        val result = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        assertEquals(exact, (result["settings"] as Map<*, *>)["defaultHourlyMinor"])
+        assertEquals(java.math.BigInteger(exact), repository.jobDetail(job).job.effectiveHourlyMinor)
+    }
     @Test fun floatingVersionsAndNoncanonicalMoneyCannotReachTheWriter() {
-        for (price in listOf<Any>(12.0, 12L, "1.20", "-1", "01", "9223372036854775808")) {
+        for (price in listOf<Any>(12.0, 12L, "1.20", "-1", "01", "1".repeat(1025))) {
             try { change("saveCard", card(price)); fail("Invalid money accepted") } catch (_: IllegalArgumentException) {}
         }
         try { change("saveCard", card("12"), 1.5); fail("Floating version accepted") } catch (_: IllegalArgumentException) {}
@@ -44,5 +69,27 @@ class BusinessBridgeTest {
         try { change("saveCard", card("12") + ("billable" to "true")); fail("String boolean accepted") } catch (_: IllegalArgumentException) {}
         try { change("reorderColumns", mapOf("jobId" to job, "columnIds" to listOf(123))); fail("Numeric ID accepted") } catch (_: IllegalArgumentException) {}
         assertTrue(repository.boardSnapshot(job).board.cards.isEmpty())
+    }
+    @Test fun exactTaxUnitsRoundTripWithExplicitZeroJobOverride() {
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        assertNull((change("saveSettings", settings + ("defaultTaxUnits" to 75000)) as TimerRepository.Outcome).conflict)
+        val detail = dispatch.call(MethodCall("job", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals(75000, detail["effectiveTaxUnits"])
+        val jobSettings = (detail["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        assertNull((dispatch.call(MethodCall("saveJob", mapOf("id" to "job-tax", "version" to repository.snapshot().version,
+            "value" to jobSettings + ("taxUnits" to 0)))) as TimerRepository.Outcome).conflict)
+        val result = dispatch.call(MethodCall("job", mapOf("jobId" to job))) as Map<*, *>
+        assertEquals(0, result["effectiveTaxUnits"]); assertEquals(0, (result["settings"] as Map<*, *>)["taxUnits"])
+        assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
+    }
+    @Test fun floatingStringAndBooleanTaxUnitsCannotReachTheNativeWriter() {
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        val before = repository.businessSnapshot()
+        for (bad in listOf<Any>(75000.0, "75000", true, Long.MAX_VALUE)) {
+            try { change("saveSettings", settings + ("defaultTaxUnits" to bad)); fail("Malformed units accepted") } catch (_: IllegalArgumentException) {}
+        }
+        assertEquals(before, repository.businessSnapshot())
     }
 }

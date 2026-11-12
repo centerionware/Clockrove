@@ -80,14 +80,16 @@ class JobLifecycleTest {
         val board = repository.boardSnapshot(job).board
         repository.saveCustomer("customer", version, BusinessStore.Customer("customer", "Synthetic retained customer", "synthetic@example.test"))
         repository.saveJobSettings("assign", version, repository.jobDetail(job).job.settings.copy(customerId = "customer"))
-        repository.saveCard("card", version, BoardStore.Draft("card", job, board.columns.last().id, "Synthetic reusable tile task", "Synthetic reusable details", "2026-11-30", true, 12500, board.currency))
+        repository.saveCard("card", version, BoardStore.Draft("card", job, board.columns.last().id, "Synthetic reusable tile task", "Synthetic reusable details", "2026-11-30", true, java.math.BigInteger.valueOf(12500), board.currency))
         val template = repository.taskTemplates().single()
         inspect { it.execSQL("INSERT INTO invoices VALUES(?,?,?,?,?,?,?,?)", arrayOf<Any?>("invoice", job, "customer", "1", now, "Synthetic private invoice", byteArrayOf(1,2,3), null)) }
         assertNull(archive().conflict); now += JobLifecycleStore.retentionMillis; assertNull(remove().conflict)
         assertEquals("customer", repository.businessSnapshot().customers.single().id)
         assertEquals(template.id, repository.taskTemplates().single().id); assertNull(repository.taskTemplates().single().sourceJobName)
+        assertEquals("Synthetic private invoice", repository.invoice("invoice").payload)
+        assertArrayEquals(byteArrayOf(1,2,3), repository.invoice("invoice").pdf)
         inspect { db ->
-            for (table in listOf("jobs", "sessions", "location_points", "kanban_cards", "kanban_columns", "invoices", "work_sites", "automation_policies")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
+            for (table in listOf("jobs", "sessions", "location_points", "kanban_cards", "kanban_columns", "work_sites", "automation_policies")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
             db.rawQuery("SELECT source_job_id,source_card_id FROM task_templates", null).use { it.moveToFirst(); assertTrue(it.isNull(0)); assertTrue(it.isNull(1)) }
             db.rawQuery("SELECT payload FROM entity_revisions WHERE job_id=? AND payload IS NOT NULL", arrayOf(job)).use { while (it.moveToNext()) assertFalse(it.getString(0).contains("Synthetic")) }
             db.rawQuery("SELECT payload FROM entity_revisions WHERE kind='template' AND entity_id=? AND payload IS NOT NULL", arrayOf(template.id)).use { while (it.moveToNext()) assertFalse(it.getString(0).contains(job)) }
@@ -97,7 +99,7 @@ class JobLifecycleTest {
         val other = repository.createJob("Synthetic new job"); val fresh = repository.boardSnapshot(other)
         assertNull(repository.copyTaskTemplate("copy", fresh.version, template.id, "fresh", other, fresh.board.columns.first().id, true).conflict)
         val copied = repository.boardSnapshot(other).board.cards.single()
-        assertNull(copied.completedMillis); assertNull(copied.dueDate); assertEquals(12500L, copied.priceMinor); assertNull(repository.snapshot().running)
+        assertNull(copied.completedMillis); assertNull(copied.dueDate); assertEquals(java.math.BigInteger.valueOf(12500L), copied.priceMinor); assertNull(repository.snapshot().running)
     }
     @Test fun deletingJobDoesNotRecreateAUserRemovedTemplate() {
         val board = repository.boardSnapshot(job).board

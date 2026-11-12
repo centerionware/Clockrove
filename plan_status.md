@@ -19,12 +19,12 @@ iOS and future service remain deferred.
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
-| M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
+| M2.4 Physical screen-off/battery validation | Pending owner device results | Owner identified Pixel 7 / Android 17 and verified main Settings saves after updating; screen-off/GPS/battery journeys remain unverified; docs/DEVICE_VALIDATION.md records the required checks |
 | M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration passed #29; provider settings and backup contracts remain |
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
 | M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
-| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions pass actual Android checks; final formatting rerun pending | #33 run 43157030521: 274 native and 20 actual tests on each API (24/35), zero failures/errors/skips; board/setup/scrolling/timer captures reviewed on both APIs; only formatting gate failed, Actions patch applied; exact final head/main delivery and physical launcher/recovery acceptance remain |
+| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions merged, main verified and internal upload accepted | #33 final head 6cadef0 passed full 43158333007 and merged 8c2f3fd; main 43159664866 has 274 native and 20 actual tests per API (24/35), zero failures/errors/skips; final captures reviewed; delivery 43160879953 accepted internal.22.1 / 216624221; physical launcher/recovery acceptance remains |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -35,7 +35,8 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, tax and payment lifecycle | Planned; owner-prioritized next iteration | docs/INVOICE_LIFECYCLE_PLAN.md: exclusive source claims; global/per-job tax; partial/full payments and balance copies; receipts; CC preference; atomic unpaid/partial void-and-replace with credit conservation |
+| Next after widget merge: invoice integrity, quantity, tax and payment lifecycle | Legacy editor behavior checked; quantities under Actions; real financial UI journey prepared; draft #35 | 94fd7c7 / 43169835589 passed behavior/native/device/viewer gates; formatting-only failure patched. Quantity 43172649874 passed all gates (365 native / 40 actual Android); financial journey run 43174102042 is live. Independent actual financial journey must pass on both APIs before merge; then payments, receipts, CC and credit-preserving void/replacement |
+| Current business priority: exact money | Source prepared; Actions validation required | Pinned decimal 3.2.6; native BigInteger and canonical TEXT money records; lossless released migration, wide amounts, receipts/rollback/precision cases prepared; docs/MONEY_PRECISION_PLAN.md |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -45,7 +46,7 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Latest hotfix main 43131240701 and delivery 43132531984 succeeded for c5e19d1; Play accepted 0.1.0-internal.21.1 / 216609104; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Widget iteration upload verified; launch gates remain | Main 43159664866 and delivery 43160879953 succeeded for 8c2f3fd; Play accepted 0.1.0-internal.22.1 / 216624221; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -1963,3 +1964,351 @@ Only the required clean-format gate failed: applied its exact Actions-generated
 test-expression patch. Final exact-head validation and subsequent main/internal
 delivery remain required; physical launcher/GPS/email acceptance remains separate.
 No build, test or formatter ran on the VM.
+
+### Owner physical Settings regression result
+
+2026-11-12: owner reports a Pixel 7 running Android 17 now saves main Settings
+without crashing and appears to work. Owner confirms updating to the latest
+available app build immediately before testing. Latest verified Play delivery at
+this point is 0.1.0-internal.21.1 / 216609104; Android App info was not transcribed.
+This is physical-device confirmation of the reported Save crash correction, not
+the invalid-template correction, widget, GPS, email, upgrade or recovery matrix.
+
+### Final widget acceptance in Actions and merge
+
+Final head 6cadef0 passed full Actions 43158333007, including formatting, analysis,
+101 Flutter cases, Android build, 274 native cases, twenty actual Android cases
+on each API (24/35), seven actual-document viewer cases and locked release-policy
+checks. Native/device XML has no failures/errors/skips; the seven preview cases
+intentionally skipped in the general Flutter stage passed in the dedicated stage.
+Reviewed all eight final board/list/timer/setup captures from the two API versions.
+
+Reviewed the public file list, confirmed unchanged tested main base and no active
+competing main runs, then merged #33 as 8c2f3fdfb3853c6a567f0a5f050f003fa27c39a0
+at 2026-11-12 05:11:06 UTC. Main validation 43159664866 is active; no new Play
+upload is claimed yet. Production readiness remains unset and physical widget/GPS/
+email/recovery acceptance remains open.
+
+Started the next owner-ordered invoice slice in an isolated invoice-integrity
+worktree based on the actual merge commit. Read-only review confirms preparation
+currently reuses full report contents, without durable billed-source claims, and
+job purge currently removes invoices. Coverage, tax, safe legacy reconciliation
+and retained financial records therefore require native/schema changes before the
+payment and receipt features. No new financial implementation or validation is
+claimed by this review. Owner's successful latest-build Settings retest is recorded
+above. No build, test, dependency resolution, formatter or rendering ran on the VM.
+
+### Invoice source coverage and retention foundation prepared
+
+Prepared schema 7 and native coverage filtering/reservation inside the same
+serialized transaction as invoice allocation. Active task IDs are unique; UTC
+claims use half-open job intervals with database overlap/job guards. Repeated or
+partially overlapping selections bill only uncovered work. No remainder consumes
+no invoice number. Claim failures roll back documents, numbers, revisions and
+command receipts. Billed session boundaries cannot be moved out of their reserved
+span; expansion can add unbilled work. Work deletion preserves the claims.
+
+Issued invoices, cached PDF/logo references and financial revisions survive job
+purge; both deletion warnings explain that retained history. Existing invoices
+without source identities are explicitly LEGACY and block further billing for
+that job pending a reviewed reconciliation journey, rather than guessing claims.
+A frozen released-schema-6 fixture covers migration preservation and rollback.
+Prepared twelve API-24/35 coverage cases, three migration cases on both APIs, and
+five exact tax parsing/rounding/overflow cases. Existing snapshot/sequence tests
+now add genuinely new work before expecting a second invoice. None has run yet.
+
+This is incomplete source awaiting Actions, not a ready business release. Billing
+preview/exclusion links, legacy reconciliation, global/job tax settings and totals,
+retained-invoice navigation and integrated real-device/PDF journeys remain before
+this slice can merge. Payment/receipt/CC/void work follows its foundation. No VM
+build, test, formatter, dependency resolution or rendering was run.
+
+Widget main 8c2f3fd passed full 43159664866. Downloaded run-specific XML confirms
+274 native and forty actual Android cases, zero failures/errors/skips. Automatic
+Play internal delivery 43160879953 is active; do not claim accepted upload/version
+yet. Invoice foundation beec0cf is draft #35 with Actions 43160987076 active; no
+financial tests/builds are claimed passing until that run supplies results.
+
+### Widget internal delivery accepted; tax integration source prepared
+
+Play delivery 43160879953 successfully built and verified the signed bundle with
+the permanent upload key, allocated 0.1.0-internal.22.1 / 216624221, and accepted
+its internal upload at 2026-11-12 05:27:54 UTC. This is widget merge 8c2f3fd, not
+the unfinished invoice branch. Tester installation/availability remains separate.
+
+First invoice run 43160987076 stopped in Flutter tests: a deletion dialog assertion
+still expected the old reusable-template wording. Update it to assert retained
+invoices/billing history and templates/customers. Applied the CI-exported formatting
+for the existing command messages. Native coverage/migration checks did not run
+past that failed Flutter gate; no passing financial validation is claimed.
+
+Added source for global default tax and nullable per-job inheritance/override,
+including explicit 0%. SQLite stores checked integer percentage units in revisioned
+billing preference rows; save validation is authoritative and transactional. Native
+transport rejects floats/strings/booleans. Compatible zero/inherit command values
+retain released receipt fingerprints. Tax-bearing invoices freeze subtotal, rate,
+tax and grand total; email amount uses that total, and native PDF styles show the
+breakdown. Legacy invoices retain recorded totals and unknown tax, never today's
+rate. Both forms preserve invalid drafts with inline correction guidance.
+
+Prepared native tax persistence/calculation/inheritance/atomic rejection/immutability
+cases, strict bridge cases, decimal parsing and real form correction cases. Actual
+Android single/multipage PDFs for all three styles now assert 7.5% tax, subtotal
+1250.00, tax 93.75 and total 1343.75. Actions must build/test/render this source;
+preview, legacy reconciliation and retained invoice navigation still block merge.
+No VM build, test, formatter, dependency resolution or rendering was run.
+
+### Tax/coverage checks ran; review and retained-invoice navigation prepared
+
+a9c17bd / 43162233917 passed analysis, 105 Flutter cases (seven actual-document
+previews deferred), and Android build. Native XML contains 325 cases, three
+failures and no errors/skips. All new coverage/migration/tax/bridge cases passed.
+Two JobCreation rollback cases assumed settings were the only initial revisions;
+capture the complete initial revision count instead and require rollback to it.
+LogoStore's purge case expected a retained invoice logo to disappear; require the
+original bytes/reference to remain. Actual Android PDF/widget stages did not run
+past those failures. Applied the run's exported formatter patch to its source.
+
+Added native billing preview using the same unbilled lines, exact subtotal/tax/
+total and validation as preparation. It allocates no numbers or claims, exposes
+existing-invoice links for excluded work and hides unproven totals while legacy
+coverage is unresolved. The separate Review invoice route requires Create invoice
+before allocation and keeps the pending command/key across version-before-reply
+reloads or read failures. Reports/CSV still describe all selected work.
+
+Added main-menu Invoices and richer per-job/all-job lists, including frozen job/
+customer/issued date, removed-job marking and retained PDF navigation. Native
+preview equivalence/no-allocation and removed-job index checks plus UI response-
+loss and navigation cases are prepared. Legacy coverage reconciliation is still
+missing; this slice must remain a draft until that reviewed journey and final
+native/device/PDF/visual checks pass. No new source is claimed validated by writing
+it. All builds/tests/formatting/rendering remain Actions-only.
+
+### Preview checks pass; Classic pagination correction and native legacy review prepared
+
+647f941 / 43163572642 passed 106 Flutter cases and 329 native cases, zero native
+failures/errors/skips, including the preview, retention and corrected rollback/
+logo cases. Actual API 24 ran twenty cases: nineteen passed, while the three-style
+short PDF case produced two pages for Classic. Minimal's one-page tax PDF was
+captured and reviewed; Classic was the next style in the preserved loop. API 35
+and actual-document viewer stages did not run after that failed device gate.
+Applied the run's formatter patch. Adjust Classic text/row gaps while preserving
+font sizes/content and the one-page assertion; preserve failing PDF/first/last
+captures before future assertions. This adjustment awaits actual Android proof.
+
+Prepared native explicit legacy coverage reconciliation and typed transport. It
+requires a review note, confirmation and selected task identities/exact UTC ranges
+with IANA timezone context; empty mappings need a separate acknowledgment. It does
+not infer sources from titles/prices or change original documents, amounts, tax,
+payments, numbering or work completion. Task ownership, overlapping ranges and
+existing reservations are guarded before writes; review/claims/revisions/receipts
+commit together. Original outcome replay survives review completion and job purge.
+
+Legacy ranges can reserve removed historical work. A live entry overlapping any
+active job reservation cannot be shifted out of its already-billed portion, even
+when the reservation lacks the original session ID. Native context shows current
+incomplete/completed tasks and existing invoice ownership links. Prepared twelve
+API-24/35 legacy validation/rollback/concurrency/replay/transport cases plus a Dart
+immutable-intent/codec case. The user-facing source/time editor and its integrated
+journey remain unfinished; no reconciliation acceptance or full-slice completion
+is claimed. All new source awaits Actions; no VM validation/rendering ran.
+
+### Native legacy reconciliation and tax PDFs pass; full review UI source prepared
+
+9c72416 / 43165815309 passed analysis, 107 Flutter cases, Android build, 353 native
+cases, twenty actual Android cases per API (24/35), all seven actual-document
+viewer cases and release-policy checks. Native/device XML has no failures/errors/
+skips; the seven general-stage document skips passed in the dedicated stage.
+Only the clean-format gate failed. Applied its exact CI patch, then restored the
+two new draft-display fields without running a formatter locally. Reviewed the
+actual one-page tax PDF for every style on both APIs: all six captures retain
+subtotal/tax/grand total, priced rows, branding and footer, including Classic.
+
+Prepared the complete legacy review form and covered-time dialog. Invoice lists
+and blocked billing previews now open it. No sources are preselected; existing
+reservations have read-only invoice links. Tasks can be searched/selected without
+changing their work state. Exact times use calendar/time pickers or full input,
+native IANA resolution, explicit repeated-time offsets, gap rejection and overlap
+checks. Pending ranges can be edited/removed; stored reservations cannot.
+
+A private note, original-document confirmation and separate empty-source
+acknowledgment are required. The keyed form/command survives native completion
+before reply or refresh failure, locks editing/navigation while outcome is unknown,
+and replays one immutable intent. Confirmation dismisses the keyboard; save remains
+available in a fixed footer. Separating invoice history from the PDF viewer keeps
+navigation dependencies direct. Removed-job invoices still open read-only PDFs.
+
+Prepared presentation cases for both refresh outcomes, missing-source validation,
+repeated/gap/reserved times and CI light/dark captures with large text. These are
+unvalidated source, not mocked native acceptance. The next required proof is the
+actual Flutter legacy-selection/save -> unbilled-tax review -> new invoice ->
+retained document journey, isolated from first-number regression fixtures, on
+API 24 and 35 through Actions. No merge or invoice release is claimed yet.
+No VM builds/tests/formatting/dependency resolution/rendering ran.
+
+956f5da / 43169321012 stopped at analysis after exporting formatter output: twelve
+multiline if statements needed explicit braces. Applied that CI patch and wrapped
+the flagged blocks without changing their conditions or behavior. No new legacy
+screen tests/native/device checks ran past the failed analyzer gate. Renewed
+Actions evidence is required; the independent actual financial suite is next.
+
+
+Owner quantity priority (current invoice patch): the existing `price_minor` is the
+single unit price, renamed Unit price in the editor. No second price input is
+introduced. Quantity defaults to one for released tasks and templates, supports
+positive four-place exact decimals, and displays an extended total. Native reports
+and invoice previews use per-line half-up totals before subtotal tax. New issued
+lines freeze quantity and unit price; later edits keep the original source claim.
+Template quantities remain editable defaults after source deletion. Source and
+regressions are prepared; renewed GitHub Actions validation remains required.
+No VM build, test, formatter or rendering ran.
+
+94fd7c7 / 43169835589 passed Flutter behavior, Android build, native, actual
+API-24/35 and document-viewer gates; only its final formatter gate failed. Its
+exported patch was already included in the quantity commit. Quantity head
+d52e35f / 43171494802 passed analysis and Flutter behavior; native/device gates
+are still pending. Applied its CI-produced formatting correction; added strict
+quantity transport, frozen-v6 default-one migration, save-payload and light/dark
+editor capture coverage. Updated the old task-invoice basis assertion for unit
+pricing. These additional changes require their own Actions run.
+
+4477887 / 43172132517 stopped at analysis: the new capture used await on the
+synchronous test keyboard hide call. Removed that await and applied the exported
+CI formatter patch. No quantity native/device success is claimed from this run.
+
+Prepared the independent real Android financial journey in a separate test package
+and instrumentation process after the standard 20 cases/API. The Actions script
+retains and checks the original XML/PDF/widget evidence before clearing only its
+ephemeral emulator's app data. A frozen v6 database and real generated legacy PDF
+exercise production migration and the actual Flutter UI: explicit old-task review,
+unit-price/quantity save, unbilled subtotal/tax, new immutable invoice, repeat-billing
+exclusion, and reopening the retained PDF after a synthetic aged-archive purge.
+Strict separate XML requires one complete financial case plus seven captures on
+each API. The frozen DDL is packaged only in the test APK. This source is not yet
+executed; it does not constitute device acceptance or merge evidence.
+
+Goal-turn progress: pushed the actual financial journey as 50662d2 (queued run
+43173354558). Quantity head b4e547d / 43172649874 has passed analysis, Flutter,
+Android build and all 365 native tests (35 XML files; zero failures/errors/skips).
+Reviewed both CI-generated quantity editor captures: exactly one Unit price input,
+Quantity 26 and calculated USD 130.00 in light/dark themes. Actual device/PDF gates
+remain live. Extended the template regression to preserve quantity/unit price after
+aged job purge and copy them to a new job without completion history. No merge,
+new internal delivery or physical financial acceptance is claimed.
+
+Quantity b4e547d / 43172649874 completed successfully. Downloaded and inspected all
+35 native XML files: 365 tests, zero failures/errors/skips; each actual Android XML
+contains 20 cases with zero failures/errors/skips (40 total). Formatting, analysis,
+Flutter behavior, debug build, actual-document viewer and release-policy gates all
+passed. Light/dark single-price quantity editor captures reviewed above. This run
+does not include the new actual financial journey or extended purge/template case.
+Latest pushed head 6c0222d is live in 43174102042; superseded queued 50662d2 run
+43173354558 was cancelled before execution. Keep this financial slice unmerged
+until its dedicated journey is proven on both APIs.
+
+Prepared additional actual tax-form coverage in the same financial journey: main
+Settings enters/saves 7.5% through the real UI instead of seeding the native tax
+value; job Settings rejects 101 without a write, saves explicit zero, restores
+default inheritance, and verifies the issued invoice stays frozen. Added both
+tax-form captures to the required artifact list. Source only until Actions runs.
+
+Clarified the next payment milestone's precision contract: quantity-extended totals
+can exceed 64-bit minor units, so payments/credits/balances must retain arbitrary
+precision and canonical string storage/transport rather than narrowing issued
+amounts. Required conservation cases include large partial payments and transferred
+credits. No payment implementation or payment acceptance is claimed.
+
+6c0222d / 43174102042 passed build/native and the original 20 API-24 cases, then
+failed the new journey while locating the visible review-note field. Captured
+XML/tree/PNG show the selected legacy checkbox and an EditText with no label/hint
+on API 24. Inspection of the pinned Flutter engine confirms hints are only exposed
+from API 28. Added stable semantic field identifiers and focus-before-entry in the
+actual test, retaining all actual writes/assertions. API 35 was not reached.
+
+Owner money priority: audit finds exact BigInt/BigInteger totals, but released
+rate/unit-price inputs/storage still use Long limits. Added an explicit exact-money
+contract before implementation: pinned Dart decimal plus native arbitrary precision,
+canonical decimal text, lossless migration/receipts and deliberate currency rounding
+only. Removing these limits is required before this financial patch merges. No
+unbounded-money implementation or success is claimed yet.
+
+Selected decimal 3.2.6 from its primary package/author references and adapted Dart
+money parsing, formatting and quantity products to string-parsed Decimal, with
+explicit half-up only at the task minor-unit boundary. Added very large totals,
+half-cent neighbors and signed formatting cases. Native BigInteger calculations
+remain exact. This is not yet resolved or validated: use owner-only Actions
+prepare_dependencies to produce pubspec.lock, never resolve on this VM. Existing
+64-bit rate/unit-price storage/input limits remain until the exact-money migration.
+
+Prepared native exact-money migration in this milestone: settings/job/task/template
+prices are canonical TEXT with SQL guards; all typed money fields/reports use
+BigInteger, and only checked small compatibility values reach the old INTEGER
+columns. Explicit fingerprints preserve released small-number receipts and wide
+values remain distinct from unset. Monetary revisions/templates survive source
+purge correctly. Removed Dart Long input cap after completing the native path;
+kept a 1024-digit input-size guard and explicit currency precision errors.
+
+Applied the lockfile generated by Actions prepare 43176748417: decimal 3.2.6 and
+its rational dependency are pinned. Applied its formatter patch (preserving newer
+source edits). Added seven native money cases per API for wide rates/totals/tax,
+immutability, purge/reuse, exact released fingerprints, opaque retries, rollback
+and canonical DB guards; extended wide transport and frozen-v6 migration checks.
+These native source changes remain unvalidated; no merge or delivery is claimed.
+No VM tests/builds/formatting/dependency resolution/rendering ran.
+
+1e51563 owner preparation 43176748417 passed the full actual financial journey on
+both APIs: inspected four XML files, 20 original + 1 financial case per API, zero
+failures/errors/skips (42 total). Main/default and job tax forms, explicit source
+review, quantity save, taxed invoice, repeat exclusion and retained PDF all ran
+through real Flutter/native storage. Only its final formatting gate failed; the
+exported correction is applied in c5bf242. This proves the pre-money-migration
+journey, not the newer exact-money storage. c5bf242 / 43178148571 is still live.
+
+Added exact-money device acceptance to the next head: save/reopen a wide unit price
+through the real task editor and require the exact extended board total before
+returning to the normal invoice fixture. Each native PDF style must render a wide
+subtotal/tax/grand total; API 35 extraction checks every digit. Original suite count
+now requires 21 cases/API plus the separate financial case (44 total if successful),
+with ten financial captures/API and all six new wide PDF/PNG artifacts required.
+These additional checks are unvalidated source, not claimed device results.
+
+Added a byte-size guard for expanded immutable invoice payloads before committing
+a number or source claims. Wide exact prices and repeated amount tokens can grow
+a single SQLite cursor row too large; preparation now returns INVOICE_TOO_LARGE
+instead of truncating data or committing an unreadable invoice. A native regression
+uses a valid repeated template and 1024-digit price to require no invoice, number
+consumption or reservation. This new check remains unvalidated.
+
+Exact-money c5bf242 / 43178148571 passed build/Flutter/native: inspected 381 native
+cases with zero failures/errors/skips. Original API-24 suite passed 20 cases. The
+financial case reached the issued/repeat-exclusion journey, then a test-only
+waitFor queried a label twice while navigation refreshed the tree; its second
+lookup returned null at line 231 (reopened board before job tax settings). Retain
+the node found by the successful bounded poll rather than issuing another lookup.
+No assertion is removed. API 35 was not reached. New wide UI/PDF and payload-size
+cases still require fresh Actions evidence; formatting correction is being applied.
+
+Source review found PDF visual overflow separate from arithmetic: amounts wider
+than the price column could overlap descriptions, and the total stopped shrinking
+at 9pt but could still extend off-page. Preserve normal rows/styles and route wide
+line amounts and extreme totals through the existing paginated paragraph renderer.
+Extended the actual all-style wide-money case with 1000-digit values, first/last
+page captures and API-35 extraction of complete labelled row/subtotal/total values.
+Only exact known page headers/footers are removed before joining text across pages;
+monetary digits are never normalized or discarded. These changes need fresh CI.
+
+7374335 / 43179838708 passed 383 native cases, zero failures/errors/skips, and the
+21 original API-24 cases including wide-money PDF rendering. The financial case
+entered the exact large price but lost the Quantity field during keyboard/inset
+reflow between lookup and focus (tree/PNG confirm the focused price and hidden
+quantity). Its test helper now dismisses only a visible IME with real Back, waits
+for dismissal, confirms entered values and closes the keyboard between fields.
+Interactive-window inspection supplies that visibility check; all native financial
+assertions remain. Also fixes captures that could show the preceding invalid draft
+before a queued input update painted. API 35 was not reached in this run.
+
+Tightened the same input-helper correction: wait for the actual IME to open after
+field focus before SET_TEXT, then confirm the exact value and dismiss it. Otherwise
+a fast text-action acknowledgment could race the keyboard's later appearance and
+skip dismissal. This is actual UI synchronization, not a replacement of native
+saves or any financial assertion. No app-money behavior changed in this follow-up.

@@ -26,6 +26,35 @@ class _Reports extends ReportApi {
   int version = 1;
   ReportSelection? exported;
   @override
+  Future<InvoiceBillingPreview> invoiceBillingPreview(
+    ReportSelection selection,
+  ) async => InvoiceBillingPreview(
+    version: version,
+    jobId: 'job',
+    jobName: 'Synthetic renovation',
+    currency: 'USD',
+    taxUnits: 75000,
+    subtotal: attempts.isEmpty ? '123.45' : '0.00',
+    tax: attempts.isEmpty ? '9.26' : '0.00',
+    total: attempts.isEmpty ? '132.71' : '0.00',
+    problem: attempts.isEmpty ? null : 'NO_BILLABLE_ITEMS',
+    lines: attempts.isEmpty
+        ? const [
+            InvoiceBillingLine('Install tiles', 'Completed work', '123.45'),
+          ]
+        : const [],
+    excluded: attempts.isEmpty
+        ? const []
+        : [
+            InvoiceCoverageLink(
+              attempts.first.$3,
+              'INV-1000',
+              title: 'Install tiles',
+              detail: 'Previously invoiced task',
+            ),
+          ],
+  );
+  @override
   Future<ReportContext> context() async => const ReportContext('UTC', [
     ReportJob('job', 'Synthetic renovation', false),
   ]);
@@ -202,6 +231,16 @@ void main() {
       );
       await tester.tap(find.text('PDF invoice'));
       await tester.pumpAndSettle();
+      expect(find.text('Review invoice'), findsOneWidget);
+      expect(find.text('USD 132.71'), findsOneWidget);
+      expect(api.attempts, isEmpty);
+      await tester.scrollUntilVisible(
+        find.text('Create invoice'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('Create invoice'));
+      await tester.pumpAndSettle();
       expect(find.text('Retry same operation'), findsOneWidget);
       expect(api.attempts.length, 1);
       await tester.tap(find.text('Retry same operation'));
@@ -270,7 +309,7 @@ void main() {
       expect(find.text('Delete permanently'), findsOneWidget);
       expect(
         find.textContaining(
-          'Independent reusable task templates and customers are kept.',
+          'Issued invoices and billing history are kept, along with reusable task templates and customers.',
         ),
         findsOneWidget,
       );

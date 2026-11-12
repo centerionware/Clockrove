@@ -25,7 +25,28 @@ The user explicitly requested this handoff after creating agent instructions and
   uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
 
+### Exact money contract (owner priority, 2026-11-12)
+
+All money input, persistence, transport and calculations use canonical decimal
+strings and arbitrary-precision decimal/integer libraries, never binary floating
+point or fixed-width money arithmetic. Use pinned Dart `decimal` and native
+`java.math.BigDecimal`/`BigInteger`; parse strings directly. Remove current 64-bit
+rate/unit-price limits through a conservative migration preserving released values,
+issued documents, source claims and command receipts. Reject malformed/excess
+currency precision explicitly; never silently round input. Quantity and tax math
+stay exact until the documented currency boundary: half-up once per task line,
+hourly total and invoice-subtotal tax. Payments, credits and balances conserve each
+minor unit and never narrow large invoice totals. Pin/lock new dependencies through
+Actions only, and verify migration, large amounts, tiny fractions and conservation.
+
 ### Next concrete action
+
+Owner priority: complete the exact-money migration and its regressions described
+in docs/MONEY_PRECISION_PLAN.md, together with the real tax/quantity/legacy-invoice
+UI journey. Decimal 3.2.6 is selected; the application lockfile is generated only in
+Actions. Monetary rate/unit-price fields and persistence are now prepared as
+BigInteger/canonical TEXT, but their fresh validation is still required before merge.
+
 
 Priority settings fix #34 is delivered internally. Main c5e19d1 passed
 43131240701, and Play delivery 43132531984 accepted 0.1.0-internal.21.1 /
@@ -33,19 +54,36 @@ Priority settings fix #34 is delivered internally. Main c5e19d1 passed
 245 native / 32 actual Android passing results are recorded below. Tester
 installation/physical behavior is separate; production readiness remains unset.
 
-Finish M4 widget validation in #33: providers, responsive RemoteViews, scrolling
-collections, setup/picker/default-start and removal/restore integration are written.
-Actual API-24/35 board/setup/timer journeys and capture review passed in
-43157030521; apply its formatter correction and pass the final exact-head run before
-merging and observing automatic main validation/internal delivery. Real launcher
-and tracking/recovery evidence, provider settings, encrypted backup/merge and
-full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+Owner physical feedback on 2026-11-12: Pixel 7 / Android 17 saves main Settings
+without crashing and appears to work after updating to the latest available build
+immediately before testing. Latest verified delivery is internal.21.1 / 216609104;
+this verifies the reported Save journey, not the full physical acceptance matrix.
 
-Immediately after the current widget task is validated and merged, implement
-invoice coverage/tax and unpaid/partial/paid lifecycle, receipts, void/replacement
-and company/accounts-receivable CC. Follow with quotes, task comments/supplies/costs
-and business reports from the main menu. This is the owner's next implementation priority; do not start it
-before the widget merge.
+Widget PR #33 merged as 8c2f3fd after final head 6cadef0 passed full Actions
+43158333007: 274 native and 40 actual API-24/35 cases with no failures/errors/skips;
+board, scrolling Combined, compact timer and setup captures reviewed on both APIs.
+Main validation 43159664866 passed with the same 274 native / 40 actual cases;
+Play delivery 43160879953 accepted 0.1.0-internal.22.1 / 216624221 at
+2026-11-12 05:27:54 UTC. Tester availability/installation remains separate.
+Real launcher/tracking/recovery evidence, provider settings, encrypted backup/merge
+and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+
+Implement the owner's next business iteration in the invoice-integrity worktree
+from merged main: exclusive invoice source claims and conservative legacy review,
+global/per-job tax with immutable issued totals, retained financial records and
+invoice navigation. Then add unpaid/partial/paid lifecycle, receipts, atomic
+void/replacement and company/accounts-receivable CC. Follow the ordered detailed
+plan for quotes, task comments/supplies/costs and main-menu business reports.
+
+Draft #35 legacy editor head 94fd7c7 passed behavior/build/native/API-24/35 and
+actual-document viewer gates in 43169835589; only formatting failed, and the exact
+CI correction is applied. Owner priority quantities reuse the single existing
+price as Unit price and default to 1. Quantity head b4e547d passed full
+43172649874: 365 native and 40 actual Android cases without failures/errors/skips,
+plus actual-document viewer checks. An independent actual Flutter-to-native legacy
+review -> quantity save -> unbilled tax invoice -> repeat exclusion -> retained PDF
+journey is now in 6c0222d / live 43174102042, but has not run yet. Do not merge this slice from
+native/storage or synthetic presentation evidence alone.
 
 ## 2. Product decisions
 
@@ -127,6 +165,13 @@ While departure is pending, show provisional status. On retrospective finalizati
 Missing GPS alone is not proof of departure. Reboot/process death/force-stop must not fabricate clock-out times. Recover valid persisted state, re-register geofences when permitted, and explain if the user must reopen the app or grant permission. The app cannot promise continued execution after Android force-stop.
 
 ### 3.4 Kanban
+
+- Owner priority for the current invoice patch: tasks have a positive decimal
+  quantity (default 1, up to four decimal places). Rename the existing price input
+  to **Unit price**; it remains the only price input. Task total is quantity × unit
+  price, rounded half up once per task to currency precision. Preserve old amounts
+  with quantity 1. Carry quantity through templates, boards, reports and immutable
+  invoice lines. Quantity/price edits never release an existing task invoice claim.
 
 - Each new job starts with To do, Doing, Done.
 - Add, rename, and reorder columns; keep at least one column.

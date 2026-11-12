@@ -32,23 +32,23 @@ class BusinessCommandsTest {
 
     @Test fun globalRateAndJobOverrideRemainExactAndModesDoNotChangeTimeOrTaskPrices() {
         assertNull(detail.effectiveHourlyMinor)
-        assertNull(save(settings.copy(defaultHourlyMinor = 9007199254740993L)).conflict)
-        assertEquals(9007199254740993L, detail.effectiveHourlyMinor)
-        assertNull(job(detail.settings.copy(hourlyRateMinor = 0, billingMode = "TASK")).conflict)
-        assertEquals(0L, detail.effectiveHourlyMinor); assertEquals("TASK", detail.settings.billingMode)
+        assertNull(save(settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(9007199254740993L))).conflict)
+        assertEquals(java.math.BigInteger.valueOf(9007199254740993L), detail.effectiveHourlyMinor)
+        assertNull(job(detail.settings.copy(hourlyRateMinor = java.math.BigInteger.valueOf(0), billingMode = "TASK")).conflict)
+        assertEquals(java.math.BigInteger.valueOf(0L), detail.effectiveHourlyMinor); assertEquals("TASK", detail.settings.billingMode)
         assertNull(job(detail.settings.copy(hourlyRateMinor = null, billingMode = "HOURLY")).conflict)
-        assertEquals(9007199254740993L, detail.effectiveHourlyMinor)
+        assertEquals(java.math.BigInteger.valueOf(9007199254740993L), detail.effectiveHourlyMinor)
         assertNull(repository.snapshot().running)
     }
     @Test fun changingCurrencyNeverRelabelsOldJobsOrUsesAnIncompatibleDefaultRate() {
         val old = detail.settings.currency
         val other = if (old == "JPY") "USD" else "JPY"
-        assertNull(save(settings.copy(currency = other, defaultHourlyMinor = 123)).conflict)
+        assertNull(save(settings.copy(currency = other, defaultHourlyMinor = java.math.BigInteger.valueOf(123))).conflict)
         assertEquals(old, detail.settings.currency); assertNull(detail.effectiveHourlyMinor)
         assertEquals("CURRENCY_IMMUTABLE", job(detail.settings.copy(currency = other)).conflict)
         val fresh = repository.createJob("Synthetic new currency")
         assertEquals(other, repository.jobDetail(fresh).job.settings.currency)
-        assertEquals(123L, repository.jobDetail(fresh).job.effectiveHourlyMinor)
+        assertEquals(java.math.BigInteger.valueOf(123L), repository.jobDetail(fresh).job.effectiveHourlyMinor)
     }
     @Test fun settingsPersistCompanyTemplatesAndThreeStylesWithoutChangingInvoiceCounter() {
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
@@ -63,7 +63,7 @@ class BusinessCommandsTest {
     }
     @Test fun malformedSettingsDoNotPartiallyWriteOrChangeVersion() {
         val before = repository.businessSnapshot()
-        listOf(settings.copy(defaultHourlyMinor = -1), settings.copy(currency = "XXX"), settings.copy(invoiceStyle = "OTHER"),
+        listOf(settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(-1)), settings.copy(currency = "XXX"), settings.copy(invoiceStyle = "OTHER"),
             settings.copy(companyEmail = "a@example.test\nBcc:other@example.test")).forEach { assertEquals("INVALID_SETTINGS", save(it).conflict) }
         assertEquals(before, repository.businessSnapshot())
     }
@@ -95,19 +95,19 @@ class BusinessCommandsTest {
         } }
     }
     @Test fun staleAndDuplicateSettingsCommandsPreserveOriginalOutcomeAndRejectReuse() {
-        val firstVersion = version; val value = settings.copy(defaultHourlyMinor = 2200)
+        val firstVersion = version; val value = settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(2200))
         val result = repository.saveBusinessSettings("same", firstVersion, value)
         assertNull(result.conflict)
         assertEquals(result, repository.saveBusinessSettings("same", firstVersion, value))
-        assertEquals("COMMAND_ID_REUSED", repository.saveBusinessSettings("same", firstVersion, value.copy(defaultHourlyMinor = 2300)).conflict)
-        assertEquals("STALE_STATE", repository.saveBusinessSettings("stale", firstVersion, value.copy(defaultHourlyMinor = 2400)).conflict)
-        assertEquals(2200L, settings.defaultHourlyMinor)
+        assertEquals("COMMAND_ID_REUSED", repository.saveBusinessSettings("same", firstVersion, value.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(2300))).conflict)
+        assertEquals("STALE_STATE", repository.saveBusinessSettings("stale", firstVersion, value.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(2400))).conflict)
+        assertEquals(java.math.BigInteger.valueOf(2200L), settings.defaultHourlyMinor)
     }
     @Test fun invalidJobOrCustomerReferencesNeverPartiallyRenameAJob() {
         val before = detail
         assertEquals("CUSTOMER_UNAVAILABLE", job(detail.settings.copy(name = "Must not persist", customerId = "missing")).conflict)
         assertEquals("INVALID_JOB", job(detail.settings.copy(billingMode = "BOTH")).conflict)
-        assertEquals("INVALID_JOB", job(detail.settings.copy(hourlyRateMinor = -1)).conflict)
+        assertEquals("INVALID_JOB", job(detail.settings.copy(hourlyRateMinor = java.math.BigInteger.valueOf(-1))).conflict)
         assertEquals("INVALID_JOB", job(detail.settings.copy(customerEmailOverride = "bad\naddress@example.test")).conflict)
         assertEquals(before, detail)
     }

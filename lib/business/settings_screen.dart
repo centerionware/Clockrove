@@ -6,6 +6,7 @@ import 'business_command.dart';
 import 'settings_api.dart';
 import 'logo_controls.dart';
 import 'email_template.dart';
+import 'tax_rate.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -37,7 +38,10 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError, _bodyError;
+  String? _subjectError, _bodyError, _taxError;
+  late final _tax = TextEditingController(
+    text: taxPercent(widget.initial.defaultTaxUnits),
+  );
   late final _rate = TextEditingController(
     text: money(widget.initial.defaultHourlyMinor, widget.initial.digits),
   );
@@ -67,6 +71,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   void dispose() {
     for (final c in [
       _rate,
+      _tax,
       _name,
       _email,
       _phone,
@@ -113,18 +118,21 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     }
   }
 
-  void _validateTemplates() {
+  void _validateDraft() {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
+    final tax = taxPercentError(_tax.text);
     setState(() {
       _subjectError = subject;
       _bodyError = body;
+      _taxError = tax;
     });
     if (subject != null || body != null) {
       throw const FormatException(
         'Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.',
       );
     }
+    if (tax != null) throw FormatException(tax);
   }
 
   @override
@@ -181,6 +189,27 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           decoration: InputDecoration(
             labelText: 'Default hourly rate ($_currency)',
             helperText: 'Blank means no rate set. Override this in any job.',
+          ),
+        ),
+        const SizedBox(height: 20),
+        Semantics(
+          identifier: 'default-tax-percent',
+          child: TextField(
+            controller: _tax,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            maxLength: 32,
+            decoration: InputDecoration(
+              labelText: 'Default tax (%)',
+              helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',
+              helperMaxLines: 3,
+              errorText: _taxError,
+              errorMaxLines: 3,
+            ),
+            onChanged: (_) {
+              if (_taxError != null) {
+                setState(() => _taxError = taxPercentError(_tax.text));
+              }
+            },
           ),
         ),
         const SizedBox(height: 32),
@@ -250,13 +279,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           label: 'Save settings',
           enabled: current != null && !_logoBusy,
           create: () {
-            _validateTemplates();
+            _validateDraft();
             final id = newBusinessId();
             final version = current!.version;
             final s = CompanySettings(
               currency: _currency,
               digits: _digits,
               defaultHourlyMinor: parseMoney(_rate.text, _digits),
+              defaultTaxUnits: parseTaxPercent(_tax.text),
               companyName: _name.text.trim(),
               companyEmail: _email.text.trim(),
               companyPhone: _phone.text,

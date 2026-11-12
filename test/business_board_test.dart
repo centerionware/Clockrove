@@ -60,6 +60,15 @@ class _BoardApi extends BusinessApi {
   Future<JobBoard> board(String jobId) async => data;
 }
 
+class _SavingApi extends _BoardApi {
+  TaskCard? saved;
+  @override
+  Future<TimerOutcome> saveCard(String id, JobBoard b, TaskCard c) async {
+    saved = c;
+    return const TimerOutcome(2, null);
+  }
+}
+
 class _MovingTimer extends TimerApi {
   final versions = StreamController<int>.broadcast();
   @override
@@ -98,13 +107,14 @@ Future<void> _show(
   bool dark = false,
   double scale = 1,
   Key? boundary,
+  BusinessApi? api,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
       key: boundary,
       child: ProviderScope(
         overrides: [
-          businessApiProvider.overrideWithValue(_BoardApi()),
+          businessApiProvider.overrideWithValue(api ?? _BoardApi()),
           timerApiProvider.overrideWithValue(_Timer()),
         ],
         child: MaterialApp(
@@ -197,17 +207,103 @@ void main() {
     expect(parseMoney('90071992547409.93', 2), '9007199254740993');
     expect(money('9007199254740993', 2), '90071992547409.93');
     expect(parseMoney('123', 0), '123');
+    expect(parseMoney('92233720368547758.08', 2), '9223372036854775808');
+    expect(
+      parseMoney('1234567890123456789012345678.90', 2),
+      '123456789012345678901234567890',
+    );
+    expect(() => parseMoney('1' * 1025, 0), throwsFormatException);
     expect(money('1', 3), '0.001');
+    expect(money('-1', 2), '-0.01');
+    expect(
+      money('123456789012345678901234567890', 2),
+      '1234567890123456789012345678.90',
+    );
+    for (final value in ['-1', 'NaN', '1e2', '1,00', '1.001']) {
+      expect(() => parseMoney(value, 2), throwsFormatException);
+    }
+  });
+  test('quantities are positive exact decimals and totals round half up', () {
+    expect(parseTaskQuantity('26'), '260000');
+    expect(parseTaskQuantity('26.125'), '261250');
+    expect(taskQuantity('261250'), '26.125');
+    expect(taskAmount('500', '260000'), '13000');
+    expect(taskAmount('1', '5000'), '1');
+    expect(taskAmount('1', '4999'), '0');
+    expect(taskAmount('1', '1'), '0');
+    expect(
+      taskAmount('9223372036854775807', '9223372036854775807'),
+      '8507059173023461584739690778423250',
+    );
+    expect(taskAmount(null, '10000'), isNull);
     for (final value in [
+      '',
+      '0',
       '-1',
       'NaN',
       '1e2',
-      '1,00',
-      '1.001',
-      '92233720368547758.08',
+      '1,5',
+      '1.00001',
+      '922337203685477.5808',
     ]) {
-      expect(() => parseMoney(value, 2), throwsFormatException);
+      expect(() => parseTaskQuantity(value), throwsFormatException);
     }
+  });
+  testWidgets(
+    'one existing price field becomes unit price with quantity and calculated total',
+    (tester) async {
+      await _show(tester);
+      await tester.tap(find.text('Install kitchen tiles'));
+      await tester.pumpAndSettle();
+      final price = find.widgetWithText(TextFormField, 'Unit price (USD)');
+      final quantity = find.widgetWithText(TextFormField, 'Quantity');
+      expect(price, findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Fixed price (USD)'),
+        findsNothing,
+      );
+      expect(find.byType(TextFormField), findsNWidgets(4));
+      await tester.enterText(price, '5.00');
+      await tester.enterText(quantity, '26');
+      await tester.pumpAndSettle();
+      expect(find.text('Task total: USD 130.00'), findsOneWidget);
+      await tester.enterText(quantity, '0');
+      await tester.ensureVisible(find.text('Save task'));
+      await tester.tap(find.text('Save task'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Quantity must be greater than 0 and within the supported range.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Install kitchen tiles'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('saving quantity sends the existing price as unit price', (
+    tester,
+  ) async {
+    final api = _SavingApi();
+    await _show(tester, api: api);
+    await tester.tap(find.text('Install kitchen tiles'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Unit price (USD)'),
+      '5.00',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantity'),
+      '26',
+    );
+    await tester.ensureVisible(find.text('Save task'));
+    await tester.tap(find.text('Save task'));
+    await tester.pumpAndSettle();
+    expect(api.saved?.quantityUnits, '260000');
+    expect(api.saved?.priceMinor, '500');
+    expect(api.saved?.amountMinor, '13000');
+    expect(find.text('Edit task'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
     'real board screen exposes pricing, due dates and accessible moves',
@@ -301,6 +397,25 @@ void main() {
         ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
+      await tester.tap(find.text('Install kitchen tiles'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Unit price (USD)'),
+        '5.00',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Quantity'),
+        '26',
+      );
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      expect(find.text('Task total: USD 130.00'), findsOneWidget);
+      await tester.runAsync(
+        () => saveMapPreview(
+          boundary,
+          'clockrove-task-quantity-${dark ? 'dark' : 'light'}',
+        ),
+      );
       expect(tester.takeException(), isNull);
     });
   }

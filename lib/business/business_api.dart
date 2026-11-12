@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:decimal/decimal.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +17,9 @@ String newBusinessId() => List.generate(
 String? parseMoney(String input, int digits) {
   final value = input.trim();
   if (value.isEmpty) return null;
+  if (value.length > 1029) {
+    throw const FormatException('Amount is too long.');
+  }
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
     throw const FormatException(
       'Enter a positive decimal amount, or leave blank.',
@@ -25,26 +30,52 @@ String? parseMoney(String input, int digits) {
   if (fraction.length > digits) {
     throw FormatException('This currency allows $digits decimal places.');
   }
-  final minor =
-      BigInt.parse(parts[0]) * BigInt.from(10).pow(digits) +
-      BigInt.parse(
-        fraction.padRight(digits, '0').isEmpty
-            ? '0'
-            : fraction.padRight(digits, '0'),
-      );
-  if (minor > BigInt.parse('9223372036854775807')) {
-    throw const FormatException('Amount is too large.');
+  // Precision was validated above: shifting produces an exact integer, so
+  // toBigInt cannot discard a fractional minor unit.
+  final minor = Decimal.parse(value).shift(digits).toBigInt();
+  if (minor.toString().length > 1024) {
+    throw const FormatException('Amount is too long.');
   }
   return minor.toString();
 }
 
-String money(String? minor, int digits) {
-  if (minor == null) return '';
-  final value = BigInt.parse(minor).toString().padLeft(digits + 1, '0');
-  return digits == 0
-      ? value
-      : '${value.substring(0, value.length - digits)}.${value.substring(value.length - digits)}';
+String money(String? minor, int digits) => minor == null
+    ? ''
+    : Decimal.parse(minor).shift(-digits).toStringAsFixed(digits);
+
+/// Quantities use four exact decimal places, with one represented as 10000.
+String parseTaskQuantity(String input) {
+  final value = input.trim();
+  if (!RegExp(r'^\d+(\.\d{1,4})?$').hasMatch(value)) {
+    throw const FormatException(
+      'Enter a quantity greater than 0, with up to 4 decimal places.',
+    );
+  }
+  final parts = value.split('.');
+  final units =
+      BigInt.parse(parts[0]) * BigInt.from(10000) +
+      BigInt.parse((parts.length == 2 ? parts[1] : '').padRight(4, '0'));
+  if (units <= BigInt.zero || units > BigInt.parse('9223372036854775807')) {
+    throw const FormatException(
+      'Quantity must be greater than 0 and within the supported range.',
+    );
+  }
+  return units.toString();
 }
+
+String taskQuantity(String units) => money(
+  units,
+  4,
+).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+
+/// Exact decimal product; HALF_UP happens once, at the task's minor-unit boundary.
+String? taskAmount(String? unitPriceMinor, String quantityUnits) =>
+    unitPriceMinor == null
+    ? null
+    : (Decimal.parse(unitPriceMinor) * Decimal.parse(quantityUnits).shift(-4))
+          .round()
+          .toBigInt()
+          .toString();
 
 class BoardColumn {
   const BoardColumn(this.id, this.name, this.completed);
@@ -69,8 +100,10 @@ class TaskCard {
     this.dueDate,
     this.priceMinor,
     this.completedMillis,
+    this.quantityUnits = '10000',
   });
-  final String id, columnId, title, description, currency;
+  final String id, columnId, title, description, currency, quantityUnits;
+  String? get amountMinor => taskAmount(priceMinor, quantityUnits);
   final String? dueDate, priceMinor;
   final int position;
   final int? completedMillis;
@@ -86,6 +119,7 @@ class TaskCard {
     dueDate: v['dueDate'] as String?,
     priceMinor: v['priceMinor'] as String?,
     completedMillis: v['completedMillis'] as int?,
+    quantityUnits: v['quantityUnits'] as String? ?? '10000',
   );
 }
 
@@ -96,9 +130,10 @@ class TaskTemplate {
     this.description,
     this.priceMinor,
     this.currency,
-    this.source,
-  );
-  final String id, title, description, currency;
+    this.source, [
+    this.quantityUnits = '10000',
+  ]);
+  final String id, title, description, currency, quantityUnits;
   final String? priceMinor, source;
   factory TaskTemplate.decode(Map<Object?, Object?> v) => TaskTemplate(
     v['id'] as String,
@@ -107,6 +142,7 @@ class TaskTemplate {
     v['priceMinor'] as String?,
     v['currency'] as String,
     v['sourceJobName'] as String?,
+    v['quantityUnits'] as String? ?? '10000',
   );
 }
 
@@ -214,6 +250,7 @@ class BusinessApi {
         'dueDate': c.dueDate,
         'billable': c.billable,
         'priceMinor': c.priceMinor,
+        'quantityUnits': c.quantityUnits,
         'currency': c.currency,
       });
   Future<TimerOutcome> moveCard(

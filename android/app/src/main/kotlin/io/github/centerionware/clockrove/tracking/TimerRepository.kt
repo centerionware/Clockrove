@@ -402,7 +402,7 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun saveCard(id: String, version: Long, value: BoardStore.Draft): Outcome =
         boardChange(id, version, "CARD_SAVE", listOf(value.id, value.jobId, value.columnId, value.title, value.description, value.dueDate,
-            value.billable, value.priceMinor, value.currency)) { BoardStore.saveCard(it, value, wallClock()) }
+            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) + (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits))) { BoardStore.saveCard(it, value, wallClock()) }
     @Synchronized
     internal fun moveCard(id: String, version: Long, jobId: String, cardId: String, destination: String, position: Int): Outcome =
         boardChange(id, version, "CARD_MOVE", listOf(jobId, cardId, destination, position)) { BoardStore.moveCard(it, jobId, cardId, destination, position, wallClock()) }
@@ -496,13 +496,31 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
             InvoiceStore.prepare(it, invoiceId, selection, wallClock())
         }
-    internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String)
+    internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
+        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
     @Synchronized
-    internal fun invoices(jobId: String): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
-        helper.readableDatabase.rawQuery("SELECT id,number,created_ms,payload FROM invoices WHERE job_id=? ORDER BY created_ms DESC,id", arrayOf(jobId)).use { rows -> buildList {
-            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style)) }
+    internal fun invoices(jobId: String? = null): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
+        helper.readableDatabase.rawQuery("SELECT i.id,i.number,i.created_ms,i.payload,i.job_id,j.id,c.state FROM invoices i LEFT JOIN jobs j ON j.id=i.job_id LEFT JOIN invoice_coverage c ON c.invoice_id=i.id ${if (jobId == null) "" else "WHERE i.job_id=?"} ORDER BY i.created_ms DESC,i.id",
+            if (jobId == null) null else arrayOf(jobId)).use { rows -> buildList {
+            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
+                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY")) }
         } })
+    internal data class InvoiceBillingPreview(val version: Long, val preview: InvoiceCoverageStore.Preview, val taxUnits: Int)
+    @Synchronized
+    internal fun invoiceBillingPreview(selection: ReportStore.Selection): InvoiceBillingPreview {
+        require(selection.jobIds.size == 1) { "INVALID_INVOICE" }
+        val db = helper.readableDatabase
+        return InvoiceBillingPreview(readSnapshot(db).version, InvoiceCoverageStore.preview(db, ReportStore.read(db, selection)),
+            BusinessStore.job(db, selection.jobIds.single()).effectiveTaxUnits)
+    }
+    internal data class LegacyInvoiceContext(val version: Long, val context: LegacyInvoiceStore.Context)
+    @Synchronized
+    internal fun legacyInvoiceContext(invoiceId: String): LegacyInvoiceContext = LegacyInvoiceContext(
+        readSnapshot(helper.readableDatabase).version, LegacyInvoiceStore.context(helper.readableDatabase, invoiceId))
+    @Synchronized
+    internal fun reconcileInvoiceCoverage(id: String, version: Long, value: LegacyInvoiceStore.Draft): Outcome =
+        boardChange(id, version, "INVOICE_COVERAGE_RECONCILE", value.values()) { LegacyInvoiceStore.reconcile(it, value, wallClock()) }
     @Synchronized
     internal fun invoice(id: String): InvoiceStore.Record = InvoiceStore.read(helper.readableDatabase, id)
     @Synchronized
@@ -809,7 +827,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 6) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 7) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -824,6 +842,7 @@ class TimerRepository internal constructor(context: Context,
             GeofenceStore.createTables(db)
             BusinessSchema.install(db, now())
             WidgetConfigurationStore.install(db)
+            InvoiceCoverageStore.install(db, now())
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -834,12 +853,13 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..5 && newVersion == 6) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..6 && newVersion == 7) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
+            if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
         }
     }
 

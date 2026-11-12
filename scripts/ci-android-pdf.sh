@@ -118,7 +118,7 @@ assert int(root.attrib['tests']) > 0, 'No actual Android tests ran'
 assert all(int(root.attrib[k]) == 0 for k in ['failures','errors','skipped']), root.attrib
 classes = {case.attrib['classname'] for case in root.findall('testcase')}
 expected = {
-    'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 3,
+    'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 4,
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
@@ -131,11 +131,18 @@ for classname, count in expected.items():
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
   for clockrove_style in minimal classic modern; do
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.png"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.png"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
   done
+  # All original XML/PDF/widget evidence has been pulled before clearing the
+  # ephemeral emulator for the independently numbered financial journey.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
   adb -s emulator-5554 emu kill || true
   wait "$clockrove_emulator_pid" || true
   trap - EXIT

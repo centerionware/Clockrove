@@ -8,6 +8,7 @@ import 'settings_api.dart';
 import 'settings_screen.dart';
 import 'lifecycle_api.dart';
 import 'job_deletion_dialog.dart';
+import 'tax_rate.dart';
 
 class JobSettingsScreen extends ConsumerWidget {
   const JobSettingsScreen({super.key, required this.jobId});
@@ -68,6 +69,13 @@ class _JobFormState extends ConsumerState<_JobForm> {
   late final _email = TextEditingController(
     text: widget.initial.effectiveEmail,
   );
+  late final _tax = TextEditingController(
+    text: taxPercent(
+      widget.initial.taxUnits ?? widget.initial.effectiveTaxUnits,
+    ),
+  );
+  late bool _inheritTax = widget.initial.taxUnits == null;
+  String? _taxError;
   late String _mode = widget.initial.mode;
   late String? _customer = widget.initial.customerId;
   late bool _useCustomerEmail = widget.initial.emailOverride == null;
@@ -77,6 +85,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
     _name.dispose();
     _rate.dispose();
     _email.dispose();
+    _tax.dispose();
     super.dispose();
   }
 
@@ -170,6 +179,45 @@ class _JobFormState extends ConsumerState<_JobForm> {
             helperText: 'Blank uses the global default for the same currency.',
           ),
         ),
+        const SizedBox(height: 24),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Use default tax rate'),
+          subtitle: Text(
+            '${taxPercent(ref.watch(businessSettingsProvider).value?.settings.defaultTaxUnits ?? widget.business.settings.defaultTaxUnits)}% of the invoice subtotal',
+          ),
+          value: _inheritTax,
+          onChanged: data?.archived == false
+              ? (value) => setState(() {
+                  _inheritTax = value;
+                  _taxError = null;
+                })
+              : null,
+        ),
+        if (!_inheritTax)
+          Semantics(
+            identifier: 'job-tax-percent',
+            child: TextField(
+              controller: _tax,
+              readOnly: data?.archived ?? true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              maxLength: 32,
+              decoration: InputDecoration(
+                labelText: 'Job tax (%)',
+                helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',
+                helperMaxLines: 3,
+                errorText: _taxError,
+                errorMaxLines: 3,
+              ),
+              onChanged: (_) {
+                if (_taxError != null) {
+                  setState(() => _taxError = taxPercentError(_tax.text));
+                }
+              },
+            ),
+          ),
         const SizedBox(height: 32),
         Text(
           'Customer & invoice recipient',
@@ -250,6 +298,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
             if (_name.text.trim().isEmpty) {
               throw const FormatException('Enter a job name.');
             }
+            final taxError = _inheritTax ? null : taxPercentError(_tax.text);
+            setState(() => _taxError = taxError);
+            if (taxError != null) throw FormatException(taxError);
             final id = newBusinessId();
             final p = JobPreferences(
               version: data!.version,
@@ -264,6 +315,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
               rate: parseMoney(_rate.text, data.digits),
               customerId: _customer,
               emailOverride: _useCustomerEmail ? null : _email.text.trim(),
+              taxUnits: _inheritTax ? null : parseTaxPercent(_tax.text),
+              effectiveTaxUnits: data.effectiveTaxUnits,
             );
             return () => ref.read(businessSettingsApiProvider).saveJob(id, p);
           },

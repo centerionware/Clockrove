@@ -25,7 +25,7 @@ class ReportingTest {
         val app = RuntimeEnvironment.getApplication(); app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app); job = repository.createJob("=Synthetic, \"quoted\"\njob")
         val settings = repository.businessSnapshot().settings
-        assertNull(repository.saveBusinessSettings("rate", version, settings.copy(defaultHourlyMinor = 6000)).conflict)
+        assertNull(repository.saveBusinessSettings("rate", version, settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(6000))).conflict)
     }
     @After fun close() { repository.close() }
     private fun at(value: String) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.parse(value)!!.time
@@ -57,7 +57,7 @@ class ReportingTest {
     @Test fun multiDayReportSplitsDisplayButPreservesSourceAndRoundsOnlyTheJobTotal() {
         session("2026-10-31T23:59:59.700Z", "2026-11-01T00:00:00.300Z")
         val settings = repository.businessSnapshot().settings
-        repository.saveBusinessSettings("tiny-rate", version, settings.copy(defaultHourlyMinor = 3000))
+        repository.saveBusinessSettings("tiny-rate", version, settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(3000)))
         val report = repository.report(selection("2026-10-31", "2026-11-01", "UTC")).report
         assertEquals(2, report.intervals.size); assertEquals(600L, report.totals.single().durationMillis.toLong())
         assertEquals(BigInteger.ONE, report.totals.single().amountMinor)
@@ -65,11 +65,11 @@ class ReportingTest {
         assertEquals(1, report.intervals.map { it.sourceStart }.distinct().size)
     }
     @Test fun exactRoundingHandlesHalfMinorUnitsAndValuesAboveJavascriptIntegerPrecision() {
-        assertEquals(BigInteger.ZERO, ReportStore.hourlyAmount(BigInteger.valueOf(1799999), 1))
-        assertEquals(BigInteger.ONE, ReportStore.hourlyAmount(BigInteger.valueOf(1800000), 1))
+        assertEquals(BigInteger.ZERO, ReportStore.hourlyAmount(BigInteger.valueOf(1799999), BigInteger.ONE))
+        assertEquals(BigInteger.ONE, ReportStore.hourlyAmount(BigInteger.valueOf(1800000), BigInteger.ONE))
         val rate = 9007199254740993L
-        assertEquals(BigInteger.valueOf(rate), ReportStore.hourlyAmount(BigInteger.valueOf(3600000), rate))
-        assertTrue(ReportStore.hourlyAmount(BigInteger.valueOf(Long.MAX_VALUE), Long.MAX_VALUE) > BigInteger.valueOf(Long.MAX_VALUE))
+        assertEquals(BigInteger.valueOf(rate), ReportStore.hourlyAmount(BigInteger.valueOf(3600000), BigInteger.valueOf(rate)))
+        assertTrue(ReportStore.hourlyAmount(BigInteger.valueOf(Long.MAX_VALUE), BigInteger.valueOf(Long.MAX_VALUE)) > BigInteger.valueOf(Long.MAX_VALUE))
     }
     @Test fun activeAndReviewHeldSessionsAreVisibleButExcludedFromAllFinalAmountsAndGps() {
         session("2026-11-01T06:00:00.000Z", "2026-11-01T07:00:00.000Z")
@@ -86,7 +86,7 @@ class ReportingTest {
         repository.close(); repository = TimerRepository(RuntimeEnvironment.getApplication(), wallClock = { completion })
         val board = repository.boardSnapshot(job).board
         fun task(id: String, column: String, price: Long?, billable: Boolean = true) {
-            assertNull(repository.saveCard("task-$id", version, BoardStore.Draft(id, job, column, id, billable = billable, priceMinor = price, currency = board.currency)).conflict)
+            assertNull(repository.saveCard("task-$id", version, BoardStore.Draft(id, job, column, id, billable = billable, priceMinor = price?.let(java.math.BigInteger::valueOf), currency = board.currency)).conflict)
         }
         task("priced", board.columns.last().id, 12345); task("free", board.columns.last().id, 0)
         task("missing", board.columns.last().id, null); task("uncompleted", board.columns.first().id, 50000)
@@ -118,7 +118,7 @@ class ReportingTest {
     @Test fun differentCurrenciesStayInSeparateJobTotalsAndMissingRateIsNotInvented() {
         val current = repository.businessSnapshot().settings
         val otherCurrency = if (current.currency == "JPY") "USD" else "JPY"
-        repository.saveBusinessSettings("different-currency", version, current.copy(currency = otherCurrency, defaultHourlyMinor = 100))
+        repository.saveBusinessSettings("different-currency", version, current.copy(currency = otherCurrency, defaultHourlyMinor = java.math.BigInteger.valueOf(100)))
         val other = repository.createJob("Synthetic other currency")
         val report = repository.report(selection().copy(jobIds = listOf(job, other))).report
         assertEquals(2, report.totals.map { it.currency }.distinct().size)

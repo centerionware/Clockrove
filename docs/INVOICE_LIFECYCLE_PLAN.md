@@ -7,6 +7,17 @@ working agreement. Keep each slice independently reviewable.
 
 ## Ordered delivery
 
+Owner addition to this patch: task quantities and unit pricing are high priority
+within the first slice. Rename the existing price field to Unit price, without
+adding a second price input. Quantity defaults to 1 for existing/new tasks and
+supports positive decimal values with up to four fractional digits. Store exact
+scaled integer quantities; compute quantity × unit price with wide arithmetic and
+round once per task to currency precision before subtotal/tax. Reusable templates
+retain quantity as an editable default. Boards/reports show the resulting task
+total, and issued invoice lines freeze both quantity and unit price. Editing
+either later never re-bills a task already reserved by an invoice; additional work
+needs a new task or the explicit invoice correction policy.
+
 1. Invoice integrity foundation: source coverage, safe legacy migration, global/job
    tax percentage, immutable totals and invoice navigation.
 2. Payment history, partial/full payment, balance copies, receipts, accounting CC,
@@ -64,6 +75,22 @@ Migrate existing invoice coverage conservatively. Older snapshots without stable
 source identity require review/reconciliation; never infer task identity from
 amount/title or silently allow ambiguous work to be billed again.
 
+Legacy review opens the original PDF and shows the job's current tasks and existing
+invoice reservations, without automatically selecting tasks by title or price.
+The user can link a task even if its current completion state changed; linking
+must not alter completion, price or timekeeping. Covered time is entered as exact
+bounds with an IANA timezone and explicit repeated-time choice; invalid/gap times
+are rejected. These manual reservations may cover work whose source entry was
+removed. Existing reservations cannot be released or reassigned by reconciliation.
+
+Require a review note and confirmation against the original document. An empty
+mapping requires a separate explicit acknowledgment that no source records can
+be linked and a reason, retained in audit history. Uncertainty stays unresolved
+until the user reviews it; never choose this acknowledgment automatically. Commit
+source claims, review state and ancestry atomically with a replayable command.
+Do not change the original invoice/PDF/number/total/tax, fabricate work, record a
+payment or allocate a new number. Reconciliation is separate from void/replacement.
+
 ## Tax percentages and exact totals
 
 Main Settings has a default tax percentage, initially 0%. Job Settings has an
@@ -102,6 +129,15 @@ Record a payment amount in the invoice's frozen currency, received date/timezone
 and optional method/reference/note. Default date to today. Allow several partial
 payments and a final payment. Show original total, each payment, total paid and
 remaining balance; currency changes in main Settings must not reinterpret them.
+
+Quantity × unit price can produce an invoice total larger than a signed 64-bit
+minor-unit integer. Keep payment, allocation, credit and remaining-balance math in
+arbitrary-precision integers too. Transport/store these amounts as canonical
+minor-unit decimal strings with native validation and the document's frozen
+currency precision; never narrow an issued total to SQLite INTEGER, Long, double
+or a JavaScript number. Bound user input to supported document amounts and reject
+malformed values without changing the ledger. Include large-total partial-payment,
+rounding, replacement-credit and tax-allocation conservation regressions.
 
 Use native serialized/versioned commands, durable IDs and idempotent receipts.
 Prevent duplicate recording and stale/concurrent overpayment. For the first

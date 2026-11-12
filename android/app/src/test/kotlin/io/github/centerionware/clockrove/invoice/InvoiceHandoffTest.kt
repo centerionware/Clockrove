@@ -31,7 +31,7 @@ class InvoiceHandoffTest {
         context.deleteDatabase("clockrove.db"); repository = TimerRepository(context)
         job = repository.createJob("Synthetic private job")
         val settings = repository.businessSnapshot().settings
-        repository.saveBusinessSettings("settings", version, settings.copy(defaultHourlyMinor = 10000))
+        repository.saveBusinessSettings("settings", version, settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(10000)))
         repository.execute(TimerRepository.Command("start", version, TimerRepository.Action.START, job, 1793491200000, "UTC", 0, TimerRepository.Origin.MANUAL))
         repository.execute(TimerRepository.Command("stop", version, TimerRepository.Action.STOP, null, 1793494800000, "UTC", 0, TimerRepository.Origin.MANUAL))
         assertNull(repository.prepareInvoice("prepare", version, "invoice", ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf(job))).conflict)

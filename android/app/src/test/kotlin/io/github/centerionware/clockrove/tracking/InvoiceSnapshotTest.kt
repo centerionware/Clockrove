@@ -20,7 +20,7 @@ class InvoiceSnapshotTest {
     @Before fun setup() {
         val app = RuntimeEnvironment.getApplication(); app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { 1793534400000 }); job = repository.createJob("Synthetic invoice job")
-        repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = 12345, companyName = "Synthetic Co", companyEmail = "billing@example.test"))
+        repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(12345), companyName = "Synthetic Co", companyEmail = "billing@example.test"))
         repository.saveCustomer("customer", version, BusinessStore.Customer("customer", "Synthetic Customer", "recipient@example.test", address = "Synthetic address"))
         repository.saveJobSettings("job", version, repository.jobDetail(job).job.settings.copy(customerId = "customer"))
         repository.execute(TimerRepository.Command("start", version, TimerRepository.Action.START, job, 1793491200000, "UTC", 0, TimerRepository.Origin.MANUAL))
@@ -41,11 +41,12 @@ class InvoiceSnapshotTest {
     @Test fun editsNeverRewritePreparedSnapshotAndRetryDoesNotAllocateAnotherNumber() {
         val originalVersion = version; val first = repository.prepareInvoice("same", originalVersion, "invoice", selection)
         val original = repository.invoice("invoice").payload
-        repository.saveBusinessSettings("changed", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = 999, companyName = "Changed", invoiceStyle = "CLASSIC"))
+        repository.saveBusinessSettings("changed", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(999), companyName = "Changed", invoiceStyle = "CLASSIC"))
         repository.saveCustomer("contact-changed", version, BusinessStore.Customer("customer", "Changed Customer", "changed@example.test"))
         repository.saveJobSettings("job-changed", version, repository.jobDetail(job).job.settings.copy(name = "Changed job"))
         assertEquals(first, repository.prepareInvoice("same", originalVersion, "invoice", selection))
         assertEquals(original, repository.invoice("invoice").payload)
+        assertNull(repository.createManualSession("new-work", version, SessionHistoryStore.Draft("new-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         assertNull(prepare("second", "invoice-2").conflict); assertEquals("INV-1001", repository.invoice("invoice-2").number)
         val next = InvoiceStore.Snapshot.decode(repository.invoice("invoice-2").payload)
         assertEquals("9.99", next.total); assertEquals("Changed Customer", next.customer); assertEquals("CLASSIC", next.style)
@@ -58,15 +59,16 @@ class InvoiceSnapshotTest {
         val board = repository.boardSnapshot(job).board
         repository.saveCard("task", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = null, currency = board.currency))
         assertEquals("TASK_PRICES_REQUIRED", prepare("missing-price").conflict)
-        repository.saveCard("price", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = 0, currency = board.currency))
+        repository.saveCard("price", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = java.math.BigInteger.valueOf(0), currency = board.currency))
         assertNull(prepare("free").conflict)
         val data = InvoiceStore.Snapshot.decode(repository.invoice("invoice").payload)
         assertEquals("INV-1000", data.number); assertEquals(InvoiceStore.amount(java.math.BigInteger.ZERO, data.digits), data.total)
-        assertEquals(1, data.lines.size); assertTrue(data.basis.contains("fixed prices"))
+        assertEquals(1, data.lines.size); assertTrue(data.basis.contains("quantity × unit price"))
     }
     @Test fun invoiceIdReuseIsRejectedAndConflictingGenerationIsRollbackSafe() {
         assertNull(prepare().conflict); assertEquals("INVOICE_ID_EXISTS", prepare("reused").conflict)
         inspect { it.execSQL("CREATE TRIGGER fail_invoice BEFORE INSERT ON invoices BEGIN SELECT RAISE(ABORT,'synthetic failure'); END") }
+        assertNull(repository.createManualSession("rollback-work", version, SessionHistoryStore.Draft("rollback-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         val before = version
         try { prepare("failed", "second"); fail("Unexpected success") } catch (_: android.database.SQLException) {}
         assertEquals(before, version)
@@ -106,6 +108,7 @@ class InvoiceSnapshotTest {
             db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(1001L, it.getLong(0)) }
             db.execSQL("UPDATE app_settings SET next_invoice_number=3200 WHERE id=1")
         }
+        assertNull(repository.createManualSession("sequence-work", version, SessionHistoryStore.Draft("sequence-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         assertNull(prepare("higher-sequence", "higher-invoice").conflict)
         assertEquals("INV-3200", repository.invoice("higher-invoice").number)
         assertEquals(first.payload, repository.invoice("legacy-invoice").payload)

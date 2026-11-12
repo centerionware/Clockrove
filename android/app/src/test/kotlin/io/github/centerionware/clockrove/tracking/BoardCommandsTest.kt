@@ -28,7 +28,7 @@ class BoardCommandsTest {
     @After fun close() { repository.close() }
     private fun save(value: BoardStore.Draft) = repository.saveCard("save-${sequence++}", state.version, value)
     private fun draft(id: String, column: String = state.board.columns.first().id, due: String? = null, price: Long? = 12000) =
-        BoardStore.Draft(id, job, column, "Synthetic task $id", "Synthetic reusable description", due, true, price, state.board.currency)
+        BoardStore.Draft(id, job, column, "Synthetic task $id", "Synthetic reusable description", due, true, price?.let(java.math.BigInteger::valueOf), state.board.currency)
     private fun move(id: String, column: String, position: Int) = repository.moveCard("move-${sequence++}", state.version, job, id, column, position)
     private fun <T> inspect(block: (SQLiteDatabase) -> T): T = SQLiteDatabase.openDatabase(RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db").path,
         null, SQLiteDatabase.OPEN_READWRITE).use(block)
@@ -36,11 +36,11 @@ class BoardCommandsTest {
     @Test fun taskCrudPersistsPriceDateAndIndependentTemplateWithoutStartingATimer() {
         assertNull(save(draft("one", due = "2028-02-29")).conflict)
         val first = state.board.cards.single()
-        assertEquals(12000L, first.priceMinor); assertEquals("2028-02-29", first.dueDate)
+        assertEquals(java.math.BigInteger.valueOf(12000L), first.priceMinor); assertEquals("2028-02-29", first.dueDate)
         assertNull(first.completedMillis); assertNull(repository.snapshot().running)
         assertEquals(first.title, repository.taskTemplates().single().title)
         assertNull(save(draft("one", due = null, price = 0).copy(title = "Synthetic revised")).conflict)
-        assertEquals(0L, state.board.cards.single().priceMinor)
+        assertEquals(java.math.BigInteger.valueOf(0L), state.board.cards.single().priceMinor)
         assertEquals("Synthetic revised", repository.taskTemplates().single().title)
         assertNull(repository.removeCard("delete", state.version, job, "one").conflict)
         assertTrue(state.board.cards.isEmpty()); assertEquals(1, repository.taskTemplates().size)
@@ -110,7 +110,7 @@ class BoardCommandsTest {
         assertNull(repository.copyTaskTemplate("copy", target.version, template.id, "fresh", other, target.board.columns.first().id, true).conflict)
         val copy = repository.boardSnapshot(other).board.cards.single()
         assertEquals("fresh", copy.id); assertEquals(other, copy.jobId); assertNull(copy.dueDate); assertNull(copy.completedMillis)
-        assertEquals(12000L, copy.priceMinor); assertNotEquals(template.id, copy.templateId)
+        assertEquals(java.math.BigInteger.valueOf(12000L), copy.priceMinor); assertNotEquals(template.id, copy.templateId)
         assertNull(repository.snapshot().running)
         assertEquals("TASK_ALREADY_EXISTS", repository.copyTaskTemplate("bad-copy", repository.snapshot().version, template.id, "fresh", other, target.board.columns.first().id, true).conflict)
     }

@@ -95,7 +95,7 @@ class ArchiveScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 content: const Text(
-                                  'This cannot be undone. Work history, GPS, the board and in-app invoices will be deleted. Independent reusable task templates and customers are kept. Copies you already exported remain outside Clockrove.',
+                                  'This cannot be undone. Work history, GPS and the board will be deleted. Issued invoices and billing history are kept, along with reusable task templates and customers. Copies you already exported remain outside Clockrove.',
                                 ),
                                 actions: [
                                   Theme(

@@ -105,9 +105,10 @@ class ReportTask {
     this.title,
     this.date,
     this.currency,
-    this.price,
-  );
-  final String id, jobId, title, date, currency;
+    this.price, [
+    this.quantityUnits = '10000',
+  ]);
+  final String id, jobId, title, date, currency, quantityUnits;
   final String? price;
   factory ReportTask.decode(Map<Object?, Object?> v) => ReportTask(
     v['id'] as String,
@@ -116,6 +117,7 @@ class ReportTask {
     v['completedLabel'] as String,
     v['currency'] as String,
     v['priceMinor'] as String?,
+    v['quantityUnits'] as String? ?? '10000',
   );
 }
 
@@ -203,9 +205,88 @@ class PreparedInvoice {
     this.number,
     this.total,
     this.currency,
-    this.style,
-  );
+    this.style, {
+    this.jobId = '',
+    this.jobName = '',
+    this.customer = '',
+    this.createdLabel = '',
+    this.jobDeleted = false,
+    this.legacy = false,
+  });
   final String id, number, total, currency, style;
+  final String jobId, jobName, customer, createdLabel;
+  final bool jobDeleted, legacy;
+}
+
+class InvoiceBillingLine {
+  const InvoiceBillingLine(this.title, this.detail, this.amount);
+  final String title, detail, amount;
+  factory InvoiceBillingLine.decode(Map<Object?, Object?> value) =>
+      InvoiceBillingLine(
+        value['title'] as String,
+        value['detail'] as String,
+        value['amount'] as String,
+      );
+}
+
+class InvoiceCoverageLink {
+  const InvoiceCoverageLink(
+    this.invoiceId,
+    this.number, {
+    this.title = '',
+    this.detail = '',
+  });
+  final String invoiceId, number, title, detail;
+  factory InvoiceCoverageLink.decode(Map<Object?, Object?> value) =>
+      InvoiceCoverageLink(
+        value['invoiceId'] as String,
+        value['number'] as String,
+        title: value['title'] as String? ?? '',
+        detail: value['detail'] as String? ?? '',
+      );
+}
+
+class InvoiceBillingPreview {
+  const InvoiceBillingPreview({
+    required this.version,
+    required this.jobId,
+    required this.jobName,
+    required this.currency,
+    required this.taxUnits,
+    required this.lines,
+    this.subtotal,
+    this.tax,
+    this.total,
+    this.problem,
+    this.excluded = const [],
+    this.legacy = const [],
+  });
+  final int version, taxUnits;
+  final String jobId, jobName, currency;
+  final String? subtotal, tax, total, problem;
+  final List<InvoiceBillingLine> lines;
+  final List<InvoiceCoverageLink> excluded, legacy;
+  factory InvoiceBillingPreview.decode(Map<Object?, Object?> value) =>
+      InvoiceBillingPreview(
+        version: value['version'] as int,
+        jobId: value['jobId'] as String,
+        jobName: value['jobName'] as String,
+        currency: value['currency'] as String,
+        taxUnits: value['taxUnits'] as int,
+        subtotal: value['subtotal'] as String?,
+        tax: value['tax'] as String?,
+        total: value['total'] as String?,
+        problem: value['problem'] as String?,
+        lines: (value['lines'] as List)
+            .map((v) => InvoiceBillingLine.decode(v as Map<Object?, Object?>))
+            .toList(),
+        excluded: (value['excluded'] as List)
+            .map((v) => InvoiceCoverageLink.decode(v as Map<Object?, Object?>))
+            .toList(),
+        legacy: (value['legacy'] as List)
+            .map((v) => InvoiceCoverageLink.decode(v as Map<Object?, Object?>))
+            .toList(),
+      );
 }
 
 class InvoicePage {
@@ -238,6 +319,14 @@ class ReportApi {
   Future<WorkReport> report(ReportSelection s) async => WorkReport.decode(
     (await _channel.invokeMapMethod<Object?, Object?>('report', s.encode()))!,
   );
+  Future<InvoiceBillingPreview> invoiceBillingPreview(
+    ReportSelection selection,
+  ) async => InvoiceBillingPreview.decode(
+    (await _channel.invokeMapMethod<Object?, Object?>(
+      'invoiceBillingPreview',
+      selection.encode(),
+    ))!,
+  );
   Future<TimerOutcome> prepare(
     String id,
     int version,
@@ -255,7 +344,9 @@ class ReportApi {
     return TimerOutcome(v['version'] as int, v['conflict'] as String?);
   }
 
-  Future<List<PreparedInvoice>> invoices(String jobId) async {
+  Future<List<PreparedInvoice>> invoices(String jobId) => _invoices(jobId);
+  Future<List<PreparedInvoice>> allInvoices() => _invoices(null);
+  Future<List<PreparedInvoice>> _invoices(String? jobId) async {
     final v = (await _channel.invokeMapMethod<Object?, Object?>('invoices', {
       'jobId': jobId,
     }))!;
@@ -267,6 +358,12 @@ class ReportApi {
         i['total'] as String,
         i['currency'] as String,
         i['style'] as String,
+        jobId: i['jobId'] as String? ?? '',
+        jobName: i['jobName'] as String? ?? '',
+        customer: i['customer'] as String? ?? '',
+        createdLabel: i['createdLabel'] as String? ?? '',
+        jobDeleted: i['jobDeleted'] as bool? ?? false,
+        legacy: i['legacy'] as bool? ?? false,
       );
     }).toList();
   }
@@ -304,6 +401,14 @@ class ReportApi {
 }
 
 final reportApiProvider = Provider<ReportApi>((ref) => const ReportApi());
+final invoiceBillingPreviewProvider =
+    FutureProvider.family<InvoiceBillingPreview, ReportSelection>((
+      ref,
+      selection,
+    ) {
+      ref.watch(timerVersionsProvider);
+      return ref.watch(reportApiProvider).invoiceBillingPreview(selection);
+    });
 final reportProvider = FutureProvider.family<WorkReport, ReportSelection>((
   ref,
   selection,

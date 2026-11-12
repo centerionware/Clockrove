@@ -97,7 +97,7 @@ class SettingsSaveDeviceTest {
             assertEquals("INVALID_EMAIL_BODY", repository.saveBusinessSettings("invalid-body-$index", before.version, before.settings.copy(emailBody = invalid)).conflict)
             assertEquals(before, repository.businessSnapshot())
         }
-        val settings = before.settings.copy(currency = "USD", defaultHourlyMinor = 12500, companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
+        val settings = before.settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(12500), companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
         assertNull(repository.saveBusinessSettings("actual-android-template-save", before.version, settings).conflict)
         assertEquals(settings, repository.businessSnapshot().settings)
         val job = repository.createJob("Synthetic actual invoice job")
