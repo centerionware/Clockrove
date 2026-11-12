@@ -287,6 +287,7 @@ class QuoteBillingDeviceTest {
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total USD 403.13"); capture("actual-invoice-review")
             click("Keep editing"); assertEquals(0, count("invoices"))
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); click("Confirm invoice review")
+            until("Invoice review left the keyboard open over the prepare action") { !keyboardVisible() }
             reveal("Prepare reviewed invoice"); click("Prepare reviewed invoice")
             until("Actual quote invoice was not committed") { repository.quoteInvoices(quoteId).size == 1 }
             val invoice = repository.quoteInvoices(quoteId).single().invoiceId

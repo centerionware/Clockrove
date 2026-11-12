@@ -2995,3 +2995,14 @@ reserve the physical navigation inset. This is a source fix only; fresh Actions
 must prove full API-24/35 and generated-document gates before marking Q10/Q11
 complete or merging #39. Existing assertions remain strict; no build/test ran on
 the VM.
+
+Run 43269368364 / 19bbac6 passed the Android build and 561 native tests. The new
+API-24 quote run advanced beyond the prior PDF-viewer visibility failure but then
+failed at “Prepare reviewed invoice.” Its failure screenshot shows the review note
+focused and Android keyboard open after dismissing the invoice review dialog. This
+is a real keyboard focus restoration issue that obscures the next action. The
+screen now unfocuses the note before opening the confirmation dialog, and the
+device test asserts the keyboard is closed before preparation. API 35 did not run
+the quote journey in this attempt because the serial API-24 gate failed first.
+Fresh CI must still prove both APIs, invoice PDF/text/viewer outputs, and all
+remaining quote acceptance before these tasks are complete.

@@ -49,13 +49,15 @@ explicit business rule, separate from numerical precision loss.
 Complete the active quote milestone in draft PR #39, then proceed to the next
 ordered plan milestone. Latest head e4738aa / run 43264537323 attempt 2 passed
 formatting, analysis, Flutter behavior, Android build and all 561 native tests.
-API 24 completed the quote issue/accept/scope/actual-work/invoice journey and
-generated all three actual-work invoice styles. API 35 exposed a real bottom-inset
-bug on invoice detail: at maximum scroll, “View original PDF” remains under the
-system navigation bar. The detail page now reserves `viewPadding.bottom`; fresh
-exact-head Actions must confirm the fix, API 35 document/text/viewer acceptance,
-and all prior gates before #39 is merged. No device/document acceptance is inferred
-from the failed API-35 attempt.
+Run 43269368364 on 19bbac6 passed formatting, analysis, Flutter behavior, Android
+build and all 561 native tests. Its API-24 quote journey advanced past the previous
+“View original PDF” bottom-inset failure, then exposed focus restoration reopening
+the keyboard after invoice review confirmation and obscuring “Prepare reviewed
+invoice.” The flow now unfocuses before opening the review dialog, with a device
+assertion that the keyboard is closed before preparation. Fresh exact-head Actions
+must still confirm the inset fix on both APIs, API 24/35 actual-work documents and
+viewer acceptance, and all prior gates before #39 is merged. API 35 has not yet run
+this journey on the safe-area fix; no full device/document acceptance is inferred.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic

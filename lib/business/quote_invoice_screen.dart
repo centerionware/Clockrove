@@ -380,6 +380,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       }
       setState(() => _reading = false);
       final accepted = data.issued!;
+      // Keep focus restoration from reopening the soft keyboard when the
+      // confirmation dialog closes and obscuring the prepare action.
+      FocusManager.instance.primaryFocus?.unfocus();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
