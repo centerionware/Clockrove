@@ -29,7 +29,7 @@ class TaskQuantityTest {
     }
     @After fun close() { repository.close() }
     private fun task(id: String = "tile", units: Long = 260000, price: Long = 500) = BoardStore.Draft(id, job,
-        repository.boardSnapshot(job).board.columns.last().id, "Install 1 sq ft tile", priceMinor = price, currency = "USD", quantityUnits = units)
+        repository.boardSnapshot(job).board.columns.last().id, "Install 1 sq ft tile", priceMinor = java.math.BigInteger.valueOf(price), currency = "USD", quantityUnits = units)
     @Test fun twentySixUnitsFlowThroughReportsTaxAndFrozenInvoiceWithoutDuplicateBilling() {
         assertNull(repository.saveCard("save", version, task()).conflict)
         assertEquals(BigInteger.valueOf(13000), repository.report(selection).report.totals.single().amountMinor)
@@ -47,7 +47,7 @@ class TaskQuantityTest {
         assertNull(repository.saveCard("first", version, task("first", 5000, 1)).conflict)
         assertNull(repository.saveCard("second", version, task("second", 5000, 1)).conflict)
         assertEquals(BigInteger.valueOf(2), repository.report(selection).report.totals.single().amountMinor)
-        assertEquals(BigInteger("8507059173023461584739690778423250"), TaskQuantityStore.amount(Long.MAX_VALUE, Long.MAX_VALUE))
+        assertEquals(BigInteger("8507059173023461584739690778423250"), TaskQuantityStore.amount(BigInteger.valueOf(Long.MAX_VALUE), Long.MAX_VALUE))
         assertEquals("0.0001", TaskQuantityStore.format(1)); assertEquals("26.125", TaskQuantityStore.format(261250))
     }
     @Test fun templatesKeepQuantityWithoutCopyingCompletionAndCanOmitPrice() {
@@ -68,12 +68,12 @@ class TaskQuantityTest {
         }
         assertNull(repository.deleteJob("purge", version, job).conflict)
         val retained = repository.taskTemplates().single { it.id == template.id }
-        assertEquals(260000L, retained.quantityUnits); assertEquals(500L, retained.priceMinor); assertNull(retained.sourceJobName)
+        assertEquals(260000L, retained.quantityUnits); assertEquals(java.math.BigInteger.valueOf(500L), retained.priceMinor); assertNull(retained.sourceJobName)
         val nextJob = repository.createJob("Synthetic next tile job")
         val nextColumn = repository.boardSnapshot(nextJob).board.columns.first().id
         assertNull(repository.copyTaskTemplate("copy-after-purge", version, template.id, "next-copy", nextJob, nextColumn, true).conflict)
         val nextCopy = repository.boardSnapshot(nextJob).board.cards.single()
-        assertEquals(260000L, nextCopy.quantityUnits); assertEquals(500L, nextCopy.priceMinor); assertNull(nextCopy.completedMillis)
+        assertEquals(260000L, nextCopy.quantityUnits); assertEquals(java.math.BigInteger.valueOf(500L), nextCopy.priceMinor); assertNull(nextCopy.completedMillis)
     }
     @Test fun quantityChangesArePartOfReceiptIdentityAndInvalidQuantityDoesNotWrite() {
         val before = repository.boardSnapshot(job)

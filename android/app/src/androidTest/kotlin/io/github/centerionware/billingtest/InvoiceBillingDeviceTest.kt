@@ -205,7 +205,7 @@ class InvoiceBillingDeviceTest {
             waitFor("Edit task"); enter("Unit price (USD)", "5.00"); enter("Quantity", "26")
             reveal("Save task"); capture("quantity-editor"); click("Save task")
             until("Actual task editor did not commit quantity and unit price") {
-                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == 500L }
+                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) }
             }
             waitFor("Task board"); capture("quantity-board")
             click("Job report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")

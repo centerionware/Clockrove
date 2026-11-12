@@ -200,7 +200,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
             child: TextField(
               controller: _tax,
               readOnly: data?.archived ?? true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               maxLength: 32,
               decoration: InputDecoration(
                 labelText: 'Job tax (%)',

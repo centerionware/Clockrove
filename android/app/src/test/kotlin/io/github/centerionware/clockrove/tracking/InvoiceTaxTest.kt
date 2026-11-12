@@ -24,7 +24,7 @@ class InvoiceTaxTest {
         app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { midnight + 3600000 })
         // Fix the currency before job creation rather than relying on CI locale.
-        assertNull(repository.saveBusinessSettings("currency", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = 10000)).conflict)
+        assertNull(repository.saveBusinessSettings("currency", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(10000))).conflict)
         job = repository.createJob("Synthetic taxable job")
     }
     @After fun close() { repository.close() }
@@ -81,7 +81,7 @@ class InvoiceTaxTest {
         assertNull(defaultTax(100000).conflict)
         assertNull(repository.saveJobSettings("task-mode", version, repository.jobDetail(job).job.settings.copy(billingMode = "TASK")).conflict)
         val done = repository.boardSnapshot(job).board.columns.last().id
-        for (n in 1..2) assertNull(repository.saveCard("task-$n", version, BoardStore.Draft("task-$n", job, done, "Synthetic task $n", priceMinor = 3, currency = "USD")).conflict)
+        for (n in 1..2) assertNull(repository.saveCard("task-$n", version, BoardStore.Draft("task-$n", job, done, "Synthetic task $n", priceMinor = java.math.BigInteger.valueOf(3), currency = "USD")).conflict)
         assertNull(repository.prepareInvoice("prepare-tasks", version, "tasks", selection).conflict)
         val result = InvoiceStore.Snapshot.decode(repository.invoice("tasks").payload)
         assertEquals("0.06", result.subtotal); assertEquals("0.01", result.taxAmount); assertEquals("0.07", result.total)
@@ -89,7 +89,7 @@ class InvoiceTaxTest {
     @Test fun currencyChangeDoesNotReinterpretTaxOrIssuedMoney() {
         assertNull(defaultTax(75000).conflict)
         val original = invoice("first")
-        assertNull(repository.saveBusinessSettings("new-currency", version, repository.businessSnapshot().settings.copy(currency = "JPY", defaultHourlyMinor = 500)).conflict)
+        assertNull(repository.saveBusinessSettings("new-currency", version, repository.businessSnapshot().settings.copy(currency = "JPY", defaultHourlyMinor = java.math.BigInteger.valueOf(500))).conflict)
         assertEquals("USD", repository.jobDetail(job).job.settings.currency)
         assertEquals(original, InvoiceStore.Snapshot.decode(repository.invoice("first").payload))
         assertEquals(75000, repository.jobDetail(job).job.effectiveTaxUnits)

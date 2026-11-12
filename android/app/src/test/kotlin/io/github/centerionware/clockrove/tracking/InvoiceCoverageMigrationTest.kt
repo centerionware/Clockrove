@@ -55,6 +55,7 @@ class InvoiceCoverageMigrationTest {
         assertNull(InvoiceStore.Snapshot.decode(invoice.payload).taxRateUnits)
         assertNull(InvoiceStore.Snapshot.decode(invoice.payload).taxAmount)
         assertEquals(0, repo.businessSnapshot().settings.defaultTaxUnits)
+        assertEquals(java.math.BigInteger.valueOf(10000), repo.businessSnapshot().settings.defaultHourlyMinor)
         assertNull(repo.jobDetail("legacy-job").job.settings.taxUnits)
         assertEquals("legacy-widget-token", repo.widgetSnapshot(17).configuration.token)
         assertEquals("legacy-point", repo.locationPoints("legacy-work").single().id)
@@ -73,12 +74,16 @@ class InvoiceCoverageMigrationTest {
         }
         val repo = open()
         val card = repo.boardSnapshot("legacy-job").board.cards.single()
-        assertEquals(500L, card.priceMinor); assertEquals(10000L, card.quantityUnits)
+        assertEquals(java.math.BigInteger.valueOf(500L), card.priceMinor); assertEquals(10000L, card.quantityUnits)
         val template = repo.taskTemplates().single()
-        assertEquals(500L, template.priceMinor); assertEquals(10000L, template.quantityUnits)
+        assertEquals(java.math.BigInteger.valueOf(500L), template.priceMinor); assertEquals(10000L, template.quantityUnits)
         val task = repo.report(ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf("legacy-job"))).report.tasks.single()
-        assertEquals(10000L, task.quantityUnits); assertEquals(500L, task.priceMinor)
+        assertEquals(10000L, task.quantityUnits); assertEquals(java.math.BigInteger.valueOf(500L), task.priceMinor)
         assertEquals(originalPayload, repo.invoice("legacy-invoice").payload)
+        inspect { db ->
+            db.rawQuery("SELECT typeof(minor_text),minor_text FROM card_money WHERE id='tile'", null).use { it.moveToFirst(); assertEquals("text", it.getString(0)); assertEquals("500", it.getString(1)) }
+            db.rawQuery("SELECT minor_text FROM template_money WHERE id='template'", null).use { it.moveToFirst(); assertEquals("500", it.getString(0)) }
+        }
     }
     @Test fun ambiguousLegacyCoverageBlocksNewBillingWithoutInventingClaimsOrNumbers() {
         val repo = open()

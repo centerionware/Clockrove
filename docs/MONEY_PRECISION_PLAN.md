@@ -4,7 +4,7 @@ Owner priority, 2026-11-12; part of the current invoice milestone before merge.
 Read app_plan.md and plan_status.md. All dependency resolution, builds, tests and
 formatting run in GitHub Actions only.
 
-Current: totals use exact arbitrary-precision integers and money crosses the Dart
+Released / last fully validated source: totals use exact arbitrary-precision integers and money crosses the Dart
 channel as decimal strings. Rates/unit prices still use SQLite INTEGER / Kotlin
 Long and Dart rejects larger inputs. This prevents silent overflow but imposes a
 fixed-width capacity limit the owner wants removed. Issued invoice totals already
@@ -44,3 +44,12 @@ Payments/credits/void replacements and reports must use the same precision and
 conserve minor units; see INVOICE_LIFECYCLE_PLAN.md. A recurring decimal division
 cannot always have a finite decimal representation: hourly time uses an exact
 integer/rational numerator until the documented currency rounding boundary.
+
+Prepared checkpoint: native business/board/report fields now use BigInteger; four
+canonical TEXT records migrate/save settings, job rates, task prices and template
+prices. Wide legacy columns are NULL and never consulted ahead of an exact row.
+Money revisions and checked small-value fingerprints are explicit. Dart now accepts
+up to 1024 minor-unit input digits (text-size guard) rather than a Long bound;
+arithmetic totals can grow beyond that input length. Sources and tests are written,
+not validated. CI-generated decimal/rational lockfile and formatter correction are
+applied. Native, migration, receipt, rollback and actual UI checks still must pass.

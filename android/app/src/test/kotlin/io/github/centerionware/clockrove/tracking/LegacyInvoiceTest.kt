@@ -30,7 +30,7 @@ class LegacyInvoiceTest {
     @Before fun setup() {
         app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { now })
-        assertNull(repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = 10000)).conflict)
+        assertNull(repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(10000))).conflict)
         job = repository.createJob("Synthetic legacy review")
         val payload = InvoiceStore.Snapshot("INV-1000", midnight + hour, "MODERN", "USD", 2, "Synthetic company", "", "Synthetic customer", "", "Synthetic legacy review",
             "2026-11-01 · UTC", "Legacy source identity unavailable", "", "", "100.00", "", "Invoice INV-1000", "Synthetic legacy invoice",
@@ -52,7 +52,7 @@ class LegacyInvoiceTest {
     private fun task(id: String, done: Boolean = false) {
         val board = repository.boardSnapshot(job).board
         assertNull(repository.saveCard("save-$id-${sequence++}", version, BoardStore.Draft(id, job,
-            if (done) board.columns.last().id else board.columns.first().id, "Synthetic $id", priceMinor = 10000, currency = "USD")).conflict)
+            if (done) board.columns.last().id else board.columns.first().id, "Synthetic $id", priceMinor = java.math.BigInteger.valueOf(10000), currency = "USD")).conflict)
     }
     @Test fun reviewedHoursReserveOnlyCoveredTimeWithoutChangingOriginalOrAllocatingNumber() {
         work()

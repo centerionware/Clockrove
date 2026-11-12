@@ -41,6 +41,13 @@ Actions only, and verify migration, large amounts, tiny fractions and conservati
 
 ### Next concrete action
 
+Owner priority: complete the exact-money migration and its regressions described
+in docs/MONEY_PRECISION_PLAN.md, together with the real tax/quantity/legacy-invoice
+UI journey. Decimal 3.2.6 is selected; the application lockfile is generated only in
+Actions. Monetary rate/unit-price fields and persistence are now prepared as
+BigInteger/canonical TEXT, but their fresh validation is still required before merge.
+
+
 Priority settings fix #34 is delivered internally. Main c5e19d1 passed
 43131240701, and Play delivery 43132531984 accepted 0.1.0-internal.21.1 /
 216609104 at 2026-11-12 01:17:19 UTC. Original crash reproduction and the

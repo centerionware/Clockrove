@@ -11,9 +11,9 @@ internal object TaskQuantityStore {
         db.execSQL("CREATE TABLE task_quantities(card_id TEXT PRIMARY KEY NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,quantity_units INTEGER NOT NULL DEFAULT 10000 CHECK(typeof(quantity_units)='integer' AND quantity_units>0))")
         db.execSQL("CREATE TABLE template_quantities(template_id TEXT PRIMARY KEY NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,quantity_units INTEGER NOT NULL DEFAULT 10000 CHECK(typeof(quantity_units)='integer' AND quantity_units>0))")
     }
-    fun amount(priceMinor: Long, quantityUnits: Long): BigInteger {
-        require(priceMinor >= 0 && quantityUnits > 0) { "INVALID_TASK_QUANTITY" }
-        return BigInteger.valueOf(priceMinor).multiply(BigInteger.valueOf(quantityUnits))
+    fun amount(priceMinor: BigInteger, quantityUnits: Long): BigInteger {
+        require(priceMinor.signum() >= 0 && quantityUnits > 0) { "INVALID_TASK_QUANTITY" }
+        return priceMinor.multiply(BigInteger.valueOf(quantityUnits))
             .add(BigInteger.valueOf(5000)).divide(BigInteger.valueOf(one))
     }
     fun format(quantityUnits: Long): String {

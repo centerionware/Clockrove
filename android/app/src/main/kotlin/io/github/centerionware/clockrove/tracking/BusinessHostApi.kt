@@ -37,8 +37,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         fun integer(key: String): Long { val v = value[key]; require(v is Int || v is Long); return (v as Number).toLong() }
         fun int(key: String): Int { val v = integer(key); require(v in Int.MIN_VALUE..Int.MAX_VALUE); return v.toInt() }
         fun bool(key: String) = requireNotNull(value[key] as? Boolean)
-        fun money(key: String): Long? = nullable(key)?.let { require(it.matches(Regex("0|[1-9][0-9]{0,18}"))); requireNotNull(it.toLongOrNull()) }
-        fun quantity(): Long = if (!value.containsKey("quantityUnits")) TaskQuantityStore.one else requireNotNull(money("quantityUnits")).also { require(it > 0) }
+        fun money(key: String): java.math.BigInteger? = nullable(key)?.let(MoneyMath::parse)
+        fun quantity(): Long = if (!value.containsKey("quantityUnits")) TaskQuantityStore.one else requireNotNull(money("quantityUnits")).let { require(it.signum() > 0 && it <= java.math.BigInteger.valueOf(Long.MAX_VALUE)); it.toLong() }
         fun strings(key: String): List<String> = requireNotNull(value[key] as? List<*>).map { requireNotNull(it as? String) }
     }
     private fun historyEntry(entry: SessionHistoryStore.Entry) = mapOf(

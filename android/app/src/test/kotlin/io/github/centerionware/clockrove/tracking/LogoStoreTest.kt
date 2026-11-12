@@ -71,7 +71,7 @@ class LogoStoreTest {
     }
     @Test fun preparedInvoiceRetainsOriginalLogoWhenCompanyChangesOrRemovesIt() {
         val original = asset(0xff176b55.toInt()); apply("first-logo", original)
-        repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = 10000))
+        repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(10000)))
         repository.execute(TimerRepository.Command("start", version, TimerRepository.Action.START, job, 1793491200000, "UTC", 0, TimerRepository.Origin.MANUAL))
         repository.execute(TimerRepository.Command("stop", version, TimerRepository.Action.STOP, null, 1793494800000, "UTC", 0, TimerRepository.Origin.MANUAL))
         repository.prepareInvoice("invoice", version, "invoice", ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf(job)))

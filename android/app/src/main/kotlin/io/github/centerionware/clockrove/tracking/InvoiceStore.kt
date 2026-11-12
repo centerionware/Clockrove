@@ -45,10 +45,10 @@ internal object InvoiceStore {
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
         return if (total.mode == "TASK") report.tasks.map { task ->
             val price = task.priceMinor?.takeIf { task.currency == total.currency }
-            Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(BigInteger.valueOf(it), digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
+            Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(it, digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
                 price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString())
         }
-        else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${total.hourlyMinor?.let { amount(BigInteger.valueOf(it), digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
+        else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${total.hourlyMinor?.let { amount(it, digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
             total.amountMinor?.let { amount(it, digits) }.orEmpty())) + report.intervals.map {
                 Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
             }

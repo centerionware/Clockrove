@@ -12,3 +12,12 @@ become history. Revisions aid auditing but are not tamper-proof.
 
 No server, accounts, analytics, task timers or subscriptions belong in launch scope.
 See app_plan.md for contracts, recovery semantics and the full acceptance matrix.
+
+Money precision: decimal strings cross Flutter/native channels; Dart decimal 3.2.6
+and Kotlin BigInteger/BigDecimal perform exact arithmetic. In unreleased schema 7,
+settings_money, job_money, card_money and template_money store canonical TEXT with
+validation and revisions. These exact records are authoritative; old INTEGER
+columns retain only checked representable compatibility values. Invoice snapshots
+freeze exact line quantities/unit prices and totals; rounding occurs only once at
+the defined currency boundaries. Backup/merge must carry exact monetary records by
+stable entity identity. This migration remains under Actions validation.

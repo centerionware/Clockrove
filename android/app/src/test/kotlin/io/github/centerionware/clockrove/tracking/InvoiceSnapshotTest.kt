@@ -20,7 +20,7 @@ class InvoiceSnapshotTest {
     @Before fun setup() {
         val app = RuntimeEnvironment.getApplication(); app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { 1793534400000 }); job = repository.createJob("Synthetic invoice job")
-        repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = 12345, companyName = "Synthetic Co", companyEmail = "billing@example.test"))
+        repository.saveBusinessSettings("settings", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(12345), companyName = "Synthetic Co", companyEmail = "billing@example.test"))
         repository.saveCustomer("customer", version, BusinessStore.Customer("customer", "Synthetic Customer", "recipient@example.test", address = "Synthetic address"))
         repository.saveJobSettings("job", version, repository.jobDetail(job).job.settings.copy(customerId = "customer"))
         repository.execute(TimerRepository.Command("start", version, TimerRepository.Action.START, job, 1793491200000, "UTC", 0, TimerRepository.Origin.MANUAL))
@@ -41,7 +41,7 @@ class InvoiceSnapshotTest {
     @Test fun editsNeverRewritePreparedSnapshotAndRetryDoesNotAllocateAnotherNumber() {
         val originalVersion = version; val first = repository.prepareInvoice("same", originalVersion, "invoice", selection)
         val original = repository.invoice("invoice").payload
-        repository.saveBusinessSettings("changed", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = 999, companyName = "Changed", invoiceStyle = "CLASSIC"))
+        repository.saveBusinessSettings("changed", version, repository.businessSnapshot().settings.copy(defaultHourlyMinor = java.math.BigInteger.valueOf(999), companyName = "Changed", invoiceStyle = "CLASSIC"))
         repository.saveCustomer("contact-changed", version, BusinessStore.Customer("customer", "Changed Customer", "changed@example.test"))
         repository.saveJobSettings("job-changed", version, repository.jobDetail(job).job.settings.copy(name = "Changed job"))
         assertEquals(first, repository.prepareInvoice("same", originalVersion, "invoice", selection))
@@ -59,7 +59,7 @@ class InvoiceSnapshotTest {
         val board = repository.boardSnapshot(job).board
         repository.saveCard("task", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = null, currency = board.currency))
         assertEquals("TASK_PRICES_REQUIRED", prepare("missing-price").conflict)
-        repository.saveCard("price", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = 0, currency = board.currency))
+        repository.saveCard("price", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = java.math.BigInteger.valueOf(0), currency = board.currency))
         assertNull(prepare("free").conflict)
         val data = InvoiceStore.Snapshot.decode(repository.invoice("invoice").payload)
         assertEquals("INV-1000", data.number); assertEquals(InvoiceStore.amount(java.math.BigInteger.ZERO, data.digits), data.total)

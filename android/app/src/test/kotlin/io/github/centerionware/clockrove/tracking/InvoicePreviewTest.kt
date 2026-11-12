@@ -22,7 +22,7 @@ class InvoicePreviewTest {
     @Before fun setup() {
         app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { 1793494800000 })
-        assertNull(repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = 10000, defaultTaxUnits = 75000)).conflict)
+        assertNull(repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(10000), defaultTaxUnits = 75000)).conflict)
         job = repository.createJob("Synthetic invoice preview")
     }
     @After fun close() { repository.close() }

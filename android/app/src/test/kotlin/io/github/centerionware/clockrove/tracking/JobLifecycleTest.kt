@@ -80,7 +80,7 @@ class JobLifecycleTest {
         val board = repository.boardSnapshot(job).board
         repository.saveCustomer("customer", version, BusinessStore.Customer("customer", "Synthetic retained customer", "synthetic@example.test"))
         repository.saveJobSettings("assign", version, repository.jobDetail(job).job.settings.copy(customerId = "customer"))
-        repository.saveCard("card", version, BoardStore.Draft("card", job, board.columns.last().id, "Synthetic reusable tile task", "Synthetic reusable details", "2026-11-30", true, 12500, board.currency))
+        repository.saveCard("card", version, BoardStore.Draft("card", job, board.columns.last().id, "Synthetic reusable tile task", "Synthetic reusable details", "2026-11-30", true, java.math.BigInteger.valueOf(12500), board.currency))
         val template = repository.taskTemplates().single()
         inspect { it.execSQL("INSERT INTO invoices VALUES(?,?,?,?,?,?,?,?)", arrayOf<Any?>("invoice", job, "customer", "1", now, "Synthetic private invoice", byteArrayOf(1,2,3), null)) }
         assertNull(archive().conflict); now += JobLifecycleStore.retentionMillis; assertNull(remove().conflict)
@@ -99,7 +99,7 @@ class JobLifecycleTest {
         val other = repository.createJob("Synthetic new job"); val fresh = repository.boardSnapshot(other)
         assertNull(repository.copyTaskTemplate("copy", fresh.version, template.id, "fresh", other, fresh.board.columns.first().id, true).conflict)
         val copied = repository.boardSnapshot(other).board.cards.single()
-        assertNull(copied.completedMillis); assertNull(copied.dueDate); assertEquals(12500L, copied.priceMinor); assertNull(repository.snapshot().running)
+        assertNull(copied.completedMillis); assertNull(copied.dueDate); assertEquals(java.math.BigInteger.valueOf(12500L), copied.priceMinor); assertNull(repository.snapshot().running)
     }
     @Test fun deletingJobDoesNotRecreateAUserRemovedTemplate() {
         val board = repository.boardSnapshot(job).board

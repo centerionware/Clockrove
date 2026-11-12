@@ -175,8 +175,8 @@ class SessionHistoryTest {
     }
     @Test fun preparedInvoiceRemainsImmutableWhenSourceSessionIsCorrectedOrDeleted() {
         val start = 1793491200000L
-        repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = 10000))
-        repository.saveJobSettings("currency", version, repository.jobDetail(job).job.settings.copy(currency = "USD", hourlyRateMinor = 10000))
+        repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(10000)))
+        repository.saveJobSettings("currency", version, repository.jobDetail(job).job.settings.copy(currency = "USD", hourlyRateMinor = java.math.BigInteger.valueOf(10000)))
         assertNull(create(draft(start = start, end = start + 3600000)).conflict)
         val selection = ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf(job))
         assertNull(repository.prepareInvoice("prepare", version, "invoice", selection).conflict)

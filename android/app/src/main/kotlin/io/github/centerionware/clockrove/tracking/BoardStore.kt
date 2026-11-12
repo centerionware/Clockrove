@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove.tracking
 
 import android.database.sqlite.SQLiteDatabase
 import java.util.Currency
+import java.math.BigInteger
 import java.util.UUID
 
 /** SQL helpers called only inside the native repository's serialized boundary. */
@@ -9,10 +10,10 @@ internal object BoardStore {
     data class Column(val id: String, val jobId: String, val name: String, val position: Int, val completed: Boolean)
     data class Card(val id: String, val jobId: String, val columnId: String, val title: String, val description: String,
         val dueDate: String?, val position: Int, val completedMillis: Long?, val billable: Boolean,
-        val priceMinor: Long?, val currency: String, val templateId: String?, val quantityUnits: Long = TaskQuantityStore.one)
+        val priceMinor: BigInteger?, val currency: String, val templateId: String?, val quantityUnits: Long = TaskQuantityStore.one)
     data class Draft(val id: String, val jobId: String, val columnId: String, val title: String, val description: String = "",
-        val dueDate: String? = null, val billable: Boolean = true, val priceMinor: Long? = null, val currency: String, val quantityUnits: Long = TaskQuantityStore.one)
-    data class Template(val id: String, val title: String, val description: String, val priceMinor: Long?, val currency: String, val sourceJobName: String?, val quantityUnits: Long = TaskQuantityStore.one)
+        val dueDate: String? = null, val billable: Boolean = true, val priceMinor: BigInteger? = null, val currency: String, val quantityUnits: Long = TaskQuantityStore.one)
+    data class Template(val id: String, val title: String, val description: String, val priceMinor: BigInteger?, val currency: String, val sourceJobName: String?, val quantityUnits: Long = TaskQuantityStore.one)
     data class Board(val jobId: String, val name: String, val currency: String, val archived: Boolean, val columns: List<Column>, val cards: List<Card>)
     val cardColumns = listOf("id", "job_id", "column_id", "title", "description", "due_date", "position", "completed_ms", "billable", "price_minor", "currency", "template_id")
     val templateColumns = listOf("id", "title", "description", "price_minor", "currency", "source_job_id", "source_card_id")
@@ -24,15 +25,15 @@ internal object BoardStore {
     fun columns(db: SQLiteDatabase, jobId: String): List<Column> = db.rawQuery("SELECT id,job_id,name,position,completed FROM kanban_columns WHERE job_id=? ORDER BY position,id", arrayOf(jobId)).use { rows ->
         buildList { while (rows.moveToNext()) add(Column(rows.getString(0), rows.getString(1), rows.getString(2), rows.getInt(3), rows.getInt(4) != 0)) }
     }
-    fun cards(db: SQLiteDatabase, jobId: String): List<Card> = db.rawQuery("SELECT ${cardColumns.joinToString(",") { "c.$it" }},COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id WHERE c.job_id=? ORDER BY c.column_id,c.position,c.id", arrayOf(jobId)).use { rows ->
+    fun cards(db: SQLiteDatabase, jobId: String): List<Card> = db.rawQuery("SELECT ${cardColumns.joinToString(",") { if (it == "price_minor") "CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(c.price_minor AS TEXT) END" else "c.$it" }},COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id LEFT JOIN card_money m ON m.id=c.id WHERE c.job_id=? ORDER BY c.column_id,c.position,c.id", arrayOf(jobId)).use { rows ->
         buildList { while (rows.moveToNext()) add(Card(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4),
             if (rows.isNull(5)) null else rows.getString(5), rows.getInt(6), if (rows.isNull(7)) null else rows.getLong(7), rows.getInt(8) != 0,
-            if (rows.isNull(9)) null else rows.getLong(9), rows.getString(10), if (rows.isNull(11)) null else rows.getString(11), rows.getLong(12))) }
+            if (rows.isNull(9)) null else MoneyMath.parse(rows.getString(9)), rows.getString(10), if (rows.isNull(11)) null else rows.getString(11), rows.getLong(12))) }
     }
     fun templates(db: SQLiteDatabase, search: String = ""): List<Template> = db.rawQuery(
-        "SELECT t.id,t.title,t.description,t.price_minor,t.currency,j.name,COALESCE(q.quantity_units,10000) FROM task_templates t LEFT JOIN jobs j ON j.id=t.source_job_id LEFT JOIN template_quantities q ON q.template_id=t.id WHERE t.title LIKE ? OR t.description LIKE ? ORDER BY t.title,t.id",
+        "SELECT t.id,t.title,t.description,CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(t.price_minor AS TEXT) END,t.currency,j.name,COALESCE(q.quantity_units,10000) FROM task_templates t LEFT JOIN jobs j ON j.id=t.source_job_id LEFT JOIN template_quantities q ON q.template_id=t.id LEFT JOIN template_money m ON m.id=t.id WHERE t.title LIKE ? OR t.description LIKE ? ORDER BY t.title,t.id",
         arrayOf("%$search%", "%$search%")).use { rows -> buildList { while (rows.moveToNext()) add(Template(rows.getString(0), rows.getString(1), rows.getString(2),
-            if (rows.isNull(3)) null else rows.getLong(3), rows.getString(4), if (rows.isNull(5)) null else rows.getString(5), rows.getLong(6))) } }
+            if (rows.isNull(3)) null else MoneyMath.parse(rows.getString(3)), rows.getString(4), if (rows.isNull(5)) null else rows.getString(5), rows.getLong(6))) } }
     private fun available(db: SQLiteDatabase, jobId: String) = db.rawQuery("SELECT id FROM jobs WHERE id=? AND archived=0", arrayOf(jobId)).use { it.moveToFirst() }
     private fun snapshotCards(db: SQLiteDatabase, jobId: String, at: Long) = RevisionStore.snapshotRows(db, "kanban_cards", "card", cardColumns, at, "job_id", "job_id=?", arrayOf(jobId))
     private fun snapshotColumns(db: SQLiteDatabase, jobId: String, at: Long) = RevisionStore.snapshotRows(db, "kanban_columns", "column", BusinessSchema.columnColumns, at, "job_id", "job_id=?", arrayOf(jobId))
@@ -94,7 +95,7 @@ internal object BoardStore {
         if (value.quantityUnits <= 0) return "INVALID_TASK_QUANTITY"
         if (!available(db, value.jobId)) return "JOB_UNAVAILABLE"
         if (value.id.isBlank() || value.title.isBlank() || value.title.length > 240 || value.description.length > 20000 || !validDate(value.dueDate) ||
-            (value.priceMinor != null && value.priceMinor < 0)) return "INVALID_TASK"
+            !MoneyMath.valid(value.priceMinor)) return "INVALID_TASK"
         val currency = db.rawQuery("SELECT currency FROM jobs WHERE id=?", arrayOf(value.jobId)).use { it.moveToFirst(); it.getString(0) }
         if (value.currency != currency || try { Currency.getInstance(value.currency).defaultFractionDigits < 0 } catch (_: IllegalArgumentException) { true }) return "CURRENCY_MISMATCH"
         val destination = columns(db, value.jobId).firstOrNull { it.id == value.columnId } ?: return "COLUMN_UNAVAILABLE"
@@ -105,15 +106,17 @@ internal object BoardStore {
         val position = if (previous?.columnId == destination.id) previous.position else ordered(db, destination.id).size
         val completion = if (destination.completed) previous?.completedMillis ?: at else null
         if (previous?.templateId == null) db.execSQL("INSERT INTO task_templates(id,title,description,price_minor,currency,source_job_id,source_card_id) VALUES(?,?,?,?,?,?,?)",
-            arrayOf<Any?>(templateId, value.title.trim(), value.description, value.priceMinor, value.currency, value.jobId, value.id))
+            arrayOf<Any?>(templateId, value.title.trim(), value.description, MoneyMath.legacy(value.priceMinor), value.currency, value.jobId, value.id))
         else db.execSQL("UPDATE task_templates SET title=?,description=?,price_minor=?,currency=?,source_job_id=?,source_card_id=? WHERE id=?",
-            arrayOf<Any?>(value.title.trim(), value.description, value.priceMinor, value.currency, value.jobId, value.id, templateId))
+            arrayOf<Any?>(value.title.trim(), value.description, MoneyMath.legacy(value.priceMinor), value.currency, value.jobId, value.id, templateId))
         // UPDATE preserves references; REPLACE of a card could violate future dependent rows.
         if (previous == null) db.execSQL("INSERT INTO kanban_cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", arrayOf<Any?>(value.id, value.jobId, value.columnId,
-            value.title.trim(), value.description, value.dueDate, position, completion, if (value.billable) 1 else 0, value.priceMinor, value.currency, templateId))
+            value.title.trim(), value.description, value.dueDate, position, completion, if (value.billable) 1 else 0, MoneyMath.legacy(value.priceMinor), value.currency, templateId))
         else db.execSQL("UPDATE kanban_cards SET column_id=?,title=?,description=?,due_date=?,position=?,completed_ms=?,billable=?,price_minor=?,currency=?,template_id=? WHERE id=?",
-            arrayOf<Any?>(value.columnId, value.title.trim(), value.description, value.dueDate, position, completion, if (value.billable) 1 else 0, value.priceMinor, value.currency, templateId, value.id))
+            arrayOf<Any?>(value.columnId, value.title.trim(), value.description, value.dueDate, position, completion, if (value.billable) 1 else 0, MoneyMath.legacy(value.priceMinor), value.currency, templateId, value.id))
         TaskQuantityStore.save(db, value.id, value.jobId, templateId, value.quantityUnits, at)
+        MoneyStore.save(db, "card_money", value.id, value.jobId, value.priceMinor, at)
+        MoneyStore.save(db, "template_money", templateId, null, value.priceMinor, at)
         previous?.takeIf { it.columnId != value.columnId }?.let { positions(db, ordered(db, it.columnId)) }
         RevisionStore.snapshotRows(db, "task_templates", "template", templateColumns, at, where = "id=?", args = arrayOf(templateId))
         snapshotCards(db, value.jobId, at)
@@ -138,6 +141,7 @@ internal object BoardStore {
         positions(db, ordered(db, card.columnId))
         RevisionStore.record(db, "card", id, jobId, mapOf("id" to id, "job_id" to jobId), at, deleted = true)
         TaskQuantityStore.removeCard(db, id, jobId, at)
+        MoneyStore.remove(db, "card_money", id, jobId, at)
         snapshotCards(db, jobId, at)
         return null
     }
@@ -154,6 +158,7 @@ internal object BoardStore {
         db.execSQL("UPDATE kanban_cards SET template_id=NULL WHERE template_id=?", arrayOf(id))
         db.execSQL("DELETE FROM task_templates WHERE id=?", arrayOf(id))
         TaskQuantityStore.removeTemplate(db, id, at)
+        MoneyStore.remove(db, "template_money", id, null, at)
         RevisionStore.record(db, "template", id, null, mapOf("id" to id), at, deleted = true)
         jobs.forEach { snapshotCards(db, it, at) }
         return null

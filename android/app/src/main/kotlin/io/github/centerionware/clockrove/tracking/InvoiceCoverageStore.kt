@@ -42,6 +42,7 @@ internal object InvoiceCoverageStore {
         }
         BillingTaxStore.install(db, at)
         TaskQuantityStore.install(db)
+        MoneyStore.install(db, at)
     }
 
     fun preview(db: SQLiteDatabase, source: ReportStore.Report): Preview {

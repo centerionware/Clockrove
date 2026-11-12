@@ -574,7 +574,8 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: 'Unit price (${board.currency})',
-                          helperText: 'Blank: price not set. 0: explicitly free.',
+                          helperText:
+                              'Blank: price not set. 0: explicitly free.',
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,

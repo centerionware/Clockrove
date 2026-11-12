@@ -17,6 +17,9 @@ String newBusinessId() => List.generate(
 String? parseMoney(String input, int digits) {
   final value = input.trim();
   if (value.isEmpty) return null;
+  if (value.length > 1029) {
+    throw const FormatException('Amount is too long.');
+  }
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
     throw const FormatException(
       'Enter a positive decimal amount, or leave blank.',
@@ -30,8 +33,8 @@ String? parseMoney(String input, int digits) {
   // Precision was validated above: shifting produces an exact integer, so
   // toBigInt cannot discard a fractional minor unit.
   final minor = Decimal.parse(value).shift(digits).toBigInt();
-  if (minor > BigInt.parse('9223372036854775807')) {
-    throw const FormatException('Amount is too large.');
+  if (minor.toString().length > 1024) {
+    throw const FormatException('Amount is too long.');
   }
   return minor.toString();
 }

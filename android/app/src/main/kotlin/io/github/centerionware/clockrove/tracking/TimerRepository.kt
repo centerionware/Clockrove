@@ -402,7 +402,7 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun saveCard(id: String, version: Long, value: BoardStore.Draft): Outcome =
         boardChange(id, version, "CARD_SAVE", listOf(value.id, value.jobId, value.columnId, value.title, value.description, value.dueDate,
-            value.billable, value.priceMinor, value.currency) + (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits))) { BoardStore.saveCard(it, value, wallClock()) }
+            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) + (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits))) { BoardStore.saveCard(it, value, wallClock()) }
     @Synchronized
     internal fun moveCard(id: String, version: Long, jobId: String, cardId: String, destination: String, position: Int): Outcome =
         boardChange(id, version, "CARD_MOVE", listOf(jobId, cardId, destination, position)) { BoardStore.moveCard(it, jobId, cardId, destination, position, wallClock()) }

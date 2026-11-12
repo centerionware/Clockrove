@@ -28,9 +28,9 @@ class InvoiceCoverageTest {
         app.deleteDatabase("clockrove.db")
         repository = TimerRepository(app, wallClock = { now })
         job = repository.createJob("Synthetic covered work")
-        assertNull(repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = 10000)).conflict)
+        assertNull(repository.saveBusinessSettings("rate", version, repository.businessSnapshot().settings.copy(currency = "USD", defaultHourlyMinor = java.math.BigInteger.valueOf(10000))).conflict)
         // Existing jobs retain creation currency, so set their explicit rate.
-        assertNull(repository.saveJobSettings("job-rate", version, repository.jobDetail(job).job.settings.copy(hourlyRateMinor = 10000)).conflict)
+        assertNull(repository.saveJobSettings("job-rate", version, repository.jobDetail(job).job.settings.copy(hourlyRateMinor = java.math.BigInteger.valueOf(10000))).conflict)
     }
     @After fun close() { repository.close() }
     private fun work(id: String, start: Long = midnight, end: Long = start + hour) {
@@ -67,12 +67,12 @@ class InvoiceCoverageTest {
     @Test fun billedTasksStayExcludedAfterPriceCompletionAndTitleEdits() {
         assertNull(repository.saveJobSettings("task-mode", version, repository.jobDetail(job).job.settings.copy(billingMode = "TASK")).conflict)
         val board = repository.boardSnapshot(job).board
-        val task = BoardStore.Draft("task", job, board.columns.last().id, "Synthetic task", priceMinor = 2500, currency = board.currency)
+        val task = BoardStore.Draft("task", job, board.columns.last().id, "Synthetic task", priceMinor = java.math.BigInteger.valueOf(2500), currency = board.currency)
         assertNull(repository.saveCard("task", version, task).conflict)
         // Completion time comes from the injected native clock, within selection.
         val selected = selection.copy(lastDate = "2026-11-02")
         assertNull(prepare("task-first", selected).conflict)
-        assertNull(repository.saveCard("task-edit", version, task.copy(title = "Changed", priceMinor = 9999)).conflict)
+        assertNull(repository.saveCard("task-edit", version, task.copy(title = "Changed", priceMinor = java.math.BigInteger.valueOf(9999))).conflict)
         assertEquals("NO_BILLABLE_ITEMS", prepare("task-again", selected).conflict)
         assertEquals(1001L, number())
         val template = repository.taskTemplates().single()
@@ -81,7 +81,7 @@ class InvoiceCoverageTest {
     }
     @Test fun changedRatesDoNotRebillOldHoursAndNewWorkUsesTheNewRate() {
         work("old"); assertNull(prepare("first").conflict)
-        assertNull(repository.saveJobSettings("changed-rate", version, repository.jobDetail(job).job.settings.copy(hourlyRateMinor = 20000)).conflict)
+        assertNull(repository.saveJobSettings("changed-rate", version, repository.jobDetail(job).job.settings.copy(hourlyRateMinor = java.math.BigInteger.valueOf(20000))).conflict)
         work("new", midnight + hour)
         assertNull(prepare("second").conflict)
         assertEquals("200.00", InvoiceStore.Snapshot.decode(repository.invoice("second").payload).total)
