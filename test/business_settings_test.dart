@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -16,8 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
+  _Timer([this.events = const Stream.empty()]);
+  final Stream<int> events;
   @override
-  Stream<int> get committedVersions => const Stream.empty();
+  Stream<int> get committedVersions => events;
 }
 
 class _LogoApi extends LogoApi {
@@ -46,12 +50,13 @@ class _SettingsApi extends BusinessSettingsApi {
     name: 'Synthetic Customer',
     email: 'customer@example.test',
   );
+  Future<TimerOutcome> Function()? onSave;
   CompanySettings? savedSettings;
   Customer? savedCustomer;
   JobPreferences? savedJob;
   @override
   Future<BusinessSettings> read() async =>
-      const BusinessSettings(1, company, [contact]);
+      BusinessSettings(savedSettings == null ? 1 : 2, savedSettings ?? company, [contact]);
   @override
   Future<JobPreferences> job(String id) async => JobPreferences(
     version: 1,
@@ -73,7 +78,7 @@ class _SettingsApi extends BusinessSettingsApi {
     CompanySettings s,
   ) async {
     savedSettings = s;
-    return const TimerOutcome(2, null);
+    return onSave == null ? const TimerOutcome(2, null) : await onSave!();
   }
 
   @override
@@ -96,6 +101,7 @@ Future<void> _show(
   bool dark = false,
   double scale = 1,
   Key? boundary,
+  TimerApi? timer,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
@@ -104,7 +110,7 @@ Future<void> _show(
         overrides: [
           businessSettingsApiProvider.overrideWithValue(api),
           logoApiProvider.overrideWithValue(_LogoApi()),
-          timerApiProvider.overrideWithValue(_Timer()),
+          timerApiProvider.overrideWithValue(timer ?? _Timer()),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -142,6 +148,27 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('main settings survives a committed native version event before its save reply', (tester) async {
+    final events = StreamController<int>();
+    addTearDown(events.close);
+    final reply = Completer<TimerOutcome>();
+    final api = _SettingsApi()..onSave = () {
+      events.add(2);
+      return reply.future;
+    };
+    await _show(tester, api, const SettingsScreen(), timer: _Timer(events.stream));
+    await tester.enterText(find.widgetWithText(TextField, 'Default hourly rate (USD)'), '123.45');
+    await _reveal(tester, 'Save settings');
+    await tester.tap(find.text('Save settings'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Settings'), findsOneWidget);
+    expect(api.savedSettings!.defaultHourlyMinor, '12345');
+    reply.complete(const TimerOutcome(2, null));
+    await tester.pumpAndSettle();
+    expect(find.text('Open'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'global hourly amount persists as exact minor units with company templates',
     (tester) async {

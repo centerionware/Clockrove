@@ -9,6 +9,7 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.tracking.TimerRepository
+import io.github.centerionware.clockrove.tracking.InvoiceEmailTemplate
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,6 +69,22 @@ class SettingsSaveDeviceTest {
             SystemClock.sleep(120)
         }
         waitFor(label)
+    }
+    @Test fun templatesInitializeValidateAndExpandUsingAndroidRegex() {
+        val body = "Hello {customer_name},\nInvoice {invoice_number}: {amount} {currency}\n{company_name}"
+        assertTrue(InvoiceEmailTemplate.valid("Invoice {invoice_number}", true))
+        assertTrue(InvoiceEmailTemplate.valid(body, false))
+        assertFalse(InvoiceEmailTemplate.valid("{unknown}", false))
+        assertFalse(InvoiceEmailTemplate.valid("Invoice\n{invoice_number}", true))
+        val values = mapOf("customer_name" to "Synthetic \$1 \\ customer", "invoice_number" to "INV-000001",
+            "amount" to "125.00", "currency" to "USD", "company_name" to "Synthetic company {customer_name}")
+        assertEquals("Hello Synthetic \$1 \\ customer,\nInvoice INV-000001: 125.00 USD\nSynthetic company {customer_name}",
+            InvoiceEmailTemplate.expand(body, values, false))
+        val repository = TimerRepository.get(instrumentation.targetContext)
+        val before = repository.businessSnapshot()
+        val settings = before.settings.copy(companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
+        assertNull(repository.saveBusinessSettings("actual-android-template-save", before.version, settings).conflict)
+        assertEquals(settings, repository.businessSnapshot().settings)
     }
     @Test fun mainSettingsSaveSurvivesNativeCommitAndCanBeOpenedAgain() {
         val app = instrumentation.targetContext

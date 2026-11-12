@@ -109,7 +109,9 @@ internal object BusinessStore {
 /** Literal allowlisted substitution. Values are never evaluated as template syntax. */
 internal object InvoiceEmailTemplate {
     val placeholders = setOf("company_name", "customer_name", "job_name", "invoice_number", "amount", "currency")
-    private val token = Regex("\\{([^{}]*)}")
+    // Android's ICU regex engine rejects an unescaped literal right brace.
+    // A failure here is an initializer Error, outside ordinary request errors.
+    private val token = Regex("\\{([^{}]*)\\}")
     fun valid(value: String, subject: Boolean): Boolean = value.length <= (if (subject) 500 else 20000) &&
         !value.contains('\u0000') && (!subject || !value.any { it == '\r' || it == '\n' }) &&
         token.findAll(value).all { it.groupValues[1] in placeholders }

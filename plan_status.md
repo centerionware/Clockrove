@@ -1639,3 +1639,12 @@ unreleased widget schema. Added an actual Flutter/native-channel/SQLite Android
 settings-save/reopen journey and synthetic-emulator logcat capture to reproduce
 the process failure. No fix or reproduction is claimed before Actions evidence;
 no local builds/tests are permitted or performed.
+
+Source audit found InvoiceEmailTemplate's singleton initializer compiled a regex
+with an unescaped literal right brace. Android libcore explicitly documents that
+its ICU regex backend requires escaping it; JVM/Robolectric accepted the old
+pattern. Main Settings invokes this initializer; job settings do not. Escape the
+brace and add actual Android validation/expansion/native-save coverage, retaining
+the full actual Flutter save/reopen test. The baseline diagnostic run remains
+live to capture the original failure; do not claim device reproduction/fix yet.
+Reference: https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/util/regex/Pattern.java
