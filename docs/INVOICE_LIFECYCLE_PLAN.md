@@ -281,6 +281,12 @@ Quote navigation supports draft/issued/accepted/declined/expired filters, revisi
 history and linked job/invoices. Issued financial documents remain available when
 jobs are archived; deletion must preserve clear provenance and retained history.
 
+The concrete remaining conversion policy and acceptance matrix are in
+[QUOTE_ACTUAL_WORK_PLAN.md](QUOTE_ACTUAL_WORK_PLAN.md). It specifies explicit
+actual-source selection, accepted/current price/tax/party review, shared claims,
+retained provenance and correction-chain behavior; these remain implementation
+and validation requirements.
+
 ## Kanban comments, supplies and actual costs
 
 Add chronological comments to task cards, with created/edited timestamps and

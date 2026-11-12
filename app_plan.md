@@ -2088,3 +2088,11 @@ failed-read preservation. Quote refresh/page callbacks also now return void from
 setState. Fresh Actions compilation/formatting/tests/device evidence is required;
 these source changes do not complete the quote milestone. No VM tests/builds or
 formatters were used.
+
+### Quote actual-work billing handoff refined
+
+Added docs/QUOTE_ACTUAL_WORK_PLAN.md with concrete remaining entry/review, exact
+actual-source selection, accepted/current price/tax/party policies, shared native
+claims, retained original-issue provenance and replacement-chain semantics. Its
+acceptance matrix includes real UI/storage/PDF evidence and failure/replay/rollback
+cases. This closes a design ambiguity, not implementation or milestone acceptance.

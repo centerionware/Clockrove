@@ -2835,3 +2835,7 @@ source, pending fresh Actions. Invoice-list refresh assertion is being repaired
 in maintenance #41 (b0b84b8), with matching quote callback fixes here.
 Actual-work invoice preparation with accepted-price/tax review and durable quote
 provenance is the next dependency; physical acceptance remains separate.
+
+Quote actual-work preparation remains open. Its detailed policy and required
+evidence now live in docs/QUOTE_ACTUAL_WORK_PLAN.md, linked from the lifecycle
+plan. Never infer worked hours/completion or a new invoice from planning alone.
