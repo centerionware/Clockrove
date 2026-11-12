@@ -72,13 +72,34 @@ class WidgetHostDeviceTest {
             }
             TimerWidget.refreshAll(app)
             until("Compact Combined must omit task list") { view!!.findViewById<View>(R.id.widget_action) != null && view!!.findViewById<View>(R.id.widget_tasks) == null }
-            instrumentation.runOnMainSync {
-                val density = activity.resources.displayMetrics.density
-                view!!.layoutParams = FrameLayout.LayoutParams((300 * density).toInt(), (340 * density).toInt())
+            assertEquals("Native due-task source must already contain all fixture tasks", 30, repository.widgetTasks(id).items.size)
+            repeat(3) { cycle ->
+                instrumentation.runOnMainSync {
+                    val density = activity.resources.displayMetrics.density
+                    view!!.layoutParams = FrameLayout.LayoutParams((300 * density).toInt(), (340 * density).toInt())
+                }
+                manager.updateAppWidgetOptions(id, options(300, 340))
+                TimerWidget.refreshAll(app)
+                var lastCount = Int.MIN_VALUE
+                until("Expanded Combined must bind all 30 tasks through RemoteViewsService, resize $cycle") {
+                    val list = view!!.findViewById<ListView>(R.id.widget_tasks)
+                    val count = list?.count ?: -1
+                    if (count != lastCount) {
+                        android.util.Log.i("ClockroveWidgetTest", "Expanded resize=$cycle count=$count attached=${list?.isAttachedToWindow} height=${list?.height} adapter=${list?.adapter?.javaClass?.simpleName}")
+                        lastCount = count
+                    }
+                    count == 30
+                }
+                if (cycle < 2) {
+                    instrumentation.runOnMainSync {
+                        val density = activity.resources.displayMetrics.density
+                        view!!.layoutParams = FrameLayout.LayoutParams((132 * density).toInt(), (56 * density).toInt())
+                    }
+                    manager.updateAppWidgetOptions(id, options(132, 56))
+                    TimerWidget.refreshAll(app)
+                    until("Compact Combined must remove the collection on resize $cycle") { view!!.findViewById<View>(R.id.widget_tasks) == null }
+                }
             }
-            manager.updateAppWidgetOptions(id, options(300, 340))
-            TimerWidget.refreshAll(app)
-            until("Expanded Combined must bind all 30 tasks through RemoteViewsService") { view!!.findViewById<ListView>(R.id.widget_tasks)?.count == 30 }
             var nextScrollRequest = 0L
             until("Task collection must load and scroll to its final row") {
                 val list = view!!.findViewById<ListView>(R.id.widget_tasks)
