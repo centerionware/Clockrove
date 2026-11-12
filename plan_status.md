@@ -2360,3 +2360,14 @@ rollback, exact wide/split money, source ownership, hourly intervals, legacy and
 retained deleted-job history. Source only: new Actions validation, lifecycle bridge/
 editor UI, actual replacement/VOID PDFs and physical email acceptance remain open.
 This is still draft #37, not a completed or published payment milestone.
+
+7d414ee / 43207931777 passed formatting, analysis, Flutter behavior, debug and
+440 native cases (41 XML files, zero failures/errors/skips). Actual API 24 passed
+21 original and one billing journey; copy generation then failed the explicit
+one-page assertion on the short Classic paid-balance copy (two payments). The
+new payment UI journey and API 35 were not reached. Reviewed the actual Classic
+paid receipt PNG: values are correct and readable, but duplicated event detail
+layout needs less vertical space. Copy-only renderer source now uses a full-width
+compact event-detail paragraph and less header spacing; original invoice layout
+and immutable copy payloads are unchanged. Preserve the one-page assertion and
+all complete-value checks. New validation is required.

@@ -38,12 +38,12 @@ internal object InvoicePdf {
                 flow.text(snapshot.company, 22f, bold = true)
                 flow.text(snapshot.companyContact, 10f)
                 flow.text("Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(snapshot.created)) + " UTC", 9f)
-                flow.space(16f)
+                flow.space(if (snapshot.statement == null) 16f else 8f)
                 if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
                     flow.text("BILL TO", 9f, bold = true)
                     flow.text(snapshot.customer, 14f, bold = true)
                     flow.text(snapshot.customerContact, 10f)
-                    flow.space(16f)
+                    flow.space(if (snapshot.statement == null) 16f else 8f)
                 }
                 flow.text(snapshot.job, 18f, bold = true)
                 flow.text(snapshot.period, 10f)
@@ -165,7 +165,7 @@ internal object InvoicePdf {
                 canvas.drawText(value.amount, width - margin - 8 - amount.measureText(value.amount), y + 12, amount)
             }
             text(value.title, 11f, true, 352)
-            text(value.detail, 9f, available = 352)
+            text(if (compact) value.detail.replace("\n", " · ") else value.detail, 9f, available = if (compact) width - margin * 2 else 352f)
             if (value.amount.isNotBlank() && !fitsColumn) {
                 // Exact values must never overlap descriptions or disappear off-page.
                 text("Amount (${data.currency}) ${value.amount}", 11f, true)
