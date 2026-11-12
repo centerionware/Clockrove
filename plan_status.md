@@ -2921,3 +2921,8 @@ journey per API, three real accepted-price invoice PDFs/bytes/recipients); its
 54-case combined gate still needs Actions evidence. Main delivery 43257957626
 accepted internal.28.1 / 216663874 at 16:29:35 UTC; physical/store availability
 is not inferred. Quotes remain draft #39 pending complete fresh UI/device proof.
+
+Additional native quote billing source regressions added: missing current price,
+frozen versus explicitly current customer/contact, and zero/three-decimal currency
+invoice totals. Fresh Actions required; prior 553-case proof does not cover these
+new cases.

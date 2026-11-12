@@ -23,8 +23,8 @@ class QuoteScopeTest {
     private val version get() = repository.snapshot().version
     private fun <T> inspect(block: (SQLiteDatabase) -> T): T = SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use(block)
     private fun count(table: String) = inspect { db -> db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); it.getInt(0) } }
-    private fun quote(id: String = "quote", lines: List<QuoteStore.Line> = listOf(QuoteStore.Line("tile", "Synthetic tile", "Synthetic definition", "ITEM", "260000", "1250")), accepted: Boolean = true) {
-        assertNull(repository.saveQuote("save-$id", version, QuoteStore.Draft(id, null, null, "Synthetic scope", "USD", 75000, lines)).conflict)
+    private fun quote(id: String = "quote", lines: List<QuoteStore.Line> = listOf(QuoteStore.Line("tile", "Synthetic tile", "Synthetic definition", "ITEM", "260000", "1250")), accepted: Boolean = true, customerId: String? = null, currency: String = "USD") {
+        assertNull(repository.saveQuote("save-$id", version, QuoteStore.Draft(id, customerId, null, "Synthetic scope", currency, 75000, lines)).conflict)
         assertNull(repository.issueQuote("issue-$id", version, id, true).conflict)
         if (accepted) assertNull(repository.decideQuote("accept-$id", version, id, 1, "ACCEPTED", "Explicit synthetic local acceptance", true).conflict)
     }
@@ -226,6 +226,60 @@ class QuoteScopeTest {
         }
         assertNull(repository.prepareQuoteInvoice("prepare-quote", before, draft).conflict)
         assertEquals("INV-1000", repository.invoice("quoted").number)
+    }
+    @Test fun acceptedPriceRemainsInvoiceableWhenCurrentTaskPriceIsUnset() {
+        completedQuoteWork()
+        val done = repository.boardSnapshot("scope-job").board.columns.single { it.completed }.id
+        assertNull(repository.saveCard("unset-current", version, BoardStore.Draft("scope-task", "scope-job", done, "Actual tile", priceMinor = null, currency = "USD", quantityUnits = 300000)).conflict)
+        val request = actualRequest(); val choices = actualChoices(listOf("scope-task"))
+        assertEquals("TASK_PRICES_REQUIRED", inspect { QuoteInvoiceReviewStore.review(it, request, choices.copy(currentPrices = true)).problem })
+        assertNull(repository.prepareQuoteInvoice("agreed", version, QuoteInvoiceStore.Draft("agreed", request, choices)).conflict)
+        val document = InvoiceStore.Snapshot.decode(repository.invoice("agreed").payload)
+        assertEquals("375.00", document.subtotal); assertEquals("403.13", document.total)
+        assertEquals("1250", document.lines.single().unitPriceMinor)
+        assertNull(repository.boardSnapshot("scope-job").board.cards.single().priceMinor)
+    }
+    @Test fun quoteInvoicesUseFrozenAcceptedPartyUnlessCurrentPartyIsExplicitlyChosen() {
+        val original = BusinessStore.Customer("original-party", "Accepted customer", "accepted@example.test", address = "Accepted address")
+        val current = BusinessStore.Customer("current-party", "Current customer", "current@example.test", address = "Current address")
+        assertNull(repository.saveCustomer("old-party", version, original).conflict)
+        assertNull(repository.saveCustomer("new-party", version, current).conflict)
+        for (id in listOf("accepted-party", "current-party")) {
+            quote(id, customerId = original.id)
+            val job = "$id-job"; val task = "$id-task"
+            assertNull(repository.applyQuoteScope("scope-$id", version, scope().copy(quoteId = id, jobId = job, items = listOf(QuoteScopeStore.Item("tile", task, "Actual tile")))).conflict)
+            assertNull(repository.saveJobSettings("party-$id", version, repository.jobDetail(job).job.settings.copy(customerId = current.id)).conflict)
+            val done = repository.boardSnapshot(job).board.columns.single { it.completed }.id
+            assertNull(repository.saveCard("actual-$id", version, BoardStore.Draft(task, job, done, "Actual tile", priceMinor = BigInteger("999"), currency = "USD", quantityUnits = 300000)).conflict)
+        }
+        assertNull(repository.saveCustomer("edit-original", version, original.copy(name = "Changed later", email = "changed@example.test", address = "Changed later address")).conflict)
+        for (id in listOf("accepted-party", "current-party")) {
+            val request = actualRequest().copy(quoteId = id, selection = actualRequest().selection.copy(jobIds = listOf("$id-job")))
+            val choices = actualChoices(listOf("$id-task")).copy(currentParty = id == "current-party")
+            assertNull(repository.prepareQuoteInvoice("invoice-$id", version, QuoteInvoiceStore.Draft("invoice-$id", request, choices)).conflict)
+            val document = InvoiceStore.Snapshot.decode(repository.invoice("invoice-$id").payload)
+            assertEquals(if (id == "current-party") current.name else original.name, document.customer)
+            assertEquals(if (id == "current-party") current.email else original.email, document.email)
+            assertTrue(document.customerContact.contains(if (id == "current-party") current.address else original.address))
+            assertFalse(document.customerContact.contains("Changed later"))
+        }
+        assertEquals(2, count("invoice_task_claims"))
+    }
+    @Test fun zeroAndThreeDecimalQuoteInvoicesKeepNativeCurrencyAndExactMinorUnitBoundaries() {
+        for ((currency, digits, subtotal, tax, total) in listOf(
+            listOf("JPY", "0", "37500", "2813", "40313"), listOf("KWD", "3", "37.500", "2.813", "40.313"))) {
+            val id = currency.lowercase(java.util.Locale.ROOT); val job = "$id-job"; val task = "$id-task"
+            quote(id, currency = currency)
+            assertNull(repository.applyQuoteScope("scope-$id", version, scope().copy(quoteId = id, jobId = job, items = listOf(QuoteScopeStore.Item("tile", task, "Actual tile")))).conflict)
+            val done = repository.boardSnapshot(job).board.columns.single { it.completed }.id
+            assertNull(repository.saveCard("actual-$id", version, BoardStore.Draft(task, job, done, "Actual tile", priceMinor = BigInteger("999"), currency = currency, quantityUnits = 300000)).conflict)
+            val request = actualRequest().copy(quoteId = id, selection = actualRequest().selection.copy(jobIds = listOf(job)))
+            assertNull(repository.prepareQuoteInvoice("invoice-$id", version, QuoteInvoiceStore.Draft("invoice-$id", request, actualChoices(listOf(task)))).conflict)
+            val document = InvoiceStore.Snapshot.decode(repository.invoice("invoice-$id").payload)
+            assertEquals(currency, document.currency); assertEquals(digits.toInt(), document.digits)
+            assertEquals(subtotal, document.subtotal); assertEquals(tax, document.taxAmount); assertEquals(total, document.total)
+            assertEquals("1250", document.lines.single().unitPriceMinor)
+        }
     }
     @Test fun interruptedMappingRollsBackJobTasksTemplatesMoneyAncestryAndCommand() {
         quote(); val before = version

@@ -2290,3 +2290,13 @@ source pending Actions, not a claim that the journey or new screens passed.
 Main Play 43257957626 accepted 0.1.0-internal.28.1 / 216663874 at
 2026-11-12 16:29:35 UTC, built with the permanent key from main 93673fb.
 Owner installation/physical/email/availability acceptance remains separate.
+
+### Additional accepted-agreement financial regressions (source)
+
+Added native cases for accepted-price billing when the current task price is
+unset (current-price choice rejects, accepted choice preserves work), frozen
+accepted customer/contact/email despite later customer and job edits versus
+explicit current-party choice, and exact zero/three-decimal JPY/KWD invoice
+subtotal/tax/total boundaries. All use real repository/storage commands and shared
+claims; no local tests were run. These tests are newer than the 553-case backend
+proof and need fresh Actions alongside the preparation UI journey.
