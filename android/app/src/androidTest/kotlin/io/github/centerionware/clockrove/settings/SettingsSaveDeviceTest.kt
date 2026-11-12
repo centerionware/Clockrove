@@ -21,7 +21,7 @@ class SettingsSaveDeviceTest {
     private val automation get() = instrumentation.uiAutomation
     private fun find(label: String): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (node.isVisibleToUser && (node.text?.toString() == label || node.contentDescription?.toString() == label)) return node
+            if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { result -> return result } }
             return null
         }
