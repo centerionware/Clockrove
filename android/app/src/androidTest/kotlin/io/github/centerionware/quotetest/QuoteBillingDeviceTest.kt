@@ -156,6 +156,10 @@ class QuoteBillingDeviceTest {
         // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
         // acknowledgement can otherwise precede the keyboard opening and hiding.
         until("Keyboard did not open for $label") { keyboardVisible() }
+        // The IME can occlude the field's semantics bounds (including its
+        // counter) after focus. Actively reveal it again instead of waiting
+        // passively for a node outside the resized viewport.
+        reveal(label, true)
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))

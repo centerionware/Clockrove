@@ -2335,3 +2335,31 @@ one source claim/number, correct winner price, and identical retries of both kno
 outcomes. Added light/dark 390×844 phone layout tests at 1.8 text scale with
 Actions-generated setup/confirmation previews, explicitly synthetic UI fixtures
 that do not establish native financial success. Both new checks need fresh Actions.
+
+### Actual quote entry keyboard readiness correction
+
+046fcf6 / 43261516779 ended in the new API-24 quote journey waiting for the
+focused Unit price after the keyboard opened. Downloaded 13966095163 and reviewed
+failure.png/accessibility.txt: the field remains visibly focused near the IME,
+while its full semantics bounds no longer appear in the resized app tree. No
+app crash was logged. Keep real UI keyboard entry and exact-value assertions;
+actively reveal the field again after IME opening before acquiring SET_TEXT node.
+The unchanged predecessor financial/device gates passed on API 24, but this is not
+full two-API/54-case success and the final actual-page viewer stage did not run.
+Applied the Actions formatter artifact from live 43263186408. Added a per-task
+quote acceptance table to plan_status.md so baseline, source and pending real
+UI/document/release evidence remain distinct.
+
+### Phone preview and hourly assertion follow-up
+
+317e1de / 43263186408 passed analysis and the light/dark 390×844/1.8-scale
+preparation/review layout tests. Downloaded ui-previews and reviewed all four
+synthetic UI captures: readable totals, deliberate actual-versus-estimate wording
+and reachable wrapped confirmation controls. Clear input focus before the setup
+capture so it shows the actual first form page rather than returning to the note.
+The hourly allocation test correctly reached USD 43.00 after acknowledgement;
+its final duration finder omitted the source label printed in the same Text.
+Assert the complete exact source label + newline + 1h 0m duration instead, keeping
+no-calculation-before-allocation and no-write-on-cancel assertions. Applied its
+exported formatting patch. Android/native/race/device gates did not run on that
+head because the behavior assertion failed.

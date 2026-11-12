@@ -152,7 +152,17 @@ class _Invoices extends QuoteInvoiceApi {
                 'completedLabel': '2026-11-12T12:00:00Z',
               },
             ],
-      'times': hourly ? [{'sessionId': 'session', 'start': 1794484800000, 'end': 1794488400000, 'durationMillis': '3600000', 'label': 'Finalized synthetic hour'}] : <Object?>[],
+      'times': hourly
+          ? [
+              {
+                'sessionId': 'session',
+                'start': 1794484800000,
+                'end': 1794488400000,
+                'durationMillis': '3600000',
+                'label': 'Finalized synthetic hour',
+              },
+            ]
+          : <Object?>[],
       'excluded': <Object?>[],
       'legacy': <Object?>[],
       'unfinalized': <Object?>[],
@@ -211,9 +221,13 @@ Future<void> _reach(WidgetTester tester, Finder target) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _show(WidgetTester tester, _Invoices api, {
-  Size size = const Size(900, 1400), bool dark = false,
-  double textScale = 1, GlobalKey? boundary,
+Future<void> _show(
+  WidgetTester tester,
+  _Invoices api, {
+  Size size = const Size(900, 1400),
+  bool dark = false,
+  double textScale = 1,
+  GlobalKey? boundary,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -229,7 +243,8 @@ Future<void> _show(WidgetTester tester, _Invoices api, {
       child: MaterialApp(
         theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: RepaintBoundary(key: boundary, child: child!),
         ),
         home: Builder(
@@ -251,7 +266,9 @@ Future<void> _show(WidgetTester tester, _Invoices api, {
   );
   await tester.tap(find.text('Open accepted invoice review'));
   await tester.pumpAndSettle();
-  final source = api.hourly ? 'Finalized synthetic hour' : 'Actual tile installation';
+  final source = api.hourly
+      ? 'Finalized synthetic hour'
+      : 'Actual tile installation';
   await _reach(tester, find.text(source));
   await tester.tap(find.text(source));
   await tester.pumpAndSettle();
@@ -383,55 +400,94 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('hourly review requires explicit allocation of finalized time and never uses the estimate as worked time', (tester) async {
-    final api = _Invoices(hourly: true);
-    await _show(tester, api);
-    await _reach(tester, find.text('Review actual-work invoice'));
-    await tester.tap(find.text('Review actual-work invoice'));
-    await tester.pumpAndSettle();
-    expect(api.calculations, 0);
-    expect(api.calls, isEmpty);
-    final allocation = find.text('The selected actual job time belongs to this quote');
-    await _reach(tester, allocation);
-    await tester.tap(allocation);
-    await tester.pumpAndSettle();
-    await _reach(tester, find.text('Review actual-work invoice'));
-    await tester.tap(find.text('Review actual-work invoice'));
-    await tester.pumpAndSettle();
-    expect(find.text('Invoice total USD 43.00'), findsOneWidget);
-    expect(find.text('1h 0m actual finalized work'), findsOneWidget);
-    expect(api.calculations, 1);
-    expect(api.calls, isEmpty);
-    await tester.tap(find.text('Keep editing'));
-    await tester.pumpAndSettle();
-    expect(api.calls, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  for (final dark in [false, true]) {
-    testWidgets('quote invoice phone review remains scrollable at large text in ${dark ? 'dark' : 'light'} theme', (tester) async {
-      await tester.runAsync(loadMapPreviewFonts);
-      final key = GlobalKey();
-      final api = _Invoices();
-      await _show(tester, api, size: const Size(390, 844), dark: dark, textScale: 1.8, boundary: key);
-      final list = tester.state<ScrollableState>(find.byType(Scrollable).first);
-      list.position.jumpTo(0);
-      await tester.pumpAndSettle();
-      await tester.runAsync(() => saveMapPreview(key, 'quote-invoice-setup-${dark ? 'dark' : 'light'}'));
+  testWidgets(
+    'hourly review requires explicit allocation of finalized time and never uses the estimate as worked time',
+    (tester) async {
+      final api = _Invoices(hourly: true);
+      await _show(tester, api);
       await _reach(tester, find.text('Review actual-work invoice'));
       await tester.tap(find.text('Review actual-work invoice'));
       await tester.pumpAndSettle();
-      expect(find.text('Prepare this invoice?'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Invoice total USD 403.13'), 180,
-        scrollable: find.descendant(of: find.byType(AlertDialog), matching: find.byType(Scrollable)).first);
+      expect(api.calculations, 0);
+      expect(api.calls, isEmpty);
+      final allocation = find.text(
+        'The selected actual job time belongs to this quote',
+      );
+      await _reach(tester, allocation);
+      await tester.tap(allocation);
       await tester.pumpAndSettle();
-      await tester.runAsync(() => saveMapPreview(key, 'quote-invoice-review-${dark ? 'dark' : 'light'}'));
+      await _reach(tester, find.text('Review actual-work invoice'));
+      await tester.tap(find.text('Review actual-work invoice'));
+      await tester.pumpAndSettle();
+      expect(find.text('Invoice total USD 43.00'), findsOneWidget);
+      expect(
+        find.text('Finalized synthetic hour\n1h 0m actual finalized work'),
+        findsOneWidget,
+      );
+      expect(api.calculations, 1);
       expect(api.calls, isEmpty);
       await tester.tap(find.text('Keep editing'));
       await tester.pumpAndSettle();
       expect(api.calls, isEmpty);
       expect(tester.takeException(), isNull);
-    });
-  }
+    },
+  );
 
+  for (final dark in [false, true]) {
+    testWidgets(
+      'quote invoice phone review remains scrollable at large text in ${dark ? 'dark' : 'light'} theme',
+      (tester) async {
+        await tester.runAsync(loadMapPreviewFonts);
+        final key = GlobalKey();
+        final api = _Invoices();
+        await _show(
+          tester,
+          api,
+          size: const Size(390, 844),
+          dark: dark,
+          textScale: 1.8,
+          boundary: key,
+        );
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        final list = tester.state<ScrollableState>(
+          find.byType(Scrollable).first,
+        );
+        list.position.jumpTo(0);
+        await tester.pumpAndSettle();
+        await tester.runAsync(
+          () => saveMapPreview(
+            key,
+            'quote-invoice-setup-${dark ? 'dark' : 'light'}',
+          ),
+        );
+        await _reach(tester, find.text('Review actual-work invoice'));
+        await tester.tap(find.text('Review actual-work invoice'));
+        await tester.pumpAndSettle();
+        expect(find.text('Prepare this invoice?'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('Invoice total USD 403.13'),
+          180,
+          scrollable: find
+              .descendant(
+                of: find.byType(AlertDialog),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        await tester.runAsync(
+          () => saveMapPreview(
+            key,
+            'quote-invoice-review-${dark ? 'dark' : 'light'}',
+          ),
+        );
+        expect(api.calls, isEmpty);
+        await tester.tap(find.text('Keep editing'));
+        await tester.pumpAndSettle();
+        expect(api.calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }

@@ -37,8 +37,8 @@ iOS and future service remain deferred.
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
-| Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
-| Follow-on: quotes | Scope/documents verified; backend 553 native verified; preparation/history UI source awaiting Actions and real journey | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
+| Follow-on: quotes | Backend/documents verified; UI behavior verified; real quote journey correction under validation | Full backend 56307eb / 43255636714: 553 native / 52 actual. Expanded 046fcf6 / 43261516779: 559 native plus full Flutter behavior passed; real API-24 quote entry stopped at IME field visibility. Fresh source correction/phone/race gates pending; see task breakdown |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -47,10 +47,32 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Invoice/quantity/tax/widget upload verified; launch gates remain | Main 43197481528 and delivery 43199258376 succeeded for 1c358bc; Play accepted 0.1.0-internal.25.1 / 216642056 at 10:25:48 UTC; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Automatic signed internal delivery verified; launch/production gates remain | Main 93673fb / 43254952365 passed; Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC, permanent key and automatic version allocation. Owner installation/availability/production remain separate |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
+
+## Active quote milestone task breakdown
+
+| Task | Current evidence / status | Remaining gate |
+| --- | --- | --- |
+| Q1 Draft editor, exact inputs, Q-1000 sequence | Baseline Actions verified; decimal strings, quantities, tax and invalid-draft preservation | Fresh integrated head |
+| Q2 Immutable issue/revision/date/filter/history | Baseline native/Flutter/API checks passed; old documents retained | Fresh integrated head and real issue UI journey |
+| Q3 Explicit local acceptance/decline | Native and reviewed/retry/cancel Flutter checks passed | Real device acceptance UI journey |
+| Q4 Three quote PDF styles, revisions, wide amounts, email/URI/preview | Full 43255636714 device/document gates passed; six light/dark actual-page viewers reviewed in 43252783507 | Fresh integrated head |
+| Q5 Reviewed fixed/hourly mixed scope and durable task reuse | Native and Flutter checks passed; no fabricated work/completion | Real plan/board-completion UI journey |
+| Q6 Actual-work selection and accepted/current prices/tax/party | 559 native in 43261516779; full preparation/history Flutter behavior passed | New hourly/UI layout checks and actual invoice journey |
+| Q7 Exclusive claims, replay, paid exclusion, rollback | Existing source/financial guards and quote backend tests passed | New ordinary-versus-quote race test, actual duplicate-exclusion journey |
+| Q8 Retained quote/line provenance through replacement and purge | Native partial-credit replacement/purge/late-write checks passed; paged history Flutter check passed | Actual related-invoice navigation and original-issue PDFs |
+| Q9 Released v8 → unreleased v9 migration | Frozen independent v8 fixture and late-install rollback checks passed in native 559 gate | Fresh integrated head; freeze v9 before subsequent schema work after release |
+| Q10 Real issue/accept/plan/complete/invoice UI journey | Source compiled and API-24 journey started; failed after keyboard occluded unit-price semantics | Test helper must re-reveal field after IME opening; named device case must pass on both APIs |
+| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Strict new device gate source present | All required PDF/PNG/text outputs and nine UI captures, inspected after success |
+| Q12 Phone accessibility and responsive review | Existing quote document large-text/landscape gate passed; new 390×844/1.8-scale light/dark preparation previews added | New widget checks and actual exported previews |
+| Q13 Merge/main/internal delivery | #39 remains draft | Full clean fresh exact-head validation, review artifacts, merge, verify main and separate Play delivery |
+
+The full quoted milestone remains incomplete until its integration gates pass.
+Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked
+above; emulator and native fixtures do not establish them.
 
 ## Validation record
 
@@ -2942,3 +2964,17 @@ unverified until actual emulator execution succeeds.
 verified (47 downloaded XML, zero failures/errors/skips). Actual journey gate
 running. Ordinary-versus-quote concurrent source race and large-text light/dark
 phone review previews added as source; new checks require fresh Actions.
+
+046fcf6 / 43261516779 ended at real API-24 quote entry: keyboard opened and
+focused Unit price remained visually present, but its semantics node disappeared
+outside the resized accessibility viewport. Reviewed capture/accessibility dump
+from artifact 13966095163; no Flutter/native crash was logged. The entry helper
+now actively re-reveals the field after IME opening before its unchanged SET_TEXT
+and exact-value assertion. New journey/device acceptance remains unproven.
+
+317e1de / 43263186408: analysis and both enlarged-text phone-theme layout checks
+passed; four synthetic UI previews reviewed. Hourly allocation reached USD 43.00
+but asserted a duration without its combined source label; exact combined text
+assertion corrected. No calculation/write guard removed. Clear input focus before
+first-page preview. Its fresh formatter patch and API-24 IME visibility correction
+are ready for the next complete Actions run; native race/device proof stays pending.
