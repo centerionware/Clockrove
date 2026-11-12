@@ -27,15 +27,25 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-The owner-requested combined internal iteration in
-[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md) passed exact-head Actions
-43117726325 and merged via #29 as cb2efc9. Play delivery is active again;
-main validation 43120365067 and Play delivery 43121445107 passed. Play accepted
-0.1.0-internal.19.1 (216603660) from cb2efc9. Production readiness remains
-unset. Finish manual-history PR #32 checks, then continue widget configuration.
-Physical GPS/launcher/recovery/email evidence, provider settings, encrypted
-backup/merge and full launch acceptance remain unfinished. All builds/tests and
-rendering remain in GitHub Actions.
+Priority settings fix #34 is delivered internally. Main c5e19d1 passed
+43131240701, and Play delivery 43132531984 accepted 0.1.0-internal.21.1 /
+216609104 at 2026-11-12 01:17:19 UTC. Original crash reproduction and the
+245 native / 32 actual Android passing results are recorded below. Tester
+installation/physical behavior is separate; production readiness remains unset.
+
+Finish M4 widget validation in #33: providers, responsive RemoteViews, scrolling
+collections, setup/picker/default-start and removal/restore integration are written.
+Actual API-24/35 board/setup/timer journeys and capture review passed in
+43157030521; apply its formatter correction and pass the final exact-head run before
+merging and observing automatic main validation/internal delivery. Real launcher
+and tracking/recovery evidence, provider settings, encrypted backup/merge and
+full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+
+Immediately after the current widget task is validated and merged, implement
+invoice coverage/tax and unpaid/partial/paid lifecycle, receipts, void/replacement
+and company/accounts-receivable CC. Follow with quotes, task comments/supplies/costs
+and business reports from the main menu. This is the owner's next implementation priority; do not start it
+before the widget merge.
 
 ## 2. Product decisions
 
@@ -78,10 +88,12 @@ Exact-source-license wording, the name check, and store identity/account setup a
 
 ### 3.2 Home-screen widget and ongoing notification
 
+- Provide Timer, Tasks and Combined widget types. Combined uses a compact timer-only layout when small and adds a scrollable due-task list when large enough. Task taps open the corresponding job board without starting work.
+- Task lists include overdue work and the next seven calendar days in the current device timezone, excluding completed tasks and archived jobs. A task widget can show all active jobs or one selected job. Keep empty, missing-job and stale-task states explicit.
 - Each widget chooses a default job or picker mode.
 - When idle, default-job mode starts that job. Picker mode opens the app to active jobs, with **New job** last.
 - If the default job was archived or removed, open the picker with an explanation.
-- When a timer is running, every widget shows the actual running job and offers clock-out, regardless of its configured default.
+- When a timer is running, Timer and Combined widgets show the actual running job and offers clock-out, regardless of its configured default.
 - An Android ongoing foreground-service notification shows the active job and clock-out action while location tracking is active.
 - All actions enter the same serialized native command path. Deduplicate repeated taps and callbacks using command IDs and committed state; do not trust a widget's stale snapshot.
 - Refresh widgets after committed changes, restore, configuration changes, and recovery. Display elapsed time from timestamps, not a counter that must wake every second.
@@ -121,7 +133,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Deleting a populated column requires selecting a destination for its cards before committing.
 - Cards have title, description, optional due date, and position. Support moving/reordering by drag and accessible menu actions.
 - Card due dates are calendar dates, not UTC instants. Preserve them across timezone changes.
-- No attachments, team assignments, comments, or task timers at launch.
+- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. No task attachments, team assignments or task timers; comments do not introduce an account system.
 
 ### 3.5 Calendar, list, map, and CSV
 
@@ -134,6 +146,45 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Offer separate GPS CSV with session ID, job ID/name, measured timestamp, latitude, longitude, accuracy. Include only points within the selection and finalized session boundaries.
 - Explain why active/pending sessions are excluded. Use UTF-8, consistent headers, correct quoting/newlines, and spreadsheet-formula protection for user-entered text.
 - Share/save exports through Android's document/share interfaces; do not require broad filesystem permissions.
+
+### 3.5a Billing lifecycle, quotes and business reports
+
+The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
+After current widgets are validated and merged, implement invoice integrity/tax,
+then payments (including partial), receipts, accounting CC and void/replacement.
+Quotes follow; then task comments, labor/supplies classification and actual costs;
+then a main-menu Reports icon with useful business/tax-preparation summaries.
+
+- Bill each task and exact UTC portion of work only once, for unpaid and paid
+  invoices alike. Native transactional source claims, safe legacy reconciliation,
+  transparent exclusions and response-loss/concurrency tests are required.
+- Derive unpaid/partially-paid/paid from an auditable payment ledger. Updated
+  copies retain the original invoice number and total, showing payments and balance.
+  Receipts never create another charge/payment or invoice number.
+- Void only unpaid/partially-paid invoices. Partial payments require atomic Void &
+  replace: prefill lines, preserve the original VOID document, transfer source
+  claims and paid credit to the new invoice, and never count transferred credit
+  as new cash. Fully paid invoices cannot be voided. No credit may be discarded.
+- Main Settings has default tax percentage and per-job inherit/override, including
+  explicit 0%. Entering 7.5 adds 7.5% of subtotal, rounded once in minor units.
+  Freeze subtotal/rate/tax/total on issued invoices and quotes; existing documents
+  are unchanged by later settings. Separate tax collected from revenue/profit.
+- Main Settings has optional accounts-receivable email. Invoice/receipt/quote
+  email drafts CC it when set, otherwise company primary email. Fill default-email
+  To/CC/subject/body/PDF safely; the user sends. Keep both template guards.
+- Quotes have their own Q-1000 sequence, immutable issued revisions and explicit
+  local acceptance. Converting reviewed quote scope never fabricates work or
+  bypasses source coverage. Quotes/estimates are not revenue or invoice payments.
+- Task comments are private chronological records. A simple Supplies toggle
+  classifies charges; actual costs are recorded separately. Labor revenue is
+  not automatically profit; materials markup can contribute to profit.
+- Reports show invoiced sales, cash receipts, tax, outstanding balances, labor/
+  supplies/unclassified charges, actual costs and estimated profit/margins. Clearly
+  distinguish cash/invoice dates, missing costs and currencies; preserve drilldowns,
+  corrections and replacement history. Do not guess jurisdiction-specific tax rules.
+- Every slice requires native transaction/migration/retry checks, real PDF and
+  intent evidence in Actions. Physical email behavior and full acceptance remain
+  separate. Plan status is not implementation evidence.
 
 ### 3.6 Maps and privacy
 
@@ -151,7 +202,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 
 ### 3.7 Encrypted backup and merge restore
 
-- Export a versioned password-encrypted archive of jobs, sites, automation settings, boards/cards, sessions, location points, revisions, and deletion markers.
+- Export a versioned password-encrypted archive of jobs, sites, automation settings, boards/cards/comments, sessions, location points, invoices/coverage/payments/receipts/replacements, quotes, expenses, revisions, and deletion markers.
 - Use a maintained implementation of authenticated encryption (AES-256-GCM) and a salted memory-hard password KDF (Argon2id). Pin a compatible library and parameters after testing on the minimum supported device. Store version/KDF parameters in a bounded authenticated envelope; reject excessive attacker-supplied work factors before deriving keys. Do not invent cryptographic primitives.
 - Exclude map keys, caches, device widget configuration, and live automation registration state. No password recovery; explain this before export.
 - Stop timers before restore. Backups may contain an open/provisional session captured at backup time; require an explicit close-time choice or omission during preview. Never turn it into a live timer automatically or invent an end time.
@@ -301,6 +352,7 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 - Implement customizable boards and accessible card moves.
 - Build date selection, filtered list/totals, timezone handling and map history.
 - Add optional provider settings, credential handling, OSM attribution/caching, and CSV/document sharing.
+- Owner-prioritized next slice after widget merge: paid-invoice status, PAID receipts and accounting CC preference (section 3.5a).
 - Acceptance: board operations preserve cards; list/map/export filters agree; DST/range-boundary totals are correct; provider outage does not block local work; CSV formula/escaping tests pass.
 
 ### Milestone 7 — encrypted backup and safe merge
@@ -1292,6 +1344,38 @@ at 2026-11-11 23:45:25 UTC. This satisfies the combined iteration's internal
 upload gate. Tester availability/installation, physical tracking/email behavior
 and production acceptance are not inferred. Production readiness stays unset.
 
+### M4 widget configuration repository contract prepared
+
+Prepared schema 6 device-local widget bindings through the serialized native
+repository. Each widget keeps picker mode or an active default job and a fresh
+configuration token. Archived/deleted defaults remain distinguishable from a
+chosen picker without retaining job names or private work. Widget IDs/bindings
+are device-local and must not be included in future portable backup/merge.
+
+Versioned configuration commands retain original outcomes. A guarded native
+widget-start command replays committed duplicate taps, fences replaced/deleted
+bindings, rejects stale global versions and cannot switch another running job.
+Widget removal is transactional and idempotent. Schema-5 migration preserves
+existing work/settings/boards/receipts and has a rollback case. Twenty-two
+API-24/35 native executions are prepared, pending Actions. The launcher activity,
+RemoteViews integration and physical configuration journey remain unfinished;
+this contract does not mark M4 widgets accepted.
+
+Platform references: Android widget configuration lifecycle
+https://developer.android.com/develop/ui/views/appwidgets/configuration and
+foreground-service widget interaction exemptions
+https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start.
+
+### Manual history UI accepted in Actions and merged
+
+Exact #32 head 6c0f4df passed 43123810250. Inspected XML confirms 242 native
+cases plus fourteen actual Android cases per API (24/35), zero failures/errors/
+skips. Eight final history captures match reviewed original-resolution views.
+Pending BusinessCommand controls survive eviction from lazy lists and retry
+their original captured intent; the unchanged lost-response/scroll regression
+passes. Merged as 863c9a0; main validation and its internal upload remain pending.
+M4 widget configuration and physical manual/recovery acceptance are still open.
+
 ### Priority interruption: main Settings Save crash
 
 Owner reports an Android process crash saving main Settings, while job settings
@@ -1302,7 +1386,7 @@ are prepared for Actions, without assuming a cause from mocked form tests.
 Email subject and body templates must both be validated safely, with field-level
 feedback and correction guidance. Invalid placeholders/lengths/control characters
 never bypass the native transaction guard. Use a bounded literal scanner rather
-than user-driven regex initialization, and refuse malformed stored templates
+than platform-sensitive regex initialization, and refuse malformed stored templates
 before invoice-number allocation. Validation/reproduction evidence is pending
 in the priority settings-crash branch; see plan_status.md.
 
@@ -1310,3 +1394,205 @@ Owner refinement: new invoice numbering starts at 1000 (INV-1000) and advances
 automatically. Existing prepared invoices keep their numbers/content. Older
 unconsumed counters below 1000 use a floor at allocation; higher counters never
 reset. Invalid template validation must not consume or advance the sequence.
+
+### Main Settings crash reproduced and guarded source checked
+
+Unfixed diagnostic head 2cdf329 / Actions 43128896688 reached Save settings on
+actual API 24 and killed the app process. Captured AndroidRuntime trace shows
+BusinessStore.saveSettings -> InvoiceEmailTemplate.<clinit> -> PatternSyntaxException
+for the unescaped closing brace, wrapped in ExceptionInInitializerError. This
+confirms the user's process-crash report and the source cause.
+
+Guarded head a30d0b7 / 43128476006 passed 244 native host cases and sixteen
+actual cases on each API (24/35), zero native/device failures/errors/skips,
+including Settings save/reopen and both-template invalid/correction cases. The
+whole run failed formatting only; final formatted source plus the requested
+INV-1000 allocator and actual invoice preparation awaits 43129744209.
+
+### Priority settings fix merged
+
+Full Actions 43129744209 passed exact head 145870a. Final run-specific XML
+contains 245 native cases and sixteen actual cases on each API (24/35), zero
+failures/errors/skips. Actual Settings save/reopen and native invoice creation
+with INV-1000 and correct expanded subject/body pass. Merged #34 as
+c5e19d15a06ccd31e85455e5ab4782bcdf36a88d. Its main validation and Play upload
+are separate and pending; production readiness stays unset.
+
+### Priority hotfix internal delivery accepted
+
+Main c5e19d1 passed 43131240701; run-specific XML confirms 245 native cases and
+32 actual Android cases, zero failures/errors/skips. Play delivery 43132531984
+succeeded with the permanent key and accepted versionName 0.1.0-internal.21.1 /
+versionCode 216609104 at 2026-11-12 01:17:19 UTC. Settings crash correction, both
+template guards and INV-1000 numbering are delivered to the internal track.
+This does not establish tester installation or physical device acceptance.
+Resume widget implementation; production readiness remains unset.
+
+### Owner-expanded M4 widget scope
+
+Owner requests responsive combined widgets plus separate timer-only and task-list
+widgets. Small combined widgets retain only timer controls; larger widgets add a
+scrollable native due-task collection. Task taps open the correct board. Implement
+all three alongside default/picker configuration, engine-independent timer actions
+and stale/deleted-job handling. Initial due window is today plus six subsequent
+calendar days and all overdue tasks, excluding completed/archived work. Native
+collections and size-aware layouts must be verified, not represented by mock
+success. Physical launcher behavior remains a separate acceptance gate.
+
+### Responsive widgets source prepared for Actions
+
+Implemented three native providers, compact/expanded Combined layout, scrollable
+due-task collection, per-widget active-job/picker filtering and Flutter setup with
+immutable command retries. Task taps enter the corresponding board through a
+separate activity; native clock-in/out preserves serialized timer ownership.
+Restored launcher IDs deliberately reset to picker mode without starting work.
+Added native date/filter/large-collection and size checks plus Flutter lost-reply
+and unavailable-default checks. Prior combined foundation run 43133758021 passed;
+this new source still requires its own Actions and launcher evidence. No local
+builds or tests were run. Physical launcher acceptance remains open.
+
+### Widget emulator iteration: real startup regression caught
+
+Actions 43136781343 passed format/analyze/Flutter, Android build and 272 native
+cases (zero failures/errors/skips). API 24 real host scrolling, all three providers
+and task PendingIntent handoff passed. Existing Settings UI and new setup UI
+correctly failed: custom initial routes were accidentally combined with `home`,
+which Flutter rejects at startup. Replaced redundant `home` with an explicit `/`
+route and added full-app route construction plus actual board-render assertions.
+This failed run is not acceptance and no new widget build has been published.
+
+### Owner handoff: paid invoices and accounting copies next
+
+Owner explicitly schedules paid marking and invoice-derived PAID receipts as the
+next task after the current widget merge. All invoice/receipt email drafts CC the
+optional accounts-receivable email when set, otherwise the company primary email.
+This scope is planned, not implemented or validated. Current widget work continues.
+
+### Widget-host test lifecycle correction
+
+Actions 43138373244 passed Flutter startup regression, Android build and 272 native
+cases. Actual Settings save/reopen passed on API 24. The host test then detached
+a live Flutter view by replacing MainActivity content, provoking a Flutter JNI
+accessibility null-parent abort. Move the real AppWidgetHost into a native debug-only
+activity so Flutter lifecycle is preserved; this test activity is absent from
+release builds. Keep the actual service/collection/board/setup checks and strict
+zero-failure gates. This failed emulator run is not widget acceptance.
+
+### Owner clarification: invoice coverage is exclusive
+
+Work already assigned to any invoice for the same job must be excluded from new
+invoices, especially after payment. Current preparation snapshots report data
+without a source-coverage ledger, so this remains explicit next-task work rather
+than an existing guarantee. Implement native transactional task/interval claims,
+legacy reconciliation, transparent exclusions and tests alongside paid receipts.
+The original invoice is reused for resends and receipt generation.
+
+### Owner roadmap expanded while widget checks continue
+
+Recorded partial payments and unchanged-original balance copies; Q-1000 quotes
+and reviewed conversion; unpaid/partially-paid void/replacement with conserved
+credit; task comments and supplies classification with separate actual costs;
+main-menu company reporting; default tax percent with explicit per-job override.
+The detailed plan in docs/INVOICE_LIFECYCLE_PLAN.md defines order, states, exact
+money/tax arithmetic, native coverage/payment invariants, correction examples,
+PDF/email behavior, migrations, backup dependencies and acceptance checks. These
+features are planned, not implemented. Current widgets remain the active task.
+
+### Real widget setup passed; board lookup and diagnostic retrieval corrected
+
+Partial API-24 evidence from 43140436576 confirms actual main Settings save, real
+widget configuration save/cancel and all provider renders passed. The remaining
+assertion expected a standalone `To do` label, while Flutter merges column title
+and task-count subtitle. Match the exact visible semantic line and always finish
+the monitored board activity, including failed assertions. The run then stalled
+attaching post-test logcat; retain the continuous stream and bound fixture pulls.
+No passing full emulator acceptance or widget publication is claimed yet.
+
+### Actual widget choice verification strengthened
+
+43143381176 passed Flutter/build/native checks and API-24 Settings, actual task
+scrolling/board rendering and all providers. Setup intermittently left the picker
+selected: pinned Flutter AccessibilityBridge acknowledges ACTION_CLICK even when
+the addressed node has no TAP semantic action. Require a clickable target, search
+children before merged ancestors, and verify the actual checked choice before
+Save/Back. Keep the native binding and cancel assertions; do not count a transport
+acknowledgement as user selection or acceptance. Full Actions rerun is required.
+
+### First complete API-24 widget journey verified; API-35 board-body observation open
+
+6033cbe / 43144846081 passed 272 native cases and all 19 actual API-24 cases,
+zero failures/errors/skips. API 35 passed 18/19, including actual setup checked
+choice/save/cancel and Settings. Its board header and 0-of-30 loaded task summary
+were visible, but the column subtree was absent from cached accessibility nodes.
+Refresh virtual nodes and retain a separate actual board screenshot before the
+unchanged column assertion; later setup screenshots must not overwrite failure
+evidence. Full API-35 board acceptance remains open, not assumed from its header.
+
+### Collection publication and native timer-surface checks
+
+43146802062 retained all assertions and caught an intermittent first-bind task
+collection failure on API 24 before board capture. Source review identified
+concurrent widget refresh callers that could publish stale size/state after a
+newer refresh. Serialize refresh publication; load the remote factory on creation
+as well as dataset change; key adapters by per-widget configuration token. Return
+task filtering metadata in the same native read as its rows. These are source
+corrections awaiting Actions, not an assertion that this failed run passed.
+
+Also retain the configured task job's visible/accessible label when a different
+job is running. Added an actual denied-location, no-Flutter-screen clock-in/out
+journey through real PendingIntents and two widgets, asserting native WIDGET
+origin, positive duration, no location history, and separate task-filter context.
+The required actual widget class count becomes four per API (20 total per API).
+All builds/tests remain Actions-only; full acceptance is still pending.
+
+### Actual board capture and native clock-in observation
+
+43148476659 passed 272 native cases; API-24 task binding, scrolling, actual board
+rendering/column lookup, provider layouts, setup save/cancel and Settings passed.
+Reviewed the separate actual board image: populated To do cards and Doing column
+render correctly. The new native action case reached WidgetStartActivity and
+committed its configured job, but incorrectly expected ActivityMonitor.getHits()
+to count a PendingIntent launch. Observe the matched activity directly (as the
+board test already does), assert no resumed Flutter screen, then continue through
+the actual clock-out broadcast. Also publish final bindings before creating host
+views so the test never clicks a cached pre-configuration version. Full 20-case
+checks on both APIs remain pending. Launcher descriptions now distinguish all
+three widget choices. No test/build ran on the VM and no widget release is claimed.
+
+### Actual API-24 surface journey passed; API-35 reapply and pending-form bugs fixed in source
+
+bea20be / 43150196358 passed all 20 actual API-24 cases, including real native
+clock-in/out with denied location, WIDGET origin, no samples, and separate task
+job context. API 35 caught a real RemoteViews reapply bug: addView appended timer
+rows instead of replacing them. Clear the container before adding its one timer;
+repeat real updates and assert exactly one row.
+
+API-35 setup also exposed a commit-version-before-response race: timer snapshot
+reload replaced the form, disposing its pending BusinessCommand before the save
+reply and leaving controls locked. Keep prior data during reload/read failure,
+key the pending command, and add deterministic delayed-read/reply Flutter cases.
+Move platform widget-availability checks inside the native save command after
+receipt replay so widget removal resolves an original save without resurrecting
+bindings; fresh unavailable writes return a known conflict. Added native retry/
+removal checks. Preserve per-test screenshots and require actual board window
+focus; the column assertion stays required. New source awaits Actions.
+
+### Board-body failure identified as a real framework assertion
+
+4b1951a / 43153617082 passed the new Flutter save-race regressions, native checks
+and all 20 actual API-24 cases. API 35 passed native clock-in/out, repeated-update
+row count, separate task scope and setup save/cancel; only the board-body check
+failed. Its preserved per-test screenshot shows a real `_InactiveElements.remove`
+assertion in the board, not merely missing accessibility labels. Keep that test.
+
+The board's width-only LayoutBuilder was building tooltip/overlay-bearing cards
+during layout. Replace it with a normal build-phase Builder and window-relative
+MediaQuery width; give vertical columns independent scroll controllers. Similar
+upstream OverlayPortal/layout failures are documented at
+https://github.com/flutter/flutter/issues/180569 and
+https://github.com/flutter/flutter/issues/183168. This is an evidence-informed
+workaround, not a claim that the app's first stack has already proven that cause.
+Debug builds now forward bounded Flutter error type/stack only to local Android
+logcat for CI diagnosis, preserving normal presentation and excluding field/widget
+dumps; release error handling is unchanged. Apply Actions-generated formatting,
+finish removed-widget setup as cancelled, and revalidate the full source.

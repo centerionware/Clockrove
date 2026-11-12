@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_description">Clockrove running job and clock-out</string>
+    <string name="widget_description">Job timer with a scrollable due-task list when resized larger</string>
+    <string name="timer_widget_description">Running job timer and native clock-in or clock-out</string>
+    <string name="tasks_widget_description">Upcoming and overdue tasks; tap a task to open its job board</string>
     <string name="widget_idle">No timer running</string>
     <string name="widget_open">Open Clockrove</string>
     <string name="widget_stop">Clock out</string>

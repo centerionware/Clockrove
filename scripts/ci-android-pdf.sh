@@ -73,21 +73,43 @@ for clockrove_api in 24 35; do
   # Gradle's connected-test cleanup removes app-specific external files.
   adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
   adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+  # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
+  adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
+  # Stream diagnostics while tests run, so a cancelled/hung run retains its last
+  # framework state instead of losing everything before the final logcat pull.
+  adb -s emulator-5554 logcat -v threadtime > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/logcat.txt" &
+  clockrove_logcat_pid=$!
   clockrove_instrumentation_failed=false
-  if ! adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"; then
+  if ! timeout 300 adb -s emulator-5554 shell am instrument -w -r -e package io.github.centerionware.clockrove -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"; then
     clockrove_instrumentation_failed=true
+  fi
+  kill "$clockrove_logcat_pid" 2>/dev/null || true
+  wait "$clockrove_logcat_pid" 2>/dev/null || true
+  if [[ "$clockrove_instrumentation_failed" == true ]]; then
+    timeout 20 adb -s emulator-5554 shell dumpsys activity activities > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/activities.txt" || true
+    timeout 20 adb -s emulator-5554 shell dumpsys appwidget > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widgets.txt" || true
+    timeout 20 adb -s emulator-5554 exec-out screencap -p > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-timeout.png" || true
   fi
   # This emulator contains only synthetic fixtures. Preserve native crash and
   # Flutter engine diagnostics even when a process crash prevents JUnit output.
-  adb -s emulator-5554 logcat -d -v threadtime > "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/logcat.txt"
-  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-accessibility.txt" || true
-  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-screen.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-screen.png" || true
+  # The continuous stream above already contains the full synthetic test trace.
+  # Do not replace it with a second, potentially blocking logcat attachment.
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-accessibility.txt" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-screen.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-screen.png" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-combined.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-combined.png" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-accessibility.txt" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-setup.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-setup.png" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-board.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-board.png" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-failure.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-failure.png" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-timer-running.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-timer-running.png" || true
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures/" || true
   [[ "$clockrove_instrumentation_failed" == false ]]
   # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
-  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/" || true
-  adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/" || true
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml"
   python3 - "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml" <<'PY_DEVICE'
 import sys
 import xml.etree.ElementTree as E
@@ -101,6 +123,7 @@ expected = {
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
     'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 2,
+    'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,
 }
 for classname, count in expected.items():
     actual = sum(case.attrib['classname'] == classname for case in root.findall('testcase'))

@@ -262,186 +262,199 @@ class _Board extends ConsumerWidget {
           child: Text('Archived job · board is read-only'),
         ),
       Expanded(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final column in board.columns)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: SizedBox(
-                      width: constraints.maxWidth < 400
-                          ? constraints.maxWidth - 40
-                          : 320,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(
-                                column.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+        // This is a full-page board. Build tooltip-bearing cards during build,
+        // rather than reparenting their overlay portals from a layout callback.
+        child: Builder(
+          builder: (context) {
+            final windowWidth = MediaQuery.sizeOf(context).width;
+            if (windowWidth <= 40) {
+              return const SizedBox.shrink();
+            }
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final column in board.columns)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: SizedBox(
+                        width: windowWidth < 400 ? windowWidth - 40 : 320,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                  column.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                              subtitle: Text(
-                                column.completed
-                                    ? 'Completes tasks'
-                                    : '${board.inColumn(column.id).length} tasks',
-                              ),
-                              trailing: board.archived
-                                  ? null
-                                  : IconButton(
-                                      tooltip: 'Edit column',
-                                      icon: const Icon(Icons.more_horiz),
-                                      onPressed: () =>
-                                          _editColumn(context, column),
-                                    ),
-                            ),
-                            Expanded(
-                              child: ListView(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
+                                subtitle: Text(
+                                  column.completed
+                                      ? 'Completes tasks'
+                                      : '${board.inColumn(column.id).length} tasks',
                                 ),
-                                children: [
-                                  for (final card in board.inColumn(column.id))
-                                    DragTarget<TaskCard>(
-                                      onWillAcceptWithDetails: (d) =>
-                                          !board.archived &&
-                                          d.data.id != card.id,
-                                      onAcceptWithDetails: (d) => _move(
-                                        context,
-                                        ref,
-                                        d.data,
-                                        column.id,
-                                        card.position.clamp(
-                                          0,
-                                          board
-                                              .inColumn(column.id)
-                                              .where((c) => c.id != d.data.id)
-                                              .length,
-                                        ),
+                                trailing: board.archived
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Edit column',
+                                        icon: const Icon(Icons.more_horiz),
+                                        onPressed: () =>
+                                            _editColumn(context, column),
                                       ),
-                                      builder: (_, candidates, _) => DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          border: candidates.isEmpty
-                                              ? null
-                                              : Border(
-                                                  top: BorderSide(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .primary,
-                                                    width: 3,
-                                                  ),
-                                                ),
+                              ),
+                              Expanded(
+                                child: ListView(
+                                  primary: false,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  children: [
+                                    for (final card in board.inColumn(
+                                      column.id,
+                                    ))
+                                      DragTarget<TaskCard>(
+                                        onWillAcceptWithDetails: (d) =>
+                                            !board.archived &&
+                                            d.data.id != card.id,
+                                        onAcceptWithDetails: (d) => _move(
+                                          context,
+                                          ref,
+                                          d.data,
+                                          column.id,
+                                          card.position.clamp(
+                                            0,
+                                            board
+                                                .inColumn(column.id)
+                                                .where((c) => c.id != d.data.id)
+                                                .length,
+                                          ),
                                         ),
-                                        child: board.archived
-                                            ? _taskTile(context, ref, card)
-                                            : LongPressDraggable<TaskCard>(
-                                                data: card,
-                                                feedback: Material(
-                                                  elevation: 8,
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                  child: SizedBox(
-                                                    width: 260,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            20,
-                                                          ),
-                                                      child: Text(card.title),
+                                        builder: (_, candidates, _) => DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            border: candidates.isEmpty
+                                                ? null
+                                                : Border(
+                                                    top: BorderSide(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
+                                                      width: 3,
                                                     ),
                                                   ),
-                                                ),
-                                                childWhenDragging: Opacity(
-                                                  opacity: .3,
+                                          ),
+                                          child: board.archived
+                                              ? _taskTile(context, ref, card)
+                                              : LongPressDraggable<TaskCard>(
+                                                  data: card,
+                                                  feedback: Material(
+                                                    elevation: 8,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16,
+                                                        ),
+                                                    child: SizedBox(
+                                                      width: 260,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              20,
+                                                            ),
+                                                        child: Text(card.title),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  childWhenDragging: Opacity(
+                                                    opacity: .3,
+                                                    child: _taskTile(
+                                                      context,
+                                                      ref,
+                                                      card,
+                                                    ),
+                                                  ),
                                                   child: _taskTile(
                                                     context,
                                                     ref,
                                                     card,
                                                   ),
                                                 ),
-                                                child: _taskTile(
-                                                  context,
-                                                  ref,
-                                                  card,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                  if (!board.archived)
-                                    DragTarget<TaskCard>(
-                                      onWillAcceptWithDetails: (_) => true,
-                                      onAcceptWithDetails: (d) => _move(
-                                        context,
-                                        ref,
-                                        d.data,
-                                        column.id,
-                                        board
-                                            .inColumn(column.id)
-                                            .where((c) => c.id != d.data.id)
-                                            .length,
-                                      ),
-                                      builder: (_, candidates, _) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
                                         ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            if (candidates.isNotEmpty)
-                                              const Padding(
-                                                padding: EdgeInsets.all(12),
-                                                child: Text(
-                                                  'Drop to move here',
-                                                ),
-                                              ),
-                                            TextButton.icon(
-                                              onPressed: () =>
-                                                  _task(context, column.id),
-                                              icon: const Icon(Icons.add),
-                                              label: const Text('Add task'),
-                                            ),
-                                            TextButton.icon(
-                                              onPressed: () => Navigator.push(
-                                                context,
-                                                MaterialPageRoute<void>(
-                                                  builder: (_) => _Templates(
-                                                    jobId: board.jobId,
-                                                    columnId: column.id,
+                                      ),
+                                    if (!board.archived)
+                                      DragTarget<TaskCard>(
+                                        onWillAcceptWithDetails: (_) => true,
+                                        onAcceptWithDetails: (d) => _move(
+                                          context,
+                                          ref,
+                                          d.data,
+                                          column.id,
+                                          board
+                                              .inColumn(column.id)
+                                              .where((c) => c.id != d.data.id)
+                                              .length,
+                                        ),
+                                        builder: (_, candidates, _) => Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              if (candidates.isNotEmpty)
+                                                const Padding(
+                                                  padding: EdgeInsets.all(12),
+                                                  child: Text(
+                                                    'Drop to move here',
                                                   ),
                                                 ),
+                                              TextButton.icon(
+                                                onPressed: () =>
+                                                    _task(context, column.id),
+                                                icon: const Icon(Icons.add),
+                                                label: const Text('Add task'),
                                               ),
-                                              icon: const Icon(
-                                                Icons.copy_outlined,
+                                              TextButton.icon(
+                                                onPressed: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) => _Templates(
+                                                      jobId: board.jobId,
+                                                      columnId: column.id,
+                                                    ),
+                                                  ),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.copy_outlined,
+                                                ),
+                                                label: const Text(
+                                                  'Reuse a task',
+                                                ),
                                               ),
-                                              label: const Text('Reuse a task'),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     ],
