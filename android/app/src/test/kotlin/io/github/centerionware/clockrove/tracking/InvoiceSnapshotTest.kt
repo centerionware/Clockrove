@@ -32,7 +32,7 @@ class InvoiceSnapshotTest {
     @Test fun snapshotContainsActualSelectionPriceContactsAndSafeEmailDraft() {
         assertNull(prepare().conflict)
         val record = repository.invoice("invoice"); val data = InvoiceStore.Snapshot.decode(record.payload)
-        assertEquals("INV-000001", data.number); assertEquals("123.45", data.total); assertEquals("Synthetic Co", data.company)
+        assertEquals("INV-1000", data.number); assertEquals("123.45", data.total); assertEquals("Synthetic Co", data.company)
         assertEquals("Synthetic Customer", data.customer); assertEquals("recipient@example.test", data.email)
         assertTrue(data.body.contains("123.45")); assertTrue(data.period.contains("UTC")); assertTrue(data.basis.contains("hourly"))
         assertEquals("123.45", data.lines.first().amount); assertEquals(2, data.lines.size); assertNull(record.pdf)
@@ -46,7 +46,7 @@ class InvoiceSnapshotTest {
         repository.saveJobSettings("job-changed", version, repository.jobDetail(job).job.settings.copy(name = "Changed job"))
         assertEquals(first, repository.prepareInvoice("same", originalVersion, "invoice", selection))
         assertEquals(original, repository.invoice("invoice").payload)
-        assertNull(prepare("second", "invoice-2").conflict); assertEquals("INV-000002", repository.invoice("invoice-2").number)
+        assertNull(prepare("second", "invoice-2").conflict); assertEquals("INV-1001", repository.invoice("invoice-2").number)
         val next = InvoiceStore.Snapshot.decode(repository.invoice("invoice-2").payload)
         assertEquals("9.99", next.total); assertEquals("Changed Customer", next.customer); assertEquals("CLASSIC", next.style)
     }
@@ -61,7 +61,7 @@ class InvoiceSnapshotTest {
         repository.saveCard("price", version, BoardStore.Draft("task", job, board.columns.last().id, "Synthetic free task", priceMinor = 0, currency = board.currency))
         assertNull(prepare("free").conflict)
         val data = InvoiceStore.Snapshot.decode(repository.invoice("invoice").payload)
-        assertEquals("INV-000001", data.number); assertEquals(InvoiceStore.amount(java.math.BigInteger.ZERO, data.digits), data.total)
+        assertEquals("INV-1000", data.number); assertEquals(InvoiceStore.amount(java.math.BigInteger.ZERO, data.digits), data.total)
         assertEquals(1, data.lines.size); assertTrue(data.basis.contains("fixed prices"))
     }
     @Test fun invoiceIdReuseIsRejectedAndConflictingGenerationIsRollbackSafe() {
@@ -70,7 +70,7 @@ class InvoiceSnapshotTest {
         val before = version
         try { prepare("failed", "second"); fail("Unexpected success") } catch (_: android.database.SQLException) {}
         assertEquals(before, version)
-        inspect { db -> db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(2, it.getInt(0)) }; db.rawQuery("SELECT id FROM commands WHERE id='failed'", null).use { assertFalse(it.moveToFirst()) } }
+        inspect { db -> db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001, it.getInt(0)) }; db.rawQuery("SELECT id FROM commands WHERE id='failed'", null).use { assertFalse(it.moveToFirst()) } }
     }
     @Test fun cachedPdfCannotOverwriteAnExistingDocumentOrAttachToChangedSnapshot() {
         prepare(); val original = repository.invoice("invoice"); val pdf = "%PDF-synthetic-cache-boundary".toByteArray()
@@ -79,4 +79,37 @@ class InvoiceSnapshotTest {
         assertFalse(repository.cacheInvoicePdf("invoice", original.payload, "%PDF-other".toByteArray()))
         assertArrayEquals(pdf, repository.invoice("invoice").pdf)
     }
+    @Test fun malformedStoredTemplatesReturnFieldErrorsWithoutAllocatingInvoiceNumbers() {
+        val original = repository.businessSnapshot().settings
+        val before = version
+        for (subject in listOf(true, false)) {
+            inspect { db -> db.execSQL("UPDATE app_settings SET email_subject=?,email_body=? WHERE id=1",
+                arrayOf<Any?>(if (subject) "{unknown}" else original.emailSubject, if (subject) original.emailBody else "{customer_name")) }
+            assertEquals(if (subject) "INVALID_EMAIL_SUBJECT" else "INVALID_EMAIL_BODY", prepare("invalid-$subject").conflict)
+            assertEquals(before, version)
+            inspect { db ->
+                db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(1000L, it.getLong(0)) }
+                db.rawQuery("SELECT COUNT(*) FROM invoices", null).use { assertTrue(it.moveToFirst()); assertEquals(0L, it.getLong(0)) }
+            }
+        }
+        assertNull(repository.saveBusinessSettings("correct-templates", version, original).conflict)
+        assertNull(prepare("corrected-invoice").conflict)
+        assertEquals("INV-1000", repository.invoice("invoice").number)
+    }
+
+    @Test fun firstNumberIs1000AndLegacyOrHigherCountersNeverRewritePreparedInvoices() {
+        inspect { it.execSQL("UPDATE app_settings SET next_invoice_number=1 WHERE id=1") }
+        assertNull(prepare("legacy-sequence", "legacy-invoice").conflict)
+        val first = repository.invoice("legacy-invoice")
+        assertEquals("INV-1000", first.number)
+        inspect { db ->
+            db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(1001L, it.getLong(0)) }
+            db.execSQL("UPDATE app_settings SET next_invoice_number=3200 WHERE id=1")
+        }
+        assertNull(prepare("higher-sequence", "higher-invoice").conflict)
+        assertEquals("INV-3200", repository.invoice("higher-invoice").number)
+        assertEquals(first.payload, repository.invoice("legacy-invoice").payload)
+        inspect { db -> db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(3201L, it.getLong(0)) } }
+    }
+
 }

@@ -59,12 +59,11 @@ class BusinessCommandsTest {
         }
         repository.close(); repository = TimerRepository(RuntimeEnvironment.getApplication())
         assertEquals("MODERN", settings.invoiceStyle); assertEquals("Synthetic Co", settings.companyName)
-        inspect { db -> db.rawQuery("SELECT next_invoice_number,logo_id FROM app_settings", null).use { it.moveToFirst(); assertEquals(1, it.getInt(0)); assertTrue(it.isNull(1)) } }
+        inspect { db -> db.rawQuery("SELECT next_invoice_number,logo_id FROM app_settings", null).use { it.moveToFirst(); assertEquals(1000, it.getInt(0)); assertTrue(it.isNull(1)) } }
     }
     @Test fun malformedSettingsDoNotPartiallyWriteOrChangeVersion() {
         val before = repository.businessSnapshot()
         listOf(settings.copy(defaultHourlyMinor = -1), settings.copy(currency = "XXX"), settings.copy(invoiceStyle = "OTHER"),
-            settings.copy(emailSubject = "Hello\r\nBcc:other@example.test"), settings.copy(emailBody = "{execute}"),
             settings.copy(companyEmail = "a@example.test\nBcc:other@example.test")).forEach { assertEquals("INVALID_SETTINGS", save(it).conflict) }
         assertEquals(before, repository.businessSnapshot())
     }
@@ -126,4 +125,20 @@ class BusinessCommandsTest {
         assertEquals("Hello\n\$1 {amount}", InvoiceEmailTemplate.expand("Hello\n{job_name}", values, false))
         assertFalse(InvoiceEmailTemplate.valid("{unknown}", false)); assertFalse(InvoiceEmailTemplate.valid("Header\n", true))
     }
+    @Test fun bothEmailTemplatesRejectMalformedInputWithoutPartialWritesAndRemainCorrectable() {
+        val before = repository.businessSnapshot()
+        for ((index, value) in listOf("{unknown}", "{", "}", "{company_name", "{{company_name}}", "{company_name}}", "nul\u0000").withIndex()) {
+            assertEquals("INVALID_EMAIL_SUBJECT", save(settings.copy(emailSubject = value)).conflict)
+            assertEquals("INVALID_EMAIL_BODY", save(settings.copy(emailBody = value)).conflict)
+            assertEquals(before, repository.businessSnapshot())
+            try { InvoiceEmailTemplate.expand(value, emptyMap(), false); fail("Invalid template $index expanded") } catch (_: IllegalArgumentException) {}
+        }
+        assertEquals("INVALID_EMAIL_SUBJECT", save(settings.copy(emailSubject = "Header\r\nBcc:other@example.test")).conflict)
+        assertEquals("INVALID_EMAIL_SUBJECT", save(settings.copy(emailSubject = "x".repeat(501))).conflict)
+        assertEquals("INVALID_EMAIL_BODY", save(settings.copy(emailBody = "x".repeat(20001))).conflict)
+        assertEquals(before, repository.businessSnapshot())
+        val corrected = settings.copy(emailSubject = "Invoice {invoice_number}", emailBody = "Hello {customer_name},\n{company_name}")
+        assertNull(save(corrected).conflict); assertEquals(corrected, settings)
+    }
+
 }

@@ -56,8 +56,9 @@ internal object BusinessStore {
             !bounded(value.companyName, 240) || !validEmail(value.companyEmail) || !bounded(value.companyPhone, 120) ||
             !bounded(value.companyAddress, 4000) || !bounded(value.companyWebsite, 2000) ||
             !bounded(value.invoiceHeader, 4000) || !bounded(value.invoiceFooter, 4000) ||
-            value.invoiceStyle !in setOf("MINIMAL", "CLASSIC", "MODERN") ||
-            !InvoiceEmailTemplate.valid(value.emailSubject, subject = true) || !InvoiceEmailTemplate.valid(value.emailBody, subject = false)) return "INVALID_SETTINGS"
+            value.invoiceStyle !in setOf("MINIMAL", "CLASSIC", "MODERN")) return "INVALID_SETTINGS"
+        if (!InvoiceEmailTemplate.valid(value.emailSubject, subject = true)) return "INVALID_EMAIL_SUBJECT"
+        if (!InvoiceEmailTemplate.valid(value.emailBody, subject = false)) return "INVALID_EMAIL_BODY"
         val columns = BusinessSchema.settingsColumns.drop(1).take(12)
         // Existing jobs keep their own currency; a new default never converts existing money.
         db.execSQL("UPDATE app_settings SET ${columns.joinToString(",") { "$it=?" }} WHERE id=1", value.values().toTypedArray())
@@ -107,17 +108,41 @@ internal object BusinessStore {
 }
 
 /** Literal allowlisted substitution. Values are never evaluated as template syntax. */
+/** Bounded scanner: invalid user text never constructs a regex or recursive parser. */
 internal object InvoiceEmailTemplate {
     val placeholders = setOf("company_name", "customer_name", "job_name", "invoice_number", "amount", "currency")
-    private val token = Regex("\\{([^{}]*)}")
+    private data class Token(val start: Int, val end: Int, val name: String)
+    private fun tokens(value: String): List<Token>? {
+        val result = mutableListOf<Token>()
+        var index = 0
+        while (index < value.length) {
+            when (value[index]) {
+                '}' -> return null
+                '{' -> {
+                    val end = value.indexOf('}', index + 1)
+                    if (end < 0) return null
+                    val name = value.substring(index + 1, end)
+                    if (name !in placeholders) return null
+                    result.add(Token(index, end + 1, name))
+                    index = end + 1
+                }
+                else -> index++
+            }
+        }
+        return result
+    }
     fun valid(value: String, subject: Boolean): Boolean = value.length <= (if (subject) 500 else 20000) &&
-        !value.contains('\u0000') && (!subject || !value.any { it == '\r' || it == '\n' }) &&
-        token.findAll(value).all { it.groupValues[1] in placeholders }
+        !value.contains('\u0000') && (!subject || !value.any { it.isISOControl() }) && tokens(value) != null
     fun expand(value: String, values: Map<String, String>, subject: Boolean): String {
         require(valid(value, subject)) { "INVALID_EMAIL_TEMPLATE" }
-        return token.replace(value) { match ->
-            val replacement = values[match.groupValues[1]].orEmpty()
-            if (subject) replacement.map { if (it.isISOControl()) ' ' else it }.joinToString("") else replacement.replace("\u0000", "")
+        val result = StringBuilder()
+        var copied = 0
+        for (token in requireNotNull(tokens(value))) {
+            result.append(value, copied, token.start)
+            val replacement = values[token.name].orEmpty()
+            result.append(if (subject) replacement.map { if (it.isISOControl()) ' ' else it }.joinToString("") else replacement.replace("\u0000", ""))
+            copied = token.end
         }
+        return result.append(value, copied, value.length).toString()
     }
 }

@@ -5,6 +5,7 @@ import 'business_api.dart';
 import 'business_command.dart';
 import 'settings_api.dart';
 import 'logo_controls.dart';
+import 'email_template.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -36,6 +37,7 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
+  String? _subjectError, _bodyError;
   late final _rate = TextEditingController(
     text: money(widget.initial.defaultHourlyMinor, widget.initial.digits),
   );
@@ -85,16 +87,46 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     String label, {
     int lines = 1,
     int length = 4000,
+    String? error,
+    ValueChanged<String>? onChanged,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: TextField(
       controller: c,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: error,
+        errorMaxLines: 4,
+      ),
+      onChanged: onChanged,
       minLines: lines,
       maxLines: lines == 1 ? 1 : lines + 4,
       maxLength: length,
     ),
   );
+  void _templateChanged(String _) {
+    if (_subjectError != null || _bodyError != null) {
+      setState(() {
+        _subjectError = emailTemplateError(_subject.text, subject: true);
+        _bodyError = emailTemplateError(_body.text, subject: false);
+      });
+    }
+  }
+
+  void _validateTemplates() {
+    final subject = emailTemplateError(_subject.text, subject: true);
+    final body = emailTemplateError(_body.text, subject: false);
+    setState(() {
+      _subjectError = subject;
+      _bodyError = body;
+    });
+    if (subject != null || body != null) {
+      throw const FormatException(
+        'Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final current = ref.watch(businessSettingsProvider).value;
@@ -199,12 +231,26 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           'Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.',
         ),
         const SizedBox(height: 16),
-        _field(_subject, 'Email subject template', length: 500),
-        _field(_body, 'Email body template', lines: 5, length: 20000),
+        _field(
+          _subject,
+          'Email subject template',
+          length: 500,
+          error: _subjectError,
+          onChanged: _templateChanged,
+        ),
+        _field(
+          _body,
+          'Email body template',
+          lines: 5,
+          length: 20000,
+          error: _bodyError,
+          onChanged: _templateChanged,
+        ),
         BusinessCommand(
           label: 'Save settings',
           enabled: current != null && !_logoBusy,
           create: () {
+            _validateTemplates();
             final id = newBusinessId();
             final version = current!.version;
             final s = CompanySettings(

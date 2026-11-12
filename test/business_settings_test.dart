@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -16,8 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
+  _Timer([this.events = const Stream.empty()]);
+  final Stream<int> events;
   @override
-  Stream<int> get committedVersions => const Stream.empty();
+  Stream<int> get committedVersions => events;
 }
 
 class _LogoApi extends LogoApi {
@@ -46,12 +50,16 @@ class _SettingsApi extends BusinessSettingsApi {
     name: 'Synthetic Customer',
     email: 'customer@example.test',
   );
+  Future<TimerOutcome> Function()? onSave;
   CompanySettings? savedSettings;
   Customer? savedCustomer;
   JobPreferences? savedJob;
   @override
-  Future<BusinessSettings> read() async =>
-      const BusinessSettings(1, company, [contact]);
+  Future<BusinessSettings> read() async => BusinessSettings(
+    savedSettings == null ? 1 : 2,
+    savedSettings ?? company,
+    [contact],
+  );
   @override
   Future<JobPreferences> job(String id) async => JobPreferences(
     version: 1,
@@ -73,7 +81,7 @@ class _SettingsApi extends BusinessSettingsApi {
     CompanySettings s,
   ) async {
     savedSettings = s;
-    return const TimerOutcome(2, null);
+    return onSave == null ? const TimerOutcome(2, null) : await onSave!();
   }
 
   @override
@@ -96,6 +104,7 @@ Future<void> _show(
   bool dark = false,
   double scale = 1,
   Key? boundary,
+  TimerApi? timer,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
@@ -104,7 +113,7 @@ Future<void> _show(
         overrides: [
           businessSettingsApiProvider.overrideWithValue(api),
           logoApiProvider.overrideWithValue(_LogoApi()),
-          timerApiProvider.overrideWithValue(_Timer()),
+          timerApiProvider.overrideWithValue(timer ?? _Timer()),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -133,15 +142,113 @@ Future<void> _show(
 }
 
 Future<void> _reveal(WidgetTester tester, String label) async {
+  final scrollable = find.byType(Scrollable).first;
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pumpAndSettle();
   await tester.scrollUntilVisible(
     find.text(label),
     250,
-    scrollable: find.byType(Scrollable).first,
+    scrollable: scrollable,
   );
   await tester.pumpAndSettle();
 }
 
 void main() {
+  testWidgets(
+    'main settings survives a committed native version event before its save reply',
+    (tester) async {
+      final events = StreamController<int>();
+      addTearDown(events.close);
+      final reply = Completer<TimerOutcome>();
+      final api = _SettingsApi()
+        ..onSave = () {
+          events.add(2);
+          return reply.future;
+        };
+      await _show(
+        tester,
+        api,
+        const SettingsScreen(),
+        timer: _Timer(events.stream),
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Default hourly rate (USD)'),
+        '123.45',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Settings'), findsOneWidget);
+      expect(api.savedSettings!.defaultHourlyMinor, '12345');
+      reply.complete(const TimerOutcome(2, null));
+      await tester.pumpAndSettle();
+      expect(find.text('Open'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'both email template errors are inline and block save until corrected',
+    (tester) async {
+      final api = _SettingsApi();
+      await _show(tester, api, const SettingsScreen());
+      await _reveal(tester, 'Email subject template');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email subject template'),
+        'Invoice {unknown}',
+      );
+      await _reveal(tester, 'Email body template');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email body template'),
+        'Hello {customer_name',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings, isNull);
+      expect(
+        find.textContaining('Fix the highlighted email subject'),
+        findsOneWidget,
+      );
+      await _reveal(tester, 'Email subject template');
+      expect(
+        tester
+            .widget<TextField>(
+              find.widgetWithText(TextField, 'Email subject template'),
+            )
+            .decoration!
+            .errorText,
+        contains('unknown placeholder'),
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email subject template'),
+        'Invoice {invoice_number}',
+      );
+      await _reveal(tester, 'Email body template');
+      expect(
+        tester
+            .widget<TextField>(
+              find.widgetWithText(TextField, 'Email body template'),
+            )
+            .decoration!
+            .errorText,
+        contains('unfinished placeholder'),
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email body template'),
+        'Hello {customer_name},\n{company_name}',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings!.emailSubject, 'Invoice {invoice_number}');
+      expect(
+        api.savedSettings!.emailBody,
+        'Hello {customer_name},\n{company_name}',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'global hourly amount persists as exact minor units with company templates',
     (tester) async {

@@ -121,6 +121,11 @@ Do not substitute a partial feature set for this contract.
   change an existing prepared invoice. Repeated taps/retries must not allocate
   duplicate invoices for the same generation intent.
 
+New invoice sequences start at 1000 (displayed as INV-1000), then increment
+automatically. Existing prepared invoices retain their immutable numbers and
+content. An older unconsumed counter below 1000 is raised when the next invoice
+is committed; already higher sequences continue without resetting.
+
 ## Email handoff
 
 - Generating/sending an invoice should open the default email app (or the system

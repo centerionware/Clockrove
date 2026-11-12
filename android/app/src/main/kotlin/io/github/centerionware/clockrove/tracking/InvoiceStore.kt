@@ -44,9 +44,11 @@ internal object InvoiceStore {
         if (total.mode == "HOURLY" && report.intervals.isEmpty() || total.mode == "TASK" && report.tasks.isEmpty()) return "NO_BILLABLE_ITEMS"
         if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
-        val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
+        if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
+        if (!InvoiceEmailTemplate.valid(company.emailBody, false)) return "INVALID_EMAIL_BODY"
+        val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0).coerceAtLeast(1000) }
         if (sequence == Long.MAX_VALUE) return "INVOICE_SEQUENCE_EXHAUSTED"
-        val number = "INV-${sequence.toString().padStart(6, '0')}"
+        val number = "INV-$sequence"
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
         val formatted = amount(total.amountMinor, digits)
         val lines = if (total.mode == "TASK") report.tasks.map { Line(it.title, "Completed ${instant(it.completed, selection.timezone)}", amount(BigInteger.valueOf(requireNotNull(it.priceMinor)), digits)) }
