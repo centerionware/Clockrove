@@ -49,9 +49,11 @@ then exposed initial adapter binding. #38 corrected the early-notification race
 with revision/token/local-day adapter identity. Final c1595c7 passed 43195277559:
 385 native / 44 actual Android, zero failures/errors/skips, three resize cycles,
 live edit, exact final-row rendering and real board tap on both APIs. XML/logs and
-widget captures reviewed. Merged 1c358bc at 2026-11-12 10:07:02 UTC; new main
-validation/internal delivery must be verified. Last accepted Play build remains
-internal.22.1 / 216624221 (43160879953). No VM builds/tests ran.
+widget captures reviewed. Merged 1c358bc at 2026-11-12 10:07:02 UTC. Main 43197481528 passed 385 native /
+44 actual Android (downloaded XML, zero failures/errors/skips), and Play delivery
+43199258376 accepted 0.1.0-internal.25.1 / 216642056 at 10:25:48 UTC using the
+permanent key. Tester availability/physical upgrade remain separate. No VM
+builds/tests ran.
 
 Continue the immediate payment milestone in `.local/invoice-payments`, draft #37.
 Baseline 811fb7d / 43193679201 passed all 414 native cases, formatting, analysis,
@@ -1687,3 +1689,16 @@ immediate notifications with revision/token/day adapter identity passed all thre
 resize cycles, a committed live edit and final-row/real-board checks on both APIs.
 Merged 1c358bc; main and internal upload are separate gates, not yet proven here.
 The payment draft now includes the tested source through a main merge.
+
+### 2026-11-12 receipt validation and isolation correction
+
+9562f08 / 43197625440 passed all 434 native cases (downloaded XML, zero failures,
+errors/skips), plus Flutter/formatting/analysis/debug gates. The new all-style
+actual receipt/correction/balance/wide-PDF case passed API 24, but the shared suite
+then failed its unchanged first-invoice settings regression: six earlier receipt
+fixtures had consumed INV-1000, so it observed INV-1006. API 35 was not reached.
+Keep both first-number assertions and move copy lifecycle instrumentation to a
+fresh process/app-data run after prior XML/captures have been retained, following
+the existing financial-journey isolation. New copy run also asserts INV-1000; no
+counter reset or weakened expected number is used. Revised full Actions evidence
+and all-style image/API-35 text review are still required before acceptance.

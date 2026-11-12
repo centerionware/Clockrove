@@ -1,10 +1,11 @@
-package io.github.centerionware.clockrove.invoice
+package io.github.centerionware.billingtest
 
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.centerionware.clockrove.invoice.InvoiceDocuments
 import io.github.centerionware.clockrove.tracking.BoardStore
 import io.github.centerionware.clockrove.tracking.InvoicePaymentStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
@@ -105,6 +106,7 @@ class InvoiceCopiesPdfTest {
                 val token = style.lowercase(Locale.ROOT)
                 val id = invoice(style, token, BigInteger.valueOf(10000))
                 val original = InvoiceDocuments.ensure(repository, id)
+                if (style == "MINIMAL") assertEquals("INV-1000", original.number)
                 pay(id, "$token-first", BigInteger.valueOf(3000))
                 val partial = render(id, "receipt-$token-first", "clockrove-receipt-partial-$token",
                     listOf("PaidtodateUSD30.00", "BALANCEDUEUSD77.50", "USD107.50", "Syntheticpaymentreference"))
