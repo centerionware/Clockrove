@@ -134,6 +134,12 @@ class WidgetHostDeviceTest {
             instrumentation.runOnMainSync { host.stopListening(); host.deleteHost(); activity.finish() }
         }
     }
+    private fun captureSetup() {
+        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+            File(app.getExternalFilesDir(null), "widget-setup.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+    }
     private fun clickText(label: String, click: Boolean = true) {
         var found: android.view.accessibility.AccessibilityNodeInfo? = null
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
@@ -145,6 +151,17 @@ class WidgetHostDeviceTest {
         while (found == null && SystemClock.uptimeMillis() < deadline) {
             found = instrumentation.uiAutomation.rootInActiveWindow?.let(::visit)
             if (found == null) SystemClock.sleep(100)
+        }
+        if (found == null) {
+            val dump = StringBuilder()
+            fun describe(node: android.view.accessibility.AccessibilityNodeInfo, depth: Int) {
+                if (dump.length > 200000 || depth > 50) return
+                dump.append(" ".repeat(depth)).append(node.toString()).append('\n')
+                for (index in 0 until node.childCount) node.getChild(index)?.let { describe(it, depth + 1) }
+            }
+            instrumentation.uiAutomation.rootInActiveWindow?.let { describe(it, 0) }
+            File(app.getExternalFilesDir(null), "widget-accessibility.txt").writeText(dump.toString())
+            captureSetup()
         }
         var node = found ?: throw AssertionError("Actual widget setup did not show $label")
         if (!click) return
@@ -164,6 +181,7 @@ class WidgetHostDeviceTest {
             val intent = Intent(app, WidgetConfigurationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
             activity = instrumentation.startActivitySync(intent) as WidgetConfigurationActivity
             clickText("Widget setup choice")
+            captureSetup()
             clickText("Save widget")
             until("Actual widget setup must commit and close") { activity!!.isFinishing && repository.widgetSnapshot(id).configuration.jobId == job }
             val binding = repository.widgetSnapshot(id).configuration
