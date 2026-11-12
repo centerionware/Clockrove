@@ -119,6 +119,7 @@ assert all(int(root.attrib[k]) == 0 for k in ['failures','errors','skipped']), r
 classes = {case.attrib['classname'] for case in root.findall('testcase')}
 expected = {
     'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 4,
+    'io.github.centerionware.clockrove.invoice.InvoiceCopiesPdfTest': 1,
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
@@ -131,6 +132,10 @@ for classname, count in expected.items():
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
   for clockrove_style in minimal classic modern; do
+    for clockrove_copy in receipt-partial receipt-paid balance-paid payment-correction receipt-wide; do
+      test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-$clockrove_copy-$clockrove_style.pdf"
+      test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-$clockrove_copy-$clockrove_style.png"
+    done
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.pdf"

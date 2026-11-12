@@ -360,3 +360,29 @@ replacements, quotes/revisions, tax snapshots, comments and expenses by stable
 identity. Import may not duplicate payment/credit or release already-billed work;
 ambiguous histories need previewed conflicts and transactional resolution. No
 email sending, timers or automation are triggered by restore.
+
+## Current copy implementation checkpoint (not milestone acceptance)
+
+Baseline 811fb7d / 43193679201 passed 414 native cases plus Flutter/analysis/build;
+its device stage was held by the separate widget binding issue. Native copy source
+now atomically retains a receipt intent per payment and correction intent per
+reversal. Balance copies are explicit versioned commands. Stable kind-prefixed
+identities prevent collisions, and retries reuse the same intent. Metadata is
+immutable; derived PDF caching does not mutate the ledger. Original documents,
+numbers, coverage and earlier receipts remain unchanged.
+
+A copy freezes its command-version boundary and exact paid/due minor strings.
+Receipt/correction documents refer to one immutable event; balance documents list
+events through that boundary. Received/effective labels and offsets are captured
+at native write time, so later timezone changes do not rewrite a printed copy.
+Internal payment/correction notes stay off customer PDFs. Copies retain financial
+revision history on job purge and use separate read-only private content URIs.
+All three layouts label original invoice totals separately from paid and due.
+
+Rendering a balance history is bounded to 5000 events and 200 pages; exceeding a
+limit fails explicitly without truncation or deleting payments. Individual saved
+receipts remain available. Rendering and email failures never undo a committed
+payment; retries open the same retained document. Email expansions over 100 KB are
+rejected before activity handoff and unexpected handoff failures are caught; Save
+PDF/Share remain available. Actual Android PDFs/attachments and wide receipt money
+need the new Actions/visual evidence. UI, bridge and void/replacement remain open.

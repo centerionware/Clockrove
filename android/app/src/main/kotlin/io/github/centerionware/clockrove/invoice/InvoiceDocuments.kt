@@ -15,22 +15,31 @@ import java.io.File
 
 internal object InvoiceDocuments {
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
-    fun ensure(repository: TimerRepository, id: String): InvoiceStore.Record {
-        val before = repository.invoice(id)
+    fun ensure(repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
+        fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
+        val before = read()
         if (before.pdf != null) return before
         val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo)
-        repository.cacheInvoicePdf(id, before.payload, bytes)
-        return repository.invoice(id).also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
+        if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
+        return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
     fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
+    fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
+    fun filename(record: InvoiceStore.Record): String {
+        if (record.copyId == null) return "${record.number}.pdf"
+        val statement = requireNotNull(InvoiceStore.Snapshot.decode(record.payload).statement)
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(statement.created))
+        return "${record.number}-${record.documentKind.lowercase(java.util.Locale.ROOT)}-$date-${record.copyId.takeLast(8)}.pdf"
+    }
     fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings): Intent {
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         require(BusinessStore.validEmail(snapshot.email)) { "INVALID_RECIPIENT" }
+        require(snapshot.subject.toByteArray(Charsets.UTF_8).size + snapshot.body.toByteArray(Charsets.UTF_8).size <= 100_000) { "EMAIL_TOO_LARGE" }
         require(snapshot.subject.none { it == '\r' || it == '\n' }) { "INVALID_SUBJECT" }
         val accounting = company.receivablesEmail.ifEmpty { company.companyEmail }
         require(BusinessStore.validEmail(accounting)) { "INVALID_ACCOUNTS_RECEIVABLE_EMAIL" }
         val cc = if (accounting.isEmpty() || accounting.equals(snapshot.email, ignoreCase = true)) emptyArray<String>() else arrayOf(accounting)
-        val uri = uri(context, record.id)
+        val uri = uri(context, record)
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
@@ -44,7 +53,7 @@ internal object InvoiceDocuments {
         }
     }
     fun share(context: Context, record: InvoiceStore.Record): Intent {
-        val uri = uri(context, record.id)
+        val uri = uri(context, record)
         return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri("Invoice PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
     fun preview(context: Context, record: InvoiceStore.Record, index: Int): Map<String, Any> {

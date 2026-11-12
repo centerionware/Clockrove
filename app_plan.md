@@ -1671,3 +1671,28 @@ overlay intercepted scrolling to Save. Native checks did not run. Applied the
 Actions formatter patch, configured company/AR fields for email input without
 autocorrect/suggestions, and dismiss text editing before the regression scroll.
 Next Actions evidence must verify these changes and the frozen-fixture migrations.
+
+### 2026-11-12 payment baseline and immutable copy increment
+
+811fb7d / Actions 43193679201 passed formatting, analysis, Flutter behavior, debug
+build and all 414 native cases (downloaded XML: zero failures/errors/skips). This
+verifies the frozen 5/7→8 migrations, ledger, AR validation and native CC baseline.
+Its actual Android stage failed the known old widget initial-binding case; that is
+being corrected separately in #38. This is not full payment milestone acceptance.
+
+Next source increment retains an immutable receipt intent in the same transaction
+as each payment, and a correction copy with each reversal. Explicit balance copies
+freeze a command version, paid/due and historical event boundary without consuming
+invoice numbers or creating cash. Original issued payload/PDF remains unchanged.
+Payment events freeze received/effective labels and UTC offset as well as UTC and
+IANA timezone. Customer documents exclude internal notes. Retained copy metadata
+and revisions survive job purge; derived PDFs use separate private content URIs,
+read-only grants and the same three native styles. Save captures the selected
+bytes; email keeps current AR/company CC and guards oversized/failed handoffs.
+
+Seven native copy cases per API, two additional handoff cases per API and one
+comprehensive actual Android copy/PDF case per API are prepared. The latter covers
+partial/paid/balance/correction documents in all three styles, real attachments,
+and 1000-digit receipt balances, with required image/PDF artifacts and exact API-35
+text checks. New source still needs Actions evidence and image review. Payment UI,
+bridge wiring and credit-preserving void/replacement remain outstanding.

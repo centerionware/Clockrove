@@ -67,6 +67,34 @@ class InvoiceHandoffTest {
         } catch (_: IllegalArgumentException) { }
         assertEquals(record.payload, repository.invoice("invoice").payload)
     }
+    @Test fun oversizedExpandedEmailIsRejectedBeforeActivityBinderHandoff() {
+        val record = repository.invoice("invoice")
+        val snapshot = InvoiceStore.Snapshot.decode(record.payload).copy(body = "x".repeat(100001))
+        try { InvoiceDocuments.email(context, record.copy(payload = snapshot.encode()), repository.businessSnapshot().settings); fail("Oversize email accepted") } catch (_: IllegalArgumentException) { }
+        assertArrayEquals(synthetic, repository.invoice("invoice").pdf)
+    }
+    @Test fun receiptUriGrantsOnlyItsFrozenBytesAndAccountingCopyUsesCurrentSettings() {
+        val total = io.github.centerionware.clockrove.tracking.PaymentMath.parseMajor(InvoiceStore.Snapshot.decode(repository.invoice("invoice").payload).total, 2)
+        val at = System.currentTimeMillis()
+        assertNull(repository.recordInvoicePayment("pay", version, io.github.centerionware.clockrove.tracking.InvoicePaymentStore.Draft("payment", "invoice", total.divide(java.math.BigInteger.valueOf(2)).toString(), "USD", at - 1000, "UTC")).conflict)
+        val copy = repository.invoiceCopy("receipt-payment")
+        val bytes = "%PDF-synthetic-receipt-provider-fixture".toByteArray()
+        assertTrue(repository.cacheInvoiceCopyPdf("receipt-payment", copy.payload, bytes))
+        val ready = InvoiceDocuments.ensure(repository, "invoice", "receipt-payment")
+        val uri = InvoiceDocuments.uri(context, ready)
+        assertEquals(listOf("copies", "receipt-payment"), uri.pathSegments)
+        ParcelFileDescriptor.AutoCloseInputStream(provider.openFile(uri, "r")).use { assertArrayEquals(bytes, it.readBytes()) }
+        val company = repository.businessSnapshot().settings.copy(companyEmail = "company@example.test", receivablesEmail = "accounts@example.test")
+        val intent = InvoiceDocuments.email(context, ready, company)
+        assertArrayEquals(arrayOf("accounts@example.test"), intent.getStringArrayExtra(Intent.EXTRA_CC))
+        assertEquals(uri, intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)); assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
+        assertTrue(intent.getStringExtra(Intent.EXTRA_SUBJECT)!!.startsWith("Payment receipt"))
+        assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Original total:"))
+        assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Balance due:"))
+        assertTrue(InvoiceDocuments.filename(ready).startsWith("INV-1000-receipt-"))
+        try { InvoiceDocuments.ensure(repository, "other-invoice", "receipt-payment"); fail("Wrong invoice copy accepted") } catch (_: IllegalArgumentException) { }
+        assertArrayEquals(synthetic, repository.invoice("invoice").pdf)
+    }
     @Test fun recipientAndSubjectInjectionAreRejectedBeforeOpeningAnyApplication() {
         val record = repository.invoice("invoice"); val s = InvoiceStore.Snapshot.decode(record.payload)
         for (bad in listOf(s.copy(email = "a@example.test\r\nBcc:b@example.test"), s.copy(subject = "Invoice\nBcc:other@example.test"))) {

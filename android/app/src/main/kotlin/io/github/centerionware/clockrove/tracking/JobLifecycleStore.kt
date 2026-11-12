@@ -57,7 +57,7 @@ internal object JobLifecycleStore {
         }
         // Issued documents and their source reservations are retained financial
         // records. Purging work must neither erase them nor release billed work.
-        val financial = "'invoice','invoice_coverage','invoice_task_claim','invoice_time_claim','invoice_payment','payment_destination','invoice_payment_reversal','invoice_payment_event'"
+        val financial = "'invoice','invoice_coverage','invoice_task_claim','invoice_time_claim','invoice_payment','payment_destination','invoice_payment_reversal','invoice_payment_event','invoice_copy'"
         val entities = db.rawQuery("SELECT kind,entity_id FROM entity_heads WHERE revision_id IN (SELECT id FROM entity_revisions WHERE job_id=? AND kind NOT IN($financial))", arrayOf(id)).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1)) } }
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE job_id=? AND kind NOT IN($financial)", arrayOf(id))
         entities.forEach { (kind, entityId) -> RevisionStore.record(db, kind, entityId, id, mapOf("id" to entityId, "job_id" to id), now, deleted = true) }

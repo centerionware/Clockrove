@@ -505,6 +505,20 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun reverseInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Reversal): Outcome =
         boardChange(id, version, "INVOICE_PAYMENT_REVERSE", value.values()) { InvoicePaymentStore.reverse(it, value, wallClock()) }
+    @Synchronized
+    internal fun prepareInvoiceBalanceCopy(id: String, version: Long, copyToken: String, invoiceId: String): Outcome =
+        boardChange(id, version, "INVOICE_BALANCE_COPY", listOf(copyToken, invoiceId)) { InvoiceCopyStore.prepareBalance(it, copyToken, invoiceId, wallClock()) }
+    @Synchronized
+    internal fun invoiceCopies(invoiceId: String): List<InvoiceCopyStore.Summary> = InvoiceCopyStore.list(helper.readableDatabase, invoiceId)
+    @Synchronized
+    internal fun invoiceCopy(copyId: String): InvoiceStore.Record = InvoiceCopyStore.read(helper.readableDatabase, copyId)
+    @Synchronized
+    internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray): Boolean {
+        require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))
+        val db = helper.writableDatabase
+        if (InvoiceCopyStore.read(db, copyId).payload != payload) return false
+        return db.update("invoice_copies", android.content.ContentValues().apply { put("pdf", bytes) }, "id=? AND pdf IS NULL", arrayOf(copyId)) == 1
+    }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
         val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
