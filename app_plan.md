@@ -27,16 +27,19 @@ The user explicitly requested this handoff after creating agent instructions and
 
 ### Next concrete action
 
-The owner-requested combined internal iteration in
-[docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md) passed exact-head Actions
-43117726325 and merged via #29 as cb2efc9. Play delivery is active again;
-main validation 43120365067 and Play delivery 43121445107 passed. Play accepted
-0.1.0-internal.19.1 (216603660) from cb2efc9. Production readiness remains
-unset. Manual-history #32 passed 43123810250 and merged as 863c9a0.
-Follow its main validation/internal delivery and continue widget configuration.
-Physical GPS/launcher/recovery/email evidence, provider settings, encrypted
-backup/merge and full launch acceptance remain unfinished. All builds/tests and
-rendering remain in GitHub Actions.
+Settings crash fix #34 passed exact-head Actions 43129744209 and merged as
+c5e19d1. Actual unfixed-source crash reproduction 43128896688 confirms the
+InvoiceEmailTemplate initializer failure. Inspected final results: 245 native
+cases and sixteen actual Android cases per API (24/35), zero failures/errors/
+skips, including Settings save/reopen, both-template rejection/correction and
+INV-1000 invoice preparation/expanded email. Follow the new main validation and
+automatic internal delivery before claiming Play acceptance of the fix.
+
+Widget #33 remains paused for priority delivery. Its local branch now includes
+the fixed main source and requires fresh combined checks before merging. Keep the full application goal: widget setup,
+physical GPS/launcher/recovery/email evidence, provider settings, encrypted
+backup/merge and launch acceptance remain unfinished. Production readiness is
+unset. All builds/tests/rendering run only in GitHub Actions.
 
 ## 2. Product decisions
 
@@ -1335,7 +1338,7 @@ are prepared for Actions, without assuming a cause from mocked form tests.
 Email subject and body templates must both be validated safely, with field-level
 feedback and correction guidance. Invalid placeholders/lengths/control characters
 never bypass the native transaction guard. Use a bounded literal scanner rather
-than user-driven regex initialization, and refuse malformed stored templates
+than platform-sensitive regex initialization, and refuse malformed stored templates
 before invoice-number allocation. Validation/reproduction evidence is pending
 in the priority settings-crash branch; see plan_status.md.
 
@@ -1343,3 +1346,26 @@ Owner refinement: new invoice numbering starts at 1000 (INV-1000) and advances
 automatically. Existing prepared invoices keep their numbers/content. Older
 unconsumed counters below 1000 use a floor at allocation; higher counters never
 reset. Invalid template validation must not consume or advance the sequence.
+
+### Main Settings crash reproduced and guarded source checked
+
+Unfixed diagnostic head 2cdf329 / Actions 43128896688 reached Save settings on
+actual API 24 and killed the app process. Captured AndroidRuntime trace shows
+BusinessStore.saveSettings -> InvoiceEmailTemplate.<clinit> -> PatternSyntaxException
+for the unescaped closing brace, wrapped in ExceptionInInitializerError. This
+confirms the user's process-crash report and the source cause.
+
+Guarded head a30d0b7 / 43128476006 passed 244 native host cases and sixteen
+actual cases on each API (24/35), zero native/device failures/errors/skips,
+including Settings save/reopen and both-template invalid/correction cases. The
+whole run failed formatting only; final formatted source plus the requested
+INV-1000 allocator and actual invoice preparation awaits 43129744209.
+
+### Priority settings fix merged
+
+Full Actions 43129744209 passed exact head 145870a. Final run-specific XML
+contains 245 native cases and sixteen actual cases on each API (24/35), zero
+failures/errors/skips. Actual Settings save/reopen and native invoice creation
+with INV-1000 and correct expanded subject/body pass. Merged #34 as
+c5e19d15a06ccd31e85455e5ab4782bcdf36a88d. Its main validation and Play upload
+are separate and pending; production readiness stays unset.

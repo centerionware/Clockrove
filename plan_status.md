@@ -33,7 +33,7 @@ iOS and future service remain deferred.
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
-| Business iteration: invoices and email | Implemented and combined Actions acceptance passed | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
+| Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix validated and merged; internal upload pending | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
@@ -1713,3 +1713,35 @@ and invoice preparation: require INV-1000, the expanded subject and the real
 hourly total in the email body on both APIs. This closes the prior gap where
 actual PDF renderer cases used prebuilt snapshots without exercising native
 template expansion/allocation. The final source still needs its exact-head run.
+
+### Actual process crash reproduced; guarded Android path passes
+
+Unfixed source 2cdf329 / run 43128896688 reached Save on actual API 24 and
+terminated the app process. Inspected AndroidRuntime logs identify
+InvoiceEmailTemplate.<clinit>, PatternSyntaxException for the unescaped literal
+right brace, wrapped in ExceptionInInitializerError and followed by process
+death. This is a reproduced process failure, not a mocked/assumed cause.
+
+Guarded source a30d0b7 / 43128476006 passed 244 native host cases and sixteen
+actual Android cases on each API (24/35), zero native/device failures/errors/
+skips. Both Settings save/reopen and native subject/body validation/correction
+cases passed. The whole workflow failed only the clean-format gate. Applied
+that exact formatter patch; final source 145870a additionally includes INV-1000
+allocation and actual native invoice preparation. Run 43129744209 is live; no
+final-head acceptance/upload is claimed. Widget #33 remains paused and must
+combine the fixed main source before its eventual merge.
+
+History main 863c9a0 passed 43125332760 and Play delivery 43126724653; inspected
+logs confirm accepted 0.1.0-internal.20.1 / versionCode 216606241 at 00:29:37 UTC.
+That build predates the settings fix. Production readiness remains unset.
+
+### Priority fix final acceptance and merge
+
+Full Actions 43129744209 passed exact head 145870a. Inspected final XML confirms
+245 native cases and sixteen actual Android cases per API (24/35), zero failures/
+errors/skips. Actual Flutter Settings save/reopen, native invalid subject/body
+rejection/correction and real invoice preparation/expansion with INV-1000 pass.
+Merged #34 as c5e19d15a06ccd31e85455e5ab4782bcdf36a88d. Main validation and
+automatic internal delivery for this new merge must pass before claiming Play
+acceptance of the fix. The original crash was independently reproduced against
+unfixed source in 43128896688. No builds/tests ran on the VM.
