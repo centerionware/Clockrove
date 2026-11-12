@@ -90,7 +90,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 3,
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
-    'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 3,
+    'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
 }
 for classname, count in expected.items():
     actual = sum(case.attrib['classname'] == classname for case in root.findall('testcase'))

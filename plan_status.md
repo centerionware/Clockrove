@@ -20,28 +20,28 @@ iOS and future service remain deferred.
 | M2.2 Location/geofences/departure/recovery prototype | Native feasibility in progress | Sample storage, FGS/permission adapter, measured status, departure persistence and qualified membership passed Actions and merged; policy, alarms and Android registration/callbacks merged in PRs #12–14; 86 native tests passed; control UI validation and device evidence remain |
 | M2.3 OSM and runtime Google-key experiment | OSM source/synthetic CI verified; runtime proof pending | Actions 43006507700 passed; PR #10 merged bb2a9eb with six reviewed previews. Live OSM/device rendering and Google runtime-key initialization remain unproven |
 | M2.4 Physical screen-off/battery validation | Pending external device | No device identified; docs/DEVICE_VALIDATION.md records the prototype checks and honest capability boundaries |
-| M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration, provider settings and backup contracts remain |
+| M3.1 Schema, migrations and typed contracts | Business/history/job contracts verified; full contracts in progress | Schema 5 plus PRs #19–28/#30/#31 merged; history Actions 43105996492 and job-command Actions 43115650224 pass; final business integration passed #29; provider settings and backup contracts remain |
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections and queries verified; history UI pending | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
-| M4.1 Manual tracker UI and history | Timer and business UI merged; correction/history screens pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30, UI forms and full manual journey remain unfinished |
+| M4.1 Manual tracker UI and history | Timer/business UI merged; correction/history UI prepared, CI pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history contracts verified in #30; #32 adds forms/deleted-entry history, awaiting Actions and visual review; full manual journey remains unaccepted |
 | M4.2 Widgets/configuration/notification actions | Compact widget and actions verified in CI; configuration/device gaps | PR #18 native API-24/35 RemoteViews and synthetic previews reviewed; default-job/picker configuration and real launcher/recovery journey remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
-| M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition checks verified; recovery update/device proof pending | Departure/alarm/geofence tests on main; #17 monitoring retry/app-upgrade recovery awaits complete current-main validation; screen-off/OEM/reboot/GPS evidence remains |
-| M6.1 Boards and accessible moves | Implemented and merged; final integration checks pending | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 adds refreshed move-dialog regression |
-| M6.2 Date/list/totals/map/timezones | Implemented and merged; strengthened calendar checks pending | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks still under validation |
+| M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
+| M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
+| M6.2 Date/list/totals/map/timezones | Implemented, integrated and calendar checks verified | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks passed 43117726325 |
 | M6.3 Provider settings/secure credentials/tile policy | Pending | Outage must preserve manual functionality |
-| M6.4 CSV and document sharing | Implemented and merged; combined document acceptance pending | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; actual framework PDF tests pass in earlier run, final logo/pagination/viewer checks pending |
+| M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
-| Business iteration: archive/restore/delete | Implemented and merged; final settings integration pending | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
-| Business iteration: invoices and email | Implemented and merged; combined acceptance pending | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
-| Business iteration: logo and final document previews | Source prepared in #29; validation in progress | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; no final visual acceptance yet |
+| Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
+| Business iteration: invoices and email | Implemented and combined Actions acceptance passed | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
+| Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Internal upload verified; broader release readiness incomplete | Actions 42988068348 attempt 2 succeeded; Play accepted versionCode 216549708; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Complete business iteration upload verified; launch gates remain | Main 43120365067 and delivery 43121445107 succeeded for cb2efc9; Play accepted 0.1.0-internal.19.1 / 216603660; permanent key and automatic allocation verified; production/device/store gates remain |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
@@ -1034,26 +1034,27 @@ large text. Native visual harness renders idle/running images in Actions. No VM
 build/test/render ran; source is not yet validated on CI or the owner's launcher.
 
 
-### Binding combined next-test-release scope and publishing hold
+### Binding combined business scope — current internal acceptance
 
-Contract: [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). Owner requires the
-next internal release to include all requested features; documentation is not
-completion. **Play delivery workflow 414395901 is temporarily disabled_manually**
-(verified through GitHub API). Validate is active. Do not publish partial builds;
-re-enable automatic delivery only for the complete validated combined iteration.
+Contract: [docs/NEXT_TEST_RELEASE.md](docs/NEXT_TEST_RELEASE.md). The complete
+combined implementation passed exact-head checks 43117726325 and merged in #29.
+Main checks 43120365067 and Play delivery 43121445107 passed for cb2efc9;
+0.1.0-internal.19.1 / 216603660 was accepted. Play delivery is active and
+production readiness remains unset. Earlier held/pending ledger notes below
+record the development history, not the current release state.
 
-| Addition | Status | Required evidence |
+| Addition | Status | Evidence / remaining gap |
 | --- | --- | --- |
-| Hourly/task billing mode and task prices | Native/settings UI passed; report UI pending | PRs #20–24; exact integer, mode, zero/missing/currency and DST cases passed; combined report UI #28 awaits checks |
-| Reusable task templates including deleted-job content | Board/native lifecycle passed; final cleanup pending | Independent catalog/copy/removal tested; #27 historical-provenance cleanup and final UI checks remain |
-| Complete reporting and Kanban task management | Kanban passed; report core passed; integrated UI pending | #23 validated board and previews; #22 DST/pricing/CSV native tests; #28 full report/map/export UI unverified |
-| Customers and per-job customer/email | Implemented and Actions passed | #21 native persistence/references and #24 typed forms/customer journeys; refresh-race fix in #28 pending |
-| PDF invoice beside CSV | Pending | Valid multipage PDF with actual report line items/totals |
-| Email draft with automatic fields and PDF attachment | Pending | Native Intent/URI grant tests; device email handoff evidence separate |
-| Global company/contact and email subject/body templates | Implemented and Actions passed | #21 literal/injection/persistence tests and #24 UI journeys passed; document handoff pending |
-| Optional invoice header/footer and company logo import | Header/footer stored; logo importer pending | Header/footer settings/native snapshot source exists; actual PDF/logo/device checks and importer remain |
-| Minimal, Classic and Modern invoice styles | Pending | Three distinct real rendered PDFs with equal totals and logo/pagination checks |
-| Combined internal release | Held | All scope implemented and checked before Play workflow is re-enabled |
+| Hourly/task billing mode and task prices | Merged and Actions verified | Exact integer pricing, missing/zero values, currencies, completion dates and DST report cases passed; report UI integrated |
+| Reusable templates including deleted-job content | Merged and Actions verified | Independent catalog/copy/removal, deletion retention and provenance cleanup passed |
+| Reporting and full Kanban management | Merged and Actions verified | Board CRUD/reorder/drag/accessibility, selected date/job list/map/totals/CSV, reviewed theme previews |
+| Customers and per-job customer/email | Merged and Actions verified | Native references and typed customer/job forms, refresh-race checks passed |
+| PDF invoice beside CSV | Merged and actual-framework verified | Immutable numbered snapshots and all-style multipage row/amount/total checks passed |
+| Email draft with automatic fields and PDF attachment | Merged; native handoff checks verified | Real Intent/content-URI/read-grant tests pass; installed email-app compatibility remains a physical-device gap |
+| Company/contact and email templates | Merged and Actions verified | Persistence, placeholder handling, immutable snapshots and UI journeys passed |
+| Optional header/footer and company logo | Merged and actual-framework verified | Bounded PNG/JPEG/WebP import, metadata removal, immutable retention and actual rendered logo/pagination checks passed |
+| Minimal, Classic and Modern invoice styles | Merged; actual visuals reviewed | Three distinct native PDFs, multipage first/middle/final pages and decoded light/dark viewer captures reviewed |
+| Combined internal release | Upload accepted | Delivery 43121445107 / versionCode 216603660; tester installation is separate |
 
 No new login/server/SMTP credential system, task timer, tax calculation or recurring
 billing is authorized by these features. Existing application scope remains active.
@@ -1537,3 +1538,94 @@ Job-command head 0f0c7c4 / 43115650224 passed its native step: inspected XML
 confirms 231 cases, including all sixteen job-creation executions, with zero
 failures/errors/skips. Full workflow/device completion is still required before
 merging #31. Source has not been built or tested on this VM.
+
+Viewer retry 43115429141 attempt 2 / head 65b0f44 completed successfully.
+Downloaded six decoded light/dark captures; hashes differ across all style/theme
+pairs and original-resolution review shows the actual PDF pages, logo, totals,
+email/save/share controls and page navigation. The earlier blank-capture issue is
+resolved in the verification path. Native multipage review and viewer acceptance
+are now supported; final combined head 8e0e19e still requires its own full check.
+
+### Combined iteration exact-head acceptance and main merge
+
+Full Actions 43117726325 passed exact head 8e0e19e. Inspected XML: 238 native
+cases, thirteen actual Android cases on API 24 and thirteen on API 35, zero
+failures/errors/skips. Six final decoded viewer captures match the reviewed
+light/dark images. Actual PDF all-style multipage review and all 130 priced-row
+checks passed. This supersedes the earlier pending/held iteration statuses.
+
+PR #29 merged as cb2efc9d9aa3dd8fb2b183ebc2eb457e71c514ec. No open PRs
+remain. Play workflow 414395901 is active; production readiness remains unset.
+Main Actions 43120365067 passed; automatic delivery 43121445107 is queued.
+This iteration's signed upload and Play acceptance are not yet claimed. All execution remains in GitHub Actions.
+Full manual-history UI, widget configuration, providers, backup/merge and launch
+acceptance remain unfinished; physical GPS/launcher/email compatibility remains
+a separate device-validation gap.
+
+### Manual history UI and retained changes — prepared for Actions
+
+Implemented a job work-history route with native pagination, manual add/correct
+forms, original timezone/millisecond preservation, explicit offset choices and
+gap rejection. Commands capture immutable intent for unknown-response retries;
+forms/navigation are locked until resolved. Refresh keeps drafts and only adopts
+a newer version when the saved entry still matches its baseline. Changed source
+requires explicit reload/review. Running sessions remain read-only until stopped.
+
+Added red confirmed deletion and job-wide paginated change history, including
+deleted entries. Native insertion ordering survives wall-clock rollback, and
+job-scoped detail/audit reads honor job purge. Added query/transport tests, a real
+API-24/35 time-format/resolve round trip and UI loss/stale/gap/deletion/history/
+large-text cases plus six synthetic preview captures. All validation is pending
+in GitHub Actions; no local execution or completed M4 acceptance is claimed.
+
+History PR #32 is open as a draft. Exact head 71d23b6 is being validated in
+Actions 43121754750. Earlier run 43121577416 was cancelled only after its source
+was superseded. Additional local review bounds calendar-picker seed years and
+makes UI test scrolling independent of the previous scroll position; these
+changes must be included in the next validation head. Main delivery 43121445107
+is currently building with the permanent key; acceptance remains pending.
+
+History run 43121754750 stopped at analysis: ten unbraced conditional lints in
+the screen, one in the codec fixture, and a missing closing parenthesis in the
+widget harness. No behavior/native/device check ran. Corrected those source
+issues; formatter output was unavailable because the syntax error stopped the
+format step before patch generation. Fresh Actions evidence remains required.
+
+### Combined business internal upload verified
+
+Main validation 43120365067 and automatic Play delivery 43121445107 succeeded
+for cb2efc9. Inspected delivery logs confirm permanent-key signing, automatic
+versionCode 216603660 and versionName 0.1.0-internal.19.1. Play accepted the
+internal upload at 2026-11-11 23:45:25 UTC. This supersedes the queued/building
+notes above. Tester availability/installation and physical GPS/launcher/email
+compatibility are not inferred, and production readiness remains unset.
+
+Applied the exact Actions formatter patch from 43122136231; analysis passed
+on that source. Its behavior step remained live during review. The new preview
+harness awaited real font/file work inside the fake widget-test clock, unlike
+the accepted preview harnesses. Move font loading and image/file capture into
+tester.runAsync and retain real capture assertions. Also queue a fresh read
+when native versions arrive during a history request, with a held-response UI
+regression. New source needs fresh Actions checks; no device/native result from
+that old run is inferred.
+
+Corrected history head ebfda2a is being validated in 43122948408. Applied its
+exact Actions formatter patch for the queued-refresh regression and real-I/O
+capture calls. Behavior/native/device results are still pending; the formatting
+correction requires an exact-head validation before merge. No VM execution ran.
+
+Run 43122948408 completed FAILURE: 90 Flutter cases passed, one failed; seven
+existing device-preview-only cases were deferred to the post-device invocation.
+The failed history retry case scrolled a pending save button outside the lazy
+list cache, discarding its captured command. Other history cases and eight
+preview captures passed. Preserve BusinessCommand state with native Flutter
+keep-alive while its outcome is unknown, releasing it after a known result. Keep
+the scroll-away/retry test unchanged to verify the actual defect is fixed.
+Android build/native/device stages did not run after this UI failure.
+
+Reviewed all eight original-resolution history captures from ebfda2a /
+43122948408: list, editor, offset/save section and deleted-change history in
+light/dark themes. Text, timestamp precision, selected offsets, scrolling save
+actions and red deletion are legible. This is synthetic UI visual evidence, not
+a native history/device acceptance substitute. Current retry fix 386ce0d is
+being validated in 43123476933; exact-head native/device checks remain pending.

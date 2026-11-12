@@ -12,7 +12,7 @@ internal object SessionHistoryStore {
     data class Page(val entries: List<Entry>, val next: Cursor?)
     data class Revision(val id: String, val changed: Long, val origin: String, val deleted: Boolean, val payload: String?, val parents: List<String>)
 
-    private fun entry(db: SQLiteDatabase, id: String): Entry? = db.rawQuery(
+    fun entry(db: SQLiteDatabase, id: String): Entry? = db.rawQuery(
         "SELECT id,job_id,start_ms,end_ms,timezone,offset_seconds,origin,EXISTS(SELECT 1 FROM geofence_conflicts c WHERE c.session_id=sessions.id) FROM sessions WHERE id=?", arrayOf(id)
     ).use { if (!it.moveToFirst()) null else decode(it) }
     private fun decode(row: android.database.Cursor) = Entry(row.getString(0), row.getString(1), row.getLong(2),
@@ -37,6 +37,22 @@ internal object SessionHistoryStore {
                 add(Revision(id, rows.getLong(1), rows.getString(2), rows.getInt(3) != 0, if (rows.isNull(4)) null else rows.getString(4), parents))
             }
         } }
+    }
+    data class AuditEvent(val sequence: Long, val sessionId: String, val revision: Revision)
+    data class AuditPage(val events: List<AuditEvent>, val next: Long?)
+    fun audit(db: SQLiteDatabase, jobId: String, before: Long?, limit: Int): AuditPage {
+        require(limit in 1..500 && (before == null || before > 0) && jobExists(db, jobId)) { "INVALID_HISTORY_QUERY" }
+        val filter = if (before == null) "" else " AND rowid<?"
+        val args = if (before == null) arrayOf(jobId) else arrayOf(jobId, before.toString())
+        // Insertion sequence, not a mutable wall clock, orders the local audit trail.
+        val events = db.rawQuery("SELECT rowid,entity_id,id,changed_ms,origin,deleted,payload FROM entity_revisions WHERE kind='session' AND job_id=?$filter ORDER BY rowid DESC LIMIT ${limit + 1}", args).use { rows -> buildList {
+            while (rows.moveToNext()) {
+                val revisionId = rows.getString(2)
+                val parents = db.rawQuery("SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id", arrayOf(revisionId)).use { p -> buildList { while (p.moveToNext()) add(p.getString(0)) } }
+                add(AuditEvent(rows.getLong(0), rows.getString(1), Revision(revisionId, rows.getLong(3), rows.getString(4), rows.getInt(5) != 0, if (rows.isNull(6)) null else rows.getString(6), parents)))
+            }
+        } }
+        return AuditPage(events.take(limit), if (events.size > limit) events[limit - 1].sequence else null)
     }
     fun save(db: SQLiteDatabase, draft: Draft, creating: Boolean, now: Long): String? {
         if (draft.id.isBlank() || draft.jobId.isBlank()) return "INVALID_SESSION"

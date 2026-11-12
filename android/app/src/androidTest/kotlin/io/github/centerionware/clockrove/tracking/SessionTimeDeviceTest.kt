@@ -30,4 +30,18 @@ class SessionTimeDeviceTest {
         }
         try { SessionTime.resolve("2026-01-01T12:00:00.000", "Invented/Zone"); fail("Unknown zone accepted") } catch (_: IllegalArgumentException) {}
     }
+    @Test fun formattingRoundTripsBothRepeatedInstantsAndOriginalMilliseconds() {
+        for ((instant, zone) in listOf(1793511000123L to "America/New_York", 1793514600123L to "America/New_York",
+            -1L to "UTC", 0L to "Pacific/Apia", -14831769600000L to "UTC")) {
+            val formatted = SessionTime.format(instant, zone)
+            val choices = SessionTime.resolve(formatted.localTime, zone)
+            val restored = choices.single { it.instant == instant }
+            assertEquals(formatted.offsetSeconds, restored.offsetSeconds)
+            assertEquals(formatted.label, restored.label)
+        }
+        assertEquals("1969-12-31T23:59:59.999", SessionTime.format(-1L, "UTC").localTime)
+        try { SessionTime.format(0, "Invented/Zone"); fail("Unknown zone accepted") } catch (_: IllegalArgumentException) {}
+        try { SessionTime.format(Long.MAX_VALUE, "UTC"); fail("Unsupported date accepted") } catch (_: IllegalArgumentException) {}
+    }
+
 }

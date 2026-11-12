@@ -22,14 +22,20 @@ class BusinessCommand extends StatefulWidget {
   State<BusinessCommand> createState() => _BusinessCommandState();
 }
 
-class _BusinessCommandState extends State<BusinessCommand> {
+class _BusinessCommandState extends State<BusinessCommand>
+    with AutomaticKeepAliveClientMixin<BusinessCommand> {
   Future<TimerOutcome> Function()? _pending;
+  // Lazy form lists may evict an offscreen button. Retain unknown operations
+  // until the original command has a known outcome and can safely be released.
+  @override
+  bool get wantKeepAlive => _pending != null;
   bool _busy = false;
   String? _message;
   Future<void> _submit() async {
     if (_busy) return;
     try {
       _pending ??= widget.create();
+      updateKeepAlive();
       widget.onPendingChanged?.call(true);
       setState(() {
         _busy = true;
@@ -42,6 +48,7 @@ class _BusinessCommandState extends State<BusinessCommand> {
         _busy = false;
         _message = result.committed ? null : _conflict(result.conflict);
       });
+      updateKeepAlive();
       widget.onPendingChanged?.call(false);
       if (result.committed) widget.onCommitted();
     } on FormatException catch (e) {
@@ -63,6 +70,12 @@ class _BusinessCommandState extends State<BusinessCommand> {
 
   String _conflict(String? value) => switch (value) {
     'STALE_STATE' => 'This job changed. Your draft is kept. Review the latest data and save again.',
+    'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
+    'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
+    'INVALID_TIMEZONE' =>
+      'Check the timezone and choose the intended UTC offset.',
+    'SESSION_UNAVAILABLE' => 'This work entry was removed. Your draft is kept.',
+    'STOP_SESSION_BEFORE_EDIT' => 'Clock out before changing this work entry.',
     'CURRENCY_MISMATCH' =>
       'The template uses another currency. Copy without its price.',
     'DESTINATION_REQUIRED' => 'Choose a destination for the tasks first.',
@@ -91,33 +104,38 @@ class _BusinessCommandState extends State<BusinessCommand> {
     _ => 'The change could not be applied. Your draft is kept. Refresh the details and try again.',
   };
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: _pending == null,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_message != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              _message!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+  Widget build(BuildContext context) {
+    super.build(context);
+    return PopScope(
+      canPop: _pending == null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_message != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _message!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
+          FilledButton(
+            onPressed: _busy || (!widget.enabled && _pending == null)
+                ? null
+                : _submit,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    _pending != null ? 'Retry same operation' : widget.label,
+                  ),
           ),
-        FilledButton(
-          onPressed: _busy || (!widget.enabled && _pending == null)
-              ? null
-              : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_pending != null ? 'Retry same operation' : widget.label),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

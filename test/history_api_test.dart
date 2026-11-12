@@ -140,4 +140,49 @@ void main() {
       expect(value.containsKey('origin'), isFalse);
     },
   );
+  test(
+    'detail and audit decode removed entries, revision parents and pagination',
+    () async {
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        if (call.method == 'sessionDetail') {
+          return {'version': 42, 'entry': null};
+        }
+        return {
+          'version': 42,
+          'next': 99,
+          'events': [
+            {
+              'sequence': 100,
+              'sessionId': 'removed',
+              'revision': {
+                'id': 'deletion',
+                'changed': 1,
+                'origin': 'MANUAL_DELETE',
+                'deleted': true,
+                'payload': '{"id":"removed"}',
+                'parents': ['previous'],
+              },
+            },
+          ],
+        };
+      });
+      final detail = await const HistoryApi().detail('job', 'removed');
+      expect(detail.version, 42);
+      expect(detail.entry, isNull);
+      final audit = await const HistoryApi().audit(
+        'job',
+        before: 101,
+        limit: 1,
+      );
+      expect(audit.next, 99);
+      expect(audit.events.single.sequence, 100);
+      expect(audit.events.single.sessionId, 'removed');
+      expect(audit.events.single.revision.parents, ['previous']);
+      expect(audit.events.single.revision.deleted, isTrue);
+      expect(calls.last.arguments, {'jobId': 'job', 'before': 101, 'limit': 1});
+      expect(() => audit.events.clear(), throwsUnsupportedError);
+    },
+  );
 }
