@@ -100,7 +100,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(
-        widget.copyId == null ? 'Prepared invoice' : 'Saved payment copy',
+        widget.copyId == null ? 'Prepared invoice' : widget.copyId!.startsWith('void-') ? 'Cancellation copy' : 'Saved payment copy',
       ),
       actions: [
         IconButton(
@@ -133,7 +133,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                   Text(
                     widget.copyId == null
                         ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
-                        : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
+                        : widget.copyId!.startsWith('void-') ? 'This copy records the invoice cancellation and credit transferred to a replacement. No payment is due on the cancelled invoice.' : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
                   ),
                   if (_notice != null) Text(_notice!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   if (_message != null)

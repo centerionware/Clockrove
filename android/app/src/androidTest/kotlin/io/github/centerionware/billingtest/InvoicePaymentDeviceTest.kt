@@ -54,6 +54,9 @@ class InvoicePaymentDeviceTest {
             "Payment amount (USD)" -> "invoice-payment-amount"
             "Internal note (optional)", "Reason for correction" -> "invoice-payment-note"
             "Accounts receivable email (optional)" -> "accounts-receivable-email"
+            "Unit price (USD)" -> "invoice-correction-price-0"
+            "Replacement tax (%)" -> "invoice-correction-tax"
+            "Internal correction reason" -> "invoice-correction-reason"
             else -> null
         }
         fun editableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
@@ -168,8 +171,8 @@ class InvoicePaymentDeviceTest {
         app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         waitFor("App settings and customers")
     }
-    private fun receipt(repository: TimerRepository, copyId: String, name: String) {
-        waitFor("Saved payment copy")
+    private fun receipt(repository: TimerRepository, copyId: String, name: String, title: String = "Saved payment copy") {
+        waitFor(title)
         until("Actual app did not generate its saved payment PDF") { repository.invoiceCopy(copyId).pdf != null }
         val record = repository.invoiceCopy(copyId)
         val pages = InvoiceDocuments.preview(app, record, 0)["pages"] as Int
@@ -260,6 +263,77 @@ class InvoicePaymentDeviceTest {
             assertEquals(BigInteger.valueOf(750), repository.invoicePayments("payment-invoice").second.collectedTax)
             assertEquals(4, repository.invoiceCopies("payment-invoice").size)
             inspect { db -> db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001L, it.getLong(0)) } }
+            // New actual UI journey: partially paid correction -> immutable replacement ->
+            // historic receipt owner -> VOID copy -> explicit unpaid cancellation.
+            val correctionJob = repository.createJob("Synthetic correction job")
+            assertNull(repository.saveJobSettings("correction-fixture-job", version(), repository.jobDetail(correctionJob).job.settings.copy(billingMode = "TASK", customerId = "payment-customer")).conflict)
+            val correctionColumn = repository.boardSnapshot(correctionJob).board.columns.first { it.completed }.id
+            assertNull(repository.saveCard("correction-fixture-card", version(), BoardStore.Draft("correction-task", correctionJob, correctionColumn,
+                "Synthetic correction tile", priceMinor = BigInteger.valueOf(10000), currency = "USD")).conflict)
+            val correctionSelection = ReportStore.Selection(date.format(Date(now - 86400000)), date.format(Date(now + 86400000)), "UTC", listOf(correctionJob))
+            assertNull(repository.prepareInvoice("correction-fixture-invoice", version(), "correction-invoice", correctionSelection).conflict)
+            val correctionOriginal = InvoiceDocuments.ensure(repository, "correction-invoice")
+            assertEquals("INV-1001", correctionOriginal.number)
+            assertNull(repository.recordInvoicePayment("correction-fixture-credit", version(), InvoicePaymentStore.Draft("correction-credit", "correction-invoice", "3000", "USD", System.currentTimeMillis() - 1000, "UTC")).conflict)
+            val originalReceipt = InvoiceDocuments.ensure(repository, "correction-invoice", "receipt-correction-credit")
+            closeActivities(); launch(); click("App settings and customers"); click("Invoices"); click("INV-1001")
+            waitFor("Partially paid"); reveal("Correct this invoice"); click("Correct this invoice")
+            reveal("Void & replace"); click("Void & replace")
+            enter("Unit price (USD)", "120.00"); enter("Replacement tax (%)", "10")
+            enter("Internal correction reason", "Synthetic corrected tile unit price")
+            reveal("Review correction"); click("Review correction")
+            waitFor("Void and replace INV-1001?"); waitFor("Remaining balance: USD 102.00"); capture("replacement-review")
+            click("Keep editing")
+            assertEquals("PARTIALLY_PAID", repository.invoicePayments("correction-invoice").second.balance.status)
+            assertEquals(1, repository.invoices(correctionJob).invoices.size)
+            reveal("Review correction"); click("Review correction"); click("Confirm review")
+            reveal("Issue replacement invoice"); click("Issue replacement invoice")
+            until("Actual editor did not atomically replace the invoice") { repository.invoicePayments("correction-invoice").second.balance.status == "VOID" }
+            val replacementId = requireNotNull(repository.invoiceVoidContext("correction-invoice")!!.info.replacementId)
+            waitFor("INV-1002"); waitFor("Partially paid"); capture("replacement-balance")
+            val replacementState = repository.invoicePayments(replacementId).second
+            assertEquals(BigInteger.valueOf(3000), replacementState.balance.paid)
+            assertEquals(BigInteger.valueOf(10200), replacementState.balance.due)
+            assertEquals(BigInteger.valueOf(273), replacementState.collectedTax)
+            assertEquals("correction-credit", replacementState.payments.single().id)
+            assertEquals("correction-invoice", replacementState.payments.single().originalInvoiceId)
+            assertEquals(replacementId, replacementState.payments.single().currentInvoiceId)
+            assertEquals("12000", replacementState.document.lines.single().unitPriceMinor)
+            assertFalse(replacementState.document.encode().contains("Synthetic corrected tile unit price"))
+            assertEquals(correctionOriginal.payload, repository.invoice("correction-invoice").payload)
+            assertArrayEquals(correctionOriginal.pdf, repository.invoice("correction-invoice").pdf)
+            reveal("Open receipt"); click("Open receipt")
+            receipt(repository, "receipt-correction-credit", "replacement-original-receipt")
+            reveal("Email historical copy")
+            assertArrayEquals(originalReceipt.pdf, repository.invoiceCopy("receipt-correction-credit").pdf)
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            waitFor("Refresh invoice details"); scrollToStart(); reveal("Open original invoice"); click("Open original invoice")
+            waitFor("Voided"); capture("void-balance")
+            assertEquals(BigInteger.ZERO, repository.invoicePayments("correction-invoice").second.balance.due)
+            reveal("Cancellation copy"); click("Cancellation copy")
+            receipt(repository, "void-correction-invoice", "cancellation-copy", "Cancellation copy")
+            val cancellation = repository.invoiceCopy("void-correction-invoice")
+            val cancellationMail = InvoiceDocuments.email(app, cancellation, repository.businessSnapshot().settings)
+            assertArrayEquals(arrayOf("accounts@example.test"), cancellationMail.getStringArrayExtra(Intent.EXTRA_CC))
+            app.contentResolver.openInputStream(InvoiceDocuments.uri(app, cancellation))!!.use { assertArrayEquals(cancellation.pdf, it.readBytes()) }
+            assertNull(repository.saveCard("unpaid-void-fixture-card", version(), BoardStore.Draft("unpaid-void-task", correctionJob, correctionColumn,
+                "Synthetic cancelled work", priceMinor = BigInteger.valueOf(5000), currency = "USD")).conflict)
+            assertNull(repository.prepareInvoice("unpaid-void-fixture-invoice", version(), "unpaid-void-invoice", correctionSelection).conflict)
+            val unpaidOriginal = InvoiceDocuments.ensure(repository, "unpaid-void-invoice")
+            assertEquals("INV-1003", unpaidOriginal.number)
+            closeActivities(); launch(); click("App settings and customers"); click("Invoices"); click("INV-1003")
+            waitFor("Unpaid"); reveal("Correct this invoice"); click("Correct this invoice")
+            reveal("Void unpaid invoice"); click("Void unpaid invoice")
+            enter("Internal correction reason", "Synthetic cancelled duplicate invoice")
+            reveal("Review correction"); click("Review correction"); waitFor("Void INV-1003?"); click("Confirm review")
+            reveal("Confirm void"); click("Confirm void")
+            until("Actual unpaid cancellation did not persist") { repository.invoicePayments("unpaid-void-invoice").second.balance.status == "VOID" }
+            receipt(repository, "void-unpaid-void-invoice", "unpaid-void", "Cancellation copy")
+            assertEquals(unpaidOriginal.payload, repository.invoice("unpaid-void-invoice").payload)
+            assertArrayEquals(unpaidOriginal.pdf, repository.invoice("unpaid-void-invoice").pdf)
+            assertEquals(BigInteger.valueOf(3000), repository.invoicePayments(replacementId).second.balance.paid)
+            assertEquals(listOf("unpaid-void-task"), repository.invoiceBillingPreview(correctionSelection).preview.report.tasks.map { it.id })
+
         } catch (failure: Throwable) {
             try { diagnostic() } catch (diagnosticFailure: Throwable) { failure.addSuppressed(diagnosticFailure) }
             throw failure

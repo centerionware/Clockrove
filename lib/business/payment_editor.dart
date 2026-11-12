@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -323,6 +324,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   controller: _amount,
                   enabled: !_locked,
                   maxLength: 4101,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),

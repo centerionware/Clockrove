@@ -36,6 +36,6 @@ assert cases[0].attrib['classname'] == 'io.github.centerionware.billingtest.Invo
 assert cases[0].attrib['name'] == 'actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt'
 print('Verified actual Android payment journey:', root.attrib)
 PY_DEVICE
-for clockrove_payment_capture in receivables-settings unpaid invalid-payment partial-receipt partial-balance paid-receipt correction-receipt retained-balance retained-paid-receipt; do
+for clockrove_payment_capture in receivables-settings unpaid invalid-payment partial-receipt partial-balance paid-receipt correction-receipt retained-balance retained-paid-receipt replacement-review replacement-balance replacement-original-receipt void-balance cancellation-copy unpaid-void; do
   test -s "$clockrove_payment_results/payment-captures/$clockrove_payment_capture.png"
 done

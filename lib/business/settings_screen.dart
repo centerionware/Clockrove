@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -209,6 +210,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             controller: _tax,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             maxLength: 32,
+            maxLengthEnforcement: MaxLengthEnforcement.none,
             decoration: InputDecoration(
               labelText: 'Default tax (%)',
               helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',

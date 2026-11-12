@@ -86,6 +86,14 @@ void main() {
     await _reveal(tester, _field('Unit price (USD)'));
     expect(tester.widget<TextField>(_field('Unit price (USD)')).controller!.text, '1.00');
   });
+  testWidgets('oversized pasted money is preserved and rejected rather than truncated', (tester) async {
+    final api = _Lifecycle(); await _show(tester, api);
+    final invalid = '120.00${' ' * 4100}1';
+    await _enter(tester, 'Unit price (USD)', invalid);
+    expect(tester.widget<TextField>(_field('Unit price (USD)')).controller!.text, invalid);
+    await _enter(tester, 'Internal correction reason', 'Synthetic invalid pasted price'); await _review(tester);
+    expect(find.byType(AlertDialog), findsNothing); expect(api.replacements, isEmpty);
+  });
   testWidgets('review cancellation writes nothing and unpaid void needs explicit confirmation', (tester) async {
     final api = _Lifecycle()..data = _data(paid: '0', due: '10750', status: 'UNPAID');
     await _show(tester, api, replace: false);

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -204,6 +205,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 decimal: true,
               ),
               maxLength: 32,
+            maxLengthEnforcement: MaxLengthEnforcement.none,
               decoration: InputDecoration(
                 labelText: 'Job tax (%)',
                 helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',

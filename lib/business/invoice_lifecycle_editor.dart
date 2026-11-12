@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -139,7 +140,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
   }
   Widget _field(TextEditingController controller, String label, {int max = 500, bool numeric = false, int lines = 1, String? identifier}) =>
       Semantics(identifier: identifier, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
-        controller: controller, enabled: !_pending, maxLength: max, minLines: lines, maxLines: lines + 2,
+        controller: controller, enabled: !_pending, maxLength: max, maxLengthEnforcement: numeric ? MaxLengthEnforcement.none : MaxLengthEnforcement.enforced, minLines: lines, maxLines: lines + 2,
         keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.multiline,
         decoration: InputDecoration(labelText: label), onChanged: _changed,
       )));

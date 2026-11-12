@@ -1867,3 +1867,17 @@ reasons. Added presentation/math/immutable-retry and native handoff regressions;
 actual PDF checks also verify historical attachment retention. This new UI/handoff
 source requires fresh Actions formatting/analysis/tests/build/device proof and
 visual review. Complete payment milestone remains draft #37.
+
+Actual UI source now extends the isolated financial journey through reviewed
+partial-payment replacement, cancelled review with no writes, preserved payment
+ID/credit/tax, original-owner receipt with historical notice, predecessor VOID
+details/copy, and confirmed unpaid cancellation with released unbilled work.
+Fifteen actual UI captures per API are required alongside the 24 all-style PDF
+pairs. Cancellation view has its own title and zero-due explanation. New money/
+tax fields disable Flutter's default max-length truncation; oversized pasted
+values remain intact and fail exact parsers. Added a regression for a valid-looking
+prefix followed by over-limit content, preventing a truncated valid prefix from
+being saved. All new UI/format/handoff/interaction evidence remains pending.
+The intermediate ad3f06b run's live Android stage is superseded by this concrete
+Back-synchronization/editor/actual-flow source, not treated as a timeout failure;
+its inspected 477 native results remain the accepted baseline.
