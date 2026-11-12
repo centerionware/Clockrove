@@ -2742,3 +2742,40 @@ cards stable list keys, preserving captured commands when those cards move.
 Retain the full response-loss/version-event assertion; this is an app UI fix,
 not a relaxed test. Applied formatter artifact 13954368054 to all four unchanged
 navigation/API/test files. Full corrected-head Actions validation remains pending.
+
+### Main payment journey synchronization failure — 2026-11-12
+
+Main Validate 43229082487 on merged 1492081 failed its API-24 payment UI journey
+at initial amount entry. Downloaded artifact 13949183965 and reviewed failure.png
+and accessibility.txt: the app is on Record payment, scrolled to its bottom,
+without a crash. The helper began forward scrolling while the incoming route's
+amount semantics was not yet exposed, moving past the top field. Add explicit
+waits for the real payment refresh action and editable amount before entry starts;
+retain all exact amount, state, PDF and capture assertions. The prior PR pass does
+not prove main validation or publication. Internal delivery remains blocked until
+main passes. This test-only correction awaits Actions; no VM build/test ran.
+
+### Payment-fix workflow startup timeout — 2026-11-12
+
+#40 head 0c9175c / 43231269977 is terminal cancelled at the 45-minute job limit.
+Its app build/native gate passed; no actual instrumentation started. Full log
+shows the API-24 image verified, AVD created and adb daemon started at 14:00:21,
+then cancellation at 14:36:27. Available artifacts contain no emulator log, so
+which startup probe stalled is unproven. Source bounds wait-for-device with a
+kill-after grace, every boot property call, an overall boot deadline and shutdown;
+it also captures emulator diagnostics on success/failure. Financial assertions,
+required cases and UI captures are unchanged. Validate the corrected script in
+Actions before merging or claiming publication. No VM build/test ran.
+
+### Focused financial validation fix merged — 2026-11-12 14:59 UTC
+
+#40 exact head 658fce0 passed all Actions gates in 43239688776. Downloaded
+artifacts 13954427580 and 13956665417: 42 native/eight device XML files prove
+479 native / 50 actual Android cases with zero failures/errors/skips. Both APIs
+produced all 16 financial UI captures; reviewed retained excess-precision input
+and its inline error on API 24/35. No app behavior changed in this focused fix.
+Merged with exact-head guard as 05ee6e76063172866ec8a1f48c9128c6eb069c0e at
+2026-11-12 14:59:36 UTC. Main Validate 43242962261 is live; automatic internal
+delivery remains pending. Last proven Play acceptance is still internal.25.1 /
+216642056. Brought main into the quote branch, preserving both validation ledgers.
+No VM builds/tests/formatting/rendering ran.

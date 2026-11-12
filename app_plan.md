@@ -46,18 +46,14 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Prioritize financial validation fix #40 (`payment-route-sync`, 658fce0,
-Actions 43239688776). #37 exact head 4825869 passed 479 native / 50 actual
-Android cases, zero failures/errors/skips in downloaded XML, then merged as
-1492081. Main 43229082487 failed a payment UI-test transition: captured screen
-and accessibility show the incoming form open but scrolled past the amount.
-#40 waits for the real form and editable amount before scrolling. Its previous
-run was cancelled at the workflow limit during emulator startup; no instrumentation
-started. Startup probes are now bounded and emulator logs retained. Current CI
-is live; merge only after current validation passes, then observe
-main and automatic internal delivery. Play 43230903575 was skipped. Last proven
-Play acceptance remains internal.25.1 / 216642056 in 43199258376. No new internal
-publication or physical tester upgrade is claimed.
+#40 exact head 658fce0 passed all gates in 43239688776: 479 native / 50 actual
+Android cases, zero failures/errors/skips in downloaded 42 native/eight device XML
+files. Both APIs produced 16 financial captures; reviewed exact invalid-precision
+input and field error. Merged 05ee6e7 at 2026-11-12 14:59:36 UTC. Main Validate
+43242962261 is live; observe its result and automatic internal delivery next.
+No new Play acceptance or physical upgrade is claimed. Last proven Play acceptance
+remains internal.25.1 / 216642056 in 43199258376. The quote branch includes this
+validated payment-form wait and bounded startup/diagnostic script.
 
 Quotes are the next ordered feature milestone in draft #39, `quotes` in
 `.local/invoice-payments`. First storage head 1213cc5 passed all gates in
@@ -2033,3 +2029,34 @@ its command child and losing the retry. Stable parent-card keys now preserve the
 captured operation across list moves. The response-loss test stays unchanged;
 validate this correction before acceptance. Navigation formatting came from
 Actions artifact 13954368054, not a VM formatter.
+
+### Main financial validation follow-up
+
+Main 43229082487 failed at the initial API-24 payment field lookup. Reviewed the
+actual failure screenshot/accessibility tree: the Record payment route is open,
+but early forward-scroll actions passed the top field during its transition.
+`payment-route-sync` adds real-route/action and editable-field waits before those
+scrolls. Keep the full financial gates; validate and merge this focused test fix
+before claiming a new internal delivery. No app crash or store upload is proven
+by this failed run. See plan_status.md for artifact evidence.
+
+### Focused payment-fix CI startup follow-up
+
+43231269977 ended cancelled at the job time limit during emulator startup,
+before instrumentation. The exact blocked probe is not proven by its log.
+Bound all startup property probes and preserve emulator logs in device artifacts;
+retain all financial/device gates. #40 still needs a successful current-head run
+before merge, main validation and automatic internal delivery.
+
+### Focused financial validation fix merged — 2026-11-12 14:59 UTC
+
+#40 exact head 658fce0 passed all Actions gates in 43239688776. Downloaded
+artifacts 13954427580 and 13956665417: 42 native/eight device XML files prove
+479 native / 50 actual Android cases with zero failures/errors/skips. Both APIs
+produced all 16 financial UI captures; reviewed retained excess-precision input
+and its inline error on API 24/35. No app behavior changed in this focused fix.
+Merged with exact-head guard as 05ee6e76063172866ec8a1f48c9128c6eb069c0e at
+2026-11-12 14:59:36 UTC. Main Validate 43242962261 is live; automatic internal
+delivery remains pending. Last proven Play acceptance is still internal.25.1 /
+216642056. Brought main into the quote branch, preserving both validation ledgers.
+No VM builds/tests/formatting/rendering ran.
