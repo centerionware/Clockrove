@@ -10,6 +10,9 @@ import androidx.test.runner.lifecycle.Stage
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import io.github.centerionware.clockrove.tracking.InvoiceEmailTemplate
+import io.github.centerionware.clockrove.tracking.InvoiceStore
+import io.github.centerionware.clockrove.tracking.ReportStore
+import io.github.centerionware.clockrove.tracking.SessionHistoryStore
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,9 +97,18 @@ class SettingsSaveDeviceTest {
             assertEquals("INVALID_EMAIL_BODY", repository.saveBusinessSettings("invalid-body-$index", before.version, before.settings.copy(emailBody = invalid)).conflict)
             assertEquals(before, repository.businessSnapshot())
         }
-        val settings = before.settings.copy(companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
+        val settings = before.settings.copy(currency = "USD", defaultHourlyMinor = 12500, companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
         assertNull(repository.saveBusinessSettings("actual-android-template-save", before.version, settings).conflict)
         assertEquals(settings, repository.businessSnapshot().settings)
+        val job = repository.createJob("Synthetic actual invoice job")
+        assertNull(repository.createManualSession("actual-invoice-work", repository.snapshot().version,
+            SessionHistoryStore.Draft("actual-invoice-session", job, 1793491200000, 1793494800000, "UTC", 0)).conflict)
+        assertNull(repository.prepareInvoice("actual-invoice-prepare", repository.snapshot().version, "actual-invoice",
+            ReportStore.Selection("2026-11-01", "2026-11-01", "UTC", listOf(job))).conflict)
+        val invoice = InvoiceStore.Snapshot.decode(repository.invoice("actual-invoice").payload)
+        assertEquals("INV-1000", invoice.number)
+        assertEquals("Invoice INV-1000", invoice.subject)
+        assertTrue(invoice.body.contains("125.00 USD"))
     }
     @Test fun mainSettingsSaveSurvivesNativeCommitAndCanBeOpenedAgain() {
         val app = instrumentation.targetContext

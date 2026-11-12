@@ -1676,3 +1676,9 @@ Dispatched corrected UI lookup against unfixed app source on branch
 settings-crash-baseline (2cdf329), run 43128896688, to verify the original Android
 process failure independently of the proposed fix. This diagnostic branch is
 not a release candidate and must not be merged. No failure result is assumed.
+
+Extended the actual Android template case through native manual-work creation
+and invoice preparation: require INV-1000, the expanded subject and the real
+hourly total in the email body on both APIs. This closes the prior gap where
+actual PDF renderer cases used prebuilt snapshots without exercising native
+template expansion/allocation. The final source still needs its exact-head run.
