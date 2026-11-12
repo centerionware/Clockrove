@@ -22,7 +22,7 @@ class SettingsSaveDeviceTest {
     private val automation get() = instrumentation.uiAutomation
     private fun find(label: String): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (node.isVisibleToUser && (node.text?.toString() == label || node.contentDescription?.toString() == label)) return node
+            if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { result -> return result } }
             return null
         }
@@ -70,11 +70,18 @@ class SettingsSaveDeviceTest {
         }
         waitFor(label)
     }
-    @Test fun templatesInitializeValidateAndExpandUsingAndroidRegex() {
+    @Test fun templatesValidateAndExpandOnActualAndroidWithoutRegexInitialization() {
+        try {
+            java.util.regex.Pattern.compile("\\{([^{}]*)}")
+            fail("Legacy unescaped brace unexpectedly accepted on Android")
+        } catch (_: java.util.regex.PatternSyntaxException) { /* Android-only JVM incompatibility reproduced safely. */ }
         val body = "Hello {customer_name},\nInvoice {invoice_number}: {amount} {currency}\n{company_name}"
         assertTrue(InvoiceEmailTemplate.valid("Invoice {invoice_number}", true))
         assertTrue(InvoiceEmailTemplate.valid(body, false))
-        assertFalse(InvoiceEmailTemplate.valid("{unknown}", false))
+        for (invalid in listOf("{unknown}", "{", "}", "{company_name", "{{company_name}}", "Invoice {company_name}}")) {
+            assertFalse(InvoiceEmailTemplate.valid(invalid, false))
+            assertFalse(InvoiceEmailTemplate.valid(invalid, true))
+        }
         assertFalse(InvoiceEmailTemplate.valid("Invoice\n{invoice_number}", true))
         val values = mapOf("customer_name" to "Synthetic \$1 \\ customer", "invoice_number" to "INV-000001",
             "amount" to "125.00", "currency" to "USD", "company_name" to "Synthetic company {customer_name}")
@@ -82,6 +89,11 @@ class SettingsSaveDeviceTest {
             InvoiceEmailTemplate.expand(body, values, false))
         val repository = TimerRepository.get(instrumentation.targetContext)
         val before = repository.businessSnapshot()
+        for ((index, invalid) in listOf("{unknown}", "{", "}", "{customer_name", "{{customer_name}}", "{company_name}}").withIndex()) {
+            assertEquals("INVALID_EMAIL_SUBJECT", repository.saveBusinessSettings("invalid-subject-$index", before.version, before.settings.copy(emailSubject = invalid)).conflict)
+            assertEquals("INVALID_EMAIL_BODY", repository.saveBusinessSettings("invalid-body-$index", before.version, before.settings.copy(emailBody = invalid)).conflict)
+            assertEquals(before, repository.businessSnapshot())
+        }
         val settings = before.settings.copy(companyName = "Synthetic saved company", emailSubject = "Invoice {invoice_number}", emailBody = body)
         assertNull(repository.saveBusinessSettings("actual-android-template-save", before.version, settings).conflict)
         assertEquals(settings, repository.businessSnapshot().settings)

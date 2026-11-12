@@ -1298,3 +1298,10 @@ Owner reports an Android process crash saving main Settings, while job settings
 save normally. Prioritize reproduction/fix ahead of widget UI. Actual Flutter +
 native channel + SQLite save/reopen instrumentation and synthetic logcat capture
 are prepared for Actions, without assuming a cause from mocked form tests.
+
+Email subject and body templates must both be validated safely, with field-level
+feedback and correction guidance. Invalid placeholders/lengths/control characters
+never bypass the native transaction guard. Use a bounded literal scanner rather
+than user-driven regex initialization, and refuse malformed stored templates
+before invoice-number allocation. Validation/reproduction evidence is pending
+in the priority settings-crash branch; see plan_status.md.

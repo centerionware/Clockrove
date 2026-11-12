@@ -44,6 +44,8 @@ internal object InvoiceStore {
         if (total.mode == "HOURLY" && report.intervals.isEmpty() || total.mode == "TASK" && report.tasks.isEmpty()) return "NO_BILLABLE_ITEMS"
         if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
+        if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
+        if (!InvoiceEmailTemplate.valid(company.emailBody, false)) return "INVALID_EMAIL_BODY"
         val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
         if (sequence == Long.MAX_VALUE) return "INVOICE_SEQUENCE_EXHAUSTED"
         val number = "INV-${sequence.toString().padStart(6, '0')}"

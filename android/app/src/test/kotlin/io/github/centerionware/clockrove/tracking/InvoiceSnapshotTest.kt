@@ -79,4 +79,22 @@ class InvoiceSnapshotTest {
         assertFalse(repository.cacheInvoicePdf("invoice", original.payload, "%PDF-other".toByteArray()))
         assertArrayEquals(pdf, repository.invoice("invoice").pdf)
     }
+    @Test fun malformedStoredTemplatesReturnFieldErrorsWithoutAllocatingInvoiceNumbers() {
+        val original = repository.businessSnapshot().settings
+        val before = version
+        for (subject in listOf(true, false)) {
+            inspect { db -> db.execSQL("UPDATE app_settings SET email_subject=?,email_body=? WHERE id=1",
+                arrayOf<Any?>(if (subject) "{unknown}" else original.emailSubject, if (subject) original.emailBody else "{customer_name")) }
+            assertEquals(if (subject) "INVALID_EMAIL_SUBJECT" else "INVALID_EMAIL_BODY", prepare("invalid-$subject").conflict)
+            assertEquals(before, version)
+            inspect { db ->
+                db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(1L, it.getLong(0)) }
+                db.rawQuery("SELECT COUNT(*) FROM invoices", null).use { assertTrue(it.moveToFirst()); assertEquals(0L, it.getLong(0)) }
+            }
+        }
+        assertNull(repository.saveBusinessSettings("correct-templates", version, original).conflict)
+        assertNull(prepare("corrected-invoice").conflict)
+        assertEquals("INV-000001", repository.invoice("invoice").number)
+    }
+
 }

@@ -1648,3 +1648,20 @@ brace and add actual Android validation/expansion/native-save coverage, retainin
 the full actual Flutter save/reopen test. The baseline diagnostic run remains
 live to capture the original failure; do not claim device reproduction/fix yet.
 Reference: https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/util/regex/Pattern.java
+
+Owner requires guarded, actionable validation for both email subject and body.
+Replace the platform-sensitive regex entirely with a bounded, nonrecursive
+placeholder scanner. Both fields reject unknown, unfinished, nested or unmatched
+braces, lengths/control characters as appropriate. UI validates both controllers
+even when a field is offscreen, shows inline errors with supported-placeholder
+guidance and blocks save until corrected. Native save returns field-specific
+conflicts without changing settings/version; invoice preparation also rejects
+malformed stored templates before allocating a number. Regression cases cover
+both fields, correction, literal replacement values and native transaction safety.
+
+Baseline 43126720643 did not reach Save: Flutter accessibility descriptions had
+a leading newline and the exact-label harness missed the menu. The retained
+actual tree identified that harness issue; trim the labels and retain the full
+save/reopen gate. Its result is not evidence that the original crash was
+reproduced. Add a safely caught legacy-pattern compilation check on real Android
+to establish the platform mismatch directly. New checks await Actions.
