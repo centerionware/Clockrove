@@ -11,15 +11,25 @@ internal object InvoicePaymentStore {
     private fun text(value: String, limit: Int) = value.length <= limit && '\u0000' !in value
     private fun amountColumn(name: String) = "$name TEXT NOT NULL CHECK(typeof($name)='text' AND length($name) BETWEEN 1 AND ${PaymentMath.maxDigits} AND ($name='0' OR (substr($name,1,1) BETWEEN '1' AND '9' AND $name NOT GLOB '*[^0-9]*')))"
 
+    fun accountingEmail(db: SQLiteDatabase): String = db.rawQuery("SELECT receivables_email FROM invoice_accounting_settings WHERE id=1", null).use {
+        check(it.moveToFirst()); it.getString(0)
+    }
+    fun saveAccountingEmail(db: SQLiteDatabase, value: String, at: Long) {
+        require(BusinessStore.validEmail(value)) { "INVALID_ACCOUNTS_RECEIVABLE_EMAIL" }
+        db.execSQL("UPDATE invoice_accounting_settings SET receivables_email=? WHERE id=1", arrayOf(value))
+        RevisionStore.record(db, "invoice_accounting_settings", "1", null, mapOf("id" to 1, "receivables_email" to value), at)
+    }
     fun install(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE invoice_accounting_settings(id INTEGER PRIMARY KEY CHECK(id=1),receivables_email TEXT NOT NULL DEFAULT '')")
+        db.execSQL("INSERT INTO invoice_accounting_settings(id) VALUES(1)")
         db.execSQL("CREATE TABLE invoice_payments(id TEXT PRIMARY KEY NOT NULL,original_invoice_id TEXT NOT NULL REFERENCES invoices(id),${amountColumn("amount_minor")},currency TEXT NOT NULL,received_ms INTEGER NOT NULL CHECK(received_ms>=0),timezone TEXT NOT NULL,method TEXT NOT NULL,reference TEXT NOT NULL,note TEXT NOT NULL,recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0),CHECK(amount_minor<>'0'))")
         db.execSQL("CREATE TABLE payment_destinations(payment_id TEXT PRIMARY KEY NOT NULL REFERENCES invoice_payments(id),invoice_id TEXT NOT NULL REFERENCES invoices(id))")
         db.execSQL("CREATE INDEX payment_destination_invoice ON payment_destinations(invoice_id,payment_id)")
         db.execSQL("CREATE TABLE invoice_payment_reversals(id TEXT PRIMARY KEY NOT NULL,payment_id TEXT NOT NULL UNIQUE REFERENCES invoice_payments(id),effective_ms INTEGER NOT NULL CHECK(effective_ms>=0),timezone TEXT NOT NULL,note TEXT NOT NULL,recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0))")
         // Exact signed changes and the immutable balance snapshot are encoded as
         // canonical strings in a bounded native JSON event, never SQL SUM/REAL.
-        db.execSQL("CREATE TABLE invoice_payment_events(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),payment_id TEXT NOT NULL REFERENCES invoice_payments(id),kind TEXT NOT NULL CHECK(kind IN('PAYMENT','REVERSAL','TRANSFER')),effective_ms INTEGER NOT NULL CHECK(effective_ms>=0),recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0),payload TEXT NOT NULL)")
-        db.execSQL("CREATE INDEX invoice_payment_event_order ON invoice_payment_events(invoice_id,recorded_ms,id)")
+        db.execSQL("CREATE TABLE invoice_payment_events(id TEXT PRIMARY KEY NOT NULL,invoice_id TEXT NOT NULL REFERENCES invoices(id),payment_id TEXT NOT NULL REFERENCES invoice_payments(id),kind TEXT NOT NULL CHECK(kind IN('PAYMENT','REVERSAL','TRANSFER')),effective_ms INTEGER NOT NULL CHECK(effective_ms>=0),recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0),command_version INTEGER NOT NULL CHECK(command_version>0),ordinal INTEGER NOT NULL CHECK(ordinal>=0),payload TEXT NOT NULL,UNIQUE(command_version,ordinal))")
+        db.execSQL("CREATE INDEX invoice_payment_event_order ON invoice_payment_events(invoice_id,command_version,ordinal)")
         for (table in listOf("invoice_payments", "invoice_payment_reversals", "invoice_payment_events")) {
             for (event in listOf("UPDATE", "DELETE")) db.execSQL("CREATE TRIGGER ${table}_immutable_${event.lowercase()} BEFORE $event ON $table BEGIN SELECT RAISE(ABORT,'Financial event is immutable'); END")
         }
@@ -88,12 +98,13 @@ internal object InvoicePaymentStore {
         kind: String, effective: Long, at: Long, cashChange: BigInteger) {
         val tax = before.document.taxAmount?.let { PaymentMath.parseMajor(it, before.document.digits) }
         val taxChange = PaymentMath.taxChange(after.total, tax, before.balance.paid, after.paid)
-        val values = mapOf("invoice_id" to before.invoice.id, "payment_id" to paymentId, "kind" to kind,
+        val commandVersion = db.rawQuery("SELECT version FROM state WHERE id=1", null).use { check(it.moveToFirst()); Math.addExact(it.getLong(0), 1L) }
+        val values = mapOf("command_version" to commandVersion, "ordinal" to 0, "invoice_id" to before.invoice.id, "payment_id" to paymentId, "kind" to kind,
             "total_minor" to after.total.toString(), "before_paid_minor" to before.balance.paid.toString(), "paid_minor" to after.paid.toString(),
             "due_minor" to after.due.toString(), "cash_change_minor" to cashChange.toString(), "tax_change_minor" to taxChange?.toString(),
             "sales_change_minor" to taxChange?.let { cashChange.subtract(it).toString() }, "currency" to before.document.currency,
             "effective_ms" to effective, "recorded_ms" to at)
-        db.execSQL("INSERT INTO invoice_payment_events VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>("$kind-$id", before.invoice.id, paymentId, kind, effective, at, org.json.JSONObject(values).toString()))
+        db.execSQL("INSERT INTO invoice_payment_events VALUES(?,?,?,?,?,?,?,?,?)", arrayOf<Any?>("$kind-$id", before.invoice.id, paymentId, kind, effective, at, commandVersion, 0, org.json.JSONObject(values).toString()))
         RevisionStore.record(db, "invoice_payment_event", "$kind-$id", before.invoice.jobId, values, at)
     }
 

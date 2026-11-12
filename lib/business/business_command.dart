@@ -113,6 +113,7 @@ class _BusinessCommandState extends State<BusinessCommand>
       'Choose an active customer or unarchive this customer first.',
     'INVALID_EMAIL_SUBJECT' => 'The email subject template is invalid. Open Settings and correct its placeholders or line breaks.',
     'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
+    'INVALID_ACCOUNTS_RECEIVABLE_EMAIL' => 'Enter one valid accounts receivable email address in Settings, or leave it blank to use the company email.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',

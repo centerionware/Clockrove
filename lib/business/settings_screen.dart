@@ -38,7 +38,7 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError, _bodyError, _taxError;
+  String? _subjectError, _bodyError, _taxError, _receivablesError;
   late final _tax = TextEditingController(
     text: taxPercent(widget.initial.defaultTaxUnits),
   );
@@ -47,6 +47,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   );
   late final _name = TextEditingController(text: widget.initial.companyName);
   late final _email = TextEditingController(text: widget.initial.companyEmail);
+  late final _receivables = TextEditingController(text: widget.initial.receivablesEmail);
   late final _phone = TextEditingController(text: widget.initial.companyPhone);
   late final _address = TextEditingController(
     text: widget.initial.companyAddress,
@@ -74,6 +75,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       _tax,
       _name,
       _email,
+      _receivables,
       _phone,
       _address,
       _website,
@@ -122,10 +124,12 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
     final tax = taxPercentError(_tax.text);
+    final receivables = accountingEmailError(_receivables.text);
     setState(() {
       _subjectError = subject;
       _bodyError = body;
       _taxError = tax;
+      _receivablesError = receivables;
     });
     if (subject != null || body != null) {
       throw const FormatException(
@@ -133,6 +137,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       );
     }
     if (tax != null) throw FormatException(tax);
+    if (receivables != null) throw FormatException(receivables);
   }
 
   @override
@@ -220,6 +225,21 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         _field(_name, 'Company name', length: 240),
         _field(_email, 'Company email', length: 254),
+        _field(
+          _receivables,
+          'Accounts receivable email (optional)',
+          length: 254,
+          error: _receivablesError,
+          onChanged: (_) {
+            if (_receivablesError != null) {
+              setState(() => _receivablesError = accountingEmailError(_receivables.text));
+            }
+          },
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text('Invoice and receipt emails CC this address, or the company email when blank.'),
+        ),
         _field(_phone, 'Phone', length: 120),
         _field(_address, 'Address', lines: 2),
         _field(_website, 'Website', length: 2000),
@@ -289,6 +309,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               defaultTaxUnits: parseTaxPercent(_tax.text),
               companyName: _name.text.trim(),
               companyEmail: _email.text.trim(),
+              receivablesEmail: _receivables.text.trim(),
               companyPhone: _phone.text,
               companyAddress: _address.text,
               companyWebsite: _website.text,

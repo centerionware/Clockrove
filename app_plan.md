@@ -50,9 +50,11 @@ and locked release-policy checks. Native/device XML inspected; all six wide and
 explicit-zero job tax and retained invoice. Values wrap without clipping; API-35
 extraction verifies complete repeated monetary values. No VM validation ran.
 
-Main validation 43185844256 failed the API-35 existing widget scroll test;
-focused PR #36 is under Actions validation 43188818216. Internal upload for
-f935485 has not started. Latest verified delivery remains widget internal.22.1 / 216624221
+Main validation 43185844256 failed the API-35 existing widget scroll test.
+Focused PR #36 passed 43188818216 (383 native / 44 actual Android, all zero
+failures/errors/skips; both final-row captures reviewed) and merged d4df7bd at
+2026-11-12 09:19:31 UTC. Main validation 43190458383 is running. Internal upload
+for the invoice foundation has not started. Latest verified delivery remains widget internal.22.1 / 216624221
 (43160879953); production readiness remains unset.
 
 Continue the immediate next milestone in `.local/invoice-payments`, branch
@@ -70,8 +72,12 @@ are now prepared, including financial revision retention on job purge and eight
 API-24/35 native ledger cases. A one-time Actions export will freeze the released
 schema-7 fixture before independent forward-migration tests are added. The focused
 widget scroll change from #36 is carried into this draft's validation. All new
-ledger/migration checks require Actions evidence. Payment UI, PDFs/email CC and
-void/replacement are not implemented or accepted by this native source increment.
+ledger/migration checks require Actions evidence. The optional receivables address, inline draft validation and current-settings
+invoice-email CC precedence/fallback/deduplication are also prepared, with Flutter
+and native intent/bridge checks. Native event snapshots now retain command version
+and ordinal for deterministic ordering despite equal timestamps. Payment UI,
+receipt PDFs and void/replacement are not implemented or accepted by this source
+increment; the new ledger/CC changes still require Actions evidence.
 
 Then follow the ordered plan for quotes, task comments/supplies/actual costs and
 main-menu company reports. Provider settings, encrypted backup/transactional merge,

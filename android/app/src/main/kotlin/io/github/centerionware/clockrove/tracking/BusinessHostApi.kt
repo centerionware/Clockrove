@@ -114,7 +114,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "removeCard" -> repository.removeCard(id, version, v.string("jobId"), v.string("cardId"))
             "copyTemplate" -> repository.copyTaskTemplate(id, version, v.string("templateId"), v.string("cardId"), v.string("jobId"), v.string("columnId"), v.bool("copyPrice"))
             "removeTemplate" -> repository.removeTaskTemplate(id, version, v.string("templateId"))
-            "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody"), if (v.value.containsKey("defaultTaxUnits")) v.int("defaultTaxUnits") else 0))
+            "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody"), if (v.value.containsKey("defaultTaxUnits")) v.int("defaultTaxUnits") else 0, if (v.value.containsKey("receivablesEmail")) v.string("receivablesEmail") else ""))
             "saveCustomer" -> repository.saveCustomer(id, version, BusinessStore.Customer(v.string("customerId"), v.string("name"), v.string("email"), v.string("phone"), v.string("address"), v.string("notes"), v.bool("archived")))
             "removeCustomer" -> repository.removeCustomer(id, version, v.string("customerId"))
             "archiveJob" -> repository.archiveJob(id, version, v.string("jobId"))
@@ -135,7 +135,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     private fun settings(v: BusinessStore.Settings): Map<String, Any?> = mapOf("currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits,
         "defaultHourlyMinor" to v.defaultHourlyMinor?.toString(), "companyName" to v.companyName, "companyEmail" to v.companyEmail, "companyPhone" to v.companyPhone,
         "companyAddress" to v.companyAddress, "companyWebsite" to v.companyWebsite, "invoiceHeader" to v.invoiceHeader, "invoiceFooter" to v.invoiceFooter,
-        "invoiceStyle" to v.invoiceStyle, "emailSubject" to v.emailSubject, "emailBody" to v.emailBody, "defaultTaxUnits" to v.defaultTaxUnits)
+        "invoiceStyle" to v.invoiceStyle, "emailSubject" to v.emailSubject, "emailBody" to v.emailBody, "defaultTaxUnits" to v.defaultTaxUnits, "receivablesEmail" to v.receivablesEmail)
     private fun customer(v: BusinessStore.Customer): Map<String, Any?> = mapOf("customerId" to v.id, "name" to v.name, "email" to v.email, "phone" to v.phone, "address" to v.address, "notes" to v.notes, "archived" to v.archived)
     private fun job(v: BusinessStore.JobSettings): Map<String, Any?> = mapOf("jobId" to v.id, "name" to v.name, "colorArgb" to v.colorArgb, "billingMode" to v.billingMode,
         "currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits, "hourlyRateMinor" to v.hourlyRateMinor?.toString(), "customerId" to v.customerId, "customerEmailOverride" to v.customerEmailOverride, "taxUnits" to v.taxUnits)

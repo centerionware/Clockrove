@@ -77,7 +77,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     "emailInvoice", "shareInvoice" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
                         val record = InvoiceDocuments.ensure(repository, id)
-                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record) else Intent.createChooser(InvoiceDocuments.share(activity, record), "Share invoice")
+                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings) else Intent.createChooser(InvoiceDocuments.share(activity, record), "Share invoice")
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }

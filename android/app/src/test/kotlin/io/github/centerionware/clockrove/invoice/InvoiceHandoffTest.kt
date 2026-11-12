@@ -42,7 +42,7 @@ class InvoiceHandoffTest {
     @After fun close() { repository.close(); provider.shutdown() }
     @Test fun emailIntentRoutesToEmailAppsAndContainsActualRecipientBodyAndPdfReadGrant() {
         val record = repository.invoice("invoice"); val s = InvoiceStore.Snapshot.decode(record.payload).copy(email = "synthetic@example.test", subject = "Synthetic invoice", body = "Hello\nActual invoice attached.")
-        val intent = InvoiceDocuments.email(context, record.copy(payload = s.encode()))
+        val intent = InvoiceDocuments.email(context, record.copy(payload = s.encode()), repository.businessSnapshot().settings)
         val uri = InvoiceDocuments.uri(context, record.id)
         assertEquals(Intent.ACTION_SEND, intent.action); assertEquals("application/pdf", intent.type)
         assertEquals(Intent.ACTION_SENDTO, intent.selector?.action); assertEquals("mailto", intent.selector?.data?.scheme)
@@ -51,10 +51,26 @@ class InvoiceHandoffTest {
         assertEquals(uri, intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)); assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
         assertTrue(intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0); assertEquals(0, intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
     }
+    @Test fun accountingCopyUsesCurrentReceivablesOrCompanyFallbackAndDeduplicatesCustomer() {
+        val record = repository.invoice("invoice")
+        val company = repository.businessSnapshot().settings.copy(companyEmail = "company@example.test")
+        val s = InvoiceStore.Snapshot.decode(record.payload).copy(email = "customer@example.test")
+        val retained = record.copy(payload = s.encode())
+        assertArrayEquals(arrayOf("company@example.test"), InvoiceDocuments.email(context, retained, company).getStringArrayExtra(Intent.EXTRA_CC))
+        val receivables = company.copy(receivablesEmail = "accounts@example.test")
+        assertArrayEquals(arrayOf("accounts@example.test"), InvoiceDocuments.email(context, retained, receivables).getStringArrayExtra(Intent.EXTRA_CC))
+        assertArrayEquals(emptyArray<String>(), InvoiceDocuments.email(context, retained, company.copy(receivablesEmail = "CUSTOMER@example.test")).getStringArrayExtra(Intent.EXTRA_CC))
+        assertArrayEquals(emptyArray<String>(), InvoiceDocuments.email(context, retained, company.copy(companyEmail = "")).getStringArrayExtra(Intent.EXTRA_CC))
+        try {
+            InvoiceDocuments.email(context, retained, company.copy(receivablesEmail = "accounts@example.test\r\nBcc:other@example.test"))
+            fail("Accounting address injection accepted")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(record.payload, repository.invoice("invoice").payload)
+    }
     @Test fun recipientAndSubjectInjectionAreRejectedBeforeOpeningAnyApplication() {
         val record = repository.invoice("invoice"); val s = InvoiceStore.Snapshot.decode(record.payload)
         for (bad in listOf(s.copy(email = "a@example.test\r\nBcc:b@example.test"), s.copy(subject = "Invoice\nBcc:other@example.test"))) {
-            try { InvoiceDocuments.email(context, record.copy(payload = bad.encode())); fail("Injection accepted") } catch (_: IllegalArgumentException) {}
+            try { InvoiceDocuments.email(context, record.copy(payload = bad.encode()), repository.businessSnapshot().settings); fail("Injection accepted") } catch (_: IllegalArgumentException) {}
         }
     }
     @Test fun providerReturnsPreparedBytesThroughASeekableReadOnlyDescriptorWithoutNamedCacheFiles() {

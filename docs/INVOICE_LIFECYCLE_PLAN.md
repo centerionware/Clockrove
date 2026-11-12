@@ -180,7 +180,7 @@ historical allocation events; never rewrite earlier reports using today's ratio.
 A later reversal applies to the current allocation destination and books its
 current cumulative tax difference. Retain the original payment ID through chains.
 
-Payment persistence will use schema 8 with immutable payment/reversal/transfer and
+Payment persistence is being implemented as schema 8 with immutable payment/reversal/transfer and
 allocation-event identities, original invoice ownership, current destination, and
 revision ancestry. Financial rows reference retained invoice identities rather
 than mutable job rows; job purging must retain their revision payloads too.
@@ -188,7 +188,13 @@ Commands must atomically write payment, allocation, event, receipt intent and
 version outcome. Unknown-response retries reuse all IDs and the unchanged draft.
 Install tables without decoding every historical invoice payload; validate a
 frozen document when it is actually opened or changed. This section and the
-PaymentMath source/tests do not implement the ledger or user-facing payments yet.
+PaymentMath source/tests do not complete the user-facing payment milestone.
+The native ledger source currently prepares payments/reversals/ordered allocation
+events and retained financial revisions; transfer/copy/UI behavior remains pending.
+Event order uses command version plus ordinal, not wall-clock timestamp or random
+ID. Received/effective dates are stored separately from recorded dates. A backdated
+entry never rewrites previously stored allocation events; dated adjustment rows
+must explain corrections in later reports.
 
 For replacements, v7 invoice lines lack stable source IDs even though coverage
 claims do have IDs. Never infer a line-to-task association from its title, price or

@@ -23,15 +23,19 @@ internal object InvoiceDocuments {
         return repository.invoice(id).also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
     fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
-    fun email(context: Context, record: InvoiceStore.Record): Intent {
+    fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings): Intent {
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         require(BusinessStore.validEmail(snapshot.email)) { "INVALID_RECIPIENT" }
         require(snapshot.subject.none { it == '\r' || it == '\n' }) { "INVALID_SUBJECT" }
+        val accounting = company.receivablesEmail.ifEmpty { company.companyEmail }
+        require(BusinessStore.validEmail(accounting)) { "INVALID_ACCOUNTS_RECEIVABLE_EMAIL" }
+        val cc = if (accounting.isEmpty() || accounting.equals(snapshot.email, ignoreCase = true)) emptyArray<String>() else arrayOf(accounting)
         val uri = uri(context, record.id)
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
             putExtra(Intent.EXTRA_EMAIL, if (snapshot.email.isEmpty()) emptyArray<String>() else arrayOf(snapshot.email))
+            putExtra(Intent.EXTRA_CC, cc)
             putExtra(Intent.EXTRA_SUBJECT, snapshot.subject)
             putExtra(Intent.EXTRA_TEXT, snapshot.body)
             putExtra(Intent.EXTRA_STREAM, uri)

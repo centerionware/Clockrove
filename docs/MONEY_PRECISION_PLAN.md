@@ -1,6 +1,6 @@
 # Exact money implementation checkpoint
 
-Owner priority, 2026-11-12; part of the current invoice milestone before merge.
+Owner priority, 2026-11-12; invoice foundation merged, payment precision in progress.
 Read app_plan.md and plan_status.md. All dependency resolution, builds, tests and
 formatting run in GitHub Actions only.
 
@@ -17,7 +17,7 @@ ongoing requirements for later payments, credits, quotes and reports.
 2. Add canonical TEXT money persistence for business default hourly rate, job rate,
    task unit price and template unit price, linked to the same entity IDs. Migrate
    released integers by decimal-string conversion in one transaction. Preserve the
-   released v5/v6 DDL fixture; schema 7 is still unreleased. Keep old columns only
+   released v5/v6 DDL fixture; schema 7 is now on main and new persistence requires a forward migration. Keep old columns only
    as a conservative legacy representation; wide values must never enter INTEGER
    affinity and silently become REAL. Reads prefer the canonical exact record.
 3. Use BigInteger money values throughout Kotlin business/board/report contracts;

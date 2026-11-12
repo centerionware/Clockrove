@@ -12,11 +12,12 @@ internal object BusinessStore {
         val invoiceFooter: String = "", val invoiceStyle: String = "MODERN",
         val emailSubject: String = "Invoice {invoice_number} — {job_name}",
         val emailBody: String = "Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}",
-        val defaultTaxUnits: Int = 0) {
+        val defaultTaxUnits: Int = 0, val receivablesEmail: String = "") {
         fun storedValues(): List<Any?> = listOf(currency, MoneyMath.legacy(defaultHourlyMinor), companyName, companyEmail, companyPhone,
             companyAddress, companyWebsite, invoiceHeader, invoiceFooter, invoiceStyle, emailSubject, emailBody)
         // Retain released command fingerprints when the new preference is zero.
-        fun values(): List<Any?> = storedValues().toMutableList().apply { this[1] = MoneyMath.fingerprint(defaultHourlyMinor) } + if (defaultTaxUnits == 0) emptyList() else listOf(defaultTaxUnits)
+        fun values(): List<Any?> = storedValues().toMutableList().apply { this[1] = MoneyMath.fingerprint(defaultHourlyMinor) } + (if (defaultTaxUnits == 0) emptyList() else listOf(defaultTaxUnits)) +
+            (if (receivablesEmail.isEmpty()) emptyList() else listOf(receivablesEmail))
     }
     data class Customer(val id: String, val name: String, val email: String = "", val phone: String = "",
         val address: String = "", val notes: String = "", val archived: Boolean = false) {
@@ -34,7 +35,7 @@ internal object BusinessStore {
     fun settings(db: SQLiteDatabase): Settings = db.rawQuery("SELECT ${BusinessSchema.settingsColumns.drop(1).take(12).joinToString(",")} FROM app_settings WHERE id=1", null).use {
         check(it.moveToFirst())
         Settings(it.getString(0), MoneyStore.read(db, "settings_money", "1", if (it.isNull(1)) null else it.getString(1)), it.getString(2), it.getString(3),
-            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11), BillingTaxStore.defaultUnits(db))
+            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11), BillingTaxStore.defaultUnits(db), InvoicePaymentStore.accountingEmail(db))
     }
     fun customers(db: SQLiteDatabase): List<Customer> = db.rawQuery("SELECT ${customerColumns.joinToString(",")} FROM customers ORDER BY archived,name,id", null).use { rows ->
         buildList { while (rows.moveToNext()) add(Customer(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4), rows.getString(5), rows.getInt(6) != 0)) }
@@ -57,6 +58,7 @@ internal object BusinessStore {
     private fun bounded(value: String, size: Int) = value.length <= size && !value.contains('\u0000')
 
     fun saveSettings(db: SQLiteDatabase, value: Settings, at: Long): String? {
+        if (!validEmail(value.receivablesEmail)) return "INVALID_ACCOUNTS_RECEIVABLE_EMAIL"
         if (!TaxRate.valid(value.defaultTaxUnits)) return "INVALID_TAX_RATE"
         if (!validCurrency(value.currency) || !MoneyMath.valid(value.defaultHourlyMinor) ||
             !bounded(value.companyName, 240) || !validEmail(value.companyEmail) || !bounded(value.companyPhone, 120) ||
@@ -70,6 +72,7 @@ internal object BusinessStore {
         db.execSQL("UPDATE app_settings SET ${columns.joinToString(",") { "$it=?" }} WHERE id=1", value.storedValues().toTypedArray())
         MoneyStore.save(db, "settings_money", "1", null, value.defaultHourlyMinor, at)
         BillingTaxStore.saveDefault(db, value.defaultTaxUnits, at)
+        InvoicePaymentStore.saveAccountingEmail(db, value.receivablesEmail, at)
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)
         return null
     }
