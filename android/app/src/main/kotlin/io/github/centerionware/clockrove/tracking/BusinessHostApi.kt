@@ -162,7 +162,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         return mapOf("version" to context.version, "invoiceId" to ledger.invoice.id, "number" to document.number,
             "jobId" to ledger.invoice.jobId, "jobName" to document.job, "customer" to document.customer,
             "currency" to document.currency, "digits" to document.digits, "totalMinor" to ledger.balance.total.toString(),
-            "paidMinor" to ledger.balance.paid.toString(), "dueMinor" to ledger.balance.collectibleDue.toString(), "status" to ledger.balance.status,
+            "paidMinor" to ledger.balance.paid.toString(), "dueMinor" to ledger.balance.due.toString(), "status" to ledger.balance.status,
             "collectedTaxMinor" to ledger.collectedTax?.toString(),
             "replacesInvoiceId" to context.replacesInvoiceId,
             "void" to context.voidInfo?.let { mapOf("replacementId" to it.replacementId, "creditedMinor" to it.credited, "cancelledMinor" to it.cancelled,

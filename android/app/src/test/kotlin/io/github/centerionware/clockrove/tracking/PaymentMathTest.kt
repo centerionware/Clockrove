@@ -53,6 +53,12 @@ class PaymentMathTest {
         rejected { PaymentMath.balance(n(100), n(-1)) }
         rejected { PaymentMath.balance(n(100), n(101)) }
     }
+    @Test fun cancelledBalanceCannotExposeCollectibleDebtWhileOriginalTotalRemainsHistorical() {
+        val cancelled = PaymentMath.balance(n(10750), n(0)).copy(voided = true)
+        assertEquals("VOID", cancelled.status); assertEquals(n(0), cancelled.due)
+        assertEquals(n(10750), cancelled.total); assertEquals(n(0), cancelled.paid)
+        assertEquals(n(10750), PaymentMath.balance(n(10750), n(0)).due)
+    }
     @Test fun tinySplitPaymentsConserveTaxAndSalesAtEveryStepAndFinalSettlement() {
         // Independently rounding each 1-cent payment would lose all three cents of tax.
         var paid = n(0); var taxBooked = n(0); var salesBooked = n(0)

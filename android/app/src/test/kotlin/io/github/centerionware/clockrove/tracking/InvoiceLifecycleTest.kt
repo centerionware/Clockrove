@@ -61,7 +61,7 @@ class InvoiceLifecycleTest {
         assertEquals(original, repository.invoice("invoice").payload)
         assertArrayEquals(pdf, repository.invoice("invoice").pdf)
         assertEquals("VOID", ledger().balance.status)
-        assertEquals(n(0), ledger().balance.collectibleDue)
+        assertEquals(n(0), ledger().balance.due)
         assertEquals("0", repository.invoices().invoices.single().dueMinor)
         assertEquals("VOID", repository.invoices().invoices.single().status)
         assertEquals("INVOICE_VOID", repository.recordInvoicePayment("late", version, InvoicePaymentStore.Draft("late", "invoice", "1", "USD", at, "UTC")).conflict)

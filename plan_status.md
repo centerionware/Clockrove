@@ -2403,3 +2403,10 @@ requires all 24 PDF/PNG pairs per API, including nine new lifecycle captures, wh
 retaining the short-document one-page and 1000-digit completeness assertions.
 These are prepared cases, not acceptance; current 40259d7 / 43211073661 is live
 on the preceding source and the extended document cases need their own run.
+
+Native balance review removed a second competing due accessor: `balance.due`
+itself is now zero for VOID records, while the original total and immutable
+credited/cancelled split remain retained. This prevents a future native consumer
+from accidentally collecting a cancelled predecessor by reading the ordinary due
+field. Added a direct pure arithmetic regression and kept the native/index/bridge
+zero-due assertions. This follow-up requires Actions validation too.

@@ -24,8 +24,10 @@ internal object PaymentMath {
         return parseMinor(minor)
     }
 
-    data class Balance(val total: BigInteger, val paid: BigInteger, val due: BigInteger, val voided: Boolean = false) {
-        val collectibleDue: BigInteger get() = if (voided) BigInteger.ZERO else due
+    data class Balance(val total: BigInteger, val paid: BigInteger, private val unallocated: BigInteger, val voided: Boolean = false) {
+        // The original total remains historical. A cancelled invoice is not collectible;
+        // its credited/cancelled split is retained in the immutable lifecycle record.
+        val due: BigInteger get() = if (voided) BigInteger.ZERO else unallocated
         val status: String get() = when {
             voided -> "VOID"
             total.signum() == 0 -> "NOTHING_DUE"
