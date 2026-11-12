@@ -1857,3 +1857,13 @@ the addressed node has no TAP semantic action. Require a clickable target, searc
 children before merged ancestors, and verify the actual checked choice before
 Save/Back. Keep the native binding and cancel assertions; do not count a transport
 acknowledgement as user selection or acceptance. Full Actions rerun is required.
+
+### First complete API-24 widget journey verified; API-35 board-body observation open
+
+6033cbe / 43144846081 passed 272 native cases and all 19 actual API-24 cases,
+zero failures/errors/skips. API 35 passed 18/19, including actual setup checked
+choice/save/cancel and Settings. Its board header and 0-of-30 loaded task summary
+were visible, but the column subtree was absent from cached accessibility nodes.
+Refresh virtual nodes and retain a separate actual board screenshot before the
+unchanged column assertion; later setup screenshots must not overwrite failure
+evidence. Full API-35 board acceptance remains open, not assumed from its header.

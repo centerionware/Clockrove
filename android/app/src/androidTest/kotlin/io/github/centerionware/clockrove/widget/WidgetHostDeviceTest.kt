@@ -105,6 +105,10 @@ class WidgetHostDeviceTest {
                 assertEquals("widget-device-card-29", boardActivity.intent.getStringExtra("taskId"))
                 assertTrue(boardActivity.getInitialRoute().contains(job))
                 clickText("Synthetic widget board", false)
+                clickText("Task board", false)
+                clickText("0 of 30 tasks complete", false)
+                instrumentation.uiAutomation.waitForIdle(300, 3000)
+                captureSetup("board")
                 clickText("To do", false)
             } finally { instrumentation.runOnMainSync { opened?.finish() }; instrumentation.removeMonitor(monitor) }
             assertNull("Task tap must never start a timer", repository.snapshot().running)
@@ -135,15 +139,17 @@ class WidgetHostDeviceTest {
             instrumentation.runOnMainSync { host.stopListening(); host.deleteHost(); activity.finish() }
         }
     }
-    private fun captureSetup() {
+    private fun captureSetup(kind: String = "setup") {
         instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-            File(app.getExternalFilesDir(null), "widget-setup.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            File(app.getExternalFilesDir(null), "widget-$kind.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
     }
     private fun clickText(label: String, click: Boolean = true, checked: Boolean = false) {
         var found: android.view.accessibility.AccessibilityNodeInfo? = null
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo): android.view.accessibility.AccessibilityNodeInfo? {
+            // Refresh cached virtual nodes after an asynchronous Flutter data load.
+            if (!node.refresh()) return null
             // Flutter may merge a ListTile's title and subtitle into one label.
             fun matches(value: CharSequence?) = value?.toString()?.lineSequence()?.any { it.trim() == label } == true
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { match -> return match } }
@@ -164,7 +170,7 @@ class WidgetHostDeviceTest {
             }
             instrumentation.uiAutomation.rootInActiveWindow?.let { describe(it, 0) }
             File(app.getExternalFilesDir(null), "widget-accessibility.txt").writeText(dump.toString())
-            captureSetup()
+            captureSetup("failure")
         }
         var node = found ?: throw AssertionError("Actual widget setup did not show $label")
         if (!click) return
