@@ -386,3 +386,18 @@ payment; retries open the same retained document. Email expansions over 100 KB a
 rejected before activity handoff and unexpected handoff failures are caught; Save
 PDF/Share remain available. Actual Android PDFs/attachments and wide receipt money
 need the new Actions/visual evidence. UI, bridge and void/replacement remain open.
+
+### UI integration checkpoint
+
+c21ef87 / 43201426802 passed 434 native / 46 actual Android cases, including
+all-style native copies and wide receipt text. Visual review found short-copy
+footer overflow; revised spacing and a one-page short-fixture gate are prepared.
+The invoice detail/entry/correction UI and strict bridge are now source-complete
+for testing, with exact list balances, saved-copy viewing/email, separate source
+review and private notes. Mark paid proposes remaining due and asks for payment
+confirmation. Confirmation opens the immutable receipt; Send latest copy prepares
+one versioned balance document and opens its email draft. Neither action claims
+customer delivery. Unknown operations keep immutable IDs and block Back; keyed
+submit controls survive live balance changes. UI/bridge/replay and an independent
+actual app/payment/purge journey still need new Actions proof. Native ledger/copy
+acceptance does not implement void-and-replace or complete this milestone.

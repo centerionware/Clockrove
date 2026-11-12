@@ -212,7 +212,13 @@ class PreparedInvoice {
     this.createdLabel = '',
     this.jobDeleted = false,
     this.legacy = false,
+    this.paid,
+    this.due,
+    this.status,
+    this.digits = 2,
   });
+  final String? paid, due, status;
+  final int digits;
   final String id, number, total, currency, style;
   final String jobId, jobName, customer, createdLabel;
   final bool jobDeleted, legacy;
@@ -364,6 +370,10 @@ class ReportApi {
         createdLabel: i['createdLabel'] as String? ?? '',
         jobDeleted: i['jobDeleted'] as bool? ?? false,
         legacy: i['legacy'] as bool? ?? false,
+        paid: i['paidMinor'] as String?,
+        due: i['dueMinor'] as String?,
+        status: i['status'] as String?,
+        digits: i['digits'] as int? ?? 2,
       );
     }).toList();
   }
@@ -379,6 +389,19 @@ class ReportApi {
       v['png'] as Uint8List,
     );
   }
+
+  Future<InvoicePage> previewCopy(String id, String copyId, int page) async {
+    final value = (await _documents.invokeMapMethod<Object?, Object?>(
+      'invoicePreview', {'invoiceId': id, 'copyId': copyId, 'page': page},
+    ))!;
+    return InvoicePage(value['page'] as int, value['pages'] as int, value['png'] as Uint8List);
+  }
+  Future<void> emailCopy(String id, String copyId) =>
+      _documents.invokeMethod<void>('emailInvoice', {'invoiceId': id, 'copyId': copyId});
+  Future<void> shareCopy(String id, String copyId) =>
+      _documents.invokeMethod<void>('shareInvoice', {'invoiceId': id, 'copyId': copyId});
+  Future<bool> saveCopy(String id, String copyId) async =>
+      await _documents.invokeMethod<bool>('saveInvoice', {'invoiceId': id, 'copyId': copyId}) ?? false;
 
   Future<void> email(String id) =>
       _documents.invokeMethod<void>('emailInvoice', {'invoiceId': id});

@@ -144,6 +144,7 @@ PY_DEVICE
   # ephemeral emulator for the independently numbered financial journey.
   bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
   adb -s emulator-5554 emu kill || true
   wait "$clockrove_emulator_pid" || true
   trap - EXIT

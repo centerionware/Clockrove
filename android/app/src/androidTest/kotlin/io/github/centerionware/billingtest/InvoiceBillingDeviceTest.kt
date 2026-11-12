@@ -204,7 +204,7 @@ class InvoiceBillingDeviceTest {
             reveal("Save settings"); click("Save settings")
             until("Actual main Settings did not save tax") { repository.businessSnapshot().settings.defaultTaxUnits == 75000 }
             waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
-            waitFor("Review billed work")
+            reveal("Review billed work"); click("Review billed work"); waitFor("Review billed work")
             reveal("Previously installed tile"); click("Previously installed tile")
             until("Covered task checkbox did not become checked") { find("Previously installed tile")?.isChecked == true }
             enter("Why this work belongs to the invoice", "Checked original invoice: only the previously installed tile was billed.")
@@ -212,7 +212,7 @@ class InvoiceBillingDeviceTest {
             until("Original-document confirmation was not checked") { find("I checked this against the original invoice")?.isChecked == true }
             capture("legacy-selection"); click("Save coverage review")
             until("Actual Flutter review never committed") { !repository.legacyInvoiceContext("legacy-invoice").context.legacy }
-            waitFor("Invoices")
+            waitFor("INV-1000"); instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); waitFor("Invoices")
             assertEquals(originalPayload, repository.invoice("legacy-invoice").payload)
             assertArrayEquals(originalPdf, repository.invoice("legacy-invoice").pdf)
             assertEquals(1001L, sequence())
@@ -280,7 +280,7 @@ class InvoiceBillingDeviceTest {
             assertTrue(repository.invoices().invoices.all { it.jobDeleted })
             assertArrayEquals(originalPdf, repository.invoice("legacy-invoice").pdf)
             launch(); click("App settings and customers"); click("Invoices")
-            waitFor("$jobName · job deleted"); click("INV-1001"); waitFor("Prepared invoice"); waitFor("Page 1 of 1")
+            waitFor("$jobName · job deleted"); click("INV-1001"); reveal("View original PDF"); click("View original PDF"); waitFor("Prepared invoice"); waitFor("Page 1 of 1")
             capture("retained-invoice")
             assertEquals(frozen, InvoiceStore.Snapshot.decode(repository.invoice(issued.id).payload))
         } catch (failure: Throwable) {

@@ -88,7 +88,10 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     }
                     else -> result.notImplemented()
                 }
-            } catch (_: IllegalArgumentException) { result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null) }
+            } catch (failure: IllegalArgumentException) {
+                if (failure.message == "PAYMENT_HISTORY_TOO_LARGE") result.error("PAYMENT_HISTORY_TOO_LARGE", "This history is too long for one PDF. Open individual saved receipts instead.", null)
+                else result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null)
+            }
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }
         }
     }

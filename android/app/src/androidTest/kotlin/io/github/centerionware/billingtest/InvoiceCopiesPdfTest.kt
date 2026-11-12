@@ -40,6 +40,7 @@ class InvoiceCopiesPdfTest {
             file.writeBytes(bytes)
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor -> PdfRenderer(descriptor).use { pdf ->
                 assertTrue(pdf.pageCount > 0)
+                if (!name.contains("wide")) assertEquals("Short financial copy must fit one page: $name", 1, pdf.pageCount)
                 for (index in 0 until pdf.pageCount) pdf.openPage(index).use { page ->
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
                         val compact = CopyPdfTextApi35.read(page).filterNot { it.isWhitespace() }

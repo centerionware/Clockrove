@@ -1702,3 +1702,31 @@ fresh process/app-data run after prior XML/captures have been retained, followin
 the existing financial-journey isolation. New copy run also asserts INV-1000; no
 counter reset or weakened expected number is used. Revised full Actions evidence
 and all-style image/API-35 text review are still required before acceptance.
+
+### 2026-11-12 immutable-copy acceptance and payment UI increment
+
+c21ef87 / 43201426802 passed full Actions: 434 native cases and 46 actual Android
+cases across API 24/35, zero failures/errors/skips (40 native XML files and six
+actual XML files inspected). Both settings and isolated copy processes preserve
+INV-1000 first-number checks. Partial/paid receipt captures in all three API-35
+styles were reviewed; short-copy footer pagination exposed on API 24 and balance
+copies needs improvement. Source now removes redundant status/section spacing,
+keeps a prominent header state, shortens the fixed copy note and requires short
+financial fixtures to fit one page. Wide values still paginate without truncation.
+All revised visuals require fresh Actions review; not every prior capture was
+reviewed yet.
+
+Native payment/receipt metadata and strict command bridge, invoice-list balances,
+Dart 4096-digit payment parsing and the invoice detail/payment/correction screens
+are prepared. One invoice journey exposes original PDFs, source review, payments,
+saved historical copies, current AR/company CC and Send latest copy. Mark paid
+proposes the remaining amount; payment/correction confirmation opens its saved
+receipt. Native copies retain original invoice/cash identity. Stable keyed submit
+controls preserve unknown-response retries when a live paid balance changes form
+layout. Regressions cover exact input, response loss, concurrent refresh, transport,
+retained deleted-job invoices and audited correction. A new isolated actual Flutter
+journey covers AR Save, rejected precision, partial/full payments, corrections,
+real receipt views/To/CC/attachment and settlement after job purge. Existing legacy
+review navigation is updated for the unified detail screen. All new UI/bridge and
+layout source needs Actions evidence. Void/credit-preserving replacement remains
+unimplemented and blocks merging the complete payment milestone.

@@ -31,10 +31,9 @@ internal object InvoicePdf {
                 val flow = Flow(document, snapshot, logo)
                 flow.start()
                 snapshot.statement?.let {
-                    flow.text(it.status.replace('_', ' '), 18f, bold = true)
                     flow.text("Payment state recorded ${io.github.centerionware.clockrove.tracking.ReportCsv.instant(it.created, "UTC")}", 9f)
                     flow.text("Copy reference: ${it.reference}", 8f)
-                    flow.space(12f)
+                    flow.space(8f)
                 }
                 flow.text(snapshot.company, 22f, bold = true)
                 flow.text(snapshot.companyContact, 10f)
@@ -49,21 +48,23 @@ internal object InvoicePdf {
                 flow.text(snapshot.job, 18f, bold = true)
                 flow.text(snapshot.period, 10f)
                 flow.text(snapshot.basis, 9f)
-                flow.space(12f)
-                flow.text(snapshot.header, 11f)
-                flow.space(12f)
+                if (snapshot.statement == null || snapshot.header.isNotBlank()) {
+                    flow.space(12f)
+                    flow.text(snapshot.header, 11f)
+                    flow.space(12f)
+                } else flow.space(8f)
                 flow.tableHeader()
                 snapshot.lines.forEach { flow.line(it) }
                 flow.total()
                 snapshot.statement?.let {
                     flow.text("Paid to date   ${snapshot.currency} ${it.paid}", 12f, bold = true)
                     flow.text("BALANCE DUE   ${snapshot.currency} ${it.due}", 16f, bold = true)
-                    flow.space(16f)
+                    flow.space(8f)
                     if (it.events.isNotEmpty()) {
-                        flow.text(if (it.kind == "RECEIPT") "PAYMENT RECEIVED" else if (it.kind == "CORRECTION") "PAYMENT CORRECTION" else "PAYMENTS AND CREDITS", 12f, bold = true)
-                        it.events.forEach { event -> flow.line(event) }
+                        if (it.kind == "BALANCE") flow.text("PAYMENTS AND CREDITS", 12f, bold = true)
+                        it.events.forEach { event -> flow.line(event, compact = true) }
                     }
-                    flow.text("This is a saved payment-state copy of ${snapshot.number}. It does not create another charge. Later payments or corrections do not rewrite this copy.", 9f)
+                    flow.text("Saved payment record for ${snapshot.number}. Balances reflect the recorded date.", 9f)
                 }
                 if (snapshot.footer.isNotBlank()) {
                     flow.space(20f)
@@ -108,7 +109,7 @@ internal object InvoicePdf {
                 canvas.drawLine(margin, 84f, width - margin, 84f, paint(1f).apply { strokeWidth = .7f })
             }
             data.statement?.let {
-                canvas.drawText(it.status.replace('_', ' '), 260f, if (modern) 65f else if (classic) 73f else 69f, paint(10f, true, if (modern) Color.WHITE else ink))
+                canvas.drawText(it.status.replace('_', ' '), 260f, if (modern) 65f else if (classic) 73f else 69f, paint(14f, true, if (modern) Color.WHITE else ink))
             }
             logo?.let {
                 val box = RectF(width - margin - 85, 20f, width - margin, 69f)
@@ -156,7 +157,7 @@ internal object InvoicePdf {
             canvas.drawText(amount, width - margin - 8 - paint(9f, true).measureText(amount), y + 18, paint(9f, true))
             y += 36
         }
-        fun line(value: InvoiceStore.Line) {
+        fun line(value: InvoiceStore.Line, compact: Boolean = false) {
             ensure(45f)
             val amount = paint(11f, true)
             val fitsColumn = amount.measureText(value.amount) <= width - margin * 2 - 352 - 16
@@ -169,9 +170,9 @@ internal object InvoicePdf {
                 // Exact values must never overlap descriptions or disappear off-page.
                 text("Amount (${data.currency}) ${value.amount}", 11f, true)
             }
-            space(if (classic) 4f else 8f)
+            space(if (compact) 2f else if (classic) 4f else 8f)
             canvas.drawLine(margin, y, width - margin, y, Paint().apply { color = Color.rgb(222, 228, 224); strokeWidth = .5f })
-            space(if (classic) 8f else 12f)
+            space(if (compact) 6f else if (classic) 8f else 12f)
         }
         fun total() {
             if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {

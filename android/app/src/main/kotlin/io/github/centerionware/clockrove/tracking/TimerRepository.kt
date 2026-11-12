@@ -505,6 +505,21 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun reverseInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Reversal): Outcome =
         boardChange(id, version, "INVOICE_PAYMENT_REVERSE", value.values()) { InvoicePaymentStore.reverse(it, value, wallClock()) }
+    internal data class InvoicePaymentContext(val version: Long, val now: Long, val timezone: String,
+        val localNow: SessionTime.Formatted, val accountingEmail: String, val legacy: Boolean, val jobDeleted: Boolean,
+        val ledger: InvoicePaymentStore.Snapshot, val copies: List<InvoiceCopyStore.Summary>)
+    @Synchronized
+    internal fun invoicePaymentContext(invoiceId: String): InvoicePaymentContext {
+        val db = helper.readableDatabase
+        val ledger = InvoicePaymentStore.read(db, invoiceId)
+        val company = BusinessStore.settings(db)
+        val timezone = java.util.TimeZone.getDefault().id
+        val now = wallClock()
+        val legacy = db.rawQuery("SELECT state FROM invoice_coverage WHERE invoice_id=?", arrayOf(invoiceId)).use { !it.moveToFirst() || it.getString(0) == "LEGACY" }
+        val deleted = db.rawQuery("SELECT 1 FROM jobs WHERE id=?", arrayOf(ledger.invoice.jobId)).use { !it.moveToFirst() }
+        return InvoicePaymentContext(readSnapshot(db).version, now, timezone, SessionTime.format(now, timezone),
+            company.receivablesEmail.ifEmpty { company.companyEmail }, legacy, deleted, ledger, InvoiceCopyStore.list(db, invoiceId))
+    }
     @Synchronized
     internal fun prepareInvoiceBalanceCopy(id: String, version: Long, copyToken: String, invoiceId: String): Outcome =
         boardChange(id, version, "INVOICE_BALANCE_COPY", listOf(copyToken, invoiceId)) { InvoiceCopyStore.prepareBalance(it, copyToken, invoiceId, wallClock()) }
@@ -520,14 +535,15 @@ class TimerRepository internal constructor(context: Context,
         return db.update("invoice_copies", android.content.ContentValues().apply { put("pdf", bytes) }, "id=? AND pdf IS NULL", arrayOf(copyId)) == 1
     }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
-        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
+        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean,
+        val paidMinor: String, val dueMinor: String, val status: String, val digits: Int)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
     @Synchronized
     internal fun invoices(jobId: String? = null): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
         helper.readableDatabase.rawQuery("SELECT i.id,i.number,i.created_ms,i.payload,i.job_id,j.id,c.state FROM invoices i LEFT JOIN jobs j ON j.id=i.job_id LEFT JOIN invoice_coverage c ON c.invoice_id=i.id ${if (jobId == null) "" else "WHERE i.job_id=?"} ORDER BY i.created_ms DESC,i.id",
             if (jobId == null) null else arrayOf(jobId)).use { rows -> buildList {
-            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
-                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY")) }
+            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); val balance = InvoicePaymentStore.balance(helper.readableDatabase, rows.getString(0), snapshot); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
+                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY", balance.paid.toString(), balance.due.toString(), balance.status, snapshot.digits)) }
         } })
     internal data class InvoiceBillingPreview(val version: Long, val preview: InvoiceCoverageStore.Preview, val taxUnits: Int)
     @Synchronized

@@ -84,8 +84,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "templates" -> return repository.taskTemplates(input.string("search")).map { mapOf("id" to it.id, "title" to it.title, "description" to it.description,
                 "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName) }
             "invoices" -> { val s = repository.invoices(input.nullable("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style,
-                "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy,
+                "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy, "paidMinor" to it.paidMinor, "dueMinor" to it.dueMinor, "status" to it.status, "digits" to it.digits,
                 "createdLabel" to ReportCsv.instant(it.created, java.util.TimeZone.getDefault().id)) }) }
+            "invoicePayments" -> return invoicePayments(repository.invoicePaymentContext(input.string("invoiceId")))
             "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
             "legacyInvoiceContext" -> return legacyInvoiceContext(repository.legacyInvoiceContext(input.string("invoiceId")))
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
@@ -96,7 +97,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession")
+        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -122,6 +123,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "deleteJob" -> repository.deleteJob(id, version, v.string("jobId"))
             "applyLogo" -> repository.applyLogo(id, version, v.string("token")) { logoLoader(v.string("token")) }
             "removeLogo" -> repository.removeLogo(id, version)
+            "recordInvoicePayment" -> repository.recordInvoicePayment(id, version, InvoicePaymentStore.Draft(v.string("paymentId"), v.string("invoiceId"), v.string("amountMinor"), v.string("currency"), v.integer("received"), v.string("timezone"), v.string("method"), v.string("reference"), v.string("note")))
+            "reverseInvoicePayment" -> repository.reverseInvoicePayment(id, version, InvoicePaymentStore.Reversal(v.string("reversalId"), v.string("invoiceId"), v.string("paymentId"), v.integer("effective"), v.string("timezone"), v.string("note")))
+            "prepareInvoiceBalanceCopy" -> repository.prepareInvoiceBalanceCopy(id, version, v.string("copyToken"), v.string("invoiceId"))
             "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
             "reconcileInvoiceCoverage" -> {
                 val raw = requireNotNull(v.value["spans"] as? List<*>); require(raw.size <= 1000)
@@ -131,6 +135,23 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride"), if (v.value["taxUnits"] == null) null else v.int("taxUnits")))
             else -> error("Unreachable")
         }
+    }
+    private fun invoicePayments(context: TimerRepository.InvoicePaymentContext): Map<String, Any?> {
+        val ledger = context.ledger; val document = ledger.document
+        return mapOf("version" to context.version, "invoiceId" to ledger.invoice.id, "number" to document.number,
+            "jobId" to ledger.invoice.jobId, "jobName" to document.job, "customer" to document.customer,
+            "currency" to document.currency, "digits" to document.digits, "totalMinor" to ledger.balance.total.toString(),
+            "paidMinor" to ledger.balance.paid.toString(), "dueMinor" to ledger.balance.due.toString(), "status" to ledger.balance.status,
+            "collectedTaxMinor" to ledger.collectedTax?.toString(), "legacy" to context.legacy, "jobDeleted" to context.jobDeleted,
+            "accountingEmail" to context.accountingEmail, "customerEmail" to document.email,
+            "now" to context.now, "timezone" to context.timezone, "localNow" to context.localNow.localTime,
+            "nowOffsetSeconds" to context.localNow.offsetSeconds, "nowLabel" to context.localNow.label,
+            "payments" to ledger.payments.map { mapOf("id" to it.id, "originalInvoiceId" to it.originalInvoiceId,
+                "amountMinor" to it.amount.toString(), "currency" to it.currency, "received" to it.received, "timezone" to it.timezone,
+                "offsetSeconds" to it.offsetSeconds, "receivedLabel" to it.receivedLabel, "method" to it.method, "reference" to it.reference,
+                "note" to it.note, "recorded" to it.recorded, "reversalId" to it.reversalId, "reversalNote" to it.reversalNote) },
+            "copies" to context.copies.map { mapOf("id" to it.id, "kind" to it.kind, "created" to it.created,
+                "createdLabel" to ReportCsv.instant(it.created, context.timezone), "paidMinor" to it.paid, "dueMinor" to it.due) })
     }
     private fun settings(v: BusinessStore.Settings): Map<String, Any?> = mapOf("currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits,
         "defaultHourlyMinor" to v.defaultHourlyMinor?.toString(), "companyName" to v.companyName, "companyEmail" to v.companyEmail, "companyPhone" to v.companyPhone,

@@ -69,7 +69,7 @@ class _BusinessCommandState extends State<BusinessCommand>
   }
 
   String _conflict(String? value) => switch (value) {
-    'STALE_STATE' => 'This job changed. Your draft is kept. Review the latest data and save again.',
+    'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
     'INVALID_TIMEZONE' =>
@@ -114,6 +114,15 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_EMAIL_SUBJECT' => 'The email subject template is invalid. Open Settings and correct its placeholders or line breaks.',
     'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
     'INVALID_ACCOUNTS_RECEIVABLE_EMAIL' => 'Enter one valid accounts receivable email address in Settings, or leave it blank to use the company email.',
+    'INVALID_PAYMENT_AMOUNT' => 'Enter a positive amount within this invoice’s currency precision. Your draft is kept.',
+    'PAYMENT_EXCEEDS_BALANCE' => 'This exceeds the remaining balance. Refresh the invoice and review the payment amount.',
+    'PAYMENT_CURRENCY_MISMATCH' => 'Use the invoice’s original currency. Settings changes never convert its balance.',
+    'INVALID_PAYMENT' => 'Review the received date, timezone and field lengths. A payment cannot be dated in the future.',
+    'INVALID_PAYMENT_REVERSAL' => 'Add a correction reason of at least 10 characters and review its date and timezone.',
+    'REVERSAL_BEFORE_PAYMENT' => 'The correction date cannot be before the payment was received.',
+    'PAYMENT_ALREADY_REVERSED' => 'This payment was already corrected. Refresh its history.',
+    'PAYMENT_UNAVAILABLE_OR_MOVED' => 'This payment is unavailable here or was credited to a replacement invoice. Refresh and open its current invoice.',
+    'PAYMENT_ID_EXISTS' || 'REVERSAL_ID_EXISTS' || 'INVOICE_COPY_ID_EXISTS' => 'This record already exists. Refresh the invoice to review its saved history.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',

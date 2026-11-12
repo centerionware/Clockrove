@@ -49,6 +49,16 @@ internal object InvoicePaymentStore {
     data class Snapshot(val invoice: InvoiceStore.Record, val document: InvoiceStore.Snapshot,
         val balance: PaymentMath.Balance, val collectedTax: BigInteger?, val payments: List<Payment>)
 
+    fun balance(db: SQLiteDatabase, invoiceId: String, document: InvoiceStore.Snapshot): PaymentMath.Balance {
+        var paid = BigInteger.ZERO
+        db.rawQuery("SELECT p.amount_minor,p.currency FROM payment_destinations d JOIN invoice_payments p ON p.id=d.payment_id LEFT JOIN invoice_payment_reversals r ON r.payment_id=p.id WHERE d.invoice_id=? AND r.id IS NULL", arrayOf(invoiceId)).use { rows ->
+            while (rows.moveToNext()) {
+                require(rows.getString(1) == document.currency) { "INVALID_PAYMENT_CURRENCY" }
+                paid = paid.add(PaymentMath.parseMinor(rows.getString(0)))
+            }
+        }
+        return PaymentMath.balance(PaymentMath.parseMajor(document.total, document.digits), paid)
+    }
     fun read(db: SQLiteDatabase, invoiceId: String): Snapshot {
         val invoice = InvoiceStore.read(db, invoiceId)
         val document = InvoiceStore.Snapshot.decode(invoice.payload)
