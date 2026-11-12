@@ -2287,3 +2287,12 @@ lookup returned null at line 231 (reopened board before job tax settings). Retai
 the node found by the successful bounded poll rather than issuing another lookup.
 No assertion is removed. API 35 was not reached. New wide UI/PDF and payload-size
 cases still require fresh Actions evidence; formatting correction is being applied.
+
+Source review found PDF visual overflow separate from arithmetic: amounts wider
+than the price column could overlap descriptions, and the total stopped shrinking
+at 9pt but could still extend off-page. Preserve normal rows/styles and route wide
+line amounts and extreme totals through the existing paginated paragraph renderer.
+Extended the actual all-style wide-money case with 1000-digit values, first/last
+page captures and API-35 extraction of complete labelled row/subtotal/total values.
+Only exact known page headers/footers are removed before joining text across pages;
+monetary digits are never normalized or discarded. These changes need fresh CI.

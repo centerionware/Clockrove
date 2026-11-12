@@ -138,12 +138,17 @@ internal object InvoicePdf {
         }
         fun line(value: InvoiceStore.Line) {
             ensure(45f)
-            if (value.amount.isNotBlank()) {
-                val amount = paint(11f, true)
+            val amount = paint(11f, true)
+            val fitsColumn = amount.measureText(value.amount) <= width - margin * 2 - 352 - 16
+            if (value.amount.isNotBlank() && fitsColumn) {
                 canvas.drawText(value.amount, width - margin - 8 - amount.measureText(value.amount), y + 12, amount)
             }
             text(value.title, 11f, true, 352)
             text(value.detail, 9f, available = 352)
+            if (value.amount.isNotBlank() && !fitsColumn) {
+                // Exact values must never overlap descriptions or disappear off-page.
+                text("Amount (${data.currency}) ${value.amount}", 11f, true)
+            }
             space(if (classic) 4f else 8f)
             canvas.drawLine(margin, y, width - margin, y, Paint().apply { color = Color.rgb(222, 228, 224); strokeWidth = .5f })
             space(if (classic) 8f else 12f)
@@ -155,12 +160,20 @@ internal object InvoicePdf {
                 text("Subtotal   ${data.currency} ${data.subtotal}", 11f)
                 text("Tax (${TaxRate.format(data.taxRateUnits)}%)   ${data.currency} ${data.taxAmount}", 11f)
             }
+            val value = "${data.currency} ${data.total}"
+            if (paint(9f, true).measureText(value) > 345) {
+                // A bounded font cannot fit every arbitrary-precision total on one
+                // line. Reuse the paginating paragraph flow without dropping digits.
+                ensure(90f); space(12f)
+                canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
+                space(12f); text("TOTAL", 12f, true); text(value, 12f, true); space(12f)
+                return
+            }
             ensure(90f); space(12f)
             val box = RectF(margin, y, width - margin, y + 55)
             if (modern) canvas.drawRoundRect(box, 8f, 8f, Paint().apply { color = Color.rgb(232, 244, 238) })
             else canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
             canvas.drawText("TOTAL", margin + 12, y + 33, paint(12f, true))
-            val value = "${data.currency} ${data.total}"
             var size = 21f
             while (paint(size, true).measureText(value) > 345 && size > 9) size -= 1
             val amount = paint(size, true)

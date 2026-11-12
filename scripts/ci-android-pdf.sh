@@ -131,6 +131,8 @@ for classname, count in expected.items():
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
   for clockrove_style in minimal classic modern; do
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
+    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.png"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf"

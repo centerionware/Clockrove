@@ -32,34 +32,56 @@ class InvoicePdfTest {
         val file = File.createTempFile("synthetic-invoice", ".pdf", InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
         try { file.writeBytes(bytes); ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use(block) } } finally { file.delete() }
     }
+    private fun exactMoneyPdf(snapshot: InvoiceStore.Snapshot, name: String, expected: List<String>) {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+        val bytes = InvoicePdf.generate(snapshot, logo())
+        File(root, "$name.pdf").writeBytes(bytes)
+        inspect(bytes) { renderer ->
+            val text = StringBuilder()
+            for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                if (android.os.Build.VERSION.SDK_INT >= 35) {
+                    // Remove only known page furniture before joining wrapped text.
+                    // An exact number can span pages; never strip/reformat its digits.
+                    val compact = PdfTextApi35.read(page).filterNot { it.isWhitespace() }
+                    text.append(compact.replace("Page${index + 1}·${snapshot.number}", "")
+                        .replace("INVOICE${snapshot.number}", "").replace("Invoice${snapshot.number}", ""))
+                }
+                if (index == 0 || index == renderer.pageCount - 1) {
+                    val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                    try {
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        val suffix = if (index == 0) "" else "-page-${index + 1}"
+                        File(root, "$name$suffix.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    } finally { bitmap.recycle() }
+                }
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 35) {
+                File(root, "$name-extracted.txt").writeText(text.toString())
+                expected.groupingBy { it }.eachCount().forEach { (value, required) ->
+                    var count = 0; var offset = 0
+                    while (offset < text.length) {
+                        val found = text.indexOf(value, offset)
+                        if (found < 0) break
+                        count++; offset = found + value.length
+                    }
+                    assertTrue("Exact amount missing or clipped in $name: expected $required copies, got $count", count >= required)
+                }
+            }
+        }
+    }
     @Test fun wideMoneyRemainsCompleteInAllActualPdfStyles() {
         val subtotal = "26000000000000000000.00"
         val tax = "1950000000000000000.00"
         val total = "27950000000000000000.00"
-        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+        val longValue = "1234567890".repeat(100) + ".00"
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
             val snapshot = fixture(style).copy(subtotal = subtotal, taxAmount = tax, total = total,
                 lines = listOf(InvoiceStore.Line("Synthetic exact quantity", "26 × 1000000000000000000.00 USD each", subtotal, "260000", "100000000000000000000")))
-            val bytes = InvoicePdf.generate(snapshot, logo())
-            File(root, "clockrove-wide-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
-            inspect(bytes) { renderer ->
-                val text = StringBuilder()
-                for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
-                    if (android.os.Build.VERSION.SDK_INT >= 35) text.append(PdfTextApi35.read(page))
-                    if (index == 0) {
-                        val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
-                        try {
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            File(root, "clockrove-wide-invoice-${style.lowercase()}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                        } finally { bitmap.recycle() }
-                    }
-                }
-                if (android.os.Build.VERSION.SDK_INT >= 35) {
-                    val compact = text.toString().filterNot { it.isWhitespace() }
-                    for (amount in listOf(subtotal, tax, total)) assertTrue("Wide $style amount was truncated: $amount", compact.contains(amount))
-                    assertTrue(compact.contains("1000000000000000000.00USDeach"))
-                }
-            }
+            exactMoneyPdf(snapshot, "clockrove-wide-invoice-${style.lowercase()}", listOf(subtotal, subtotal, tax, total, "1000000000000000000.00USDeach"))
+            val longSnapshot = fixture(style).copy(subtotal = longValue, taxRateUnits = 0, taxAmount = "0.00", total = longValue,
+                lines = listOf(InvoiceStore.Line("Synthetic exact long amount", "One unit, exact decimal text", longValue)))
+            exactMoneyPdf(longSnapshot, "clockrove-long-exact-invoice-${style.lowercase()}",
+                listOf(longValue, longValue, longValue, "SubtotalUSD", "TOTALUSD"))
         }
     }
     @Test fun allThreeStylesProduceActualReadablePdfPagesWithLogoAndEqualTotals() {
