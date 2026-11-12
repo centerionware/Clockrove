@@ -46,6 +46,7 @@ class InvoiceSnapshotTest {
         repository.saveJobSettings("job-changed", version, repository.jobDetail(job).job.settings.copy(name = "Changed job"))
         assertEquals(first, repository.prepareInvoice("same", originalVersion, "invoice", selection))
         assertEquals(original, repository.invoice("invoice").payload)
+        assertNull(repository.createManualSession("new-work", version, SessionHistoryStore.Draft("new-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         assertNull(prepare("second", "invoice-2").conflict); assertEquals("INV-1001", repository.invoice("invoice-2").number)
         val next = InvoiceStore.Snapshot.decode(repository.invoice("invoice-2").payload)
         assertEquals("9.99", next.total); assertEquals("Changed Customer", next.customer); assertEquals("CLASSIC", next.style)
@@ -67,6 +68,7 @@ class InvoiceSnapshotTest {
     @Test fun invoiceIdReuseIsRejectedAndConflictingGenerationIsRollbackSafe() {
         assertNull(prepare().conflict); assertEquals("INVOICE_ID_EXISTS", prepare("reused").conflict)
         inspect { it.execSQL("CREATE TRIGGER fail_invoice BEFORE INSERT ON invoices BEGIN SELECT RAISE(ABORT,'synthetic failure'); END") }
+        assertNull(repository.createManualSession("rollback-work", version, SessionHistoryStore.Draft("rollback-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         val before = version
         try { prepare("failed", "second"); fail("Unexpected success") } catch (_: android.database.SQLException) {}
         assertEquals(before, version)
@@ -106,6 +108,7 @@ class InvoiceSnapshotTest {
             db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { assertTrue(it.moveToFirst()); assertEquals(1001L, it.getLong(0)) }
             db.execSQL("UPDATE app_settings SET next_invoice_number=3200 WHERE id=1")
         }
+        assertNull(repository.createManualSession("sequence-work", version, SessionHistoryStore.Draft("sequence-work", job, 1793494800000, 1793498400000, "UTC", 0)).conflict)
         assertNull(prepare("higher-sequence", "higher-invoice").conflict)
         assertEquals("INV-3200", repository.invoice("higher-invoice").number)
         assertEquals(first.payload, repository.invoice("legacy-invoice").payload)

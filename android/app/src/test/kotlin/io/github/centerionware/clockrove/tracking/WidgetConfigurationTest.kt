@@ -187,6 +187,9 @@ class WidgetConfigurationTest {
         repository.close()
         inspect { db ->
             db.execSQL("DROP TABLE widget_configurations")
+            db.execSQL("DROP TABLE invoice_task_claims")
+            db.execSQL("DROP TABLE invoice_time_claims")
+            db.execSQL("DROP TABLE invoice_coverage")
             db.execSQL("UPDATE app_settings SET company_name='Synthetic migration company' WHERE id=1")
             db.version = 5
         }
@@ -196,7 +199,7 @@ class WidgetConfigurationTest {
         assertEquals("Synthetic migration company", repository.businessSnapshot().settings.companyName)
         assertNull(repository.executeFromSurface("old-start", captured, TimerRepository.Action.START, job, TimerRepository.Origin.MANUAL).conflict)
         assertNull(repository.widgetSnapshot(1).configuration.token)
-        inspect { assertEquals(6, it.version) }
+        inspect { assertEquals(7, it.version) }
     }
     @Test fun failedVersionFiveUpgradeRollsBackWithoutReplacingExistingState() {
         assertNull(save(1).conflict)

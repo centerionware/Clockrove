@@ -86,8 +86,10 @@ class JobLifecycleTest {
         assertNull(archive().conflict); now += JobLifecycleStore.retentionMillis; assertNull(remove().conflict)
         assertEquals("customer", repository.businessSnapshot().customers.single().id)
         assertEquals(template.id, repository.taskTemplates().single().id); assertNull(repository.taskTemplates().single().sourceJobName)
+        assertEquals("Synthetic private invoice", repository.invoice("invoice").payload)
+        assertArrayEquals(byteArrayOf(1,2,3), repository.invoice("invoice").pdf)
         inspect { db ->
-            for (table in listOf("jobs", "sessions", "location_points", "kanban_cards", "kanban_columns", "invoices", "work_sites", "automation_policies")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
+            for (table in listOf("jobs", "sessions", "location_points", "kanban_cards", "kanban_columns", "work_sites", "automation_policies")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(table, 0, it.getInt(0)) }
             db.rawQuery("SELECT source_job_id,source_card_id FROM task_templates", null).use { it.moveToFirst(); assertTrue(it.isNull(0)); assertTrue(it.isNull(1)) }
             db.rawQuery("SELECT payload FROM entity_revisions WHERE job_id=? AND payload IS NOT NULL", arrayOf(job)).use { while (it.moveToNext()) assertFalse(it.getString(0).contains("Synthetic")) }
             db.rawQuery("SELECT payload FROM entity_revisions WHERE kind='template' AND entity_id=? AND payload IS NOT NULL", arrayOf(template.id)).use { while (it.moveToNext()) assertFalse(it.getString(0).contains(job)) }

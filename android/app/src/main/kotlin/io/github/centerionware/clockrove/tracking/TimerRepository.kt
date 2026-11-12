@@ -809,7 +809,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 6) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 7) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -824,6 +824,7 @@ class TimerRepository internal constructor(context: Context,
             GeofenceStore.createTables(db)
             BusinessSchema.install(db, now())
             WidgetConfigurationStore.install(db)
+            InvoiceCoverageStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -834,12 +835,13 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..5 && newVersion == 6) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..6 && newVersion == 7) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
+            if (oldVersion < 7) InvoiceCoverageStore.install(db)
         }
     }
 

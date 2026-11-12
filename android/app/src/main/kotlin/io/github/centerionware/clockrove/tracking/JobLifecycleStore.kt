@@ -55,13 +55,16 @@ internal object JobLifecycleStore {
             db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='template' AND entity_id=?", arrayOf(template))
             RevisionStore.snapshotRows(db, "task_templates", "template", BoardStore.templateColumns, now, where = "id=?", args = arrayOf(template))
         }
-        val entities = db.rawQuery("SELECT kind,entity_id FROM entity_heads WHERE revision_id IN (SELECT id FROM entity_revisions WHERE job_id=?)", arrayOf(id)).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1)) } }
-        db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE job_id=?", arrayOf(id))
+        // Issued documents and their source reservations are retained financial
+        // records. Purging work must neither erase them nor release billed work.
+        val financial = "'invoice','invoice_coverage','invoice_task_claim','invoice_time_claim'"
+        val entities = db.rawQuery("SELECT kind,entity_id FROM entity_heads WHERE revision_id IN (SELECT id FROM entity_revisions WHERE job_id=? AND kind NOT IN($financial))", arrayOf(id)).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1)) } }
+        db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE job_id=? AND kind NOT IN($financial)", arrayOf(id))
         entities.forEach { (kind, entityId) -> RevisionStore.record(db, kind, entityId, id, mapOf("id" to entityId, "job_id" to id), now, deleted = true) }
         listOf("location_points", "pending_departure", "finalized_departures", "geofence_conflicts").forEach { table ->
             db.execSQL("DELETE FROM $table WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(id))
         }
-        listOf("sessions", "invoices", "kanban_cards", "kanban_columns", "work_sites", "automation_policies").forEach { table -> db.execSQL("DELETE FROM $table WHERE job_id=?", arrayOf(id)) }
+        listOf("sessions", "kanban_cards", "kanban_columns", "work_sites", "automation_policies").forEach { table -> db.execSQL("DELETE FROM $table WHERE job_id=?", arrayOf(id)) }
         db.execSQL("DELETE FROM jobs WHERE id=?", arrayOf(id))
         val revision = RevisionStore.record(db, "job", id, id, mapOf("id" to id, "job_id" to id), now, deleted = true)
         db.execSQL("INSERT INTO job_deletions VALUES(?,?,?)", arrayOf<Any?>(id, revision, now))

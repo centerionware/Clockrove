@@ -38,10 +38,12 @@ internal object InvoiceStore {
     fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long): String? {
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
-        val report = ReportStore.read(db, selection)
+        val preview = InvoiceCoverageStore.preview(db, ReportStore.read(db, selection))
+        if (preview.legacy.isNotEmpty()) return "LEGACY_INVOICE_REVIEW_REQUIRED"
+        val report = preview.report
         val total = report.totals.single()
-        if (total.amountMinor == null) return if (total.mode == "HOURLY") "HOURLY_RATE_REQUIRED" else "TASK_PRICES_REQUIRED"
         if (total.mode == "HOURLY" && report.intervals.isEmpty() || total.mode == "TASK" && report.tasks.isEmpty()) return "NO_BILLABLE_ITEMS"
+        if (total.amountMinor == null) return if (total.mode == "HOURLY") "HOURLY_RATE_REQUIRED" else "TASK_PRICES_REQUIRED"
         if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
         if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
@@ -65,6 +67,7 @@ internal object InvoiceStore {
             InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines)
         val logoId = db.rawQuery("SELECT logo_id FROM app_settings WHERE id=1", null).use { it.moveToFirst(); if (it.isNull(0)) null else it.getString(0) }
         db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, total.jobId, job.customer?.id, number, at, snapshot.encode(), logoId))
+        InvoiceCoverageStore.reserve(db, id, report, at)
         db.execSQL("UPDATE app_settings SET next_invoice_number=? WHERE id=1", arrayOf<Any?>(sequence + 1))
         RevisionStore.snapshotRows(db, "invoices", "invoice", listOf("id", "job_id", "customer_id", "number", "created_ms", "payload", "logo_id"), at, "job_id", "id=?", arrayOf(id))
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)

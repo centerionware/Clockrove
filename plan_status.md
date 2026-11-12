@@ -1996,3 +1996,28 @@ and retained financial records therefore require native/schema changes before th
 payment and receipt features. No new financial implementation or validation is
 claimed by this review. Owner's successful latest-build Settings retest is recorded
 above. No build, test, dependency resolution, formatter or rendering ran on the VM.
+
+### Invoice source coverage and retention foundation prepared
+
+Prepared schema 7 and native coverage filtering/reservation inside the same
+serialized transaction as invoice allocation. Active task IDs are unique; UTC
+claims use half-open job intervals with database overlap/job guards. Repeated or
+partially overlapping selections bill only uncovered work. No remainder consumes
+no invoice number. Claim failures roll back documents, numbers, revisions and
+command receipts. Billed session boundaries cannot be moved out of their reserved
+span; expansion can add unbilled work. Work deletion preserves the claims.
+
+Issued invoices, cached PDF/logo references and financial revisions survive job
+purge; both deletion warnings explain that retained history. Existing invoices
+without source identities are explicitly LEGACY and block further billing for
+that job pending a reviewed reconciliation journey, rather than guessing claims.
+A frozen released-schema-6 fixture covers migration preservation and rollback.
+Prepared twelve API-24/35 coverage cases, three migration cases on both APIs, and
+five exact tax parsing/rounding/overflow cases. Existing snapshot/sequence tests
+now add genuinely new work before expecting a second invoice. None has run yet.
+
+This is incomplete source awaiting Actions, not a ready business release. Billing
+preview/exclusion links, legacy reconciliation, global/job tax settings and totals,
+retained-invoice navigation and integrated real-device/PDF journeys remain before
+this slice can merge. Payment/receipt/CC/void work follows its foundation. No VM
+build, test, formatter, dependency resolution or rendering was run.
