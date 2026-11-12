@@ -24,7 +24,7 @@ iOS and future service remain deferred.
 | M3.2 IDs/revisions/tombstones/serialized commands | Business/history/job foundation verified; full merge integrity pending | Native serialized writer, ancestry, opaque receipts, deleted-ID fences and versioned job creation checked in migrations/board/lifecycle/history/invoice/creation tests; backup merge integrity remains |
 | M3.3 Jobs/sites/boards/session corrections/queries | Native corrections/queries and history UI verified; broader contracts remain | PRs #16/#19–28/#30 on main; fourteen storage and eight bridge history cases plus six actual framework calendar cases passed; manual correction forms/history navigation remain |
 | M4.1 Manual tracker UI and history | Manual history UI merged and Actions verified; full M4 acceptance pending | Native start/stop/switch, board/settings/customer/report/archive/invoice views on main; history #32 exact-head Actions 43123810250 passed: 242 native plus 28 actual Android cases; eight final captures match reviewed views; launcher/configuration and physical manual journey remain |
-| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions pass actual Android checks; final formatting rerun pending | #33 run 43157030521: 274 native and 20 actual tests on each API (24/35), zero failures/errors/skips; board/setup/scrolling/timer captures reviewed on both APIs; only formatting gate failed, Actions patch applied; exact final head/main delivery and physical launcher/recovery acceptance remain |
+| M4.2 Widgets/configuration/notification actions | Responsive providers/setup/native actions merged and Actions verified; main delivery pending | #33 final head 6cadef0 passed full 43158333007: 274 native and 20 actual tests on each API (24/35), zero failures/errors/skips; eight board/setup/scrolling/timer captures reviewed; merged 8c2f3fd; main 43159664866/internal delivery and physical launcher/recovery acceptance remain |
 | M5.1 Permissions/site editor/capacity/entry/departure | Native implementation and CI verified; physical acceptance pending | PRs #12–16 cover policy, capacity, qualification, permission controls, maps and precise current-location setup; actual device journeys remain |
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, tax and payment lifecycle | Planned; owner-prioritized next iteration | docs/INVOICE_LIFECYCLE_PLAN.md: exclusive source claims; global/per-job tax; partial/full payments and balance copies; receipts; CC preference; atomic unpaid/partial void-and-replace with credit conservation |
+| Next after widget merge: invoice integrity, tax and payment lifecycle | Started source review on merged widget base; implementation pending | docs/INVOICE_LIFECYCLE_PLAN.md: exclusive source claims; global/per-job tax; partial/full payments and balance copies; receipts; CC preference; atomic unpaid/partial void-and-replace with credit conservation |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -1963,3 +1963,36 @@ Only the required clean-format gate failed: applied its exact Actions-generated
 test-expression patch. Final exact-head validation and subsequent main/internal
 delivery remain required; physical launcher/GPS/email acceptance remains separate.
 No build, test or formatter ran on the VM.
+
+### Owner physical Settings regression result
+
+2026-11-12: owner reports a Pixel 7 running Android 17 now saves main Settings
+without crashing and appears to work. Owner confirms updating to the latest
+available app build immediately before testing. Latest verified Play delivery at
+this point is 0.1.0-internal.21.1 / 216609104; Android App info was not transcribed.
+This is physical-device confirmation of the reported Save crash correction, not
+the invalid-template correction, widget, GPS, email, upgrade or recovery matrix.
+
+### Final widget acceptance in Actions and merge
+
+Final head 6cadef0 passed full Actions 43158333007, including formatting, analysis,
+101 Flutter cases, Android build, 274 native cases, twenty actual Android cases
+on each API (24/35), seven actual-document viewer cases and locked release-policy
+checks. Native/device XML has no failures/errors/skips; the seven preview cases
+intentionally skipped in the general Flutter stage passed in the dedicated stage.
+Reviewed all eight final board/list/timer/setup captures from the two API versions.
+
+Reviewed the public file list, confirmed unchanged tested main base and no active
+competing main runs, then merged #33 as 8c2f3fdfb3853c6a567f0a5f050f003fa27c39a0
+at 2026-11-12 05:11:06 UTC. Main validation 43159664866 is active; no new Play
+upload is claimed yet. Production readiness remains unset and physical widget/GPS/
+email/recovery acceptance remains open.
+
+Started the next owner-ordered invoice slice in an isolated invoice-integrity
+worktree based on the actual merge commit. Read-only review confirms preparation
+currently reuses full report contents, without durable billed-source claims, and
+job purge currently removes invoices. Coverage, tax, safe legacy reconciliation
+and retained financial records therefore require native/schema changes before the
+payment and receipt features. No new financial implementation or validation is
+claimed by this review. Owner's successful latest-build Settings retest is recorded
+above. No build, test, dependency resolution, formatter or rendering ran on the VM.

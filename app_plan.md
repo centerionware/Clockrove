@@ -33,19 +33,24 @@ Priority settings fix #34 is delivered internally. Main c5e19d1 passed
 245 native / 32 actual Android passing results are recorded below. Tester
 installation/physical behavior is separate; production readiness remains unset.
 
-Finish M4 widget validation in #33: providers, responsive RemoteViews, scrolling
-collections, setup/picker/default-start and removal/restore integration are written.
-Actual API-24/35 board/setup/timer journeys and capture review passed in
-43157030521; apply its formatter correction and pass the final exact-head run before
-merging and observing automatic main validation/internal delivery. Real launcher
-and tracking/recovery evidence, provider settings, encrypted backup/merge and
-full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+Owner physical feedback on 2026-11-12: Pixel 7 / Android 17 saves main Settings
+without crashing and appears to work after updating to the latest available build
+immediately before testing. Latest verified delivery is internal.21.1 / 216609104;
+this verifies the reported Save journey, not the full physical acceptance matrix.
 
-Immediately after the current widget task is validated and merged, implement
-invoice coverage/tax and unpaid/partial/paid lifecycle, receipts, void/replacement
-and company/accounts-receivable CC. Follow with quotes, task comments/supplies/costs
-and business reports from the main menu. This is the owner's next implementation priority; do not start it
-before the widget merge.
+Widget PR #33 merged as 8c2f3fd after final head 6cadef0 passed full Actions
+43158333007: 274 native and 40 actual API-24/35 cases with no failures/errors/skips;
+board, scrolling Combined, compact timer and setup captures reviewed on both APIs.
+Main validation 43159664866 and automatic internal delivery are still pending.
+Real launcher/tracking/recovery evidence, provider settings, encrypted backup/merge
+and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+
+Implement the owner's next business iteration in the invoice-integrity worktree
+from merged main: exclusive invoice source claims and conservative legacy review,
+global/per-job tax with immutable issued totals, retained financial records and
+invoice navigation. Then add unpaid/partial/paid lifecycle, receipts, atomic
+void/replacement and company/accounts-receivable CC. Follow the ordered detailed
+plan for quotes, task comments/supplies/costs and main-menu business reports.
 
 ## 2. Product decisions
 
