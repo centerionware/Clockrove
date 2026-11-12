@@ -1735,3 +1735,11 @@ Payment UI cea30dc / 43205517843 stopped at analysis with five missing-brace lin
 findings; behavior/build/native/device stages did not run. Applied the Actions
 formatter patch and fixed all five reported control-flow blocks. Revalidate the
 same prepared UI/bridge/layout journey in Actions; no VM formatter or tests ran.
+
+Payment UI 3731b80 / 43206450476 passed formatting and analysis but remained in
+Flutter behavior tests during observation. Source review identified two test
+cleanup paths closing a broadcast stream while offstage Riverpod subscribers can
+remain paused. Dispose the ProviderScope first, then close the stream; preserve
+all exact-money, command identity, retry and navigation assertions. This is a
+test-lifecycle correction, not evidence of a passed behavior/native/device gate.
+Fresh Actions validation is required; no local builds or tests ran.

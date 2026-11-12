@@ -2329,3 +2329,11 @@ from confirmed origin/main, preserving the prior worktree and unrelated work.
 Updated the product handoff and next milestone status. Payments/receipts/CC/void,
 quotes, comments/costs, reports and the remaining launch milestones stay unfinished.
 No VM build, test, formatter, dependency resolution or rendering ran.
+
+Payment UI 3731b80 / 43206450476 passed formatting and analysis but remained in
+Flutter behavior tests during observation. Source review identified two test
+cleanup paths closing a broadcast stream while offstage Riverpod subscribers can
+remain paused. Dispose the ProviderScope first, then close the stream; preserve
+all exact-money, command identity, retry and navigation assertions. This is a
+test-lifecycle correction, not evidence of a passed behavior/native/device gate.
+Fresh Actions validation is required; no local builds or tests ran.

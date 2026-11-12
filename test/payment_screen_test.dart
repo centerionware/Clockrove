@@ -204,6 +204,9 @@ void main() {
       expect(api.calls[1].draft.amount, '10750');
       expect(find.text('Open'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      // Dispose paused route subscriptions before closing the event stream.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
       await events.close();
     },
   );
@@ -251,6 +254,9 @@ void main() {
       expect(api.calls, isEmpty);
       expect(find.text('Retry PDF preview'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      // Dispose paused route subscriptions before closing the event stream.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
       await events.close();
     },
   );
