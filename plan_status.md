@@ -1936,3 +1936,13 @@ Debug builds now forward bounded Flutter error type/stack only to local Android
 logcat for CI diagnosis, preserving normal presentation and excluding field/widget
 dumps; release error handling is unchanged. Apply Actions-generated formatting,
 finish removed-widget setup as cancelled, and revalidate the full source.
+
+### Board viewport fixture corrected before renewed device checks
+
+19781aa / 43156318971 passed analysis and the new zero-to-ready window-metrics
+regression, but two existing board journeys failed because their shared fixture
+overrode MediaQuery with an implicit zero size. Preserve the real test view's
+metrics while overriding text scale; keep the pricing/editor assertions and the
+separate intentional zero-size regression. Applied the Actions formatter patch.
+No actual Android validation ran for that head after the Flutter test gate failed;
+the board workaround still needs full Actions and actual API-24/35 evidence.

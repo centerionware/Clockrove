@@ -18,10 +18,14 @@ void main() {
     FlutterError.onError = (details) {
       // Debug CI diagnostics contain only type/stack, never field values or a
       // widget dump. Release builds retain the normal Flutter error handler.
-      unawaited(const MethodChannel('clockrove/debug/v1').invokeMethod<void>(
-        'flutterError',
-        {'type': details.exception.runtimeType.toString(), 'stack': details.stack?.toString() ?? ''},
-      ).catchError((Object _) {}));
+      unawaited(
+        const MethodChannel('clockrove/debug/v1')
+            .invokeMethod<void>('flutterError', {
+              'type': details.exception.runtimeType.toString(),
+              'stack': details.stack?.toString() ?? '',
+            })
+            .catchError((Object _) {}),
+      );
       present?.call(details);
     };
   }
