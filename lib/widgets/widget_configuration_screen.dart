@@ -34,11 +34,12 @@ class _WidgetConfigurationScreenState
     try {
       await widgetChannel.invokeMethod<void>('finish');
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () =>
               _finishError = 'Settings saved. Tap Done to close widget setup.',
         );
+      }
     }
   }
 
@@ -95,8 +96,9 @@ class _WidgetConfigurationScreenState
                   RadioGroup<String>(
                     groupValue: _job ?? '',
                     onChanged: (value) {
-                      if (!_pending && !_saved)
+                      if (!_pending && !_saved) {
                         setState(() => _job = value == '' ? null : value);
+                      }
                     },
                     child: Column(
                       children: [
@@ -135,10 +137,11 @@ class _WidgetConfigurationScreenState
                                 'version': version,
                                 'jobId': job,
                               });
-                          if (result == null)
+                          if (result == null) {
                             throw const FormatException(
                               'Missing widget save result',
                             );
+                          }
                           return TimerOutcome(
                             result['version'] as int,
                             result['conflict'] as String?,

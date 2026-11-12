@@ -24,8 +24,9 @@ void main() {
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(widgetChannel, (call) async {
-        if (call.method == 'configuration')
+        if (call.method == 'configuration') {
           return {'jobId': null, 'taskOnly': false};
+        }
         if (call.method == 'finish') {
           finished = true;
           return null;
