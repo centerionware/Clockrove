@@ -18,9 +18,12 @@ class InvoiceProvider() : ContentProvider() {
     internal constructor(repository: TimerRepository) : this() { injectedRepository = repository }
     override fun onCreate() = true
     private fun record(uri: Uri): InvoiceStore.Record {
-        if (uri.scheme != "content" || uri.authority != "${requireNotNull(context).packageName}.invoices" || uri.pathSegments.size != 2 || uri.pathSegments[0] !in setOf("invoices", "copies") || !uri.pathSegments[1].matches(Regex("[A-Za-z0-9_-]{1,140}"))) throw FileNotFoundException("Invoice unavailable")
+        val parts = uri.pathSegments
+        val quote = parts.size == 3 && parts[0] == "quotes" && parts[1].matches(Regex("[A-Za-z0-9_-]{1,100}")) && parts[2].matches(Regex("[1-9][0-9]{0,9}")) && (parts[2].toIntOrNull() ?: 0) > 0
+        val invoice = parts.size == 2 && parts[0] in setOf("invoices", "copies") && parts[1].matches(Regex("[A-Za-z0-9_-]{1,140}"))
+        if (uri.scheme != "content" || uri.authority != "${requireNotNull(context).packageName}.invoices" || (!quote && !invoice)) throw FileNotFoundException("Invoice unavailable")
         return try { val repository = injectedRepository ?: TimerRepository.get(requireNotNull(context));
-            (if (uri.pathSegments[0] == "copies") repository.invoiceCopy(uri.pathSegments[1]) else repository.invoice(uri.pathSegments[1])).also { if (it.pdf == null) throw FileNotFoundException("Invoice unavailable") } }
+            (if (quote) repository.quoteDocument(parts[1], parts[2].toInt()) else if (parts[0] == "copies") repository.invoiceCopy(parts[1]) else repository.invoice(parts[1])).also { if (it.pdf == null) throw FileNotFoundException("Invoice unavailable") } }
             catch (_: Exception) { throw FileNotFoundException("Invoice unavailable") }
     }
     override fun getType(uri: Uri): String { record(uri); return "application/pdf" }

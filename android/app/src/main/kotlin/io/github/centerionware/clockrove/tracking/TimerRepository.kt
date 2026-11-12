@@ -498,6 +498,10 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun quoteRevision(id: String, revision: Int): QuoteStore.Revision? = QuoteStore.revision(helper.readableDatabase, id, revision)
     @Synchronized
+    internal fun quoteDocument(id: String, revision: Int): InvoiceStore.Record = QuoteStore.document(helper.readableDatabase, id, revision)
+    @Synchronized
+    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray): Boolean = QuoteStore.cachePdf(helper.writableDatabase, id, revision, payload, bytes)
+    @Synchronized
     internal fun quoteHistory(id: String, before: Int? = null, limit: Int = 20): List<QuoteStore.RevisionSummary> =
         QuoteStore.history(helper.readableDatabase, id, before, limit)
     internal data class QuoteIndex(val version: Long, val today: String, val timezone: String, val page: QuoteStore.Page)

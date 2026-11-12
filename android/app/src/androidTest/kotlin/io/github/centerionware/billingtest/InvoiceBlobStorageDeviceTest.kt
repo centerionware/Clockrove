@@ -26,11 +26,13 @@ class InvoiceBlobStorageDeviceTest {
                 // the live app database, numbering and the all-style PDF fixtures.
                 db.execSQL("CREATE TABLE invoices(id TEXT PRIMARY KEY,job_id TEXT,number TEXT,payload TEXT,pdf BLOB,logo_id TEXT)")
                 db.execSQL("CREATE TABLE logo_assets(id TEXT PRIMARY KEY,bytes BLOB)")
+                db.execSQL("CREATE TABLE quote_pdfs(id TEXT PRIMARY KEY,bytes BLOB)")
                 db.execSQL("CREATE TABLE invoice_copies(id TEXT PRIMARY KEY,invoice_id TEXT,kind TEXT,created_ms INTEGER,command_version INTEGER,metadata TEXT,pdf BLOB)")
                 db.execSQL("CREATE TABLE invoice_payments(id TEXT,method TEXT,reference TEXT)")
                 db.execSQL("CREATE TABLE invoice_payment_events(id TEXT,invoice_id TEXT,payment_id TEXT,kind TEXT,effective_ms INTEGER,payload TEXT,command_version INTEGER,ordinal INTEGER)")
                 val original = ByteArray(3_100_000) { (it * 31).toByte() }
                 val copy = ByteArray(3_200_000) { (it * 17 + 3).toByte() }
+                val quote = ByteArray(3_300_000) { (it * 13 + 5).toByte() }
                 val logo = ByteArray(1_900_000) { (it * 7 + 1).toByte() }
                 val document = InvoiceStore.Snapshot(number = "INV-STORAGE", created = 1L, style = "MINIMAL", currency = "USD", digits = 2,
                     company = "Synthetic storage probe", companyContact = "", customer = "", customerContact = "", job = "Storage only",
@@ -38,6 +40,7 @@ class InvoiceBlobStorageDeviceTest {
                     subject = "Storage probe", body = "Synthetic storage-only fixture", lines = emptyList())
                 val payload = document.encode()
                 db.execSQL("INSERT INTO logo_assets VALUES('logo',?)", arrayOf(logo))
+                db.execSQL("INSERT INTO quote_pdfs VALUES('quote:1',?)", arrayOf(quote))
                 db.execSQL("INSERT INTO invoices VALUES('original','job','INV-STORAGE',?,?,'logo')", arrayOf<Any?>(payload, original))
                 val metadata = JSONObject(mapOf("id" to "balance-storage", "invoice_id" to "original", "kind" to "BALANCE", "created_ms" to 1L,
                     "command_version" to 1L, "paid_minor" to "0", "due_minor" to "100", "event_id" to null)).toString()
@@ -59,6 +62,7 @@ class InvoiceBlobStorageDeviceTest {
                 }
                 if (Build.VERSION.SDK_INT == 24) assertTrue("Stock Android 7 must reproduce the oversized cursor row", cursorRejected)
                 val record = InvoiceStore.read(db, "original")
+                assertArrayEquals(quote, InvoiceBlobs.quote(db, "quote:1"))
                 assertEquals(payload, record.payload); assertArrayEquals(original, record.pdf); assertArrayEquals(logo, record.logo)
                 val savedCopy = InvoiceCopyStore.read(db, "balance-storage")
                 assertArrayEquals(copy, savedCopy.pdf); assertArrayEquals(logo, savedCopy.logo)

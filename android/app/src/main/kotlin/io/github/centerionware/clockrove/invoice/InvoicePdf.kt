@@ -17,7 +17,8 @@ import java.io.ByteArrayOutputStream
 
 /** Three native, paginated layouts. Render on a worker, outside repository writes. */
 internal object InvoicePdf {
-    fun generate(snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null): ByteArray {
+    fun generate(snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE"): ByteArray {
+        require(documentKind in setOf("INVOICE", "QUOTE"))
         val logo = logoBytes?.let {
             require(it.size <= 2_000_000) { "INVALID_LOGO" }
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -28,7 +29,7 @@ internal object InvoicePdf {
         try {
             val document = PdfDocument()
             try {
-                val flow = Flow(document, snapshot, logo)
+                val flow = Flow(document, snapshot, logo, documentKind == "QUOTE")
                 flow.start()
                 snapshot.statement?.let {
                     flow.text("Payment state recorded ${io.github.centerionware.clockrove.tracking.ReportCsv.instant(it.created, "UTC")}", 9f)
@@ -40,7 +41,7 @@ internal object InvoicePdf {
                 flow.text("Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(snapshot.created)) + " UTC", 9f)
                 flow.space(if (snapshot.statement == null) 16f else 8f)
                 if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
-                    flow.text("BILL TO", 9f, bold = true)
+                    flow.text(if (documentKind == "QUOTE") "PREPARED FOR" else "BILL TO", 9f, bold = true)
                     flow.text(snapshot.customer, 14f, bold = true)
                     flow.text(snapshot.customerContact, 10f)
                     flow.space(if (snapshot.statement == null) 16f else 8f)
@@ -75,7 +76,7 @@ internal object InvoicePdf {
             } finally { document.close() }
         } finally { logo?.recycle() }
     }
-    private class Flow(val document: PdfDocument, val data: InvoiceStore.Snapshot, val logo: Bitmap?) {
+    private class Flow(val document: PdfDocument, val data: InvoiceStore.Snapshot, val logo: Bitmap?, val quote: Boolean) {
         val modern = data.style == "MODERN"
         val classic = data.style == "CLASSIC"
         val ink = if (modern) Color.rgb(23, 107, 85) else if (classic) Color.rgb(29, 46, 72) else Color.rgb(25, 29, 33)
@@ -92,7 +93,7 @@ internal object InvoicePdf {
             check(pageNumber <= 200) { "INVOICE_TOO_LARGE" }
             page = document.startPage(PdfDocument.PageInfo.Builder(width, height, pageNumber).create())
             canvas.drawColor(if (classic) Color.rgb(253, 252, 248) else Color.WHITE)
-            val heading = when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; "VOID" -> "VOID INVOICE"; else -> "INVOICE" }
+            val heading = if (quote) "QUOTE" else when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; "VOID" -> "VOID INVOICE"; else -> "INVOICE" }
             if (modern) {
                 canvas.drawRect(0f, 0f, width.toFloat(), 84f, Paint().apply { color = ink })
                 canvas.drawText(heading, margin, 43f, paint(25f, true, Color.WHITE))
@@ -104,7 +105,7 @@ internal object InvoicePdf {
                 canvas.drawLine(margin, 83f, width - margin, 83f, paint(1f).apply { strokeWidth = 1.5f })
                 canvas.drawLine(margin, 87f, width - margin, 87f, paint(1f).apply { strokeWidth = .5f })
             } else {
-                canvas.drawText(if (data.statement == null) "Invoice" else heading, margin, 46f, paint(28f, true))
+                canvas.drawText(if (data.statement == null && !quote) "Invoice" else heading, margin, 46f, paint(28f, true))
                 canvas.drawText(data.number, margin, 69f, paint(10f))
                 canvas.drawLine(margin, 84f, width - margin, 84f, paint(1f).apply { strokeWidth = .7f })
             }
@@ -187,14 +188,14 @@ internal object InvoicePdf {
                 // line. Reuse the paginating paragraph flow without dropping digits.
                 ensure(90f); space(12f)
                 canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-                space(12f); text(if (data.statement == null) "TOTAL" else "ORIGINAL INVOICE TOTAL", 12f, true); text(value, 12f, true); space(12f)
+                space(12f); text(if (quote) "ESTIMATED TOTAL" else if (data.statement == null) "TOTAL" else "ORIGINAL INVOICE TOTAL", 12f, true); text(value, 12f, true); space(12f)
                 return
             }
             ensure(90f); space(12f)
             val box = RectF(margin, y, width - margin, y + 55)
             if (modern) canvas.drawRoundRect(box, 8f, 8f, Paint().apply { color = Color.rgb(232, 244, 238) })
             else canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-            canvas.drawText(if (data.statement == null) "TOTAL" else "INVOICE TOTAL", margin + 12, y + 33, paint(12f, true))
+            canvas.drawText(if (quote) "ESTIMATED TOTAL" else if (data.statement == null) "TOTAL" else "INVOICE TOTAL", margin + 12, y + 33, paint(12f, true))
             var size = 21f
             while (paint(size, true).measureText(value) > 345 && size > 9) size -= 1
             val amount = paint(size, true)

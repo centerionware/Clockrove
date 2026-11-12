@@ -1995,3 +1995,14 @@ upgrade/rollback cases. Later bridge and paged-history source 3962104 requires
 43231015416; actual-device/full milestone gates remain pending. Main financial
 validation failed at a UI-test transition; focused #40 / 43231269977 runs the
 real-form wait correction. Automatic delivery was skipped, not published.
+
+### Quote documents source awaiting Actions
+
+Issued quote revisions now have private immutable PDF caches and explicit QUOTE
+rendering across the three existing styles. Frozen unit quantities/prices/tax,
+revision, calendar validity and printed terms/notes feed the renderer, with an
+estimated total and no payment statement. Native preview/save/email/share and
+private content URIs retain exact revision ownership and accounting CC. The new
+actual quote PDF/text/attachment gate requires nine quote variants per API and
+52 actual tests in total. No passing current document result or UI/conversion
+completion is claimed; follow Actions and review genuine captured pages next.

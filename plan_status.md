@@ -2610,3 +2610,24 @@ amount during incoming-route semantics. Focused test-only #40 / 0c9175c waits fo
 the real payment form and amount before scrolling; Validate 43231269977 is live.
 Play 43230903575 was skipped because main validation failed. New internal delivery
 is not accepted; last proven acceptance remains internal.25.1 / 216642056.
+
+### Quote PDF and private handoff source
+
+First storage head 1213cc5 completed all gates in 43230233087; the later paged
+bridge head remains under 43231015416. New unvalidated source adapts each frozen
+issued revision to the shared three-style renderer with QUOTE/ESTIMATED TOTAL,
+revision, expiry, exact item/estimated-hour lines and printed terms/notes. A
+separate immutable first-write PDF cache uses bounded descriptor reads. Private
+URI paths include quote/revision identity; preview/save/email/share route through
+the existing native document boundary and current AR/company CC. Superseded
+revision views/handoffs get a historical notice without rewriting prior PDFs.
+Both global email-template guards remain mandatory at issue; default quote copy
+uses estimate language and custom body expansion is retained with a QUOTE prefix.
+
+Native source tests cover frozen adaptation, first-cache identity, exact private
+provider bytes, read-only grants and retained revision attachment ownership.
+Actual API-24/35 source adds all-three-style quote/revision/1000-digit PDF render,
+text and private attachment checks. Copies gate now requires all three named
+cases and 33 genuine PDF/PNG pairs per API (nine new quote variants), giving 52
+actual cases overall. These are required pending gates, not completed evidence.
+Quote UI, reviewed scope mapping and the complete milestone remain unfinished.

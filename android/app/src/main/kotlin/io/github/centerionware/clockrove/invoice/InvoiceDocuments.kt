@@ -23,15 +23,28 @@ internal object InvoiceDocuments {
         if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
         return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
+    fun ensureQuote(repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
+        val before = repository.quoteDocument(id, revision)
+        if (before.pdf != null) return before
+        val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
+        repository.cacheQuotePdf(id, revision, before.payload, bytes)
+        return repository.quoteDocument(id, revision).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
+    }
     fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
-    fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
+    fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.quoteRevision != null) Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("quotes").appendPath(record.id).appendPath(record.quoteRevision.toString()).build()
+        else if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
     fun filename(record: InvoiceStore.Record): String {
+        if (record.quoteRevision != null) return "${record.number}-revision-${record.quoteRevision}.pdf"
         if (record.copyId == null) return "${record.number}.pdf"
         val statement = requireNotNull(InvoiceStore.Snapshot.decode(record.payload).statement)
         val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(statement.created))
         return "${record.number}-${record.documentKind.lowercase(java.util.Locale.ROOT)}-$date-${record.copyId.takeLast(8)}.pdf"
     }
     fun historicalNotice(repository: TimerRepository, record: InvoiceStore.Record): String? {
+        if (record.quoteRevision != null) {
+            val latest = repository.quote(record.id).latest ?: return null
+            return if (latest.revision == record.quoteRevision) null else "Historical quote: ${record.number} revision ${record.quoteRevision}. The current issued revision is ${latest.revision}. This estimate is not an invoice or payment request."
+        }
         if (record.documentKind == "VOID") return null
         val state = repository.invoiceVoidContext(record.id) ?: return null
         return "Historical copy: ${record.number} is VOID. Do not pay this invoice." +

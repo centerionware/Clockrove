@@ -13,7 +13,7 @@ import org.json.JSONObject
 
 /** Immutable prepared invoice data; rendering is derived outside the write lock. */
 internal object InvoiceStore {
-    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE")
+    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE", val quoteRevision: Int? = null)
     data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null, val unitPriceMinor: String? = null)
     data class Statement(val kind: String, val status: String, val created: Long, val paid: String, val due: String,
         val events: List<Line>, val reference: String = "") {
