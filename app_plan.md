@@ -53,7 +53,8 @@ extraction verifies complete repeated monetary values. No VM validation ran.
 Main validation 43185844256 failed the API-35 existing widget scroll test.
 Focused PR #36 passed 43188818216 (383 native / 44 actual Android, all zero
 failures/errors/skips; both final-row captures reviewed) and merged d4df7bd at
-2026-11-12 09:19:31 UTC. Main validation 43190458383 is running. Internal upload
+2026-11-12 09:19:31 UTC. Main validation 43190458383 failed API-24 initial expanded widget task binding;
+its captured empty list and factory lifecycle need investigation. Internal upload
 for the invoice foundation has not started. Latest verified delivery remains widget internal.22.1 / 216624221
 (43160879953); production readiness remains unset.
 
@@ -1644,3 +1645,16 @@ Debug builds now forward bounded Flutter error type/stack only to local Android
 logcat for CI diagnosis, preserving normal presentation and excluding field/widget
 dumps; release error handling is unchanged. Apply Actions-generated formatting,
 finish removed-widget setup as cancelled, and revalidate the full source.
+
+### 2026-11-12 payment source checkpoint
+
+Draft #37 arithmetic/native ledger head c00eb1a ran Actions 43190055836: 407
+native cases, two failures in the old widget v5 migration simulation; all seven
+payment arithmetic and 16 API-24/35 ledger cases passed. This is not full branch
+acceptance. The simulation lowered a current database's version and left new
+payment tables behind. It is replaced with an independent frozen-v5 DDL seed.
+Actions also exported released v7 DDL/seed statements, frozen as schema_v7.json
+with only platform-owned android_metadata omitted. New 7→8 preservation/rollback
+cases are prepared; the one-time generator/export step is removed. AR/CC and
+ordered ledger additions also require the next Actions run. Main/internal delivery
+remains held by the separately investigated widget binding failure.

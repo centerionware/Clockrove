@@ -14,7 +14,7 @@ No server, accounts, analytics, task timers or subscriptions belong in launch sc
 See app_plan.md for contracts, recovery semantics and the full acceptance matrix.
 
 Money precision: decimal strings cross Flutter/native channels; Dart decimal 3.2.6
-and Kotlin BigInteger/BigDecimal perform exact arithmetic. In unreleased schema 7,
+and Kotlin BigInteger/BigDecimal perform exact arithmetic. In schema 7,
 settings_money, job_money, card_money and template_money store canonical TEXT with
 validation and revisions. These exact records are authoritative; old INTEGER
 columns retain only checked representable compatibility values. Invoice snapshots
