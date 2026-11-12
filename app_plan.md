@@ -41,42 +41,52 @@ Actions only, and verify migration, large amounts, tiny fractions and conservati
 
 ### Next concrete action
 
-Invoice foundation PR #35 merged as f935485127930ac499f08f01f23b2e59d79627f3.
-Final head eb74c74 passed full Actions 43182854787: 383 native and 44 actual
-Android cases across API 24/35, zero failures/errors/skips. Exact decimal-string
-money, quantity with one Unit price input, tax and retained invoice coverage are
-merged. Native/device XML and wide/1000-digit PDF captures were reviewed.
+Invoice foundation #35 merged f935485 after full Actions 43182854787 (383 native /
+44 actual Android, zero failures/errors/skips), including exact strings/money,
+quantity/unit pricing, tax, coverage and retained invoices. XML and wide/1000-digit
+PDF/UI captures were reviewed. Widget #36 corrected scroll scheduling, but main
+then exposed initial adapter binding. #38 corrected the early-notification race
+with revision/token/local-day adapter identity. Final c1595c7 passed 43195277559:
+385 native / 44 actual Android, zero failures/errors/skips, three resize cycles,
+live edit, exact final-row rendering and real board tap on both APIs. XML/logs and
+widget captures reviewed. Merged 1c358bc at 2026-11-12 10:07:02 UTC. Main 43197481528 passed 385 native /
+44 actual Android (downloaded XML, zero failures/errors/skips), and Play delivery
+43199258376 accepted 0.1.0-internal.25.1 / 216642056 at 10:25:48 UTC using the
+permanent key. Tester availability/physical upgrade remain separate. No VM
+builds/tests ran.
 
-Main validation 43185844256 failed the API-35 scroll case. Focused #36 passed
-43188818216 (383 native / 44 actual Android, zero failures/errors/skips; both final
-row captures reviewed), merged d4df7bd at 09:19:31 UTC. Main 43190458383 then failed
-API-24 expanded-list binding: its screenshot shows the task title and empty-state
-message before the scroll step. No new Play upload has started.
+Continue the immediate payment milestone in `.local/invoice-payments`, draft #37.
+Baseline c21ef87 / 43201426802 passed 434 native and 46 actual Android cases,
+zero failures/errors/skips, with immutable receipt/correction/balance copies and
+all-style wide PDFs. Subsequent UI source 7d414ee / 43207931777 passed formatting,
+analysis, Flutter behavior, debug build and 440 native cases. API 24 passed the
+21 original cases plus billing; the short Classic balance copy then failed its
+one-page assertion. Its copy-only layout is corrected in source; the isolated
+payment UI journey and API 35 remain unverified for this increment.
 
-Investigate the separate factory lifecycle: old onDestroy clears its rows while
-resize/reapply can have callbacks across Binder adapters, and four mutable fields
-were published separately. The focused source change publishes one immutable,
-volatile snapshot, serializes dataset loads and lets factory disposal release its
-rows without clearing in-flight reads. Bounded lifecycle/count diagnostics contain
-no task/job content. Exact causation remains to be confirmed by actual Android
-logs; this is source hardening, not a claim the empty binding is already fixed.
-The actual host case now verifies its native source has 30 tasks, performs three
-compact/expanded cycles and retains full collection/scroll/final-row/board-tap
-assertions on both APIs. Full Actions evidence is required, no VM validation runs.
-Latest accepted delivery remains internal.22.1 / 216624221 (43160879953).
+The complete financial baseline 29fbe8b / 43220345571 passed all Actions gates:
+479 native and 48 actual Android cases, zero failures/errors/skips. Downloaded and
+inspected 42 native/eight device XML files and 15 UI captures per API. Real
+receipt/VOID/credited-replacement PDFs and key lifecycle UI captures were reviewed;
+remaining full current-head visual review is required. Schema 8 includes confirmed
+unpaid cancellation, atomic credit-preserving replacement, exact balances, reviewed
+editor, retained links, original-owner receipts and historical VOID warnings.
 
-After validation/merge and verified main/internal delivery, continue the immediate
-next milestone: payments and partial/full balances, immutable updated copies and
-receipts, company/accounts-receivable CC, and atomic unpaid/partial void-and-replace
-with conserved original payment credit. Follow docs/INVOICE_LIFECYCLE_PLAN.md and
-the exact money contract above. Schema 7 is on main; new persistence requires a
-forward migration. Then quotes, comments/supplies/costs and company reports.
-Provider settings, encrypted backup/transactional merge, physical tracking/recovery
-and full launch acceptance remain open.
+Current source adds bounded descriptor reads for PDF/logo bytes exceeding the
+cursor window and a separate actual storage regression (opaque bytes, never PDF
+render proof), plus navigation-bar inset padding and a required editor-field
+capture. Validate both pending increments before merging #37: 50 actual cases,
+16 UI captures per API and the genuine all-style PDF/text/private attachment gates
+are now required. Continue the existing Actions handles, inspect failures and
+review final captures; do not infer acceptance from the older green baseline.
+Schema 8 remains unreleased and upgrades released 7 conservatively. Physical email
+client compatibility and Pixel tracking/widget acceptance remain separate.
 
-Owner physical feedback remains Pixel 7 / Android 17: main Settings saves without
-crashing after updating to the latest available build. Exact App info version was
-not transcribed. Financial/widget/GPS physical acceptance remains separate.
+Then quotes, comments/supplies/actual costs and company reports. Provider settings,
+encrypted backup/transactional merge, physical tracking/recovery and full launch
+acceptance remain open. Owner Pixel 7 / Android 17 main Settings Save confirmation
+is recorded; exact App info version was not transcribed, and financial/widget/GPS
+physical acceptance remains separate.
 
 ## 2. Product decisions
 
@@ -1635,19 +1645,318 @@ logcat for CI diagnosis, preserving normal presentation and excluding field/widg
 dumps; release error handling is unchanged. Apply Actions-generated formatting,
 finish removed-widget setup as cancelled, and revalidate the full source.
 
-### 2026-11-12 widget adapter diagnosis
+### 2026-11-12 payment source checkpoint
 
-PR #38 head 68a8c7f / 43192676395 reproduced empty binding on API 24, resize 3.
-Native factory diagnostics show all 30 rows loaded and no disposal before failure;
-the host never attaches its adapter. Thus factory clearing was not the observed
-cause. Android 7 RemoteViewsAdapter's pre-connection notify branch updates metadata
-without calling the connection callback that attaches the adapter (AOSP source:
-https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/android-7.0.0_r1/core/java/android/widget/RemoteViewsAdapter.java).
-That path matches the captured adapter=null/count=0 and loaded factory.
+Draft #37 arithmetic/native ledger head c00eb1a ran Actions 43190055836: 407
+native cases, two failures in the old widget v5 migration simulation; all seven
+payment arithmetic and 16 API-24/35 ledger cases passed. This is not full branch
+acceptance. The simulation lowered a current database's version and left new
+payment tables behind. It is replaced with an independent frozen-v5 DDL seed.
+Actions also exported released v7 DDL/seed statements, frozen as schema_v7.json
+with only platform-owned android_metadata omitted. New 7→8 preservation/rollback
+cases are prepared; the one-time generator/export step is removed. AR/CC and
+ordered ledger additions also require the next Actions run. Main/internal delivery
+remains held by the separately investigated widget binding failure.
 
-Replace immediate collection notifications with an adapter URI containing the
-committed version, widget configuration token and local calendar day. Changed work
-and date rollover get fresh data without racing initial attachment. Keep atomic
-factory snapshots, three resize cycles and exact scroll/tap checks; add a live
-committed-title edit assertion and native revision/day/DST identity regression.
-The revised head needs full Actions proof before merge; internal upload stays held.
+PR #37 had documentation merge conflicts after #36 landed, so its b9869b2 push
+did not schedule pull-request Actions. Resolved those conflicts by retaining the
+newer payment checkpoint and consolidating duplicate status rows; validation must
+run on the merged branch head. No validation is inferred from that missing run.
+
+Payment draft 6177d71 / 43192830791 stopped in Flutter behavior: the AR invalid
+address and preserved-draft assertions passed, then the corrected email's selection
+overlay intercepted scrolling to Save. Native checks did not run. Applied the
+Actions formatter patch, configured company/AR fields for email input without
+autocorrect/suggestions, and dismiss text editing before the regression scroll.
+Next Actions evidence must verify these changes and the frozen-fixture migrations.
+
+### 2026-11-12 payment baseline and immutable copy increment
+
+811fb7d / Actions 43193679201 passed formatting, analysis, Flutter behavior, debug
+build and all 414 native cases (downloaded XML: zero failures/errors/skips). This
+verifies the frozen 5/7→8 migrations, ledger, AR validation and native CC baseline.
+Its actual Android stage failed the known old widget initial-binding case; that is
+being corrected separately in #38. This is not full payment milestone acceptance.
+
+Next source increment retains an immutable receipt intent in the same transaction
+as each payment, and a correction copy with each reversal. Explicit balance copies
+freeze a command version, paid/due and historical event boundary without consuming
+invoice numbers or creating cash. Original issued payload/PDF remains unchanged.
+Payment events freeze received/effective labels and UTC offset as well as UTC and
+IANA timezone. Customer documents exclude internal notes. Retained copy metadata
+and revisions survive job purge; derived PDFs use separate private content URIs,
+read-only grants and the same three native styles. Save captures the selected
+bytes; email keeps current AR/company CC and guards oversized/failed handoffs.
+
+Seven native copy cases per API, two additional handoff cases per API and one
+comprehensive actual Android copy/PDF case per API are prepared. The latter covers
+partial/paid/balance/correction documents in all three styles, real attachments,
+and 1000-digit receipt balances, with required image/PDF artifacts and exact API-35
+text checks. New source still needs Actions evidence and image review. Payment UI,
+bridge wiring and credit-preserving void/replacement remain outstanding.
+
+### 2026-11-12 widget release hold resolved at PR level
+
+#38 c1595c7 / 43195277559 passed 385 native and 44 actual Android cases with no
+failures/errors/skips. The prior factory-only change reproduced the empty third
+resize even while the factory held 30 rows and the host adapter remained null.
+AOSP Android-7 pre-connection notify path omitted the attachment callback; replacing
+immediate notifications with revision/token/day adapter identity passed all three
+resize cycles, a committed live edit and final-row/real-board checks on both APIs.
+Merged 1c358bc; main and internal upload are separate gates, not yet proven here.
+The payment draft now includes the tested source through a main merge.
+
+### 2026-11-12 receipt validation and isolation correction
+
+9562f08 / 43197625440 passed all 434 native cases (downloaded XML, zero failures,
+errors/skips), plus Flutter/formatting/analysis/debug gates. The new all-style
+actual receipt/correction/balance/wide-PDF case passed API 24, but the shared suite
+then failed its unchanged first-invoice settings regression: six earlier receipt
+fixtures had consumed INV-1000, so it observed INV-1006. API 35 was not reached.
+Keep both first-number assertions and move copy lifecycle instrumentation to a
+fresh process/app-data run after prior XML/captures have been retained, following
+the existing financial-journey isolation. New copy run also asserts INV-1000; no
+counter reset or weakened expected number is used. Revised full Actions evidence
+and all-style image/API-35 text review are still required before acceptance.
+
+### 2026-11-12 immutable-copy acceptance and payment UI increment
+
+c21ef87 / 43201426802 passed full Actions: 434 native cases and 46 actual Android
+cases across API 24/35, zero failures/errors/skips (40 native XML files and six
+actual XML files inspected). Both settings and isolated copy processes preserve
+INV-1000 first-number checks. Partial/paid receipt captures in all three API-35
+styles were reviewed; short-copy footer pagination exposed on API 24 and balance
+copies needs improvement. Source now removes redundant status/section spacing,
+keeps a prominent header state, shortens the fixed copy note and requires short
+financial fixtures to fit one page. Wide values still paginate without truncation.
+All revised visuals require fresh Actions review; not every prior capture was
+reviewed yet.
+
+Native payment/receipt metadata and strict command bridge, invoice-list balances,
+Dart 4096-digit payment parsing and the invoice detail/payment/correction screens
+are prepared. One invoice journey exposes original PDFs, source review, payments,
+saved historical copies, current AR/company CC and Send latest copy. Mark paid
+proposes the remaining amount; payment/correction confirmation opens its saved
+receipt. Native copies retain original invoice/cash identity. Stable keyed submit
+controls preserve unknown-response retries when a live paid balance changes form
+layout. Regressions cover exact input, response loss, concurrent refresh, transport,
+retained deleted-job invoices and audited correction. A new isolated actual Flutter
+journey covers AR Save, rejected precision, partial/full payments, corrections,
+real receipt views/To/CC/attachment and settlement after job purge. Existing legacy
+review navigation is updated for the unified detail screen. All new UI/bridge and
+layout source needs Actions evidence. Void/credit-preserving replacement remains
+unimplemented and blocks merging the complete payment milestone.
+
+Payment UI cea30dc / 43205517843 stopped at analysis with five missing-brace lint
+findings; behavior/build/native/device stages did not run. Applied the Actions
+formatter patch and fixed all five reported control-flow blocks. Revalidate the
+same prepared UI/bridge/layout journey in Actions; no VM formatter or tests ran.
+
+Payment UI 3731b80 / 43206450476 passed formatting and analysis but remained in
+Flutter behavior tests during observation. Source review identified two test
+cleanup paths closing a broadcast stream while offstage Riverpod subscribers can
+remain paused. Dispose the ProviderScope first, then close the stream; preserve
+all exact-money, command identity, retry and navigation assertions. This is a
+test-lifecycle correction, not evidence of a passed behavior/native/device gate.
+Fresh Actions validation is required; no local builds or tests ran.
+
+### Native void/replacement source checkpoint (2026-11-12)
+
+Prior turn made progress: pushed 7d414ee to correct paused-stream test cleanup and
+updated draft #37 with accurate scope. Actions 43207931777 now passed formatting,
+analysis, Flutter behavior, debug build and native unit gates; actual Android
+document/payment journey remains live. Do not treat the whole run as passed.
+
+New native source prepares confirmed/audited unpaid cancellation and atomic
+replacement with edited existing rows, explicit owned-claim release and additions
+from actual unbilled work. The default keeps the entire old claim bundle; old line
+titles/prices are never used to guess source identity. Original documents remain
+unchanged, cancelled predecessors have no collectible balance, and unresolved
+legacy coverage stays unresolved on successors. Replacement freezes existing
+credit at issue. Positive fully paid invoices reject void/replacement; a zero-total
+Nothing due invoice may be cancelled to release reservations. Below-credit totals
+are rejected. Transfers preserve payment IDs/dates and emit zero-cash, ordered
+credit/tax/sales adjustments; corrections follow the current allocation. Cancellation
+copies are separate immutable intents. Native regressions cover concurrency, replay,
+rollback, exact wide/split money, source ownership, hourly intervals, legacy and
+retained deleted-job history. Source only: new Actions validation, lifecycle bridge/
+editor UI, actual replacement/VOID PDFs and physical email acceptance remain open.
+This is still draft #37, not a completed or published payment milestone.
+
+7d414ee / 43207931777 passed formatting, analysis, Flutter behavior, debug and
+440 native cases (41 XML files, zero failures/errors/skips). Actual API 24 passed
+21 original and one billing journey; copy generation then failed the explicit
+one-page assertion on the short Classic paid-balance copy (two payments). The
+new payment UI journey and API 35 were not reached. Reviewed the actual Classic
+paid receipt PNG: values are correct and readable, but duplicated event detail
+layout needs less vertical space. Copy-only renderer source now uses a full-width
+compact event-detail paragraph and less header spacing; original invoice layout
+and immutable copy payloads are unchanged. Preserve the one-page assertion and
+all complete-value checks. New validation is required.
+
+Lifecycle bridge source now exposes exact editable frozen rows, active claim IDs,
+predecessor/successor links, immutable cancellation details and each payment's
+current allocation. Strict void/replace commands preserve string amounts, integer
+versions/tax and explicit confirmation; two additional native bridge cases cover
+transport rejection and credit/relationship/cancellation-copy round trips. Native
+replacement build 43209333407 remains live; no new native result is claimed yet.
+Lifecycle editor UI and actual VOID/replacement PDF/interaction acceptance remain
+next. Financial UI must route original receipts to their original invoice and
+corrections to the current invoice, and must not offer collection on VOID records.
+
+Replacement ed94bfc / 43209333407 stopped at native compilation: a refactored
+ledger read still referenced the removed local `total` for tax allocation. Source
+now uses `balance.total`; no arithmetic policy changed. Native lifecycle tests and
+actual replacement/VOID documents have not passed. Superseded queued/intermediate
+commits share this identified compile error; validate the corrected head in Actions.
+
+551a748 / 43210091600 also stopped at native compilation: the full-width copy
+paragraph passed a Float width to the existing Int layout API. Corrected the
+width conversion; preserve exact content and the one-page check. Added late
+VOID-copy failure injection to prove rollback after credit has already moved,
+and cancellation immutability/retention across a subsequent job purge. These new
+cases still require Actions evidence; no native lifecycle success is claimed.
+
+Actual Android document test source now extends every invoice style through
+partial-payment replacement: immutable VOID copy, new invoice with credited
+payments at issue, final settlement receipt, frozen old PDF/receipt bytes, exact
+API-35 extraction and actual To/CC/private attachment reads. The Actions copy gate
+requires all 24 PDF/PNG pairs per API, including nine new lifecycle captures, while
+retaining the short-document one-page and 1000-digit completeness assertions.
+These are prepared cases, not acceptance; current 40259d7 / 43211073661 is live
+on the preceding source and the extended document cases need their own run.
+
+Native balance review removed a second competing due accessor: `balance.due`
+itself is now zero for VOID records, while the original total and immutable
+credited/cancelled split remain retained. This prevents a future native consumer
+from accidentally collecting a cancelled predecessor by reading the ordinary due
+field. Added a direct pure arithmetic regression and kept the native/index/bridge
+zero-due assertions. This follow-up requires Actions validation too.
+
+### Verified native lifecycle checkpoint
+
+40259d7 / 43211073661 passed formatting, analysis, Flutter behavior, debug build
+and 476 native tests. Downloaded/inspected 42 native XML files: zero failures,
+errors or skips; InvoiceLifecycleTest has 32 executions and InvoicePaymentBridgeTest
+has 10 across API 24/35. This validates native cancellation/replacement, ordered
+zero-cash credit/tax changes, command replay/concurrency, early/late rollback,
+coverage/legacy/retained history and bridge baseline. Real Android stage remains
+live. Subsequent 7d84a5b adds the single ordinary due-field guard and all-style
+actual lifecycle PDFs; those additions do not inherit acceptance from this older
+head. Lifecycle editor/relationships and complete physical acceptance remain open.
+
+### Lifecycle editor and actual UI checkpoint
+
+Previous goal turn made concrete progress: native cancellation/replacement and
+strict bridging were committed, 476 native XML results inspected, and current
+source/remaining acceptance recorded. No milestone was marked complete.
+40259d7 / 43211073661 completed 48 actual Android executions: API 24 all 24
+passed; API 35 original/billing/copies passed but the payment UI missed Partially
+paid after Back (47 pass / 1 fail total, no errors/skips). Actual screenshot shows
+correct 30.00 paid / 77.50 due, with the status above the viewport. The test now
+waits for the actual invoice-detail route before scrolling, preserving all balance/
+status assertions. Short-copy one-page gates passed on both APIs. New baseline
+ad3f06b / 43212272285 passed 477 native cases (42 XML files inspected, zero
+failures/errors/skips); extended actual document/UI validation remains separate.
+
+Prepared lifecycle UI now edits frozen descriptions/quantity/unit price or flat
+amounts, previews exact subtotal/tax/credit/due, adds actual unbilled report work,
+explicitly reviews source releases and requires a red confirmation before native
+commit. Cancellation/Back writes nothing. Live version changes keep the draft but
+require reviewed refresh; unknown replies retain the same immutable command across
+a VOID transition. Invoice details link predecessor/successor, route receipts to
+the original invoice and corrections to their current allocation, and expose VOID
+credit/cancelled amounts without collection actions. Historical view/email/share
+adds a current VOID warning without rewriting old PDF bytes or printing private
+reasons. Added presentation/math/immutable-retry and native handoff regressions;
+actual PDF checks also verify historical attachment retention. This new UI/handoff
+source requires fresh Actions formatting/analysis/tests/build/device proof and
+visual review. Complete payment milestone remains draft #37.
+
+Actual UI source now extends the isolated financial journey through reviewed
+partial-payment replacement, cancelled review with no writes, preserved payment
+ID/credit/tax, original-owner receipt with historical notice, predecessor VOID
+details/copy, and confirmed unpaid cancellation with released unbilled work.
+Fifteen actual UI captures per API are required alongside the 24 all-style PDF
+pairs. Cancellation view has its own title and zero-due explanation. New money/
+tax fields disable Flutter's default max-length truncation; oversized pasted
+values remain intact and fail exact parsers. Added a regression for a valid-looking
+prefix followed by over-limit content, preventing a truncated valid prefix from
+being saved. All new UI/format/handoff/interaction evidence remains pending.
+The intermediate ad3f06b run's live Android stage is superseded by this concrete
+Back-synchronization/editor/actual-flow source, not treated as a timeout failure;
+its inspected 477 native results remain the accepted baseline.
+
+Editor source 3f1265f / 43215477299 stopped at analysis with five required-brace
+lint findings; behavior/build/native/device gates did not run. Applied only the
+Actions-exported formatter patch and corrected all five reported branches. The
+actual Back-status helper also now polls the incoming detail route and scrolls
+until the real status is visible, rather than treating one transient false scroll
+action as proof of reaching the top during a route transition. All financial and
+status assertions remain. Revalidate this source; no formatter or tests ran on VM.
+
+99f57ac / 43215957788 passed formatting, analysis, Flutter behavior, debug build
+and 479 native cases (42 XML files inspected, zero failures/errors/skips; 34
+lifecycle executions). The Android gate then stopped compiling its test APK: the
+new fixture referenced InvoicePaymentStore without importing it. Added the missing
+import. No emulator cases or new actual-document acceptance ran on that head.
+Prior visual review covered actual 40259d7 short Classic paid-balance copies on
+both APIs, modern balance/correction and minimal correction; they remain readable
+and one page. New lifecycle editor/VOID/replacement captures still need fresh CI.
+
+60fe554 / 43218156299 passed formatting/analysis/Flutter/debug and 479 native
+cases (42 XML files inspected, zero failures/errors/skips). API 24 then passed
+original/billing/all-style copies; the payment journey completed its earlier
+partial/full/correction/deleted-job steps before the new correction expansion
+lookup failed. Its actual PNG/tree show the control is visible with Android 7's
+spoken label "Correct this invoice, Collapsed". The helper now accepts only the
+exact label or exact known ", Collapsed"/", Expanded" accessibility suffixes; all
+value, status, source, credit and document assertions remain. API 35 was not reached.
+Added physical acceptance procedures for quantities, pasted-value rejection,
+payments, company/AR CC in the real email app, corrected credit and source releases.
+No physical/device success is inferred from those instructions. Fresh CI required.
+
+### Bounded cached-document storage review
+
+Source audit found that the accepted 20 MB cached-PDF limit exceeded Android 7's
+stock 2048 KiB CursorWindow, while original/copy readers selected PDF and metadata
+(and original logo) in one cursor row. AOSP config/implementation and the public
+SQLiteStatement blob-descriptor API were checked. New source reads metadata
+separately, checks each BLOB length/type/limit first, uses a bounded small-row path
+and a read-only descriptor for larger bytes, closes resources and verifies exact
+length/EOF. Copy reads do not load the original PDF unnecessarily. No money,
+numbering, payload or source-claim write behavior changes.
+
+A new actual Android storage case uses an isolated temporary database, reproduces
+the oversized cursor constraint on stock API 24, and checks original/copy/logo
+byte identity, nullable/small reads and oversized rejection. Its patterned bytes
+are explicitly NOT native PDF-rendering evidence; the existing all-style genuine
+PdfDocument/PdfRenderer/text/attachment cases remain separate and required. The
+copy gate now requires exactly those two named actual cases per API (50 combined
+actual cases expected for the complete workflow). This follow-up needs Actions
+proof; 29fbe8b's existing UI validation continues separately.
+
+29fbe8b / 43220345571 passed the actual Android stage: downloaded/inspected 42
+native XML files (479 cases) and eight device XML files (48 cases), zero failures/
+errors/skips. All 15 UI captures per API were produced. The complete workflow then succeeded, including actual-document viewer and
+locked release tooling/version policy. Reviewed all nine API-24 VOID/replacement/settled
+replacement PDF captures from 60fe554, plus 29fbe8b API-35 correction confirmation,
+credited balance and original-owner historical receipt: exact values, warnings
+and retained identities are legible. Capture review found a bottom correction CTA
+partly behind Android's navigation bar; source now adds the system bottom inset
+to all three financial scrolling screens. Added a required actual editor-fields
+capture (16 UI captures per API now). Fresh reader/inset current-head acceptance
+remains required; the native-only BLOB boundary case remains separate from genuine
+PDF rendering. No new merge, Play upload or physical acceptance is claimed.
+
+The bounded-reader source e3a29e7 / 43221972322 passed app/native gates, then its
+actual storage test reproduced the legacy cursor failure on API 24 at the explicit
+old-query probe: IllegalStateException "Couldn't read row 0, col 0 from CursorWindow".
+The probe had only expected SQLiteException; fixed-reader assertions were not
+reached. Accept that exact additional platform exception/message at the old probe
+only, preserving mandatory byte-identity, bounds, null/small and real PDF checks.
+No positive large-reader acceptance is claimed yet. The queued inset increment
+contains the same probe and is superseded by this specific correction. Complete
+financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
+48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
+captures per API. No VM build/test ran.

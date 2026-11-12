@@ -13,7 +13,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
     private val repository = TimerRepository.get(activity.applicationContext)
     private val main = Handler(Looper.getMainLooper())
     private val channel = MethodChannel(messenger, "clockrove/documents/v1", io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
-    private data class Save(val invoiceId: String?, val bytes: ByteArray?, val result: MethodChannel.Result)
+    private data class Save(val bytes: ByteArray, val result: MethodChannel.Result)
     private var save: Save? = null
     private var logoResult: MethodChannel.Result? = null
     private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -37,7 +37,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     "invoicePreview" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
-                        result.success(InvoiceDocuments.preview(activity, InvoiceDocuments.ensure(repository, id), index))
+                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(repository, record)))
                     }
                     "saveReport" -> {
                         val selection = io.github.centerionware.clockrove.tracking.ReportStore.Selection(requireNotNull(call.argument<String>("firstDate")), requireNotNull(call.argument<String>("lastDate")), requireNotNull(call.argument<String>("timezone")), requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) })
@@ -51,7 +52,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
                             else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
                             else {
-                                save = Save(null, bytes, result)
+                                save = Save(bytes, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                     addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, "Clockrove-${if (gps) "gps" else "work"}-${selection.firstDate}-${selection.lastDate}.csv")
                                 }, 0xcc42) }
@@ -61,14 +62,14 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     }
                     "saveInvoice" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
-                        val record = InvoiceDocuments.ensure(repository, id)
+                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
                             else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
                             else {
-                                save = Save(id, null, result)
+                                save = Save(requireNotNull(record.pdf), result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, "${record.number}.pdf")
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(record))
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -76,18 +77,23 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     }
                     "emailInvoice", "shareInvoice" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
-                        val record = InvoiceDocuments.ensure(repository, id)
-                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record) else Intent.createChooser(InvoiceDocuments.share(activity, record), "Share invoice")
+                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val notice = InvoiceDocuments.historicalNotice(repository, record)
+                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), "Share invoice")
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }
                             catch (_: ActivityNotFoundException) { result.error("NO_COMPATIBLE_APP", "No compatible app is installed. Save or share the PDF instead.", null) }
                             catch (_: SecurityException) { result.error("SHARE_UNAVAILABLE", "The invoice could not be shared", null) }
+                            catch (_: RuntimeException) { result.error("SHARE_UNAVAILABLE", "The email or share app could not accept this document. Save the PDF instead.", null) }
                         }
                     }
                     else -> result.notImplemented()
                 }
-            } catch (_: IllegalArgumentException) { result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null) }
+            } catch (failure: IllegalArgumentException) {
+                if (failure.message == "PAYMENT_HISTORY_TOO_LARGE") result.error("PAYMENT_HISTORY_TOO_LARGE", "This history is too long for one PDF. Open individual saved receipts instead.", null)
+                else result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null)
+            }
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }
         }
     }
@@ -113,7 +119,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         if (status != Activity.RESULT_OK || uri == null) { pending.result.success(false); return true }
         writer.execute {
             try {
-                val bytes = pending.bytes ?: requireNotNull(repository.invoice(requireNotNull(pending.invoiceId)).pdf)
+                val bytes = pending.bytes
                 requireNotNull(activity.contentResolver.openOutputStream(uri, "w")).use { it.write(bytes) }
                 main.post { pending.result.success(true) }
             } catch (_: Exception) { main.post { pending.result.error("SAVE_UNAVAILABLE", "The PDF could not be saved. Your prepared invoice is retained.", null) } }

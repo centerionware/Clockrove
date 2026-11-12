@@ -24,6 +24,26 @@ class BusinessBridgeTest {
     private fun change(method: String, value: Map<String, Any?>, version: Any = repository.snapshot().version): Any? = dispatch.call(MethodCall(method, mapOf("id" to "same", "version" to version, "value" to value)))
     private fun card(price: Any?) = mapOf("cardId" to "task", "jobId" to job, "columnId" to repository.boardSnapshot(job).board.columns.first().id,
         "title" to "Synthetic task", "description" to "", "dueDate" to null, "billable" to true, "priceMinor" to price, "currency" to repository.jobDetail(job).job.settings.currency)
+    @Test fun receivablesSettingRoundTripsWhileMalformedAddressesRetainExistingSettings() {
+        val business = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        val settings = (business["settings"] as Map<*, *>).entries.associate { it.key as String to it.value }
+        val saved = dispatch.call(MethodCall("saveSettings", mapOf("id" to "accounting", "version" to repository.snapshot().version,
+            "value" to settings + ("receivablesEmail" to "accounts@example.test")))) as TimerRepository.Outcome
+        assertNull(saved.conflict)
+        val before = repository.businessSnapshot()
+        assertEquals("accounts@example.test", before.settings.receivablesEmail)
+        val roundTrip = dispatch.call(MethodCall("business", null)) as Map<*, *>
+        assertEquals("accounts@example.test", (roundTrip["settings"] as Map<*, *>)["receivablesEmail"])
+        listOf("bad", "a@example.test,b@example.test", "a@example.test\r\nBcc:b@example.test").forEachIndexed { index, address ->
+            val outcome = dispatch.call(MethodCall("saveSettings", mapOf("id" to "bad-accounting-$index", "version" to before.version,
+                "value" to settings + mapOf("companyName" to "Must not save", "receivablesEmail" to address)))) as TimerRepository.Outcome
+            assertEquals("INVALID_ACCOUNTS_RECEIVABLE_EMAIL", outcome.conflict)
+        }
+        assertEquals(before, repository.businessSnapshot())
+        val cleared = dispatch.call(MethodCall("saveSettings", mapOf("id" to "clear-accounting", "version" to before.version,
+            "value" to settings + ("receivablesEmail" to "")))) as TimerRepository.Outcome
+        assertNull(cleared.conflict); assertEquals("", repository.businessSnapshot().settings.receivablesEmail)
+    }
     @Test fun boardAndPriceRoundTripThroughActualDispatchWithoutFloatingPoint() {
         val outcome = change("saveCard", card("9007199254740993")) as TimerRepository.Outcome
         assertNull(outcome.conflict)

@@ -496,15 +496,74 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
             InvoiceStore.prepare(it, invoiceId, selection, wallClock())
         }
+    @Synchronized
+    internal fun voidInvoice(id: String, version: Long, value: InvoiceLifecycleStore.VoidDraft): Outcome =
+        boardChange(id, version, "INVOICE_VOID", value.values()) { InvoiceLifecycleStore.void(it, value, wallClock()) }
+    @Synchronized
+    internal fun replaceInvoice(id: String, version: Long, value: InvoiceLifecycleStore.ReplacementDraft): Outcome =
+        boardChange(id, version, "INVOICE_REPLACE", value.values()) { InvoiceLifecycleStore.replace(it, value, wallClock()) }
+    @Synchronized
+    internal fun invoicePayments(invoiceId: String): Pair<Long, InvoicePaymentStore.Snapshot> =
+        readSnapshot(helper.readableDatabase).version to InvoicePaymentStore.read(helper.readableDatabase, invoiceId)
+    @Synchronized
+    internal fun recordInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Draft): Outcome =
+        boardChange(id, version, "INVOICE_PAYMENT", value.values()) { InvoicePaymentStore.record(it, value, wallClock()) }
+    @Synchronized
+    internal fun reverseInvoicePayment(id: String, version: Long, value: InvoicePaymentStore.Reversal): Outcome =
+        boardChange(id, version, "INVOICE_PAYMENT_REVERSE", value.values()) { InvoicePaymentStore.reverse(it, value, wallClock()) }
+    internal data class InvoicePaymentContext(val version: Long, val now: Long, val timezone: String,
+        val localNow: SessionTime.Formatted, val accountingEmail: String, val legacy: Boolean, val jobDeleted: Boolean,
+        val ledger: InvoicePaymentStore.Snapshot, val copies: List<InvoiceCopyStore.Summary>,
+        val voidInfo: InvoiceLifecycleStore.VoidInfo?, val replacesInvoiceId: String?)
+    @Synchronized
+    internal fun invoicePaymentContext(invoiceId: String): InvoicePaymentContext {
+        val db = helper.readableDatabase
+        val ledger = InvoicePaymentStore.read(db, invoiceId)
+        val company = BusinessStore.settings(db)
+        val timezone = java.util.TimeZone.getDefault().id
+        val now = wallClock()
+        val legacy = db.rawQuery("SELECT state FROM invoice_coverage WHERE invoice_id=?", arrayOf(invoiceId)).use { !it.moveToFirst() || it.getString(0) == "LEGACY" }
+        val deleted = db.rawQuery("SELECT 1 FROM jobs WHERE id=?", arrayOf(ledger.invoice.jobId)).use { !it.moveToFirst() }
+        return InvoicePaymentContext(readSnapshot(db).version, now, timezone, SessionTime.format(now, timezone),
+            company.receivablesEmail.ifEmpty { company.companyEmail }, legacy, deleted, ledger, InvoiceCopyStore.list(db, invoiceId),
+            InvoiceLifecycleStore.voidInfo(db, invoiceId), db.rawQuery("SELECT invoice_id FROM invoice_voids WHERE replacement_id=?", arrayOf(invoiceId)).use { if (it.moveToFirst()) it.getString(0) else null })
+    }
+    internal data class InvoiceVoidContext(val info: InvoiceLifecycleStore.VoidInfo, val replacementNumber: String?)
+    @Synchronized
+    internal fun invoiceVoidContext(invoiceId: String): InvoiceVoidContext? {
+        val db = helper.readableDatabase
+        val info = InvoiceLifecycleStore.voidInfo(db, invoiceId) ?: return null
+        val number = info.replacementId?.let { id -> db.rawQuery("SELECT number FROM invoices WHERE id=?", arrayOf(id)).use { check(it.moveToFirst()); it.getString(0) } }
+        return InvoiceVoidContext(info, number)
+    }
+    internal data class InvoiceLifecycleContext(val payment: InvoicePaymentContext, val claims: List<InvoiceLifecycleStore.Claim>)
+    @Synchronized
+    internal fun invoiceLifecycleContext(invoiceId: String): InvoiceLifecycleContext =
+        InvoiceLifecycleContext(invoicePaymentContext(invoiceId), InvoiceLifecycleStore.claims(helper.readableDatabase, invoiceId))
+    @Synchronized
+    internal fun prepareInvoiceBalanceCopy(id: String, version: Long, copyToken: String, invoiceId: String): Outcome =
+        boardChange(id, version, "INVOICE_BALANCE_COPY", listOf(copyToken, invoiceId)) { InvoiceCopyStore.prepareBalance(it, copyToken, invoiceId, wallClock()) }
+    @Synchronized
+    internal fun invoiceCopies(invoiceId: String): List<InvoiceCopyStore.Summary> = InvoiceCopyStore.list(helper.readableDatabase, invoiceId)
+    @Synchronized
+    internal fun invoiceCopy(copyId: String): InvoiceStore.Record = InvoiceCopyStore.read(helper.readableDatabase, copyId)
+    @Synchronized
+    internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray): Boolean {
+        require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))
+        val db = helper.writableDatabase
+        if (InvoiceCopyStore.read(db, copyId).payload != payload) return false
+        return db.update("invoice_copies", android.content.ContentValues().apply { put("pdf", bytes) }, "id=? AND pdf IS NULL", arrayOf(copyId)) == 1
+    }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,
-        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean)
+        val jobId: String, val jobName: String, val customer: String, val jobDeleted: Boolean, val legacy: Boolean,
+        val paidMinor: String, val dueMinor: String, val status: String, val digits: Int)
     internal data class InvoiceIndex(val version: Long, val invoices: List<InvoiceSummary>)
     @Synchronized
     internal fun invoices(jobId: String? = null): InvoiceIndex = InvoiceIndex(readSnapshot(helper.readableDatabase).version,
         helper.readableDatabase.rawQuery("SELECT i.id,i.number,i.created_ms,i.payload,i.job_id,j.id,c.state FROM invoices i LEFT JOIN jobs j ON j.id=i.job_id LEFT JOIN invoice_coverage c ON c.invoice_id=i.id ${if (jobId == null) "" else "WHERE i.job_id=?"} ORDER BY i.created_ms DESC,i.id",
             if (jobId == null) null else arrayOf(jobId)).use { rows -> buildList {
-            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
-                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY")) }
+            while (rows.moveToNext()) { val snapshot = InvoiceStore.Snapshot.decode(rows.getString(3)); val balance = InvoicePaymentStore.balance(helper.readableDatabase, rows.getString(0), snapshot); add(InvoiceSummary(rows.getString(0), rows.getString(1), rows.getLong(2), snapshot.total, snapshot.currency, snapshot.style,
+                rows.getString(4), snapshot.job, snapshot.customer, rows.isNull(5), rows.isNull(6) || rows.getString(6) == "LEGACY", balance.paid.toString(), balance.due.toString(), balance.status, snapshot.digits)) }
         } })
     internal data class InvoiceBillingPreview(val version: Long, val preview: InvoiceCoverageStore.Preview, val taxUnits: Int)
     @Synchronized
@@ -827,7 +886,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 7) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 8) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -843,6 +902,7 @@ class TimerRepository internal constructor(context: Context,
             BusinessSchema.install(db, now())
             WidgetConfigurationStore.install(db)
             InvoiceCoverageStore.install(db, now())
+            InvoicePaymentStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -853,13 +913,14 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..6 && newVersion == 7) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..7 && newVersion == 8) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
             if (oldVersion < 5) BusinessSchema.install(db, now())
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
+            if (oldVersion < 8) InvoicePaymentStore.install(db)
         }
     }
 

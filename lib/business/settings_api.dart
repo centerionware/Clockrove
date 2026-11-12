@@ -20,6 +20,7 @@ class CompanySettings {
     required this.emailSubject,
     required this.emailBody,
     this.defaultTaxUnits = 0,
+    this.receivablesEmail = '',
   });
   final String currency,
       companyName,
@@ -34,6 +35,7 @@ class CompanySettings {
       emailBody;
   final int digits;
   final int defaultTaxUnits;
+  final String receivablesEmail;
   final String? defaultHourlyMinor;
   factory CompanySettings.decode(Map<Object?, Object?> v) => CompanySettings(
     currency: v['currency'] as String,
@@ -50,6 +52,7 @@ class CompanySettings {
     emailSubject: v['emailSubject'] as String,
     emailBody: v['emailBody'] as String,
     defaultTaxUnits: v['defaultTaxUnits'] as int? ?? 0,
+    receivablesEmail: v['receivablesEmail'] as String? ?? '',
   );
   Map<String, Object?> encode() => {
     'currency': currency,
@@ -65,6 +68,7 @@ class CompanySettings {
     'emailSubject': emailSubject,
     'emailBody': emailBody,
     'defaultTaxUnits': defaultTaxUnits,
+    'receivablesEmail': receivablesEmail,
   };
 }
 
@@ -228,3 +232,14 @@ final jobPreferencesProvider = FutureProvider.family<JobPreferences, String>((
   ref.watch(timerVersionsProvider);
   return ref.watch(businessSettingsApiProvider).job(id);
 });
+
+String? accountingEmailError(String input) {
+  final value = input.trim();
+  if (value.isEmpty) return null;
+  if (value.length > 254 ||
+      value.codeUnits.any((c) => c <= 32 || c == 127) ||
+      !RegExp(r'^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$').hasMatch(value)) {
+    return 'Enter one email address, or leave blank to use the company email.';
+  }
+  return null;
+}

@@ -177,35 +177,42 @@ class WidgetConfigurationTest {
         assertEquals(replacement, repository.widgetSnapshot(2).configuration)
     }
     @Test fun versionFiveUpgradePreservesWorkReceiptsSettingsAndBoardWithoutCreatingBindings() {
-        val captured = version
-        assertNull(repository.execute(TimerRepository.Command("old-start", captured, TimerRepository.Action.START,
-            job, 1000, "UTC", 0, TimerRepository.Origin.MANUAL)).conflict)
-        val running = repository.snapshot().running!!
-        assertEquals(TimerRepository.SampleResult.RECORDED, repository.recordLocation(
-            TimerRepository.LocationPoint("old-point", running.id, 1500, 1600, 1.0, 2.0, 3.0)))
-        val before = repository.snapshot(); val board = repository.boardSnapshot(job).board
         repository.close()
-        inspect { db ->
-            db.execSQL("DROP TABLE widget_configurations")
-            db.execSQL("DROP TABLE invoice_task_claims")
-            db.execSQL("DROP TABLE invoice_time_claims")
-            db.execSQL("DROP TABLE invoice_coverage")
-            db.execSQL("DROP TABLE job_tax_rates")
-            db.execSQL("DROP TABLE billing_tax_settings")
-            db.execSQL("DROP TABLE task_quantities")
-            db.execSQL("DROP TABLE template_quantities")
-            for (table in listOf("settings_money", "job_money", "card_money", "template_money")) db.execSQL("DROP TABLE $table")
-            db.execSQL("UPDATE app_settings SET company_name='Synthetic migration company' WHERE id=1")
+        app.deleteDatabase("clockrove.db")
+        job = "legacy-widget-job"
+        // Frozen released DDL, not today's helper with its version number lowered.
+        SQLiteDatabase.openOrCreateDatabase(app.getDatabasePath("clockrove.db"), null).use { db ->
+            db.setForeignKeyConstraintsEnabled(true)
+            javaClass.getResourceAsStream("/schema_v5.sql")!!.bufferedReader().use { source ->
+                source.readText().split(';').map { it.trim() }.filter { it.isNotEmpty() }.forEach { db.execSQL(it) }
+            }
+            db.execSQL("INSERT INTO jobs(id,name) VALUES('legacy-widget-job','Synthetic legacy widget job')")
+            db.execSQL("INSERT INTO kanban_columns VALUES('legacy-column','legacy-widget-job','To do',0,0)")
+            db.execSQL("INSERT INTO sessions VALUES('legacy-session','legacy-widget-job',1000,NULL,'UTC',0,'MANUAL')")
+            db.execSQL("INSERT INTO location_points VALUES('old-point','legacy-session',1500,1600,1.0,2.0,3.0)")
+            db.execSQL("UPDATE state SET version=42")
+            db.execSQL("UPDATE app_settings SET company_name='Synthetic migration company',default_hourly_minor=12500")
+            val fingerprint = """[41,"START","legacy-widget-job",1000,"UTC",0,"MANUAL"]"""
+            db.execSQL("INSERT INTO commands VALUES('old-start',?,42,NULL)", arrayOf(fingerprint))
             db.version = 5
         }
         open()
-        assertEquals(before, repository.snapshot()); assertEquals(board, repository.boardSnapshot(job).board)
-        assertEquals("old-point", repository.locationPoints(running.id).single().id)
+        assertEquals(42L, version)
+        assertEquals(TimerRepository.Session("legacy-session", job, 1000, "Synthetic legacy widget job"), repository.snapshot().running)
+        assertEquals(listOf("legacy-column"), repository.boardSnapshot(job).board.columns.map { it.id })
+        assertEquals("old-point", repository.locationPoints("legacy-session").single().id)
         assertEquals("Synthetic migration company", repository.businessSnapshot().settings.companyName)
-        assertNull(repository.executeFromSurface("old-start", captured, TimerRepository.Action.START, job, TimerRepository.Origin.MANUAL).conflict)
+        assertEquals(java.math.BigInteger.valueOf(12500), repository.businessSnapshot().settings.defaultHourlyMinor)
+        assertNull(repository.executeFromSurface("old-start", 41, TimerRepository.Action.START, job, TimerRepository.Origin.MANUAL).conflict)
         assertNull(repository.widgetSnapshot(1).configuration.token)
-        inspect { assertEquals(7, it.version) }
+        assertEquals("", repository.businessSnapshot().settings.receivablesEmail)
+        inspect { db ->
+            assertEquals(8, db.version)
+            db.rawQuery("SELECT COUNT(*) FROM invoice_payments", null).use { assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0)) }
+            db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
+        }
     }
+
     @Test fun failedVersionFiveUpgradeRollsBackWithoutReplacingExistingState() {
         assertNull(save(1).conflict)
         val binding = repository.widgetSnapshot(1).configuration

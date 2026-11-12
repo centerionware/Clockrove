@@ -157,6 +157,69 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 
 void main() {
   testWidgets(
+    'invalid receivables address keeps the draft and corrected address saves',
+    (tester) async {
+      final api = _SettingsApi();
+      await _show(tester, api, const SettingsScreen());
+      const label = 'Accounts receivable email (optional)';
+      await _reveal(tester, label);
+      await tester.enterText(
+        find.widgetWithText(TextField, label),
+        'accounts@example.test,other@example.test',
+      );
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings, isNull);
+      await _reveal(tester, label);
+      final field = tester.widget<TextField>(
+        find.widgetWithText(TextField, label),
+      );
+      expect(
+        field.controller!.text,
+        'accounts@example.test,other@example.test',
+      );
+      expect(field.decoration!.errorText, contains('one email address'));
+      await tester.enterText(
+        find.widgetWithText(TextField, label),
+        'accounts@example.test',
+      );
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await _reveal(tester, 'Save settings');
+      await tester.tap(find.text('Save settings'));
+      await tester.pumpAndSettle();
+      expect(api.savedSettings!.receivablesEmail, 'accounts@example.test');
+      expect(
+        api.savedSettings!.companyEmail,
+        _SettingsApi.company.companyEmail,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+  test('receivables codec and validation retain optional fallback and one recipient', () {
+    final encoded = _SettingsApi.company.encode();
+    encoded['fractionDigits'] = 2;
+    expect(CompanySettings.decode(encoded).receivablesEmail, isEmpty);
+    expect(
+      CompanySettings.decode({
+        ...encoded,
+        'receivablesEmail': 'accounts@example.test',
+      }).encode()['receivablesEmail'],
+      'accounts@example.test',
+    );
+    expect(accountingEmailError(''), isNull);
+    expect(accountingEmailError(' accounts@example.test '), isNull);
+    for (final value in [
+      'bad',
+      'a@example.test;b@example.test',
+      'a@example.test\nBcc:b@example.test',
+      'a@example.test\u0000',
+    ]) {
+      expect(accountingEmailError(value), isNotNull);
+    }
+  });
+  testWidgets(
     'invalid global tax keeps the draft and corrected percentage saves exactly',
     (tester) async {
       final api = _SettingsApi();

@@ -18,14 +18,15 @@ class InvoiceProvider() : ContentProvider() {
     internal constructor(repository: TimerRepository) : this() { injectedRepository = repository }
     override fun onCreate() = true
     private fun record(uri: Uri): InvoiceStore.Record {
-        if (uri.scheme != "content" || uri.authority != "${requireNotNull(context).packageName}.invoices" || uri.pathSegments.size != 2 || uri.pathSegments[0] != "invoices" || !uri.pathSegments[1].matches(Regex("[A-Za-z0-9_-]{1,100}"))) throw FileNotFoundException("Invoice unavailable")
-        return try { (injectedRepository ?: TimerRepository.get(requireNotNull(context))).invoice(uri.pathSegments[1]).also { if (it.pdf == null) throw FileNotFoundException("Invoice unavailable") } }
+        if (uri.scheme != "content" || uri.authority != "${requireNotNull(context).packageName}.invoices" || uri.pathSegments.size != 2 || uri.pathSegments[0] !in setOf("invoices", "copies") || !uri.pathSegments[1].matches(Regex("[A-Za-z0-9_-]{1,140}"))) throw FileNotFoundException("Invoice unavailable")
+        return try { val repository = injectedRepository ?: TimerRepository.get(requireNotNull(context));
+            (if (uri.pathSegments[0] == "copies") repository.invoiceCopy(uri.pathSegments[1]) else repository.invoice(uri.pathSegments[1])).also { if (it.pdf == null) throw FileNotFoundException("Invoice unavailable") } }
             catch (_: Exception) { throw FileNotFoundException("Invoice unavailable") }
     }
     override fun getType(uri: Uri): String { record(uri); return "application/pdf" }
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         val invoice = record(uri); val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
-        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> "${invoice.number}.pdf"; OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray<Any?>()) }
+        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> InvoiceDocuments.filename(invoice); OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray<Any?>()) }
     }
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         if (mode != "r") throw FileNotFoundException("Read only")

@@ -1,9 +1,15 @@
 import 'package:clockrove/business/invoice_screen.dart';
+import 'package:clockrove/business/invoice_detail_screen.dart';
+import 'package:clockrove/business/payment_api.dart';
+import 'package:clockrove/tracking/timer_api.dart';
+import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:clockrove/business/invoice_history_screen.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/payment_fixture.dart';
 
 class _Invoices extends ReportApi {
   @override
@@ -27,13 +33,28 @@ class _Invoices extends ReportApi {
   );
 }
 
+class _Payments extends PaymentApi {
+  @override
+  Future<InvoicePayments> read(String id) async =>
+      paymentFixture(invoiceId: id, deleted: true);
+}
+
+class _Timer extends TimerApi {
+  @override
+  Stream<int> get committedVersions => const Stream.empty();
+}
+
 void main() {
   testWidgets(
     'main invoice list keeps removed-job documents accessible with customer and date',
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [reportApiProvider.overrideWithValue(_Invoices())],
+          overrides: [
+            reportApiProvider.overrideWithValue(_Invoices()),
+            paymentApiProvider.overrideWithValue(_Payments()),
+            timerApiProvider.overrideWithValue(_Timer()),
+          ],
           child: const MaterialApp(home: InvoiceHistory()),
         ),
       );
@@ -47,6 +68,18 @@ void main() {
       expect(find.textContaining('USD 107.50'), findsOneWidget);
       expect(find.textContaining('Issued 2026-11-01'), findsOneWidget);
       await tester.tap(find.text('INV-1000'));
+      await tester.pumpAndSettle();
+      expect(find.byType(InvoiceDetailScreen), findsOneWidget);
+      expect(
+        find.text('Job deleted · financial records retained'),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.text('View original PDF'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('View original PDF'));
       await tester.pumpAndSettle();
       expect(find.byType(InvoiceScreen), findsOneWidget);
       expect(find.text('Retry PDF preview'), findsOneWidget);

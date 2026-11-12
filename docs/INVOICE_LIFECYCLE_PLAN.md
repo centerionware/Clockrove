@@ -1,9 +1,10 @@
 # Billing, quotes, task notes and business reporting
 
 Owner-requested implementation queue, 2026-11-12. This is a contract for future
-work, not implemented-feature or acceptance evidence. Finish and merge the current
-Timer/Tasks/Combined widget task first. Follow app_plan.md and the Actions-only
-working agreement. Keep each slice independently reviewable.
+work, not blanket feature or launch acceptance evidence. Widgets and the invoice
+foundation have merged; see app_plan.md and plan_status.md for exact validation and
+delivery evidence. Follow the Actions-only working agreement and keep each remaining
+slice independently reviewable.
 
 ## Ordered delivery
 
@@ -19,7 +20,8 @@ either later never re-bills a task already reserved by an invoice; additional wo
 needs a new task or the explicit invoice correction policy.
 
 1. Invoice integrity foundation: source coverage, safe legacy migration, global/job
-   tax percentage, immutable totals and invoice navigation.
+   tax, quantity/unit pricing, exact money, immutable totals and invoice navigation.
+   Merged in #35 as f935485 after 383 native / 44 actual Android cases passed.
 2. Payment history, partial/full payment, balance copies, receipts, accounting CC,
    and unpaid/partially-paid void-and-replace.
 3. Quotes and their reviewed connection to actual jobs and invoices.
@@ -28,7 +30,7 @@ needs a new task or the explicit invoice correction policy.
    validated invoice/payment/cost data.
 
 Carry the owner-requested payment/receipt/CC work as the immediate next iteration
-after widgets. These dependent slices are one business roadmap; scaffolding or
+after the merged invoice foundation. These dependent slices are one business roadmap; scaffolding or
 mocked PDF/email/storage behavior does not complete a slice.
 
 ## One clear invoice journey
@@ -153,6 +155,52 @@ available unchanged. A receipt records the payment/document snapshot at that tim
 a fully settled copy is prominently PAID with zero due. Reopening/resending any
 copy neither records another payment nor allocates another invoice number.
 Keep old receipts as historical records when later corrections occur.
+
+### Native payment arithmetic and event allocation
+
+The next implementation uses canonical minor-unit strings up to 4096 digits for
+issued totals/payments, independent of the 1024-digit source-price limit. A task's
+quantity and a multi-line subtotal can grow beyond its source price. This is a
+bounded-text policy, not fixed-width arithmetic. Plain major-unit invoice amounts
+are parsed exactly against their frozen currency digits (0–4); excess fractional
+digits, exponents, signs, grouping, leading zeros and malformed input are rejected.
+A zero-total invoice has an explicit Nothing due state and cannot accept payment.
+
+For known tax T, grand total G and cumulative effective paid P, allocate collected
+tax as roundHalfUp(P × T / G), with zero when G is zero. Each payment or reversal
+books the difference between allocations before and after that event. Net-sales
+change is cash change minus tax change. Consequently splitting a payment cannot
+lose tax cents and full settlement collects exactly the frozen tax. Unknown legacy
+tax remains unknown. Do not independently round tax on every payment.
+
+A replacement does not create cash. Recompute cumulative tax against the new
+frozen total/tax and book the difference as a dated accounting reclassification,
+with an equal opposite net-sales change. Preserve prior payment receipt dates and
+historical allocation events; never rewrite earlier reports using today's ratio.
+A later reversal applies to the current allocation destination and books its
+current cumulative tax difference. Retain the original payment ID through chains.
+
+Payment persistence is being implemented as schema 8 with immutable payment/reversal/transfer and
+allocation-event identities, original invoice ownership, current destination, and
+revision ancestry. Financial rows reference retained invoice identities rather
+than mutable job rows; job purging must retain their revision payloads too.
+Commands must atomically write payment, allocation, event, receipt intent and
+version outcome. Unknown-response retries reuse all IDs and the unchanged draft.
+Install tables without decoding every historical invoice payload; validate a
+frozen document when it is actually opened or changed. This section and the
+PaymentMath source/tests do not complete the user-facing payment milestone.
+The native ledger source currently prepares payments/reversals/ordered allocation
+events and retained financial revisions; transfer/copy/UI behavior remains pending.
+Event order uses command version plus ordinal, not wall-clock timestamp or random
+ID. Received/effective dates are stored separately from recorded dates. A backdated
+entry never rewrites previously stored allocation events; dated adjustment rows
+must explain corrections in later reports.
+
+For replacements, v7 invoice lines lack stable source IDs even though coverage
+claims do have IDs. Never infer a line-to-task association from its title, price or
+array order. Keep the full old claim bundle by default; partial source release
+requires an explicit reviewed mapping. New issued lines may carry stable IDs and
+source links, while old/deleted-job documents retain conservative coverage.
 
 ## Void and replace without losing money
 
@@ -312,3 +360,67 @@ replacements, quotes/revisions, tax snapshots, comments and expenses by stable
 identity. Import may not duplicate payment/credit or release already-billed work;
 ambiguous histories need previewed conflicts and transactional resolution. No
 email sending, timers or automation are triggered by restore.
+
+## Current copy implementation checkpoint (not milestone acceptance)
+
+Baseline 811fb7d / 43193679201 passed 414 native cases plus Flutter/analysis/build;
+its device stage was held by the separate widget binding issue. Native copy source
+now atomically retains a receipt intent per payment and correction intent per
+reversal. Balance copies are explicit versioned commands. Stable kind-prefixed
+identities prevent collisions, and retries reuse the same intent. Metadata is
+immutable; derived PDF caching does not mutate the ledger. Original documents,
+numbers, coverage and earlier receipts remain unchanged.
+
+A copy freezes its command-version boundary and exact paid/due minor strings.
+Receipt/correction documents refer to one immutable event; balance documents list
+events through that boundary. Received/effective labels and offsets are captured
+at native write time, so later timezone changes do not rewrite a printed copy.
+Internal payment/correction notes stay off customer PDFs. Copies retain financial
+revision history on job purge and use separate read-only private content URIs.
+All three layouts label original invoice totals separately from paid and due.
+
+Rendering a balance history is bounded to 5000 events and 200 pages; exceeding a
+limit fails explicitly without truncation or deleting payments. Individual saved
+receipts remain available. Rendering and email failures never undo a committed
+payment; retries open the same retained document. Email expansions over 100 KB are
+rejected before activity handoff and unexpected handoff failures are caught; Save
+PDF/Share remain available. Actual Android PDFs/attachments and wide receipt money
+need the new Actions/visual evidence. UI, bridge and void/replacement remain open.
+
+### UI integration checkpoint
+
+c21ef87 / 43201426802 passed 434 native / 46 actual Android cases, including
+all-style native copies and wide receipt text. Visual review found short-copy
+footer overflow; revised spacing and a one-page short-fixture gate are prepared.
+The invoice detail/entry/correction UI and strict bridge are now source-complete
+for testing, with exact list balances, saved-copy viewing/email, separate source
+review and private notes. Mark paid proposes remaining due and asks for payment
+confirmation. Confirmation opens the immutable receipt; Send latest copy prepares
+one versioned balance document and opens its email draft. Neither action claims
+customer delivery. Unknown operations keep immutable IDs and block Back; keyed
+submit controls survive live balance changes. UI/bridge/replay and an independent
+actual app/payment/purge journey still need new Actions proof. Native ledger/copy
+acceptance does not implement void-and-replace or complete this milestone.
+
+### Native void/replacement source checkpoint (2026-11-12)
+
+Prior turn made progress: pushed 7d414ee to correct paused-stream test cleanup and
+updated draft #37 with accurate scope. Actions 43207931777 now passed formatting,
+analysis, Flutter behavior, debug build and native unit gates; actual Android
+document/payment journey remains live. Do not treat the whole run as passed.
+
+New native source prepares confirmed/audited unpaid cancellation and atomic
+replacement with edited existing rows, explicit owned-claim release and additions
+from actual unbilled work. The default keeps the entire old claim bundle; old line
+titles/prices are never used to guess source identity. Original documents remain
+unchanged, cancelled predecessors have no collectible balance, and unresolved
+legacy coverage stays unresolved on successors. Replacement freezes existing
+credit at issue. Positive fully paid invoices reject void/replacement; a zero-total
+Nothing due invoice may be cancelled to release reservations. Below-credit totals
+are rejected. Transfers preserve payment IDs/dates and emit zero-cash, ordered
+credit/tax/sales adjustments; corrections follow the current allocation. Cancellation
+copies are separate immutable intents. Native regressions cover concurrency, replay,
+rollback, exact wide/split money, source ownership, hourly intervals, legacy and
+retained deleted-job history. Source only: new Actions validation, lifecycle bridge/
+editor UI, actual replacement/VOID PDFs and physical email acceptance remain open.
+This is still draft #37, not a completed or published payment milestone.

@@ -13,18 +13,30 @@ import org.json.JSONObject
 
 /** Immutable prepared invoice data; rendering is derived outside the write lock. */
 internal object InvoiceStore {
-    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?)
+    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE")
     data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null, val unitPriceMinor: String? = null)
+    data class Statement(val kind: String, val status: String, val created: Long, val paid: String, val due: String,
+        val events: List<Line>, val reference: String = "") {
+        fun encode(): JSONObject = JSONObject(mapOf("kind" to kind, "status" to status, "created" to created,
+            "paid" to paid, "due" to due, "reference" to reference, "events" to JSONArray(events.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount)) })))
+        companion object {
+            fun decode(value: JSONObject): Statement {
+                val rows = value.getJSONArray("events")
+                return Statement(value.getString("kind"), value.getString("status"), value.getLong("created"), value.getString("paid"), value.getString("due"),
+                    (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount")) }, value.optString("reference", ""))
+            }
+        }
+    }
     data class Snapshot(val number: String, val created: Long, val style: String, val currency: String, val digits: Int,
         val company: String, val companyContact: String, val customer: String, val customerContact: String,
         val job: String, val period: String, val basis: String, val header: String, val footer: String,
         val total: String, val email: String, val subject: String, val body: String, val lines: List<Line>,
-        val subtotal: String? = null, val taxRateUnits: Int? = null, val taxAmount: String? = null) {
+        val subtotal: String? = null, val taxRateUnits: Int? = null, val taxAmount: String? = null, val statement: Statement? = null) {
         fun encode(): String = JSONObject(mapOf("number" to number, "created" to created, "style" to style, "currency" to currency, "digits" to digits,
             "company" to company, "companyContact" to companyContact, "customer" to customer, "customerContact" to customerContact,
             "job" to job, "period" to period, "basis" to basis, "header" to header, "footer" to footer, "total" to total, "email" to email,
             "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount, "quantityUnits" to it.quantityUnits, "unitPriceMinor" to it.unitPriceMinor)) }),
-            "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount)).toString()
+            "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount, "statement" to statement?.encode())).toString()
         companion object {
             fun decode(value: String): Snapshot { val v = JSONObject(value); val rows = v.getJSONArray("lines")
                 return Snapshot(v.getString("number"), v.getLong("created"), v.getString("style"), v.getString("currency"), v.getInt("digits"),
@@ -33,7 +45,8 @@ internal object InvoiceStore {
                     v.getString("subject"), v.getString("body"), (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount"), if (row.isNull("quantityUnits")) null else row.getString("quantityUnits"), if (row.isNull("unitPriceMinor")) null else row.getString("unitPriceMinor")) },
                     if (v.isNull("subtotal")) null else v.getString("subtotal"),
                     if (v.isNull("taxRateUnits")) null else v.getInt("taxRateUnits"),
-                    if (v.isNull("taxAmount")) null else v.getString("taxAmount"))
+                    if (v.isNull("taxAmount")) null else v.getString("taxAmount"),
+                    if (v.isNull("statement")) null else Statement.decode(v.getJSONObject("statement")))
             }
         }
     }
@@ -104,8 +117,12 @@ internal object InvoiceStore {
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)
         return null
     }
-    fun read(db: SQLiteDatabase, id: String): Record = db.rawQuery("SELECT i.id,i.job_id,i.number,i.payload,i.pdf,l.bytes FROM invoices i LEFT JOIN logo_assets l ON l.id=i.logo_id WHERE i.id=?", arrayOf(id)).use {
-        require(it.moveToFirst()) { "INVOICE_UNAVAILABLE" }
-        Record(it.getString(0), it.getString(1), it.getString(2), it.getString(3), if (it.isNull(4)) null else it.getBlob(4), if (it.isNull(5)) null else it.getBlob(5))
+    fun read(db: SQLiteDatabase, id: String, includePdf: Boolean = true): Record {
+        val header = db.rawQuery("SELECT id,job_id,number,payload,logo_id FROM invoices WHERE id=?", arrayOf(id)).use {
+            require(it.moveToFirst()) { "INVOICE_UNAVAILABLE" }
+            Record(it.getString(0), it.getString(1), it.getString(2), it.getString(3), null, null) to if (it.isNull(4)) null else it.getString(4)
+        }
+        return header.first.copy(pdf = if (includePdf) InvoiceBlobs.original(db, id) else null,
+            logo = header.second?.let { InvoiceBlobs.logo(db, it) })
     }
 }

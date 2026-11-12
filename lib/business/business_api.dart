@@ -14,10 +14,17 @@ String newBusinessId() => List.generate(
 ).map((v) => v.toRadixString(16).padLeft(2, '0')).join();
 
 /// Decimal input and display never pass through floating point.
-String? parseMoney(String input, int digits) {
+String? parseMoney(String input, int digits) =>
+    _parseMoney(input, digits, 1024);
+
+/// Extended invoice balances can exceed the source-price text limit.
+String? parsePaymentMoney(String input, int digits) =>
+    _parseMoney(input, digits, 4096);
+
+String? _parseMoney(String input, int digits, int maxDigits) {
   final value = input.trim();
   if (value.isEmpty) return null;
-  if (value.length > 1029) {
+  if (value.length > maxDigits + 5) {
     throw const FormatException('Amount is too long.');
   }
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
@@ -33,7 +40,7 @@ String? parseMoney(String input, int digits) {
   // Precision was validated above: shifting produces an exact integer, so
   // toBigInt cannot discard a fractional minor unit.
   final minor = Decimal.parse(value).shift(digits).toBigInt();
-  if (minor.toString().length > 1024) {
+  if (minor.toString().length > maxDigits) {
     throw const FormatException('Amount is too long.');
   }
   return minor.toString();

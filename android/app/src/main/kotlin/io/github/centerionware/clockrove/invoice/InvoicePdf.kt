@@ -30,25 +30,42 @@ internal object InvoicePdf {
             try {
                 val flow = Flow(document, snapshot, logo)
                 flow.start()
+                snapshot.statement?.let {
+                    flow.text("Payment state recorded ${io.github.centerionware.clockrove.tracking.ReportCsv.instant(it.created, "UTC")}", 9f)
+                    flow.text("Copy reference: ${it.reference}", 8f)
+                    flow.space(8f)
+                }
                 flow.text(snapshot.company, 22f, bold = true)
                 flow.text(snapshot.companyContact, 10f)
                 flow.text("Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(snapshot.created)) + " UTC", 9f)
-                flow.space(16f)
+                flow.space(if (snapshot.statement == null) 16f else 8f)
                 if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
                     flow.text("BILL TO", 9f, bold = true)
                     flow.text(snapshot.customer, 14f, bold = true)
                     flow.text(snapshot.customerContact, 10f)
-                    flow.space(16f)
+                    flow.space(if (snapshot.statement == null) 16f else 8f)
                 }
                 flow.text(snapshot.job, 18f, bold = true)
                 flow.text(snapshot.period, 10f)
                 flow.text(snapshot.basis, 9f)
-                flow.space(12f)
-                flow.text(snapshot.header, 11f)
-                flow.space(12f)
+                if (snapshot.statement == null || snapshot.header.isNotBlank()) {
+                    flow.space(12f)
+                    flow.text(snapshot.header, 11f)
+                    flow.space(12f)
+                } else flow.space(8f)
                 flow.tableHeader()
                 snapshot.lines.forEach { flow.line(it) }
                 flow.total()
+                snapshot.statement?.let {
+                    flow.text("${if (it.kind == "VOID") "Credit transferred" else if (it.kind == "REPLACEMENT") "Credit at issue" else "Paid to date"}   ${snapshot.currency} ${it.paid}", 12f, bold = true)
+                    flow.text("BALANCE DUE   ${snapshot.currency} ${it.due}", 16f, bold = true)
+                    flow.space(8f)
+                    if (it.events.isNotEmpty()) {
+                        if (it.kind == "BALANCE") flow.text("PAYMENTS AND CREDITS", 12f, bold = true)
+                        it.events.forEach { event -> flow.line(event, compact = true) }
+                    }
+                    flow.text(if (it.kind == "VOID") "This invoice is cancelled. Do not pay this invoice." else "Saved payment record for ${snapshot.number}. Balances reflect the recorded date.", 9f)
+                }
                 if (snapshot.footer.isNotBlank()) {
                     flow.space(20f)
                     flow.text(snapshot.footer, 10f)
@@ -75,20 +92,24 @@ internal object InvoicePdf {
             check(pageNumber <= 200) { "INVOICE_TOO_LARGE" }
             page = document.startPage(PdfDocument.PageInfo.Builder(width, height, pageNumber).create())
             canvas.drawColor(if (classic) Color.rgb(253, 252, 248) else Color.WHITE)
+            val heading = when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; "VOID" -> "VOID INVOICE"; else -> "INVOICE" }
             if (modern) {
                 canvas.drawRect(0f, 0f, width.toFloat(), 84f, Paint().apply { color = ink })
-                canvas.drawText("INVOICE", margin, 43f, paint(25f, true, Color.WHITE))
+                canvas.drawText(heading, margin, 43f, paint(25f, true, Color.WHITE))
                 canvas.drawText(data.number, margin, 65f, paint(10f, false, Color.WHITE))
             } else if (classic) {
                 val title = paint(28f, true)
-                canvas.drawText("INVOICE", (width - title.measureText("INVOICE")) / 2, 43f, title)
+                canvas.drawText(heading, (width - title.measureText(heading)) / 2, 43f, title)
                 canvas.drawText(data.number, margin, 73f, paint(10f))
                 canvas.drawLine(margin, 83f, width - margin, 83f, paint(1f).apply { strokeWidth = 1.5f })
                 canvas.drawLine(margin, 87f, width - margin, 87f, paint(1f).apply { strokeWidth = .5f })
             } else {
-                canvas.drawText("Invoice", margin, 46f, paint(28f, true))
+                canvas.drawText(if (data.statement == null) "Invoice" else heading, margin, 46f, paint(28f, true))
                 canvas.drawText(data.number, margin, 69f, paint(10f))
                 canvas.drawLine(margin, 84f, width - margin, 84f, paint(1f).apply { strokeWidth = .7f })
+            }
+            data.statement?.let {
+                canvas.drawText(it.status.replace('_', ' '), 260f, if (modern) 65f else if (classic) 73f else 69f, paint(14f, true, if (modern) Color.WHITE else ink))
             }
             logo?.let {
                 val box = RectF(width - margin - 85, 20f, width - margin, 69f)
@@ -136,7 +157,7 @@ internal object InvoicePdf {
             canvas.drawText(amount, width - margin - 8 - paint(9f, true).measureText(amount), y + 18, paint(9f, true))
             y += 36
         }
-        fun line(value: InvoiceStore.Line) {
+        fun line(value: InvoiceStore.Line, compact: Boolean = false) {
             ensure(45f)
             val amount = paint(11f, true)
             val fitsColumn = amount.measureText(value.amount) <= width - margin * 2 - 352 - 16
@@ -144,21 +165,21 @@ internal object InvoicePdf {
                 canvas.drawText(value.amount, width - margin - 8 - amount.measureText(value.amount), y + 12, amount)
             }
             text(value.title, 11f, true, 352)
-            text(value.detail, 9f, available = 352)
+            text(if (compact) value.detail.replace("\n", " · ") else value.detail, 9f, available = if (compact) (width - margin * 2).toInt() else 352)
             if (value.amount.isNotBlank() && !fitsColumn) {
                 // Exact values must never overlap descriptions or disappear off-page.
                 text("Amount (${data.currency}) ${value.amount}", 11f, true)
             }
-            space(if (classic) 4f else 8f)
+            space(if (compact) 2f else if (classic) 4f else 8f)
             canvas.drawLine(margin, y, width - margin, y, Paint().apply { color = Color.rgb(222, 228, 224); strokeWidth = .5f })
-            space(if (classic) 8f else 12f)
+            space(if (compact) 6f else if (classic) 8f else 12f)
         }
         fun total() {
             if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {
                 ensure(145f)
                 space(8f)
-                text("Subtotal   ${data.currency} ${data.subtotal}", 11f)
-                text("Tax (${TaxRate.format(data.taxRateUnits)}%)   ${data.currency} ${data.taxAmount}", 11f)
+                text("${if (data.statement == null) "Subtotal" else "Invoice subtotal"}   ${data.currency} ${data.subtotal}", 11f)
+                text("${if (data.statement == null) "Tax" else "Invoice tax"} (${TaxRate.format(data.taxRateUnits)}%)   ${data.currency} ${data.taxAmount}", 11f)
             }
             val value = "${data.currency} ${data.total}"
             if (paint(9f, true).measureText(value) > 345) {
@@ -166,14 +187,14 @@ internal object InvoicePdf {
                 // line. Reuse the paginating paragraph flow without dropping digits.
                 ensure(90f); space(12f)
                 canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-                space(12f); text("TOTAL", 12f, true); text(value, 12f, true); space(12f)
+                space(12f); text(if (data.statement == null) "TOTAL" else "ORIGINAL INVOICE TOTAL", 12f, true); text(value, 12f, true); space(12f)
                 return
             }
             ensure(90f); space(12f)
             val box = RectF(margin, y, width - margin, y + 55)
             if (modern) canvas.drawRoundRect(box, 8f, 8f, Paint().apply { color = Color.rgb(232, 244, 238) })
             else canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-            canvas.drawText("TOTAL", margin + 12, y + 33, paint(12f, true))
+            canvas.drawText(if (data.statement == null) "TOTAL" else "INVOICE TOTAL", margin + 12, y + 33, paint(12f, true))
             var size = 21f
             while (paint(size, true).measureText(value) > 345 && size > 9) size -= 1
             val amount = paint(size, true)

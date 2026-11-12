@@ -69,7 +69,7 @@ class _BusinessCommandState extends State<BusinessCommand>
   }
 
   String _conflict(String? value) => switch (value) {
-    'STALE_STATE' => 'This job changed. Your draft is kept. Review the latest data and save again.',
+    'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
     'INVALID_TIMEZONE' =>
@@ -113,6 +113,31 @@ class _BusinessCommandState extends State<BusinessCommand>
       'Choose an active customer or unarchive this customer first.',
     'INVALID_EMAIL_SUBJECT' => 'The email subject template is invalid. Open Settings and correct its placeholders or line breaks.',
     'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
+    'INVALID_ACCOUNTS_RECEIVABLE_EMAIL' => 'Enter one valid accounts receivable email address in Settings, or leave it blank to use the company email.',
+    'INVALID_PAYMENT_AMOUNT' => 'Enter a positive amount within this invoice’s currency precision. Your draft is kept.',
+    'PAYMENT_EXCEEDS_BALANCE' => 'This exceeds the remaining balance. Refresh the invoice and review the payment amount.',
+    'PAYMENT_CURRENCY_MISMATCH' => 'Use the invoice’s original currency. Settings changes never convert its balance.',
+    'INVALID_PAYMENT' => 'Review the received date, timezone and field lengths. A payment cannot be dated in the future.',
+    'INVALID_PAYMENT_REVERSAL' => 'Add a correction reason of at least 10 characters and review its date and timezone.',
+    'REVERSAL_BEFORE_PAYMENT' =>
+      'The correction date cannot be before the payment was received.',
+    'PAYMENT_ALREADY_REVERSED' =>
+      'This payment was already corrected. Refresh its history.',
+    'PAYMENT_UNAVAILABLE_OR_MOVED' => 'This payment is unavailable here or was credited to a replacement invoice. Refresh and open its current invoice.',
+    'PAYMENT_ID_EXISTS' || 'REVERSAL_ID_EXISTS' || 'INVOICE_COPY_ID_EXISTS' => 'This record already exists. Refresh the invoice to review its saved history.',
+    'INVOICE_VOID' => 'This invoice is void. Open its cancellation copy or replacement; no payment is due here.',
+    'PAID_INVOICE_CANNOT_VOID' => 'A fully paid invoice cannot be voided or replaced. Its receipts remain in history.',
+    'PARTIAL_INVOICE_REQUIRES_REPLACEMENT' => 'Use Void & replace so the existing payment credit moves to a new invoice.',
+    'REPLACEMENT_BELOW_CREDIT' => 'The replacement total cannot be less than the existing payment credit. Your draft is kept.',
+    'INVOICE_VOID_CONFIRMATION_REQUIRED' =>
+      'Review and confirm the invoice correction before continuing.',
+    'INVOICE_VOID_REASON_REQUIRED' => 'Explain the correction in 10 to 4000 characters. The reason stays internal.',
+    'INVALID_REPLACEMENT_LINES' ||
+    'INVALID_REPLACEMENT_AMOUNT' ||
+    'INVALID_REPLACEMENT' => 'Review the included lines, quantities and exact prices. New work must come from actual unbilled records.',
+    'INVALID_RELEASED_CLAIMS' || 'INVALID_REPLACEMENT_SOURCES' => 'Some work reservations changed. Refresh and review the work to retain or release.',
+    'INVALID_INVOICE_VOID' =>
+      'Refresh the invoice and review its correction details.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',
