@@ -24,14 +24,33 @@ class ClockroveApp extends StatelessWidget {
       final Widget screen;
       if (uri.path == '/widget-configuration') {
         screen = const WidgetConfigurationScreen();
-      } else if (uri.path == '/widget-board' && uri.queryParameters['job'] != null) {
-        screen = JobScreen(jobId: uri.queryParameters['job']!, jobName: uri.queryParameters['name'] ?? 'Job board');
+      } else if (uri.path == '/widget-board' &&
+          uri.queryParameters['job'] != null) {
+        screen = JobScreen(
+          jobId: uri.queryParameters['job']!,
+          jobName: uri.queryParameters['name'] ?? 'Job board',
+        );
       } else if (uri.path == '/widget-unavailable') {
-        screen = Scaffold(appBar: AppBar(title: const Text('Job unavailable')), body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('This job was archived or removed. Refresh the widget or choose an active job in widget settings.'))));
+        screen = Scaffold(
+          appBar: AppBar(title: const Text('Job unavailable')),
+          body: const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'This job was archived or removed. Refresh the widget or choose an active job in widget settings.',
+              ),
+            ),
+          ),
+        );
       } else {
         screen = const TimerScreen();
       }
-      return [MaterialPageRoute<void>(settings: RouteSettings(name: name), builder: (_) => screen)];
+      return [
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => screen,
+        ),
+      ];
     },
   );
 }
