@@ -47,7 +47,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   );
   late final _name = TextEditingController(text: widget.initial.companyName);
   late final _email = TextEditingController(text: widget.initial.companyEmail);
-  late final _receivables = TextEditingController(text: widget.initial.receivablesEmail);
+  late final _receivables = TextEditingController(
+    text: widget.initial.receivablesEmail,
+  );
   late final _phone = TextEditingController(text: widget.initial.companyPhone);
   late final _address = TextEditingController(
     text: widget.initial.companyAddress,
@@ -96,10 +98,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     int length = 4000,
     String? error,
     ValueChanged<String>? onChanged,
+    bool email = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: TextField(
       controller: c,
+      keyboardType: email ? TextInputType.emailAddress : null,
+      autocorrect: !email,
+      enableSuggestions: !email,
       decoration: InputDecoration(
         labelText: label,
         errorText: error,
@@ -224,21 +230,27 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         ),
         const SizedBox(height: 16),
         _field(_name, 'Company name', length: 240),
-        _field(_email, 'Company email', length: 254),
+        _field(_email, 'Company email', length: 254, email: true),
         _field(
           _receivables,
           'Accounts receivable email (optional)',
           length: 254,
+          email: true,
           error: _receivablesError,
           onChanged: (_) {
             if (_receivablesError != null) {
-              setState(() => _receivablesError = accountingEmailError(_receivables.text));
+              setState(
+                () =>
+                    _receivablesError = accountingEmailError(_receivables.text),
+              );
             }
           },
         ),
         const Padding(
           padding: EdgeInsets.only(bottom: 16),
-          child: Text('Invoice and receipt emails CC this address, or the company email when blank.'),
+          child: Text(
+            'Invoice and receipt emails CC this address, or the company email when blank.',
+          ),
         ),
         _field(_phone, 'Phone', length: 120),
         _field(_address, 'Address', lines: 2),

@@ -1664,3 +1664,10 @@ PR #37 had documentation merge conflicts after #36 landed, so its b9869b2 push
 did not schedule pull-request Actions. Resolved those conflicts by retaining the
 newer payment checkpoint and consolidating duplicate status rows; validation must
 run on the merged branch head. No validation is inferred from that missing run.
+
+Payment draft 6177d71 / 43192830791 stopped in Flutter behavior: the AR invalid
+address and preserved-draft assertions passed, then the corrected email's selection
+overlay intercepted scrolling to Save. Native checks did not run. Applied the
+Actions formatter patch, configured company/AR fields for email input without
+autocorrect/suggestions, and dismiss text editing before the regression scroll.
+Next Actions evidence must verify these changes and the frozen-fixture migrations.
