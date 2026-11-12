@@ -70,7 +70,6 @@ open class TimerWidget : AppWidgetProvider() {
                 val landscape = viewsForSize(context, bound, id, provider, maxWidth, minHeight)
                 val views = RemoteViews(landscape, portrait)
                 manager.updateAppWidget(id, views)
-                if (provider != TimerOnlyWidget::class.java) manager.notifyAppWidgetViewDataChanged(id, R.id.widget_tasks)
                 } catch (_: Exception) {
                     // A failed refresh must not crash an already committed timer/settings command.
                     val unavailable = RemoteViews(context.packageName, R.layout.timer_widget).apply {
@@ -99,7 +98,7 @@ open class TimerWidget : AppWidgetProvider() {
                     setOnClickPendingIntent(R.id.widget_tasks_title, configureIntent(context, id))
                     setTextViewText(R.id.widget_tasks_empty, if (bound.missingDefault) "Choose an active job in widget settings" else "No tasks due in the next 7 days")
                     val adapter = Intent(context, WidgetTasksService::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                        .setData(Uri.parse("clockrove://widget/$id/tasks/${bound.configuration.token ?: "picker"}"))
+                        .setData(taskAdapterUri(bound, id, io.github.centerionware.clockrove.tracking.WidgetTasksStore.localDate(System.currentTimeMillis(), java.util.TimeZone.getDefault().id)))
                     setRemoteAdapter(R.id.widget_tasks, adapter)
                     setEmptyView(R.id.widget_tasks, R.id.widget_tasks_empty)
                     val template = Intent(context, WidgetBoardActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -113,6 +112,12 @@ open class TimerWidget : AppWidgetProvider() {
                 }
                 return views
         }
+        // Android 7 can skip attaching a newly connected adapter when an early
+        // notifyDataSetChanged is pending. A revision/day identity loads a fresh
+        // factory after committed edits and midnight without that notification.
+        internal fun taskAdapterUri(bound: TimerRepository.WidgetSnapshot, id: Int, day: String): Uri = Uri.Builder()
+            .scheme("clockrove").authority("widget").appendPath(id.toString()).appendPath("tasks")
+            .appendPath(bound.configuration.token ?: "picker").appendPath(bound.state.version.toString()).appendPath(day).build()
         internal fun hasTaskRoom(width: Int, height: Int, fontScale: Float): Boolean = width >= 180 && height >= 64 + (120 * fontScale.coerceAtLeast(1f)).toInt()
         internal fun configureIntent(context: Context, id: Int): PendingIntent = PendingIntent.getActivity(context, id,
             Intent(context, WidgetConfigurationActivity::class.java).setData(Uri.parse("clockrove://widget/$id/configure"))

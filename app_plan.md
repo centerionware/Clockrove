@@ -41,54 +41,34 @@ Actions only, and verify migration, large amounts, tiny fractions and conservati
 
 ### Next concrete action
 
-Invoice foundation PR #35 merged as f935485127930ac499f08f01f23b2e59d79627f3 at
-2026-11-12 08:47:27 UTC. Final head eb74c74 passed full Actions 43182854787:
-383 native and 44 actual Android cases (API 24/35), zero failures/errors/skips,
-plus formatting, analysis, Flutter behavior, debug build, actual-document viewer
-and locked release-policy checks. Native/device XML inspected; all six wide and
-12 first/last 1000-digit PDF captures reviewed, along with actual large-price boards,
-explicit-zero job tax and retained invoice. Values wrap without clipping; API-35
-extraction verifies complete repeated monetary values. No VM validation ran.
+Invoice foundation #35 merged f935485 after full Actions 43182854787 (383 native /
+44 actual Android, zero failures/errors/skips), including exact strings/money,
+quantity/unit pricing, tax, coverage and retained invoices. XML and wide/1000-digit
+PDF/UI captures were reviewed. Widget #36 corrected scroll scheduling, but main
+then exposed initial adapter binding. #38 corrected the early-notification race
+with revision/token/local-day adapter identity. Final c1595c7 passed 43195277559:
+385 native / 44 actual Android, zero failures/errors/skips, three resize cycles,
+live edit, exact final-row rendering and real board tap on both APIs. XML/logs and
+widget captures reviewed. Merged 1c358bc at 2026-11-12 10:07:02 UTC; new main
+validation/internal delivery must be verified. Last accepted Play build remains
+internal.22.1 / 216624221 (43160879953). No VM builds/tests ran.
 
-Main validation 43185844256 failed the API-35 existing widget scroll test.
-Focused PR #36 passed 43188818216 (383 native / 44 actual Android, all zero
-failures/errors/skips; both final-row captures reviewed) and merged d4df7bd at
-2026-11-12 09:19:31 UTC. Main validation 43190458383 failed API-24 initial expanded widget task binding;
-PR #38 factory snapshot/disposal hardening and three-cycle resize checks are
-under Actions 43192676395; exact cause still needs device evidence. Internal upload
-for the invoice foundation has not started. Latest verified delivery remains widget internal.22.1 / 216624221
-(43160879953); production readiness remains unset.
+Continue the immediate payment milestone in `.local/invoice-payments`, draft #37.
+Baseline 811fb7d / 43193679201 passed all 414 native cases, formatting, analysis,
+Flutter behavior and debug build; its device stage met the now-fixed old widget
+binding failure. This verifies schema-8 ledger/AR/CC and frozen v5/v7 migration
+baseline. New source adds immutable receipt/correction/balance copies, frozen
+payment-time labels/offsets, separate private document handoff and all-style actual
+receipt/wide-PDF cases. Bring in merged #38, validate the new copy source and review
+its artifacts. Payment bridge/UI and credit-preserving void/replacement remain
+unfinished; do not merge the draft as a completed feature. Subsequent persistence
+uses schema 8 forward from released 7, preserving frozen fixtures and prior money.
 
-Continue the immediate next milestone in `.local/invoice-payments`, branch
-`invoice-payments`, from merged main: native payment/allocation history, partial and
-full balances, immutable updated copies/receipts, company/accounts-receivable CC,
-and atomic unpaid/partial void-and-replace with conserved original payment credit.
-Use the exact monetary contract above and docs/INVOICE_LIFECYCLE_PLAN.md. Schema 7
-is now on main: subsequent financial persistence changes need a forward migration,
-not edits to the released v5/v6 schema or the completed schema-7 installation.
-Verify main/internal delivery alongside independent work on this milestone.
-PaymentMath prepares exact extended-total parsing, balance eligibility and
-cumulative tax allocation/reversal math, with seven focused regression cases.
-Schema-8 native payment/destination/reversal/event storage and serialized commands
-are now prepared, including financial revision retention on job purge and eight
-API-24/35 native ledger cases. A one-time Actions export will freeze the released
-schema-7 fixture before independent forward-migration tests are added. The focused
-widget scroll change from #36 is carried into this draft's validation. All new
-ledger/migration checks require Actions evidence. The optional receivables address, inline draft validation and current-settings
-invoice-email CC precedence/fallback/deduplication are also prepared, with Flutter
-and native intent/bridge checks. Native event snapshots now retain command version
-and ordinal for deterministic ordering despite equal timestamps. Payment UI,
-receipt PDFs and void/replacement are not implemented or accepted by this source
-increment; the new ledger/CC changes still require Actions evidence.
-
-Then follow the ordered plan for quotes, task comments/supplies/actual costs and
-main-menu company reports. Provider settings, encrypted backup/transactional merge,
-physical tracking/recovery and full launch acceptance remain open; this completed
-invoice slice does not satisfy those milestones.
-
-Owner physical feedback remains Pixel 7 / Android 17: main Settings saves without
-crashing after updating to the latest available build at that time. Exact App info
-version was not transcribed. Financial/widget/GPS physical acceptance is separate.
+Then quotes, comments/supplies/actual costs and company reports. Provider settings,
+encrypted backup/transactional merge, physical tracking/recovery and full launch
+acceptance remain open. Owner Pixel 7 / Android 17 main Settings Save confirmation
+is recorded; exact App info version was not transcribed, and financial/widget/GPS
+physical acceptance remains separate.
 
 ## 2. Product decisions
 
@@ -1696,3 +1676,14 @@ partial/paid/balance/correction documents in all three styles, real attachments,
 and 1000-digit receipt balances, with required image/PDF artifacts and exact API-35
 text checks. New source still needs Actions evidence and image review. Payment UI,
 bridge wiring and credit-preserving void/replacement remain outstanding.
+
+### 2026-11-12 widget release hold resolved at PR level
+
+#38 c1595c7 / 43195277559 passed 385 native and 44 actual Android cases with no
+failures/errors/skips. The prior factory-only change reproduced the empty third
+resize even while the factory held 30 rows and the host adapter remained null.
+AOSP Android-7 pre-connection notify path omitted the attachment callback; replacing
+immediate notifications with revision/token/day adapter identity passed all three
+resize cycles, a committed live edit and final-row/real-board checks on both APIs.
+Merged 1c358bc; main and internal upload are separate gates, not yet proven here.
+The payment draft now includes the tested source through a main merge.
