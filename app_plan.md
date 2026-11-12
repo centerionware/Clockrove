@@ -41,7 +41,8 @@ this verifies the reported Save journey, not the full physical acceptance matrix
 Widget PR #33 merged as 8c2f3fd after final head 6cadef0 passed full Actions
 43158333007: 274 native and 40 actual API-24/35 cases with no failures/errors/skips;
 board, scrolling Combined, compact timer and setup captures reviewed on both APIs.
-Main validation 43159664866 and automatic internal delivery are still pending.
+Main validation 43159664866 passed with the same 274 native / 40 actual cases;
+automatic Play internal delivery 43160879953 is running and not yet accepted.
 Real launcher/tracking/recovery evidence, provider settings, encrypted backup/merge
 and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
 
