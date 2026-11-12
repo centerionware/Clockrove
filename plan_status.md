@@ -2932,3 +2932,8 @@ overall 152 passed / one quote-detail offscreen-finder failure / 14 document-onl
 skips. Existing command-identity assertions kept; test now scrolls to and checks
 the enabled issued-document button after retry. Actions formatter patch applied;
 Android build/native/device gates did not run on this failed head.
+
+046fcf6 / 43261516779 passed formatting/analysis/full Flutter behavior and reached
+Android build. Additional hourly allocation/estimate-versus-actual UI regression
+added as source; fresh Actions still required. Native real-journey/PDF gate remains
+unverified until actual emulator execution succeeds.

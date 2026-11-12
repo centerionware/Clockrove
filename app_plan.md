@@ -2312,3 +2312,14 @@ lazy-list document button after its successful retry. Preserve its command count
 identity assertions, scroll back to the document button and assert it is enabled.
 Applied Actions-generated semantic-wrapper formatting. No Android build/device
 result is inferred from this behavior-stage failure. Fresh validation required.
+
+### Hourly UI allocation regression and current behavior proof
+
+046fcf6 / 43261516779 passed clean formatting, analysis and the full Flutter
+behavior gate, including the corrected issued-document readiness check; Android
+build is running. Added a further hourly UI case with coherent estimate/mapping/
+actual-time fixtures: selected finalized time cannot reach calculation without
+explicit quote allocation; reviewed total reflects one actual hour, not the
+1.5-hour estimate, and cancelling creates no command. Estimated-hour display trims
+unused fractional zeros. This additional source needs Actions; no claim of actual
+Android quote journey acceptance is made before its named device case passes.

@@ -689,7 +689,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ),
                 if (data.mode == 'HOURLY') ...[
                   Text(
-                    'Estimated ${money(data.estimatedHours, 4)} hours · Agreed rate ${data.currency} ${money(data.acceptedRate, data.digits)}/hour',
+                    'Estimated ${taskQuantity(data.estimatedHours)} hours · Agreed rate ${data.currency} ${money(data.acceptedRate, data.digits)}/hour',
                   ),
                   Text(
                     'Current rate ${data.currency} ${data.currentRate == null ? 'unset' : money(data.currentRate, data.digits)}/hour',

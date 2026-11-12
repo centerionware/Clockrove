@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, Object?> _issued() => {
+Map<String, Object?> _issued({bool hourly = false}) => {
   'quoteId': 'quote',
   'revision': 1,
   'number': 'Q-1000',
@@ -32,15 +32,15 @@ Map<String, Object?> _issued() => {
           'id': 'tile',
           'title': 'Install tile',
           'detail': '',
-          'kind': 'ITEM',
-          'quantity': '260000',
-          'unitPrice': '1250',
+          'kind': hourly ? 'HOURS' : 'ITEM',
+          'quantity': hourly ? '15000' : '260000',
+          'unitPrice': hourly ? '4000' : '1250',
         },
       ],
     },
-    'total': '349.38',
-    'subtotal': '325.00',
-    'tax': '24.38',
+    'total': hourly ? '64.50' : '349.38',
+    'subtotal': hourly ? '60.00' : '325.00',
+    'tax': hourly ? '4.50' : '24.38',
     'customer': 'Accepted customer',
     'email': 'accepted@example.test',
     'digits': 2,
@@ -48,6 +48,8 @@ Map<String, Object?> _issued() => {
 };
 
 class _Scope extends QuoteScopeApi {
+  _Scope({this.hourly = false});
+  final bool hourly;
   @override
   Future<QuoteScopeData> read(
     String quoteId,
@@ -55,7 +57,7 @@ class _Scope extends QuoteScopeApi {
     String? jobId,
   }) async => QuoteScopeData({
     'version': 7,
-    'issued': _issued(),
+    'issued': _issued(hourly: hourly),
     'latestRevision': 1,
     'linkedLines': ['tile'],
     'bindings': [
@@ -63,7 +65,7 @@ class _Scope extends QuoteScopeApi {
         'lineId': 'tile',
         'jobId': 'job',
         'taskId': 'task',
-        'kind': 'ITEM',
+        'kind': hourly ? 'HOURS' : 'ITEM',
         'originalRevision': 1,
       },
     ],
@@ -71,7 +73,7 @@ class _Scope extends QuoteScopeApi {
       {
         'jobId': 'job',
         'name': 'Synthetic job',
-        'mode': 'TASK',
+        'mode': hourly ? 'HOURLY' : 'TASK',
         'currency': 'USD',
         'archived': false,
       },
@@ -82,17 +84,21 @@ class _Scope extends QuoteScopeApi {
 }
 
 class _Quotes extends QuoteApi {
+  _Quotes({this.hourly = false});
+  final bool hourly;
   @override
   Future<QuoteData> read(String id) async => QuoteData(
     7,
     null,
-    QuoteRevision(_issued()),
+    QuoteRevision(_issued(hourly: hourly)),
     today: '2026-11-12',
     timezone: 'UTC',
   );
 }
 
 class _Invoices extends QuoteInvoiceApi {
+  _Invoices({this.hourly = false});
+  final bool hourly;
   bool failRead = false, claimed = false;
   int reads = 0, calculations = 0, calculationVersion = 7;
   final calls =
@@ -114,9 +120,9 @@ class _Invoices extends QuoteInvoiceApi {
     return QuoteInvoiceContext({
       'version': 7,
       'problem': null,
-      'issued': _issued(),
+      'issued': _issued(hourly: hourly),
       'historical': false,
-      'mode': 'TASK',
+      'mode': hourly ? 'HOURLY' : 'TASK',
       'currency': 'USD',
       'digits': 2,
       'jobName': 'Synthetic job',
@@ -125,9 +131,10 @@ class _Invoices extends QuoteInvoiceApi {
       'currentEmail': 'current@example.test',
       'currentContact': 'Current address',
       'currentTaxUnits': 100000,
-      'currentHourlyMinor': null,
-      'acceptedHourlyMinor': null,
-      'tasks': claimed
+      'currentHourlyMinor': hourly ? '6000' : null,
+      'acceptedHourlyMinor': hourly ? '4000' : null,
+      'estimatedHoursUnits': hourly ? '15000' : '0',
+      'tasks': (claimed || hourly)
           ? <Object?>[]
           : [
               {
@@ -141,7 +148,7 @@ class _Invoices extends QuoteInvoiceApi {
                 'completedLabel': '2026-11-12T12:00:00Z',
               },
             ],
-      'times': <Object?>[],
+      'times': hourly ? [{'sessionId': 'session', 'start': 1794484800000, 'end': 1794488400000, 'durationMillis': '3600000', 'label': 'Finalized synthetic hour'}] : <Object?>[],
       'excluded': <Object?>[],
       'legacy': <Object?>[],
       'unfinalized': <Object?>[],
@@ -157,9 +164,9 @@ class _Invoices extends QuoteInvoiceApi {
     return QuoteInvoiceCalculation({
       'version': calculationVersion,
       'problem': null,
-      'subtotalMinor': '37500',
-      'taxMinor': '2813',
-      'totalMinor': '40313',
+      'subtotalMinor': hourly ? '4000' : '37500',
+      'taxMinor': hourly ? '300' : '2813',
+      'totalMinor': hourly ? '4300' : '40313',
       'taxUnits': 75000,
       'currency': 'USD',
       'digits': 2,
@@ -208,8 +215,8 @@ Future<void> _show(WidgetTester tester, _Invoices api) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        quoteApiProvider.overrideWithValue(_Quotes()),
-        quoteScopeApiProvider.overrideWithValue(_Scope()),
+        quoteApiProvider.overrideWithValue(_Quotes(hourly: api.hourly)),
+        quoteScopeApiProvider.overrideWithValue(_Scope(hourly: api.hourly)),
         quoteInvoiceApiProvider.overrideWithValue(api),
       ],
       child: MaterialApp(
@@ -232,8 +239,9 @@ Future<void> _show(WidgetTester tester, _Invoices api) async {
   );
   await tester.tap(find.text('Open accepted invoice review'));
   await tester.pumpAndSettle();
-  await _reach(tester, find.text('Actual tile installation'));
-  await tester.tap(find.text('Actual tile installation'));
+  final source = api.hourly ? 'Finalized synthetic hour' : 'Actual tile installation';
+  await _reach(tester, find.text(source));
+  await tester.tap(find.text(source));
   await tester.pumpAndSettle();
   await _reach(
     tester,
@@ -363,4 +371,29 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('hourly review requires explicit allocation of finalized time and never uses the estimate as worked time', (tester) async {
+    final api = _Invoices(hourly: true);
+    await _show(tester, api);
+    await _reach(tester, find.text('Review actual-work invoice'));
+    await tester.tap(find.text('Review actual-work invoice'));
+    await tester.pumpAndSettle();
+    expect(api.calculations, 0);
+    expect(api.calls, isEmpty);
+    final allocation = find.text('The selected actual job time belongs to this quote');
+    await _reach(tester, allocation);
+    await tester.tap(allocation);
+    await tester.pumpAndSettle();
+    await _reach(tester, find.text('Review actual-work invoice'));
+    await tester.tap(find.text('Review actual-work invoice'));
+    await tester.pumpAndSettle();
+    expect(find.text('Invoice total USD 43.00'), findsOneWidget);
+    expect(find.text('1h 0m actual finalized work'), findsOneWidget);
+    expect(api.calculations, 1);
+    expect(api.calls, isEmpty);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(api.calls, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
 }
