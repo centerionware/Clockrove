@@ -60,6 +60,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Invoices'), findsOneWidget);
+      await tester.tap(find.byTooltip('Refresh invoices'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(
         find.textContaining('Synthetic removed job · job deleted'),
         findsOneWidget,
@@ -83,6 +86,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(InvoiceScreen), findsOneWidget);
       expect(find.text('Retry PDF preview'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Invoices'), findsOneWidget);
+      expect(find.text('INV-1000'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

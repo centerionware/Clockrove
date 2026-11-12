@@ -2575,3 +2575,11 @@ until the exact target appears, prefer the vertical form over editable scroll
 nodes, and wait for Billing defaults before entry. Preserve strict field/state,
 PDF/attachment and all required capture assertions. This focused test-only fix
 still requires full Actions proof before merge and new internal delivery.
+
+### Invoice navigation follow-up
+
+Source repair pending Actions: invoice history refresh/back navigation must use
+a synchronous setState callback. Actual quote run 43247145880 billing log caught
+the Future-return assertion; strengthened widget navigation test checks refresh
+and return without framework exceptions. #41 remains unmerged pending fresh full
+validation. The emulator also went offline; no successful device result inferred.

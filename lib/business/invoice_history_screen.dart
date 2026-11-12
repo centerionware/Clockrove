@@ -20,7 +20,9 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
   }
 
   late Future<List<PreparedInvoice>> _data = _load();
-  void _refresh() => setState(() => _data = _load());
+  void _refresh() => setState(() {
+    _data = _load();
+  });
   Future<void> _open(PreparedInvoice invoice) async {
     await Navigator.push<void>(
       context,
