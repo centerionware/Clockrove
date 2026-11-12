@@ -2096,3 +2096,10 @@ actual-source selection, accepted/current price/tax/party policies, shared nativ
 claims, retained original-issue provenance and replacement-chain semantics. Its
 acceptance matrix includes real UI/storage/PDF evidence and failure/replay/rollback
 cases. This closes a design ambiguity, not implementation or milestone acceptance.
+
+### Scope first source check correction
+
+43252111565 reached Actions analysis after exporting formatting corrections;
+analyzer required a superclass constructor parameter in QuoteScopeTarget. Applied
+the Actions-generated patch and constructor correction. Behavior/native/device
+gates did not run on that head; the new scope source is not yet validated.

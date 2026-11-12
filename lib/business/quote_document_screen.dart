@@ -83,7 +83,11 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       actions: [
         IconButton(
           tooltip: 'Refresh quote PDF',
-          onPressed: _busy ? null : () => setState(() { _page = _load(0); }),
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                  _page = _load(0);
+                }),
           icon: const Icon(Icons.refresh),
         ),
       ],
@@ -95,7 +99,9 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
           if (snapshot.hasError) {
             return Center(
               child: TextButton(
-                onPressed: () => setState(() { _page = _load(0); }),
+                onPressed: () => setState(() {
+                  _page = _load(0);
+                }),
                 child: const Text('Retry quote PDF'),
               ),
             );
@@ -179,7 +185,9 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     tooltip: 'Previous quote page',
                     onPressed: loading || page.index == 0
                         ? null
-                        : () => setState(() { _page = _load(page.index - 1); }),
+                        : () => setState(() {
+                            _page = _load(page.index - 1);
+                          }),
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Text('Page ${page.index + 1} of ${page.pages}'),
@@ -187,7 +195,9 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     tooltip: 'Next quote page',
                     onPressed: loading || page.index + 1 >= page.pages
                         ? null
-                        : () => setState(() { _page = _load(page.index + 1); }),
+                        : () => setState(() {
+                            _page = _load(page.index + 1);
+                          }),
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],

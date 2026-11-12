@@ -52,7 +52,9 @@ class _QuoteEditorState extends ConsumerState<QuoteEditor> {
         body: Center(
           child: snapshot.hasError
               ? TextButton(
-                  onPressed: () => setState(() { _data = _load(); }),
+                  onPressed: () => setState(() {
+                    _data = _load();
+                  }),
                   child: const Text('Retry quote draft'),
                 )
               : const CircularProgressIndicator(),

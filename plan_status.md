@@ -2839,3 +2839,7 @@ provenance is the next dependency; physical acceptance remains separate.
 Quote actual-work preparation remains open. Its detailed policy and required
 evidence now live in docs/QUOTE_ACTUAL_WORK_PLAN.md, linked from the lifecycle
 plan. Never infer worked hours/completion or a new invoice from planning alone.
+
+Scope 2e10834 / 43252111565 stopped at an analyzer constructor-style lint and
+formatting. Actions source patch and super-parameter correction applied; fresh
+validation required. No behavior/native success inferred from this run.

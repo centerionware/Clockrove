@@ -82,7 +82,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'QUOTE_JOB_REVIEW_REQUIRED' => 'Review the existing job’s customer, tax and hourly rate differences before applying.',
     'QUOTE_SCOPE_ALREADY_MAPPED' || 'QUOTE_TASK_ALREADY_MAPPED' => 'This line or task already belongs to a retained quote plan. Refresh and reuse its existing mapping.',
     'QUOTE_SCOPE_KIND_CHANGED' => 'A retained line cannot change its billing kind. Add a new quote line for the changed scope.',
-    'QUOTE_SCOPE_OPEN_COLUMN_REQUIRED' => 'Add an open board column before creating planning tasks.',
+    'QUOTE_SCOPE_OPEN_COLUMN_REQUIRED' =>
+      'Add an open board column before creating planning tasks.',
     'TASK_UNAVAILABLE' => 'This retained task was removed. Choose existing work or add a new quote line; deleted identities cannot be recreated.',
     'JOB_ID_EXISTS' || 'TASK_ID_EXISTS' => 'This planning identity already exists. Refresh the retained plan before applying.',
     'INVALID_QUOTE' || 'INVALID_QUOTE_LINE' =>

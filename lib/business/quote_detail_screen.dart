@@ -111,8 +111,16 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
   }
 
   Future<void> _scope(QuoteRevision revision) async {
-    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => QuoteScopeScreen(quoteId: revision.id, revision: revision.revision)));
-    if (mounted) { _refresh(); }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            QuoteScopeScreen(quoteId: revision.id, revision: revision.revision),
+      ),
+    );
+    if (mounted) {
+      _refresh();
+    }
   }
 
   void _document(QuoteRevision revision) => Navigator.push<void>(
@@ -311,7 +319,14 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     label: const Text('Open revision PDF'),
                   ),
-                  if (value.decision == 'ACCEPTED') OutlinedButton(onPressed: () { Navigator.pop(context); _scope(value); }, child: const Text('Review accepted revision scope')),
+                  if (value.decision == 'ACCEPTED')
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _scope(value);
+                      },
+                      child: const Text('Review accepted revision scope'),
+                    ),
                 ],
               ),
             );
@@ -406,7 +421,12 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 label: const Text('Open issued quote'),
               ),
-              if (latest.decision == 'ACCEPTED') OutlinedButton.icon(onPressed: _eligible ? () => _scope(latest) : null, icon: const Icon(Icons.playlist_add_check), label: const Text('Plan accepted scope')),
+              if (latest.decision == 'ACCEPTED')
+                OutlinedButton.icon(
+                  onPressed: _eligible ? () => _scope(latest) : null,
+                  icon: const Icon(Icons.playlist_add_check),
+                  label: const Text('Plan accepted scope'),
+                ),
             ],
             const SizedBox(height: 16),
             if (draft != null || latest != null)
@@ -601,8 +621,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return TextButton(
-                      onPressed: () =>
-                          setState(() { _history = _readHistory(); }),
+                      onPressed: () => setState(() {
+                        _history = _readHistory();
+                      }),
                       child: const Text('Retry revision history'),
                     );
                   }
