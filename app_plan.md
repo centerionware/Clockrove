@@ -2024,3 +2024,12 @@ controller values before choosing that summary, preserving the exact money error
 the original assertion is retained. Applied the Actions formatting patch to the
 unchanged editor/test/common command files. Current source also incorporates #40's
 route wait and bounded startup diagnostics without weakening any device gate.
+
+### Quote issue retry card retention
+
+The c604021 Actions regression caught a real unknown-response UI bug: native
+publication inserted an issued summary before the unkeyed issue card, recreating
+its command child and losing the retry. Stable parent-card keys now preserve the
+captured operation across list moves. The response-loss test stays unchanged;
+validate this correction before acceptance. Navigation formatting came from
+Actions artifact 13954368054, not a VM formatter.

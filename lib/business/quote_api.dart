@@ -9,8 +9,12 @@ import 'business_api.dart';
 import 'report_api.dart';
 
 String quoteStatus(String value) => switch (value) {
-  'DRAFT' => 'Draft', 'ISSUED' => 'Issued', 'ACCEPTED' => 'Accepted locally',
-  'DECLINED' => 'Declined locally', 'EXPIRED' => 'Expired', _ => 'Quote',
+  'DRAFT' => 'Draft',
+  'ISSUED' => 'Issued',
+  'ACCEPTED' => 'Accepted locally',
+  'DECLINED' => 'Declined locally',
+  'EXPIRED' => 'Expired',
+  _ => 'Quote',
 };
 
 class QuoteLine {
@@ -111,12 +115,28 @@ class QuoteRevision {
 }
 
 class QuoteData {
-  const QuoteData(this.version, this.draft, this.latest, {this.draftDigits, this.today = '', this.timezone = '', this.draftCustomer = '', this.draftEmail = '', this.draftCompany = '', this.draftStyle = ''});
+  const QuoteData(
+    this.version,
+    this.draft,
+    this.latest, {
+    this.draftDigits,
+    this.today = '',
+    this.timezone = '',
+    this.draftCustomer = '',
+    this.draftEmail = '',
+    this.draftCompany = '',
+    this.draftStyle = '',
+  });
   final int version;
   final QuoteDraft? draft;
   final QuoteRevision? latest;
   final int? draftDigits;
-  final String today, timezone, draftCustomer, draftEmail, draftCompany, draftStyle;
+  final String today,
+      timezone,
+      draftCustomer,
+      draftEmail,
+      draftCompany,
+      draftStyle;
   factory QuoteData.decode(Map<Object?, Object?> value) => QuoteData(
     value['version'] as int,
     value['draftJson'] == null
@@ -127,8 +147,13 @@ class QuoteData {
     value['latest'] == null
         ? null
         : QuoteRevision(value['latest'] as Map<Object?, Object?>),
-    draftDigits: value['draftDigits'] as int?, today: value['today'] as String? ?? '', timezone: value['timezone'] as String? ?? '',
-    draftCustomer: value['draftCustomer'] as String? ?? '', draftEmail: value['draftEmail'] as String? ?? '', draftCompany: value['draftCompany'] as String? ?? '', draftStyle: value['draftStyle'] as String? ?? '',
+    draftDigits: value['draftDigits'] as int?,
+    today: value['today'] as String? ?? '',
+    timezone: value['timezone'] as String? ?? '',
+    draftCustomer: value['draftCustomer'] as String? ?? '',
+    draftEmail: value['draftEmail'] as String? ?? '',
+    draftCompany: value['draftCompany'] as String? ?? '',
+    draftStyle: value['draftStyle'] as String? ?? '',
   );
 }
 
@@ -233,19 +258,24 @@ class QuoteApi {
   static const _channel = MethodChannel('clockrove/business/v1');
   static const _documents = MethodChannel('clockrove/documents/v1');
   Future<int> precision(String currency, {String? quoteId}) async =>
-      (await _channel.invokeMapMethod<Object?, Object?>('currencyPrecision', {'currency': currency, 'quoteId': quoteId}))!['digits'] as int;
+      (await _channel.invokeMapMethod<Object?, Object?>('currencyPrecision', {
+            'currency': currency,
+            'quoteId': quoteId,
+          }))!['digits']
+          as int;
   Future<QuoteData> read(String id) async => QuoteData.decode(
     (await _channel.invokeMapMethod<Object?, Object?>('quoteContext', {
       'quoteId': id,
     }))!,
   );
-  Future<QuotePage> page({QuoteCursor? before, String? status}) async => QuotePage(
-    (await _channel.invokeMapMethod<Object?, Object?>('quotes', {
-      'before': before?.encode(),
-            'status': status,
-      'limit': 20,
-    }))!,
-  );
+  Future<QuotePage> page({QuoteCursor? before, String? status}) async =>
+      QuotePage(
+        (await _channel.invokeMapMethod<Object?, Object?>('quotes', {
+          'before': before?.encode(),
+          'status': status,
+          'limit': 20,
+        }))!,
+      );
   Future<List<QuoteHistoryEntry>> history(String id, {int? before}) async =>
       (await _channel.invokeListMethod<Object?>('quoteHistory', {
         'quoteId': id,

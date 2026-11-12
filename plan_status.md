@@ -2730,3 +2730,15 @@ Current head 658fce0 / 43239688776 bounds startup/wait/property/shutdown probes 
 retains emulator logs; it is live. The quote branch incorporates the same startup
 script and initial payment-form wait. Required device cases and financial assertions
 are unchanged. No new main validation or Play acceptance is claimed.
+
+### Quote issue-response regression caught a moved command card
+
+c604021 / 43241323307 passed analysis. The zero-decimal editor case and explicit
+acceptance case passed; the lost issue-reply case failed because Retry same
+operation disappeared after native version publication. The issued summary inserts
+new list children ahead of the issue card; the unkeyed parent card was recreated,
+disposing its keyed child command state. Source now gives the issue and decision
+cards stable list keys, preserving captured commands when those cards move.
+Retain the full response-loss/version-event assertion; this is an app UI fix,
+not a relaxed test. Applied formatter artifact 13954368054 to all four unchanged
+navigation/API/test files. Full corrected-head Actions validation remains pending.
