@@ -61,7 +61,7 @@ class InvoiceHandoffTest {
         val uri = InvoiceDocuments.uri(context, "invoice")
         assertEquals("application/pdf", provider.getType(uri))
         provider.query(uri, null, null, null, null).use { rows ->
-            assertTrue(rows.moveToFirst()); assertEquals("INV-000001.pdf", rows.getString(rows.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)))
+            assertTrue(rows.moveToFirst()); assertEquals("INV-1000.pdf", rows.getString(rows.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)))
             assertEquals(synthetic.size, rows.getInt(rows.getColumnIndexOrThrow(OpenableColumns.SIZE)))
         }
         ParcelFileDescriptor.AutoCloseInputStream(provider.openFile(uri, "r")).use { assertArrayEquals(synthetic, it.readBytes()) }

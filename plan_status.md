@@ -1660,3 +1660,56 @@ Merged #32 as 863c9a0ce8f508886df7b3b2955d52904b0e8b85. Its main checks and
 subsequent automatic internal delivery are separate and still pending. Full M4
 widget configuration, physical launcher/history/recovery acceptance and the
 remaining provider/backup/launch gates are not complete.
+
+### Priority: owner-reported main Settings save process crash
+
+Owner confirms main Settings Save exits to the Android home screen with an
+"app stopped working" message; job-settings Save does not crash. Paused widget
+implementation. Investigation branch is based on current main, excluding the
+unreleased widget schema. Added an actual Flutter/native-channel/SQLite Android
+settings-save/reopen journey and synthetic-emulator logcat capture to reproduce
+the process failure. No fix or reproduction is claimed before Actions evidence;
+no local builds/tests are permitted or performed.
+
+Source audit found InvoiceEmailTemplate's singleton initializer compiled a regex
+with an unescaped literal right brace. Android libcore explicitly documents that
+its ICU regex backend requires escaping it; JVM/Robolectric accepted the old
+pattern. Main Settings invokes this initializer; job settings do not. Escape the
+brace and add actual Android validation/expansion/native-save coverage, retaining
+the full actual Flutter save/reopen test. The baseline diagnostic run remains
+live to capture the original failure; do not claim device reproduction/fix yet.
+Reference: https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/util/regex/Pattern.java
+
+Owner requires guarded, actionable validation for both email subject and body.
+Replace the platform-sensitive regex entirely with a bounded, nonrecursive
+placeholder scanner. Both fields reject unknown, unfinished, nested or unmatched
+braces, lengths/control characters as appropriate. UI validates both controllers
+even when a field is offscreen, shows inline errors with supported-placeholder
+guidance and blocks save until corrected. Native save returns field-specific
+conflicts without changing settings/version; invoice preparation also rejects
+malformed stored templates before allocating a number. Regression cases cover
+both fields, correction, literal replacement values and native transaction safety.
+
+Baseline 43126720643 did not reach Save: Flutter accessibility descriptions had
+a leading newline and the exact-label harness missed the menu. The retained
+actual tree identified that harness issue; trim the labels and retain the full
+save/reopen gate. Its result is not evidence that the original crash was
+reproduced. Add a safely caught legacy-pattern compilation check on real Android
+to establish the platform mismatch directly. New checks await Actions.
+
+Owner requests the first invoice number 1000. Updated new-database defaults and
+the atomic allocator's legacy floor to produce INV-1000, INV-1001, etc. Higher
+existing sequences continue, and stored invoice records are never renumbered.
+Number/file-name/rollback assertions and a low/high legacy counter regression
+are prepared; validation remains pending alongside the priority crash guard.
+
+Dispatched corrected UI lookup against unfixed app source on branch
+settings-crash-baseline (2cdf329), run 43128896688, to verify the original Android
+process failure independently of the proposed fix. This diagnostic branch is
+not a release candidate and must not be merged. No failure result is assumed.
+
+Extended the actual Android template case through native manual-work creation
+and invoice preparation: require INV-1000, the expanded subject and the real
+hourly total in the email body on both APIs. This closes the prior gap where
+actual PDF renderer cases used prebuilt snapshots without exercising native
+template expansion/allocation. The final source still needs its exact-head run.

@@ -95,6 +95,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
     'CUSTOMER_ARCHIVED' =>
       'Choose an active customer or unarchive this customer first.',
+    'INVALID_EMAIL_SUBJECT' => 'The email subject template is invalid. Open Settings and correct its placeholders or line breaks.',
+    'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',

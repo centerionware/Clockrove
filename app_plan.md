@@ -1324,3 +1324,22 @@ Pending BusinessCommand controls survive eviction from lazy lists and retry
 their original captured intent; the unchanged lost-response/scroll regression
 passes. Merged as 863c9a0; main validation and its internal upload remain pending.
 M4 widget configuration and physical manual/recovery acceptance are still open.
+
+### Priority interruption: main Settings Save crash
+
+Owner reports an Android process crash saving main Settings, while job settings
+save normally. Prioritize reproduction/fix ahead of widget UI. Actual Flutter +
+native channel + SQLite save/reopen instrumentation and synthetic logcat capture
+are prepared for Actions, without assuming a cause from mocked form tests.
+
+Email subject and body templates must both be validated safely, with field-level
+feedback and correction guidance. Invalid placeholders/lengths/control characters
+never bypass the native transaction guard. Use a bounded literal scanner rather
+than user-driven regex initialization, and refuse malformed stored templates
+before invoice-number allocation. Validation/reproduction evidence is pending
+in the priority settings-crash branch; see plan_status.md.
+
+Owner refinement: new invoice numbering starts at 1000 (INV-1000) and advances
+automatically. Existing prepared invoices keep their numbers/content. Older
+unconsumed counters below 1000 use a floor at allocation; higher counters never
+reset. Invalid template validation must not consume or advance the sequence.
