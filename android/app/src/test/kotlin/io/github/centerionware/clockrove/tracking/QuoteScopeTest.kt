@@ -96,6 +96,78 @@ class QuoteScopeTest {
         assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims"))
         assertEquals("existing-task", repository.quoteScope("quote").second.single().taskId)
     }
+    private fun actualRequest() = QuoteInvoiceReviewStore.Request("quote", 1, ReportStore.Selection("2026-01-01", "2026-12-31", "UTC", listOf("scope-job")))
+    private fun actualChoices(tasks: List<String> = emptyList(), times: List<QuoteInvoiceReviewStore.Time> = emptyList()) =
+        QuoteInvoiceReviewStore.Choices(tasks, times, note = "Explicit review of actual performed scope", confirmed = true)
+    @Test fun quoteInvoiceReviewUsesActualCompletedQuantityAndAcceptedPriceWithoutMutatingWork() {
+        quote(); assertNull(repository.applyQuoteScope("scope", version, scope()).conflict)
+        val request = actualRequest()
+        assertTrue(repository.quoteActualReview(request).result.context!!.tasks.isEmpty())
+        assertEquals("NO_BILLABLE_ITEMS", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices()).problem })
+        val board = repository.boardSnapshot("scope-job").board
+        val done = board.columns.single { it.completed }.id
+        assertNull(repository.saveCard("complete", version, BoardStore.Draft("scope-task", "scope-job", done, "Actually installed tile", priceMinor = BigInteger("999"), currency = "USD", quantityUnits = 300000)).conflict)
+        assertNull(repository.saveCard("unrelated", version, BoardStore.Draft("unmapped-task", "scope-job", done, "Unmapped extra work", priceMinor = BigInteger("999999"), currency = "USD")).conflict)
+        assertNull(repository.saveJobSettings("tax", version, repository.jobDetail("scope-job").job.settings.copy(taxUnits = 100000)).conflict)
+        val before = repository.boardSnapshot("scope-job"); val beforeVersion = version
+        val available = repository.quoteActualReview(request).result.context!!
+        assertEquals(listOf("scope-task"), available.tasks.map { it.actual.id })
+        assertEquals(BigInteger("29970"), available.coverage.report.totals.single().amountMinor)
+        val accepted = inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task"))) }
+        assertNull(accepted.problem)
+        assertEquals(BigInteger("37500"), accepted.value!!.report.totals.single().amountMinor)
+        assertEquals(75000, accepted.value!!.taxUnits)
+        assertEquals("260000", accepted.value!!.context.tasks.single().accepted.quantity)
+        val current = inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task")).copy(currentPrices = true, currentTax = true, currentParty = true)) }
+        assertNull(current.problem); assertEquals(BigInteger("29970"), current.value!!.report.totals.single().amountMinor)
+        assertEquals(100000, current.value!!.taxUnits); assertFalse(current.value!!.acceptedParty)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("unmapped-task"))).problem })
+        assertEquals(before, repository.boardSnapshot("scope-job")); assertEquals(beforeVersion, version)
+        assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims"))
+        assertNull(repository.prepareInvoice("ordinary-bill", version, "ordinary", request.selection).conflict)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task"))).problem })
+    }
+    @Test fun quoteInvoiceHourlyReviewRequiresRealExactUnclaimedIntervalsAndKeepsWideAgreedRate() {
+        val wide = "9".repeat(1000)
+        quote(lines = listOf(QuoteStore.Line("hours", "Estimated work", "", "HOURS", "15000", wide)))
+        assertNull(repository.applyQuoteScope("scope", version, scope().copy(items = listOf(QuoteScopeStore.Item("hours", "scope-task", "Planning checklist")))).conflict)
+        val request = actualRequest()
+        assertEquals("NO_BILLABLE_ITEMS", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices()).problem })
+        assertNull(repository.createManualSession("actual-work", version, SessionHistoryStore.Draft("session", "scope-job", at - 3600000, at, "UTC", 0)).conflict)
+        val available = repository.quoteActualReview(request).result.context!!
+        val times = available.coverage.report.intervals.map { QuoteInvoiceReviewStore.Time(it.sessionId, it.start, it.end) }
+        val review = inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(times = times)) }
+        assertNull(review.problem); assertEquals(BigInteger(wide), review.value!!.report.totals.single().amountMinor)
+        assertEquals(BigInteger("3600000"), review.value!!.report.totals.single().durationMillis)
+        val forged = times.toMutableList(); forged[0] = forged[0].copy(end = forged[0].end + 1)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(times = forged)).problem })
+        assertEquals("INVALID_QUOTE_INVOICE", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(times = times + times)).problem })
+        assertEquals(1, count("sessions")); assertNull(repository.boardSnapshot("scope-job").board.cards.single().completedMillis)
+        assertEquals(0, count("invoices")); assertEquals(0, count("invoice_time_claims"))
+        assertNull(repository.prepareInvoice("ordinary-bill", version, "ordinary", request.selection).conflict)
+        assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(times = times)).problem })
+    }
+    @Test fun quoteInvoiceReviewRequiresRevisionLinksAndExplicitHistoricalReviewAndRetainsArchivedRead() {
+        quote(); assertNull(repository.applyQuoteScope("scope", version, scope()).conflict)
+        val request = actualRequest()
+        val revised = QuoteStore.Draft("quote", null, null, "Revised agreement", "USD", 100000,
+            listOf(QuoteStore.Line("tile", "Tile", "", "ITEM", "280000", "1500")))
+        assertNull(repository.saveQuote("revise", version, revised).conflict)
+        assertNull(repository.issueQuote("issue-two", version, "quote", true).conflict)
+        assertEquals("QUOTE_ACCEPTANCE_REQUIRED", repository.quoteActualReview(request.copy(revision = 2)).result.problem)
+        assertNull(repository.decideQuote("accept-two", version, "quote", 2, "ACCEPTED", "Explicit synthetic revised acceptance", true).conflict)
+        assertEquals("QUOTE_INVOICE_MAPPING_REQUIRED", repository.quoteActualReview(request.copy(revision = 2)).result.problem)
+        assertEquals("QUOTE_HISTORICAL_REVIEW_REQUIRED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices()).problem })
+        assertEquals("NO_BILLABLE_ITEMS", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices().copy(historicalReviewed = true)).problem })
+        assertNull(repository.applyQuoteScope("link-two", version, scope().copy(revision = 2, newJobName = null, jobDifferencesReviewed = true)).conflict)
+        assertNull(repository.quoteActualReview(request.copy(revision = 2)).result.problem)
+        assertNull(repository.archiveJob("archive", version, "scope-job").conflict)
+        assertTrue(repository.quoteActualReview(request.copy(revision = 2)).result.context!!.job.archived)
+        at += 31L * 86400000
+        assertNull(repository.deleteJob("purge", version, "scope-job").conflict)
+        assertEquals("JOB_UNAVAILABLE", repository.quoteActualReview(request.copy(revision = 2)).result.problem)
+        assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims"))
+    }
     @Test fun interruptedMappingRollsBackJobTasksTemplatesMoneyAncestryAndCommand() {
         quote(); val before = version
         val revisions = count("entity_revisions")

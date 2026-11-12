@@ -2103,3 +2103,22 @@ cases. This closes a design ambiguity, not implementation or milestone acceptanc
 analyzer required a superclass constructor parameter in QuoteScopeTarget. Applied
 the Actions-generated patch and constructor correction. Behavior/native/device
 gates did not run on that head; the new scope source is not yet validated.
+
+### Native actual-work quote review calculation (source)
+
+QuoteInvoiceReviewStore reads accepted revision-linked mappings, compatible job
+settings and the existing InvoiceCoverageStore preview. Its read-only review
+selects exact completed task IDs or available finalized session slices, excludes
+unmapped/incomplete/claimed work, and calculates actual quantities/duration using
+accepted or explicitly chosen current prices/tax. Accepted-price billing remains
+available when current prices are absent. Historical review, duplicate/forged
+sources and cross-kind choices are rejected; no invoice, claim or work mutation
+is exposed yet. Current preview totals are recomputed for eligible mapped work,
+not copied from unrelated job tasks. Added native source tests for actual-versus-
+estimated quantities, 1000-digit hourly rates, ordinary-invoice exclusions,
+revision linkage, historical acknowledgement, archive and deletion behavior.
+
+Actions 43252783507 passed formatting, analysis and Flutter behavior gates for
+202ceb1 (including scope review/cancel/unknown-reply/failed-refresh tests) and is
+building Android. The new native review source is newer and still needs Actions;
+this is not completed quote invoice preparation/provenance or milestone acceptance.

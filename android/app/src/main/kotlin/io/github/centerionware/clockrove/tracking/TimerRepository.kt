@@ -550,6 +550,10 @@ class TimerRepository internal constructor(context: Context,
         return QuoteScopeContext(readSnapshot(db).version, issued, requireNotNull(QuoteStore.latest(db, id)).revision,
             QuoteScopeStore.bindings(db, id), linked, jobs, board?.let { BusinessStore.job(db, it.jobId) }, board, owners)
     }
+    internal data class QuoteActualReview(val version: Long, val result: QuoteInvoiceReviewStore.Read)
+    @Synchronized
+    internal fun quoteActualReview(request: QuoteInvoiceReviewStore.Request): QuoteActualReview =
+        QuoteActualReview(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.read(helper.readableDatabase, request))
     @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }

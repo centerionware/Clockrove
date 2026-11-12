@@ -2843,3 +2843,9 @@ plan. Never infer worked hours/completion or a new invoice from planning alone.
 Scope 2e10834 / 43252111565 stopped at an analyzer constructor-style lint and
 formatting. Actions source patch and super-parameter correction applied; fresh
 validation required. No behavior/native success inferred from this run.
+
+Actual-work review core: read-only native source and tests added; no preparation
+command/UI/provenance write yet. Exact task/session selection and accepted/current
+price/tax calculations must pass fresh Actions before integration. Scope head
+202ceb1 / 43252783507 passed Flutter formatting/analysis/behavior and reached
+Android build; native/device outcomes remain pending.
