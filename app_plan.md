@@ -149,6 +149,20 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Next task immediately after the current widget merge: explicitly mark an invoice
   paid and show its payment status. Persist this through the native serialized,
   versioned command boundary; retain durable revision history and idempotent retries.
+- Prevent duplicate billing at native invoice preparation, for unpaid and paid
+  invoices alike. Atomically claim task IDs and the exact half-open UTC portions
+  of hourly work included in each invoice. Overlapping date selections, changed
+  report timezones, concurrent preparations, retries, or subsequent job/work edits
+  must not charge the same work twice. Bill only unclaimed work; explain exclusions
+  and link to its existing invoice. No remaining billable work must consume no
+  invoice number and create no extra invoice.
+- Claims remain attached to the original invoice when it is marked paid or shared
+  again. A receipt references the same claims and never creates new charges.
+  Changes/removal of work or invoice display must not silently release claims.
+  Migrate existing invoice coverage safely; where old snapshots lack stable source
+  identity, require explicit reconciliation rather than guess or permit duplicate
+  billing. Include concurrent/overlapping-range, partial-interval, paid/unpaid,
+  retry, edited-source and legacy-migration cases in acceptance tests.
 - Generate a receipt from that invoice with a clear PAID marking and payment date.
   Preserve the original invoice number, line items, totals and immutable prepared
   document; a receipt must not allocate a second invoice number or silently alter
@@ -1461,3 +1475,12 @@ accessibility null-parent abort. Move the real AppWidgetHost into a native debug
 activity so Flutter lifecycle is preserved; this test activity is absent from
 release builds. Keep the actual service/collection/board/setup checks and strict
 zero-failure gates. This failed emulator run is not widget acceptance.
+
+### Owner clarification: invoice coverage is exclusive
+
+Work already assigned to any invoice for the same job must be excluded from new
+invoices, especially after payment. Current preparation snapshots report data
+without a source-coverage ledger, so this remains explicit next-task work rather
+than an existing guarantee. Implement native transactional task/interval claims,
+legacy reconciliation, transparent exclusions and tests alongside paid receipts.
+The original invoice is reused for resends and receipt generation.

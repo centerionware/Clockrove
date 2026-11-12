@@ -35,7 +35,7 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: paid invoices, receipts and accounting CC | Planned; owner-prioritized next task | Mark invoices paid through native versioned commands; derive PAID receipts without changing original invoice/number; default-email PDF drafts CC optional accounts-receivable email, otherwise company primary email; settings validation, migrations, retry, PDF and intent evidence required |
+| Next after widget merge: paid invoices, receipts and accounting CC | Planned; owner-prioritized next task | Prevent duplicate task/hourly billing with transactional source-coverage claims and safe legacy reconciliation; mark invoices paid through native versioned commands; derive PAID receipts without changing original invoice/number; default-email PDF drafts CC optional accounts-receivable email, otherwise company primary email; settings validation, migrations, retry, PDF and intent evidence required |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
@@ -1816,3 +1816,10 @@ API-24 Settings save passed; the test host incorrectly replaced a live Flutter
 view and caused a native accessibility abort. Replace the test host with a native
 debug-only Activity and retain the actual collection/setup/board gates. No local
 build/test and no new widget publication occurred.
+
+Owner clarification: exclude previously invoiced work from subsequent invoices
+for that job, whether the first invoice is unpaid or paid. Current InvoiceStore
+does not yet keep source claims; this is planned work after the widget merge.
+Cover overlapping dates/timezones, concurrent preparation, task IDs, partial UTC
+intervals, edits, response-loss retries, empty billable remainder and safe legacy
+invoice reconciliation. Payment/receipt/resend must retain original coverage.
