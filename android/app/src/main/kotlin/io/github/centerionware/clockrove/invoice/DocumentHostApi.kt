@@ -37,7 +37,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     "invoicePreview" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
-                        result.success(InvoiceDocuments.preview(activity, InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId")), index))
+                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(repository, record)))
                     }
                     "saveReport" -> {
                         val selection = io.github.centerionware.clockrove.tracking.ReportStore.Selection(requireNotNull(call.argument<String>("firstDate")), requireNotNull(call.argument<String>("lastDate")), requireNotNull(call.argument<String>("timezone")), requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) })
@@ -77,7 +78,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     "emailInvoice", "shareInvoice" -> {
                         val id = requireNotNull(call.argument<String>("invoiceId"))
                         val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
-                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings) else Intent.createChooser(InvoiceDocuments.share(activity, record), "Share invoice")
+                        val notice = InvoiceDocuments.historicalNotice(repository, record)
+                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), "Share invoice")
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }

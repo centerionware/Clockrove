@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
+import 'invoice_lifecycle_editor.dart';
 import 'legacy_invoice_screen.dart';
 import 'payment_api.dart';
 import 'payment_editor.dart';
@@ -54,12 +55,12 @@ class _InvoiceDetail extends ConsumerStatefulWidget {
 class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
   String? _copyToken;
   bool _pendingCopy = false;
-  Future<void> _open([String? copyId, bool compose = false]) async {
+  Future<void> _open([String? copyId, bool compose = false, String? ownerInvoiceId]) async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
         builder: (_) => InvoiceScreen(
-          invoiceId: widget.data.invoiceId,
+          invoiceId: ownerInvoiceId ?? widget.data.invoiceId,
           copyId: copyId,
           composeOnOpen: compose,
         ),
@@ -84,6 +85,23 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
     if (copy != null) await _open(copy);
   }
 
+  Future<void> _correction(bool replace) async {
+    final id = widget.data.invoiceId;
+    final result = await Navigator.push<InvoiceLifecycleResult>(context,
+      MaterialPageRoute<InvoiceLifecycleResult>(builder: (_) => InvoiceLifecycleEditor(invoiceId: id, replace: replace)));
+    if (!mounted || result == null) return;
+    ref.invalidate(invoicePaymentsProvider(id));
+    if (result.replacementId != null) {
+      await _related(result.replacementId!);
+    } else {
+      await _open('void-$id');
+    }
+  }
+  Future<void> _related(String id) async {
+    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => InvoiceDetailScreen(invoiceId: id)));
+    if (mounted) ref.invalidate(invoicePaymentsProvider(widget.data.invoiceId));
+  }
+
   Widget _amount(String title, String minor, {bool prominent = false}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
@@ -105,6 +123,8 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
   Widget build(BuildContext context) {
     final data = widget.data;
     final eligible = !_pendingCopy && !widget.refreshFailed;
+    final voided = data.status == 'VOID';
+    final correctable = !voided && (data.due != '0' || data.total == '0');
     return PopScope(
       canPop: !_pendingCopy,
       child: Scaffold(
@@ -141,7 +161,10 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _amount('Invoice total', data.total),
-                    _amount('Paid to date', data.paid),
+                    if (data.cancellation == null) _amount('Paid to date', data.paid) else ...[
+                      _amount('Credit transferred', data.cancellation!.credit),
+                      _amount('Cancelled unpaid balance', data.cancellation!.cancelled),
+                    ],
                     _amount('Balance due', data.due, prominent: true),
                     if (data.collectedTax != null)
                       Text(
@@ -153,7 +176,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               ),
             ),
             const SizedBox(height: 16),
-            if (data.due != '0')
+            if (!voided && data.due != '0')
               Wrap(
                 spacing: 12,
                 runSpacing: 8,
@@ -174,7 +197,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             BusinessCommand(
               key: const ValueKey('invoice-balance-copy-command'),
               label: 'Send latest copy',
-              enabled: eligible,
+              enabled: eligible && !voided,
               onPendingChanged: (value) {
                 if (mounted) setState(() => _pendingCopy = value);
               },
@@ -193,9 +216,17 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               },
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Prepare the current balance and open an email draft with its PDF attached.',
-            ),
+            Text(voided ? 'This invoice is void. No payment is due on it.' : 'Prepare the current balance and open an email draft with its PDF attached.'),
+            if (voided) ...[
+              OutlinedButton.icon(onPressed: eligible ? () => _open('void-${data.invoiceId}', true) : null, icon: const Icon(Icons.description_outlined), label: const Text('Email cancellation copy')),
+              if (data.cancellation?.replacementId != null) TextButton(onPressed: eligible ? () => _related(data.cancellation!.replacementId!) : null, child: const Text('Open replacement invoice')),
+              if (data.cancellation != null) ExpansionTile(title: const Text('Cancellation history'), children: [Text(data.cancellation!.createdLabel), Text('Internal reason: ${data.cancellation!.reason}')]),
+            ],
+            if (data.replacesInvoiceId != null) TextButton(onPressed: eligible ? () => _related(data.replacesInvoiceId!) : null, child: const Text('Open original invoice')),
+            if (correctable) ExpansionTile(title: const Text('Correct this invoice'), children: [
+              if (data.paid == '0') TextButton.icon(onPressed: eligible ? () => _correction(false) : null, style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), icon: const Icon(Icons.block_outlined), label: const Text('Void unpaid invoice')),
+              TextButton.icon(onPressed: eligible ? () => _correction(true) : null, icon: const Icon(Icons.edit_outlined), label: const Text('Void & replace')),
+            ]),
             TextButton.icon(
               onPressed: eligible ? () => _open() : null,
               icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -286,11 +317,13 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         children: [
                           TextButton(
                             onPressed: eligible
-                                ? () => _open('receipt-${payment.id}')
+                                ? () => _open('receipt-${payment.id}', false, payment.originalInvoiceId)
                                 : null,
                             child: const Text('Open receipt'),
                           ),
-                          if (payment.reversalId == null)
+                          if (payment.allocatedInvoiceId != data.invoiceId)
+                            TextButton(onPressed: eligible ? () => _related(payment.allocatedInvoiceId) : null, child: const Text('Open current invoice')),
+                          if (!voided && payment.reversalId == null && payment.allocatedInvoiceId == data.invoiceId)
                             TextButton(
                               onPressed: eligible
                                   ? () => _payment(reversal: payment)
@@ -317,10 +350,11 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 title: Text(switch (copy.kind) {
                   'RECEIPT' => 'Payment receipt',
                   'CORRECTION' => 'Payment correction',
+                  'VOID' => 'Cancellation copy',
                   _ => 'Balance copy',
                 }),
                 subtitle: Text(
-                  '${copy.createdLabel}\nPaid ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
+                  '${copy.createdLabel}\n${copy.kind == 'VOID' ? 'Credit transferred' : 'Paid'} ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: eligible ? () => _open(copy.id) : null,

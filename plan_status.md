@@ -2422,3 +2422,31 @@ coverage/legacy/retained history and bridge baseline. Real Android stage remains
 live. Subsequent 7d84a5b adds the single ordinary due-field guard and all-style
 actual lifecycle PDFs; those additions do not inherit acceptance from this older
 head. Lifecycle editor/relationships and complete physical acceptance remain open.
+
+### Lifecycle editor and actual UI checkpoint
+
+Previous goal turn made concrete progress: native cancellation/replacement and
+strict bridging were committed, 476 native XML results inspected, and current
+source/remaining acceptance recorded. No milestone was marked complete.
+40259d7 / 43211073661 completed 48 actual Android executions: API 24 all 24
+passed; API 35 original/billing/copies passed but the payment UI missed Partially
+paid after Back (47 pass / 1 fail total, no errors/skips). Actual screenshot shows
+correct 30.00 paid / 77.50 due, with the status above the viewport. The test now
+waits for the actual invoice-detail route before scrolling, preserving all balance/
+status assertions. Short-copy one-page gates passed on both APIs. New baseline
+ad3f06b / 43212272285 passed 477 native cases (42 XML files inspected, zero
+failures/errors/skips); extended actual document/UI validation remains separate.
+
+Prepared lifecycle UI now edits frozen descriptions/quantity/unit price or flat
+amounts, previews exact subtotal/tax/credit/due, adds actual unbilled report work,
+explicitly reviews source releases and requires a red confirmation before native
+commit. Cancellation/Back writes nothing. Live version changes keep the draft but
+require reviewed refresh; unknown replies retain the same immutable command across
+a VOID transition. Invoice details link predecessor/successor, route receipts to
+the original invoice and corrections to their current allocation, and expose VOID
+credit/cancelled amounts without collection actions. Historical view/email/share
+adds a current VOID warning without rewriting old PDF bytes or printing private
+reasons. Added presentation/math/immutable-retry and native handoff regressions;
+actual PDF checks also verify historical attachment retention. This new UI/handoff
+source requires fresh Actions formatting/analysis/tests/build/device proof and
+visual review. Complete payment milestone remains draft #37.

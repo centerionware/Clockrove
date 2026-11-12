@@ -119,6 +119,22 @@ class InvoiceLifecycleTest {
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }
     }
+    @Test fun historicalEmailAndShareWarnAboutVoidWithoutRewritingOriginalOrLeakingPrivateReason() {
+        payment()
+        val original = repository.invoice("invoice")
+        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, original))
+        assertNull(repository.replaceInvoice("replace", version, replacement()).conflict)
+        val notice = requireNotNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, original))
+        assertTrue(notice.contains("INV-1000 is VOID")); assertTrue(notice.contains("INV-1001")); assertTrue(notice.contains("Do not pay"))
+        val mail = io.github.centerionware.clockrove.invoice.InvoiceDocuments.email(app, original, repository.businessSnapshot().settings, notice)
+        assertTrue(mail.getStringExtra(android.content.Intent.EXTRA_SUBJECT)!!.startsWith("Historical copy"))
+        assertTrue(mail.getStringExtra(android.content.Intent.EXTRA_TEXT)!!.startsWith(notice))
+        assertFalse(mail.getStringExtra(android.content.Intent.EXTRA_TEXT)!!.contains("Synthetic price correction"))
+        val share = io.github.centerionware.clockrove.invoice.InvoiceDocuments.share(app, original, notice)
+        assertEquals(notice, share.getStringExtra(android.content.Intent.EXTRA_TEXT))
+        assertEquals(original.payload, repository.invoice("invoice").payload)
+        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, repository.invoiceCopy("void-invoice")))
+    }
     @Test fun replacementChainsAndCorrectionsKeepOriginalReceiptAndCurrentCredit() {
         payment()
         val receipt = repository.invoiceCopy("receipt-payment").payload
@@ -291,6 +307,7 @@ class InvoiceLifecycleTest {
         assertEquals(2, draft.lines.size)
         assertEquals("INVALID_REPLACEMENT_LINES", repository.replaceInvoice("fabricated-time", version, draft.copy(lines = draft.lines.map { if (it.sourceIndex == 1) it.copy(amountMinor = "100") else it })).conflict)
         assertNull(repository.replaceInvoice("replace-hourly", version, draft).conflict)
+        assertTrue(ledger("new-hourly").document.lines.first().detail.startsWith("Adjusted amount. Original basis:"))
         val claims = inspect { InvoiceLifecycleStore.claims(it, "new-hourly") }
         assertEquals(1, claims.size); assertEquals(at - 3600000, claims.single().start); assertEquals(at, claims.single().end)
         assertTrue(repository.invoiceBillingPreview(report).preview.report.intervals.isEmpty())

@@ -528,6 +528,14 @@ class TimerRepository internal constructor(context: Context,
             company.receivablesEmail.ifEmpty { company.companyEmail }, legacy, deleted, ledger, InvoiceCopyStore.list(db, invoiceId),
             InvoiceLifecycleStore.voidInfo(db, invoiceId), db.rawQuery("SELECT invoice_id FROM invoice_voids WHERE replacement_id=?", arrayOf(invoiceId)).use { if (it.moveToFirst()) it.getString(0) else null })
     }
+    internal data class InvoiceVoidContext(val info: InvoiceLifecycleStore.VoidInfo, val replacementNumber: String?)
+    @Synchronized
+    internal fun invoiceVoidContext(invoiceId: String): InvoiceVoidContext? {
+        val db = helper.readableDatabase
+        val info = InvoiceLifecycleStore.voidInfo(db, invoiceId) ?: return null
+        val number = info.replacementId?.let { id -> db.rawQuery("SELECT number FROM invoices WHERE id=?", arrayOf(id)).use { check(it.moveToFirst()); it.getString(0) } }
+        return InvoiceVoidContext(info, number)
+    }
     internal data class InvoiceLifecycleContext(val payment: InvoicePaymentContext, val claims: List<InvoiceLifecycleStore.Claim>)
     @Synchronized
     internal fun invoiceLifecycleContext(invoiceId: String): InvoiceLifecycleContext =

@@ -223,7 +223,7 @@ class InvoicePaymentDeviceTest {
             assertArrayEquals(arrayOf("accounts@example.test"), mail.getStringArrayExtra(Intent.EXTRA_CC))
             app.contentResolver.openInputStream(InvoiceDocuments.uri(app, partial))!!.use { assertArrayEquals(partial.pdf, it.readBytes()) }
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            scrollToStart(); waitFor("Partially paid"); capture("partial-balance")
+            waitFor("Refresh invoice details"); scrollToStart(); waitFor("Partially paid"); capture("partial-balance")
             reveal("Mark paid"); click("Mark paid")
             assertEquals("77.50", waitFor("Payment amount (USD)", true).text.toString())
             reveal("Confirm payment"); click("Confirm payment")
@@ -234,7 +234,7 @@ class InvoicePaymentDeviceTest {
             assertEquals("PAID", InvoiceStore.Snapshot.decode(paid.payload).statement!!.status)
             assertEquals("0.00", InvoiceStore.Snapshot.decode(paid.payload).statement!!.due)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            scrollToStart(); waitFor("Paid"); reveal("Correct payment"); click("Correct payment")
+            waitFor("Refresh invoice details"); scrollToStart(); waitFor("Paid"); reveal("Correct payment"); click("Correct payment")
             waitFor("Reverse the recorded payment of USD 30.00.")
             enter("Reason for correction", "Corrected duplicate transfer entry")
             reveal("Confirm reversal"); click("Confirm reversal")

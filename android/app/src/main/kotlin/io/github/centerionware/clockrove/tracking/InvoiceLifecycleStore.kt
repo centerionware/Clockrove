@@ -28,7 +28,7 @@ internal object InvoiceLifecycleStore {
             })
     }
     data class Claim(val id: String, val taskId: String? = null, val sessionId: String? = null,
-        val start: Long? = null, val end: Long? = null, val timezone: String? = null)
+        val start: Long? = null, val end: Long? = null, val timezone: String? = null, val label: String = "")
 
     private fun amountColumn(name: String) = "$name TEXT NOT NULL CHECK(typeof($name)='text' AND length($name) BETWEEN 1 AND ${PaymentMath.maxDigits} AND ($name='0' OR (substr($name,1,1) BETWEEN '1' AND '9' AND $name NOT GLOB '*[^0-9]*')))"
     fun install(db: SQLiteDatabase) {
@@ -40,8 +40,8 @@ internal object InvoiceLifecycleStore {
         if (!it.moveToFirst()) null else VoidInfo(if (it.isNull(0)) null else it.getString(0), it.getString(1), it.getString(2), it.getLong(3), it.getString(4), it.getString(5))
     }
     fun claims(db: SQLiteDatabase, invoiceId: String): List<Claim> = buildList {
-        db.rawQuery("SELECT id,task_id FROM invoice_task_claims WHERE invoice_id=? AND released_ms IS NULL ORDER BY id", arrayOf(invoiceId)).use {
-            while (it.moveToNext()) add(Claim(it.getString(0), taskId = it.getString(1)))
+        db.rawQuery("SELECT c.id,c.task_id,t.title FROM invoice_task_claims c LEFT JOIN kanban_cards t ON t.id=c.task_id AND t.job_id=c.job_id WHERE c.invoice_id=? AND c.released_ms IS NULL ORDER BY c.id", arrayOf(invoiceId)).use {
+            while (it.moveToNext()) add(Claim(it.getString(0), taskId = it.getString(1), label = (if (it.isNull(2)) "Unavailable task" else it.getString(2)) + " · " + it.getString(1)))
         }
         db.rawQuery("SELECT id,session_id,start_ms,end_ms,timezone FROM invoice_time_claims WHERE invoice_id=? AND released_ms IS NULL ORDER BY start_ms,id", arrayOf(invoiceId)).use {
             while (it.moveToNext()) add(Claim(it.getString(0), sessionId = it.getString(1), start = it.getLong(2), end = it.getLong(3), timezone = it.getString(4)))
@@ -96,6 +96,9 @@ internal object InvoiceLifecycleStore {
                 // Price/quantity captions are derived, never stale text from the predecessor.
                 detail = "${TaskQuantityStore.format(quantity)} × ${InvoiceStore.amount(price, source.digits)} ${source.currency} each" +
                     line.detail.substringAfter('\n', "").let { if (it.isBlank()) "" else "\n$it" }
+            }
+            if (line.quantityUnits == null && amount != null && detail == old.detail && amount != PaymentMath.parseMajor(old.amount, source.digits)) {
+                detail = "Adjusted amount. Original basis:\n$detail"
             }
             edited.add(InvoiceStore.Line(line.title, detail, amount?.let { InvoiceStore.amount(it, source.digits) }.orEmpty(), line.quantityUnits, line.unitPriceMinor))
         }

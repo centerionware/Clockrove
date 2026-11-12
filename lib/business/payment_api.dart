@@ -18,6 +18,7 @@ class InvoicePayment {
     required this.reference,
     required this.note,
     required this.recorded,
+    this.currentInvoiceId,
     this.reversalId,
     this.reversalNote,
   });
@@ -31,10 +32,12 @@ class InvoicePayment {
       reference,
       note;
   final int received, offsetSeconds, recorded;
-  final String? reversalId, reversalNote;
+  final String? reversalId, reversalNote, currentInvoiceId;
+  String get allocatedInvoiceId => currentInvoiceId ?? originalInvoiceId;
   factory InvoicePayment.decode(Map<Object?, Object?> v) => InvoicePayment(
     id: v['id'] as String,
     originalInvoiceId: v['originalInvoiceId'] as String,
+    currentInvoiceId: v['currentInvoiceId'] as String?,
     amount: v['amountMinor'] as String,
     currency: v['currency'] as String,
     received: v['received'] as int,
@@ -59,6 +62,17 @@ class InvoiceCopy {
     v['createdLabel'] as String,
     v['paidMinor'] as String,
     v['dueMinor'] as String,
+  );
+}
+
+class InvoiceCancellation {
+  const InvoiceCancellation(this.replacementId, this.credit, this.cancelled,
+      this.createdLabel, this.reason);
+  final String? replacementId;
+  final String credit, cancelled, createdLabel, reason;
+  factory InvoiceCancellation.decode(Map<Object?, Object?> v) => InvoiceCancellation(
+    v['replacementId'] as String?, v['creditedMinor'] as String,
+    v['cancelledMinor'] as String, v['createdLabel'] as String, v['reason'] as String,
   );
 }
 
@@ -88,6 +102,8 @@ class InvoicePayments {
     required List<InvoicePayment> payments,
     required List<InvoiceCopy> copies,
     this.collectedTax,
+    this.cancellation,
+    this.replacesInvoiceId,
   }) : payments = List.unmodifiable(payments),
        copies = List.unmodifiable(copies);
   final int version, digits, now, nowOffsetSeconds;
@@ -106,7 +122,8 @@ class InvoicePayments {
       timezone,
       localNow,
       nowLabel;
-  final String? collectedTax;
+  final String? collectedTax, replacesInvoiceId;
+  final InvoiceCancellation? cancellation;
   final bool legacy, jobDeleted;
   final List<InvoicePayment> payments;
   final List<InvoiceCopy> copies;
@@ -124,6 +141,8 @@ class InvoicePayments {
     due: v['dueMinor'] as String,
     status: v['status'] as String,
     collectedTax: v['collectedTaxMinor'] as String?,
+    replacesInvoiceId: v['replacesInvoiceId'] as String?,
+    cancellation: v['void'] == null ? null : InvoiceCancellation.decode(v['void'] as Map<Object?, Object?>),
     legacy: v['legacy'] as bool,
     jobDeleted: v['jobDeleted'] as bool,
     accountingEmail: v['accountingEmail'] as String,

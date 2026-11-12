@@ -8,6 +8,8 @@ InvoicePayments paymentFixture({
   String status = 'UNPAID',
   bool legacy = false,
   bool deleted = false,
+  InvoiceCancellation? cancellation,
+  String? replacesInvoiceId,
   List<InvoicePayment> payments = const [],
   List<InvoiceCopy> copies = const [],
 }) => InvoicePayments(
@@ -25,6 +27,8 @@ InvoicePayments paymentFixture({
   status: status,
   legacy: legacy,
   jobDeleted: deleted,
+  cancellation: cancellation,
+  replacesInvoiceId: replacesInvoiceId,
   accountingEmail: 'accounts@example.test',
   customerEmail: 'customer@example.test',
   now: 1793494800000,

@@ -20,11 +20,12 @@ class InvoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
-  Future<InvoicePage> _preview(int page) {
+  String? _notice;
+  Future<InvoicePage> _preview(int page) async {
     final api = ref.read(reportApiProvider), copy = widget.copyId;
-    return copy == null
-        ? api.preview(widget.invoiceId, page)
-        : api.previewCopy(widget.invoiceId, copy, page);
+    final result = await (copy == null ? api.preview(widget.invoiceId, page) : api.previewCopy(widget.invoiceId, copy, page));
+    if (mounted && result.notice != _notice) setState(() => _notice = result.notice);
+    return result;
   }
 
   late Future<InvoicePage> _page = _preview(0);
@@ -134,6 +135,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                         ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
                         : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
                   ),
+                  if (_notice != null) Text(_notice!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -148,9 +150,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                         onPressed: _busy ? null : () => _handoff('email'),
                         icon: const Icon(Icons.email_outlined),
                         label: Text(
-                          widget.copyId == null
-                              ? 'Email invoice'
-                              : 'Email copy',
+                          _notice != null ? 'Email historical copy' : widget.copyId == null ? 'Email invoice' : 'Email copy',
                         ),
                       ),
                       OutlinedButton.icon(

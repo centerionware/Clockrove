@@ -296,7 +296,8 @@ class InvoiceBillingPreview {
 }
 
 class InvoicePage {
-  const InvoicePage(this.index, this.pages, this.png);
+  const InvoicePage(this.index, this.pages, this.png, {this.notice});
+  final String? notice;
   final int index, pages;
   final Uint8List png;
 }
@@ -387,6 +388,7 @@ class ReportApi {
       v['page'] as int,
       v['pages'] as int,
       v['png'] as Uint8List,
+      notice: v['notice'] as String?,
     );
   }
 
@@ -399,6 +401,7 @@ class ReportApi {
       value['page'] as int,
       value['pages'] as int,
       value['png'] as Uint8List,
+      notice: value['notice'] as String?,
     );
   }
 

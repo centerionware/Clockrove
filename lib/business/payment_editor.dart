@@ -188,7 +188,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         ? null
         : data.payments.where((p) => p.id == widget.reversal!.id).firstOrNull;
     final available = _correction
-        ? currentPayment != null && currentPayment.reversalId == null
+        ? currentPayment != null && currentPayment.reversalId == null && currentPayment.allocatedInvoiceId == data.invoiceId && data.status != 'VOID'
         : data.due != '0';
     final calendar = DateTime.parse(_local);
     final localizations = MaterialLocalizations.of(context);

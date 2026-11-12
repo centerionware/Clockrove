@@ -94,7 +94,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                         "quantityUnits" to line.quantityUnits, "unitPriceMinor" to line.unitPriceMinor) },
                     "claims" to state.claims.map { claim -> mapOf("id" to claim.id, "taskId" to claim.taskId, "sessionId" to claim.sessionId,
                         "start" to claim.start, "end" to claim.end, "timezone" to claim.timezone,
-                        "label" to if (claim.taskId != null) "Task ${claim.taskId}" else "${ReportCsv.instant(requireNotNull(claim.start), requireNotNull(claim.timezone))} — ${ReportCsv.instant(requireNotNull(claim.end), requireNotNull(claim.timezone))} · ${claim.timezone}") })
+                        "label" to if (claim.taskId != null) claim.label else "${ReportCsv.instant(requireNotNull(claim.start), requireNotNull(claim.timezone))} — ${ReportCsv.instant(requireNotNull(claim.end), requireNotNull(claim.timezone))} · ${claim.timezone}") })
             }
             "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
             "legacyInvoiceContext" -> return legacyInvoiceContext(repository.legacyInvoiceContext(input.string("invoiceId")))
