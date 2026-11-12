@@ -47,17 +47,18 @@ explicit business rule, separate from numerical precision loss.
 ### Next concrete action
 
 Complete the active quote milestone in draft PR #39, then proceed to the next
-ordered plan milestone. Latest head c4ac90d / run 43272288322 passed formatting,
-analysis, Flutter behavior, Android build and all 561 native tests. API 24 passed
-the full actual quote issue/accept/plan/complete/invoice journey, duplicate
-exclusion, three real invoice PDFs, and viewer checks. API 35 passed its preceding
-26 device cases, then failed before entering Unit price: the field had focus and
-the IME was open, but the test checked for ACTION_SET_TEXT during Android's
-transient pre-IME semantics state. The helper now waits for the IME transition,
-re-reveals the field, then requires the text action and exact value as before.
-Fresh exact-head Actions must confirm both APIs, all generated documents, and
-remaining quote acceptance before #39 is merged. This is a test synchronization
-correction, not evidence that the API-35 journey now passes.
+ordered plan milestone. Head 5a71a9c / run 43276003231 passed formatting,
+analysis, Flutter behavior, Android build, all 561 native tests, and all API-24/35
+device gates. Downloaded JUnit results show 27 actual Android cases per API with
+zero failures/errors/skips, including the actual quote issue/accept/plan/complete/
+invoice journey. All three generated quote-to-invoice styles were inspected on
+both APIs; API-35 extracted text confirms 30 × USD 12.50 = USD 375.00, 7.5% tax
+USD 28.13, total USD 403.13, with the Q-1000 source revision retained. Preview
+review then found floating input labels collide with controls at 1.8× text in the
+actual-work screen. Replaced those floating labels with separate responsive labels
+and added control spacing. This UI fix is source only; fresh exact-head Actions
+must verify it before Q12/#39 merge. Keep PR #39 draft until that visual gate and
+the complete review are done.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic

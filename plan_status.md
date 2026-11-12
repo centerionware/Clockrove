@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
-| Follow-on: quotes | Backend/documents verified; UI behavior verified; real quote journey correction under validation | Full backend 56307eb / 43255636714: 553 native / 52 actual. Expanded 046fcf6 / 43261516779: 559 native plus full Flutter behavior passed; real API-24 quote entry stopped at IME field visibility. Fresh source correction/phone/race gates pending; see task breakdown |
+| Follow-on: quotes | Backend, issue/accept/plan, actual work, duplicate protection and three real invoice styles verified in Actions; responsive label collision found and fixed in source, pending fresh validation | Head 5a71a9c / 43276003231: 561 native / 27 actual Android cases per API, zero failures/errors/skips. Inspected both APIs' real quote-derived invoice PDFs/screenshots; extracted API-35 totals match exact quantity/unit-price/tax math. New 1.8× large-text preview exposed floating-label collisions; explicit labels/spacing fix is now pending Actions. Keep #39 draft until fix passes |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -56,18 +56,18 @@ iOS and future service remain deferred.
 
 | Task | Current evidence / status | Remaining gate |
 | --- | --- | --- |
-| Q1 Draft editor, exact inputs, Q-1000 sequence | Baseline Actions verified; decimal strings, quantities, tax and invalid-draft preservation | Fresh integrated head |
-| Q2 Immutable issue/revision/date/filter/history | Baseline native/Flutter/API checks passed; old documents retained | Fresh integrated head and real issue UI journey |
-| Q3 Explicit local acceptance/decline | Native and reviewed/retry/cancel Flutter checks passed | Real device acceptance UI journey |
-| Q4 Three quote PDF styles, revisions, wide amounts, email/URI/preview | Full 43255636714 device/document gates passed; six light/dark actual-page viewers reviewed in 43252783507 | Fresh integrated head |
-| Q5 Reviewed fixed/hourly mixed scope and durable task reuse | Native and Flutter checks passed; no fabricated work/completion | Real plan/board-completion UI journey |
-| Q6 Actual-work selection and accepted/current prices/tax/party | 559 native in 43261516779; full preparation/history Flutter behavior passed | New hourly/UI layout checks and actual invoice journey |
-| Q7 Exclusive claims, replay, paid exclusion, rollback | Existing source/financial guards and quote backend tests passed | New ordinary-versus-quote race test, actual duplicate-exclusion journey |
-| Q8 Retained quote/line provenance through replacement and purge | Native partial-credit replacement/purge/late-write checks passed; paged history Flutter check passed | Actual related-invoice navigation and original-issue PDFs |
-| Q9 Released v8 → unreleased v9 migration | Frozen independent v8 fixture and late-install rollback checks passed in native 559 gate | Fresh integrated head; freeze v9 before subsequent schema work after release |
-| Q10 Real issue/accept/plan/complete/invoice UI journey | Source compiled and API-24 journey started; failed after keyboard occluded unit-price semantics | Test helper must re-reveal field after IME opening; named device case must pass on both APIs |
-| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Strict new device gate source present | All required PDF/PNG/text outputs and nine UI captures, inspected after success |
-| Q12 Phone accessibility and responsive review | Existing quote document large-text/landscape gate passed; new 390×844/1.8-scale light/dark preparation previews added | New widget checks and actual exported previews |
+| Q1 Draft editor, exact inputs, Q-1000 sequence | Fresh head 5a71a9c full Actions passed; decimal inputs, quantity, tax, invalid draft and Q-1000 actual issue journey | None for this task |
+| Q2 Immutable issue/revision/date/filter/history | Fresh native/Flutter/API checks and actual issue/history journey passed | None for this task |
+| Q3 Explicit local acceptance/decline | Fresh native/Flutter and API-24/35 actual acceptance journey passed | None for this task |
+| Q4 Three quote PDF styles, revisions, wide amounts, email/URI/preview | Fresh API-24/35 actual quote-to-invoice PDFs/screenshots and viewer passed; all three styles reviewed and API-35 text inspected | Review complete for current head; new UI fix still requires rerun |
+| Q5 Reviewed fixed/hourly mixed scope and durable task reuse | Fresh native and actual API-24/35 planning/task completion journey passed without creating work before completion | None for this task |
+| Q6 Actual-work selection and accepted/current prices/tax/party | Fresh native and actual API-24/35 invoice journey passed; accepted/current values and customer/tax selection covered | None for this task |
+| Q7 Exclusive claims, replay, paid exclusion, rollback | Fresh native race/claim checks and actual duplicate-exclusion journey passed on API 24/35 | None for this task |
+| Q8 Retained quote/line provenance through replacement and purge | Fresh native replacement/purge/late-write checks, actual related-invoice navigation and source quote retention passed | None for this task |
+| Q9 Released v8 → unreleased v9 migration | Frozen v8 fixture and late-install rollback included in fresh 561-test native Actions gate | Freeze v9 before subsequent schema work after release |
+| Q10 Real issue/accept/plan/complete/invoice UI journey | Head 5a71a9c: named actual journey passed 1/1 on API 24 and API 35; downloaded XML inspected | Rerun exact UI journey after large-text layout fix |
+| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Head 5a71a9c: API-24/35 generated actual minimal/classic/modern PDFs; API-35 extracted text confirms source, quantity, subtotal, tax and total; all style previews visually reviewed | Rerun document gates after large-text layout fix |
+| Q12 Phone accessibility and responsive review | 390×844/1.8-scale light/dark previews revealed floating-label collisions; switched to separate labels and added control spacing in source | Fresh Actions and visual review must show readable, non-overlapping labels in both themes |
 | Q13 Merge/main/internal delivery | #39 remains draft | Full clean fresh exact-head validation, review artifacts, merge, verify main and separate Play delivery |
 
 The full quoted milestone remains incomplete until its integration gates pass.
@@ -3021,3 +3021,26 @@ ACTION_SET_TEXT before waiting for the IME transition. Updated the helper to wai
 for keyboard visibility, reveal the field again, then wait for its text action
 before entering and asserting the exact value. This is a test timing fix awaiting
 fresh Actions evidence, not a passing API-35 result. No build or test ran on the VM.
+
+### Actual quote journey passes on API 24 and API 35; large-text collision fixed in source
+
+Head 5a71a9c / Actions run 43276003231 succeeded. Formatting, analysis, all
+Flutter behavior tests, Android build, all 561 native tests (47 XML, zero
+failures/errors/skips), and the full Android PDF/device gate passed. Downloaded
+the device artifact and inspected JUnit: API 24 and API 35 each report 27 actual
+Android cases with zero failures/errors/skips; the quote issue/accept/plan/task
+completion/actual-invoice/duplicate-exclusion case passed 1/1 on both APIs. Both
+APIs generated the three accepted-price quote-to-invoice PDFs; visually reviewed
+minimal, classic and modern outputs on each API and actual Flutter invoice viewer
+captures. API-35 extracted text from all three shows quantity 30 × USD 12.50,
+subtotal USD 375.00, tax 7.5% = USD 28.13 and total USD 403.13, retaining quote
+Q-1000 revision 1. This validates the explicit currency-boundary rounding rule
+with exact decimal inputs and output.
+
+Downloaded and reviewed the 390×844 / 1.8× light/dark UI previews. The actual-work
+setup screen's outlined floating labels overlapped neighboring controls, despite
+the layout test passing. Replaced these with separate responsive labels, added
+vertical spacing, and preserved the field identifiers and helper hints. This
+source fix is not yet validated; rerun full Actions, review new previews, then
+update Q12 and decide whether #39 is ready to merge. All build and test work stays
+in GitHub Actions.

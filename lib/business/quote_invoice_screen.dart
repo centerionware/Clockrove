@@ -538,11 +538,17 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 icon: const Icon(Icons.playlist_add_check),
                 label: const Text('Review accepted scope'),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Mapped job',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: ValueKey('invoice-job/$_job'),
                 initialValue: _job,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Mapped job'),
+                decoration: const InputDecoration(hintText: 'Choose a job'),
                 items: [
                   for (final id in jobIds)
                     DropdownMenuItem(
@@ -560,39 +566,56 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                         _changed(source: true);
                       }),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'First date (YYYY-MM-DD)',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
               Semantics(
                 identifier: 'quote-invoice-first',
                 child: TextFormField(
                   controller: _first,
                   enabled: _enabled,
                   decoration: const InputDecoration(
-                    labelText: 'First date (YYYY-MM-DD)',
+                    hintText: 'YYYY-MM-DD',
                   ),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Last date (YYYY-MM-DD)',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
               Semantics(
                 identifier: 'quote-invoice-last',
                 child: TextFormField(
                   controller: _last,
                   enabled: _enabled,
                   decoration: const InputDecoration(
-                    labelText: 'Last date (YYYY-MM-DD)',
+                    hintText: 'YYYY-MM-DD',
                   ),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Report timezone',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
               Semantics(
                 identifier: 'quote-invoice-zone',
                 child: TextFormField(
                   controller: _zone,
                   enabled: _enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Report timezone',
-                  ),
+                  decoration: const InputDecoration(hintText: 'IANA timezone'),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
+              const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _enabled && _job != null ? _load : null,
                 child: const Text('Load available work'),
