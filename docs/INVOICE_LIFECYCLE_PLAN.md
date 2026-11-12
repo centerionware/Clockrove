@@ -1,9 +1,10 @@
 # Billing, quotes, task notes and business reporting
 
 Owner-requested implementation queue, 2026-11-12. This is a contract for future
-work, not implemented-feature or acceptance evidence. Finish and merge the current
-Timer/Tasks/Combined widget task first. Follow app_plan.md and the Actions-only
-working agreement. Keep each slice independently reviewable.
+work, not blanket feature or launch acceptance evidence. Widgets and the invoice
+foundation have merged; see app_plan.md and plan_status.md for exact validation and
+delivery evidence. Follow the Actions-only working agreement and keep each remaining
+slice independently reviewable.
 
 ## Ordered delivery
 
@@ -19,7 +20,8 @@ either later never re-bills a task already reserved by an invoice; additional wo
 needs a new task or the explicit invoice correction policy.
 
 1. Invoice integrity foundation: source coverage, safe legacy migration, global/job
-   tax percentage, immutable totals and invoice navigation.
+   tax, quantity/unit pricing, exact money, immutable totals and invoice navigation.
+   Merged in #35 as f935485 after 383 native / 44 actual Android cases passed.
 2. Payment history, partial/full payment, balance copies, receipts, accounting CC,
    and unpaid/partially-paid void-and-replace.
 3. Quotes and their reviewed connection to actual jobs and invoices.
@@ -28,7 +30,7 @@ needs a new task or the explicit invoice correction policy.
    validated invoice/payment/cost data.
 
 Carry the owner-requested payment/receipt/CC work as the immediate next iteration
-after widgets. These dependent slices are one business roadmap; scaffolding or
+after the merged invoice foundation. These dependent slices are one business roadmap; scaffolding or
 mocked PDF/email/storage behavior does not complete a slice.
 
 ## One clear invoice journey

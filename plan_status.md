@@ -35,8 +35,9 @@ iOS and future service remain deferred.
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
 | Business iteration: invoices and email | Renderer/handoff checks passed; priority template-crash fix delivered internally; physical email/device checks remain | PRs #26–28 real PDF styles/numbered immutable snapshots, report action and private default-email/save/share handoff; actual email-app device compatibility remains unproven |
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
-| Next after widget merge: invoice integrity, quantity, tax and payment lifecycle | Legacy editor behavior checked; quantities under Actions; real financial UI journey prepared; draft #35 | 94fd7c7 / 43169835589 passed behavior/native/device/viewer gates; formatting-only failure patched. Quantity 43172649874 passed all gates (365 native / 40 actual Android); financial journey run 43174102042 is live. Independent actual financial journey must pass on both APIs before merge; then payments, receipts, CC and credit-preserving void/replacement |
-| Current business priority: exact money | Source prepared; Actions validation required | Pinned decimal 3.2.6; native BigInteger and canonical TEXT money records; lossless released migration, wide amounts, receipts/rollback/precision cases prepared; docs/MONEY_PRECISION_PLAN.md |
+| Invoice foundation: source integrity, tax, quantity and navigation | Validated and merged #35; main/delivery pending | eb74c74 / 43182854787: 383 native and 44 actual Android cases pass, zero failures/errors/skips; XML/PDF/UI captures reviewed; merged f935485; main 43185844256 live |
+| Next: payments, receipts, CC and void/replacement | Starting from merged main; not implemented | invoice-payments worktree/branch; schema-8 forward migration, exact ledgers, partial/full balance copies, accounting CC and credit-preserving replacement per docs/INVOICE_LIFECYCLE_PLAN.md |
+| Exact money | Validated and merged #35; main verification pending | decimal 3.2.6 lockfile from Actions; native BigInteger/canonical TEXT; large totals, rounding boundaries, migration, receipt/rollback/purge and actual wide-value/PDF cases passed in 43182854787 |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2312,3 +2313,19 @@ field focus before SET_TEXT, then confirm the exact value and dismiss it. Otherw
 a fast text-action acknowledgment could race the keyboard's later appearance and
 skip dismissal. This is actual UI synchronization, not a replacement of native
 saves or any financial assertion. No app-money behavior changed in this follow-up.
+
+Goal-turn progress: final eb74c747cb8cbc6e343864ad9b471c910b131c26 passed complete
+43182854787. Inspected 36 native XML files (383 tests) and four actual Android XML
+files (21 original + 1 financial case per API, 44 total): zero failures/errors/skips.
+Reviewed all six wide and twelve first/last 1000-digit PDF captures, exact wide-price
+boards on both APIs, zero tax override and retained invoice. Ordinary layouts stay
+clean; extreme values wrap and paginate; repeated full values are checked by actual
+API-35 extraction. All other workflow gates passed, including actual-document viewer.
+
+Merged #35 using the exact tested head guard; GitHub confirms f935485 at
+2026-11-12 08:47:27 UTC. Main validation 43185844256 is live; new Play acceptance
+and tester installation are not claimed. Created invoice-payments worktree/branch
+from confirmed origin/main, preserving the prior worktree and unrelated work.
+Updated the product handoff and next milestone status. Payments/receipts/CC/void,
+quotes, comments/costs, reports and the remaining launch milestones stay unfinished.
+No VM build, test, formatter, dependency resolution or rendering ran.

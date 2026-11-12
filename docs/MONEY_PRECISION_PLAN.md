@@ -4,11 +4,11 @@ Owner priority, 2026-11-12; part of the current invoice milestone before merge.
 Read app_plan.md and plan_status.md. All dependency resolution, builds, tests and
 formatting run in GitHub Actions only.
 
-Released / last fully validated source: totals use exact arbitrary-precision integers and money crosses the Dart
-channel as decimal strings. Rates/unit prices still use SQLite INTEGER / Kotlin
-Long and Dart rejects larger inputs. This prevents silent overflow but imposes a
-fixed-width capacity limit the owner wants removed. Issued invoice totals already
-can exceed Long through quantity multiplication and must never be narrowed.
+Completed source: exact money is merged in #35 / f935485. Final head eb74c74
+passed full Actions 43182854787 (383 native / 44 actual Android cases, no failures,
+errors or skips). Main validation and new internal delivery remain separate gates.
+The implementation checklist below records the completed money design and the
+ongoing requirements for later payments, credits, quotes and reports.
 
 1. Pin Dart decimal 3.2.6, resolve/commit its lockfile via the existing owner-only
    Validate prepare_dependencies dispatch, and keep all money construction from
@@ -45,11 +45,13 @@ conserve minor units; see INVOICE_LIFECYCLE_PLAN.md. A recurring decimal divisio
 cannot always have a finite decimal representation: hourly time uses an exact
 integer/rational numerator until the documented currency rounding boundary.
 
-Prepared checkpoint: native business/board/report fields now use BigInteger; four
-canonical TEXT records migrate/save settings, job rates, task prices and template
-prices. Wide legacy columns are NULL and never consulted ahead of an exact row.
-Money revisions and checked small-value fingerprints are explicit. Dart now accepts
-up to 1024 minor-unit input digits (text-size guard) rather than a Long bound;
-arithmetic totals can grow beyond that input length. Sources and tests are written,
-not validated. CI-generated decimal/rational lockfile and formatter correction are
-applied. Native, migration, receipt, rollback and actual UI checks still must pass.
+Verified checkpoint: native business/board/report fields use BigInteger; canonical
+TEXT records migrate/save settings, job rates, task prices and template prices.
+Wide legacy columns are NULL and exact rows are authoritative. Receipt identity,
+rollback and template reuse are verified. Dart accepts up to 1024 minor-unit input
+digits as a text-size guard; arithmetic totals can grow beyond that input length.
+The decimal/rational lockfile was generated in Actions. Both actual Android APIs
+verified a wide editor save/reopen, tax, source exclusion and retained PDF; all three
+PDF styles retain full 1000-digit row/subtotal/total values through pagination.
+Subsequent payment/credit/backup work must preserve this precision; it is not yet
+implemented or validated by these completed foundation tests.
