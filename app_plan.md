@@ -46,40 +46,17 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-#40 exact head 658fce0 passed all gates in 43239688776: 479 native / 50 actual
-Android cases, zero failures/errors/skips in downloaded 42 native/eight device XML
-files. Both APIs produced 16 financial captures; reviewed exact invalid-precision
-input and field error. Merged 05ee6e7 at 2026-11-12 14:59:36 UTC. Main Validate
-43242962261 failed the API-35 AR-field lookup. Focused #41 (d92e617) adds active
-vertical reveal/body readiness; validate and merge it before observing main delivery.
-No new Play acceptance or physical upgrade is claimed. Last proven Play acceptance
-remains internal.25.1 / 216642056 in 43199258376. The quote branch includes this
-validated payment-form wait and bounded startup/diagnostic script.
-
-Quotes are the next ordered feature milestone in draft #39, `quotes` in
-`.local/invoice-payments`. First storage head 1213cc5 passed all gates in
-43230233087; downloaded 44 native XML files prove 495 cases with no failures,
-errors or skips. Later 3962104 ran 505 native cases with two first-page failures:
-Android rejects null string selection bindings. Source now uses separate fixed
-first-page/keyset queries, preserving the pagination tests. Schema 9 remains
-unreleased; the frozen schema-8 fixture preserves the merged financial boundary.
-
-Current quote source includes exact item/estimated-hour drafts, Q-1000 issue-time
-numbering, immutable revisions/decisions and retained links, paged reads, three-style
-revision PDFs, bounded immutable caches, private preview/email/save/share and a
-revision-specific Flutter viewer. Corrected custom subject/body preservation and
-both template guards apply. The new gate requires nine quote PDF variants/API,
-52 actual cases overall and real-page light/dark/large-text viewer checks. Current
-source still needs full Actions validation and genuine page review. ef3ddcd /
-43234622742 passed analysis and Flutter behavior; its Actions formatter patch
-was applied to source. Its Android build/native/device gates remain pending.
-
-Continue quote list/editor, explicit issue/accept/decline and revision navigation,
-then reviewed accepted-scope mapping to actual jobs/tasks and covered invoices.
-These user-facing requirements are incomplete; do not merge scaffolding as the
-completed quote milestone. Then comments/supplies/actual costs and company reports.
-Provider settings, encrypted backup/transactional merge, physical tracking/recovery
-and full launch acceptance remain open. All builds/tests/rendering stay in Actions.
+Complete the active quote milestone in draft PR #39: accepted-scope planning,
+reviewed actual-work invoice preparation/provenance, and real Android UI/document
+acceptance. Native baseline bc57074 passed 537 cases in run 43247145880 (47 XML,
+zero failures/errors/skips). Its API-35 billing journey failed waiting for original
+PDF access; captured log also exposed invoice-list Future-returning setState.
+Maintenance PR #41 now includes the synchronous callback repair/navigation test
+and Settings reveal recovery; b0b84b8 is awaiting fresh Actions validation.
+Do not merge either branch or claim internal publication before current evidence.
+Current scope UI/context/hash changes remain source pending Actions. Actual-work
+quote invoicing, physical device journeys, provider settings, encrypted backup,
+rights/store/production gates remain open. All builds/tests/rendering use Actions.
 
 ## 2. Product decisions
 
@@ -2088,3 +2065,26 @@ Settings capture shows the app open at its top, with AR below the viewport.
 Wait for the actual body and keep bounded active scrolling until the exact field
 is visible. Current quote source carries this same test correction; no assertion
 or required financial/document gate is removed. New internal delivery is pending.
+
+### Accepted-scope UI/context and bounded replay receipts (source)
+
+Quote planning now has an issued-revision entry from current and historical local
+acceptance. Mixed quotes show every fixed-price/hourly-rate group, compatible
+new/existing jobs, and explicit create/link choices. Native context reads version,
+issued agreement, retained mappings, job settings and board task ownership under
+the same serialized boundary. Existing customer/tax/rate, quantity/unit price and
+completion are shown before review; differences and historical revisions need
+explicit acknowledgement. Plans create no time/completion/invoice/payment.
+Read failures block review/submission while retaining entered names, existing-task
+choices and note. Missing mapped task IDs are never recreated. Unknown write
+outcomes lock edits/back navigation and retry the captured DTO and operation ID.
+
+Scope commands hash their bounded receipt before persistence to avoid loading
+thousands of task titles into a single SQLite cursor field on replay. New native
+UTF-8-wide replay test checks compact receipt, identical replay, changed-payload
+conflict and zero work claims. Source API/widget tests cover mixed exact-price
+groups, immutable transport, review cancellation, response-loss identity and
+failed-read preservation. Quote refresh/page callbacks also now return void from
+setState. Fresh Actions compilation/formatting/tests/device evidence is required;
+these source changes do not complete the quote milestone. No VM tests/builds or
+formatters were used.

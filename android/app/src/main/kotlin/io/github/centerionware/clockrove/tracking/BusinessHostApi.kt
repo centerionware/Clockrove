@@ -68,6 +68,19 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 ?: mapOf("unavailable" to true)
             "quoteHistory" -> return repository.quoteHistory(input.string("quoteId"), if (input.value["before"] == null) null else input.int("before"),
                 if (input.value.containsKey("limit")) input.int("limit") else 20).map { mapOf("revision" to it.revision, "created" to it.created, "decision" to it.decision) }
+            "quoteScopeContext" -> return repository.quoteScopeContext(input.string("quoteId"), input.int("revision"), input.nullable("jobId")).let { state ->
+                mapOf("version" to state.version, "issued" to quoteRevision(state.issued), "latestRevision" to state.latestRevision,
+                    "linkedLines" to state.linkedLines.toList(),
+                    "bindings" to state.bindings.map { mapOf("lineId" to it.lineId, "jobId" to it.jobId, "taskId" to it.taskId, "kind" to it.kind, "originalRevision" to it.originalRevision) },
+                    "jobs" to state.jobs.map { mapOf("jobId" to it.id, "name" to it.name, "mode" to it.mode, "currency" to it.currency, "archived" to it.archived) },
+                    "target" to state.target?.let { target -> mapOf("jobId" to target.settings.id, "name" to target.settings.name,
+                        "mode" to target.settings.billingMode, "currency" to target.settings.currency, "digits" to Currency.getInstance(target.settings.currency).defaultFractionDigits,
+                        "archived" to target.archived, "customerId" to target.settings.customerId, "customerName" to target.customer?.name, "taxUnits" to target.effectiveTaxUnits,
+                        "hourlyMinor" to target.effectiveHourlyMinor?.toString()) },
+                    "tasks" to state.board?.cards.orEmpty().map { task -> mapOf("taskId" to task.id, "title" to task.title,
+                        "completed" to task.completedMillis, "billable" to task.billable, "unitPriceMinor" to task.priceMinor?.toString(), "quantityUnits" to task.quantityUnits.toString(),
+                        "ownerQuoteId" to state.taskOwners[task.id]?.first, "ownerLineId" to state.taskOwners[task.id]?.second) })
+            }
             "quoteScope" -> return repository.quoteScope(input.string("quoteId")).let { (version, bindings) ->
                 mapOf("version" to version, "bindings" to bindings.map { mapOf("lineId" to it.lineId, "jobId" to it.jobId,
                     "taskId" to it.taskId, "kind" to it.kind, "originalRevision" to it.originalRevision) })

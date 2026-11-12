@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
-| Follow-on: quotes | Native documents/editor/navigation under validation; reviewed conversion pending | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Follow-on: quotes | Native baseline 537 cases verified; accepted-scope UI/context source pending Actions; actual-work invoicing remains | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -2824,3 +2824,14 @@ head d92e617 keeps active bounded reveal polling, prefers the vertical form and
 waits for Billing defaults. Carried the same test-only correction into the quote
 branch. All exact money/state/PDF/capture gates remain intact. Validate #41 before
 merge; main/internal delivery remains unaccepted. This is not a device crash fix.
+
+### Current quotes increment
+
+43247145880: 47 native XML / 537 tests, zero failures/errors/skips. Android
+API-35 billing original-PDF lookup failed and emulator went offline; actual
+viewer stage did not run. Do not treat source or native-only checks as completion.
+Current planning UI/context/bounded receipt and retry tests are implemented as
+source, pending fresh Actions. Invoice-list refresh assertion is being repaired
+in maintenance #41 (b0b84b8), with matching quote callback fixes here.
+Actual-work invoice preparation with accepted-price/tax review and durable quote
+provenance is the next dependency; physical acceptance remains separate.

@@ -525,10 +525,31 @@ class TimerRepository internal constructor(context: Context,
     }
     @Synchronized
     internal fun applyQuoteScope(id: String, version: Long, value: QuoteScopeStore.Draft): Outcome =
-        boardChange(id, version, "QUOTE_SCOPE_APPLY", value.values()) { QuoteScopeStore.apply(it, value, wallClock()) }
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_SCOPE_APPLY") + value.values()).toString()), version) { QuoteScopeStore.apply(it, value, wallClock()) }
     @Synchronized
     internal fun quoteScope(id: String): Pair<Long, List<QuoteScopeStore.Binding>> =
         readSnapshot(helper.readableDatabase).version to QuoteScopeStore.bindings(helper.readableDatabase, id)
+    internal data class ScopeJobChoice(val id: String, val name: String, val mode: String, val currency: String, val archived: Boolean)
+    internal data class QuoteScopeContext(val version: Long, val issued: QuoteStore.Revision, val latestRevision: Int,
+        val bindings: List<QuoteScopeStore.Binding>, val linkedLines: Set<String>, val jobs: List<ScopeJobChoice>,
+        val target: BusinessStore.JobDetail?, val board: BoardStore.Board?, val taskOwners: Map<String, Pair<String, String>>)
+    @Synchronized
+    internal fun quoteScopeContext(id: String, revision: Int, jobId: String?): QuoteScopeContext {
+        val db = helper.readableDatabase
+        val issued = requireNotNull(QuoteStore.revision(db, id, revision)) { "QUOTE_UNAVAILABLE" }
+        val jobs = db.rawQuery("SELECT id,name,billing_mode,currency,archived FROM jobs ORDER BY name,id", null).use { rows -> buildList {
+            while (rows.moveToNext()) add(ScopeJobChoice(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getInt(4) != 0))
+        } }
+        val board = jobId?.takeIf { candidate -> jobs.any { it.id == candidate } }?.let { BoardStore.read(db, it) }
+        val linked = db.rawQuery("SELECT line_id FROM quote_scope_revisions WHERE quote_id=? AND revision=?", arrayOf(id, revision.toString())).use { rows -> buildSet {
+            while (rows.moveToNext()) add(rows.getString(0))
+        } }
+        val owners = if (board == null) emptyMap() else db.rawQuery("SELECT task_id,quote_id,line_id FROM quote_scope_lines WHERE job_id=?", arrayOf(board.jobId)).use { rows -> buildMap {
+            while (rows.moveToNext()) put(rows.getString(0), rows.getString(1) to rows.getString(2))
+        } }
+        return QuoteScopeContext(readSnapshot(db).version, issued, requireNotNull(QuoteStore.latest(db, id)).revision,
+            QuoteScopeStore.bindings(db, id), linked, jobs, board?.let { BusinessStore.job(db, it.jobId) }, board, owners)
+    }
     @Synchronized
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }

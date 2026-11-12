@@ -49,6 +49,19 @@ class QuoteScopeTest {
         assertEquals("QUOTE_SCOPE_ALREADY_MAPPED", repository.applyQuoteScope("duplicate", version, value.copy(items = listOf(value.items.single().copy(taskId = "different-task")))).conflict)
         assertEquals(1, count("kanban_cards"))
     }
+    @Test fun wideUtf8PlanningCommandKeepsBoundedReceiptAndExactReplay() {
+        val lines = (0 until 2000).map { QuoteStore.Line("line-$it", "Tile $it", "", "ITEM", "10000", "1250") }
+        quote(lines = lines)
+        val value = scope().copy(items = lines.mapIndexed { index, line -> QuoteScopeStore.Item(line.id, "task-$index", "界".repeat(240)) })
+        val before = version
+        val result = repository.applyQuoteScope("wide-scope", before, value)
+        assertNull(result.conflict)
+        assertEquals(result, repository.applyQuoteScope("wide-scope", before, value))
+        assertEquals("COMMAND_ID_REUSED", repository.applyQuoteScope("wide-scope", before, value.copy(note = "Different reviewed scope note")).conflict)
+        inspect { db -> db.rawQuery("SELECT length(fingerprint) FROM commands WHERE id='wide-scope'", null).use { it.moveToFirst(); assertTrue(it.getInt(0) < 256) } }
+        assertEquals(2000, count("kanban_cards"))
+        assertEquals(0, count("invoice_task_claims")); assertEquals(0, count("sessions"))
+    }
     @Test fun estimatedHoursCreateNonbillableChecklistAndExactJobRateButNeverWorkedTime() {
         val wide = "9".repeat(1000)
         quote(lines = listOf(QuoteStore.Line("hours", "Estimated preparation", "", "HOURS", "15000", wide)))

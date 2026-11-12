@@ -72,6 +72,14 @@ class QuoteBridgeTest {
         val state = dispatch.call(MethodCall("quoteScope", mapOf("quoteId" to "quote"))) as Map<*, *>
         val binding = (state["bindings"] as List<*>).single() as Map<*, *>
         assertEquals("line", binding["lineId"]); assertEquals("planned-job", binding["jobId"]); assertEquals("planned-task", binding["taskId"])
+        val review = dispatch.call(MethodCall("quoteScopeContext", mapOf("quoteId" to "quote", "revision" to 1, "jobId" to "planned-job"))) as Map<*, *>
+        assertEquals(version, review["version"]); assertEquals(1, review["latestRevision"])
+        assertEquals(listOf("line"), review["linkedLines"])
+        val target = review["target"] as Map<*, *>
+        assertEquals("TASK", target["mode"]); assertEquals(75000, target["taxUnits"])
+        val currentTask = (review["tasks"] as List<*>).single() as Map<*, *>
+        assertEquals("1250", currentTask["unitPriceMinor"]); assertEquals("260000", currentTask["quantityUnits"])
+        assertEquals("quote", currentTask["ownerQuoteId"]); assertEquals("line", currentTask["ownerLineId"])
         assertNull(repository.boardSnapshot("planned-job").board.cards.single().completedMillis)
         assertNull(repository.snapshot().running)
     }

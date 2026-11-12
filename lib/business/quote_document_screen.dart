@@ -40,23 +40,34 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       if (action == 'email') {
         await api.email(widget.quoteId, widget.revision);
         if (mounted) {
-          _feedback('Email draft opened. Review the quote and press Send in your email app.');
+          _feedback(
+            'Email draft opened. Review the quote and press Send in your email app.',
+          );
         }
       } else if (action == 'share') {
         await api.share(widget.quoteId, widget.revision);
       } else {
         final saved = await api.savePdf(widget.quoteId, widget.revision);
         if (mounted) {
-          _feedback(saved ? 'Quote PDF saved.' : 'Save cancelled. Your issued quote is retained.');
+          _feedback(
+            saved
+                ? 'Quote PDF saved.'
+                : 'Save cancelled. Your issued quote is retained.',
+          );
         }
       }
     } on PlatformException catch (error) {
       if (mounted) {
-        _feedback(error.message ?? 'The document could not be opened. Try saving the PDF.');
+        _feedback(
+          error.message ??
+              'The document could not be opened. Try saving the PDF.',
+        );
       }
     } catch (_) {
       if (mounted) {
-        _feedback('The quote could not be shared. Its issued revision is retained.');
+        _feedback(
+          'The quote could not be shared. Its issued revision is retained.',
+        );
       }
     } finally {
       if (mounted) {
@@ -64,6 +75,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       }
     }
   }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -71,7 +83,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       actions: [
         IconButton(
           tooltip: 'Refresh quote PDF',
-          onPressed: _busy ? null : () => setState(() => _page = _load(0)),
+          onPressed: _busy ? null : () => setState(() { _page = _load(0); }),
           icon: const Icon(Icons.refresh),
         ),
       ],
@@ -83,7 +95,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
           if (snapshot.hasError) {
             return Center(
               child: TextButton(
-                onPressed: () => setState(() => _page = _load(0)),
+                onPressed: () => setState(() { _page = _load(0); }),
                 child: const Text('Retry quote PDF'),
               ),
             );
@@ -167,7 +179,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     tooltip: 'Previous quote page',
                     onPressed: loading || page.index == 0
                         ? null
-                        : () => setState(() => _page = _load(page.index - 1)),
+                        : () => setState(() { _page = _load(page.index - 1); }),
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Text('Page ${page.index + 1} of ${page.pages}'),
@@ -175,7 +187,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     tooltip: 'Next quote page',
                     onPressed: loading || page.index + 1 >= page.pages
                         ? null
-                        : () => setState(() => _page = _load(page.index + 1)),
+                        : () => setState(() { _page = _load(page.index + 1); }),
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],

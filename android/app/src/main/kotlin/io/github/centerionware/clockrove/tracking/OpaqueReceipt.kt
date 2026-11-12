@@ -14,6 +14,8 @@ internal object OpaqueReceipt {
             raw.opt(3) !is Number || raw.opt(4) !is String || raw.opt(5) !is Number || raw.optString(6) !in setOf("MANUAL", "WIDGET", "NOTIFICATION")) return null
         return JSONArray(listOf(raw.getLong(0), raw.getString(1), if (raw.isNull(2)) null else raw.getString(2), raw.getString(6)))
     }
+    /** Bound new large command receipts before they enter a SQLite cursor window. */
+    fun compact(candidate: String): String = JSONArray(listOf(marker, digest(candidate), surface(parse(candidate) ?: JSONArray()))).toString()
     fun matches(stored: String, candidate: String): Boolean {
         if (stored == candidate) return true
         val raw = parse(stored) ?: return false
