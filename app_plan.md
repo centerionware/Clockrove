@@ -50,7 +50,8 @@ explicit business rule, separate from numerical precision loss.
 Android cases, zero failures/errors/skips in downloaded 42 native/eight device XML
 files. Both APIs produced 16 financial captures; reviewed exact invalid-precision
 input and field error. Merged 05ee6e7 at 2026-11-12 14:59:36 UTC. Main Validate
-43242962261 is live; observe its result and automatic internal delivery next.
+43242962261 failed the API-35 AR-field lookup. Focused #41 (d92e617) adds active
+vertical reveal/body readiness; validate and merge it before observing main delivery.
 No new Play acceptance or physical upgrade is claimed. Last proven Play acceptance
 remains internal.25.1 / 216642056 in 43199258376. The quote branch includes this
 validated payment-form wait and bounded startup/diagnostic script.
@@ -2079,3 +2080,11 @@ source cases cover retry/concurrency/rollback/retention and schema failure. This
 is not full conversion acceptance: UI and actual eligible-work invoicing with
 retained agreement prices/tax, explicit estimate/actual differences and exclusive
 coverage/provenance remain required. Never bill estimated hours automatically.
+
+### Main validation readiness follow-up carried into quotes
+
+#41 d92e617 corrects a test reveal gap found in main 43242962261. The reviewed
+Settings capture shows the app open at its top, with AR below the viewport.
+Wait for the actual body and keep bounded active scrolling until the exact field
+is visible. Current quote source carries this same test correction; no assertion
+or required financial/document gate is removed. New internal delivery is pending.

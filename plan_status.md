@@ -2813,3 +2813,14 @@ invoice preview/preparation, accepted-price/tax retention, estimate/actual diffe
 review and invoice provenance still remain. Ordinary/quoted billing must share
 exclusive coverage; estimated hours never become worked time. All build/test and
 render work remains in Actions.
+
+### Focused main follow-up #41 carried into quote validation
+
+Main 43242962261 is terminal failure at API-35 Accounts receivable field lookup.
+Downloaded 13954879850; reviewed failure.png/accessibility.txt showing Settings
+open at the top with the target below the viewport and a real vertical ScrollView.
+The helper previously stopped issuing scrolls and then waited passively. #41
+head d92e617 keeps active bounded reveal polling, prefers the vertical form and
+waits for Billing defaults. Carried the same test-only correction into the quote
+branch. All exact money/state/PDF/capture gates remain intact. Validate #41 before
+merge; main/internal delivery remains unaccepted. This is not a device crash fix.
