@@ -37,7 +37,7 @@ iOS and future service remain deferred.
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
-| Immediate next: payments, receipts, CC and void/replacement | Complete financial baseline validated; final storage/inset follow-ups under CI in draft #37 | 29fbe8b / 43220345571 passed all gates, 479 native / 48 actual Android, zero failures/errors/skips; 42 native/eight device XML inspected and required captures downloaded. Reviewed all API-24 lifecycle PDF variants and key API-35 lifecycle UI. Bounded large-BLOB reads, separate real storage regression and navigation inset correction now require current-head 50 actual cases/16 UI captures per API and final visual review before merge |
+| Payments, receipts, CC and void/replacement | Merged #37; main validation and internal delivery pending | Final 4825869 / 43224532785 attempt 2 passed all gates: 479 native / 50 actual Android, zero failures/errors/skips in 42 native/eight device XML; 16 UI captures/API and genuine PDF/text/attachment gates passed. Final editor/confirmation, invalid precision, balances/historical receipt and three-style lifecycle PDF visuals reviewed. Merged 1492081 at 13:37:28 UTC; main 43229082487 queued. Physical email/upgrade acceptance separate |
 | Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -2538,3 +2538,30 @@ contains the same probe and is superseded by this specific correction. Complete
 financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
 48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
 captures per API. No VM build/test ran.
+
+### Financial milestone accepted and merged — 2026-11-12 13:37 UTC
+
+#37 final 4825869 passed Validate 43224532785 attempt 2. Downloaded current retry
+artifact IDs 13947948379 (native), 13949201748 (device), 13949066888 (previews),
+selecting by ID because attempt 1 retained duplicate artifact names. Inspected
+42 native XML files / 479 cases and eight actual-device XML files / 50 cases;
+zero failures/errors/skips. Both APIs produced the 16 required UI captures.
+Reviewed current editor and confirmation captures on API 24/35, plus API-35
+excess-precision input, balance, VOID and retained receipt screens and current
+replacement/VOID/settled PDFs across the three styles. The bottom confirmation
+control clears Android navigation. Actual storage case verified complete bounded
+BLOB reads on API 24/35 after reproducing the old API-24 cursor failure. Opaque
+storage bytes are separate from genuine PDF render/text/attachment checks.
+Attempt 1 failed downloading the pinned emulator with curl HTTP/2 error 92,
+before actual tests; only the failed job was retried on the same commit.
+
+Merged exact tested head using match-head guard: main 1492081c9644e60020e06fde8b8401c5f4388759,
+2026-11-12 13:37:28 UTC. Main Validate 43229082487 was queued at observation;
+new internal publication remains pending. Last proven Play acceptance remains
+internal.25.1 / 216642056. No VM builds/tests/formatting/rendering ran.
+
+Owner reiterated exact money: confirmed pinned decimal 3.2.6 in Dart and native
+BigInteger/BigDecimal string parsing. Excess currency precision rejects with the
+draft kept; bounded input rejects rather than overflow/clamp/truncate. Exact
+products round only at the documented currency boundary. Quotes remain the next
+implementation milestone, using the same money contract.

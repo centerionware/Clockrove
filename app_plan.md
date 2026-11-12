@@ -38,6 +38,11 @@ stay exact until the documented currency boundary: half-up once per task line,
 hourly total and invoice-subtotal tax. Payments, credits and balances conserve each
 minor unit and never narrow large invoice totals. Pin/lock new dependencies through
 Actions only, and verify migration, large amounts, tiny fractions and conservation.
+Arbitrary precision must not be described as unlimited input: enforce explicit
+resource bounds before arithmetic/allocation, reject out-of-range quantities and
+amounts without writes, and preserve the entered draft. Never wrap, clamp or
+truncate an amount to fit a machine integer. Currency-boundary rounding is an
+explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
@@ -72,15 +77,21 @@ remaining full current-head visual review is required. Schema 8 includes confirm
 unpaid cancellation, atomic credit-preserving replacement, exact balances, reviewed
 editor, retained links, original-owner receipts and historical VOID warnings.
 
-Current source adds bounded descriptor reads for PDF/logo bytes exceeding the
-cursor window and a separate actual storage regression (opaque bytes, never PDF
-render proof), plus navigation-bar inset padding and a required editor-field
-capture. Validate both pending increments before merging #37: 50 actual cases,
-16 UI captures per API and the genuine all-style PDF/text/private attachment gates
-are now required. Continue the existing Actions handles, inspect failures and
-review final captures; do not infer acceptance from the older green baseline.
-Schema 8 remains unreleased and upgrades released 7 conservatively. Physical email
-client compatibility and Pixel tracking/widget acceptance remain separate.
+Final 4825869 / 43224532785 attempt 2 passed every Actions gate: 479 native
+and 50 actual Android cases on API 24/35, zero failures/errors/skips in downloaded
+42 native/eight device XML files. All 16 UI captures per API and genuine all-style
+PDF/PNG/text/private-attachment gates passed. The actual storage regression
+reproduced the old API-24 cursor failure and verified complete original/copy/logo
+bytes through the bounded reader. Its opaque bytes are not PDF render evidence.
+Reviewed final API-24/35 editor/confirmation captures, API-35 invalid precision,
+balances and historical receipt, plus current replacement/VOID/settled PDFs across
+all three styles. Attempt 1 failed downloading the emulator (HTTP/2 error 92),
+before device tests; retry on the same commit succeeded.
+
+#37 merged 1492081 at 2026-11-12 13:37:28 UTC. Main Validate 43229082487 is queued;
+new main validation and automatic internal delivery remain pending. Schema 8
+upgrades released 7 conservatively. Physical email-client compatibility and Pixel
+tracking/widget acceptance remain separate. No VM builds/tests ran.
 
 Then quotes, comments/supplies/actual costs and company reports. Provider settings,
 encrypted backup/transactional merge, physical tracking/recovery and full launch
