@@ -95,16 +95,21 @@ class InvoicePaymentDeviceTest {
         }
     }
     private fun reveal(label: String, editable: Boolean = false) {
-        repeat(35) {
-            if (find(label, editable) != null) return
-            fun scroll(node: AccessibilityNodeInfo): Boolean {
-                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+        until("Actual app never exposed $label") {
+            if (find(label, editable) != null) true else {
+                fun scroll(node: AccessibilityNodeInfo): Boolean {
+                    // Prefer the vertical form over editable text's own scroll
+                    // actions. Route semantics can arrive after navigation.
+                    if (node.isVisibleToUser && node.isScrollable && node.className?.toString() == "android.widget.ScrollView" &&
+                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
+                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
+                    return false
+                }
+                automation.rootInActiveWindow?.let(::scroll)
+                SystemClock.sleep(150)
+                false
             }
-            automation.rootInActiveWindow?.let(::scroll)
-            SystemClock.sleep(150)
         }
-        waitFor(label, editable)
     }
     private fun scrollToStart() {
         repeat(12) {
@@ -219,6 +224,7 @@ class InvoicePaymentDeviceTest {
         assertEquals("INV-1000", original.number)
         try {
             launch(); click("App settings and customers"); click("Settings")
+            waitFor("Billing defaults")
             enter("Accounts receivable email (optional)", "accounts@example.test"); capture("receivables-settings")
             reveal("Save settings"); click("Save settings")
             until("Actual AR address did not persist") { repository.businessSnapshot().settings.receivablesEmail == "accounts@example.test" }

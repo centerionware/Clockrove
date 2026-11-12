@@ -1978,3 +1978,12 @@ before instrumentation. The exact blocked probe is not proven by its log.
 Bound all startup property probes and preserve emulator logs in device artifacts;
 retain all financial/device gates. #40 still needs a successful current-head run
 before merge, main validation and automatic internal delivery.
+
+### Main API-35 settings reveal follow-up
+
+43242962261 failed the real payment setup AR-field lookup on API 35 after API 24
+passed. The reviewed capture shows Settings open at the top, not a crash. The
+focused settings-route-sync test fix keeps polling/scrolling the real vertical
+form through route readiness and waits for its Billing defaults body heading.
+All financial assertions remain intact. Validate before merge; no new internal
+publication is claimed from this failed main run.
