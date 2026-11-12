@@ -22,7 +22,12 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
   late Future<List<PreparedInvoice>> _data = _load();
   void _refresh() => setState(() => _data = _load());
   Future<void> _open(PreparedInvoice invoice) async {
-    await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => InvoiceDetailScreen(invoiceId: invoice.id)));
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InvoiceDetailScreen(invoiceId: invoice.id),
+      ),
+    );
     if (mounted) _refresh();
   }
 
@@ -74,8 +79,10 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                         '${invoice.jobName}${invoice.jobDeleted ? ' · job deleted' : ''}',
                       if (invoice.customer.isNotEmpty) invoice.customer,
                       '${invoice.currency} ${invoice.total}',
-                      if (invoice.status != null) invoicePaymentStatus(invoice.status!),
-                      if (invoice.due != null) 'Balance due ${invoice.currency} ${money(invoice.due, invoice.digits)}',
+                      if (invoice.status != null)
+                        invoicePaymentStatus(invoice.status!),
+                      if (invoice.due != null)
+                        'Balance due ${invoice.currency} ${money(invoice.due, invoice.digits)}',
                       if (invoice.createdLabel.isNotEmpty)
                         'Issued ${invoice.createdLabel}',
                       if (invoice.legacy)

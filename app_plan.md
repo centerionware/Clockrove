@@ -1730,3 +1730,8 @@ real receipt views/To/CC/attachment and settlement after job purge. Existing leg
 review navigation is updated for the unified detail screen. All new UI/bridge and
 layout source needs Actions evidence. Void/credit-preserving replacement remains
 unimplemented and blocks merging the complete payment milestone.
+
+Payment UI cea30dc / 43205517843 stopped at analysis with five missing-brace lint
+findings; behavior/build/native/device stages did not run. Applied the Actions
+formatter patch and fixed all five reported control-flow blocks. Revalidate the
+same prepared UI/bridge/layout journey in Actions; no VM formatter or tests ran.

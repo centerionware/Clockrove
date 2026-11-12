@@ -231,21 +231,25 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         _field(_name, 'Company name', length: 240),
         _field(_email, 'Company email', length: 254, email: true),
-        Semantics(identifier: 'accounts-receivable-email', child: _field(
-          _receivables,
-          'Accounts receivable email (optional)',
-          length: 254,
-          email: true,
-          error: _receivablesError,
-          onChanged: (_) {
-            if (_receivablesError != null) {
-              setState(
-                () =>
-                    _receivablesError = accountingEmailError(_receivables.text),
-              );
-            }
-          },
-        )),
+        Semantics(
+          identifier: 'accounts-receivable-email',
+          child: _field(
+            _receivables,
+            'Accounts receivable email (optional)',
+            length: 254,
+            email: true,
+            error: _receivablesError,
+            onChanged: (_) {
+              if (_receivablesError != null) {
+                setState(
+                  () => _receivablesError = accountingEmailError(
+                    _receivables.text,
+                  ),
+                );
+              }
+            },
+          ),
+        ),
         const Padding(
           padding: EdgeInsets.only(bottom: 16),
           child: Text(

@@ -6,7 +6,12 @@ import 'report_api.dart';
 import 'invoice_detail_screen.dart';
 
 class InvoiceScreen extends ConsumerStatefulWidget {
-  const InvoiceScreen({super.key, required this.invoiceId, this.copyId, this.composeOnOpen = false});
+  const InvoiceScreen({
+    super.key,
+    required this.invoiceId,
+    this.copyId,
+    this.composeOnOpen = false,
+  });
   final String invoiceId;
   final String? copyId;
   final bool composeOnOpen;
@@ -17,16 +22,22 @@ class InvoiceScreen extends ConsumerStatefulWidget {
 class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   Future<InvoicePage> _preview(int page) {
     final api = ref.read(reportApiProvider), copy = widget.copyId;
-    return copy == null ? api.preview(widget.invoiceId, page) : api.previewCopy(widget.invoiceId, copy, page);
+    return copy == null
+        ? api.preview(widget.invoiceId, page)
+        : api.previewCopy(widget.invoiceId, copy, page);
   }
+
   late Future<InvoicePage> _page = _preview(0);
   @override
   void initState() {
     super.initState();
     if (widget.composeOnOpen) {
-      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _handoff('email'); });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handoff('email');
+      });
     }
   }
+
   bool _busy = false;
   String? _message;
   Future<void> _handoff(String kind) async {
@@ -39,13 +50,24 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
       final api = ref.read(reportApiProvider);
       String message;
       if (kind == 'email') {
-        if (widget.copyId == null) { await api.email(widget.invoiceId); } else { await api.emailCopy(widget.invoiceId, widget.copyId!); }
+        if (widget.copyId == null) {
+          await api.email(widget.invoiceId);
+        } else {
+          await api.emailCopy(widget.invoiceId, widget.copyId!);
+        }
         message = 'Email composer opened. Review the PDF attachment and press Send in your email app.';
       } else if (kind == 'share') {
-        if (widget.copyId == null) { await api.share(widget.invoiceId); } else { await api.shareCopy(widget.invoiceId, widget.copyId!); }
+        if (widget.copyId == null) {
+          await api.share(widget.invoiceId);
+        } else {
+          await api.shareCopy(widget.invoiceId, widget.copyId!);
+        }
         message = 'Share dialog opened.';
       } else {
-        message = await (widget.copyId == null ? api.save(widget.invoiceId) : api.saveCopy(widget.invoiceId, widget.copyId!))
+        message =
+            await (widget.copyId == null
+                ? api.save(widget.invoiceId)
+                : api.saveCopy(widget.invoiceId, widget.copyId!))
             ? 'PDF saved.'
             : 'Save cancelled. Your prepared invoice is kept.';
       }
@@ -53,9 +75,13 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
         setState(() => _message = message);
       }
     } on PlatformException catch (error) {
-      if (mounted) setState(() => _message = error.code == 'PAYMENT_HISTORY_TOO_LARGE'
-        ? 'This history is too long for one PDF. Open individual saved receipts from the invoice.'
-        : 'The handoff could not be opened. Try Save PDF or Share. Your saved document is kept.');
+      if (mounted) {
+        setState(
+          () => _message = error.code == 'PAYMENT_HISTORY_TOO_LARGE'
+              ? 'This history is too long for one PDF. Open individual saved receipts from the invoice.'
+              : 'The handoff could not be opened. Try Save PDF or Share. Your saved document is kept.',
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -71,9 +97,26 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.copyId == null ? 'Prepared invoice' : 'Saved payment copy'), actions: [
-      IconButton(tooltip: 'Payments and balance', onPressed: _busy ? null : () => Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => InvoiceDetailScreen(invoiceId: widget.invoiceId))), icon: const Icon(Icons.payments_outlined)),
-    ]),
+    appBar: AppBar(
+      title: Text(
+        widget.copyId == null ? 'Prepared invoice' : 'Saved payment copy',
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Payments and balance',
+          onPressed: _busy
+              ? null
+              : () => Navigator.push<void>(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        InvoiceDetailScreen(invoiceId: widget.invoiceId),
+                  ),
+                ),
+          icon: const Icon(Icons.payments_outlined),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: Column(
         children: [
@@ -86,9 +129,11 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(widget.copyId == null
-                    ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
-                    : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.'),
+                  Text(
+                    widget.copyId == null
+                        ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
+                        : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
+                  ),
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -102,7 +147,11 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                       FilledButton.icon(
                         onPressed: _busy ? null : () => _handoff('email'),
                         icon: const Icon(Icons.email_outlined),
-                        label: Text(widget.copyId == null ? 'Email invoice' : 'Email copy'),
+                        label: Text(
+                          widget.copyId == null
+                              ? 'Email invoice'
+                              : 'Email copy',
+                        ),
                       ),
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _handoff('save'),
@@ -127,9 +176,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                 if (snapshot.hasError) {
                   return Center(
                     child: TextButton(
-                      onPressed: () => setState(
-                        () => _page = _preview(0),
-                      ),
+                      onPressed: () => setState(() => _page = _preview(0)),
                       child: const Text('Retry PDF preview'),
                     ),
                   );

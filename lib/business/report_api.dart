@@ -392,16 +392,26 @@ class ReportApi {
 
   Future<InvoicePage> previewCopy(String id, String copyId, int page) async {
     final value = (await _documents.invokeMapMethod<Object?, Object?>(
-      'invoicePreview', {'invoiceId': id, 'copyId': copyId, 'page': page},
+      'invoicePreview',
+      {'invoiceId': id, 'copyId': copyId, 'page': page},
     ))!;
-    return InvoicePage(value['page'] as int, value['pages'] as int, value['png'] as Uint8List);
+    return InvoicePage(
+      value['page'] as int,
+      value['pages'] as int,
+      value['png'] as Uint8List,
+    );
   }
-  Future<void> emailCopy(String id, String copyId) =>
-      _documents.invokeMethod<void>('emailInvoice', {'invoiceId': id, 'copyId': copyId});
-  Future<void> shareCopy(String id, String copyId) =>
-      _documents.invokeMethod<void>('shareInvoice', {'invoiceId': id, 'copyId': copyId});
+
+  Future<void> emailCopy(String id, String copyId) => _documents
+      .invokeMethod<void>('emailInvoice', {'invoiceId': id, 'copyId': copyId});
+  Future<void> shareCopy(String id, String copyId) => _documents
+      .invokeMethod<void>('shareInvoice', {'invoiceId': id, 'copyId': copyId});
   Future<bool> saveCopy(String id, String copyId) async =>
-      await _documents.invokeMethod<bool>('saveInvoice', {'invoiceId': id, 'copyId': copyId}) ?? false;
+      await _documents.invokeMethod<bool>('saveInvoice', {
+        'invoiceId': id,
+        'copyId': copyId,
+      }) ??
+      false;
 
   Future<void> email(String id) =>
       _documents.invokeMethod<void>('emailInvoice', {'invoiceId': id});

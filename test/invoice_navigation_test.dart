@@ -35,8 +35,10 @@ class _Invoices extends ReportApi {
 
 class _Payments extends PaymentApi {
   @override
-  Future<InvoicePayments> read(String id) async => paymentFixture(invoiceId: id, deleted: true);
+  Future<InvoicePayments> read(String id) async =>
+      paymentFixture(invoiceId: id, deleted: true);
 }
+
 class _Timer extends TimerApi {
   @override
   Stream<int> get committedVersions => const Stream.empty();
@@ -48,7 +50,11 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [reportApiProvider.overrideWithValue(_Invoices()), paymentApiProvider.overrideWithValue(_Payments()), timerApiProvider.overrideWithValue(_Timer())],
+          overrides: [
+            reportApiProvider.overrideWithValue(_Invoices()),
+            paymentApiProvider.overrideWithValue(_Payments()),
+            timerApiProvider.overrideWithValue(_Timer()),
+          ],
           child: const MaterialApp(home: InvoiceHistory()),
         ),
       );
@@ -64,8 +70,15 @@ void main() {
       await tester.tap(find.text('INV-1000'));
       await tester.pumpAndSettle();
       expect(find.byType(InvoiceDetailScreen), findsOneWidget);
-      expect(find.text('Job deleted · financial records retained'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('View original PDF'), 200, scrollable: find.byType(Scrollable).first);
+      expect(
+        find.text('Job deleted · financial records retained'),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.text('View original PDF'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('View original PDF'));
       await tester.pumpAndSettle();
       expect(find.byType(InvoiceScreen), findsOneWidget);

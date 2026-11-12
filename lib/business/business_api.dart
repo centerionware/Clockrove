@@ -14,10 +14,12 @@ String newBusinessId() => List.generate(
 ).map((v) => v.toRadixString(16).padLeft(2, '0')).join();
 
 /// Decimal input and display never pass through floating point.
-String? parseMoney(String input, int digits) => _parseMoney(input, digits, 1024);
+String? parseMoney(String input, int digits) =>
+    _parseMoney(input, digits, 1024);
 
 /// Extended invoice balances can exceed the source-price text limit.
-String? parsePaymentMoney(String input, int digits) => _parseMoney(input, digits, 4096);
+String? parsePaymentMoney(String input, int digits) =>
+    _parseMoney(input, digits, 4096);
 
 String? _parseMoney(String input, int digits, int maxDigits) {
   final value = input.trim();

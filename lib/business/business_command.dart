@@ -119,8 +119,10 @@ class _BusinessCommandState extends State<BusinessCommand>
     'PAYMENT_CURRENCY_MISMATCH' => 'Use the invoice’s original currency. Settings changes never convert its balance.',
     'INVALID_PAYMENT' => 'Review the received date, timezone and field lengths. A payment cannot be dated in the future.',
     'INVALID_PAYMENT_REVERSAL' => 'Add a correction reason of at least 10 characters and review its date and timezone.',
-    'REVERSAL_BEFORE_PAYMENT' => 'The correction date cannot be before the payment was received.',
-    'PAYMENT_ALREADY_REVERSED' => 'This payment was already corrected. Refresh its history.',
+    'REVERSAL_BEFORE_PAYMENT' =>
+      'The correction date cannot be before the payment was received.',
+    'PAYMENT_ALREADY_REVERSED' =>
+      'This payment was already corrected. Refresh its history.',
     'PAYMENT_UNAVAILABLE_OR_MOVED' => 'This payment is unavailable here or was credited to a replacement invoice. Refresh and open its current invoice.',
     'PAYMENT_ID_EXISTS' || 'REVERSAL_ID_EXISTS' || 'INVOICE_COPY_ID_EXISTS' => 'This record already exists. Refresh the invoice to review its saved history.',
     'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
