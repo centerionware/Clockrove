@@ -1960,3 +1960,13 @@ contains the same probe and is superseded by this specific correction. Complete
 financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
 48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
 captures per API. No VM build/test ran.
+
+### Main financial validation follow-up
+
+Main 43229082487 failed at the initial API-24 payment field lookup. Reviewed the
+actual failure screenshot/accessibility tree: the Record payment route is open,
+but early forward-scroll actions passed the top field during its transition.
+`payment-route-sync` adds real-route/action and editable-field waits before those
+scrolls. Keep the full financial gates; validate and merge this focused test fix
+before claiming a new internal delivery. No app crash or store upload is proven
+by this failed run. See plan_status.md for artifact evidence.
