@@ -55,13 +55,14 @@ internal object InvoiceCopyStore {
         return null
     }
     fun read(db: SQLiteDatabase, copyId: String): InvoiceStore.Record {
-        val row = db.rawQuery("SELECT invoice_id,kind,created_ms,command_version,metadata,pdf FROM invoice_copies WHERE id=?", arrayOf(copyId)).use {
+        val row = db.rawQuery("SELECT invoice_id,kind,created_ms,command_version,metadata FROM invoice_copies WHERE id=?", arrayOf(copyId)).use {
             require(it.moveToFirst()) { "INVOICE_COPY_UNAVAILABLE" }
-            Copy(it.getString(0), it.getString(1), it.getLong(2), it.getLong(3), JSONObject(it.getString(4)), if (it.isNull(5)) null else it.getBlob(5))
+            Copy(it.getString(0), it.getString(1), it.getLong(2), it.getLong(3), JSONObject(it.getString(4)))
         }
         require(row.metadata.getString("id") == copyId && row.metadata.getString("invoice_id") == row.invoiceId &&
             row.metadata.getString("kind") == row.kind && row.metadata.getLong("created_ms") == row.created && row.metadata.getLong("command_version") == row.version) { "INVALID_INVOICE_COPY" }
-        val original = InvoiceStore.read(db, row.invoiceId)
+        val cachedPdf = InvoiceBlobs.copy(db, copyId)
+        val original = InvoiceStore.read(db, row.invoiceId, includePdf = false)
         val document = InvoiceStore.Snapshot.decode(original.payload)
         val paid = PaymentMath.parseMinor(row.metadata.getString("paid_minor"))
         val due = PaymentMath.parseMinor(row.metadata.getString("due_minor"))
@@ -77,7 +78,7 @@ internal object InvoiceCopyStore {
                 InvoiceStore.amount(BigInteger.ZERO, document.digits), listOf(InvoiceStore.Line("Cancelled unpaid balance", detail, InvoiceStore.amount(cancelled, document.digits))), copyId)
             val copy = document.copy(subject = "Voided invoice · ${document.number}",
                 body = "Invoice ${document.number} is VOID. $detail\nOriginal total: ${document.total} ${document.currency}\nCredit transferred: ${statement.paid} ${document.currency}\nBalance due: ${statement.due} ${document.currency}\nCopy reference: $copyId", statement = statement)
-            return original.copy(payload = copy.encode(), pdf = row.pdf, copyId = copyId, documentKind = "VOID")
+            return original.copy(payload = copy.encode(), pdf = cachedPdf, copyId = copyId, documentKind = "VOID")
         }
         val balance = PaymentMath.balance(total, paid)
         require(balance.due == due) { "INVALID_INVOICE_COPY" }
@@ -90,9 +91,9 @@ internal object InvoiceCopyStore {
         val status = balance.status.replace('_', ' ')
         val body = document.body + "\n\n$caption ${document.number}\nStatus: $status\nOriginal total: ${document.total} ${document.currency}\nPaid: ${statement.paid} ${document.currency}\nBalance due: ${statement.due} ${document.currency}\nCopy reference: $copyId"
         val copy = document.copy(subject = "$caption · ${document.subject}", body = body, statement = statement)
-        return original.copy(payload = copy.encode(), pdf = row.pdf, copyId = copyId, documentKind = row.kind)
+        return original.copy(payload = copy.encode(), pdf = cachedPdf, copyId = copyId, documentKind = row.kind)
     }
-    private data class Copy(val invoiceId: String, val kind: String, val created: Long, val version: Long, val metadata: JSONObject, val pdf: ByteArray?)
+    private data class Copy(val invoiceId: String, val kind: String, val created: Long, val version: Long, val metadata: JSONObject)
     private fun events(db: SQLiteDatabase, invoiceId: String, version: Long, eventId: String?, digits: Int): List<InvoiceStore.Line> {
         val args = if (eventId == null) arrayOf(invoiceId, version.toString()) else arrayOf(invoiceId, version.toString(), eventId)
         return db.rawQuery("SELECT e.kind,e.effective_ms,e.payload,p.method,p.reference FROM invoice_payment_events e JOIN invoice_payments p ON p.id=e.payment_id WHERE e.invoice_id=? AND e.command_version<=? ${if (eventId == null) "" else "AND e.id=?"} ORDER BY e.command_version,e.ordinal LIMIT 5001", args).use { rows -> buildList {

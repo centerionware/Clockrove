@@ -117,8 +117,12 @@ internal object InvoiceStore {
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)
         return null
     }
-    fun read(db: SQLiteDatabase, id: String): Record = db.rawQuery("SELECT i.id,i.job_id,i.number,i.payload,i.pdf,l.bytes FROM invoices i LEFT JOIN logo_assets l ON l.id=i.logo_id WHERE i.id=?", arrayOf(id)).use {
-        require(it.moveToFirst()) { "INVOICE_UNAVAILABLE" }
-        Record(it.getString(0), it.getString(1), it.getString(2), it.getString(3), if (it.isNull(4)) null else it.getBlob(4), if (it.isNull(5)) null else it.getBlob(5))
+    fun read(db: SQLiteDatabase, id: String, includePdf: Boolean = true): Record {
+        val header = db.rawQuery("SELECT id,job_id,number,payload,logo_id FROM invoices WHERE id=?", arrayOf(id)).use {
+            require(it.moveToFirst()) { "INVOICE_UNAVAILABLE" }
+            Record(it.getString(0), it.getString(1), it.getString(2), it.getString(3), null, null) to if (it.isNull(4)) null else it.getString(4)
+        }
+        return header.first.copy(pdf = if (includePdf) InvoiceBlobs.original(db, id) else null,
+            logo = header.second?.let { InvoiceBlobs.logo(db, it) })
     }
 }

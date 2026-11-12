@@ -17,7 +17,7 @@ adb -s emulator-5554 logcat -v threadtime > "$clockrove_copy_results/copies-logc
 clockrove_copy_logcat_pid=$!
 trap 'kill "$clockrove_copy_logcat_pid" 2>/dev/null || true' EXIT
 clockrove_copy_failed=false
-if ! timeout 300 adb -s emulator-5554 shell am instrument -w -r -e class io.github.centerionware.billingtest.InvoiceCopiesPdfTest -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$clockrove_copy_results/copies-instrumentation.txt"; then
+if ! timeout 300 adb -s emulator-5554 shell am instrument -w -r -e class io.github.centerionware.billingtest.InvoiceCopiesPdfTest,io.github.centerionware.billingtest.InvoiceBlobStorageDeviceTest -e listener io.github.centerionware.clockrove.CiXmlListener io.github.centerionware.clockrove.test/androidx.test.runner.AndroidJUnitRunner | tee "$clockrove_copy_results/copies-instrumentation.txt"; then
   clockrove_copy_failed=true
 fi
 kill "$clockrove_copy_logcat_pid" 2>/dev/null || true
@@ -30,12 +30,14 @@ python3 - "$clockrove_copy_results/TEST-copies.xml" <<'PY_DEVICE'
 import sys
 import xml.etree.ElementTree as E
 root = E.parse(sys.argv[1]).getroot()
-assert int(root.attrib['tests']) == 1, root.attrib
+assert int(root.attrib['tests']) == 2, root.attrib
 assert all(int(root.attrib[k]) == 0 for k in ['failures', 'errors', 'skipped']), root.attrib
 cases = root.findall('testcase')
-assert len(cases) == 1
-assert cases[0].attrib['classname'] == 'io.github.centerionware.billingtest.InvoiceCopiesPdfTest'
-assert cases[0].attrib['name'] == 'nativePaymentsProduceAllStylePartialPaidBalanceCorrectionAndWideCopies'
+assert len(cases) == 2
+assert {(c.attrib['classname'], c.attrib['name']) for c in cases} == {
+    ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'nativePaymentsProduceAllStylePartialPaidBalanceCorrectionAndWideCopies'),
+    ('io.github.centerionware.billingtest.InvoiceBlobStorageDeviceTest', 'originalCopyAndLogoBytesSurviveActualCursorWindowLimit'),
+}
 print('Verified actual Android immutable financial copies:', root.attrib)
 PY_DEVICE
 for clockrove_copy_style in minimal classic modern; do

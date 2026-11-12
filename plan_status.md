@@ -2493,3 +2493,23 @@ value, status, source, credit and document assertions remain. API 35 was not rea
 Added physical acceptance procedures for quantities, pasted-value rejection,
 payments, company/AR CC in the real email app, corrected credit and source releases.
 No physical/device success is inferred from those instructions. Fresh CI required.
+
+### Bounded cached-document storage review
+
+Source audit found that the accepted 20 MB cached-PDF limit exceeded Android 7's
+stock 2048 KiB CursorWindow, while original/copy readers selected PDF and metadata
+(and original logo) in one cursor row. AOSP config/implementation and the public
+SQLiteStatement blob-descriptor API were checked. New source reads metadata
+separately, checks each BLOB length/type/limit first, uses a bounded small-row path
+and a read-only descriptor for larger bytes, closes resources and verifies exact
+length/EOF. Copy reads do not load the original PDF unnecessarily. No money,
+numbering, payload or source-claim write behavior changes.
+
+A new actual Android storage case uses an isolated temporary database, reproduces
+the oversized cursor constraint on stock API 24, and checks original/copy/logo
+byte identity, nullable/small reads and oversized rejection. Its patterned bytes
+are explicitly NOT native PDF-rendering evidence; the existing all-style genuine
+PdfDocument/PdfRenderer/text/attachment cases remain separate and required. The
+copy gate now requires exactly those two named actual cases per API (50 combined
+actual cases expected for the complete workflow). This follow-up needs Actions
+proof; 29fbe8b's existing UI validation continues separately.
