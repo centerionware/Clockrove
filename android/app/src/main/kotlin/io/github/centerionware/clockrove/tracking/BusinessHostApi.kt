@@ -161,7 +161,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                         "updated" to comment.updatedMillis, "attachments" to comment.attachments.map { mapOf("id" to it.id, "commentId" to it.commentId, "created" to it.createdMillis, "bytes" to it.bytes) }) },
                     "events" to conversation.events.map { mapOf("commentId" to it.commentId, "action" to it.action, "recorded" to it.recordedMillis) })
             }
-            "taskAttachment" -> repository.taskAttachment(input.string("attachmentId"))?.let { mapOf("id" to it.id, "taskId" to it.taskId, "commentId" to it.commentId, "image" to it.bytes) }
+            "taskAttachment" -> return repository.taskAttachment(input.string("attachmentId"))?.let { mapOf("id" to it.id, "taskId" to it.taskId, "commentId" to it.commentId, "image" to it.bytes) }
                 ?: mapOf("unavailable" to true)
             "invoices" -> { val s = repository.invoices(input.nullable("jobId")); return mapOf("version" to s.version, "invoices" to s.invoices.map { mapOf("id" to it.id, "number" to it.number, "created" to it.created, "total" to it.total, "currency" to it.currency, "style" to it.style,
                 "jobId" to it.jobId, "jobName" to it.jobName, "customer" to it.customer, "jobDeleted" to it.jobDeleted, "legacy" to it.legacy, "paidMinor" to it.paidMinor, "dueMinor" to it.dueMinor, "status" to it.status, "digits" to it.digits,
