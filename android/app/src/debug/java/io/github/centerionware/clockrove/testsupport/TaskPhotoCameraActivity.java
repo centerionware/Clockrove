@@ -19,6 +19,9 @@ public final class TaskPhotoCameraActivity extends Activity {
         super.onCreate(savedInstanceState);
         Bitmap bitmap = null;
         try {
+            if (!MediaStore.ACTION_IMAGE_CAPTURE.equals(getIntent().getAction())) {
+                throw new IllegalStateException("Camera capture action is missing");
+            }
             Uri output;
             if (Build.VERSION.SDK_INT >= 33) {
                 output = getIntent().getParcelableExtra(MediaStore.EXTRA_OUTPUT, Uri.class);

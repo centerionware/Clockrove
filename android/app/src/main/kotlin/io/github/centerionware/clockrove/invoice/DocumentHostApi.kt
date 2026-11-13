@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -134,7 +135,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                 val file = File.createTempFile("capture-", ".jpg", directory)
                 val uri = Uri.parse("content://${activity.packageName}.task-capture/capture/${file.name}")
                 photoCaptureFile = file
-                Intent("android.media.action.IMAGE_CAPTURE").apply {
+                Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
                     putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
                     clipData = ClipData.newUri(activity.contentResolver, "Clockrove task photo", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -145,6 +146,12 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     type = "image/*"
                     putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/png", "image/jpeg", "image/webp"))
                 }
+            }
+            if (camera && isCiCameraFixtureEnabled()) {
+                intent.setClassName(
+                    activity,
+                    "io.github.centerionware.clockrove.testsupport.TaskPhotoCameraActivity",
+                )
             }
             photoResult = result
             activity.startActivityForResult(intent, requestCode)
@@ -165,6 +172,12 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
             result.error("PHOTO_SOURCE_UNAVAILABLE", "The selected photo source could not be opened", null)
         }
     }
+
+    private fun isCiCameraFixtureEnabled(): Boolean =
+        (activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+            activity.applicationInfo.metaData?.getBoolean(
+                "io.github.centerionware.clockrove.CI_CAMERA_FIXTURE",
+            ) == true
 
     fun activityResult(code: Int, status: Int, data: Intent?): Boolean {
         if (code == 0xcc44 || code == 0xcc45) {

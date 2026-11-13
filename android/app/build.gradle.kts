@@ -41,6 +41,8 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["clockroveCiCameraFixture"] =
+            (System.getenv("CLOCKROVE_CI_CAMERA_FIXTURE") == "true").toString()
     }
 
     testOptions { unitTests.isIncludeAndroidResources = true }

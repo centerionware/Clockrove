@@ -5,15 +5,12 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application>
-        <!-- Deterministic CI camera for ACTION_IMAGE_CAPTURE. Debug-only; this
-             is absent from release APKs and exercises the production URI path. -->
-        <activity android:name=".testsupport.TaskPhotoCameraActivity" android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
-            <intent-filter android:priority="1000">
-                <action android:name="android.media.action.IMAGE_CAPTURE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+        <!-- Disabled by default; Actions opts into the deterministic camera for
+             its debug-only run. Release builds do not contain this component. -->
+        <meta-data android:name="io.github.centerionware.clockrove.CI_CAMERA_FIXTURE"
+            android:value="${clockroveCiCameraFixture}" />
+        <activity android:name=".testsupport.TaskPhotoCameraActivity" android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name=".widget.WidgetTestHostActivity" android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
