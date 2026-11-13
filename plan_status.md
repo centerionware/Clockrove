@@ -44,7 +44,7 @@ remain deferred.
 | Follow-on: quotes and invoice detail | Merged #39; main validation passed and internal delivery accepted | PR exact-head run 43381832106 and main run 43384059350 passed the actual quote journey and 30 API-24/35 device tests each with zero failures/errors/skips. Keyboard-closed assertion passed before recording the customer decision. Play run 43385810795 accepted internal.29.1 / version code 216718138; physical install and tester availability remain separate. |
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
 | PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
-| M6.5 quote usability, task comments/images, map and GPS controls | API 24 actual journeys pass; CI-only camera fixture integration in progress; physical-device evidence pending | Head `851d064` / exact run [43482510219](https://github.com/centerionware/Clockrove/actions/runs/43482510219) passed format/analyze/Flutter tests/build/native tests and all journeys until the API-24 task-media camera step. The explicit component attempt still showed the no-camera fallback, so camera attachment remains unverified. Next revision has instrumentation set a preference in the synthetic app and asserts its non-exported fixture activity is installed before starting the app; only a debuggable app honors the preference. Exact-head API-24/35 rerun pending. No VM build/test/formatter. Record owner-device map/GPS/camera acceptance separately. |
+| M6.5 quote usability, task comments/images, map and GPS controls | API-24/35 emulator journeys passed at `8be7c17`; destination-specific photo message correction awaits Actions; owner-device map/GPS/camera evidence pending | Exact head `8be7c17` / Actions run [43485231969](https://github.com/centerionware/Clockrove/actions/runs/43485231969) passed all checks. Downloaded device XML reports 32 actual Android tests on each API, all zero failures/errors/skips. Reviewed camera-review and task/comment attachment screenshots on both APIs. Visual inspection found the comment-photo success message incorrectly called it a task photo; corrected the message and added assertions for both destinations. That latest source change must pass Actions. The non-exported synthetic fixture is instrumentation-only and absent from release builds. Physical map rendering, GPS sampling and real-camera acceptance remain pending; no VM build/test/formatter. |
 | M6.6 remaining requested business features | Planned after M6.5 | Invoice-only hourly minimum/rounding, task minimum fee, Supplies classification, actual costs, tax-preparation reports and pending map-provider settings remain before declaring launch functionality complete. |
 | Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
@@ -3173,14 +3173,18 @@ exercise the production capture intent and output-URI flow on both APIs. Fresh
 exact-head device evidence is pending. All build and test work remains in
 Actions; no VM build/test/formatter ran.
 
-Head `fb90455` / Actions run `43478660042` confirmed that moving the handler to
-the debug APK alone did not fix API-35 intent resolution; the same test reported
-“No camera app is available” on API 35, while all API-24 suites and API-35 suites
-through quote passed. Head `851d064` / run `43482510219` passed every suite on
-API 24 until the camera step, where the same fallback occurred; evidence confirms
-the explicit component route was not active or available. The camera test remains
-incomplete. The next revision makes the instrumentation set an isolated test
-preference and asserts the non-exported debug fixture activity is installed
-before launching the app. Only a debuggable build honors that preference, so
-ordinary debug/release builds still use the device camera. Fresh Actions evidence
-is required.
+The camera test remained incomplete until head `8be7c17` / run `43485231969`.
+That exact run passed all workflow steps and its downloaded XML reports 32 actual
+Android tests on each API, all zero failures/errors/skips, including task-media.
+Reviewed camera-review and final comment-owned attachment screenshots on API 24
+and 35. The task-media test sets a private preference in the debuggable app,
+verifies the non-exported fixture activity is installed, and clears the
+preference afterward. It confirms review-before-attach and persisted comment
+ownership. This fixture is absent from release builds. Physical map/GPS/real-
+camera acceptance remains separate.
+
+Visual review of the successful API-24/API-35 comment-photo screenshots showed
+that the snackbar incorrectly said “Photo attached to this task” for a
+comment-owned image. Changed the success copy to identify the task or comment
+destination and added actual Android assertions for both cases. The code and
+plan correction await exact-head Actions validation; no VM test or build ran.

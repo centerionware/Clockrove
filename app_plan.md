@@ -55,43 +55,25 @@ all with zero failures/errors/skips. Automatic Play delivery 43391432210 accepte
 `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval,
 availability and physical installation remain separate.
 
-M6.5 source implementation is prepared on `milestone-quote-media-gps`: quote
-templates and optional decisions, reviewed quote-to-new-job conversion, task
-comments and private reviewed images, map centering when a site has no saved
-location, and global/per-job GPS recording controls. PR #43 head `a177984` /
-Actions run `43443440401` passed formatting, analysis, Flutter tests, Android
-build, native tests, API-24 actual journeys (including comment/gallery/camera
-attachments), and the API-24 document checks. It failed in the API-35 quote
-journey while the device helper tried to reveal the Description field; the saved
-failure screenshot shows the quote form still at the top with its keyboard open.
-The next head `6bf3238` / run `43470341913` passed formatting, analysis, Flutter
-tests, Android build and native tests, all API-24 actual journeys (including
-quote and task/comment gallery-camera paths), API-35 native cases, billing and
-immutable-copy journeys. It then failed in the API-35 payment journey while its
-helper sought the replacement Unit price field; the screenshot shows the
-replacement form at the tax section. API-35 quote/task-media were not reached on
-this run. Add the same touch fallback to the payment-device helper and rerun the
-exact head. No local build/test/formatter has run. Physical map, camera and GPS
-acceptance remains separate.
+M6.5 quote, comments, private image attachment, GPS controls and map fallback
+source are on PR #43 (`milestone-quote-media-gps`). Exact head `8be7c17` / Actions
+run `43485231969` passed formatting, analysis, Flutter tests, Android build,
+native tests, the actual Android journey suite on API 24 and 35, invoice viewer
+checks, and release tooling. Downloaded XML reports 32 actual Android tests per
+API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media),
+all with zero failures/errors/skips. Reviewed camera-review and task/comment
+attachment screenshots on both APIs; they show the explicit photo review before
+attachment and the saved comment-owned image afterward. The test fixture is a
+non-exported debug-only activity selected through an instrumentation-only app
+preference; release builds still use the phone's camera app. M6.5 emulator
+journeys pass at this head. Visual review caught an incorrect success message on
+comment photos (“Photo attached to this task”). Updated it to identify the
+comment destination and added assertions for both task and comment messages to
+the Android journey; this copy fix is awaiting its exact-head Actions run.
+Physical map display, GPS sampling and hardware-camera acceptance remain
+owner-device checks. No VM build/test/formatter has run.
 
-The exact-head run `43473888142` then validated `baa38a4`: format, analysis,
-Flutter tests, Android build and native tests passed. API 24 passed the 23 base
-device cases plus billing, copies, payment, quote and task-media journeys. API 35
-passed those same cases through quote, but task-media could not resolve its
-deterministic camera activity and displayed the app's expected “No camera app is
-available” state. Moved the synthetic handler into the debug APK so the
-production `ACTION_IMAGE_CAPTURE` and temporary output-URI flow can be exercised
-reliably without adding a camera implementation to release builds. Validate this
-correction on API 24 and 35 before accepting M6.5. The whole-app UI/E2E milestone
-remains M7.6 after M6.5, M6.6 and backup M7.
-
-The first debug-APK handler attempt (`fb90455`, run `43478660042`) reproduced the
-same API-35 ActivityNotFound fallback: merely registering a debug implicit
-handler was not reliable. The next explicit-component attempt (`851d064`, run
-`43482510219`) also displayed that fallback on API 24, so its test capture did
-not pass. The current revision uses an instrumentation-set preference that
-routes only a debuggable app to the non-exported fixture component; ordinary
-debug and release builds continue to launch the device's camera app.
+The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
 After M6.5, complete M7 backup and the remaining requested business features.
 Only after all launch functionality is implemented, M7.6 is the whole-app

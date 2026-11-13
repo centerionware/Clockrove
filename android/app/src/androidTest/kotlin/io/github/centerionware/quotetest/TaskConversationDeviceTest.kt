@@ -293,6 +293,7 @@ class TaskConversationDeviceTest {
             val attachDeadline = SystemClock.uptimeMillis() + 30000
             while (attachmentCount() != 2 && SystemClock.uptimeMillis() < attachDeadline) SystemClock.sleep(100)
             assertEquals(2, attachmentCount())
+            waitFor("Photo attached to this task.")
             assertCameraTemporaryFilesWereRemoved()
             scrollToStart()
             waitFor("Task photo attachment")
@@ -309,6 +310,7 @@ class TaskConversationDeviceTest {
             val commentPhotoDeadline = SystemClock.uptimeMillis() + 30000
             while (attachmentCount() != 3 && SystemClock.uptimeMillis() < commentPhotoDeadline) SystemClock.sleep(100)
             assertEquals(3, attachmentCount())
+            waitFor("Photo attached to this comment.")
             assertCameraTemporaryFilesWereRemoved()
             val attachedToComment = SQLiteDatabase.openDatabase(
                 app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY,

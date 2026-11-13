@@ -126,7 +126,13 @@ class _TaskConversationScreenState
         FocusManager.instance.primaryFocus?.unfocus();
         _refresh();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo attached to this task.')),
+          SnackBar(
+            content: Text(
+              commentId == null
+                  ? 'Photo attached to this task.'
+                  : 'Photo attached to this comment.',
+            ),
+          ),
         );
       }
       return;
