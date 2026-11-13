@@ -205,7 +205,7 @@ class SettingsSaveDeviceTest {
         app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
             click("App settings and customers"); click("Settings")
-            waitFor("Record work locations")
+            reveal("Record work locations")
             click("Record work locations")
             capture("location-recording-global-off")
             reveal("Save settings")
@@ -215,7 +215,7 @@ class SettingsSaveDeviceTest {
             assertFalse("Global location recording did not save as off", repository.businessSnapshot().settings.defaultLocationRecording)
 
             waitFor("App settings and customers"); click("App settings and customers"); click("Settings")
-            waitFor("Record work locations")
+            reveal("Record work locations")
             click("Record work locations")
             capture("location-recording-global-on")
             reveal("Save settings")
