@@ -2516,6 +2516,21 @@ preview sample-text case but failed the layout case before it reached the bounds
 checks: the joined text was normalized to remove spaces, while the marker assertion
 still expected spaces. Its formatter annotation also showed the preview test
 callback body needed dedenting. Both exact corrections are now in the worktree,
-pending a fresh Actions run. Thus actual column geometry is not yet verified. No
-local build, test or formatter was run. Keep #39 draft until corrected formatting/
-PDF/quote acceptance passes and the actual generated PDF images have been inspected.
+pending a fresh Actions run. Run 43368987614 on `0b3d9f4b03eb9d380e1f36a3834b77bfa9d8f590`
+passed formatting, Flutter behavior, Android build and native tests but the PDF
+layout assertion still received empty bounds. Android's [`PdfPageTextContent`
+reference](https://developer.android.com/reference/android/graphics/pdf/content/PdfPageTextContent)
+says bounds can be empty for unbounded text; API 35 also provides
+[`PdfRenderer.Page.searchText`](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer.Page#searchText(java.lang.String)),
+which returns match bounds. The test now requests bounds for each sentinel through
+that API instead of inferring them from text content fragments. This correction
+awaits Actions. The `native-ui-previews` artifact from 43368987614 was retrieved
+and visually reviewed: API-24 party-layout images for all styles, API-35 Minimal
+party layout, all three API-35 Settings preview styles, and the Settings preview
+screen capture. These show customer-left/company-right placement, wrapped
+overflow, right-aligned subtotal/tax rows, bold amount digits and a clear
+sample-only preview with page controls. Visual review looks correct, while the
+automated API-35 geometry assertion remains unverified until the `searchText`
+revision passes. No local build, test or formatter was run. Keep #39 draft until
+corrected formatting/PDF/quote acceptance passes and generated PDF images from
+the passing run have been reviewed.

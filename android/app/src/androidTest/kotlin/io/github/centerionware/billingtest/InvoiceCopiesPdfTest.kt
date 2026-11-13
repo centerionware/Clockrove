@@ -167,7 +167,15 @@ class InvoiceCopiesPdfTest {
                 ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                     PdfRenderer(descriptor).use { pdf ->
                         assertTrue("Long party details should wrap and paginate: $style", pdf.pageCount > 1)
-                        val textAndBounds = mutableListOf<Pair<String, List<android.graphics.RectF>>>()
+                        val extractedPages = mutableListOf<String>()
+                        val markers = listOf(
+                            "LEFT CUSTOMER SENTINEL",
+                            "RIGHT COMPANY SENTINEL",
+                            "CUSTOMER_ADDRESS_SENTINEL",
+                            "COMPANY_ADDRESS_SENTINEL",
+                            "8.88",
+                        )
+                        val boundsByMarker = markers.associateWith { mutableListOf<android.graphics.RectF>() }
                         for (index in 0 until pdf.pageCount) pdf.openPage(index).use { page ->
                             if (index == 0) {
                                 val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
@@ -179,32 +187,22 @@ class InvoiceCopiesPdfTest {
                                 } finally { bitmap.recycle() }
                             }
                             if (android.os.Build.VERSION.SDK_INT >= 35) {
-                                textAndBounds += CopyPdfTextApi35.entries(page)
+                                extractedPages += CopyPdfTextApi35.read(page)
+                                for (marker in markers) {
+                                    boundsByMarker.getValue(marker).addAll(
+                                        CopyPdfTextApi35.searchBounds(page, marker),
+                                    )
+                                }
                             }
                         }
                         if (android.os.Build.VERSION.SDK_INT >= 35) {
                             fun compactText(value: String) = value.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "").uppercase(Locale.ROOT)
-                            data class TextSpan(val text: String, val start: Int, val end: Int, val bounds: List<android.graphics.RectF>)
-                            var textOffset = 0
-                            val spans = textAndBounds.mapNotNull { (text, bounds) ->
-                                val compact = compactText(text)
-                                if (compact.isEmpty()) return@mapNotNull null
-                                val span = TextSpan(compact, textOffset, textOffset + compact.length, bounds)
-                                textOffset += compact.length
-                                span
-                            }
-                            val extracted = spans.joinToString("") { it.text }
+                            val extracted = compactText(extractedPages.joinToString(""))
                             assertTrue(extracted.contains(compactText("LEFT CUSTOMER SENTINEL")))
                             assertTrue(extracted.contains(compactText("RIGHT COMPANY SENTINEL")))
                             assertTrue(extracted.contains(compactText("CUSTOMER_ADDRESS_SENTINEL")))
                             assertTrue(extracted.contains(compactText("COMPANY_ADDRESS_SENTINEL")))
-                            fun markerBounds(marker: String): List<android.graphics.RectF> {
-                                val compactMarker = compactText(marker)
-                                val start = extracted.indexOf(compactMarker)
-                                if (start < 0) return emptyList()
-                                val end = start + compactMarker.length
-                                return spans.filter { it.start < end && it.end > start }.flatMap { it.bounds }
-                            }
+                            fun markerBounds(marker: String) = boundsByMarker.getValue(marker)
                             val leftBounds = markerBounds("LEFT CUSTOMER SENTINEL")
                             val rightBounds = markerBounds("RIGHT COMPANY SENTINEL")
                             val customerAddressBounds = markerBounds("CUSTOMER_ADDRESS_SENTINEL")
@@ -316,11 +314,10 @@ class InvoiceCopiesPdfTest {
     }
 }
 
-/** Isolate API-35-only reflection from Android 7. */
+/** Isolate API-35-only PDF APIs from Android 7. */
 @android.annotation.TargetApi(35)
 internal object CopyPdfTextApi35 {
     fun read(page: PdfRenderer.Page): String = page.textContents.joinToString(" ") { it.text }
-    fun entries(page: PdfRenderer.Page): List<Pair<String, List<android.graphics.RectF>>> = page.textContents.map { content ->
-        content.text to content.bounds.map { android.graphics.RectF(it) }
-    }
+    fun searchBounds(page: PdfRenderer.Page, marker: String): List<android.graphics.RectF> =
+        page.searchText(marker).flatMap { match -> match.bounds.map { android.graphics.RectF(it) } }
 }
