@@ -20,6 +20,18 @@ class _Business extends BusinessApi {
   final _taskAttachments = <TaskAttachmentInfo>[];
   final _images = <String, Uint8List>{};
 
+  void seedComment(String body) {
+    _comments.add(
+      TaskComment(
+        id: 'existing-comment',
+        body: body,
+        createdMillis: 1,
+        updatedMillis: 1,
+        attachments: const [],
+      ),
+    );
+  }
+
   TaskConversation _snapshot() => TaskConversation(
     version: _version,
     jobId: 'job',
@@ -173,14 +185,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('task comments can be added, edited and deleted', (tester) async {
+  testWidgets('task comment can be added', (tester) async {
     final api = _Business();
     await show(tester, api);
     await tester.enterText(find.byType(TextField), 'Tiles are on site.');
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
+    expect(api._events.map((event) => event.action), ['ADDED']);
+  });
 
+  testWidgets('existing task comment can be edited', (tester) async {
+    final api = _Business()..seedComment('Delivery arrived.');
+    await show(tester, api);
+    expect(find.text('Delivery arrived.'), findsOneWidget);
     final edit = find.byTooltip('Edit comment');
     await tester.tap(edit);
     await tester.pumpAndSettle();
@@ -189,14 +207,20 @@ void main() {
     await tester.tap(find.text('Save comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are ready to install.'), findsOneWidget);
-    expect(api._events.map((event) => event.action), ['ADDED', 'EDITED']);
+    expect(api._events.map((event) => event.action), ['EDITED']);
+  });
 
+  testWidgets('existing task comment can be deleted with confirmation', (
+    tester,
+  ) async {
+    final api = _Business()..seedComment('Remove this note.');
+    await show(tester, api);
     final delete = find.byTooltip('Delete comment');
     await tester.tap(delete);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete comment'));
     await tester.pumpAndSettle();
-    expect(find.text('Tiles are ready to install.'), findsNothing);
+    expect(find.text('Remove this note.'), findsNothing);
     expect(api._events.last.action, 'DELETED');
   });
 
@@ -242,7 +266,7 @@ void main() {
   testWidgets('gallery photo can be attached to a task comment', (
     tester,
   ) async {
-    final api = _Business();
+    final api = _Business()..seedComment('Before repair.');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(photoChannel, (call) async {
           expect(call.method, 'pickTaskPhoto');
@@ -253,10 +277,6 @@ void main() {
           .setMockMethodCallHandler(photoChannel, null),
     );
     await show(tester, api);
-    await tester.enterText(find.byType(TextField), 'Before repair.');
-    await tester.tap(find.text('Add comment'));
-    await tester.pumpAndSettle();
-
     final choosePhoto = find.text('Choose photo for comment');
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
