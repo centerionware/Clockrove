@@ -125,7 +125,8 @@ class InvoiceCopiesPdfTest {
                         }
                     }
                     val extractedText = extracted.toString()
-                    val sample = extractedText.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "")
+                    fun compactText(value: String) = value.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "")
+                    val sample = compactText(extractedText)
                     val expectedSampleValues = listOf(
                         "INV-SAMPLE-1000", "SampleCompanyLLC", "TaylorMorgan",
                         "billing@example.test", "taylor.morgan@example.test",
@@ -135,7 +136,7 @@ class InvoiceCopiesPdfTest {
                     for (value in expectedSampleValues) {
                         assertTrue(
                             "$style sample invoice is missing $value; extracted text: ${extractedText.take(3000)}",
-                            sample.contains(value),
+                            sample.contains(compactText(value)),
                         )
                     }
                 } finally { file.delete() }
@@ -182,14 +183,30 @@ class InvoiceCopiesPdfTest {
                             }
                         }
                         if (android.os.Build.VERSION.SDK_INT >= 35) {
-                            val extracted = textAndBounds.joinToString(" ") { it.first }
+                            fun compactText(value: String) = value.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "").uppercase(Locale.ROOT)
+                            data class TextSpan(val text: String, val start: Int, val end: Int, val bounds: List<android.graphics.RectF>)
+                            var textOffset = 0
+                            val spans = textAndBounds.mapNotNull { (text, bounds) ->
+                                val compact = compactText(text)
+                                if (compact.isEmpty()) return@mapNotNull null
+                                val span = TextSpan(compact, textOffset, textOffset + compact.length, bounds)
+                                textOffset += compact.length
+                                span
+                            }
+                            val extracted = spans.joinToString("") { it.text }
                             assertTrue(extracted.contains("LEFT CUSTOMER SENTINEL"))
                             assertTrue(extracted.contains("RIGHT COMPANY SENTINEL"))
                             assertTrue(extracted.contains("CUSTOMER_ADDRESS_SENTINEL"))
                             assertTrue(extracted.contains("COMPANY_ADDRESS_SENTINEL"))
-                            fun markerBounds(marker: String) = textAndBounds.filter { it.first.contains(marker) }.flatMap { it.second }
-                            val leftBounds = markerBounds("LEFT")
-                            val rightBounds = markerBounds("RIGHT")
+                            fun markerBounds(marker: String): List<android.graphics.RectF> {
+                                val compactMarker = compactText(marker)
+                                val start = extracted.indexOf(compactMarker)
+                                if (start < 0) return emptyList()
+                                val end = start + compactMarker.length
+                                return spans.filter { it.start < end && it.end > start }.flatMap { it.bounds }
+                            }
+                            val leftBounds = markerBounds("LEFT CUSTOMER SENTINEL")
+                            val rightBounds = markerBounds("RIGHT COMPANY SENTINEL")
                             val customerAddressBounds = markerBounds("CUSTOMER_ADDRESS_SENTINEL")
                             val companyAddressBounds = markerBounds("COMPANY_ADDRESS_SENTINEL")
                             assertTrue(

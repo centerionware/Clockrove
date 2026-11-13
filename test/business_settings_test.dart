@@ -140,8 +140,7 @@ Future<void> _show(
           businessSettingsApiProvider.overrideWithValue(api),
           logoApiProvider.overrideWithValue(_LogoApi()),
           timerApiProvider.overrideWithValue(timer ?? _Timer()),
-          if (reportApi != null)
-            reportApiProvider.overrideWithValue(reportApi),
+          if (reportApi != null) reportApiProvider.overrideWithValue(reportApi),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -182,9 +181,9 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets(
-    'invoice style preview uses the selected style and sample data',
-    (tester) async {
+  testWidgets('invoice style preview uses the selected style and sample data', (
+    tester,
+  ) async {
       final reports = _PreviewReportApi();
       await _show(
         tester,

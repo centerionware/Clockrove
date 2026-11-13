@@ -2487,3 +2487,31 @@ screenshots in both themes; scope review no longer restores the keyboard or hide
 the next action. This closes the Actions quote gate at d03992c. Subsequent email,
 map, GPS, small-radius and map-centering source edits have not yet run in Actions;
 no build, test or formatter has been run on the VM.
+
+### 2026-11-13 — invoice hierarchy and Settings preview acceptance
+
+The owner requested that invoice, receipt, correction, replacement and quote PDFs
+show customer billing details on the left and company details on the right, each
+limited to 47% of printable width with wrapped and paginated overflow. The issue
+date belongs in the company column. Subtotal and tax rows align to the right edge;
+labels and tax rates remain regular weight, while only the subtotal/tax amount
+digits are bold. Main Settings places **Preview invoice** immediately below the
+style selector and renders synthetic sample data through the production PDF
+renderer/viewer using the selected style/currency and saved logo, without saving
+an invoice, reserving work, using a number or opening email. These requirements
+are recorded in §3.5a, `docs/INVOICE_LIFECYCLE_PLAN.md` and `docs/UI_DESIGN.md`.
+
+The source implementation is in PR #39. Actions run 43364550534 on
+`925045b77c23e44d1ba5c5e5c4debf070e2bc7b2` failed its final formatting and PDF
+gates. Check-run annotations from 131685765272 supplied the exact diagnostics:
+the preview PDF contained “Kitchen tile installation,” but the expected-value
+comparison stripped separators only from extracted text; the full customer
+sentinel appeared in concatenated PDF text, but the bounds check searched each
+fragment for the entire marker and therefore returned no bounds. The formatter
+annotation identified three Dart line-wrap adjustments. The source now normalizes
+both sides of the sample comparison, maps marker offsets across normalized PDF
+text fragments to their corresponding bounds, and applies the formatter's three
+changes. These corrections have not yet run in Actions. The PDF geometry assertion
+and actual generated-image review remain open; no local build, test or formatter
+was run. Keep #39 draft until corrected formatting/PDF/quote acceptance passes
+and the actual generated PDF images have been inspected.

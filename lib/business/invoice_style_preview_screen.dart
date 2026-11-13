@@ -120,7 +120,8 @@ class _InvoiceStylePreviewScreenState
                       children: [
                         IconButton(
                           tooltip: 'Previous preview page',
-                          onPressed: state.connectionState ==
+                          onPressed:
+                              state.connectionState ==
                                       ConnectionState.waiting ||
                                   page.index == 0
                               ? null
@@ -132,7 +133,8 @@ class _InvoiceStylePreviewScreenState
                         Text('Page ${page.index + 1} of ${page.pages}'),
                         IconButton(
                           tooltip: 'Next preview page',
-                          onPressed: state.connectionState ==
+                          onPressed:
+                              state.connectionState ==
                                       ConnectionState.waiting ||
                                   page.index + 1 >= page.pages
                               ? null
