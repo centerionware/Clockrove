@@ -222,22 +222,23 @@ class TaskConversation {
   final List<TaskAttachmentInfo> taskAttachments;
   final List<TaskComment> comments;
   final List<TaskCommentEvent> events;
-  factory TaskConversation.decode(Map<Object?, Object?> value) =>
-      TaskConversation(
-        version: value['version'] as int,
-        jobId: value['jobId'] as String,
-        taskId: value['taskId'] as String,
-        archived: value['archived'] as bool,
-        taskAttachments: (value['taskAttachments'] as List)
-            .map((item) => TaskAttachmentInfo.decode(item as Map<Object?, Object?>))
-            .toList(),
-        comments: (value['comments'] as List)
-            .map((item) => TaskComment.decode(item as Map<Object?, Object?>))
-            .toList(),
-        events: (value['events'] as List)
-            .map((item) => TaskCommentEvent.decode(item as Map<Object?, Object?>))
-            .toList(),
-      );
+  factory TaskConversation.decode(
+    Map<Object?, Object?> value,
+  ) => TaskConversation(
+    version: value['version'] as int,
+    jobId: value['jobId'] as String,
+    taskId: value['taskId'] as String,
+    archived: value['archived'] as bool,
+    taskAttachments: (value['taskAttachments'] as List)
+        .map((item) => TaskAttachmentInfo.decode(item as Map<Object?, Object?>))
+        .toList(),
+    comments: (value['comments'] as List)
+        .map((item) => TaskComment.decode(item as Map<Object?, Object?>))
+        .toList(),
+    events: (value['events'] as List)
+        .map((item) => TaskCommentEvent.decode(item as Map<Object?, Object?>))
+        .toList(),
+  );
 }
 
 class JobBoard {
@@ -287,22 +288,23 @@ class BusinessApi {
       (await _channel.invokeListMethod<Object?>('templates', {
         'search': search,
       }))!.map((e) => TaskTemplate.decode(e as Map<Object?, Object?>)).toList();
-  Future<TaskConversation> taskConversation(String jobId, String taskId) async =>
-      TaskConversation.decode(
-        (await _channel.invokeMapMethod<Object?, Object?>(
-          'taskConversation',
-          {'jobId': jobId, 'taskId': taskId},
-        ))!,
-      );
+  Future<TaskConversation> taskConversation(
+    String jobId,
+    String taskId,
+  ) async => TaskConversation.decode(
+    (await _channel.invokeMapMethod<Object?, Object?>('taskConversation', {
+      'jobId': jobId,
+      'taskId': taskId,
+    }))!,
+  );
   Future<Uint8List?> taskAttachment(String attachmentId) async {
     final value = await _channel.invokeMapMethod<Object?, Object?>(
       'taskAttachment',
       {'attachmentId': attachmentId},
     );
-    return value?['unavailable'] == true
-        ? null
-        : value?['image'] as Uint8List?;
+    return value?['unavailable'] == true ? null : value?['image'] as Uint8List?;
   }
+
   Future<TimerOutcome> _change(
     String method,
     String id,

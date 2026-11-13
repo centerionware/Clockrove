@@ -236,8 +236,14 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 'Use global default (${widget.business.settings.defaultLocationRecording ? 'on' : 'off'})',
               ),
             ),
-            const DropdownMenuItem<bool?>(value: true, child: Text('On for this job')),
-            const DropdownMenuItem<bool?>(value: false, child: Text('Off for this job')),
+            const DropdownMenuItem<bool?>(
+              value: true,
+              child: Text('On for this job'),
+            ),
+            const DropdownMenuItem<bool?>(
+              value: false,
+              child: Text('Off for this job'),
+            ),
           ],
           onChanged: data?.archived == false
               ? (value) => setState(() => _locationRecordingOverride = value)

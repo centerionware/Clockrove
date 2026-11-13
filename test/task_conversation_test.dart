@@ -31,8 +31,10 @@ class _Business extends BusinessApi {
   );
 
   @override
-  Future<TaskConversation> taskConversation(String jobId, String taskId) async =>
-      _snapshot();
+  Future<TaskConversation> taskConversation(
+    String jobId,
+    String taskId,
+  ) async => _snapshot();
 
   @override
   Future<Uint8List?> taskAttachment(String attachmentId) async =>
@@ -172,12 +174,18 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder target) async {
-    await tester.scrollUntilVisible(
-      target,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+    final list = find.byType(ListView).first;
+    for (final direction in [-1.0, 1.0]) {
+      var attempt = 0;
+      while (attempt < 16 && target.evaluate().isEmpty) {
+        await tester.drag(list, Offset(0, direction * 280));
+        await tester.pumpAndSettle();
+        attempt++;
+      }
+      if (target.evaluate().isNotEmpty) break;
+    }
+    expect(target, findsOneWidget);
+    await tester.ensureVisible(target);
   }
 
   testWidgets('task comments can be added, edited and deleted', (tester) async {
@@ -213,45 +221,48 @@ void main() {
     expect(api._events.last.action, 'DELETED');
   });
 
-  testWidgets('camera photos require review and can be retaken before attaching', (
+  testWidgets(
+    'camera photos require review and can be retaken before attaching',
+    (tester) async {
+      final api = _Business();
+      var captures = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(photoChannel, (call) async {
+            expect(call.method, 'captureTaskPhoto');
+            captures++;
+            return Uint8List.fromList(_pixel);
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(photoChannel, null),
+      );
+      await show(tester, api);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Take photo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review photo'), findsOneWidget);
+      expect(api._images, isEmpty);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(api._images, isEmpty);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Take photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retake'));
+      await tester.pumpAndSettle();
+      expect(captures, 3);
+      expect(find.text('Review photo'), findsOneWidget);
+      expect(api._images, isEmpty);
+      await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
+      await tester.pumpAndSettle();
+      expect(api._taskAttachments, hasLength(1));
+      expect(api._images, hasLength(1));
+    },
+  );
+
+  testWidgets('gallery photo can be attached to a task comment', (
     tester,
   ) async {
-    final api = _Business();
-    var captures = 0;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(photoChannel, (call) async {
-          expect(call.method, 'captureTaskPhoto');
-          captures++;
-          return Uint8List.fromList(_pixel);
-        });
-    addTearDown(
-      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(photoChannel, null),
-    );
-    await show(tester, api);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Take photo'));
-    await tester.pumpAndSettle();
-    expect(find.text('Review photo'), findsOneWidget);
-    expect(api._images, isEmpty);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(api._images, isEmpty);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Take photo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Retake'));
-    await tester.pumpAndSettle();
-    expect(captures, 3);
-    expect(find.text('Review photo'), findsOneWidget);
-    expect(api._images, isEmpty);
-    await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
-    await tester.pumpAndSettle();
-    expect(api._taskAttachments, hasLength(1));
-    expect(api._images, hasLength(1));
-  });
-
-  testWidgets('gallery photo can be attached to a task comment', (tester) async {
     final api = _Business();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(photoChannel, (call) async {
@@ -279,25 +290,26 @@ void main() {
     expect(api._taskAttachments, isEmpty);
   });
 
-  testWidgets('unavailable gallery explains the problem without saving a photo', (
-    tester,
-  ) async {
-    final api = _Business();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(photoChannel, (call) async {
-          throw PlatformException(
-            code: 'NO_DOCUMENT_PICKER',
-            message: 'No image picker is installed',
-          );
-        });
-    addTearDown(
-      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(photoChannel, null),
-    );
-    await show(tester, api);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photo'));
-    await tester.pumpAndSettle();
-    expect(find.text('No image picker is installed'), findsOneWidget);
-    expect(api._images, isEmpty);
-  });
+  testWidgets(
+    'unavailable gallery explains the problem without saving a photo',
+    (tester) async {
+      final api = _Business();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(photoChannel, (call) async {
+            throw PlatformException(
+              code: 'NO_DOCUMENT_PICKER',
+              message: 'No image picker is installed',
+            );
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(photoChannel, null),
+      );
+      await show(tester, api);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photo'));
+      await tester.pumpAndSettle();
+      expect(find.text('No image picker is installed'), findsOneWidget);
+      expect(api._images, isEmpty);
+    },
+  );
 }

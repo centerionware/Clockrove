@@ -35,7 +35,9 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.createNewJob ? 'Create job from quote' : 'Plan accepted scope'),
+      title: Text(
+        widget.createNewJob ? 'Create job from quote' : 'Plan accepted scope',
+      ),
       actions: [
         IconButton(
           tooltip: 'Refresh scope groups',
@@ -143,17 +145,20 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
                             group,
                             createNewJob: true,
                           ),
-                          child: const Text('Create a new job with these tasks'),
+                          child: const Text(
+                            'Create a new job with these tasks',
+                          ),
                         ),
                       ],
-                      for (final jobId in data.bindings
-                          .where(
-                            (binding) => group.lines.any(
-                              (line) => line.id == binding.lineId,
-                            ),
-                          )
-                          .map((binding) => binding.jobId)
-                          .toSet()) ...[
+                      for (final jobId
+                          in data.bindings
+                              .where(
+                                (binding) => group.lines.any(
+                                  (line) => line.id == binding.lineId,
+                                ),
+                              )
+                              .map((binding) => binding.jobId)
+                              .toSet()) ...[
                         Builder(
                           builder: (context) {
                             final job = data.jobs
@@ -438,8 +443,7 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
             _name.text.contains('\u0000'))) {
       throw const FormatException('Enter a job name of up to 240 characters.');
     }
-    if (_note.text.length > 2000 ||
-        _note.text.contains('\u0000')) {
+    if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       throw const FormatException(
         'Private review notes can be up to 2000 characters.',
       );
@@ -866,7 +870,8 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                   maxLengthEnforcement: MaxLengthEnforcement.none,
                   decoration: const InputDecoration(
                     labelText: 'Private scope review note',
-                    helperText: 'Optional. Your scope can be accepted without a note.',
+                    helperText:
+                        'Optional. Your scope can be accepted without a note.',
                   ),
                   onChanged: (_) => setState(_changed),
                 ),

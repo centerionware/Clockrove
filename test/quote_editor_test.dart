@@ -40,8 +40,10 @@ class _Templates extends BusinessApi {
   final List<TaskTemplate> values;
   @override
   Future<List<TaskTemplate>> templates(String search) async => values
-      .where((template) =>
-          template.title.toLowerCase().contains(search.toLowerCase()))
+      .where(
+        (template) =>
+            template.title.toLowerCase().contains(search.toLowerCase()),
+      )
       .toList();
 }
 
@@ -172,7 +174,10 @@ void main() {
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(api.calls, hasLength(1));
-      expect(api.calls.single.draft.lines.last.title, 'Edited roof installation');
+      expect(
+        api.calls.single.draft.lines.last.title,
+        'Edited roof installation',
+      );
       expect(api.calls.single.draft.lines.last.quantity, '260000');
       expect(api.calls.single.draft.lines.last.unitPrice, '1250');
     },

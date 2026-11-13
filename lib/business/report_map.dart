@@ -56,8 +56,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
   late final _client = TileBackoffClient(http.Client());
   late final _tiles = ref.read(workMapTilesProvider)(_client);
   final _controller = MapController();
-  late ReportPoint? _selected =
-      widget.points.isEmpty ? null : widget.points.first;
+  late ReportPoint? _selected = widget.points.isEmpty
+      ? null
+      : widget.points.first;
   bool _failed = false;
   @override
   void dispose() {
@@ -133,7 +134,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                         '${selected.label} · ${selected.accuracy.toStringAsFixed(0)} m accuracy',
                       ),
                     ] else
-                      const Text('No recorded location samples in this report.'),
+                      const Text(
+                        'No recorded location samples in this report.',
+                      ),
                     Text('Report timezone: ${widget.timezone}'),
                     const Text(
                       'Lines connect measured samples within a session, with gaps over 30 minutes left open. They are not verified routes. Map requests share the viewed area with the tile provider.',

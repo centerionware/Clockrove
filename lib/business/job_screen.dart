@@ -90,16 +90,17 @@ class _Board extends ConsumerWidget {
               _TaskEditor(jobId: board.jobId, columnId: columnId, card: card),
         ),
       );
-  Future<void> _conversation(BuildContext context, TaskCard card) => Navigator.push(
-    context,
-    MaterialPageRoute<void>(
-      builder: (_) => TaskConversationScreen(
-        jobId: board.jobId,
-        taskId: card.id,
-        taskTitle: card.title,
-      ),
-    ),
-  );
+  Future<void> _conversation(BuildContext context, TaskCard card) =>
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => TaskConversationScreen(
+            jobId: board.jobId,
+            taskId: card.id,
+            taskTitle: card.title,
+          ),
+        ),
+      );
   Future<void> _move(
     BuildContext context,
     WidgetRef ref,

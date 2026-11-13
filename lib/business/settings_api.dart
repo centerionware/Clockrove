@@ -168,7 +168,8 @@ class JobPreferences {
       taxUnits: s['taxUnits'] as int?,
       effectiveTaxUnits: v['effectiveTaxUnits'] as int? ?? 0,
       locationRecordingOverride: s['locationRecordingOverride'] as bool?,
-      effectiveLocationRecording: v['effectiveLocationRecording'] as bool? ?? true,
+      effectiveLocationRecording:
+          v['effectiveLocationRecording'] as bool? ?? true,
     );
   }
   Map<String, Object?> encode() => {

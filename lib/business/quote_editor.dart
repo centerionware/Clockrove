@@ -183,9 +183,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                       labelText: 'Search saved tasks',
                     ),
                     onChanged: (value) => updateSheet(() {
-                      results = ref
-                          .read(businessApiProvider)
-                          .templates(value);
+                      results = ref.read(businessApiProvider).templates(value);
                     }),
                   ),
                   const SizedBox(height: 12),
@@ -235,7 +233,8 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                     '${template.currency} ${money(template.priceMinor, _currencies[template.currency] ?? _digits)} each',
                                 ].join(' · '),
                               ),
-                              onTap: () => Navigator.pop(sheetContext, template),
+                              onTap: () =>
+                                  Navigator.pop(sheetContext, template),
                             );
                           },
                         );
@@ -269,6 +268,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           : 'Added the task details. Its price uses ${template.currency}; enter a unit price in $_currency.';
     });
   }
+
   @override
   void initState() {
     super.initState();

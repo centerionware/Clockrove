@@ -119,12 +119,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (_) =>
-            QuoteScopeScreen(
-              quoteId: revision.id,
-              revision: revision.revision,
-              createNewJob: createNewJob,
-            ),
+        builder: (_) => QuoteScopeScreen(
+          quoteId: revision.id,
+          revision: revision.revision,
+          createNewJob: createNewJob,
+        ),
       ),
     );
     if (mounted) {
@@ -251,8 +250,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     if (revision == null) {
       return;
     }
-    if (_note.text.length > 2000 ||
-        _note.text.contains('\u0000')) {
+    if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       setState(
         () => _noteError = 'Private notes can be up to 2000 characters.',
       );

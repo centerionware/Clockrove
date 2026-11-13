@@ -322,8 +322,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         'Current prices are missing. Choose accepted prices or update the job/task prices.',
       );
     }
-    if (_note.text.length > 2000 ||
-        _note.text.contains('\u0000')) {
+    if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       throw const FormatException(
         'Private review notes can be up to 2000 characters.',
       );

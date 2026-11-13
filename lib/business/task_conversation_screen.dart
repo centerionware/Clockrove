@@ -65,7 +65,9 @@ class _TaskConversationScreenState
         );
       } on PlatformException catch (error) {
         if (mounted) {
-          setState(() => _notice = error.message ?? 'The photo could not be opened.');
+          setState(
+            () => _notice = error.message ?? 'The photo could not be opened.',
+          );
         }
         return;
       }
@@ -84,18 +86,14 @@ class _TaskConversationScreenState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                _PhotoReviewResult.cancelled,
-              ),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _PhotoReviewResult.cancelled),
               child: const Text('Cancel'),
             ),
             if (camera)
               TextButton.icon(
-                onPressed: () => Navigator.pop(
-                  dialogContext,
-                  _PhotoReviewResult.retake,
-                ),
+                onPressed: () =>
+                    Navigator.pop(dialogContext, _PhotoReviewResult.retake),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retake'),
               ),
@@ -132,17 +130,20 @@ class _TaskConversationScreenState
   }
 
   Future<void> _viewPhoto(TaskAttachmentInfo attachment) async {
-    final image = await ref.read(businessApiProvider).taskAttachment(attachment.id);
+    final image = await ref
+        .read(businessApiProvider)
+        .taskAttachment(attachment.id);
     if (!mounted) return;
     if (image == null) {
-      setState(() => _notice = 'This attachment is no longer available. Refresh the task.');
+      setState(
+        () => _notice =
+            'This attachment is no longer available. Refresh the task.',
+      );
       return;
     }
     await Navigator.push<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => _TaskPhotoViewer(image: image),
-      ),
+      MaterialPageRoute<void>(builder: (_) => _TaskPhotoViewer(image: image)),
     );
   }
 
@@ -187,7 +188,9 @@ class _TaskConversationScreenState
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Remove photo?'),
-      content: const Text('This permanently removes the attached image from this task.'),
+      content: const Text(
+        'This permanently removes the attached image from this task.',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
@@ -264,14 +267,22 @@ class _TaskConversationScreenState
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
-            Text(widget.taskTitle, style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              widget.taskTitle,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
-            Text(readOnly
-                ? 'Archived tasks keep their notes and photos for reference.'
-                : 'Keep progress notes and job-site photos with this task. They stay private and are not printed on invoices.'),
+            Text(
+              readOnly
+                  ? 'Archived tasks keep their notes and photos for reference.'
+                  : 'Keep progress notes and job-site photos with this task. They stay private and are not printed on invoices.',
+            ),
             if (_notice != null) ...[
               const SizedBox(height: 12),
-              Text(_notice!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _notice!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
             const SizedBox(height: 20),
             Text('Task photos', style: Theme.of(context).textTheme.titleLarge),
@@ -302,7 +313,9 @@ class _TaskConversationScreenState
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('No comments yet. Add a note about progress or materials.'),
+                  child: Text(
+                    'No comments yet. Add a note about progress or materials.',
+                  ),
                 ),
               ),
             for (final comment in comments)
@@ -314,7 +327,12 @@ class _TaskConversationScreenState
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(_date(comment.createdMillis), style: Theme.of(context).textTheme.labelMedium)),
+                          Expanded(
+                            child: Text(
+                              _date(comment.createdMillis),
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                          ),
                           if (comment.updatedMillis > comment.createdMillis)
                             const Padding(
                               padding: EdgeInsets.only(right: 8),
@@ -329,7 +347,8 @@ class _TaskConversationScreenState
                           if (!readOnly)
                             IconButton(
                               tooltip: 'Delete comment',
-                              onPressed: () => _confirmRemoveComment(conversation, comment),
+                              onPressed: () =>
+                                  _confirmRemoveComment(conversation, comment),
                               icon: const Icon(Icons.delete_outline),
                             ),
                         ],
@@ -389,18 +408,27 @@ class _TaskConversationScreenState
               if (_editing != null)
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: _cancelEdit, child: const Text('Cancel edit')),
+                  child: TextButton(
+                    onPressed: _cancelEdit,
+                    child: const Text('Cancel edit'),
+                  ),
                 ),
               BusinessCommand(
                 label: _editing == null ? 'Add comment' : 'Save comment',
-                enabled: _body.text.trim().isNotEmpty && _body.text.length <= 2000,
+                enabled:
+                    _body.text.trim().isNotEmpty && _body.text.length <= 2000,
                 onPendingChanged: (_) {},
                 create: () {
                   final commandId = newBusinessId();
                   final commentId = _editing ?? newBusinessId();
                   final body = _body.text;
                   final api = ref.read(businessApiProvider);
-                  return () => api.saveTaskComment(commandId, conversation, commentId, body);
+                  return () => api.saveTaskComment(
+                    commandId,
+                    conversation,
+                    commentId,
+                    body,
+                  );
                 },
                 onCommitted: () {
                   _body.clear();
@@ -411,7 +439,10 @@ class _TaskConversationScreenState
             ],
             if (conversation.events.isNotEmpty) ...[
               const SizedBox(height: 24),
-              Text('Recent activity', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Recent activity',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               for (final event in conversation.events)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -443,9 +474,7 @@ class _TaskPhotoViewer extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Task photo')),
     body: Center(
-      child: InteractiveViewer(
-        child: Image.memory(image, fit: BoxFit.contain),
-      ),
+      child: InteractiveViewer(child: Image.memory(image, fit: BoxFit.contain)),
     ),
   );
 }
@@ -461,47 +490,48 @@ class _TaskAttachmentThumb extends ConsumerWidget {
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FutureBuilder<Uint8List?>(
-    future: ref.read(businessApiProvider).taskAttachment(attachment.id),
-    builder: (context, snapshot) => InkWell(
-      onTap: snapshot.data == null ? null : onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 76,
-        height: 76,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+  Widget build(BuildContext context, WidgetRef ref) =>
+      FutureBuilder<Uint8List?>(
+        future: ref.read(businessApiProvider).taskAttachment(attachment.id),
+        builder: (context, snapshot) => InkWell(
+          onTap: snapshot.data == null ? null : onTap,
           borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 76,
+            height: 76,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (snapshot.hasData)
+                  Semantics(
+                    label: attachment.commentId == null
+                        ? 'Task photo attachment'
+                        : 'Comment photo attachment',
+                    button: true,
+                    child: Image.memory(snapshot.data!, fit: BoxFit.cover),
+                  )
+                else
+                  const Center(child: Icon(Icons.image_outlined)),
+                if (onRemove != null)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: IconButton.filledTonal(
+                      tooltip: 'Remove photo',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 18,
+                      onPressed: onRemove,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (snapshot.hasData)
-              Semantics(
-                label: attachment.commentId == null
-                    ? 'Task photo attachment'
-                    : 'Comment photo attachment',
-                button: true,
-                child: Image.memory(snapshot.data!, fit: BoxFit.cover),
-              )
-            else
-              const Center(child: Icon(Icons.image_outlined)),
-            if (onRemove != null)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: IconButton.filledTonal(
-                  tooltip: 'Remove photo',
-                  visualDensity: VisualDensity.compact,
-                  iconSize: 18,
-                  onPressed: onRemove,
-                  icon: const Icon(Icons.close),
-                ),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
+      );
 }

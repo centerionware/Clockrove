@@ -181,33 +181,32 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets(
-    'local acceptance can be recorded without a private note',
-    (tester) async {
-      final api = _Quotes()
-        ..current = QuoteData(
-          2,
-          null,
-          _issued(),
-          today: '2026-11-01',
-          timezone: 'UTC',
-        );
-      await _show(tester, api);
-      await _tap(tester, 'Review customer decision');
-      await _tap(tester, 'Cancel');
-      expect(api.decisions, isEmpty);
-      await _tap(tester, 'Review customer decision');
-      await _tap(tester, 'Confirm review');
-      expect(api.decisions, isEmpty);
-      await _tap(tester, 'Record reviewed decision');
-      expect(api.decisions, hasLength(1));
-      expect(api.decisions.single.version, 2);
-      expect(api.decisions.single.revision, 1);
-      expect(api.decisions.single.decision, 'ACCEPTED');
-      expect(api.decisions.single.note, isEmpty);
-      expect(find.text('Accepted locally'), findsWidgets);
-      expect(find.text('Review customer decision'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('local acceptance can be recorded without a private note', (
+    tester,
+  ) async {
+    final api = _Quotes()
+      ..current = QuoteData(
+        2,
+        null,
+        _issued(),
+        today: '2026-11-01',
+        timezone: 'UTC',
+      );
+    await _show(tester, api);
+    await _tap(tester, 'Review customer decision');
+    await _tap(tester, 'Cancel');
+    expect(api.decisions, isEmpty);
+    await _tap(tester, 'Review customer decision');
+    await _tap(tester, 'Confirm review');
+    expect(api.decisions, isEmpty);
+    await _tap(tester, 'Record reviewed decision');
+    expect(api.decisions, hasLength(1));
+    expect(api.decisions.single.version, 2);
+    expect(api.decisions.single.revision, 1);
+    expect(api.decisions.single.decision, 'ACCEPTED');
+    expect(api.decisions.single.note, isEmpty);
+    expect(find.text('Accepted locally'), findsWidgets);
+    expect(find.text('Review customer decision'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
