@@ -171,6 +171,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  void scrollToStart(WidgetTester tester) {
+    tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position
+        .jumpTo(0);
+  }
+
+  void scrollToEnd(WidgetTester tester) {
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+  }
+
   testWidgets('task comments can be added, edited and deleted', (tester) async {
     final api = _Business();
     await show(tester, api);
@@ -181,20 +195,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
 
-    final edit = find.byTooltip('Edit comment');
-    await tester.ensureVisible(edit);
+    scrollToStart(tester);
     await tester.pumpAndSettle();
+    final edit = find.byTooltip('Edit comment');
     await tester.tap(edit);
     await tester.pumpAndSettle();
-    final editor = find.byType(TextField);
-    await tester.ensureVisible(editor);
+    scrollToEnd(tester);
     await tester.pumpAndSettle();
+    final editor = find.byType(TextField);
     await tester.enterText(editor, 'Tiles are ready to install.');
     await tester.tap(find.text('Save comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are ready to install.'), findsOneWidget);
     expect(api._events.map((event) => event.action), ['ADDED', 'EDITED']);
 
+    scrollToStart(tester);
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Delete comment'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete comment'));
@@ -259,8 +275,9 @@ void main() {
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
 
+    scrollToStart(tester);
+    await tester.pumpAndSettle();
     final choosePhoto = find.text('Choose photo for comment');
-    await tester.ensureVisible(choosePhoto);
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
