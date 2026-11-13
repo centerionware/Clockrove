@@ -92,8 +92,11 @@ not force its fake image through Flutter's decoder before asserting the tile
 failure callback; added the deterministic decode step already used by the other
 map-outage test. Android build, native and real-device steps did not run. A fresh
 exact-head Actions run is required. No local build/test/formatter was run, per
-owner instruction. Quote run 43337896079 passed at d03992c before these fixes
-were added and therefore does not validate the current worktree.
+owner instruction. Run 43343448664 then stopped at analyzer because the added
+`dart:typed_data` import was redundant with `flutter/services.dart`; removed it.
+The behavior suite did not run on that head. Quote run 43337896079 passed at
+d03992c before these fixes were added and therefore does not validate the current
+worktree.
 
 The full quoted milestone remains incomplete until its integration gates pass.
 Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked
