@@ -226,6 +226,8 @@ class TaskConversationDeviceTest {
             val galleryDeadline = SystemClock.uptimeMillis() + 30000
             while (attachmentCount() != 1 && SystemClock.uptimeMillis() < galleryDeadline) SystemClock.sleep(100)
             assertEquals(1, attachmentCount())
+            hideKeyboard()
+            scrollToStart()
             waitFor("Task photo attachment")
             capture("task-gallery-attached")
 
@@ -242,6 +244,8 @@ class TaskConversationDeviceTest {
             while (attachmentCount() != 2 && SystemClock.uptimeMillis() < attachDeadline) SystemClock.sleep(100)
             assertEquals(2, attachmentCount())
             assertCameraTemporaryFilesWereRemoved()
+            hideKeyboard()
+            scrollToStart()
             waitFor("Task photo attachment")
             capture("task-camera-attached")
 
@@ -257,6 +261,7 @@ class TaskConversationDeviceTest {
             while (attachmentCount() != 3 && SystemClock.uptimeMillis() < commentPhotoDeadline) SystemClock.sleep(100)
             assertEquals(3, attachmentCount())
             assertCameraTemporaryFilesWereRemoved()
+            hideKeyboard()
             val attachedToComment = SQLiteDatabase.openDatabase(
                 app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY,
             ).use { db -> db.rawQuery("SELECT COUNT(*) FROM task_attachments WHERE comment_id IS NOT NULL", null).use { it.moveToFirst(); it.getInt(0) } }
@@ -264,6 +269,7 @@ class TaskConversationDeviceTest {
             waitFor("Comment photo attachment")
             capture("comment-camera-attached")
 
+            scrollToStart()
             reveal("Task photo attachment")
             click("Task photo attachment")
             waitFor("Task photo")

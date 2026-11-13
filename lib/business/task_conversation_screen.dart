@@ -112,6 +112,7 @@ class _TaskConversationScreenState
                 );
               },
               onCommitted: () {
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(dialogContext, _PhotoReviewResult.attached);
                 _refresh();
               },
