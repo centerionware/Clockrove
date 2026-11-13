@@ -154,7 +154,7 @@ void main() {
   const photoChannel = MethodChannel('clockrove/documents/v1');
 
   Future<void> show(WidgetTester tester, _Business api) async {
-    tester.view.physicalSize = const Size(420, 850);
+    tester.view.physicalSize = const Size(420, 2600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -173,46 +173,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> reveal(WidgetTester tester, Finder target) async {
-    final list = find.byType(ListView).first;
-    for (final direction in [-1.0, 1.0]) {
-      var attempt = 0;
-      while (attempt < 16 && target.evaluate().isEmpty) {
-        await tester.drag(list, Offset(0, direction * 280));
-        await tester.pumpAndSettle();
-        attempt++;
-      }
-      if (target.evaluate().isNotEmpty) break;
-    }
-    expect(target, findsOneWidget);
-    await tester.ensureVisible(target);
-  }
-
   testWidgets('task comments can be added, edited and deleted', (tester) async {
     final api = _Business();
     await show(tester, api);
-    await tester.ensureVisible(find.byType(TextField));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Tiles are on site.');
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
 
     final edit = find.byTooltip('Edit comment');
-    await reveal(tester, edit);
     await tester.tap(edit);
     await tester.pumpAndSettle();
     final editor = find.byType(TextField);
-    await reveal(tester, editor);
     await tester.enterText(editor, 'Tiles are ready to install.');
-    await reveal(tester, find.text('Save comment'));
     await tester.tap(find.text('Save comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are ready to install.'), findsOneWidget);
     expect(api._events.map((event) => event.action), ['ADDED', 'EDITED']);
 
     final delete = find.byTooltip('Delete comment');
-    await reveal(tester, delete);
     await tester.tap(delete);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete comment'));
@@ -274,14 +253,11 @@ void main() {
           .setMockMethodCallHandler(photoChannel, null),
     );
     await show(tester, api);
-    await tester.ensureVisible(find.byType(TextField));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Before repair.');
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
 
     final choosePhoto = find.text('Choose photo for comment');
-    await reveal(tester, choosePhoto);
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
