@@ -71,23 +71,39 @@ class SettingsSaveDeviceTest {
         File(directory, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
-    private fun reveal(label: String) {
-        fun scroll(node: AccessibilityNodeInfo, direction: Int): Boolean {
-            if (node.isScrollable && node.performAction(direction)) return true
-            for (index in 0 until node.childCount) {
-                node.getChild(index)?.let { if (scroll(it, direction)) return true }
-            }
-            return false
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
-        for (direction in listOf(
-            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
-        )) {
+        inject(android.view.MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(android.view.MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
+    }
+    private fun reveal(label: String) {
+        for (up in listOf(true, false)) {
             var attempts = 0
             while (attempts++ < 60 && find(label) == null) {
-                val root = automation.rootInActiveWindow ?: break
-                if (!scroll(root, direction)) break
-                SystemClock.sleep(120)
+                swipeContent(up)
+                SystemClock.sleep(150)
             }
             if (find(label) != null) return
         }
