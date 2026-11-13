@@ -2508,10 +2508,14 @@ the preview PDF contained “Kitchen tile installation,” but the expected-valu
 comparison stripped separators only from extracted text; the full customer
 sentinel appeared in concatenated PDF text, but the bounds check searched each
 fragment for the entire marker and therefore returned no bounds. The formatter
-annotation identified three Dart line-wrap adjustments. The source now normalizes
+annotation identified three Dart line-wrap adjustments. The source normalizes
 both sides of the sample comparison, maps marker offsets across normalized PDF
-text fragments to their corresponding bounds, and applies the formatter's three
-changes. These corrections have not yet run in Actions. The PDF geometry assertion
-and actual generated-image review remain open; no local build, test or formatter
-was run. Keep #39 draft until corrected formatting/PDF/quote acceptance passes
-and the actual generated PDF images have been inspected.
+text fragments to their corresponding bounds, and applies those changes. Run
+43367050519 on `26b434dd580e2ccee405951dd1a539055becb951` passed the invoice
+preview sample-text case but failed the layout case before it reached the bounds
+checks: the joined text was normalized to remove spaces, while the marker assertion
+still expected spaces. Its formatter annotation also showed the preview test
+callback body needed dedenting. Both exact corrections are now in the worktree,
+pending a fresh Actions run. Thus actual column geometry is not yet verified. No
+local build, test or formatter was run. Keep #39 draft until corrected formatting/
+PDF/quote acceptance passes and the actual generated PDF images have been inspected.

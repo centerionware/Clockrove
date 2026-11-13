@@ -194,10 +194,10 @@ class InvoiceCopiesPdfTest {
                                 span
                             }
                             val extracted = spans.joinToString("") { it.text }
-                            assertTrue(extracted.contains("LEFT CUSTOMER SENTINEL"))
-                            assertTrue(extracted.contains("RIGHT COMPANY SENTINEL"))
-                            assertTrue(extracted.contains("CUSTOMER_ADDRESS_SENTINEL"))
-                            assertTrue(extracted.contains("COMPANY_ADDRESS_SENTINEL"))
+                            assertTrue(extracted.contains(compactText("LEFT CUSTOMER SENTINEL")))
+                            assertTrue(extracted.contains(compactText("RIGHT COMPANY SENTINEL")))
+                            assertTrue(extracted.contains(compactText("CUSTOMER_ADDRESS_SENTINEL")))
+                            assertTrue(extracted.contains(compactText("COMPANY_ADDRESS_SENTINEL")))
                             fun markerBounds(marker: String): List<android.graphics.RectF> {
                                 val compactMarker = compactText(marker)
                                 val start = extracted.indexOf(compactMarker)

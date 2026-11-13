@@ -184,32 +184,31 @@ void main() {
   testWidgets('invoice style preview uses the selected style and sample data', (
     tester,
   ) async {
-      final reports = _PreviewReportApi();
-      await _show(
-        tester,
-        _SettingsApi(),
-        const SettingsScreen(),
-        reportApi: reports,
-      );
-      await _reveal(tester, 'Invoice style');
-      await tester.tap(find.byType(DropdownButtonFormField<String>).last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Classic').last);
-      await tester.pumpAndSettle();
-      await _reveal(tester, 'Preview invoice');
-      await tester.tap(find.text('Preview invoice'));
-      await tester.pumpAndSettle();
-      expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
-      expect(find.text('Classic · sample invoice'), findsOneWidget);
-      expect(
-        find.textContaining('does not create or send an invoice'),
-        findsOneWidget,
-      );
-      expect(find.text('Page 1 of 1'), findsOneWidget);
-      expect(reports.styles, ['CLASSIC']);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    final reports = _PreviewReportApi();
+    await _show(
+      tester,
+      _SettingsApi(),
+      const SettingsScreen(),
+      reportApi: reports,
+    );
+    await _reveal(tester, 'Invoice style');
+    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Classic').last);
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'Preview invoice');
+    await tester.tap(find.text('Preview invoice'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
+    expect(find.text('Classic · sample invoice'), findsOneWidget);
+    expect(
+      find.textContaining('does not create or send an invoice'),
+      findsOneWidget,
+    );
+    expect(find.text('Page 1 of 1'), findsOneWidget);
+    expect(reports.styles, ['CLASSIC']);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'invalid receivables address keeps the draft and corrected address saves',
