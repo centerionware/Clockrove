@@ -50,15 +50,17 @@ The quote milestone baseline passed on d03992c / Actions run 43337896079.
 Owner-fix run 43350422474 passed formatting, analysis, Flutter behavior, Android
 debug build and native tests. API 24 then passed the formerly failing
 `InvoicePaymentDeviceTest.actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt`
-case after “Void & replace” was moved below the invoice balance. The later actual
-quote journey failed on API 24 because it did not expose “Open issued quote” at
-`QuoteBillingDeviceTest.kt:260`; investigate that exact interaction before
-claiming the UI repair. The next source update also needs to validate the newly
-requested invoice PDF party columns, right-aligned subtotal/tax amounts, and the
-Settings sample invoice preview. Keep #39 draft and rerun full exact-head
-Actions. The owner-reported email/map/manual-GPS/site-radius fixes still need
-complete Actions and physical owner-device acceptance; task-image and full-release
-E2E/Cloudflare documentation plans are recorded below.
+case after “Void & replace” was moved below the invoice balance. Its later actual
+quote journey failed because “Open issued quote” was not exposed at
+`QuoteBillingDeviceTest.kt:260`; the test now includes accessibility-state
+diagnostics. Current head 4ffdab3 has the invoice PDF hierarchy and Settings
+preview source, contracts and CI checks. Exact-head Actions run 43354950876 has
+passed formatting, analysis, Flutter behavior, synthetic previews, Android debug
+build and native tests; real Android PDF/device validation is still in progress.
+Inspect its diagnostics and rendered artifacts, resolve any failure, and keep
+#39 draft until all gates pass. The owner-reported email/map/manual-GPS/site-radius
+fixes still need complete Actions and physical owner-device acceptance; task-image
+and full-release E2E/Cloudflare documentation plans are recorded below.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
