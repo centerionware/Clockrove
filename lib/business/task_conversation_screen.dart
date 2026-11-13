@@ -112,9 +112,7 @@ class _TaskConversationScreenState
                 );
               },
               onCommitted: () {
-                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(dialogContext, _PhotoReviewResult.attached);
-                _refresh();
               },
             ),
           ],
@@ -122,6 +120,11 @@ class _TaskConversationScreenState
       );
       if (decision == _PhotoReviewResult.retake && camera) continue;
       if (decision == _PhotoReviewResult.attached && mounted) {
+        // Dismissing the review route can restore focus to the comment editor.
+        // Clear it only after the route is gone so the keyboard cannot remain
+        // over the newly attached image or consume the next Back action.
+        FocusManager.instance.primaryFocus?.unfocus();
+        _refresh();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Photo attached to this task.')),
         );
