@@ -25,8 +25,9 @@ needs a new task or the explicit invoice correction policy.
 2. Payment history, partial/full payment, balance copies, receipts, accounting CC,
    and unpaid/partially-paid void-and-replace.
 3. Quotes and their reviewed connection to actual jobs and invoices.
-4. Kanban comments, labor/supplies classification and actual expense records.
-5. Main-menu business Reports icon, financial summaries and exports using the
+4. Invoice-only hourly rounding/minimum-hours policies and task-rate minimum fees.
+5. Kanban comments, labor/supplies classification and actual expense records.
+6. Main-menu business Reports icon, financial summaries and exports using the
    validated invoice/payment/cost data.
 
 Carry the owner-requested payment/receipt/CC work as the immediate next iteration
@@ -76,6 +77,53 @@ coverage. Payment, job archiving, resending, or hiding an invoice never releases
 Migrate existing invoice coverage conservatively. Older snapshots without stable
 source identity require review/reconciliation; never infer task identity from
 amount/title or silently allow ambiguous work to be billed again.
+
+## Invoice-only rounding and minimum-charge policies
+
+These settings affect only newly generated invoices. Keep actual session bounds,
+durations, location history, reports of actual hours and time exports unchanged.
+Quotes remain unrounded and have no minimum charge unless the owner separately
+requests that behavior.
+
+Main Settings exposes an hourly billing mode, a minimum billable-hours value and
+a minimum task-invoice fee. Each has a global default and an independent per-job
+choice to inherit the default or override it. An explicit zero/disabled override
+suppresses a nonzero global default for that job:
+
+- **Hourly billing mode**: default to **Minimum hours, then exact time**. Bill at
+  least the configured minimum, then charge any additional work at its exact
+  recorded duration; with a 1-hour minimum, 5 minutes bills as 1 hour and 1 hour
+  1 minute bills as 1 hour 1 minute. The alternative **Round total time up to the
+  next hour** bills 5 minutes as 1 hour and 1 hour 1 minute as 2 hours. Recommend
+  aggregating exact, selected, finalized and still-unbilled seconds per job and
+  effective rate on each invoice, so splitting work into separate sessions does
+  not cause repeated round-ups. For exact mode use
+  `max(minimumHours, exactSeconds / 3600)`; for round-up mode use
+  `max(minimumHours, ceil(exactSeconds / 3600))`. Do not alter source intervals.
+- **Minimum billable hours**: 0 disables the minimum. Parse/store values as
+  bounded canonical decimal strings and use exact decimal/integer arithmetic.
+  In exact mode any duration above the minimum stays exact to its recorded
+  second; only the final hourly money amount uses the established currency-boundary
+  rounding rule.
+- **Minimum task-invoice fee**: 0 disables the minimum. For a task-rate invoice
+  with at least one billable task line, if the exact task subtotal is below the
+  configured amount, add a visible minimum-fee adjustment equal to the difference.
+  Never create an invoice or fee when there is no billable task work.
+  Do not invent a task, change unit prices or claim new source work. Tax applies
+  according to the invoice's explicit job/global tax snapshot. Store the global
+  amount in the configured default currency; if a job uses another currency,
+  require an explicit job-currency override instead of implying an exchange rate.
+
+Invoice review and PDFs must show exact worked time separately from rounded/minimum
+billed hours, and show any minimum-fee adjustment as its own labeled line. Keep the
+original covered sessions/tasks exclusive across invoices; a rounding increment or
+minimum fee is not a new time interval or task source. Freeze the effective policy,
+inputs and resulting invoice lines/totals when issuing; resends, balance copies and
+receipts reuse that issued snapshot. A void/replacement preview shows the inherited
+or overridden policy, recalculated billable hours/fee and paid credit before
+confirmation, and retains the original voided invoice unchanged. Open product
+decision before coding: confirm the recommended per-job/per-rate/per-invoice scope
+for hourly rounding/minimums and per-job/per-invoice scope for task minimum fee.
 
 Legacy review opens the original PDF and shows the job's current tasks and existing
 invoice reservations, without automatically selecting tasks by title or price.
@@ -357,7 +405,14 @@ ambiguity, concurrent invoice/payment/replacement commands, response loss,
 payment conservation, reversal/transfer chains, stale drafts, exact percentage
 parsing/rounding and overflow, inherited/explicit-zero tax, immutable documents,
 CC precedence/fallback, comments and template-copy isolation, cost completeness,
-report dates/currencies and CSV safety. Actual Android PDFs in all three styles
+report dates/currencies and CSV safety. Billing-policy tests must prove that with
+a 1-hour minimum exact mode bills 5 minutes as 1 hour and 1 hour 1 minute as
+1 hour 1 minute; round-up mode bills 5 minutes as 1 hour and 1 hour 1 minute as
+2 hours; larger minimums raise but never lower billable time; inherited and
+per-job overrides (including explicit disable); task minimum-fee adjustment and
+no-work behavior; exact actual-time preservation; tax application; immutable
+policy snapshots; and source-claim exclusivity. Actual
+Android PDFs in all three styles
 must show correct tax/paid/due/VOID/QUOTE states and paginate cleanly. Verify native
 email To/CC/body/attachment intents; physical mail-app behavior is separate.
 

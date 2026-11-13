@@ -39,6 +39,7 @@ iOS and future service remain deferred.
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
 | Follow-on: quotes | Full journey passed at 5a71a9c; 1f59374 previews verify large-text label fix; latest device run exposed keyboard focus restoration after scope review, fix pending fresh Actions | 43276003231: 561 native / 27 actual Android cases per API, zero failures/errors/skips; reviewed three real PDF styles and exact API-35 text. 43281033608: formatter, analysis, Flutter tests, build and native tests passed; API 24 actual quote journey failed because keyboard reopened after “Confirm review” and obscured “Apply reviewed plan”; API 35 quote journey not reached. Scope review now unfocuses and has a closed-keyboard device assertion; rerun fresh Actions. Keep #39 draft |
+| Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -101,7 +102,13 @@ accept the new explained current-location prompt before trying to locate the
 map; it now explicitly confirms the prompt before inducing a tile decode error.
 Android build/native/device steps did not run. Quote run 43337896079 passed at
 d03992c before these fixes were added and therefore does not validate the current
-worktree.
+worktree. Run 43344356175 then passed formatting, analysis, Flutter behavior and
+the Android debug build, but native tests reported 563 completed with one failure:
+the new `TimerHostApiTest` fake messenger inherited Flutter's unsupported default
+background-task-queue method, and teardown then hit an uninitialized host. Added
+an inline test task queue and null-safe cleanup. API-24/35/device and later gates
+did not run. A new exact-head Actions run is required; no build/test/formatter ran
+on this VM.
 
 The full quoted milestone remains incomplete until its integration gates pass.
 Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked

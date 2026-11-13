@@ -178,7 +178,8 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
 After current widgets are validated and merged, implement invoice integrity/tax,
 then payments (including partial), receipts, accounting CC and void/replacement.
-Quotes follow; then task comments, labor/supplies classification and actual costs;
+Quotes follow; then invoice-only hourly rounding/minimum-hours and task-job minimum-
+fee settings; then task comments, labor/supplies classification and actual costs;
 then a main-menu Reports icon with useful business/tax-preparation summaries.
 
 - Bill each task and exact UTC portion of work only once, for unpaid and paid
@@ -195,6 +196,31 @@ then a main-menu Reports icon with useful business/tax-preparation summaries.
   explicit 0%. Entering 7.5 adds 7.5% of subtotal, rounded once in minor units.
   Freeze subtotal/rate/tax/total on issued invoices and quotes; existing documents
   are unchanged by later settings. Separate tax collected from revenue/profit.
+- Main Settings also has invoice-only hourly billing policies with global defaults
+  and per-job inherit/override: a billing mode, plus a minimum billable-hours
+  amount (0 disables the minimum). Provide both **minimum hours, then exact time**
+  (5 minutes with a 1-hour minimum bills as 1 hour; 1 hour 1 minute bills as
+  1 hour 1 minute) and **round total time up to the next hour** (5 minutes bills
+  as 1 hour; 1 hour 1 minute bills as 2 hours). Apply these only when generating
+  hourly invoices. Recommended scope is to aggregate the exact, unbilled selected
+  seconds per job/rate on that invoice. In exact mode use `max(minimumHours,
+  exactSeconds / 3600)`; in round-up mode use
+  `max(minimumHours, ceil(exactSeconds / 3600))`. Show exact worked duration and
+  billed hours separately so the invoice is transparent.
+  Main Settings has a separate optional minimum fee for task-rate invoices, also
+  independently inherited/overridden per job; if a nonempty task invoice subtotal
+  is below it, add a clearly named adjustment line to reach the minimum. A zero
+  minimum disables it. Use exact decimal strings for settings and calculations,
+  apply the normal invoice tax policy to any fee adjustment, and do not alter task
+  prices or source claims. Keep all three controls out of quotes unless requested
+  separately. Session timestamps, actual hours, GPS, history, widgets and time
+  exports remain exact and unmodified; reports distinguish actual from billed
+  hours. Snapshot effective policies on each issued invoice so later setting
+  changes do not mutate documents; resending/receipts/balance copies reuse the
+  snapshot. A void/replacement flow must preview any changed billable quantities,
+  minimum-fee adjustment and paid credit before confirmation. Confirm whether the
+  chosen rounding/minimum scope per job per invoice matches the owner's intent
+  before implementation.
 - Main Settings has optional accounts-receivable email. Invoice/receipt/quote
   email drafts CC it when set, otherwise company primary email. Fill default-email
   To/CC/subject/body/PDF safely; the user sends. Keep both template guards.

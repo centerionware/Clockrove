@@ -23,7 +23,7 @@ import org.robolectric.annotation.LooperMode
 @LooperMode(LooperMode.Mode.PAUSED)
 class TimerHostApiTest {
     private lateinit var repository: TimerRepository
-    private lateinit var host: TimerHostApi
+    private var host: TimerHostApi? = null
     private val messenger = TestMessenger()
     private val trackingStarts = AtomicInteger()
     private val app get() = RuntimeEnvironment.getApplication()
@@ -35,7 +35,7 @@ class TimerHostApiTest {
     }
 
     @After fun teardown() {
-        host.detach()
+        host?.detach()
         repository.close()
     }
 
@@ -78,10 +78,15 @@ class TimerHostApiTest {
 
     private class TestMessenger : BinaryMessenger {
         private val handlers = mutableMapOf<String, BinaryMessenger.BinaryMessageHandler>()
+        private val inlineQueue = object : BinaryMessenger.TaskQueue {}
         override fun send(channel: String, message: ByteBuffer?) { }
         override fun send(channel: String, message: ByteBuffer?, callback: BinaryMessenger.BinaryReply?) { callback?.reply(null) }
+        override fun makeBackgroundTaskQueue(): BinaryMessenger.TaskQueue = inlineQueue
         override fun setMessageHandler(channel: String, handler: BinaryMessenger.BinaryMessageHandler?) {
             if (handler == null) handlers.remove(channel) else handlers[channel] = handler
+        }
+        override fun setMessageHandler(channel: String, handler: BinaryMessenger.BinaryMessageHandler?, taskQueue: BinaryMessenger.TaskQueue?) {
+            setMessageHandler(channel, handler)
         }
         fun invoke(method: String, arguments: Map<String, Any?>): Response {
             val response = Response()
