@@ -43,7 +43,7 @@ class TaskConversationDeviceTest {
         }
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
             if (!node.refresh()) return null
-            if (editable && node.viewIdResourceName == "task-comment-body") return input(node)
+            if (editable && node.isVisibleToUser && node.viewIdResourceName == "task-comment-body") return input(node)
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { value -> return value } }
             val labels = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
                 .flatMap { it.lineSequence().map(String::trim).toList() }
@@ -88,10 +88,10 @@ class TaskConversationDeviceTest {
         throw AssertionError("Actual app could not click '$label'")
     }
 
-    private fun reveal(label: String) {
+    private fun reveal(label: String, editable: Boolean = false) {
         val deadline = SystemClock.uptimeMillis() + 30000
         while (SystemClock.uptimeMillis() < deadline) {
-            if (find(label) != null) return
+            if (find(label, editable) != null) return
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
@@ -99,7 +99,7 @@ class TaskConversationDeviceTest {
             automation.rootInActiveWindow?.let(::scroll)
             SystemClock.sleep(100)
         }
-        waitFor(label)
+        waitFor(label, editable)
     }
 
     private fun keyboardVisible() = automation.windows.any {
@@ -107,7 +107,7 @@ class TaskConversationDeviceTest {
     }
 
     private fun enterComment(value: String) {
-        reveal("Add a comment")
+        reveal("Add a comment", editable = true)
         val field = waitFor("Add a comment", editable = true)
         assertTrue("Comment field would not focus", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         val keyboardDeadline = SystemClock.uptimeMillis() + 10000
