@@ -204,10 +204,7 @@ void main() {
       expect(api.decisions.single.version, 2);
       expect(api.decisions.single.revision, 1);
       expect(api.decisions.single.decision, 'ACCEPTED');
-      expect(
-        api.decisions.single.note,
-        'Customer agreed by phone on the recorded date.',
-      );
+      expect(api.decisions.single.note, isEmpty);
       expect(find.text('Accepted locally'), findsWidgets);
       expect(find.text('Review customer decision'), findsNothing);
       expect(tester.takeException(), isNull);

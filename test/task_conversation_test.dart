@@ -179,9 +179,14 @@ void main() {
 
     await tester.tap(find.byTooltip('Edit comment'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byType(TextField));
+    final editor = find.byType(TextField);
+    await tester.scrollUntilVisible(
+      editor,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Tiles are ready to install.');
+    await tester.enterText(editor, 'Tiles are ready to install.');
     await tester.tap(find.text('Save comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are ready to install.'), findsOneWidget);
@@ -251,16 +256,13 @@ void main() {
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
 
-    final commentCard = find.byType(Card).last;
-    await tester.tap(
-      find.descendant(
-        of: commentCard,
-        matching: find.widgetWithText(
-          TextButton,
-          'Choose photo for comment',
-        ),
-      ),
+    final choosePhoto = find.text('Choose photo for comment');
+    await tester.scrollUntilVisible(
+      choosePhoto,
+      400,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
     await tester.pumpAndSettle();

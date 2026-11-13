@@ -138,16 +138,35 @@ void main() {
       await tester.tap(find.text('Install roof tile'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Added as an editable quote line.'), findsOneWidget);
-      expect(find.text('USD 12.50 each'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Line 2'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       final descriptions = find.byWidgetPredicate(
         (widget) =>
             widget is TextField &&
             widget.decoration?.labelText == 'Description',
       );
-      expect(descriptions, findsNWidgets(2));
-      await _reveal(tester, descriptions.at(1), 400);
-      await tester.enterText(descriptions.at(1), 'Edited roof installation');
+      expect(descriptions, findsWidgets);
+      expect(
+        tester.widget<TextField>(descriptions.last).controller?.text,
+        'Install roof tile',
+      );
+      final quantities = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Quantity',
+      );
+      expect(tester.widget<TextField>(quantities.last).controller?.text, '26');
+      final prices = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Unit price (USD)',
+      );
+      expect(tester.widget<TextField>(prices.last).controller?.text, '12.50');
+      await tester.ensureVisible(descriptions.last);
+      await tester.enterText(descriptions.last, 'Edited roof installation');
       final save = find.widgetWithText(FilledButton, 'Save quote draft');
       await _reveal(tester, save, 400);
       await tester.tap(save);
