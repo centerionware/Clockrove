@@ -56,6 +56,13 @@ class GeofencePolicyPersistenceTest {
         repository = TimerRepository(RuntimeEnvironment.getApplication(), eventDigest = ::fixtureDigest) { clock }
     }
 
+    @Test fun acceptsAWorksiteOfAboutTenSquareMetresAndRejectsSmallerThanSupportedRadius() {
+        val small = GeofenceStore.Site("small-site", job, "Synthetic small shop", 10.0, 20.0, 1.8)
+        assertNull(saveSite(small).conflict)
+        assertEquals(1.8, repository.sites().single().radiusMeters, 0.0)
+        assertEquals("INVALID_SITE", saveSite(small.copy(id = "too-small", radiusMeters = 1.79)).conflict)
+    }
+
     @Test fun enableInsideRequiresExitThenEntryAndSuppressionSurvivesRecovery() {
         configure()
         assertNull(event("initial-inside", INSIDE, 1100, "site").startedSessionId)
@@ -298,7 +305,7 @@ class GeofencePolicyPersistenceTest {
         assertEquals(failure, repository.saveSite("overflow-command", version, site))
         assertNull(settings(GeofenceStore.Settings(other, enabled = true)).conflict)
         assertEquals(100, repository.sitesToRegister().size)
-        assertEquals("INVALID_SITE", saveSite(site.copy(radiusMeters = 149.0)).conflict)
+        assertEquals("INVALID_SITE", saveSite(site.copy(radiusMeters = 1.79)).conflict)
         assertEquals("INVALID_SITE", saveSite(site.copy(latitude = Double.NaN)).conflict)
     }
 

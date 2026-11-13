@@ -1004,6 +1004,7 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
             if (oldVersion < 8) InvoicePaymentStore.install(db)
             if (oldVersion < 9) QuoteStore.install(db)
+            if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }
 

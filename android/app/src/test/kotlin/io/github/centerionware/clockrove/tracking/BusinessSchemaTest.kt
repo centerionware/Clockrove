@@ -86,6 +86,11 @@ class BusinessSchemaTest {
             }
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }
+        val existing = repository.sites().single()
+        assertEquals(150.0, existing.radiusMeters, 0.0)
+        assertNull(repository.saveSite("small-site-radius", repository.snapshot().version,
+            existing.copy(radiusMeters = 1.8)).conflict)
+        assertEquals(1.8, repository.sites().single().radiusMeters, 0.0)
     }
 
     @Test fun failedBoardSeedingRollsBackTheWholeJobAndItsRevisionMetadata() {

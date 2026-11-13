@@ -46,21 +46,19 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-Complete the active quote milestone in draft PR #39, then proceed to the next
-ordered plan milestone. Head 5a71a9c / run 43276003231 passed formatting,
-analysis, Flutter behavior, Android build, all 561 native tests, and all API-24/35
-device gates. Its actual quote journey passed 1/1 on each API; all three generated
-quote-to-invoice styles were inspected on both APIs. API-35 extracted text confirms
-30 × USD 12.50 = USD 375.00, 7.5% tax USD 28.13, total USD 403.13, retaining
-Q-1000 revision 1. Later large-text previews exposed and then confirmed the fix
-for floating-label collisions. The next device run, 43281033608 on 1f59374, passed
-formatting, analysis, Flutter behavior, Android build and 561 native tests, but
-API 24 failed when the scope-review dialog dismissal reopened the note keyboard
-and hid “Apply reviewed plan”; API 35 did not run the quote journey. The scope
-screen now unfocuses before confirmation and the device test asserts that the
-keyboard stays closed. Fresh exact-head Actions and artifact review remain
-required; keep #39 draft until the quote journey, real documents and responsive
-screens all pass.
+The quote milestone passed on head d03992c / Actions run 43337896079. Formatting,
+analysis, Flutter behavior, Android build, and 561 native tests (47 XML; zero
+failures/errors/skips) passed. API 24 and API 35 each passed all 27 device cases;
+the actual quote issue/accept/plan/complete/invoice/exclusion journey passed 1/1
+on both. All three generated invoice styles were reviewed on both APIs, and
+API-35 extracted text confirms 30 × USD 12.50 = USD 375.00, 7.5% tax USD 28.13,
+total USD 403.13, retaining quote Q-1001 revision 1. Large-text 390×844 previews
+at 1.8 scale were reviewed in light and dark; labels no longer collide, the
+confirmation dialog is readable, and its wrapped action stays visible with the
+keyboard closed. The user-reported email/map/manual-GPS/site-radius fixes are now
+in the worktree with Actions validation pending; task-image and full-release E2E/
+Cloudflare documentation plans are recorded below. Keep #39 draft until those
+source changes pass Actions and the remaining owner/device gates are addressed.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
@@ -126,7 +124,7 @@ Exact-source-license wording, the name check, and store identity/account setup a
 - Use Android fused location, a location foreground service, and the platform geofencing API. Ordinary background timers and periodic WorkManager jobs are not evidence of ten-minute GPS delivery.
 - Explain the purpose of location access before requesting it. Request background access separately when enabling geofencing. Show an honest degraded state for denied permissions and platform restrictions.
 - Monitor enabled geofences while idle without keeping an off-clock trail. Current readings for site setup must not become session history.
-- Sites are circles selected by map tap, current location, or coordinates. Default radius 150 m; supported initial range 150–10,000 m. Display that accuracy and event latency vary.
+- Sites are circles selected by map tap, current location, or coordinates. If a site has no usable coordinates, opening the map first explains and requests one current-location fix, then centers on it; denied permission or a missing fresh fix leaves coordinate entry and the separate current-location action available with a clear message. Default radius 30 m; supported initial range 1.8–10,000 m (about 10 m² at the lower bound). Explain that Android recommends 100–150 m for dependable geofence detection; small radii are supported for small properties but can miss automatic arrival/departure, and manual timekeeping remains available.
 - Jobs support multiple sites. Enforce Android's active registration limit of 100 sites across the app with a visible capacity message; do not silently drop registrations. Recheck platform limits when implementing iOS.
 - A job is considered inside if any of its enabled sites is inside. Exiting one of several overlapping sites does not count as leaving the job.
 - Auto-start only when enabled, no session is active, and exactly one eligible job matches. If several match, post a selection notification/deep link; do not launch an activity unexpectedly from the background.
@@ -161,7 +159,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Deleting a populated column requires selecting a destination for its cards before committing.
 - Cards have title, description, optional due date, and position. Support moving/reordering by drag and accessible menu actions.
 - Card due dates are calendar dates, not UTC instants. Preserve them across timezone changes.
-- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. No task attachments, team assignments or task timers; comments do not introduce an account system.
+- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. After tasks and comments are implemented, support taking a photo or choosing images and attaching them to a task or individual comment. Store images locally in app-private storage, limit file types/count/size and total storage, strip location metadata, preview/remove attachments, and delete them with their parent. Include them in the explicit encrypted backup with strict archive limits. No team assignments or task timers; comments do not introduce an account system.
 
 ### 3.5 Calendar, list, map, and CSV
 
@@ -398,6 +396,37 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 - Complete applicable closed testing/production eligibility. Publish paid release from a validated version tag, subject to store review.
 - Acceptance: separate evidence for tests, signed AAB, internal installation, upgrade behavior, submission and approval. A submitted build is not yet a live app.
 
+### Final full-open-release gate — end-to-end coverage and visual documentation
+
+This final gate is required before the full public launch. It is deliberately later
+than internal and closed testing so those test tracks can receive builds while
+coverage is being completed.
+
+- Maintain a release coverage inventory generated from the app navigation, every
+  user-facing feature/screen, and every selectable setting or action. Require an
+  end-to-end path through the actual Android app and native persistence for each
+  entry; include relevant success, validation/error, empty, cancellation and
+  confirmation paths. A mocked UI-only test does not count as end-to-end evidence.
+- Run the complete journey on the minimum supported Android API and the latest
+  Play-supported stable API at release, using fresh and upgraded databases and
+  synthetic data. Preserve per-case results, logs with private values removed,
+  and a screenshot for every screen and distinct feature/option state. Review the
+  captures for clipping, unreadable text, broken navigation and stale information.
+- Do not gate internal or closed testing on this exhaustive inventory. Gate the
+  full open release on complete coverage, zero unexplained failures, reviewed
+  screenshots, and closure of all release-blocking findings.
+- Build a static, end-user documentation site from the reviewed screenshots and
+  step-by-step task guides. Include accessible captions/alt text, current app
+  version labels, privacy-sensitive workflows, and feature limitations. Use only
+  synthetic/example data; never publish customer details, real locations, account
+  identifiers, diagnostic dumps or test credentials.
+- Keep the documentation source and screenshots versioned with the project.
+  Configure Cloudflare Pages to host the static site and deploy the public docs
+  as part of full public release; validate links, mobile layout and image loading
+  in the Pages deployment. No runtime backend is needed for documentation.
+- Acceptance: every inventory item has a passing end-to-end case and reviewed
+  screenshot; the public static docs build and Pages deployment are verified.
+
 ### Milestone 9 — later iOS (deferred)
 
 - Implement Swift location/geofence/widget adapters and an extension-safe repository; share Flutter UI/domain contracts.
@@ -422,7 +451,7 @@ Account creation, owner credentials, concrete license review, and physical devic
 | Timer concurrency | Simultaneous app/widget/notification/geofence commands yield at most one open session; duplicate commands return consistent results |
 | Editing | Negative, zero and overlapping completed intervals rejected; manual edits create revisions and reconcile GPS association |
 | Clock/timezone | DST, midnight, timezone changes and wall-clock adjustments cannot silently create invalid work; report clipping/totals verified |
-| Geofences | Multiple same-job sites, overlapping jobs, disabled/archive states, capacity, zero/custom grace, re-entry and paid travel |
+| Geofences | Multiple same-job sites, overlapping jobs, disabled/archive states, capacity, small-radius limitations, zero/custom grace, re-entry and paid travel |
 | Manual precedence | Manual stop suppresses restart until exit/re-entry; auto events do not switch active jobs |
 | Recovery | Process death, reboot, force-stop/relaunch, permission revocation, notification permission limitations and battery saver |
 | GPS | Actual sample times/accuracy shown; gaps truthful; no retained idle/post-finalization trail; deletion does not delete timesheets |
@@ -434,13 +463,15 @@ Account creation, owner credentials, concrete license review, and physical devic
 | Backup | Authenticated round-trip, wrong password, tampering, bounds, unsupported version, ID dedupe, ancestry/divergence, tombstones, overlaps, open sessions, crash rollback |
 | Migration | Install and upgrade across each released schema; no record loss or credentials in export |
 | CI/security | Fork validation has no secrets; pinned actions; tag/main validation; unique build numbers; no private files in artifacts |
+| Full-release E2E | Every feature, screen and selectable option has an actual-app journey, persisted/native assertions, and a reviewed screenshot on minimum and current release APIs |
+| End-user documentation | Versioned static guides cover every shipped feature with reviewed screenshots; deployed on Cloudflare Pages for public release with synthetic data only |
 | Store | Required declarations, internal install/upgrade, applicable closed testing, successful submission distinguished from approval |
 
 Use unit/domain tests, native integration tests, widget/UI tests and physical-device tests according to the behavior being checked. Keep private traces in ignored `device-evidence/` and summarize sanitized results publicly. Do not add superficial tests that only assert documentation wording or mirror implementation statements.
 
 ## 11. Defaults and remaining gates
 
-Implementation defaults in this plan fill gaps without changing the owner's choices: 150 m site radius, 0–1,440 minute grace, three initial board columns, no task timers, English initial UI, provider-independent records, current-device report timezone, and no automatic OS backup of sensitive data. Preserve them unless evidence reveals an incompatibility; document any necessary revision before implementing a changed behavior.
+Implementation defaults in this plan fill gaps without changing the owner's choices: 30 m site radius with a 1.8 m minimum, 0–1,440 minute grace, three initial board columns, no task timers, English initial UI, provider-independent records, current-device report timezone, and no automatic OS backup of sensitive data. Preserve them unless evidence reveals an incompatibility; document any necessary revision before implementing a changed behavior.
 
 Remaining gates are concrete, not assumed complete:
 
@@ -2371,3 +2402,17 @@ Assert the complete exact source label + newline + 1h 0m duration instead, keepi
 no-calculation-before-allocation and no-write-on-cancel assertions. Applied its
 exported formatting patch. Android/native/race/device gates did not run on that
 head because the behavior assertion failed.
+
+### 2026-11-13 — quote scope-review fix accepted; owner bug fixes in progress
+
+Head d03992c / Actions run 43337896079 passed the full quote milestone. Downloaded
+and reviewed native test XML: 47 suites, 561 tests, zero failures/errors/skips.
+Downloaded Android test results: 27 actual cases on each of API 24 and API 35,
+zero failures/errors/skips, including the quote journey 1/1 on each API. Reviewed
+actual generated quote-to-invoice PDFs in minimal/classic/modern styles on both
+APIs; API-35 text confirms Q-1001 revision 1 and exact 30 × USD 12.50 subtotal,
+7.5% tax and USD 403.13 total. Reviewed 390×844, 1.8-scale setup and confirmation
+screenshots in both themes; scope review no longer restores the keyboard or hides
+the next action. This closes the Actions quote gate at d03992c. Subsequent email,
+map, GPS, small-radius and map-centering source edits have not yet run in Actions;
+no build, test or formatter has been run on the VM.

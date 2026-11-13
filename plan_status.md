@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-12. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-13. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. Android launch requires milestones 1–8;
 iOS and future service remain deferred.
 
@@ -65,10 +65,26 @@ iOS and future service remain deferred.
 | Q7 Exclusive claims, replay, paid exclusion, rollback | Fresh native race/claim checks and actual duplicate-exclusion journey passed on API 24/35 | None for this task |
 | Q8 Retained quote/line provenance through replacement and purge | Fresh native replacement/purge/late-write checks, actual related-invoice navigation and source quote retention passed | None for this task |
 | Q9 Released v8 → unreleased v9 migration | Frozen v8 fixture and late-install rollback included in fresh 561-test native Actions gate | Freeze v9 before subsequent schema work after release |
-| Q10 Real issue/accept/plan/complete/invoice UI journey | Head 5a71a9c passed 1/1 on API 24 and API 35; run 43281033608 failed at Apply reviewed plan because the keyboard reopened after scope confirmation; focus fix and assertion now in source | Fresh API-24/35 journey pass after scope-dialog focus fix |
-| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Head 5a71a9c generated and visually reviewed all three actual styles on API 24/35; extracted text confirms quantity, price, subtotal, tax and total. New source run failed before invoice step | Fresh API-24/35 document gates after scope-dialog fix |
-| Q12 Phone accessibility and responsive review | Actions artifact from 43281033608 at 390×844/1.8 scale visually confirms separate labels and field spacing no longer collide in light/dark | Fresh full run plus final visual inspection; confirm controls remain readable and scrollable |
+| Q10 Real issue/accept/plan/complete/invoice UI journey | Run 43337896079 at d03992c passed 1/1 on API 24 and API 35; keyboard stayed closed after scope confirmation | Actions gate passed; later unrelated source fixes need their own full rerun |
+| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Run 43337896079 generated the actual documents/viewers in all three styles on API 24/35; API-35 extracted text confirms 30 × USD 12.50 = USD 375.00, 7.5% tax = USD 28.13, total USD 403.13 with quote revision provenance | Actions document gate passed; later unrelated source fixes need their own full rerun |
+| Q12 Phone accessibility and responsive review | Artifact 13997334053 reviewed at 390×844 / 1.8 scale in light/dark; labels, totals, note and wrapped confirmation action are readable; keyboard closed | Actions visual gate passed; physical owner acceptance remains separate |
 | Q13 Merge/main/internal delivery | #39 remains draft | Full clean fresh exact-head validation, review artifacts, merge, verify main and separate Play delivery |
+
+## Current owner-reported bugs and final-release plan additions
+
+| Item | Status | Evidence / next action |
+| --- | --- | --- |
+| Email invoice handoff always reports failure | Source fix in progress | Email used `ACTION_SEND` with an `ACTION_SENDTO` selector while attaching a PDF; changed it to attachment-capable `ACTION_SEND`. Native Android Actions tests and owner device acceptance remain required. |
+| Map opens as a blank/white area | Source resilience fix in progress | Added bounded tile-request timeout, failure state with coordinates and an external map fallback; unset site maps now request one explained current fix before centering. The actual OSM-rendering cause is not reproduced on this VM; verify map tiles and fallback through Actions artifacts and on the owner's phone. |
+| Manual clock-in does not record GPS | Source fix in progress | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. Actions/native validation and physical device delivery evidence remain pending. |
+| Small worksite radius | Source/schema change in progress | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; verify migration and site editor in Actions. |
+| Task and task-comment images | Added to product contract | Planned after tasks/comments: take/select images, local private storage, bounded size/count, metadata stripping, preview/removal, encrypted backup inclusion and parent deletion. Not implemented. |
+| Full app E2E screenshots and Cloudflare Pages documentation | Added as final public-release gate | Plan now requires an end-to-end coverage inventory for every feature, screen and selectable option, reviewed screenshots on minimum/current Android APIs, then versioned static user guides deployed on Cloudflare Pages for open release. Internal/closed tracks are not gated by exhaustive coverage. |
+
+These current bug fixes are source changes only until a fresh GitHub Actions run
+passes. No local build/test/formatter was run, per owner instruction. Quote run
+43337896079 passed at d03992c before these fixes were added and therefore does not
+validate the current worktree.
 
 The full quoted milestone remains incomplete until its integration gates pass.
 Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked
@@ -3058,3 +3074,19 @@ Added pre-dialog unfocus in quote-scope review plus a device assertion that the
 keyboard stays closed after confirmation. This fix and the full actual invoice
 journey need fresh Actions and artifact review before Q10–Q12 can be accepted.
 No VM build, test or formatter was run.
+
+### Quote scope keyboard fix passed full Actions validation
+
+Head d03992c / Actions run 43337896079 succeeded. Formatting, analysis, Flutter
+behavior tests, Android build and all 561 native tests passed (47 XML, zero
+failures/errors/skips). Downloaded Android device XML reports 27 actual cases on
+API 24 and 27 on API 35, zero failures/errors/skips; the real quote issue,
+acceptance, scope planning, task completion, invoice and duplicate-exclusion
+journey passed 1/1 on each API. All three actual quote-to-invoice styles and the
+Flutter invoice viewer were reviewed on both APIs. Extracted API-35 text confirms
+30 × USD 12.50, USD 375.00 subtotal, 7.5% / USD 28.13 tax and USD 403.13 total.
+Reviewed Actions preview artifact 13997334053 at 390×844 / 1.8 scale in light
+and dark; the fields and confirmation action are readable, and the keyboard
+remains closed after review. This confirms the quote fix at d03992c only; all
+later bugfix source changes remain pending Actions. No VM build/test/formatter
+was run.

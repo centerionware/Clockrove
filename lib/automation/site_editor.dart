@@ -41,7 +41,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     text: widget.site?.longitude.toString() ?? '',
   );
   late final _radius = TextEditingController(
-    text: widget.site?.radius.toString() ?? '150',
+    text: widget.site?.radius.toString() ?? '30',
   );
   late bool _enabled = widget.site?.enabled ?? true;
   @override
@@ -57,8 +57,28 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
   }
 
   Future<void> _map() async {
-    final lat = double.tryParse(_latitude.text);
-    final lon = double.tryParse(_longitude.text);
+    var lat = double.tryParse(_latitude.text);
+    var lon = double.tryParse(_longitude.text);
+    bool canCenter(double? latitude, double? longitude) =>
+        latitude != null &&
+        latitude.isFinite &&
+        latitude.abs() <= 85 &&
+        longitude != null &&
+        longitude.isFinite &&
+        longitude.abs() <= 180;
+    if (!canCenter(lat, lon)) {
+      await _current();
+      if (!mounted) return;
+      lat = double.tryParse(_latitude.text);
+      lon = double.tryParse(_longitude.text);
+      if (!canCenter(lat, lon)) {
+        setState(() {
+          _notice =
+              'The map needs a current location or coordinates. Allow precise location, try Use current location again, or enter coordinates.';
+        });
+        return;
+      }
+    }
     final radius = double.tryParse(_radius.text);
     final point = await Navigator.of(context).push<LatLng>(
       MaterialPageRoute(
@@ -68,10 +88,10 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
           radius:
               radius != null &&
                   radius.isFinite &&
-                  radius >= 150 &&
+                  radius >= 1.8 &&
                   radius <= 10000
               ? radius
-              : 150,
+              : 30,
         ),
       ),
     );
@@ -141,8 +161,11 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
 
   String? _number(String? raw, double min, double max) {
     final value = double.tryParse(raw?.trim() ?? '');
+    final minLabel = min == min.truncateToDouble()
+        ? min.toStringAsFixed(0)
+        : min.toString();
     return value == null || !value.isFinite || value < min || value > max
-        ? 'Enter a number from ${min.toStringAsFixed(0)} to ${max.toStringAsFixed(0)}.'
+        ? 'Enter a number from $minLabel to ${max.toStringAsFixed(0)}.'
         : null;
   }
 
@@ -273,12 +296,13 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   controller: _radius,
                   decoration: const InputDecoration(
                     labelText: 'Radius in metres',
-                    helperText: '150–10,000 m',
+                    helperText:
+                        '1.8–10,000 m. Android recommends 100–150 m for geofences; tight radii can miss automatic arrival or departure.',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  validator: (v) => _number(v, 150, 10000),
+                  validator: (v) => _number(v, 1.8, 10000),
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(

@@ -64,7 +64,6 @@ internal object InvoiceDocuments {
         val uri = uri(context, record)
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
-            selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
             putExtra(Intent.EXTRA_EMAIL, if (snapshot.email.isEmpty()) emptyArray<String>() else arrayOf(snapshot.email))
             putExtra(Intent.EXTRA_CC, cc)
             putExtra(Intent.EXTRA_SUBJECT, subject)

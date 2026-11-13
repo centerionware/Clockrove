@@ -173,6 +173,8 @@ void main() {
       });
       await tester.pumpAndSettle();
       expect(find.text(AppStrings.mapUnavailable), findsOneWidget);
+      expect(find.text('Open map'), findsOneWidget);
+      expect(find.text('51.500000, -0.100000'), findsOneWidget);
       expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();

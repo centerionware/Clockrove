@@ -86,6 +86,34 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     }
   }
 
+  Future<void> _openExternalMap() async {
+    final latitude = widget.latitude.toStringAsFixed(6);
+    final longitude = widget.longitude.toStringAsFixed(6);
+    final webMap = Uri.https('www.openstreetmap.org', '/', {
+      'mlat': latitude,
+      'mlon': longitude,
+    }).replace(fragment: 'map=17/$latitude/$longitude');
+    for (final uri in [
+      Uri(
+        scheme: 'geo',
+        path: '$latitude,$longitude',
+        queryParameters: {'q': '$latitude,$longitude'},
+      ),
+      webMap,
+    ]) {
+      try {
+        if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+      } catch (_) {
+        // Keep an unavailable map app/browser separate from location history.
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.linkUnavailable)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final point = LatLng(widget.latitude, widget.longitude);
@@ -110,10 +138,23 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                       if (_failed)
                         Container(
                           color: colors.errorContainer,
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            AppStrings.mapUnavailable,
-                            style: TextStyle(color: colors.onErrorContainer),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  AppStrings.mapUnavailable,
+                                  style: TextStyle(
+                                    color: colors.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _openExternalMap,
+                                icon: const Icon(Icons.open_in_new),
+                                label: const Text('Open map'),
+                              ),
+                            ],
                           ),
                         ),
                       Padding(
@@ -126,6 +167,10 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                               '${MaterialLocalizations.of(context).formatShortDate(measured)} '
                               '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(measured))}',
                               style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              '${widget.latitude.toStringAsFixed(6)}, ${widget.longitude.toStringAsFixed(6)}',
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                             if (widget.accuracyMeters != null)
                               Text(

@@ -11,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/** Frozen v8 SQL is independent of the current installer. Never rewrite it for v9. */
+/** Frozen v8 SQL is independent of the current installer. Never rewrite it. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [24, 35])
 class QuoteMigrationTest {

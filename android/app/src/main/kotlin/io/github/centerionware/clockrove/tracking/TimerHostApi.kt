@@ -7,11 +7,16 @@ import io.flutter.plugin.common.EventChannel
 import android.os.Handler
 import android.os.Looper
 import io.github.centerionware.clockrove.widget.TimerWidget
+import io.github.centerionware.clockrove.location.WorkLocationService
 
 /** Versioned codec adapter. Raw transport values do not escape this boundary. */
-class TimerHostApi(context: Context, messenger: BinaryMessenger) {
+class TimerHostApi(
+    context: Context,
+    messenger: BinaryMessenger,
+    private val repository: TimerRepository = TimerRepository.get(context.applicationContext),
+    private val startTracking: (Context) -> Unit = { WorkLocationService.startForManualTimer(it) },
+) {
     private val appContext = context.applicationContext
-    private val repository = TimerRepository.get(appContext)
     private val channel = MethodChannel(messenger, "clockrove/timer/v1",
         io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
 
@@ -44,6 +49,10 @@ class TimerHostApi(context: Context, messenger: BinaryMessenger) {
                 if (response == null) result.notImplemented()
                 else if (response is TimerRepository.Outcome) {
                     TimerWidget.refreshAll(appContext)
+                    val action = (call.arguments as? Map<*, *>)?.get("action") as? String
+                    if (response.conflict == null && (action == "START" || action == "SWITCH") && repository.snapshot().running != null) {
+                        mainHandler.post { startTracking(appContext) }
+                    }
                     result.success(mapOf("version" to response.version, "conflict" to response.conflict))
                 } else result.success(response)
             } catch (invalid: IllegalArgumentException) {
