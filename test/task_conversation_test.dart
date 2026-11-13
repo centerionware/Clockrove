@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _pixel = base64Decode(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pFQAAAAASUVORK5CYII=',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
 );
 
 class _Business extends BusinessApi {
@@ -152,7 +152,7 @@ void main() {
   const photoChannel = MethodChannel('clockrove/documents/v1');
 
   Future<void> show(WidgetTester tester, _Business api) async {
-    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.physicalSize = const Size(420, 850);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -171,8 +171,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> dragTaskList(WidgetTester tester, double distance) async {
-    await tester.drag(find.byType(ListView).first, Offset(0, distance));
+  Future<void> reveal(WidgetTester tester, Finder target) async {
+    await tester.scrollUntilVisible(
+      target,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -186,20 +190,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
 
-    await dragTaskList(tester, 900);
     final edit = find.byTooltip('Edit comment');
+    await reveal(tester, edit);
     await tester.tap(edit);
     await tester.pumpAndSettle();
-    await dragTaskList(tester, -900);
     final editor = find.byType(TextField);
+    await reveal(tester, editor);
     await tester.enterText(editor, 'Tiles are ready to install.');
+    await reveal(tester, find.text('Save comment'));
     await tester.tap(find.text('Save comment'));
     await tester.pumpAndSettle();
     expect(find.text('Tiles are ready to install.'), findsOneWidget);
     expect(api._events.map((event) => event.action), ['ADDED', 'EDITED']);
 
-    await dragTaskList(tester, 900);
-    await tester.tap(find.byTooltip('Delete comment'));
+    final delete = find.byTooltip('Delete comment');
+    await reveal(tester, delete);
+    await tester.tap(delete);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete comment'));
     await tester.pumpAndSettle();
@@ -263,8 +269,8 @@ void main() {
     await tester.tap(find.text('Add comment'));
     await tester.pumpAndSettle();
 
-    await dragTaskList(tester, 900);
     final choosePhoto = find.text('Choose photo for comment');
+    await reveal(tester, choosePhoto);
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
