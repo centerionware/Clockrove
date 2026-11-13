@@ -194,6 +194,7 @@ class QuoteBillingDeviceTest {
     }
     private fun enter(label: String, value: String) {
         hideKeyboard()
+        if (find(label, true) == null) scrollToStart()
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))

@@ -64,10 +64,15 @@ build, native tests, API-24 actual journeys (including comment/gallery/camera
 attachments), and the API-24 document checks. It failed in the API-35 quote
 journey while the device helper tried to reveal the Description field; the saved
 failure screenshot shows the quote form still at the top with its keyboard open.
-API-35 task-media did not run. A test-only touch-swipe fallback is being added to
-the actual-device helpers and needs a fresh exact-head Actions run. No local
-build/test/formatter has run. Physical map, camera and GPS acceptance remains
-separate.
+The next head `6bf3238` / run `43470341913` passed formatting, analysis, Flutter
+tests, Android build and native tests, all API-24 actual journeys (including
+quote and task/comment gallery-camera paths), API-35 native cases, billing and
+immutable-copy journeys. It then failed in the API-35 payment journey while its
+helper sought the replacement Unit price field; the screenshot shows the
+replacement form at the tax section. API-35 quote/task-media were not reached on
+this run. Add the same touch fallback to the payment-device helper and rerun the
+exact head. No local build/test/formatter has run. Physical map, camera and GPS
+acceptance remains separate.
 
 After M6.5, complete M7 backup and the remaining requested business features.
 Only after all launch functionality is implemented, M7.6 is the whole-app
