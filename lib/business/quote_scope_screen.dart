@@ -430,6 +430,9 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
     _form.currentState!.validate();
     try {
       final draft = _capture(), version = _data.version, target = _data.target;
+      // Keep focus restoration from reopening the note keyboard after the
+      // confirmation dialog closes and covering the plan action.
+      FocusManager.instance.primaryFocus?.unfocus();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(

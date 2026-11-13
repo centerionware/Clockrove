@@ -49,16 +49,18 @@ explicit business rule, separate from numerical precision loss.
 Complete the active quote milestone in draft PR #39, then proceed to the next
 ordered plan milestone. Head 5a71a9c / run 43276003231 passed formatting,
 analysis, Flutter behavior, Android build, all 561 native tests, and all API-24/35
-device gates. Downloaded JUnit results show 27 actual Android cases per API with
-zero failures/errors/skips, including the actual quote issue/accept/plan/complete/
-invoice journey. All three generated quote-to-invoice styles were inspected on
-both APIs; API-35 extracted text confirms 30 × USD 12.50 = USD 375.00, 7.5% tax
-USD 28.13, total USD 403.13, with the Q-1000 source revision retained. Preview
-review then found floating input labels collide with controls at 1.8× text in the
-actual-work screen. Replaced those floating labels with separate responsive labels
-and added control spacing. This UI fix is source only; fresh exact-head Actions
-must verify it before Q12/#39 merge. Keep PR #39 draft until that visual gate and
-the complete review are done.
+device gates. Its actual quote journey passed 1/1 on each API; all three generated
+quote-to-invoice styles were inspected on both APIs. API-35 extracted text confirms
+30 × USD 12.50 = USD 375.00, 7.5% tax USD 28.13, total USD 403.13, retaining
+Q-1000 revision 1. Later large-text previews exposed and then confirmed the fix
+for floating-label collisions. The next device run, 43281033608 on 1f59374, passed
+formatting, analysis, Flutter behavior, Android build and 561 native tests, but
+API 24 failed when the scope-review dialog dismissal reopened the note keyboard
+and hid “Apply reviewed plan”; API 35 did not run the quote journey. The scope
+screen now unfocuses before confirmation and the device test asserts that the
+keyboard stays closed. Fresh exact-head Actions and artifact review remain
+required; keep #39 draft until the quote journey, real documents and responsive
+screens all pass.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic

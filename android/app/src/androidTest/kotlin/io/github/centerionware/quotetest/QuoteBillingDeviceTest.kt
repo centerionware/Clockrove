@@ -267,6 +267,7 @@ class QuoteBillingDeviceTest {
             scrollToStart(); reveal("Plan accepted scope"); click("Plan accepted scope"); click("Review group plan")
             waitFor("Review scope plan"); enter("Private scope review note", "Reviewed planned task quantity and accepted unit price")
             reveal("Review selected plan"); click("Review selected plan"); click("Confirm review")
+            until("Scope review reopened the keyboard and obscured plan application") { !keyboardVisible() }
             reveal("Apply reviewed plan"); click("Apply reviewed plan")
             until("Actual scope mapping was not committed") { repository.quoteScope(quoteId).second.size == 1 }
             val binding = repository.quoteScope(quoteId).second.single()

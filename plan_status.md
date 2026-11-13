@@ -38,7 +38,7 @@ iOS and future service remain deferred.
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
 | Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
-| Follow-on: quotes | Backend, issue/accept/plan, actual work, duplicate protection and three real invoice styles verified in Actions; responsive label collision found and fixed in source, pending fresh validation | Head 5a71a9c / 43276003231: 561 native / 27 actual Android cases per API, zero failures/errors/skips. Inspected both APIs' real quote-derived invoice PDFs/screenshots; extracted API-35 totals match exact quantity/unit-price/tax math. New 1.8× large-text preview exposed floating-label collisions; explicit labels/spacing fix is now pending Actions. Keep #39 draft until fix passes |
+| Follow-on: quotes | Full journey passed at 5a71a9c; 1f59374 previews verify large-text label fix; latest device run exposed keyboard focus restoration after scope review, fix pending fresh Actions | 43276003231: 561 native / 27 actual Android cases per API, zero failures/errors/skips; reviewed three real PDF styles and exact API-35 text. 43281033608: formatter, analysis, Flutter tests, build and native tests passed; API 24 actual quote journey failed because keyboard reopened after “Confirm review” and obscured “Apply reviewed plan”; API 35 quote journey not reached. Scope review now unfocuses and has a closed-keyboard device assertion; rerun fresh Actions. Keep #39 draft |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -65,9 +65,9 @@ iOS and future service remain deferred.
 | Q7 Exclusive claims, replay, paid exclusion, rollback | Fresh native race/claim checks and actual duplicate-exclusion journey passed on API 24/35 | None for this task |
 | Q8 Retained quote/line provenance through replacement and purge | Fresh native replacement/purge/late-write checks, actual related-invoice navigation and source quote retention passed | None for this task |
 | Q9 Released v8 → unreleased v9 migration | Frozen v8 fixture and late-install rollback included in fresh 561-test native Actions gate | Freeze v9 before subsequent schema work after release |
-| Q10 Real issue/accept/plan/complete/invoice UI journey | Head 5a71a9c: named actual journey passed 1/1 on API 24 and API 35; downloaded XML inspected | Rerun exact UI journey after large-text layout fix |
-| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Head 5a71a9c: API-24/35 generated actual minimal/classic/modern PDFs; API-35 extracted text confirms source, quantity, subtotal, tax and total; all style previews visually reviewed | Rerun document gates after large-text layout fix |
-| Q12 Phone accessibility and responsive review | 390×844/1.8-scale light/dark previews revealed floating-label collisions; switched to separate labels and added control spacing in source | Fresh Actions and visual review must show readable, non-overlapping labels in both themes |
+| Q10 Real issue/accept/plan/complete/invoice UI journey | Head 5a71a9c passed 1/1 on API 24 and API 35; run 43281033608 failed at Apply reviewed plan because the keyboard reopened after scope confirmation; focus fix and assertion now in source | Fresh API-24/35 journey pass after scope-dialog focus fix |
+| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Head 5a71a9c generated and visually reviewed all three actual styles on API 24/35; extracted text confirms quantity, price, subtotal, tax and total. New source run failed before invoice step | Fresh API-24/35 document gates after scope-dialog fix |
+| Q12 Phone accessibility and responsive review | Actions artifact from 43281033608 at 390×844/1.8 scale visually confirms separate labels and field spacing no longer collide in light/dark | Fresh full run plus final visual inspection; confirm controls remain readable and scrollable |
 | Q13 Merge/main/internal delivery | #39 remains draft | Full clean fresh exact-head validation, review artifacts, merge, verify main and separate Play delivery |
 
 The full quoted milestone remains incomplete until its integration gates pass.
@@ -3040,7 +3040,21 @@ with exact decimal inputs and output.
 Downloaded and reviewed the 390×844 / 1.8× light/dark UI previews. The actual-work
 setup screen's outlined floating labels overlapped neighboring controls, despite
 the layout test passing. Replaced these with separate responsive labels, added
-vertical spacing, and preserved the field identifiers and helper hints. This
-source fix is not yet validated; rerun full Actions, review new previews, then
-update Q12 and decide whether #39 is ready to merge. All build and test work stays
-in GitHub Actions.
+vertical spacing, and preserved the field identifiers and helper hints. The next
+Actions artifact confirms the visual correction in both themes; the full actual
+journey is pending because the scope review dialog reopened the keyboard. All
+build and test work stays in GitHub Actions.
+
+### Large-text layout preview passes; scope-review keyboard restoration found
+
+Head 1f59374 / Actions run 43281033608 passed formatting, analysis, Flutter
+behavior, Android build and all 561 native tests. Downloaded the UI preview
+artifact and confirmed in both light and dark 390×844 / 1.8× screenshots that
+separate labels and spacing remove the prior overlap. The actual API-24 journey
+then failed after “Confirm review”: its note regained focus and the keyboard
+covered “Apply reviewed plan.” Downloaded screenshot and JUnit show this exact
+failure; API 35's quote journey did not run because the API-24 gate failed first.
+Added pre-dialog unfocus in quote-scope review plus a device assertion that the
+keyboard stays closed after confirmation. This fix and the full actual invoice
+journey need fresh Actions and artifact review before Q10–Q12 can be accepted.
+No VM build, test or formatter was run.
