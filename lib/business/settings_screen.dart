@@ -370,8 +370,6 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               invoiceStyle: _style,
               emailSubject: _subject.text,
               emailBody: _body.text,
-              defaultTaxUnits: widget.initial.defaultTaxUnits,
-              receivablesEmail: widget.initial.receivablesEmail,
               defaultLocationRecording: _defaultLocationRecording,
             );
             return () =>

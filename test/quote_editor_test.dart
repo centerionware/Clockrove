@@ -142,7 +142,7 @@ void main() {
       expect(find.text('USD 12.50 each'), findsOneWidget);
       final descriptions = find.byWidgetPredicate(
         (widget) =>
-            widget is TextFormField &&
+            widget is TextField &&
             widget.decoration.labelText == 'Description',
       );
       expect(descriptions, findsNWidgets(2));
