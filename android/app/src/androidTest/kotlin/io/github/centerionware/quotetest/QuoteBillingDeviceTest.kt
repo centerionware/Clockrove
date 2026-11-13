@@ -40,8 +40,11 @@ class QuoteBillingDeviceTest {
             SystemClock.sleep(100)
         }
         val failure = AssertionError(description)
-        try { diagnostic() } catch (diagnosticFailure: Throwable) { failure.addSuppressed(diagnosticFailure) }
-        throw failure
+        val accessibleState = try { diagnostic() } catch (diagnosticFailure: Throwable) {
+            failure.addSuppressed(diagnosticFailure)
+            "Accessibility capture failed"
+        }
+        throw AssertionError("$description\nAccessibility state at timeout:\n${accessibleState.take(12000)}", failure)
     }
     private fun find(label: String, editable: Boolean = false, actionable: Boolean = false): AccessibilityNodeInfo? {
         val slug = label.lowercase(java.util.Locale.ROOT).replace(Regex("[^a-z0-9]+"), "-")
@@ -177,7 +180,7 @@ class QuoteBillingDeviceTest {
         File(captures, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
-    private fun diagnostic() {
+    private fun diagnostic(): String {
         val dump = StringBuilder()
         automation.windows.forEach { dump.append("Window ").append(it).append('\n') }
         fun describe(node: AccessibilityNodeInfo, depth: Int) {
@@ -188,6 +191,7 @@ class QuoteBillingDeviceTest {
         automation.rootInActiveWindow?.let { describe(it, 0) }
         File(captures, "accessibility.txt").writeText(dump.toString())
         capture("failure")
+        return dump.toString()
     }
     private fun closeActivities() {
         instrumentation.runOnMainSync {

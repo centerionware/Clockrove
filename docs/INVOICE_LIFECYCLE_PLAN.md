@@ -166,6 +166,21 @@ existing balances. Legacy invoices retain their recorded totals; do not invent
 historic tax or apply today's default. A replacement previews its own explicit
 rate/amount. Quote-to-invoice review preserves or explicitly revises agreed tax.
 PDFs/balance copies/receipts show subtotal, tax rate/amount, total, paid and due.
+For invoice, receipt, correction, replacement and quote PDFs, place customer
+billing details in a left column and company name/contact details in a right
+column. Cap each column at 47% of printable width, leaving a clear center gutter;
+wrap long content inside its own column and paginate overflow without clipping.
+Keep the issue date in the right company column. Place subtotal and tax rows at
+the printable right edge; labels and tax rates remain regular weight, while only
+the subtotal/tax amount digits are bold. Validate all three styles and rendered
+financial copies through Actions.
+
+In main Settings, place **Preview invoice** immediately below the Invoice style
+selector. Use the currently selected style and currency, the saved company logo
+when available, and synthetic example values for every document field. Render
+through the production native PDF generator/viewer, show a clear sample-only
+notice, and allow page navigation. Previewing must not save an invoice, reserve
+work, consume a number or open an email composer.
 
 Collected tax is tracked separately from tax-exclusive sales/revenue and is not
 included in profit/margin calculations. Track billed tax and collected tax

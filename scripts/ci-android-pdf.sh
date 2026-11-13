@@ -134,7 +134,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
-    'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 2,
+    'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 3,
     'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,
 }
 for classname, count in expected.items():
@@ -152,6 +152,7 @@ PY_DEVICE
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
   done
+  test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-settings-preview-screen.png"
   # All original XML/PDF/widget evidence has been pulled before clearing the
   # ephemeral emulator for the independently numbered financial journey.
   bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"

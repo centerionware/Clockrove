@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/app_theme.dart';
@@ -8,6 +10,8 @@ import 'package:clockrove/business/job_settings_screen.dart';
 import 'package:clockrove/business/settings_api.dart';
 import 'package:clockrove/business/logo_controls.dart';
 import 'package:clockrove/business/settings_screen.dart';
+import 'package:clockrove/business/report_api.dart';
+import 'package:clockrove/business/invoice_style_preview_screen.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +31,25 @@ class _Timer extends TimerApi {
 class _LogoApi extends LogoApi {
   @override
   Future<CompanyLogo> read() async => const CompanyLogo(1, null, null);
+}
+
+class _PreviewReportApi extends ReportApi {
+  static final pixel = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
+  );
+  final styles = <String>[];
+
+  @override
+  Future<InvoicePage> previewStyle({
+    required String style,
+    required String currency,
+    required int digits,
+    required Uint8List? logo,
+    required int page,
+  }) async {
+    styles.add(style);
+    return InvoicePage(page, 1, Uint8List.fromList(pixel));
+  }
 }
 
 class _SettingsApi extends BusinessSettingsApi {
@@ -107,6 +130,7 @@ Future<void> _show(
   double scale = 1,
   Key? boundary,
   TimerApi? timer,
+  ReportApi? reportApi,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
@@ -116,6 +140,8 @@ Future<void> _show(
           businessSettingsApiProvider.overrideWithValue(api),
           logoApiProvider.overrideWithValue(_LogoApi()),
           timerApiProvider.overrideWithValue(timer ?? _Timer()),
+          if (reportApi != null)
+            reportApiProvider.overrideWithValue(reportApi),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -156,6 +182,32 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('invoice style preview uses the selected style and sample data', (
+    tester,
+  ) async {
+    final reports = _PreviewReportApi();
+    await _show(
+      tester,
+      _SettingsApi(),
+      const SettingsScreen(),
+      reportApi: reports,
+    );
+    await _reveal(tester, 'Invoice style');
+    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Classic').last);
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'Preview invoice');
+    await tester.tap(find.text('Preview invoice'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
+    expect(find.text('Classic · sample invoice'), findsOneWidget);
+    expect(find.textContaining('does not create or send an invoice'), findsOneWidget);
+    expect(find.text('Page 1 of 1'), findsOneWidget);
+    expect(reports.styles, ['CLASSIC']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'invalid receivables address keeps the draft and corrected address saves',
     (tester) async {

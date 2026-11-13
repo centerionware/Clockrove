@@ -9,9 +9,16 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import io.github.centerionware.clockrove.tracking.BusinessStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
+import io.github.centerionware.clockrove.tracking.TaxRate
 import io.github.centerionware.clockrove.tracking.TimerRepository
+import java.math.BigInteger
+import java.text.SimpleDateFormat
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Currency
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 internal object InvoiceDocuments {
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
@@ -78,10 +85,13 @@ internal object InvoiceDocuments {
         return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
     fun preview(context: Context, record: InvoiceStore.Record, index: Int): Map<String, Any> {
+        return preview(context, requireNotNull(record.pdf), index)
+    }
+    fun preview(context: Context, pdfBytes: ByteArray, index: Int): Map<String, Any> {
         require(index >= 0)
         val file = File.createTempFile("invoice-preview-", ".pdf", context.cacheDir)
         try {
-            file.writeBytes(requireNotNull(record.pdf))
+            file.writeBytes(pdfBytes)
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
                 require(index < renderer.pageCount)
                 renderer.openPage(index).use { page ->
@@ -94,5 +104,38 @@ internal object InvoiceDocuments {
                 }
             } }
         } finally { file.delete() }
+    }
+
+    /** Real native sample document for Settings; it consumes no invoice number and writes no records. */
+    fun settingsPreview(style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
+        require(style in setOf("MINIMAL", "CLASSIC", "MODERN"))
+        val currencyDigits = Currency.getInstance(currency).defaultFractionDigits
+        require(digits == currencyDigits && digits in 0..3)
+        val factor = BigInteger.TEN.pow(digits)
+        val subtotal = BigInteger.valueOf(312).multiply(factor)
+        val unitPrice = BigInteger.valueOf(12).multiply(factor)
+        val tax = TaxRate.amount(subtotal, 75000)
+        val total = subtotal.add(tax)
+        val now = System.currentTimeMillis()
+        val day = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(now))
+        val snapshot = InvoiceStore.Snapshot(
+            number = "INV-SAMPLE-1000", created = now, style = style, currency = currency, digits = digits,
+            company = "Sample Company LLC",
+            companyContact = "billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test",
+            customer = "Taylor Morgan",
+            customerContact = "taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210",
+            job = "Kitchen tile installation", period = "$day — $day · UTC",
+            basis = "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft",
+            header = "Thank you for choosing us for your project.",
+            footer = "Payment due within 14 days. Sample preview only — no payment is due.",
+            total = InvoiceStore.amount(total, digits), email = "taylor.morgan@example.test",
+            subject = "Invoice INV-SAMPLE-1000", body = "Please find your sample invoice attached.",
+            lines = listOf(InvoiceStore.Line("Install porcelain tile",
+                "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft\nCompleted $day",
+                InvoiceStore.amount(subtotal, digits), "260000", unitPrice.toString())),
+            subtotal = InvoiceStore.amount(subtotal, digits), taxRateUnits = 75000,
+            taxAmount = InvoiceStore.amount(tax, digits),
+        )
+        return InvoicePdf.generate(snapshot, logoBytes)
     }
 }

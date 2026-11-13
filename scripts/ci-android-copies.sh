@@ -30,11 +30,13 @@ python3 - "$clockrove_copy_results/TEST-copies.xml" <<'PY_DEVICE'
 import sys
 import xml.etree.ElementTree as E
 root = E.parse(sys.argv[1]).getroot()
-assert int(root.attrib['tests']) == 3, root.attrib
+assert int(root.attrib['tests']) == 5, root.attrib
 assert all(int(root.attrib[k]) == 0 for k in ['failures', 'errors', 'skipped']), root.attrib
 cases = root.findall('testcase')
-assert len(cases) == 3
+assert len(cases) == 5
 assert {(c.attrib['classname'], c.attrib['name']) for c in cases} == {
+    ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'settingsStylePreviewRendersSamplePdfWithoutChangingBusinessState'),
+    ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'invoicePartiesUseWrappedColumnsAndSubtotalTaxNumbersEndAtTheRightEdge'),
     ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'nativePaymentsProduceAllStylePartialPaidBalanceCorrectionAndWideCopies'),
     ('io.github.centerionware.billingtest.InvoiceBlobStorageDeviceTest', 'originalCopyAndLogoBytesSurviveActualCursorWindowLimit'),
     ('io.github.centerionware.billingtest.QuotePdfDeviceTest', 'allStylesPreserveIssuedRevisionsAndExactWideEstimatesWithoutBillingWork'),
@@ -42,6 +44,8 @@ assert {(c.attrib['classname'], c.attrib['name']) for c in cases} == {
 print('Verified actual Android immutable financial copies:', root.attrib)
 PY_DEVICE
 for clockrove_copy_style in minimal classic modern; do
+  test -s "$clockrove_copy_previews/clockrove-settings-preview-$clockrove_copy_style.png"
+  test -s "$clockrove_copy_previews/clockrove-party-layout-$clockrove_copy_style.png"
   for clockrove_copy_kind in receipt-partial receipt-paid balance-paid payment-correction receipt-wide void replacement replacement-paid quote quote-revision quote-wide; do
     test -s "$clockrove_copy_previews/clockrove-$clockrove_copy_kind-$clockrove_copy_style.pdf"
     test -s "$clockrove_copy_previews/clockrove-$clockrove_copy_kind-$clockrove_copy_style.png"

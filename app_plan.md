@@ -47,18 +47,18 @@ explicit business rule, separate from numerical precision loss.
 ### Next concrete action
 
 The quote milestone baseline passed on d03992c / Actions run 43337896079.
-Current owner-fix heads d3cf10a / 43345767366 and f088d0e / 43346642907 passed
-formatting, analysis, Flutter behavior, Android debug build and native test steps,
-but both failed in the real Android/PDF device step. The first failure's log says
-API 24's `InvoicePaymentDeviceTest.actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt`
-could not expose “Void & replace” after opening the correction section; the
-second run failed in the same Actions step. The correction section is now placed
-directly after the invoice balance summary so its action is near the invoice
-status and reachable before payment/copy controls. This UI source change has not
-yet been validated. Run full exact-head Actions, inspect the results, and keep
-#39 draft until every gate passes. The owner-reported email/map/manual-GPS/site-
-radius fixes still need complete Actions and physical owner-device acceptance;
-task-image and full-release E2E/Cloudflare documentation plans are recorded below.
+Owner-fix run 43350422474 passed formatting, analysis, Flutter behavior, Android
+debug build and native tests. API 24 then passed the formerly failing
+`InvoicePaymentDeviceTest.actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt`
+case after “Void & replace” was moved below the invoice balance. The later actual
+quote journey failed on API 24 because it did not expose “Open issued quote” at
+`QuoteBillingDeviceTest.kt:260`; investigate that exact interaction before
+claiming the UI repair. The next source update also needs to validate the newly
+requested invoice PDF party columns, right-aligned subtotal/tax amounts, and the
+Settings sample invoice preview. Keep #39 draft and rerun full exact-head
+Actions. The owner-reported email/map/manual-GPS/site-radius fixes still need
+complete Actions and physical owner-device acceptance; task-image and full-release
+E2E/Cloudflare documentation plans are recorded below.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
@@ -242,6 +242,19 @@ then a main-menu Reports icon with useful business/tax-preparation summaries.
 - Main Settings has optional accounts-receivable email. Invoice/receipt/quote
   email drafts CC it when set, otherwise company primary email. Fill default-email
   To/CC/subject/body/PDF safely; the user sends. Keep both template guards.
+- Invoice, receipt, correction, replacement and quote PDFs place customer billing
+  details on the left and company details on the right. Each text column is at
+  most 47% of printable width; wrap long names/contact/address text within its
+  column and paginate overflow. Align issued date with the company column. Align
+  subtotal and tax rows to the invoice's right edge; keep labels and tax rate
+  regular weight while bolding only the subtotal/tax amount digits. Review all
+  three styles and actual rendered copies in Actions.
+- Put **Preview invoice** directly below the Invoice style selector in main
+  Settings. Open a paginated preview rendered by the real native PDF renderer,
+  using the currently selected style/currency, the saved company logo if present,
+  and synthetic example content for company/customer/contact, job, dates, line
+  items, subtotal, tax, total, header and footer. Mark it clearly as sample data;
+  preview must not save an invoice, reserve work, consume a number or open email.
 - Quotes have their own Q-1000 sequence, immutable issued revisions and explicit
   local acceptance. Converting reviewed quote scope never fabricates work or
   bypasses source coverage. Quotes/estimates are not revenue or invoice payments.

@@ -22,6 +22,14 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         channel.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "settingsInvoicePreview" -> {
+                        val style = requireNotNull(call.argument<String>("style"))
+                        val currency = requireNotNull(call.argument<String>("currency"))
+                        val digits = requireNotNull(call.argument<Int>("digits"))
+                        val page = requireNotNull(call.argument<Int>("page"))
+                        val pdf = InvoiceDocuments.settingsPreview(style, currency, digits, call.argument<ByteArray>("logo"))
+                        result.success(InvoiceDocuments.preview(activity, pdf, page))
+                    }
                     "pickLogo" -> main.post {
                         if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
                         else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a document first", null)

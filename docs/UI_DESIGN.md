@@ -37,6 +37,17 @@ content and usable controls across light and dark launcher wallpapers. Review
 Actions-rendered captures of Timer, Tasks and Combined at compact and expanded
 sizes against contrasting wallpapers before release.
 
+Invoice and quote PDFs put customer billing details on the left and company
+details on the right, with each column limited to 47% of printable width. Long
+names and contact/address text wrap within their column and paginate without
+clipping. Keep subtotal/tax rows flush right; use regular weight for labels and
+tax rates and bold only for the numeric subtotal/tax amounts. Review generated
+PDF pages for all three document styles in Actions.
+Place a **Preview invoice** action immediately below the style selector in main
+Settings. It opens a paginated preview from the real native renderer using the
+current selection, saved logo if present and clearly identified synthetic data;
+it does not create or send an invoice.
+
 Synthetic light/dark previews are rendered in GitHub Actions, not on the VM.
 Review actual images and interaction/accessibility test results before merging
 visual changes. The first preview's debug ribbon is absent from release builds;

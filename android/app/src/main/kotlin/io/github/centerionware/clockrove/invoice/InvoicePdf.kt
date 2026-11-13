@@ -9,8 +9,11 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.Layout
+import android.text.Spannable
+import android.text.SpannableString
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.StyleSpan
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.TaxRate
 import java.io.ByteArrayOutputStream
@@ -36,16 +39,7 @@ internal object InvoicePdf {
                     flow.text("Copy reference: ${it.reference}", 8f)
                     flow.space(8f)
                 }
-                flow.text(snapshot.company, 22f, bold = true)
-                flow.text(snapshot.companyContact, 10f)
-                flow.text("Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(snapshot.created)) + " UTC", 9f)
-                flow.space(if (snapshot.statement == null) 16f else 8f)
-                if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
-                    flow.text(if (documentKind == "QUOTE") "PREPARED FOR" else "BILL TO", 9f, bold = true)
-                    flow.text(snapshot.customer, 14f, bold = true)
-                    flow.text(snapshot.customerContact, 10f)
-                    flow.space(if (snapshot.statement == null) 16f else 8f)
-                }
+                flow.parties(snapshot, if (documentKind == "QUOTE") "PREPARED FOR" else "BILL TO")
                 flow.text(snapshot.job, 18f, bold = true)
                 flow.text(snapshot.period, 10f)
                 flow.text(snapshot.basis, 9f)
@@ -77,6 +71,14 @@ internal object InvoicePdf {
         } finally { logo?.recycle() }
     }
     private class Flow(val document: PdfDocument, val data: InvoiceStore.Snapshot, val logo: Bitmap?, val quote: Boolean) {
+        private data class PartyParagraph(val value: String, val size: Float, val bold: Boolean = false)
+        private class PartyColumn(val paragraphs: List<PartyParagraph>) {
+            var paragraphIndex = 0
+            var lineIndex = 0
+            var gapPending = false
+            val hasContent get() = paragraphIndex < paragraphs.size
+        }
+
         val modern = data.style == "MODERN"
         val classic = data.style == "CLASSIC"
         val ink = if (modern) Color.rgb(23, 107, 85) else if (classic) Color.rgb(29, 46, 72) else Color.rgb(25, 29, 33)
@@ -127,11 +129,96 @@ internal object InvoicePdf {
         fun next() { finish(); start() }
         fun ensure(space: Float) { if (y + space > bottom) next() }
         fun space(value: Float) { if (y + value <= bottom) y += value else next() }
-        fun layout(value: String, size: Float, bold: Boolean, available: Int): StaticLayout = StaticLayout.Builder.obtain(value, 0, value.length, paint(size, bold), available)
-            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).setLineSpacing(2f, 1f).build()
-        fun text(value: String, size: Float, bold: Boolean = false, available: Int = (width - margin * 2).toInt()) {
+        fun layout(value: CharSequence, size: Float, bold: Boolean, available: Int, alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL): StaticLayout = StaticLayout.Builder.obtain(value, 0, value.length, paint(size, bold), available)
+            .setAlignment(alignment).setIncludePad(false).setLineSpacing(2f, 1f).build()
+
+        /** Keep customer and company details side by side without allowing either to take over the page. */
+        fun parties(snapshot: InvoiceStore.Snapshot, customerHeading: String) {
+            val issued = "Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+                .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                .format(java.util.Date(snapshot.created)) + " UTC"
+            val customer = mutableListOf<PartyParagraph>()
+            if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
+                customer += PartyParagraph(customerHeading, 9f, true)
+                if (snapshot.customer.isNotBlank()) customer += PartyParagraph(snapshot.customer, 14f, true)
+                if (snapshot.customerContact.isNotBlank()) customer += PartyParagraph(snapshot.customerContact, 10f)
+            }
+            val company = mutableListOf<PartyParagraph>()
+            if (snapshot.company.isNotBlank()) {
+                company += PartyParagraph("FROM", 9f, true)
+                company += PartyParagraph(snapshot.company, 18f, true)
+            }
+            if (snapshot.companyContact.isNotBlank()) company += PartyParagraph(snapshot.companyContact, 10f)
+            company += PartyParagraph(issued, 9f)
+
+            val columnWidth = ((width - margin * 2) * .47f).toInt()
+            val leftX = margin
+            val rightX = width - margin - columnWidth
+            val left = PartyColumn(customer)
+            val right = PartyColumn(company)
+            while (left.hasContent || right.hasContent) {
+                val pageTop = y
+                val leftBottom = drawPartyColumn(left, leftX, pageTop, columnWidth, false)
+                val rightBottom = drawPartyColumn(right, rightX, pageTop, columnWidth, true)
+                y = maxOf(leftBottom, rightBottom)
+                if (left.hasContent || right.hasContent) next()
+            }
+            space(if (snapshot.statement == null) 16f else 8f)
+        }
+
+        private fun drawPartyColumn(column: PartyColumn, x: Float, top: Float, available: Int, rightAligned: Boolean): Float {
+            var columnY = top
+            while (column.hasContent) {
+                val paragraph = column.paragraphs[column.paragraphIndex]
+                val content = paragraph.value
+                if (content.isBlank()) {
+                    column.paragraphIndex++
+                    column.lineIndex = 0
+                    continue
+                }
+                val block = layout(content, paragraph.size, paragraph.bold, available,
+                    if (rightAligned) Layout.Alignment.ALIGN_OPPOSITE else Layout.Alignment.ALIGN_NORMAL)
+                val minimumLineHeight = block.getLineBottom(column.lineIndex) - block.getLineTop(column.lineIndex)
+                val gap = if (column.gapPending) if (classic) 3f else 5f else 0f
+                if (columnY + gap + minimumLineHeight > bottom) return columnY
+                columnY += gap
+                column.gapPending = false
+                val lineTop = block.getLineTop(column.lineIndex)
+                var lastLine = column.lineIndex
+                while (lastLine + 1 < block.lineCount && block.getLineBottom(lastLine + 1) - lineTop <= bottom - columnY) lastLine++
+                val segmentHeight = block.getLineBottom(lastLine) - lineTop
+                canvas.save()
+                canvas.clipRect(x, columnY, x + available, columnY + segmentHeight)
+                canvas.translate(x, columnY - lineTop)
+                block.draw(canvas)
+                canvas.restore()
+                columnY += segmentHeight
+                column.lineIndex = lastLine + 1
+                if (column.lineIndex >= block.lineCount) {
+                    column.paragraphIndex++
+                    column.lineIndex = 0
+                    column.gapPending = true
+                } else return columnY
+            }
+            return columnY
+        }
+
+        fun text(value: String, size: Float, bold: Boolean = false, available: Int = (width - margin * 2).toInt(), alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL) {
+            richText(value, size, bold, available, alignment)
+        }
+
+        private fun financialRow(label: String, amount: String) {
+            val value = "$label   ${data.currency} $amount"
+            val styled = SpannableString(value).apply {
+                val start = value.lastIndexOf(amount)
+                if (start >= 0) setSpan(StyleSpan(Typeface.BOLD), start, start + amount.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            richText(styled, 11f, false, (width - margin * 2).toInt(), Layout.Alignment.ALIGN_OPPOSITE)
+        }
+
+        private fun richText(value: CharSequence, size: Float, bold: Boolean, available: Int, alignment: Layout.Alignment) {
             if (value.isBlank()) return
-            val layout = layout(value, size, bold, available)
+            val layout = layout(value, size, bold, available, alignment)
             var firstLine = 0
             while (firstLine < layout.lineCount) {
                 ensure(size + 4)
@@ -179,8 +266,8 @@ internal object InvoicePdf {
             if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {
                 ensure(145f)
                 space(8f)
-                text("${if (data.statement == null) "Subtotal" else "Invoice subtotal"}   ${data.currency} ${data.subtotal}", 11f)
-                text("${if (data.statement == null) "Tax" else "Invoice tax"} (${TaxRate.format(data.taxRateUnits)}%)   ${data.currency} ${data.taxAmount}", 11f)
+                financialRow(if (data.statement == null) "Subtotal" else "Invoice subtotal", requireNotNull(data.subtotal))
+                financialRow("${if (data.statement == null) "Tax" else "Invoice tax"} (${TaxRate.format(data.taxRateUnits)}%)", requireNotNull(data.taxAmount))
             }
             val value = "${data.currency} ${data.total}"
             if (paint(9f, true).measureText(value) > 345) {

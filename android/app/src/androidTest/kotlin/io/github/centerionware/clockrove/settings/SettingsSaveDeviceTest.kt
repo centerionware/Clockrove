@@ -141,4 +141,44 @@ class SettingsSaveDeviceTest {
             instrumentation.waitForIdleSync()
         }
     }
+
+    @Test fun invoiceStylePreviewOpensRealSampleWithoutSavingInvoiceOrSettings() {
+        val app = instrumentation.targetContext
+        val repository = TimerRepository.get(app)
+        val before = repository.businessSnapshot()
+        automation.serviceInfo = automation.serviceInfo.apply {
+            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+        }
+        app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        try {
+            click("App settings and customers")
+            click("Settings")
+            waitFor("Billing defaults")
+            reveal("Preview invoice")
+            click("Preview invoice")
+            val style = when (before.settings.invoiceStyle) {
+                "CLASSIC" -> "Classic"
+                "MODERN" -> "Modern"
+                else -> "Minimal"
+            }
+            waitFor("Invoice style preview")
+            waitFor("$style · sample invoice")
+            waitFor("Page 1 of 1")
+            assertEquals("Preview must not change saved settings or consume an invoice number", before, repository.businessSnapshot())
+            val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+            automation.waitForIdle(200, 3000)
+            val bitmap = requireNotNull(automation.takeScreenshot())
+            File(directory, "clockrove-settings-preview-screen.png").outputStream().use {
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
+            bitmap.recycle()
+        } finally {
+            instrumentation.runOnMainSync {
+                for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {
+                    ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage).toList().forEach { it.finish() }
+                }
+            }
+            instrumentation.waitForIdleSync()
+        }
+    }
 }
