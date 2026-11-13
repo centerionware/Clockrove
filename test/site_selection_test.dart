@@ -242,6 +242,9 @@ void main() {
       await _reveal(tester, 'Choose on map');
       await tester.tap(find.text('Choose on map'));
       await tester.pumpAndSettle();
+      expect(find.text('Use your current location?'), findsOneWidget);
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
       await tester.runAsync(
         () => precacheImage(
           MemoryImage(Uint8List(0)),

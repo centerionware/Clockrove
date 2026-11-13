@@ -84,7 +84,7 @@ void main() {
       );
       await tester.enterText(find.byType(TextFormField).at(1), 'NaN');
       await tester.enterText(find.byType(TextFormField).at(2), '181');
-      await tester.enterText(find.byType(TextFormField).at(3), '149');
+      await tester.enterText(find.byType(TextFormField).at(3), '1.79');
       await _reveal(tester, 'Save site');
       await tester.tap(find.text('Save site'));
       await tester.pumpAndSettle();

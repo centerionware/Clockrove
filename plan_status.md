@@ -94,7 +94,12 @@ map-outage test. Android build, native and real-device steps did not run. A fres
 exact-head Actions run is required. No local build/test/formatter was run, per
 owner instruction. Run 43343448664 then stopped at analyzer because the added
 `dart:typed_data` import was redundant with `flutter/services.dart`; removed it.
-The behavior suite did not run on that head. Quote run 43337896079 passed at
+Run 43343863070 passed formatting and analysis, then reported 156 Flutter tests
+passed, 2 failed and 14 skipped. The invalid-radius fixture still entered 149 m,
+which is now valid, so it now enters 1.79 m. The site-map outage test did not
+accept the new explained current-location prompt before trying to locate the
+map; it now explicitly confirms the prompt before inducing a tile decode error.
+Android build/native/device steps did not run. Quote run 43337896079 passed at
 d03992c before these fixes were added and therefore does not validate the current
 worktree.
 
