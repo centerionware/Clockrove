@@ -2594,8 +2594,27 @@ Downloaded and visually reviewed the exact-head generated invoice PDFs in all
 three styles and party-layout samples for all styles on both APIs: customer
 details are left; company details and issue date are right. Long content wraps
 within the 47% columns, and subtotal/tax labels are regular while only the amount
-digits are bold at the right edge. Reviewed all three selected-style Settings preview pages and the preview
-screen on both APIs; it is clearly sample-only and provides page navigation. The
+digits are bold at the right edge. Reviewed the selected-style Settings preview
+pages for all three styles and preview screen on both APIs; it is clearly
+sample-only and provides page navigation. The
 preview and quote invoice figures/text were verified in the Android artifacts.
 No local build, test, or formatter was run; `gh` queries and artifact retrieval
 ran outside the sandbox as instructed.
+
+### 2026-11-13 — quote iteration merged and internal delivery accepted
+
+PR #39 was squash-merged to `main` as `8da7113a749adf39addb45f7b9005773493793a4`.
+The exact PR head `e4e730c` passed Actions run 43381832106; main commit
+`8da7113` then passed run 43384059350 with all 563 native tests and 30 actual
+Android cases each on API 24 and API 35, zero failures/errors/skips. The main
+run's device XML confirms the real quote acceptance, planned-scope, quantity,
+invoice, PDF-copy and payment journeys all passed. The invoice layout and
+Settings preview visuals were reviewed from the successful PR-head artifacts;
+the merge commit has the same source tree.
+
+Automatic main-push delivery run 43385810795 completed successfully and Google
+Play accepted the signed internal-testing upload: `0.1.0-internal.29.1`, version
+code `216718138`, on the internal track. This confirms upload/submission
+acceptance only; it does not establish Google review approval, tester
+availability, physical installation or a public release. Build, validation and
+Play delivery all ran in GitHub Actions; nothing was built or tested on the VM.
