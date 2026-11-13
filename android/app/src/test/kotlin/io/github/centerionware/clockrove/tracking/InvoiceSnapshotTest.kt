@@ -34,7 +34,7 @@ class InvoiceSnapshotTest {
         val record = repository.invoice("invoice"); val data = InvoiceStore.Snapshot.decode(record.payload)
         assertEquals("INV-1000", data.number); assertEquals("123.45", data.total); assertEquals("Synthetic Co", data.company)
         assertEquals("Synthetic Customer", data.customer); assertEquals("recipient@example.test", data.email)
-        assertTrue(data.body.contains("123.45")); assertTrue(data.period.contains("UTC")); assertTrue(data.basis.contains("hourly"))
+        assertTrue(data.body.contains("123.45")); assertTrue(data.period.contains("UTC")); assertTrue(data.basis.contains("billed"))
         assertEquals("123.45", data.lines.first().amount); assertEquals(2, data.lines.size); assertNull(record.pdf)
         assertEquals(data, InvoiceStore.Snapshot.decode(data.encode()))
     }

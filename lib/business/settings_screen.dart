@@ -41,8 +41,12 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError, _bodyError, _taxError, _receivablesError,
-      _minimumHoursErrorText, _minimumTaskFeeError;
+  String? _subjectError,
+      _bodyError,
+      _taxError,
+      _receivablesError,
+      _minimumHoursErrorText,
+      _minimumTaskFeeError;
   late final _tax = TextEditingController(
     text: taxPercent(widget.initial.defaultTaxUnits),
   );
@@ -235,8 +239,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Invoice billing rules',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Invoice billing rules',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text(
           'These rules affect new invoices only. Work reports and recorded time stay exact.',
@@ -265,13 +271,17 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             labelText: 'Minimum billable hours',
-            helperText: '0 disables the minimum. Applied only to hourly invoices.',
+            helperText:
+                '0 disables the minimum. Applied only to hourly invoices.',
             errorText: _minimumHoursErrorText,
           ),
           onChanged: (_) {
             if (_minimumHoursErrorText != null) {
-              setState(() => _minimumHoursErrorText =
-                  minimumHoursError(_minimumHours.text));
+              setState(
+                () => _minimumHoursErrorText = minimumHoursError(
+                  _minimumHours.text,
+                ),
+              );
             }
           },
         ),

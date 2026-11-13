@@ -256,7 +256,10 @@ void main() {
     final encoded = _SettingsApi.company.encode();
     encoded['fractionDigits'] = 2;
     expect(CompanySettings.decode(encoded).receivablesEmail, isEmpty);
-    expect(CompanySettings.decode(encoded).hourlyBillingMode, minimumThenExactBilling);
+    expect(
+      CompanySettings.decode(encoded).hourlyBillingMode,
+      minimumThenExactBilling,
+    );
     expect(CompanySettings.decode(encoded).minimumBillableHours, '0');
     expect(CompanySettings.decode(encoded).minimumTaskFeeMinor, '0');
     expect(
@@ -562,56 +565,52 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets(
-    'job can override each invoice billing default independently',
-    (tester) async {
-      final api = _SettingsApi();
-      await _show(tester, api, const JobSettingsScreen(jobId: 'job'));
-      await _reveal(tester, 'Use default hourly billing rule');
-      await tester.tap(find.text('Use default hourly billing rule'));
-      await tester.pumpAndSettle();
-      await _reveal(tester, 'Hourly billing rule');
-      await tester.tap(
-        find
-            .ancestor(
-              of: find.text('Hourly billing rule'),
-              matching: find.byType(DropdownButtonFormField<String>),
-            )
-            .first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Round total time up to the next hour').last);
-      await tester.pumpAndSettle();
+  testWidgets('job can override each invoice billing default independently', (
+    tester,
+  ) async {
+    final api = _SettingsApi();
+    await _show(tester, api, const JobSettingsScreen(jobId: 'job'));
+    await _reveal(tester, 'Use default hourly billing rule');
+    await tester.tap(find.text('Use default hourly billing rule'));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'Hourly billing rule');
+    await tester.tap(
+      find
+          .ancestor(
+            of: find.text('Hourly billing rule'),
+            matching: find.byType(DropdownButtonFormField<String>),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Round total time up to the next hour').last);
+    await tester.pumpAndSettle();
 
-      await _reveal(tester, 'Use default minimum billable hours');
-      await tester.tap(find.text('Use default minimum billable hours'));
-      await tester.pumpAndSettle();
-      await _reveal(tester, 'Minimum billable hours for this job');
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Minimum billable hours for this job'),
-        '2',
-      );
+    await _reveal(tester, 'Use default minimum billable hours');
+    await tester.tap(find.text('Use default minimum billable hours'));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'Minimum billable hours for this job');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Minimum billable hours for this job'),
+      '2',
+    );
 
-      await _reveal(tester, 'Use default minimum per-task fee');
-      await tester.tap(find.text('Use default minimum per-task fee'));
-      await tester.pumpAndSettle();
-      await _reveal(tester, 'Minimum task-rate invoice fee (USD)');
-      await tester.enterText(
-        find.widgetWithText(
-          TextField,
-          'Minimum task-rate invoice fee (USD)',
-        ),
-        '50.00',
-      );
-      await _reveal(tester, 'Save job settings');
-      await tester.tap(find.text('Save job settings'));
-      await tester.pumpAndSettle();
-      expect(api.savedJob!.hourlyBillingMode, roundTotalUpBilling);
-      expect(api.savedJob!.minimumBillableHours, '2');
-      expect(api.savedJob!.minimumTaskFeeMinor, '5000');
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await _reveal(tester, 'Use default minimum per-task fee');
+    await tester.tap(find.text('Use default minimum per-task fee'));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'Minimum task-rate invoice fee (USD)');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Minimum task-rate invoice fee (USD)'),
+      '50.00',
+    );
+    await _reveal(tester, 'Save job settings');
+    await tester.tap(find.text('Save job settings'));
+    await tester.pumpAndSettle();
+    expect(api.savedJob!.hourlyBillingMode, roundTotalUpBilling);
+    expect(api.savedJob!.minimumBillableHours, '2');
+    expect(api.savedJob!.minimumTaskFeeMinor, '5000');
+    expect(tester.takeException(), isNull);
+  });
   for (final dark in [false, true]) {
     testWidgets(
       'render settings customers and billing ${dark ? 'dark' : 'light'}',

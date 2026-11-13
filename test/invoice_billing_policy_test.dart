@@ -13,7 +13,13 @@ void main() {
   });
 
   test('billing mode labels remain understandable', () {
-    expect(billingModeLabel(minimumThenExactBilling), 'Minimum hours, then exact time');
-    expect(billingModeLabel(roundTotalUpBilling), 'Round total time up to the next hour');
+    expect(
+      billingModeLabel(minimumThenExactBilling),
+      'Minimum hours, then exact time',
+    );
+    expect(
+      billingModeLabel(roundTotalUpBilling),
+      'Round total time up to the next hour',
+    );
   });
 }

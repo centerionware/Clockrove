@@ -69,7 +69,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
     text: money(widget.initial.rate, widget.initial.digits),
   );
   late final _minimumHours = TextEditingController(
-    text: widget.initial.minimumBillableHours ??
+    text:
+        widget.initial.minimumBillableHours ??
         widget.initial.effectiveMinimumBillableHours,
   );
   late final _minimumTaskFee = TextEditingController(
@@ -90,9 +91,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
   late bool _inheritTax = widget.initial.taxUnits == null;
   late bool _inheritHourlyMode = widget.initial.hourlyBillingMode == null;
   late bool _inheritMinimumHours = widget.initial.minimumBillableHours == null;
-  late bool _inheritMinimumTaskFee =
-      widget.initial.minimumTaskFeeMinor == null;
-  late String _hourlyBillingMode = widget.initial.hourlyBillingMode ??
+  late bool _inheritMinimumTaskFee = widget.initial.minimumTaskFeeMinor == null;
+  late String _hourlyBillingMode =
+      widget.initial.hourlyBillingMode ??
       widget.initial.effectiveHourlyBillingMode;
   late bool? _locationRecordingOverride =
       widget.initial.locationRecordingOverride;
@@ -253,8 +254,10 @@ class _JobFormState extends ConsumerState<_JobForm> {
             ),
           ),
         const SizedBox(height: 24),
-        Text('Invoice billing rules',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Invoice billing rules',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text(
           'These rules apply only to new invoices. Recorded time and work reports stay exact.',
@@ -318,8 +321,11 @@ class _JobFormState extends ConsumerState<_JobForm> {
             ),
             onChanged: (_) {
               if (_minimumHoursErrorText != null) {
-                setState(() => _minimumHoursErrorText =
-                    minimumHoursError(_minimumHours.text));
+                setState(
+                  () => _minimumHoursErrorText = minimumHoursError(
+                    _minimumHours.text,
+                  ),
+                );
               }
             },
           ),
@@ -345,14 +351,19 @@ class _JobFormState extends ConsumerState<_JobForm> {
             readOnly: data?.archived ?? true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: 'Minimum task-rate invoice fee (${widget.initial.currency})',
+              labelText:
+                  'Minimum task-rate invoice fee (${widget.initial.currency})',
               helperText: '0 disables it. This job uses its own currency.',
               errorText: _minimumTaskFeeError,
             ),
             onChanged: (_) {
               if (_minimumTaskFeeError != null) {
-                setState(() => _minimumTaskFeeError =
-                    _taskFeeError(data!.digits, data.currency));
+                setState(
+                  () => _minimumTaskFeeError = _taskFeeError(
+                    data!.digits,
+                    data.currency,
+                  ),
+                );
               }
             },
           ),
@@ -496,8 +507,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
               effectiveTaxUnits: data.effectiveTaxUnits,
               locationRecordingOverride: _locationRecordingOverride,
               effectiveLocationRecording: data.effectiveLocationRecording,
-              hourlyBillingMode:
-                  _inheritHourlyMode ? null : _hourlyBillingMode,
+              hourlyBillingMode: _inheritHourlyMode ? null : _hourlyBillingMode,
               minimumBillableHours: _inheritMinimumHours
                   ? null
                   : canonicalMinimumHours(_minimumHours.text),
