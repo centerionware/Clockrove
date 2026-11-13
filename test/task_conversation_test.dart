@@ -152,6 +152,10 @@ void main() {
   const photoChannel = MethodChannel('clockrove/documents/v1');
 
   Future<void> show(WidgetTester tester, _Business api) async {
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [businessApiProvider.overrideWithValue(api)],
@@ -177,14 +181,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Edit comment'));
+    final edit = find.byTooltip('Edit comment');
+    await tester.ensureVisible(edit);
+    await tester.pumpAndSettle();
+    await tester.tap(edit);
     await tester.pumpAndSettle();
     final editor = find.byType(TextField);
-    await tester.scrollUntilVisible(
-      editor,
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.ensureVisible(editor);
     await tester.pumpAndSettle();
     await tester.enterText(editor, 'Tiles are ready to install.');
     await tester.tap(find.text('Save comment'));
@@ -257,11 +260,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final choosePhoto = find.text('Choose photo for comment');
-    await tester.scrollUntilVisible(
-      choosePhoto,
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.ensureVisible(choosePhoto);
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
