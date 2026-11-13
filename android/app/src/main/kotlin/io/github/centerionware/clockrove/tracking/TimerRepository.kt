@@ -1017,7 +1017,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 10) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 11) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1037,6 +1037,7 @@ class TimerRepository internal constructor(context: Context,
             QuoteStore.install(db)
             LocationRecordingStore.install(db, now())
             TaskConversationStore.install(db)
+            InvoiceBillingPolicyStore.install(db, now())
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -1047,7 +1048,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..9 && newVersion == 10) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..10 && newVersion == 11) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1060,6 +1061,7 @@ class TimerRepository internal constructor(context: Context,
                 LocationRecordingStore.install(db, now())
                 TaskConversationStore.install(db)
             }
+            if (oldVersion < 11) InvoiceBillingPolicyStore.install(db, now())
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }

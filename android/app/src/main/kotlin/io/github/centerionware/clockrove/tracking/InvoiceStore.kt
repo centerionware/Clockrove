@@ -31,12 +31,14 @@ internal object InvoiceStore {
         val company: String, val companyContact: String, val customer: String, val customerContact: String,
         val job: String, val period: String, val basis: String, val header: String, val footer: String,
         val total: String, val email: String, val subject: String, val body: String, val lines: List<Line>,
-        val subtotal: String? = null, val taxRateUnits: Int? = null, val taxAmount: String? = null, val statement: Statement? = null) {
+        val subtotal: String? = null, val taxRateUnits: Int? = null, val taxAmount: String? = null, val statement: Statement? = null,
+        val billingPolicy: String? = null) {
         fun encode(): String = JSONObject(mapOf("number" to number, "created" to created, "style" to style, "currency" to currency, "digits" to digits,
             "company" to company, "companyContact" to companyContact, "customer" to customer, "customerContact" to customerContact,
             "job" to job, "period" to period, "basis" to basis, "header" to header, "footer" to footer, "total" to total, "email" to email,
             "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount, "quantityUnits" to it.quantityUnits, "unitPriceMinor" to it.unitPriceMinor)) }),
-            "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount, "statement" to statement?.encode())).toString()
+            "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount, "statement" to statement?.encode(),
+            "billingPolicy" to billingPolicy)).toString()
         companion object {
             fun decode(value: String): Snapshot { val v = JSONObject(value); val rows = v.getJSONArray("lines")
                 return Snapshot(v.getString("number"), v.getLong("created"), v.getString("style"), v.getString("currency"), v.getInt("digits"),
@@ -46,7 +48,8 @@ internal object InvoiceStore {
                     if (v.isNull("subtotal")) null else v.getString("subtotal"),
                     if (v.isNull("taxRateUnits")) null else v.getInt("taxRateUnits"),
                     if (v.isNull("taxAmount")) null else v.getString("taxAmount"),
-                    if (v.isNull("statement")) null else Statement.decode(v.getJSONObject("statement")))
+                    if (v.isNull("statement")) null else Statement.decode(v.getJSONObject("statement")),
+                    if (v.isNull("billingPolicy")) null else v.getString("billingPolicy"))
             }
         }
     }
@@ -60,8 +63,10 @@ internal object InvoiceStore {
             val price = task.priceMinor?.takeIf { task.currency == total.currency }
             Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(it, digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
                 price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString())
-        }
-        else listOf(Line("Finalized work", "${duration(total.durationMillis)} × ${total.hourlyMinor?.let { amount(it, digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
+        } + listOfNotNull(total.minimumTaskAdjustmentMinor.takeIf { it.signum() > 0 }?.let { fee ->
+            Line("Task-rate minimum fee", "Adjustment to the configured minimum invoice fee", amount(fee, digits))
+        })
+        else listOf(Line("Finalized work", "Actual work: ${duration(total.durationMillis)}\nBilled hours: ${total.billedHours ?: "0"}\n${total.billingRule ?: "Exact recorded time"} · ${total.hourlyMinor?.let { amount(it, digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
             total.amountMinor?.let { amount(it, digits) }.orEmpty())) + report.intervals.map {
                 Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
             }
@@ -115,10 +120,15 @@ internal object InvoiceStore {
             listOf(company.companyEmail, company.companyPhone, company.companyAddress, company.companyWebsite).filter { it.isNotBlank() }.joinToString("\n"),
             customer, contact,
             job.settings.name, "${selection.firstDate} — ${selection.lastDate} · ${selection.timezone}",
-            listOfNotNull(quoteCaption, if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · hourly rate · total rounded half up to ${digits} decimal places").joinToString(" · "),
+            listOfNotNull(quoteCaption, if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · ${total.billingRule ?: "exact recorded time"} · actual ${duration(total.durationMillis)} · billed ${total.billedHours ?: "0"} hours",
+                if (total.minimumTaskAdjustmentMinor.signum() > 0) "Minimum task-rate fee adjustment ${amount(total.minimumTaskAdjustmentMinor, digits)} ${total.currency}" else null,
+                "currency amount rounded half up to ${digits} decimal places").joinToString(" · "),
             company.invoiceHeader, company.invoiceFooter, formatted, email,
             InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
-            subtotal, taxUnits, amount(tax, digits))
+            subtotal, taxUnits, amount(tax, digits), billingPolicy = JSONObject(mapOf(
+                "mode" to total.mode, "hourlyMode" to total.policyHourlyMode, "minimumHours" to total.policyMinimumHours,
+                "minimumTaskFeeMinor" to total.policyTaskMinimumMinor?.toString(), "exactDurationMillis" to total.durationMillis.toString(),
+                "billedHours" to total.billedHours, "taskMinimumAdjustmentMinor" to total.minimumTaskAdjustmentMinor.toString())).toString())
         // A single SQLite cursor row must remain readable even when exact prices
         // or repeated template substitutions are very large. Reject before any
         // number, source claim or immutable document is committed; never truncate.

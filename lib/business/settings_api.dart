@@ -22,6 +22,9 @@ class CompanySettings {
     this.defaultTaxUnits = 0,
     this.receivablesEmail = '',
     this.defaultLocationRecording = true,
+    this.hourlyBillingMode = 'MINIMUM_THEN_EXACT',
+    this.minimumBillableHours = '0',
+    this.minimumTaskFeeMinor = '0',
   });
   final String currency,
       companyName,
@@ -38,6 +41,7 @@ class CompanySettings {
   final int defaultTaxUnits;
   final String receivablesEmail;
   final bool defaultLocationRecording;
+  final String hourlyBillingMode, minimumBillableHours, minimumTaskFeeMinor;
   final String? defaultHourlyMinor;
   factory CompanySettings.decode(Map<Object?, Object?> v) => CompanySettings(
     currency: v['currency'] as String,
@@ -56,6 +60,10 @@ class CompanySettings {
     defaultTaxUnits: v['defaultTaxUnits'] as int? ?? 0,
     receivablesEmail: v['receivablesEmail'] as String? ?? '',
     defaultLocationRecording: v['defaultLocationRecording'] as bool? ?? true,
+    hourlyBillingMode:
+        v['hourlyBillingMode'] as String? ?? 'MINIMUM_THEN_EXACT',
+    minimumBillableHours: v['minimumBillableHours'] as String? ?? '0',
+    minimumTaskFeeMinor: v['minimumTaskFeeMinor'] as String? ?? '0',
   );
   Map<String, Object?> encode() => {
     'currency': currency,
@@ -73,6 +81,9 @@ class CompanySettings {
     'defaultTaxUnits': defaultTaxUnits,
     'receivablesEmail': receivablesEmail,
     'defaultLocationRecording': defaultLocationRecording,
+    'hourlyBillingMode': hourlyBillingMode,
+    'minimumBillableHours': minimumBillableHours,
+    'minimumTaskFeeMinor': minimumTaskFeeMinor,
   };
 }
 
@@ -136,6 +147,12 @@ class JobPreferences {
     this.effectiveTaxUnits = 0,
     this.locationRecordingOverride,
     this.effectiveLocationRecording = true,
+    this.hourlyBillingMode,
+    this.minimumBillableHours,
+    this.minimumTaskFeeMinor,
+    this.effectiveHourlyBillingMode = 'MINIMUM_THEN_EXACT',
+    this.effectiveMinimumBillableHours = '0',
+    this.effectiveMinimumTaskFeeMinor = '0',
   });
   final int version, color, digits;
   final int? archivedMillis;
@@ -143,6 +160,10 @@ class JobPreferences {
   final int effectiveTaxUnits;
   final bool? locationRecordingOverride;
   final bool effectiveLocationRecording;
+  final String? hourlyBillingMode, minimumBillableHours, minimumTaskFeeMinor;
+  final String effectiveHourlyBillingMode,
+      effectiveMinimumBillableHours,
+      effectiveMinimumTaskFeeMinor;
   final String id, name, mode, currency, effectiveEmail;
   final String? rate, effectiveRate, customerId, emailOverride;
   final bool archived;
@@ -170,6 +191,15 @@ class JobPreferences {
       locationRecordingOverride: s['locationRecordingOverride'] as bool?,
       effectiveLocationRecording:
           v['effectiveLocationRecording'] as bool? ?? true,
+      hourlyBillingMode: s['hourlyBillingMode'] as String?,
+      minimumBillableHours: s['minimumBillableHours'] as String?,
+      minimumTaskFeeMinor: s['minimumTaskFeeMinor'] as String?,
+      effectiveHourlyBillingMode:
+          v['effectiveHourlyBillingMode'] as String? ?? 'MINIMUM_THEN_EXACT',
+      effectiveMinimumBillableHours:
+          v['effectiveMinimumBillableHours'] as String? ?? '0',
+      effectiveMinimumTaskFeeMinor:
+          v['effectiveMinimumTaskFeeMinor'] as String? ?? '0',
     );
   }
   Map<String, Object?> encode() => {
@@ -183,6 +213,9 @@ class JobPreferences {
     'customerEmailOverride': emailOverride,
     'taxUnits': taxUnits,
     'locationRecordingOverride': locationRecordingOverride,
+    'hourlyBillingMode': hourlyBillingMode,
+    'minimumBillableHours': minimumBillableHours,
+    'minimumTaskFeeMinor': minimumTaskFeeMinor,
   };
 }
 

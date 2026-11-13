@@ -54,4 +54,78 @@ class InvoicePreviewTest {
         assertEquals("", ((result["lines"] as List<*>).single() as Map<*, *>)["amount"])
         assertEquals(1000L, counter())
     }
+
+    @Test fun hourlyMinimumIsInvoiceOnlyAndItsPolicyIsFrozenInTheIssuedDocument() {
+        val settings = repository.businessSnapshot().settings
+        assertNull(repository.saveBusinessSettings("minimum", version,
+            settings.copy(minimumBillableHours = "1")).conflict)
+        val start = 1793491200000L
+        assertNull(repository.createManualSession("five-minute-session", version,
+            SessionHistoryStore.Draft("five-minute-session", job, start, start + 300_000, "UTC", 0)).conflict)
+
+        val actual = repository.report(selection).report.totals.single()
+        assertEquals(java.math.BigInteger.valueOf(300_000), actual.durationMillis)
+        assertEquals("100.00", preview()["subtotal"])
+        val lines = preview()["lines"] as List<*>
+        val workLine = lines.first() as Map<*, *>
+        assertTrue((workLine["detail"] as String).contains("Billed hours: 1"))
+
+        assertNull(repository.prepareInvoice("prepare-minimum", version, "minimum-invoice", selection).conflict)
+        val issued = InvoiceStore.Snapshot.decode(repository.invoice("minimum-invoice").payload)
+        assertEquals("100.00", issued.subtotal)
+        assertEquals("1", org.json.JSONObject(requireNotNull(issued.billingPolicy)).getString("minimumHours"))
+        assertEquals("107.50", issued.total)
+    }
+
+    @Test fun taskMinimumFeeIsVisibleAndJobZeroOverrideSuppressesTheGlobalFee() {
+        val taskJob = repository.jobDetail(job).job.settings.copy(billingMode = "TASK")
+        assertNull(repository.saveJobSettings("task-mode", version, taskJob).conflict)
+        val board = repository.boardSnapshot(job).board
+        assertNull(repository.saveCard("task", version, BoardStore.Draft("minimum-task", job,
+            board.columns.last().id, "Synthetic task", priceMinor = java.math.BigInteger.valueOf(1_000), currency = "USD")).conflict)
+        val settings = repository.businessSnapshot().settings
+        assertNull(repository.saveBusinessSettings("minimum-fee", version,
+            settings.copy(minimumTaskFeeMinor = java.math.BigInteger.valueOf(2_500))).conflict)
+        val selection = this.selection.copy(lastDate = "2026-11-02")
+        val raised = BusinessDispatch(repository).call(MethodCall("invoiceBillingPreview", mapOf(
+            "firstDate" to selection.firstDate, "lastDate" to selection.lastDate, "timezone" to selection.timezone, "jobIds" to selection.jobIds))) as Map<*, *>
+        assertEquals("25.00", raised["subtotal"])
+        val raisedLines = raised["lines"] as List<*>
+        assertTrue(raisedLines.any { (it as Map<*, *>)["title"] == "Task-rate minimum fee" })
+
+        val jobSettings = repository.jobDetail(job).job.settings.copy(minimumTaskFeeMinor = java.math.BigInteger.ZERO)
+        assertNull(repository.saveJobSettings("disable-minimum-fee", version, jobSettings).conflict)
+        val overridden = BusinessDispatch(repository).call(MethodCall("invoiceBillingPreview", mapOf(
+            "firstDate" to selection.firstDate, "lastDate" to selection.lastDate, "timezone" to selection.timezone, "jobIds" to selection.jobIds))) as Map<*, *>
+        assertEquals("10.00", overridden["subtotal"])
+        val overriddenLines = overridden["lines"] as List<*>
+        assertFalse(overriddenLines.any { (it as Map<*, *>)["title"] == "Task-rate minimum fee" })
+
+        assertNull(repository.saveJobSettings("inherit-task-minimum", version,
+            repository.jobDetail(job).job.settings.copy(minimumTaskFeeMinor = null)).conflict)
+        val changedCurrency = repository.businessSnapshot().settings.copy(
+            currency = "EUR", defaultHourlyMinor = null, minimumTaskFeeMinor = java.math.BigInteger.valueOf(5_000))
+        assertNull(repository.saveBusinessSettings("minimum-fee-eur", version, changedCurrency).conflict)
+        val otherCurrency = BusinessDispatch(repository).call(MethodCall("invoiceBillingPreview", mapOf(
+            "firstDate" to selection.firstDate, "lastDate" to selection.lastDate, "timezone" to selection.timezone, "jobIds" to selection.jobIds))) as Map<*, *>
+        assertEquals("10.00", otherCurrency["subtotal"])
+        val otherCurrencyLines = otherCurrency["lines"] as List<*>
+        assertFalse(otherCurrencyLines.any { (it as Map<*, *>)["title"] == "Task-rate minimum fee" })
+    }
+
+    @Test fun invalidGlobalAndJobBillingPoliciesAreRejectedWithoutChangingSettings() {
+        val original = repository.businessSnapshot()
+        assertEquals("INVALID_MINIMUM_HOURS", repository.saveBusinessSettings("bad-global-hours", version,
+            original.settings.copy(minimumBillableHours = "1e2")).conflict)
+        assertEquals("INVALID_HOURLY_BILLING_MODE", repository.saveBusinessSettings("bad-global-mode", version,
+            original.settings.copy(hourlyBillingMode = "ROUND_DOWN")).conflict)
+        assertEquals(original, repository.businessSnapshot())
+
+        val jobBefore = repository.jobDetail(job).job.settings
+        assertEquals("INVALID_MINIMUM_HOURS", repository.saveJobSettings("bad-job-hours", version,
+            jobBefore.copy(minimumBillableHours = "-1")).conflict)
+        assertEquals("INVALID_HOURLY_BILLING_MODE", repository.saveJobSettings("bad-job-mode", version,
+            jobBefore.copy(hourlyBillingMode = "ROUND_DOWN")).conflict)
+        assertEquals(jobBefore, repository.jobDetail(job).job.settings)
+    }
 }

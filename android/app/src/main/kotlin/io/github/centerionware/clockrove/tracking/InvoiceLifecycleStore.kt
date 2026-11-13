@@ -129,6 +129,15 @@ internal object InvoiceLifecycleStore {
         val number = "INV-$sequence"
         val balance = PaymentMath.balance(total, before.balance.paid)
         val formatted = InvoiceStore.amount(total, source.digits)
+        val billingPolicy = org.json.JSONObject(mapOf(
+            "kind" to "REPLACEMENT", "predecessorPolicy" to source.billingPolicy,
+            "reviewedLines" to JSONArray(edited.map { line -> mapOf("title" to line.title, "detail" to line.detail,
+                "amount" to line.amount, "quantityUnits" to line.quantityUnits, "unitPriceMinor" to line.unitPriceMinor) }),
+            "addedWorkPolicy" to added?.totals?.singleOrNull()?.let { policy -> mapOf(
+                "mode" to policy.mode, "hourlyMode" to policy.policyHourlyMode,
+                "minimumHours" to policy.policyMinimumHours, "minimumTaskFeeMinor" to policy.policyTaskMinimumMinor?.toString(),
+                "exactDurationMillis" to policy.durationMillis.toString(), "billedHours" to policy.billedHours,
+                "taskMinimumAdjustmentMinor" to policy.minimumTaskAdjustmentMinor.toString()) })).toString()
         val tokens = mapOf("company_name" to source.company, "customer_name" to source.customer, "job_name" to source.job,
             "invoice_number" to number, "amount" to formatted, "currency" to source.currency)
         val replacement = source.copy(number = number, created = at, lines = edited,
@@ -137,7 +146,8 @@ internal object InvoiceLifecycleStore {
                 "\n\nReplacement of ${source.number}\nCredit at issue: ${InvoiceStore.amount(balance.paid, source.digits)} ${source.currency}\nBalance due at issue: ${InvoiceStore.amount(balance.due, source.digits)} ${source.currency}",
             basis = "Replacement of ${source.number} · reviewed line amounts · tax rounded half up",
             statement = InvoiceStore.Statement("REPLACEMENT", balance.status, at, InvoiceStore.amount(balance.paid, source.digits), InvoiceStore.amount(balance.due, source.digits),
-                listOf(InvoiceStore.Line("Credit from ${source.number}", "Existing payments transferred; no new cash received.", InvoiceStore.amount(balance.paid, source.digits))), "Replaces ${source.number}"))
+                listOf(InvoiceStore.Line("Credit from ${source.number}", "Existing payments transferred; no new cash received.", InvoiceStore.amount(balance.paid, source.digits))), "Replaces ${source.number}"),
+            billingPolicy = billingPolicy)
         val payload = replacement.encode()
         if (payload.toByteArray(Charsets.UTF_8).size > 1_000_000) return "INVOICE_TOO_LARGE"
         // From here, unexpected SQL/revision failures throw and roll back the whole command.

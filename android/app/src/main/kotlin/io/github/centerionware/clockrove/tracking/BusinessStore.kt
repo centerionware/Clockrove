@@ -13,13 +13,19 @@ internal object BusinessStore {
         val emailSubject: String = "Invoice {invoice_number} — {job_name}",
         val emailBody: String = "Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}",
         val defaultTaxUnits: Int = 0, val receivablesEmail: String = "",
-        val defaultLocationRecording: Boolean = true) {
+        val defaultLocationRecording: Boolean = true,
+        val hourlyBillingMode: String = InvoiceBillingPolicy.MINIMUM_THEN_EXACT,
+        val minimumBillableHours: String = "0",
+        val minimumTaskFeeMinor: BigInteger = BigInteger.ZERO) {
         fun storedValues(): List<Any?> = listOf(currency, MoneyMath.legacy(defaultHourlyMinor), companyName, companyEmail, companyPhone,
             companyAddress, companyWebsite, invoiceHeader, invoiceFooter, invoiceStyle, emailSubject, emailBody)
         // Omit default-valued fields so old command receipts remain replayable.
         fun values(): List<Any?> = storedValues().toMutableList().apply { this[1] = MoneyMath.fingerprint(defaultHourlyMinor) } + (if (defaultTaxUnits == 0) emptyList() else listOf(defaultTaxUnits)) +
             (if (receivablesEmail.isEmpty()) emptyList() else listOf(receivablesEmail)) +
-            (if (defaultLocationRecording) emptyList() else listOf(false))
+            (if (defaultLocationRecording) emptyList() else listOf(false)) +
+            (if (hourlyBillingMode == InvoiceBillingPolicy.MINIMUM_THEN_EXACT) emptyList() else listOf(hourlyBillingMode)) +
+            (if (minimumBillableHours == "0") emptyList() else listOf(minimumBillableHours)) +
+            (if (minimumTaskFeeMinor.signum() == 0) emptyList() else listOf(MoneyMath.fingerprint(minimumTaskFeeMinor)))
     }
     data class Customer(val id: String, val name: String, val email: String = "", val phone: String = "",
         val address: String = "", val notes: String = "", val archived: Boolean = false) {
@@ -27,32 +33,43 @@ internal object BusinessStore {
     }
     data class JobSettings(val id: String, val name: String, val colorArgb: Long, val billingMode: String,
         val currency: String, val hourlyRateMinor: BigInteger?, val customerId: String?, val customerEmailOverride: String?, val taxUnits: Int? = null,
-        val locationRecordingOverride: Boolean? = null) {
+        val locationRecordingOverride: Boolean? = null, val hourlyBillingMode: String? = null,
+        val minimumBillableHours: String? = null, val minimumTaskFeeMinor: BigInteger? = null) {
         fun values(): List<Any?> = listOf(id, name, colorArgb, billingMode, currency, MoneyMath.fingerprint(hourlyRateMinor), customerId, customerEmailOverride) +
             (if (taxUnits == null) emptyList() else listOf(taxUnits)) +
-            (if (locationRecordingOverride == null) emptyList() else listOf(locationRecordingOverride))
+            (if (locationRecordingOverride == null) emptyList() else listOf(locationRecordingOverride)) +
+            (if (hourlyBillingMode == null && minimumBillableHours == null && minimumTaskFeeMinor == null) emptyList() else
+                listOf(hourlyBillingMode, minimumBillableHours, minimumTaskFeeMinor?.let(MoneyMath::fingerprint)))
     }
     data class JobDetail(val settings: JobSettings, val archived: Boolean, val archivedMillis: Long?,
-        val customer: Customer?, val effectiveEmail: String, val effectiveHourlyMinor: BigInteger?, val effectiveTaxUnits: Int = 0)
+        val customer: Customer?, val effectiveEmail: String, val effectiveHourlyMinor: BigInteger?, val effectiveTaxUnits: Int = 0,
+        val effectiveHourlyBillingMode: String = InvoiceBillingPolicy.MINIMUM_THEN_EXACT,
+        val effectiveMinimumBillableHours: String = "0", val effectiveMinimumTaskFeeMinor: BigInteger = BigInteger.ZERO)
     val customerColumns = listOf("id", "name", "email", "phone", "address", "notes", "archived")
 
     fun settings(db: SQLiteDatabase): Settings = db.rawQuery("SELECT ${BusinessSchema.settingsColumns.drop(1).take(12).joinToString(",")} FROM app_settings WHERE id=1", null).use {
         check(it.moveToFirst())
+        val billing = InvoiceBillingPolicyStore.defaults(db)
         Settings(it.getString(0), MoneyStore.read(db, "settings_money", "1", if (it.isNull(1)) null else it.getString(1)), it.getString(2), it.getString(3),
-            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11), BillingTaxStore.defaultUnits(db), InvoicePaymentStore.accountingEmail(db), LocationRecordingStore.defaultEnabled(db))
+            it.getString(4), it.getString(5), it.getString(6), it.getString(7), it.getString(8), it.getString(9), it.getString(10), it.getString(11), BillingTaxStore.defaultUnits(db), InvoicePaymentStore.accountingEmail(db), LocationRecordingStore.defaultEnabled(db),
+            billing.hourlyMode, billing.minimumHours, billing.taskMinimumMinor)
     }
     fun customers(db: SQLiteDatabase): List<Customer> = db.rawQuery("SELECT ${customerColumns.joinToString(",")} FROM customers ORDER BY archived,name,id", null).use { rows ->
         buildList { while (rows.moveToNext()) add(Customer(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4), rows.getString(5), rows.getInt(6) != 0)) }
     }
     fun job(db: SQLiteDatabase, id: String): JobDetail = db.rawQuery("SELECT name,color_argb,billing_mode,currency,hourly_rate_minor,customer_id,customer_email_override,archived,archived_ms FROM jobs WHERE id=?", arrayOf(id)).use {
         require(it.moveToFirst()) { "JOB_UNAVAILABLE" }
+        val policy = InvoiceBillingPolicyStore.overrides(db, id)
         val value = JobSettings(id, it.getString(0), it.getLong(1), it.getString(2), it.getString(3),
-            MoneyStore.read(db, "job_money", id, if (it.isNull(4)) null else it.getString(4)), if (it.isNull(5)) null else it.getString(5), if (it.isNull(6)) null else it.getString(6), BillingTaxStore.jobUnits(db, id), LocationRecordingStore.override(db, id))
+            MoneyStore.read(db, "job_money", id, if (it.isNull(4)) null else it.getString(4)), if (it.isNull(5)) null else it.getString(5), if (it.isNull(6)) null else it.getString(6), BillingTaxStore.jobUnits(db, id), LocationRecordingStore.override(db, id),
+            policy.hourlyMode, policy.minimumHours, policy.taskMinimumMinor)
         val customer = value.customerId?.let { customerId -> customers(db).firstOrNull { c -> c.id == customerId } }
         val defaults = settings(db)
+        val billing = InvoiceBillingPolicyStore.effective(db, id, value.currency, defaults.currency)
         JobDetail(value, it.getInt(7) != 0, if (it.isNull(8)) null else it.getLong(8), customer,
             value.customerEmailOverride ?: customer?.email.orEmpty(),
-            value.hourlyRateMinor ?: defaults.defaultHourlyMinor.takeIf { defaults.currency == value.currency }, value.taxUnits ?: defaults.defaultTaxUnits)
+            value.hourlyRateMinor ?: defaults.defaultHourlyMinor.takeIf { defaults.currency == value.currency }, value.taxUnits ?: defaults.defaultTaxUnits,
+            billing.hourlyMode, billing.minimumHours, billing.taskMinimumMinor)
     }
     fun validCurrency(value: String): Boolean = value.matches(Regex("[A-Z]{3}")) && try {
         Currency.getInstance(value).defaultFractionDigits in 0..4
@@ -64,6 +81,9 @@ internal object BusinessStore {
     fun saveSettings(db: SQLiteDatabase, value: Settings, at: Long): String? {
         if (!validEmail(value.receivablesEmail)) return "INVALID_ACCOUNTS_RECEIVABLE_EMAIL"
         if (!TaxRate.valid(value.defaultTaxUnits)) return "INVALID_TAX_RATE"
+        if (!InvoiceBillingPolicy.validMode(value.hourlyBillingMode)) return "INVALID_HOURLY_BILLING_MODE"
+        if (!InvoiceBillingPolicy.validHours(value.minimumBillableHours)) return "INVALID_MINIMUM_HOURS"
+        if (!MoneyMath.valid(value.minimumTaskFeeMinor)) return "INVALID_TASK_MINIMUM_FEE"
         if (!validCurrency(value.currency) || !MoneyMath.valid(value.defaultHourlyMinor) ||
             !bounded(value.companyName, 240) || !validEmail(value.companyEmail) || !bounded(value.companyPhone, 120) ||
             !bounded(value.companyAddress, 4000) || !bounded(value.companyWebsite, 2000) ||
@@ -78,6 +98,8 @@ internal object BusinessStore {
         BillingTaxStore.saveDefault(db, value.defaultTaxUnits, at)
         InvoicePaymentStore.saveAccountingEmail(db, value.receivablesEmail, at)
         LocationRecordingStore.saveDefault(db, value.defaultLocationRecording, at)
+        InvoiceBillingPolicyStore.saveDefaults(db, InvoiceBillingPolicyStore.Defaults(value.hourlyBillingMode,
+            InvoiceBillingPolicy.canonicalHours(value.minimumBillableHours), value.minimumTaskFeeMinor), at)
         RevisionStore.snapshotRows(db, "app_settings", "settings", BusinessSchema.settingsColumns, at)
         return null
     }
@@ -103,6 +125,9 @@ internal object BusinessStore {
     }
     fun saveJob(db: SQLiteDatabase, value: JobSettings, at: Long): String? {
         if (value.taxUnits != null && !TaxRate.valid(value.taxUnits)) return "INVALID_TAX_RATE"
+        if (value.hourlyBillingMode != null && !InvoiceBillingPolicy.validMode(value.hourlyBillingMode)) return "INVALID_HOURLY_BILLING_MODE"
+        if (value.minimumBillableHours != null && !InvoiceBillingPolicy.validHours(value.minimumBillableHours)) return "INVALID_MINIMUM_HOURS"
+        if (!MoneyMath.valid(value.minimumTaskFeeMinor)) return "INVALID_TASK_MINIMUM_FEE"
         val previous = db.rawQuery("SELECT archived,currency,customer_id FROM jobs WHERE id=?", arrayOf(value.id)).use {
             if (!it.moveToFirst()) return "JOB_UNAVAILABLE"
             Triple(it.getInt(0) != 0, it.getString(1), if (it.isNull(2)) null else it.getString(2))
@@ -122,6 +147,8 @@ internal object BusinessStore {
         MoneyStore.save(db, "job_money", value.id, value.id, value.hourlyRateMinor, at)
         BillingTaxStore.saveJob(db, value.id, value.taxUnits, at)
         LocationRecordingStore.saveJob(db, value.id, value.locationRecordingOverride, at)
+        InvoiceBillingPolicyStore.saveJob(db, value.id, InvoiceBillingPolicyStore.Overrides(value.hourlyBillingMode,
+            value.minimumBillableHours?.let(InvoiceBillingPolicy::canonicalHours), value.minimumTaskFeeMinor), at)
         RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, at, where = "id=?", args = arrayOf(value.id))
         return null
     }

@@ -3191,3 +3191,27 @@ task-media journeys. Reviewed API-24 and API-35 camera-review, task attachment,
 and comment-owned attachment screenshots; the latter visibly says “Photo
 attached to this comment.” Physical map/GPS/real-camera acceptance remains
 separate. No VM build/test/formatter ran.
+
+### 2026-11-13 — M6.5 merged to main
+
+PR #43 (`milestone-quote-media-gps`, exact head `4a58bb2dcbc4d28941ba22074b230c94f3a0f58d`)
+passed Actions run `43493099149` and was squash-merged at `81079883f97d4ebbbbbc403a4309654435fa9ab2`.
+The workflow completed successfully. Downloaded device artifacts report 32
+instrumentation tests on API 24 and 32 on API 35, with zero failures, errors or
+skips. Reviewed the API-35 comment-photo screenshot; the success message names
+the comment as the attachment destination. Main-commit validation run
+`43497031589` also completed successfully. Internal Play delivery run
+`43500590080` is still in progress. Maps, GPS sampling and real-camera behavior
+still require the owner's physical-device acceptance; emulator evidence does
+not establish those results. No VM build/test/formatter ran.
+
+### 2026-11-13 — M6.6 invoice billing policies in progress
+
+Adopted the documented per-job/per-invoice scope for hourly rounding and
+minimums, with task minimum fees applied once per job per invoice. A vertical
+slice now contains the schema-v11 policy store, exact hourly billing arithmetic,
+global and per-job settings, invoice preview/line rendering, frozen invoice and
+replacement policy metadata, and native/Flutter tests. This is source work only;
+the GitHub Actions check is still required before claiming it works or merging.
+Supplies classification, the actual-cost ledger and tax-preparation reports,
+and secure map-provider settings remain in M6.6. No VM build/test/formatter ran.

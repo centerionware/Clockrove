@@ -278,9 +278,10 @@ does not mark them complete.
   hours. Snapshot effective policies on each issued invoice so later setting
   changes do not mutate documents; resending/receipts/balance copies reuse the
   snapshot. A void/replacement flow must preview any changed billable quantities,
-  minimum-fee adjustment and paid credit before confirmation. Confirm whether the
-  chosen rounding/minimum scope per job per invoice matches the owner's intent
-  before implementation.
+  minimum-fee adjustment and paid credit before confirmation. Adopt the recommended
+  scope: aggregate selected unbilled work by job and effective hourly rate once
+  per invoice; apply task minimum fees per job per invoice. This keeps repeated
+  sessions from multiplying minimums or hour round-ups.
 - Main Settings has optional accounts-receivable email. Invoice/receipt/quote
   email drafts CC it when set, otherwise company primary email. Fill default-email
   To/CC/subject/body/PDF safely; the user sends. Keep both template guards.
