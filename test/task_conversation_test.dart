@@ -189,9 +189,17 @@ void main() {
     final api = _Business();
     await show(tester, api);
     await tester.enterText(find.byType(TextField), 'Tiles are on site.');
-    await tester.tap(find.text('Add comment'));
+    await tester.pumpAndSettle();
+    final add = find.widgetWithText(FilledButton, 'Add comment');
+    expect(tester.widget<FilledButton>(add).onPressed, isNotNull);
+    await tester.tap(add);
     await tester.pumpAndSettle();
     expect(find.text('Tiles are on site.'), findsOneWidget);
+    expect(find.byType(TextField).evaluate(), hasLength(1));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      isEmpty,
+    );
     expect(api._events.map((event) => event.action), ['ADDED']);
   });
 
