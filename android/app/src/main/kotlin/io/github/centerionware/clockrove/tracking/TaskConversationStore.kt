@@ -64,7 +64,7 @@ internal object TaskConversationStore {
     ).use { if (it.moveToFirst()) Attachment(it.getString(0), it.getString(1), if (it.isNull(2)) null else it.getString(2), it.getBlob(3)) else null }
 
     private fun event(db: SQLiteDatabase, taskId: String, commentId: String, action: String, at: Long) {
-        db.execSQL("INSERT INTO task_comment_events VALUES(?,?,?,?,?)", arrayOf(UUID.randomUUID().toString(), taskId, commentId, action, at))
+        db.execSQL("INSERT INTO task_comment_events VALUES(?,?,?,?,?)", arrayOf<Any?>(UUID.randomUUID().toString(), taskId, commentId, action, at))
     }
 
     fun saveComment(db: SQLiteDatabase, jobId: String, taskId: String, commentId: String, body: String, at: Long): String? {
@@ -75,10 +75,10 @@ internal object TaskConversationStore {
         }
         if (previous != null && previous.first != taskId) return "TASK_COMMENT_MISMATCH"
         if (previous == null) {
-            db.execSQL("INSERT INTO task_comments VALUES(?,?,?,?,?)", arrayOf(commentId, taskId, body.trim(), at, at))
+            db.execSQL("INSERT INTO task_comments VALUES(?,?,?,?,?)", arrayOf<Any?>(commentId, taskId, body.trim(), at, at))
             event(db, taskId, commentId, "ADDED", at)
         } else {
-            db.execSQL("UPDATE task_comments SET body=?,updated_ms=? WHERE id=?", arrayOf(body.trim(), maxOf(at, previous.second), commentId))
+            db.execSQL("UPDATE task_comments SET body=?,updated_ms=? WHERE id=?", arrayOf<Any?>(body.trim(), maxOf(at, previous.second), commentId))
             event(db, taskId, commentId, "EDITED", at)
         }
         return null
