@@ -60,6 +60,22 @@ class TaskConversationDeviceTest {
             find(label, editable, actionable)?.let { return it }
             SystemClock.sleep(100)
         }
+        val suffix = label.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(50)
+        val root = automation.rootInActiveWindow
+        val dump = StringBuilder()
+        fun describe(node: AccessibilityNodeInfo, depth: Int) {
+            if (dump.length > 200000 || depth > 50) return
+            dump.append(" ".repeat(depth)).append(node.toString()).append('\n')
+            for (index in 0 until node.childCount) node.getChild(index)?.let { describe(it, depth + 1) }
+        }
+        root?.let(::describe)
+        File(captures, "accessibility-failure-$suffix.txt").writeText(dump.toString())
+        automation.takeScreenshot()?.let { bitmap ->
+            File(captures, "accessibility-failure-$suffix.png").outputStream().use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            bitmap.recycle()
+        }
         throw AssertionError("Actual app did not expose '$label'")
     }
 
@@ -146,6 +162,7 @@ class TaskConversationDeviceTest {
             waitFor("Work location recording")
             click("Use global default (on)")
             click("Off for this job")
+            waitFor("Off for this job")
             capture("job-location-recording-off")
             reveal("Save job settings")
             click("Save job settings")
