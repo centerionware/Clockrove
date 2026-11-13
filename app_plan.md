@@ -2566,6 +2566,10 @@ clearly marked sample-only with page navigation. No local build, test or
 formatter was run.
 
 Requirements and evidence are reflected in `docs/INVOICE_LIFECYCLE_PLAN.md`,
-`docs/UI_DESIGN.md` and `plan_status.md`. PR #39 contains the implementation and
-all feature gates passed at 751f13b; the pending plan-status update is documentation
-only and needs a fresh Actions check before the PR is marked ready and merged.
+`docs/UI_DESIGN.md` and `plan_status.md`. The documentation update triggered run
+43375591543: API-24 invoice-copy checks passed 5/5, then the quote journey failed
+before API 35 while locating its first title field. Its failure screenshot shows
+the quote draft at the bottom of its form with only backward scrolling available.
+The UI test now resets to the top before entering that title. This exact-head
+correction awaits Actions; do not mark #39 ready or merge until the complete
+API-24/35 run passes.

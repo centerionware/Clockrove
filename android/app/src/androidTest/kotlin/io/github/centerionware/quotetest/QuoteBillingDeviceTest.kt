@@ -250,7 +250,7 @@ class QuoteBillingDeviceTest {
         assertNull(repository.saveCustomer("quote-fixture-customer", version(), BusinessStore.Customer("quote-customer", "Synthetic quote customer", "quote-customer@example.test")).conflict)
         try {
             launch(); click("App settings and customers"); click("Quotes"); click("New quote")
-            waitFor("Quote draft"); enter("Quote title", "Synthetic tile work")
+            waitFor("Quote draft"); scrollToStart(); enter("Quote title", "Synthetic tile work")
             scrollToStart(); reveal("No customer selected"); click("No customer selected"); click("Synthetic quote customer")
             enter("Description", "Install tile"); enter("Quantity", "26"); enter("Unit price (USD)", "12.50")
             enter("Tax percentage", "7.5"); reveal("Save quote draft"); click("Save quote draft")
