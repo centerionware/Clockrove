@@ -106,13 +106,22 @@ class TaskConversationDeviceTest {
         it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
     }
 
+    private fun keyboardWindows(): String = automation.windows.joinToString("\n") { window ->
+        val bounds = android.graphics.Rect().also(window::getBoundsInScreen)
+        "type=${window.type} active=${window.isActive} focused=${window.isFocused} bounds=$bounds"
+    }
+
     private fun enterComment(value: String) {
         reveal("Add a comment", editable = true)
         val field = waitFor("Add a comment", editable = true)
         assertTrue("Comment field would not focus", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         val keyboardDeadline = SystemClock.uptimeMillis() + 10000
         while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) SystemClock.sleep(100)
-        assertTrue("Keyboard did not open for the comment", keyboardVisible())
+        if (!keyboardVisible()) {
+            File(captures, "comment-keyboard-missing-windows.txt").writeText(keyboardWindows())
+            capture("comment-keyboard-missing")
+            throw AssertionError("Keyboard did not open for the comment; windows:\n${keyboardWindows()}")
+        }
         val editable = waitFor("Add a comment", editable = true)
         assertTrue("Comment field does not expose set text", editable.actionList.any {
             it.id == AccessibilityNodeInfo.ACTION_SET_TEXT
@@ -152,7 +161,9 @@ class TaskConversationDeviceTest {
             BoardStore.Draft(taskId, job, board.columns.first().id, "Synthetic tile installation", currency = board.currency)).conflict)
 
         automation.serviceInfo = automation.serviceInfo.apply {
-            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            flags = flags or
+                android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
