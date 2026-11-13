@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-12. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-13. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. Android launch requires milestones 1–8;
 iOS and future service remain deferred.
 
@@ -37,8 +37,11 @@ iOS and future service remain deferred.
 | Business iteration: logo and final document previews | Merged #29; Actions and actual-document visuals verified | Private bounded PNG/JPEG/WebP import, metadata removal, immutable logo retention, three-style viewer and all-style multipage real-device gates; all three multipage styles and six decoded theme/style views reviewed |
 | Invoice foundation: source integrity, tax, quantity and navigation | Merged #35 and #38; main validated and internal upload accepted | #35 passed 383 native / 44 actual Android. #38 c1595c7 / 43195277559 passed 385 native / 44 actual, zero failures/errors/skips; three resize cycles/live edit/exact row/board checks and reviewed captures. Merged 1c358bc; main 43197481528 passed 385 native / 44 actual; delivery 43199258376 accepted internal.25.1 / 216642056 at 10:25:48 UTC; tester/physical availability separate |
 | Exact money | Validated and merged #35 | decimal 3.2.6 Actions lock; native BigInteger/BigDecimal and canonical TEXT; migration/receipt/rollback/purge, wide totals and all-style 1000-digit actual PDFs verified. Main 43197481528 / delivery 43199258376 accepted internal.25.1 |
-| Immediate next: payments, receipts, CC and void/replacement | Complete financial baseline validated; final storage/inset follow-ups under CI in draft #37 | 29fbe8b / 43220345571 passed all gates, 479 native / 48 actual Android, zero failures/errors/skips; 42 native/eight device XML inspected and required captures downloaded. Reviewed all API-24 lifecycle PDF variants and key API-35 lifecycle UI. Bounded large-BLOB reads, separate real storage regression and navigation inset correction now require current-head 50 actual cases/16 UI captures per API and final visual review before merge |
-| Follow-on: quotes | Planned after invoice foundation | Independent Q-1000 numbering, issued revisions, acceptance, three PDF styles, reviewed job/task/invoice mapping without fabricated work or duplicate charges |
+| Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
+| Follow-on: quotes and invoice detail | Full quote UI journey passes on API 24/35 after decision-review keyboard fix | Source head e3c5532 / Actions run 43379382717 passed the real issue/accept/plan/work/invoice journey 1/1 on each API; all 30 actual device tests per API passed with zero failures/errors/skips. Regression assertion confirms the keyboard stays closed before recording the customer decision. |
+| Owner additions: invoice/quote PDF hierarchy and Settings preview | Exact-head rendering, UI, and visual review passed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. Run 43379382717 on e3c5532 passed the full CI workflow, 563 native tests, and 30 Android tests per API. All five PDF-copy checks passed on each API. Reviewed actual Modern/Minimal/Classic invoices, long-party columns, and all three Settings preview styles/screens on API 24/35; layout, wrapping, right alignment, bold amount treatment and sample-only controls look correct. |
+| Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
+| Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
 | Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
@@ -47,10 +50,71 @@ iOS and future service remain deferred.
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Invoice/quantity/tax/widget upload verified; launch gates remain | Main 43197481528 and delivery 43199258376 succeeded for 1c358bc; Play accepted 0.1.0-internal.25.1 / 216642056 at 10:25:48 UTC; permanent key and automatic allocation verified; production/device/store gates remain |
+| M8.3 Protected workflows/Fastlane/internal delivery | Automatic signed internal delivery verified; launch/production gates remain | Main 93673fb / 43254952365 passed; Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC, permanent key and automatic version allocation. Owner installation/availability/production remain separate |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
+
+## Active quote milestone task breakdown
+
+| Task | Current evidence / status | Remaining gate |
+| --- | --- | --- |
+| Q1 Draft editor, exact inputs, Q-1000 sequence | Fresh head 5a71a9c full Actions passed; decimal inputs, quantity, tax, invalid draft and Q-1000 actual issue journey | None for this task |
+| Q2 Immutable issue/revision/date/filter/history | Fresh native/Flutter/API checks and actual issue/history journey passed | None for this task |
+| Q3 Explicit local acceptance/decline | Fresh native/Flutter and API-24/35 actual acceptance journey passed | None for this task |
+| Q4 Three quote PDF styles, revisions, wide amounts, email/URI/preview | Verified on API 24/35; three-style party hierarchy visually reviewed | Run 43373569280 passed all five real PDF/copy cases on each API; reviewed the generated three-style party-layout and sample-preview pages, including wrapped long contacts and right-aligned financial totals. |
+| Q5 Reviewed fixed/hourly mixed scope and durable task reuse | Fresh native and actual API-24/35 planning/task completion journey passed without creating work before completion | None for this task |
+| Q6 Actual-work selection and accepted/current prices/tax/party | Fresh native and actual API-24/35 invoice journey passed; accepted/current values and customer/tax selection covered | None for this task |
+| Q7 Exclusive claims, replay, paid exclusion, rollback | Fresh native race/claim checks and actual duplicate-exclusion journey passed on API 24/35 | None for this task |
+| Q8 Retained quote/line provenance through replacement and purge | Fresh native replacement/purge/late-write checks, actual related-invoice navigation and source quote retention passed | None for this task |
+| Q9 Released v8 → unreleased v9 migration | Frozen v8 fixture and late-install rollback passed in the 563-test native Actions gate 43379382717 | Freeze v9 before subsequent schema work after release |
+| Q10 Real issue/accept/plan/complete/invoice UI journey | Actions run 43379382717 passed 1/1 on API 24/35 | Full actual quote journey and post-review keyboard assertion passed |
+| Q11 Actual accepted-price invoice PDFs/text/To/CC/bytes in three styles | Run 43379382717 passed the PDF-copy and quote invoice checks on API 24/35; actual three-style pages reviewed | No outstanding automated gate for this item |
+| Q12 Phone accessibility and responsive review | Artifact 13997334053 reviewed at 390×844 / 1.8 scale in light/dark; latest 43379382717 preview pages/screens reviewed on API 24/35 | Actions visual gate passed; physical owner acceptance remains separate |
+| Q13 Merge/main/internal delivery | #39 remains draft pending the plan evidence commit | Push the evidence update, pass its exact-head Actions checks, then mark ready, merge, verify main and confirm separate Play internal delivery |
+
+## Current owner-reported bugs and final-release plan additions
+
+| Item | Status | Evidence / next action |
+| --- | --- | --- |
+| Email invoice handoff always reports failure | Source fix implemented; full Android/device acceptance pending | Email used `ACTION_SEND` with an `ACTION_SENDTO` selector while attaching a PDF; changed it to attachment-capable `ACTION_SEND`. The validated source head f088d0e passed formatting, analysis, Flutter behavior, Android build and native test steps; the complete device stage has not passed. Owner device acceptance remains required. |
+| Map opens as a blank/white area | Source resilience fix implemented; full Android/device acceptance pending | Added bounded tile-request timeout, failure state with coordinates and an external map fallback. If a site has no usable saved coordinates, the editor requests an explained fresh location and centers the map there; a widget test asserts the requested fix is the initial center. The actual OSM-rendering cause is not reproduced here. Current full device stage fails in invoice UI before all cases complete; verify map tiles and fallback in a passing Actions artifact and on the owner's phone. |
+| Manual clock-in does not record GPS | Source fix implemented; full Android/device acceptance pending | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. The current full Actions device stage does not pass; native/device delivery evidence remains pending. |
+| Small worksite radius | Source/schema change implemented; full Android/device acceptance pending | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; the current full device stage does not pass, so migration and site-editor acceptance remain pending. |
+| Task and task-comment images | Added to product contract | Planned after tasks/comments: take/select images, local private storage, bounded size/count, metadata stripping, preview/removal, encrypted backup inclusion and parent deletion. Not implemented. |
+| Full app E2E screenshots and Cloudflare Pages documentation | Added as final public-release gate | Plan now requires an end-to-end coverage inventory for every feature, screen and selectable option, reviewed screenshots on minimum/current Android APIs, then versioned static user guides deployed on Cloudflare Pages for open release. Internal/closed tracks are not gated by exhaustive coverage. |
+
+Actions run 43341316880 stopped in Analyze: formatting emitted a patch for three
+files, and analysis found the unsupported `BaseRequest.abort()` call in the tile
+timeout handler. Applied those CI-reported formatting changes and removed the
+unsupported call. Follow-up run 43342043446 passed formatting and analysis, then
+reported 155 Flutter tests passed, 3 failed and 14 skipped. Two failures were
+site-radius assertions still expecting the old 150 m minimum/default; updated to
+the new 1.8 m minimum and 30 m default. The third synthetic map-outage test did
+not force its fake image through Flutter's decoder before asserting the tile
+failure callback; added the deterministic decode step already used by the other
+map-outage test. Android build, native and real-device steps did not run. A fresh
+exact-head Actions run is required. No local build/test/formatter was run, per
+owner instruction. Run 43343448664 then stopped at analyzer because the added
+`dart:typed_data` import was redundant with `flutter/services.dart`; removed it.
+Run 43343863070 passed formatting and analysis, then reported 156 Flutter tests
+passed, 2 failed and 14 skipped. The invalid-radius fixture still entered 149 m,
+which is now valid, so it now enters 1.79 m. The site-map outage test did not
+accept the new explained current-location prompt before trying to locate the
+map; it now explicitly confirms the prompt before inducing a tile decode error.
+Android build/native/device steps did not run. Quote run 43337896079 passed at
+d03992c before these fixes were added and therefore does not validate the current
+worktree. Run 43344356175 then passed formatting, analysis, Flutter behavior and
+the Android debug build, but native tests reported 563 completed with one failure:
+the new `TimerHostApiTest` fake messenger inherited Flutter's unsupported default
+background-task-queue method, and teardown then hit an uninitialized host. Added
+an inline test task queue and null-safe cleanup. API-24/35/device and later gates
+did not run. A new exact-head Actions run is required; no build/test/formatter ran
+on this VM.
+
+The full quoted milestone remains incomplete until its integration gates pass.
+Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked
+above; emulator and native fixtures do not establish them.
 
 ## Validation record
 
@@ -2539,6 +2603,210 @@ financial baseline remains 29fbe8b / 43220345571, all gates green (479 native /
 48 actual); the final reader/inset head still needs 50 actual cases and 16 UI
 captures per API. No VM build/test ran.
 
+### Financial milestone accepted and merged — 2026-11-12 13:37 UTC
+
+#37 final 4825869 passed Validate 43224532785 attempt 2. Downloaded current retry
+artifact IDs 13947948379 (native), 13949201748 (device), 13949066888 (previews),
+selecting by ID because attempt 1 retained duplicate artifact names. Inspected
+42 native XML files / 479 cases and eight actual-device XML files / 50 cases;
+zero failures/errors/skips. Both APIs produced the 16 required UI captures.
+Reviewed current editor and confirmation captures on API 24/35, plus API-35
+excess-precision input, balance, VOID and retained receipt screens and current
+replacement/VOID/settled PDFs across the three styles. The bottom confirmation
+control clears Android navigation. Actual storage case verified complete bounded
+BLOB reads on API 24/35 after reproducing the old API-24 cursor failure. Opaque
+storage bytes are separate from genuine PDF render/text/attachment checks.
+Attempt 1 failed downloading the pinned emulator with curl HTTP/2 error 92,
+before actual tests; only the failed job was retried on the same commit.
+
+Merged exact tested head using match-head guard: main 1492081c9644e60020e06fde8b8401c5f4388759,
+2026-11-12 13:37:28 UTC. Main Validate 43229082487 was queued at observation;
+new internal publication remains pending. Last proven Play acceptance remains
+internal.25.1 / 216642056. No VM builds/tests/formatting/rendering ran.
+
+Owner reiterated exact money: confirmed pinned decimal 3.2.6 in Dart and native
+BigInteger/BigDecimal string parsing. Excess currency precision rejects with the
+draft kept; bounded input rejects rather than overflow/clamp/truncate. Exact
+products round only at the documented currency boundary. Quotes remain the next
+implementation milestone, using the same money contract.
+
+### Quotes native foundation — source awaiting Actions
+
+Schema 9 adds separate draft/revision/decision storage, issue-time Q-1000
+numbering and frozen exact monetary/customer/company/style/logo snapshots.
+Repository commands serialize save/issue/decision with global versions and durable
+retry receipts. New API-24/35 native cases cover no financial/work side effects,
+revisions/acceptance, half-cent and 1000-digit arithmetic, invalid input,
+concurrent issue, late rollback, retained customer/logo/job provenance, frozen-v8
+migration and failed migration rollback. The older schema fixtures stay unchanged.
+Current source is not validated; UI, revision navigation, expiry display, actual
+three-style PDF/private email handoff, accepted-scope mapping and invoice review
+remain required before quote milestone completion. No VM build/test ran.
+
+Quote foundation 1213cc5 is under Actions 43230233087 in draft #39.
+The next source adds strict native channel commands for quote save/issue/decision
+and context reads. Money and quantities must be strings; tax/revision/version
+must be integers and confirmation a boolean. Native bridge cases reject numeric
+money, numeric quantities, fractional tax/version and invalid confirmation types
+before writes. This source still awaits Actions and does not expose a quote UI.
+
+Quote source now includes bounded keyset pages, explicit historical revision reads,
+revision-history pages, and calendar-date expiry projection labeled with native
+today/timezone. Draft edits retain their issued number and prior acceptance;
+expiry projections do not mutate history. Added pagination, retained historical
+read, immutable number, changed-retry identity and exhausted-sequence cases.
+Actions proof for this increment remains pending.
+
+### Quote foundation native evidence and main delivery blocker
+
+First quote storage head 1213cc5 / Validate 43230233087 passed formatting,
+analysis, Flutter behavior, Android build and native tests. Downloaded artifact
+13950276507: 44 XML files, 495 tests, zero failures/errors/skips. This includes
+12 quote-store and four frozen-v8 migration executions across API 24/35.
+Actual-device gates remain live, and the later strict bridge/paged-history head
+3962104 still requires its own complete run 43231015416. Superseded queued
+bridge-only run 43230575471 was cancelled after newer source queued validation;
+the running first foundation run was retained for its evidence.
+
+Main 43229082487 is terminal failure at initial API-24 payment amount lookup.
+Actual failure.png/accessibility.txt show the form open but scrolled past the
+amount during incoming-route semantics. Focused test-only #40 / 0c9175c waits for
+the real payment form and amount before scrolling; Validate 43231269977 is live.
+Play 43230903575 was skipped because main validation failed. New internal delivery
+is not accepted; last proven acceptance remains internal.25.1 / 216642056.
+
+### Quote PDF and private handoff source
+
+First storage head 1213cc5 completed all gates in 43230233087; the later paged
+bridge head remains under 43231015416. New unvalidated source adapts each frozen
+issued revision to the shared three-style renderer with QUOTE/ESTIMATED TOTAL,
+revision, expiry, exact item/estimated-hour lines and printed terms/notes. A
+separate immutable first-write PDF cache uses bounded descriptor reads. Private
+URI paths include quote/revision identity; preview/save/email/share route through
+the existing native document boundary and current AR/company CC. Superseded
+revision views/handoffs get a historical notice without rewriting prior PDFs.
+Both global email-template guards remain mandatory at issue; default quote copy
+uses estimate language and custom body expansion is retained with a QUOTE prefix.
+
+Native source tests cover frozen adaptation, first-cache identity, exact private
+provider bytes, read-only grants and retained revision attachment ownership.
+Actual API-24/35 source adds all-three-style quote/revision/1000-digit PDF render,
+text and private attachment checks. Copies gate now requires all three named
+cases and 33 genuine PDF/PNG pairs per API (nine new quote variants), giving 52
+actual cases overall. These are required pending gates, not completed evidence.
+Quote UI, reviewed scope mapping and the complete milestone remain unfinished.
+
+Quote UI adapter source now defines immutable line/draft models, frozen revision
+reads, keyset pages, explicit issue/decision commands and revision-specific
+preview/email/share/save calls. Money and quantities stay strings; the Dart live
+total uses the pinned exact decimal task product and BigInt tax. Source tests
+cover estimated hours, fractional units/half-up boundary, 1000-digit arithmetic,
+invalid precision/range, immutable draft capture and exact channel transport.
+Formatting/analysis/test evidence must come from the upcoming Actions run; quote
+screens and reviewed scope conversion are still required.
+
+### Quote first-page null binding corrected from Actions evidence
+
+3962104 / 43231015416 passed formatting, analysis, Flutter behavior and Android
+build, then ran 505 native cases: 503 passed, two API-24/35 executions of the new
+first-page test failed. Downloaded artifact 13950813526; XML reports Android
+SQLiteProgram rejects null string selection bindings. The optional cursor query
+used null bindings for page one. Source now selects a fixed unfiltered first-page
+query and a separate fixed keyset clause with entirely non-null bindings for later
+pages. Pagination/order/expiry assertions remain unchanged. Real-device quote PDF
+and new Dart adapter evidence still require the corrected current head in Actions.
+
+### Quote Dart correction and actual-page viewer source
+
+cb25103 / 43233491212 stopped at analysis: unnecessary typed_data import and one
+missing brace block. Downloaded formatter artifact 13950784702 and applied its
+API/test source patch; removed the import and wrapped the reported condition.
+All formatting ran in Actions. This failed run provides no new Flutter/native
+or Android PDF acceptance.
+
+New quote document screen source previews a specific revision, displays the
+estimate/historical notice, allows zoom/page navigation and private email/save/share.
+The responsive toolbar scrolls independently for landscape/large text and reports
+email-draft creation and save cancellation honestly. It is not yet linked from
+quote navigation. Added six theme/style viewer captures and large-text handoff
+checks using genuine API-35 quote-rendered PNGs in the post-device Actions gate;
+no synthetic image is presented as PDF proof. New screen/test formatting and all
+current gates remain pending. Quote list/editor, explicit issue/decision/revision
+navigation and reviewed scope conversion still remain.
+
+### Quote current-head validation and template preservation follow-up
+
+ef3ddcd / 43234622742 passed analysis and the Flutter behavior gate, including
+quote money/model/channel tests. Native/device/document viewer gates remain live.
+Downloaded Actions formatter artifact 13950469584 and applied its two-file viewer
+source correction; no VM formatter ran. Source review also corrected custom quote
+subjects: default subjects use quote wording; custom subjects and bodies retain
+template expansions with an explicit QUOTE prefix. Added native regression checks
+that old revision email content remains unchanged. This later source still needs
+its own complete Actions run. #40 / 43231269977 remains live at its actual Android
+step; no successful main validation or new Play acceptance has been observed.
+
+### Quote document native proof and draft-editor source
+
+ef3ddcd / 43234622742 passed Android build and 509 native cases. Downloaded
+artifact 13951494219: 46 XML files, zero failures/errors/skips, including quote
+pagination/bridge/cache/private-provider cases. Android test compilation then
+failed before emulators because CopyPdfTextApi35 was file-private. Shared that
+test-only helper internally; no real quote PDF result is claimed yet. The earlier
+formatter correction was already applied to source.
+
+New editor source separates editable save from issue, with one unit-price field,
+quantity/estimated hours, native currency precision, effective linked-job tax,
+customer/job selection, explicit currency change with cleared prices, validity,
+printed terms/notes and exact totals. It preserves field values through refresh
+and captures one immutable command for unknown-reply retries. Native invalid
+content is now a known pre-write command conflict so it cannot strand an editable
+draft as an unknown result. UI capture validates controller values even when lazy
+form fields are offscreen. Native historical precision remains frozen across
+same-currency revisions; new precision and frozen-unit regressions are pending.
+Two widget source cases cover unknown-reply lock/retry identity and retained
+fractional input for native zero-decimal currency. These editor/native changes
+still require formatting, analysis and full Actions proof. Quote list/detail,
+issue/decision/revision navigation and accepted-scope conversion remain required.
+
+### Quotes connected navigation and reviewed commands — source pending Actions
+
+Added main-menu Quotes navigation, native status filters before keyset pagination,
+coherent draft-party/currency/calendar context, new/edit draft flow, issue review,
+local acceptance/decline with private notes and explicit revision confirmation,
+revision history/older-page navigation and retained quote PDF access. Unknown
+issue/decision controls remain mounted across committed version events; source
+widget cases verify cancelled reviews write nothing and response-loss retries
+keep the same captured issue intent. New native cases cover filtered older pages,
+expiry and explicit decisions. Accepted-scope/job/task/invoice mapping still remains.
+
+014f75f / 43237357264 passed analysis and ran 140 passing Flutter tests with one
+failure: exact zero-decimal error text was not exposed by the generic invalid-form
+summary. Controller capture now validates even after Form.validate reports invalid,
+so the precise money error is returned; retain the original test assertion and
+input-retention checks. Downloaded formatter artifact 13952887623 and applied its
+unchanged editor/test/common-command source hunks. New API/navigation source still
+requires its own formatting/analysis/full validation. No VM build/test/formatter ran.
+
+Focused #40 run 43231269977 ended cancelled at the 45-minute job limit. Its log
+stopped during API-24 startup after adb daemon creation; no instrumentation began.
+Current head 658fce0 / 43239688776 bounds startup/wait/property/shutdown probes and
+retains emulator logs; it is live. The quote branch incorporates the same startup
+script and initial payment-form wait. Required device cases and financial assertions
+are unchanged. No new main validation or Play acceptance is claimed.
+
+### Quote issue-response regression caught a moved command card
+
+c604021 / 43241323307 passed analysis. The zero-decimal editor case and explicit
+acceptance case passed; the lost issue-reply case failed because Retry same
+operation disappeared after native version publication. The issued summary inserts
+new list children ahead of the issue card; the unkeyed parent card was recreated,
+disposing its keyed child command state. Source now gives the issue and decision
+cards stable list keys, preserving captured commands when those cards move.
+Retain the full response-loss/version-event assertion; this is an app UI fix,
+not a relaxed test. Applied formatter artifact 13954368054 to all four unchanged
+navigation/API/test files. Full corrected-head Actions validation remains pending.
+
 ### Main payment journey synchronization failure — 2026-11-12
 
 Main Validate 43229082487 on merged 1492081 failed its API-24 payment UI journey
@@ -2563,6 +2831,99 @@ it also captures emulator diagnostics on success/failure. Financial assertions,
 required cases and UI captures are unchanged. Validate the corrected script in
 Actions before merging or claiming publication. No VM build/test ran.
 
+### Focused financial validation fix merged — 2026-11-12 14:59 UTC
+
+#40 exact head 658fce0 passed all Actions gates in 43239688776. Downloaded
+artifacts 13954427580 and 13956665417: 42 native/eight device XML files prove
+479 native / 50 actual Android cases with zero failures/errors/skips. Both APIs
+produced all 16 financial UI captures; reviewed retained excess-precision input
+and its inline error on API 24/35. No app behavior changed in this focused fix.
+Merged with exact-head guard as 05ee6e76063172866ec8a1f48c9128c6eb069c0e at
+2026-11-12 14:59:36 UTC. Main Validate 43242962261 is live; automatic internal
+delivery remains pending. Last proven Play acceptance is still internal.25.1 /
+216642056. Brought main into the quote branch, preserving both validation ledgers.
+No VM builds/tests/formatting/rendering ran.
+
+### Quote document/navigation evidence and reviewed planning conversion source
+
+f442e97 / 43242100858 passed formatting, analysis, Flutter behavior, build,
+517 native and 52 actual API-24/35 cases. Downloaded native artifact 13954384676
+(46 XML) and device artifact 13956368052 (eight XML): zero failures/errors/skips.
+All nine real quote PDF variants per API rendered with exact text/attachment checks.
+Reviewed all three genuine API-35 normal quote pages from 13956667591: descriptions,
+26 units at 12.50, 1.5 estimated hours at 40.00, subtotal 385.00, tax 28.88 and
+estimated total 413.88 are readable and correct. Full viewer gate failed only its
+landscape Save-cancel message assertion: the older email snackbar was still
+visible while the new feedback queued. Current source replaces prior feedback;
+the assertion is unchanged. Full corrected-head gate and remaining visual review
+are required; no completed quote milestone or release is claimed.
+
+Native planning conversion source adds immutable quote-line/task bindings and
+accepted-revision links in unreleased schema 9. Only explicit accepted revisions
+can create or link scope. Fixed items copy exact quantities/unit prices into open
+planning tasks; estimated-hour scope creates nonbillable checklists and a frozen
+exact job rate, never sessions/completion/invoices/claims/payments. Each reviewed
+group targets one compatible hourly/task job; mixed kinds/different hourly rates
+require explicit compatible groups. Existing-task linking leaves source work
+unchanged. Prior mappings are reused across commands/revisions, retained after
+job purge and cannot resurrect deleted identities. Old revisions/job-setting
+differences require explicit review; task templates contain no quote history.
+
+Repository/channel source plus native cases cover retry, concurrency, partial
+failure rollback, existing completed work, revised agreement links, hours with
+1000-digit rates, retained purge ancestry and late schema-install rollback.
+This new source has not passed Actions. Conversion UI, native actual-work quote
+invoice preview/preparation, accepted-price/tax retention, estimate/actual difference
+review and invoice provenance still remain. Ordinary/quoted billing must share
+exclusive coverage; estimated hours never become worked time. All build/test and
+render work remains in Actions.
+
+### Focused main follow-up #41 carried into quote validation
+
+Main 43242962261 is terminal failure at API-35 Accounts receivable field lookup.
+Downloaded 13954879850; reviewed failure.png/accessibility.txt showing Settings
+open at the top with the target below the viewport and a real vertical ScrollView.
+The helper previously stopped issuing scrolls and then waited passively. #41
+head d92e617 keeps active bounded reveal polling, prefers the vertical form and
+waits for Billing defaults. Carried the same test-only correction into the quote
+branch. All exact money/state/PDF/capture gates remain intact. Validate #41 before
+merge; main/internal delivery remains unaccepted. This is not a device crash fix.
+
+### Current quotes increment
+
+43247145880: 47 native XML / 537 tests, zero failures/errors/skips. Android
+API-35 billing original-PDF lookup failed and emulator went offline; actual
+viewer stage did not run. Do not treat source or native-only checks as completion.
+Current planning UI/context/bounded receipt and retry tests are implemented as
+source, pending fresh Actions. Invoice-list refresh assertion is being repaired
+in maintenance #41 (b0b84b8), with matching quote callback fixes here.
+Actual-work invoice preparation with accepted-price/tax review and durable quote
+provenance is the next dependency; physical acceptance remains separate.
+
+Quote actual-work preparation remains open. Its detailed policy and required
+evidence now live in docs/QUOTE_ACTUAL_WORK_PLAN.md, linked from the lifecycle
+plan. Never infer worked hours/completion or a new invoice from planning alone.
+
+Scope 2e10834 / 43252111565 stopped at an analyzer constructor-style lint and
+formatting. Actions source patch and super-parameter correction applied; fresh
+validation required. No behavior/native success inferred from this run.
+
+Actual-work review core: read-only native source and tests added; no preparation
+command/UI/provenance write yet. Exact task/session selection and accepted/current
+price/tax calculations must pass fresh Actions before integration. Scope head
+202ceb1 / 43252783507 passed Flutter formatting/analysis/behavior and reached
+Android build; native/device outcomes remain pending.
+
+Quote preparation/provenance: native source now includes one serialized command,
+shared invoice/coverage writer, accepted/current prices/tax/party selection and
+retained paginated quote links copied through replacements. Source tests cover
+credit/claim conservation, purge and late-write/schema rollback. Fresh Actions,
+Flutter transport/review/history and real-device/document acceptance remain open.
+
+Large scope source review: remove repeated whole-board reads/snapshots from
+new-card append while preserving all changed-peer revisions on moves. The full
+2000-task replay/head-count regression remains; performance/behavior awaits Actions.
+
 ### Main settings-field reveal recovery — source awaiting Actions
 
 Main 05ee6e7 / 43242962261 passed build/native checks and API-24 device cases,
@@ -2583,3 +2944,175 @@ a synchronous setState callback. Actual quote run 43247145880 billing log caught
 the Future-return assertion; strengthened widget navigation test checks refresh
 and return without framework exceptions. #41 remains unmerged pending fresh full
 validation. The emulator also went offline; no successful device result inferred.
+
+#41 merged after exact b0b84b8 / 43251725288 full success (479 native / 50 actual
+Android, zero failures/errors/skips; artifacts and AR/invalid-precision/retained-PDF
+visuals inspected). Main 93673fb / 43254952365 validation running; new Play
+publication is unproven. Quote scope 202ceb1 / 43252783507: 47 XML / 539 native
+zero failures/errors/skips verified; actual-device gates running. Later native
+quote billing and board optimization source still require fresh Actions.
+
+Quote actual-work bridge: native context/calculation/preparation and metadata-only
+paged history contracts implemented as source, with strict-type/exact-total/replay
+coverage added. Not yet validated; Flutter preparation transport/UI remain open.
+
+Flutter quote invoice API/models and exact-string/immutable-source/pagination
+source tests added; Actions formatting/analyze/behavior pending. Preparation UI
+and related-invoice navigation remain the next implementation work. Older real
+43242100858 revision-2/all-style wide first/last pages and API-24 normal modern
+quote visuals reviewed; this does not substitute for fresh current-head acceptance.
+
+Scope/document baseline 202ceb1 / 43252783507 passed full Actions: 539 native
+and 52 actual Android tests, zero failures/errors/skips; downloaded XML and all
+six light/dark actual quote viewer captures inspected. Real PDF/text/private URI
+and landscape/cancellation viewer gates passed. Newer actual-work backend and
+Flutter invoice API require fresh checks; preparation UI/device journey remain.
+
+Main 93673fb / 43254952365 passed full Actions (479 native / 50 actual Android,
+zero failures/errors/skips; downloaded XML inspected). Play delivery 43257957626
+is running; store/physical acceptance remain separate. Backend 56307eb /
+43255636714 passed 553 native (47 XML, zero failures/errors/skips); actual-device
+gates running. Preparation/history UI now implemented as source with explicit
+selection/policy/native-version review, preserved failed reads and stable unknown
+write identity. UI tests added; fresh Actions and real quote-to-invoice Android
+journey/PDF/provenance acceptance remain required before merging #39.
+
+Backend 56307eb / 43255636714 passed full Actions: 553 native / 52 actual
+Android, zero failures/errors/skips; XML inspected. New UI 8351815 / 43258627074
+stopped at null-aware-element lint/format; source patch/correction applied.
+Actual quote UI/invoice pipeline gate now added as source (one fresh emulator
+journey per API, three real accepted-price invoice PDFs/bytes/recipients); its
+54-case combined gate still needs Actions evidence. Main delivery 43257957626
+accepted internal.28.1 / 216663874 at 16:29:35 UTC; physical/store availability
+is not inferred. Quotes remain draft #39 pending complete fresh UI/device proof.
+
+Additional native quote billing source regressions added: missing current price,
+frozen versus explicitly current customer/contact, and zero/three-decimal currency
+invoice totals. Fresh Actions required; prior 553-case proof does not cover these
+new cases.
+
+6b32e7b / 43260662958: new invoice review/history UI behavior tests passed;
+overall 152 passed / one quote-detail offscreen-finder failure / 14 document-only
+skips. Existing command-identity assertions kept; test now scrolls to and checks
+the enabled issued-document button after retry. Actions formatter patch applied;
+Android build/native/device gates did not run on this failed head.
+
+046fcf6 / 43261516779 passed formatting/analysis/full Flutter behavior and reached
+Android build. Additional hourly allocation/estimate-versus-actual UI regression
+added as source; fresh Actions still required. Native real-journey/PDF gate remains
+unverified until actual emulator execution succeeds.
+
+046fcf6 / 43261516779: Android/instrumentation build and 559 native tests
+verified (47 downloaded XML, zero failures/errors/skips). Actual journey gate
+running. Ordinary-versus-quote concurrent source race and large-text light/dark
+phone review previews added as source; new checks require fresh Actions.
+
+046fcf6 / 43261516779 ended at real API-24 quote entry: keyboard opened and
+focused Unit price remained visually present, but its semantics node disappeared
+outside the resized accessibility viewport. Reviewed capture/accessibility dump
+from artifact 13966095163; no Flutter/native crash was logged. The entry helper
+now actively re-reveals the field after IME opening before its unchanged SET_TEXT
+and exact-value assertion. New journey/device acceptance remains unproven.
+
+317e1de / 43263186408: analysis and both enlarged-text phone-theme layout checks
+passed; four synthetic UI previews reviewed. Hourly allocation reached USD 43.00
+but asserted a duration without its combined source label; exact combined text
+assertion corrected. No calculation/write guard removed. Clear input focus before
+first-page preview. Its fresh formatter patch and API-24 IME visibility correction
+are ready for the next complete Actions run; native race/device proof stays pending.
+
+### Quote actual-work journey: API-35 bottom safe-area defect
+
+Latest e4738aa / Actions run 43264537323 attempt 2: formatting, analysis, Flutter
+behavior, Android build and all 561 native tests passed (47 XML; zero failures,
+errors or skips). API 24 completed all 27 actual-device cases, including the full
+Flutter quote issue/accept/scope/task completion/invoice journey and three actual
+invoice PDFs. API 35 completed its preceding 26 cases, then the quote journey
+failed at “View original PDF.” Inspected artifact 13966703563: accessibility
+reported the button at y=1864–1920, under the system navigation bar beginning at
+y=1794, while the invoice detail was at maximum scroll. The UI already attempted
+to reveal it; the bottom inset was too small on edge-to-edge API 35. Changed the
+detail ListView bottom padding from `MediaQuery.padding` to `viewPadding` to
+reserve the physical navigation inset. This is a source fix only; fresh Actions
+must prove full API-24/35 and generated-document gates before marking Q10/Q11
+complete or merging #39. Existing assertions remain strict; no build/test ran on
+the VM.
+
+Run 43269368364 / 19bbac6 passed the Android build and 561 native tests. The new
+API-24 quote run advanced beyond the prior PDF-viewer visibility failure but then
+failed at “Prepare reviewed invoice.” Its failure screenshot shows the review note
+focused and Android keyboard open after dismissing the invoice review dialog. This
+is a real keyboard focus restoration issue that obscures the next action. The
+screen now unfocuses the note before opening the confirmation dialog, and the
+device test asserts the keyboard is closed before preparation. API 35 did not run
+the quote journey in this attempt because the serial API-24 gate failed first.
+Fresh CI must still prove both APIs, invoice PDF/text/viewer outputs, and all
+remaining quote acceptance before these tasks are complete.
+
+### Quote IME synchronization: API-35 field entry
+
+Head c4ac90d / Actions run 43272288322 passed formatting, analysis, Flutter
+behavior, Android build and 561 native tests (47 XML, zero failures/errors/skips).
+Downloaded actual-device results show API 24 passed the full quote issue,
+acceptance, scope planning, task completion, invoice and duplicate-exclusion
+journey, including three generated invoice PDFs and the detail viewer. API 35
+passed its preceding 26 device cases, then failed at the first unit-price entry.
+Its capture shows the field focused with the numeric IME open; the accessibility
+dump contains the surrounding fields but the test timed out checking
+ACTION_SET_TEXT before waiting for the IME transition. Updated the helper to wait
+for keyboard visibility, reveal the field again, then wait for its text action
+before entering and asserting the exact value. This is a test timing fix awaiting
+fresh Actions evidence, not a passing API-35 result. No build or test ran on the VM.
+
+### Actual quote journey passes on API 24 and API 35; large-text collision fixed in source
+
+Head 5a71a9c / Actions run 43276003231 succeeded. Formatting, analysis, all
+Flutter behavior tests, Android build, all 561 native tests (47 XML, zero
+failures/errors/skips), and the full Android PDF/device gate passed. Downloaded
+the device artifact and inspected JUnit: API 24 and API 35 each report 27 actual
+Android cases with zero failures/errors/skips; the quote issue/accept/plan/task
+completion/actual-invoice/duplicate-exclusion case passed 1/1 on both APIs. Both
+APIs generated the three accepted-price quote-to-invoice PDFs; visually reviewed
+minimal, classic and modern outputs on each API and actual Flutter invoice viewer
+captures. API-35 extracted text from all three shows quantity 30 × USD 12.50,
+subtotal USD 375.00, tax 7.5% = USD 28.13 and total USD 403.13, retaining quote
+Q-1000 revision 1. This validates the explicit currency-boundary rounding rule
+with exact decimal inputs and output.
+
+Downloaded and reviewed the 390×844 / 1.8× light/dark UI previews. The actual-work
+setup screen's outlined floating labels overlapped neighboring controls, despite
+the layout test passing. Replaced these with separate responsive labels, added
+vertical spacing, and preserved the field identifiers and helper hints. The next
+Actions artifact confirms the visual correction in both themes; the full actual
+journey is pending because the scope review dialog reopened the keyboard. All
+build and test work stays in GitHub Actions.
+
+### Large-text layout preview passes; scope-review keyboard restoration found
+
+Head 1f59374 / Actions run 43281033608 passed formatting, analysis, Flutter
+behavior, Android build and all 561 native tests. Downloaded the UI preview
+artifact and confirmed in both light and dark 390×844 / 1.8× screenshots that
+separate labels and spacing remove the prior overlap. The actual API-24 journey
+then failed after “Confirm review”: its note regained focus and the keyboard
+covered “Apply reviewed plan.” Downloaded screenshot and JUnit show this exact
+failure; API 35's quote journey did not run because the API-24 gate failed first.
+Added pre-dialog unfocus in quote-scope review plus a device assertion that the
+keyboard stays closed after confirmation. This fix and the full actual invoice
+journey need fresh Actions and artifact review before Q10–Q12 can be accepted.
+No VM build, test or formatter was run.
+
+### Quote scope keyboard fix passed full Actions validation
+
+Head d03992c / Actions run 43337896079 succeeded. Formatting, analysis, Flutter
+behavior tests, Android build and all 561 native tests passed (47 XML, zero
+failures/errors/skips). Downloaded Android device XML reports 27 actual cases on
+API 24 and 27 on API 35, zero failures/errors/skips; the real quote issue,
+acceptance, scope planning, task completion, invoice and duplicate-exclusion
+journey passed 1/1 on each API. All three actual quote-to-invoice styles and the
+Flutter invoice viewer were reviewed on both APIs. Extracted API-35 text confirms
+30 × USD 12.50, USD 375.00 subtotal, 7.5% / USD 28.13 tax and USD 403.13 total.
+Reviewed Actions preview artifact 13997334053 at 390×844 / 1.8 scale in light
+and dark; the fields and confirmation action are readable, and the keyboard
+remains closed after review. This confirms the quote fix at d03992c only; all
+later bugfix source changes remain pending Actions. No VM build/test/formatter
+was run.

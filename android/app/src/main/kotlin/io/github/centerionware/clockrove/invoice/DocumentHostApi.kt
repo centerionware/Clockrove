@@ -22,6 +22,14 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         channel.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "settingsInvoicePreview" -> {
+                        val style = requireNotNull(call.argument<String>("style"))
+                        val currency = requireNotNull(call.argument<String>("currency"))
+                        val digits = requireNotNull(call.argument<Int>("digits"))
+                        val page = requireNotNull(call.argument<Int>("page"))
+                        val pdf = InvoiceDocuments.settingsPreview(style, currency, digits, call.argument<ByteArray>("logo"))
+                        result.success(InvoiceDocuments.preview(activity, pdf, page))
+                    }
                     "pickLogo" -> main.post {
                         if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
                         else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a document first", null)
@@ -34,10 +42,11 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             catch (_: ActivityNotFoundException) { logoResult = null; result.error("NO_DOCUMENT_PICKER", "No image document picker is installed", null) }
                         }
                     }
-                    "invoicePreview" -> {
-                        val id = requireNotNull(call.argument<String>("invoiceId"))
+                    "invoicePreview", "quotePreview" -> {
+                        val id = requireNotNull(call.argument<String>(if (call.method == "quotePreview") "quoteId" else "invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
-                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
+                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
                         result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(repository, record)))
                     }
                     "saveReport" -> {
@@ -60,9 +69,10 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             }
                         }
                     }
-                    "saveInvoice" -> {
-                        val id = requireNotNull(call.argument<String>("invoiceId"))
-                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                    "saveInvoice", "saveQuote" -> {
+                        val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
+                        val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
+                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
                             else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
@@ -75,11 +85,12 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             }
                         }
                     }
-                    "emailInvoice", "shareInvoice" -> {
-                        val id = requireNotNull(call.argument<String>("invoiceId"))
-                        val record = InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                    "emailInvoice", "shareInvoice", "emailQuote", "shareQuote" -> {
+                        val id = requireNotNull(call.argument<String>(if (call.method.endsWith("Quote")) "quoteId" else "invoiceId"))
+                        val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
+                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
                         val notice = InvoiceDocuments.historicalNotice(repository, record)
-                        val intent = if (call.method == "emailInvoice") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), "Share invoice")
+                        val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), if (quote) "Share quote" else "Share invoice")
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.*
 import com.google.android.gms.location.*
+import com.google.android.gms.tasks.CancellationTokenSource
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.tracking.TimerRepository
@@ -22,6 +23,7 @@ class WorkLocationService : Service() {
     private var subscription: AutoCloseable? = null
     private var callback: LocationCallback? = null
     private var requestedSession: String? = null
+    private var startupFix: CancellationTokenSource? = null
     @Volatile private var closed = false
 
     override fun onBind(intent: Intent?) = null
@@ -73,6 +75,7 @@ class WorkLocationService : Service() {
         callback?.let { fused.removeLocationUpdates(it) }
         requestedSession = running.id
         val boundSession = running.id
+        requestCurrentLocation(boundSession)
         val next = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val received = System.currentTimeMillis()
@@ -103,6 +106,32 @@ class WorkLocationService : Service() {
         } catch (_: SecurityException) {
             health = "PERMISSION_MISSING"
             main.post { stopSelf() }
+        }
+    }
+
+    /** Attempt one real fix immediately; the periodic request remains the source of later samples. */
+    private fun requestCurrentLocation(sessionId: String) {
+        startupFix?.cancel()
+        val cancellation = CancellationTokenSource()
+        startupFix = cancellation
+        val request = CurrentLocationRequest.Builder()
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setMaxUpdateAgeMillis(0)
+            .setDurationMillis(15_000)
+            .build()
+        try {
+            fused.getCurrentLocation(request, cancellation.token).addOnCompleteListener { result ->
+                val observed = if (result.isSuccessful) result.result else null
+                if (!closed && startupFix === cancellation && observed != null) dispatch {
+                    if (repository.snapshot().running?.id == sessionId) {
+                        FusedSampleMapper.map(sessionId, observed, System.currentTimeMillis())?.let {
+                            repository.recordLocation(it)
+                        }
+                    }
+                }
+            }
+        } catch (_: SecurityException) {
+            health = "PERMISSION_MISSING"
         }
     }
 
@@ -137,6 +166,8 @@ class WorkLocationService : Service() {
 
     override fun onDestroy() {
         closed = true
+        startupFix?.cancel()
+        startupFix = null
         worker.execute {
             subscription?.close()
             callback?.let { fused.removeLocationUpdates(it) }
@@ -152,6 +183,23 @@ class WorkLocationService : Service() {
         private const val NOTIFICATION = 101
         internal fun markStartRequested() { health = "START_REQUESTED" }
         internal fun markStartRestricted() { health = "START_RESTRICTED" }
+        internal fun startForManualTimer(context: android.content.Context) {
+            if (!hasLocationPermission(context)) {
+                health = "PERMISSION_MISSING"
+                return
+            }
+            if (health in setOf("START_REQUESTED", "STARTING", "REQUESTING", "LOCATION_UNAVAILABLE")) return
+            try {
+                markStartRequested()
+                val intent = Intent(context, WorkLocationService::class.java)
+                if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+            } catch (_: RuntimeException) {
+                markStartRestricted()
+            }
+        }
+        private fun hasLocationPermission(context: android.content.Context) =
+            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         private val healthListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
         internal fun subscribeHealth(listener: (String) -> Unit): AutoCloseable {
             healthListeners.add(listener)

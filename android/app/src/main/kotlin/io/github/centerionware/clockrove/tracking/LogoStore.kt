@@ -29,7 +29,7 @@ internal object LogoStore {
         return null
     }
     fun collectUnused(db: SQLiteDatabase, at: Long) {
-        val unused = db.rawQuery("SELECT id FROM logo_assets WHERE id NOT IN(SELECT logo_id FROM app_settings WHERE logo_id IS NOT NULL) AND id NOT IN(SELECT logo_id FROM invoices WHERE logo_id IS NOT NULL)", null).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+        val unused = db.rawQuery("SELECT id FROM logo_assets WHERE id NOT IN(SELECT logo_id FROM app_settings WHERE logo_id IS NOT NULL) AND id NOT IN(SELECT logo_id FROM invoices WHERE logo_id IS NOT NULL) AND id NOT IN(SELECT logo_id FROM quote_revisions WHERE logo_id IS NOT NULL)", null).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
         unused.forEach { id -> db.execSQL("DELETE FROM logo_assets WHERE id=?", arrayOf(id)); RevisionStore.record(db, "logo", id, null, mapOf("id" to id), at, deleted = true) }
     }
 }

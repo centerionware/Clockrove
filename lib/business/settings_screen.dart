@@ -8,6 +8,7 @@ import 'settings_api.dart';
 import 'logo_controls.dart';
 import 'email_template.dart';
 import 'tax_rate.dart';
+import 'invoice_style_preview_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -150,6 +151,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   @override
   Widget build(BuildContext context) {
     final current = ref.watch(businessSettingsProvider).value;
+    final logo = ref.watch(logoProvider).value;
     final currencies = <String, int>{
       'USD': 2,
       'EUR': 2,
@@ -280,6 +282,26 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               setState(() => _style = v);
             }
           },
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const ValueKey('invoice-style-preview'),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => InvoiceStylePreviewScreen(
+                  style: _style,
+                  currency: _currency,
+                  digits: _digits,
+                  logo: logo?.png,
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.visibility_outlined),
+            label: const Text('Preview invoice'),
+          ),
         ),
         const SizedBox(height: 20),
         LogoControls(

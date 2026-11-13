@@ -40,12 +40,12 @@ class InvoiceHandoffTest {
         provider.attachInfo(context, ProviderInfo().apply { authority = "${context.packageName}.invoices"; exported = false; grantUriPermissions = true })
     }
     @After fun close() { repository.close(); provider.shutdown() }
-    @Test fun emailIntentRoutesToEmailAppsAndContainsActualRecipientBodyAndPdfReadGrant() {
+    @Test fun emailIntentUsesAttachmentCapableSendActionAndContainsActualRecipientBodyAndPdfReadGrant() {
         val record = repository.invoice("invoice"); val s = InvoiceStore.Snapshot.decode(record.payload).copy(email = "synthetic@example.test", subject = "Synthetic invoice", body = "Hello\nActual invoice attached.")
         val intent = InvoiceDocuments.email(context, record.copy(payload = s.encode()), repository.businessSnapshot().settings)
         val uri = InvoiceDocuments.uri(context, record.id)
         assertEquals(Intent.ACTION_SEND, intent.action); assertEquals("application/pdf", intent.type)
-        assertEquals(Intent.ACTION_SENDTO, intent.selector?.action); assertEquals("mailto", intent.selector?.data?.scheme)
+        assertNull(intent.selector)
         assertArrayEquals(arrayOf("synthetic@example.test"), intent.getStringArrayExtra(Intent.EXTRA_EMAIL))
         assertEquals("Synthetic invoice", intent.getStringExtra(Intent.EXTRA_SUBJECT)); assertEquals("Hello\nActual invoice attached.", intent.getStringExtra(Intent.EXTRA_TEXT))
         assertEquals(uri, intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)); assertEquals(uri, intent.clipData!!.getItemAt(0).uri)

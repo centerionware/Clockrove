@@ -7,7 +7,7 @@ import java.util.UUID
 /** SQL helpers used only under TimerRepository's serialized transaction boundary. */
 internal object GeofenceStore {
     data class Site(val id: String, val jobId: String, val name: String,
-        val latitude: Double, val longitude: Double, val radiusMeters: Double = 150.0,
+        val latitude: Double, val longitude: Double, val radiusMeters: Double = 30.0,
         val enabled: Boolean = true, val registrationKey: String = "")
     data class Settings(val jobId: String, val enabled: Boolean = false,
         val autoStart: Boolean = false, val automaticDeparture: Boolean = true,
@@ -20,11 +20,25 @@ internal object GeofenceStore {
 
     fun createTables(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE automation_policies(job_id TEXT PRIMARY KEY REFERENCES jobs(id),enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN(0,1)),auto_start INTEGER NOT NULL DEFAULT 0 CHECK(auto_start IN(0,1)),automatic_departure INTEGER NOT NULL DEFAULT 1 CHECK(automatic_departure IN(0,1)),grace_minutes INTEGER NOT NULL DEFAULT 30 CHECK(grace_minutes BETWEEN 0 AND 1440),armed INTEGER NOT NULL DEFAULT 0 CHECK(armed IN(0,1)),suppressed INTEGER NOT NULL DEFAULT 0 CHECK(suppressed IN(0,1)),last_presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(last_presence IN('UNKNOWN','INSIDE','OUTSIDE')),configured_ms INTEGER NOT NULL,facts_since_ms INTEGER NOT NULL,manual_barrier_ms INTEGER)")
-        db.execSQL("CREATE TABLE work_sites(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 150 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
+        createSiteTable(db, "work_sites")
         db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
         db.execSQL("CREATE TABLE geofence_event_results(id TEXT PRIMARY KEY REFERENCES commands(id),payload TEXT NOT NULL)")
         db.execSQL("CREATE TABLE geofence_conflicts(session_id TEXT PRIMARY KEY REFERENCES sessions(id),job_id TEXT NOT NULL REFERENCES jobs(id),observed_ms INTEGER NOT NULL,reason TEXT NOT NULL,requires_history_review INTEGER NOT NULL DEFAULT 0 CHECK(requires_history_review IN(0,1)))")
         db.execSQL("CREATE TABLE finalized_departures(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL)")
+    }
+
+    /** Lift the old 150 m schema floor while preserving all persisted site state. */
+    fun migrateSmallSiteRadius(db: SQLiteDatabase) {
+        createSiteTable(db, "work_sites_new")
+        db.execSQL("INSERT INTO work_sites_new(id,job_id,name,latitude,longitude,radius,enabled,registration_key,presence,observed_ms) SELECT id,job_id,name,latitude,longitude,radius,enabled,registration_key,presence,observed_ms FROM work_sites")
+        db.execSQL("DROP TABLE work_sites")
+        db.execSQL("ALTER TABLE work_sites_new RENAME TO work_sites")
+        db.execSQL("CREATE INDEX sites_job ON work_sites(job_id)")
+    }
+
+    private fun createSiteTable(db: SQLiteDatabase, table: String) {
+        require(table == "work_sites" || table == "work_sites_new")
+        db.execSQL("CREATE TABLE $table(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),name TEXT NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),radius REAL NOT NULL CHECK(radius BETWEEN 1.8 AND 10000),enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),registration_key TEXT NOT NULL UNIQUE,presence TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(presence IN('UNKNOWN','INSIDE','OUTSIDE')),observed_ms INTEGER,CHECK((presence='UNKNOWN' AND observed_ms IS NULL) OR (presence!='UNKNOWN' AND observed_ms IS NOT NULL)))")
     }
 
     fun sites(db: SQLiteDatabase, enabledOnly: Boolean = false): List<Site> {
@@ -70,7 +84,7 @@ internal object GeofenceStore {
     fun saveSite(db: SQLiteDatabase, site: Site, now: Long): String? {
         if (site.id.isBlank() || site.name.isBlank() || !site.latitude.isFinite() || site.latitude !in -90.0..90.0 ||
             !site.longitude.isFinite() || site.longitude !in -180.0..180.0 ||
-            !site.radiusMeters.isFinite() || site.radiusMeters !in 150.0..10000.0) return "INVALID_SITE"
+            !site.radiusMeters.isFinite() || site.radiusMeters !in 1.8..10000.0) return "INVALID_SITE"
         if (!jobAvailable(db, site.jobId)) return "JOB_UNAVAILABLE"
         val previous = db.rawQuery("SELECT id,job_id,name,latitude,longitude,radius,enabled,registration_key FROM work_sites WHERE id=?", arrayOf(site.id)).use {
             if (!it.moveToFirst()) null else Site(it.getString(0), it.getString(1), it.getString(2),

@@ -98,12 +98,8 @@ class InvoicePaymentDeviceTest {
         until("Actual app never exposed $label") {
             if (find(label, editable) != null) true else {
                 fun scroll(node: AccessibilityNodeInfo): Boolean {
-                    // Prefer the vertical form over editable text's own scroll
-                    // actions. Route semantics can arrive after navigation.
-                    if (node.isVisibleToUser && node.isScrollable && node.className?.toString() == "android.widget.ScrollView" &&
-                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
                     for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                    return false
+                    return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                 }
                 automation.rootInActiveWindow?.let(::scroll)
                 SystemClock.sleep(150)

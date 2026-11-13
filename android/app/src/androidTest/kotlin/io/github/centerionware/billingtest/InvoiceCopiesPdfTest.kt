@@ -6,6 +6,7 @@ import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.invoice.InvoiceDocuments
+import io.github.centerionware.clockrove.invoice.InvoicePdf
 import io.github.centerionware.clockrove.tracking.BoardStore
 import io.github.centerionware.clockrove.tracking.InvoiceLifecycleStore
 import io.github.centerionware.clockrove.tracking.InvoicePaymentStore
@@ -101,6 +102,137 @@ class InvoiceCopiesPdfTest {
         assertNull(repository.recordInvoicePayment("copy-pdf-pay-$token", version, InvoicePaymentStore.Draft(token, invoiceId, amount.toString(), "USD",
             System.currentTimeMillis() - 1000, "UTC", "Bank transfer", "Synthetic payment reference", "PRIVATE INTERNAL NOTE")).conflict)
     }
+
+    @Test fun settingsStylePreviewRendersSamplePdfWithoutChangingBusinessState() {
+        val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+        val before = repository.snapshot().version
+        for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
+            val pdf = InvoiceDocuments.settingsPreview(style, "USD", 2)
+            val firstPage = InvoiceDocuments.preview(app, pdf, 0)
+            assertEquals(0, firstPage["page"])
+            assertEquals(1, firstPage["pages"])
+            val png = requireNotNull(firstPage["png"] as? ByteArray)
+            assertTrue(png.isNotEmpty())
+            File(directory, "clockrove-settings-preview-${style.lowercase(Locale.ROOT)}.png").writeBytes(png)
+            if (android.os.Build.VERSION.SDK_INT >= 35) {
+                val file = File.createTempFile("settings-sample-", ".pdf", app.cacheDir)
+                try {
+                    file.writeBytes(pdf)
+                    val extracted = StringBuilder()
+                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                        PdfRenderer(descriptor).use { renderer ->
+                            renderer.openPage(0).use { page -> extracted.append(CopyPdfTextApi35.read(page)) }
+                        }
+                    }
+                    val extractedText = extracted.toString()
+                    fun compactText(value: String) = value.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "")
+                    val sample = compactText(extractedText)
+                    val expectedSampleValues = listOf(
+                        "INV-SAMPLE-1000", "SampleCompanyLLC", "TaylorMorgan",
+                        "billing@example.test", "taylor.morgan@example.test",
+                        "Kitchen tile installation", "Install porcelain tile", "312.00",
+                        "7.5%", "23.40", "335.40", "Sample preview only",
+                    )
+                    for (value in expectedSampleValues) {
+                        assertTrue(
+                            "$style sample invoice is missing $value; extracted text: ${extractedText.take(3000)}",
+                            sample.contains(compactText(value)),
+                        )
+                    }
+                } finally { file.delete() }
+            }
+        }
+        assertEquals("Preview generation must not mutate jobs, invoices or numbering", before, repository.snapshot().version)
+    }
+
+    @Test fun invoicePartiesUseWrappedColumnsAndSubtotalTaxNumbersEndAtTheRightEdge() {
+        val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
+        val columnWidth = ((595f - 44f * 2) * .47f)
+        val rightColumnX = 595f - 44f - columnWidth
+        for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
+            val customerContact = "CUSTOMER_ADDRESS_SENTINEL " + "Customer address line with synthetic detail. ".repeat(80)
+            val companyContact = "COMPANY_ADDRESS_SENTINEL " + "Company address line with synthetic detail. ".repeat(80)
+            val snapshot = InvoiceStore.Snapshot(
+                number = "INV-LAYOUT-$style", created = System.currentTimeMillis(), style = style,
+                currency = "USD", digits = 2, company = "RIGHT COMPANY SENTINEL", companyContact = companyContact,
+                customer = "LEFT CUSTOMER SENTINEL", customerContact = customerContact,
+                job = "Layout fixture", period = "2026-11-13 — 2026-11-13 · UTC", basis = "Synthetic layout fixture",
+                header = "", footer = "", total = "119.99", email = "", subject = "", body = "", lines = emptyList(),
+                subtotal = "111.11", taxRateUnits = 80000, taxAmount = "8.88",
+            )
+            val bytes = InvoicePdf.generate(snapshot)
+            val file = File.createTempFile("party-layout-", ".pdf", app.cacheDir)
+            try {
+                file.writeBytes(bytes)
+                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                    PdfRenderer(descriptor).use { pdf ->
+                        assertTrue("Long party details should wrap and paginate: $style", pdf.pageCount > 1)
+                        val extractedPages = mutableListOf<String>()
+                        val markers = listOf(
+                            "LEFT CUSTOMER SENTINEL",
+                            "RIGHT COMPANY SENTINEL",
+                            "CUSTOMER_ADDRESS_SENTINEL",
+                            "COMPANY_ADDRESS_SENTINEL",
+                            "8.88",
+                        )
+                        val boundsByMarker = markers.associateWith { mutableListOf<android.graphics.RectF>() }
+                        for (index in 0 until pdf.pageCount) pdf.openPage(index).use { page ->
+                            if (index == 0) {
+                                val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
+                                try {
+                                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                    File(directory, "clockrove-party-layout-${style.lowercase(Locale.ROOT)}.png").outputStream().use {
+                                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                                    }
+                                } finally { bitmap.recycle() }
+                            }
+                            if (android.os.Build.VERSION.SDK_INT >= 35) {
+                                extractedPages += CopyPdfTextApi35.read(page)
+                                for (marker in markers) {
+                                    boundsByMarker.getValue(marker).addAll(
+                                        CopyPdfTextApi35.searchBounds(page, marker),
+                                    )
+                                }
+                            }
+                        }
+                        if (android.os.Build.VERSION.SDK_INT >= 35) {
+                            fun compactText(value: String) = value.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "").uppercase(Locale.ROOT)
+                            val extracted = compactText(extractedPages.joinToString(""))
+                            assertTrue(extracted.contains(compactText("LEFT CUSTOMER SENTINEL")))
+                            assertTrue(extracted.contains(compactText("RIGHT COMPANY SENTINEL")))
+                            assertTrue(extracted.contains(compactText("CUSTOMER_ADDRESS_SENTINEL")))
+                            assertTrue(extracted.contains(compactText("COMPANY_ADDRESS_SENTINEL")))
+                            fun markerBounds(marker: String) = boundsByMarker.getValue(marker)
+                            val leftBounds = markerBounds("LEFT CUSTOMER SENTINEL")
+                            val rightBounds = markerBounds("RIGHT COMPANY SENTINEL")
+                            val customerAddressBounds = markerBounds("CUSTOMER_ADDRESS_SENTINEL")
+                            val companyAddressBounds = markerBounds("COMPANY_ADDRESS_SENTINEL")
+                            assertTrue(
+                                "Customer name must be in the left 47% column; bounds=$leftBounds, " +
+                                    "expected x=43..${44f + columnWidth + 1f}",
+                                leftBounds.isNotEmpty() && leftBounds.all {
+                                    it.left >= 43f && it.right <= 44f + columnWidth + 1f
+                                },
+                            )
+                            assertTrue(
+                                "Company name must be in the right 47% column; bounds=$rightBounds, " +
+                                    "expected x=${rightColumnX - 1f}..552",
+                                rightBounds.isNotEmpty() && rightBounds.all {
+                                    it.left >= rightColumnX - 1f && it.right <= 552f
+                                },
+                            )
+                            assertTrue("Customer contact must wrap within the left 47% column", customerAddressBounds.isNotEmpty() && customerAddressBounds.all { it.left >= 43f && it.right <= 44f + columnWidth + 1f && it.width() <= columnWidth + 1f })
+                            assertTrue("Company contact must wrap within the right 47% column", companyAddressBounds.isNotEmpty() && companyAddressBounds.all { it.left >= rightColumnX - 1f && it.right <= 552f && it.width() <= columnWidth + 1f })
+                            val taxNumberBounds = markerBounds("8.88")
+                            assertTrue("Tax amount should be present", taxNumberBounds.isNotEmpty())
+                            assertTrue("Tax amount should align to the invoice right edge", kotlin.math.abs(taxNumberBounds.maxOf { it.right } - 551f) < 2f)
+                        }
+                    }
+                }
+            } finally { file.delete() }
+        }
+    }
+
     @Test fun nativePaymentsProduceAllStylePartialPaidBalanceCorrectionAndWideCopies() {
         val before = repository.businessSnapshot().settings
         try {
@@ -182,8 +314,10 @@ class InvoiceCopiesPdfTest {
     }
 }
 
-/** Isolate API-35-only reflection from Android 7. */
+/** Isolate API-35-only PDF APIs from Android 7. */
 @android.annotation.TargetApi(35)
-private object CopyPdfTextApi35 {
+internal object CopyPdfTextApi35 {
     fun read(page: PdfRenderer.Page): String = page.textContents.joinToString(" ") { it.text }
+    fun searchBounds(page: PdfRenderer.Page, marker: String): List<android.graphics.RectF> =
+        page.searchText(marker).flatMap { match -> match.bounds.map { android.graphics.RectF(it) } }
 }

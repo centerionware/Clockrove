@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -13,11 +14,13 @@ class TileBackoffClient extends http.BaseClient {
     this._inner, {
     DateTime Function()? now,
     TileBackoffState? state,
+    this.requestTimeout = const Duration(seconds: 12),
   }) : _now = now ?? DateTime.now,
        _state = state ?? _sharedState;
 
   static final _sharedState = TileBackoffState();
   final TileBackoffState _state;
+  final Duration requestTimeout;
 
   final http.Client _inner;
   final DateTime Function() _now;
@@ -29,7 +32,12 @@ class TileBackoffClient extends http.BaseClient {
     if (until != null && now.isBefore(until)) {
       throw http.ClientException('Map server is temporarily unavailable');
     }
-    final response = await _inner.send(request);
+    final http.StreamedResponse response;
+    try {
+      response = await _inner.send(request).timeout(requestTimeout);
+    } on TimeoutException {
+      throw http.ClientException('Map tile request timed out', request.url);
+    }
     if (response.statusCode == 429 || response.statusCode == 503) {
       final header = response.headers['retry-after'];
       DateTime? deadline;
@@ -57,7 +65,16 @@ class TileBackoffClient extends http.BaseClient {
           ? previous
           : pause;
     }
-    return response;
+    return http.StreamedResponse(
+      response.stream.timeout(requestTimeout),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: response.request,
+      headers: response.headers,
+      isRedirect: response.isRedirect,
+      persistentConnection: response.persistentConnection,
+      reasonPhrase: response.reasonPhrase,
+    );
   }
 
   @override

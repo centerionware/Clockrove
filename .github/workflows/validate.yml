@@ -92,6 +92,17 @@ jobs:
           path: ${{ runner.temp }}/format.patch
           retention-days: 1
           if-no-files-found: ignore
+      - name: Annotate formatter correction for source review
+        if: always() && steps.format.outcome == 'failure'
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP/format.patch" <<'PY_FORMAT'
+          import pathlib
+          import sys
+          patch = pathlib.Path(sys.argv[1]).read_text(errors='replace')[:6000]
+          escaped = patch.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print(f'::error title=Dart formatter correction::{escaped or "Formatter patch was empty"}')
+          PY_FORMAT
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Test implemented behavior
@@ -126,7 +137,7 @@ jobs:
       - name: Real Android PDF generation and rendering on API 24 and 35
         run: bash scripts/ci-android-pdf.sh
       - name: Check invoice viewer using actual Android-generated pages
-        run: flutter test --no-pub test/invoice_document_preview_test.dart --dart-define=CLOCKROVE_DEVICE_PREVIEW=true
+        run: flutter test --no-pub test/invoice_document_preview_test.dart test/quote_document_preview_test.dart --dart-define=CLOCKROVE_DEVICE_PREVIEW=true
       - name: Export actual-document Flutter previews
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

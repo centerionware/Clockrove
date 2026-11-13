@@ -84,13 +84,13 @@ void main() {
       );
       await tester.enterText(find.byType(TextFormField).at(1), 'NaN');
       await tester.enterText(find.byType(TextFormField).at(2), '181');
-      await tester.enterText(find.byType(TextFormField).at(3), '149');
+      await tester.enterText(find.byType(TextFormField).at(3), '1.79');
       await _reveal(tester, 'Save site');
       await tester.tap(find.text('Save site'));
       await tester.pumpAndSettle();
       expect(find.text('Enter a number from -90 to 90.'), findsOneWidget);
       expect(find.text('Enter a number from -180 to 180.'), findsOneWidget);
-      expect(find.text('Enter a number from 150 to 10000.'), findsOneWidget);
+      expect(find.text('Enter a number from 1.8 to 10000.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -111,7 +111,7 @@ void main() {
       await _reveal(tester, 'Save site');
       await tester.tap(find.text('Save site'));
       await tester.pumpAndSettle();
-      expect(api.sites.single.radius, 150);
+      expect(api.sites.single.radius, 30);
       expect(api.settings.enabled, isFalse);
       await _reveal(tester, 'Riverside studio');
       await tester.tap(find.text('Riverside studio'));

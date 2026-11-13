@@ -5,6 +5,13 @@ reference implementation is `ClockroveTheme` and the timer screen, validated in
 Actions run 42996201315 and visually reviewed in both light and dark previews.
 It is not a full launch acceptance pass or physical-device result.
 
+The owner's usability bar is that the interface should be “so intuitive a
+trained monkey could use it.” Common first-use tasks should need no training or
+guessing: use plain labels, obvious next actions, consistent controls, and
+actionable explanations for errors and permission states. Expose advanced choices
+when relevant, and check each feature's main path from a first-time user's point
+of view. Full-release E2E review includes representative first-use journeys.
+
 Use the forest-green/neutral light palette and mint/deep-green dark palette in
 app_theme.dart. Keep one strong primary action per context, clear typography,
 tabular elapsed digits, generous spacing and quiet grouped surfaces. Content
@@ -23,6 +30,23 @@ delivery. Manual timing remains available when location permission is denied.
 Future boards/reports/backup screens should reuse the same palette, spacing,
 control hierarchy and explicit error states. Avoid unprompted technical details
 in product copy.
+
+Home-screen widgets use a transparent outer surface with a visible, restrained
+border instead of an opaque card background. Preserve readable foreground
+content and usable controls across light and dark launcher wallpapers. Review
+Actions-rendered captures of Timer, Tasks and Combined at compact and expanded
+sizes against contrasting wallpapers before release.
+
+Invoice and quote PDFs put customer billing details on the left and company
+details on the right, with each column limited to 47% of printable width. Long
+names and contact/address text wrap within their column and paginate without
+clipping. Keep subtotal/tax rows flush right; use regular weight for labels and
+tax rates and bold only for the numeric subtotal/tax amounts. Review generated
+PDF pages for all three document styles in Actions.
+Place a **Preview invoice** action immediately below the style selector in main
+Settings. It opens a paginated preview from the real native renderer using the
+current selection, saved logo if present and clearly identified synthetic data;
+it does not create or send an invoice.
 
 Synthetic light/dark previews are rendered in GitHub Actions, not on the VM.
 Review actual images and interaction/accessibility test results before merging

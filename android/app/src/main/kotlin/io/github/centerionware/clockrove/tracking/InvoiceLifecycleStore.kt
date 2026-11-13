@@ -143,6 +143,7 @@ internal object InvoiceLifecycleStore {
         // From here, unexpected SQL/revision failures throw and roll back the whole command.
         db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) SELECT ?,job_id,customer_id,?,?,?,logo_id FROM invoices WHERE id=?",
             arrayOf<Any?>(value.replacementId, number, at, payload, value.invoiceId))
+        QuoteInvoiceStore.copyOrigin(db, before.invoice, value.replacementId, at)
         transferCoverage(db, before.invoice, value.replacementId, held, value.releaseClaimIds.toSet(), added, at)
         transferPayments(db, before, InvoiceStore.read(db, value.replacementId), replacement, value.timezone, at)
         retainVoid(db, before, value.replacementId, value.reason, value.timezone, at)

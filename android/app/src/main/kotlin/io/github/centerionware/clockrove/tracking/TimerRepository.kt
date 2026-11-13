@@ -491,6 +491,87 @@ class TimerRepository internal constructor(context: Context,
     internal fun deleteSession(id: String, version: Long, sessionId: String): Outcome =
         boardChange(id, version, "SESSION_DELETE", listOf(sessionId)) { SessionHistoryStore.remove(it, sessionId, wallClock()) }
 
+    internal data class QuoteContext(val version: Long, val draft: QuoteStore.Draft?, val latest: QuoteStore.Revision?,
+        val draftDigits: Int?, val today: String, val timezone: String,
+        val draftCustomer: String, val draftEmail: String, val draftCompany: String, val draftStyle: String)
+    @Synchronized
+    internal fun quote(id: String): QuoteContext {
+        val db = helper.readableDatabase; val draft = QuoteStore.draft(db, id)
+        val zone = java.util.TimeZone.getDefault()
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = zone }.format(java.util.Date(wallClock()))
+        val customer = draft?.customerId?.let { customerId -> BusinessStore.customers(db).firstOrNull { it.id == customerId } }
+        val company = draft?.let { BusinessStore.settings(db) }
+        return QuoteContext(readSnapshot(db).version, draft, QuoteStore.latest(db, id),
+            draft?.let { QuoteStore.currencyDigits(db, id, it.currency) }, today, zone.id,
+            customer?.name.orEmpty(), customer?.email.orEmpty(), company?.companyName.orEmpty(), company?.invoiceStyle.orEmpty())
+    }
+    @Synchronized
+    internal fun quoteRevision(id: String, revision: Int): QuoteStore.Revision? = QuoteStore.revision(helper.readableDatabase, id, revision)
+    @Synchronized
+    internal fun quoteCurrencyDigits(id: String?, currency: String): Int = QuoteStore.currencyDigits(helper.readableDatabase, id, currency)
+    @Synchronized
+    internal fun quoteDocument(id: String, revision: Int): InvoiceStore.Record = QuoteStore.document(helper.readableDatabase, id, revision)
+    @Synchronized
+    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray): Boolean = QuoteStore.cachePdf(helper.writableDatabase, id, revision, payload, bytes)
+    @Synchronized
+    internal fun quoteHistory(id: String, before: Int? = null, limit: Int = 20): List<QuoteStore.RevisionSummary> =
+        QuoteStore.history(helper.readableDatabase, id, before, limit)
+    internal data class QuoteIndex(val version: Long, val today: String, val timezone: String, val page: QuoteStore.Page)
+    @Synchronized
+    internal fun quotes(before: QuoteStore.Cursor? = null, limit: Int = 20, status: String? = null): QuoteIndex {
+        val db = helper.readableDatabase; val zone = java.util.TimeZone.getDefault()
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = zone }.format(java.util.Date(wallClock()))
+        return QuoteIndex(readSnapshot(db).version, today, zone.id, QuoteStore.index(db, today, before, limit, status))
+    }
+    @Synchronized
+    internal fun applyQuoteScope(id: String, version: Long, value: QuoteScopeStore.Draft): Outcome =
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_SCOPE_APPLY") + value.values()).toString()), version) { QuoteScopeStore.apply(it, value, wallClock()) }
+    @Synchronized
+    internal fun quoteScope(id: String): Pair<Long, List<QuoteScopeStore.Binding>> =
+        readSnapshot(helper.readableDatabase).version to QuoteScopeStore.bindings(helper.readableDatabase, id)
+    internal data class ScopeJobChoice(val id: String, val name: String, val mode: String, val currency: String, val archived: Boolean)
+    internal data class QuoteScopeContext(val version: Long, val issued: QuoteStore.Revision, val latestRevision: Int,
+        val bindings: List<QuoteScopeStore.Binding>, val linkedLines: Set<String>, val jobs: List<ScopeJobChoice>,
+        val target: BusinessStore.JobDetail?, val board: BoardStore.Board?, val taskOwners: Map<String, Pair<String, String>>)
+    @Synchronized
+    internal fun quoteScopeContext(id: String, revision: Int, jobId: String?): QuoteScopeContext {
+        val db = helper.readableDatabase
+        val issued = requireNotNull(QuoteStore.revision(db, id, revision)) { "QUOTE_UNAVAILABLE" }
+        val jobs = db.rawQuery("SELECT id,name,billing_mode,currency,archived FROM jobs ORDER BY name,id", null).use { rows -> buildList {
+            while (rows.moveToNext()) add(ScopeJobChoice(rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3), rows.getInt(4) != 0))
+        } }
+        val board = jobId?.takeIf { candidate -> jobs.any { it.id == candidate } }?.let { BoardStore.read(db, it) }
+        val linked = db.rawQuery("SELECT line_id FROM quote_scope_revisions WHERE quote_id=? AND revision=?", arrayOf(id, revision.toString())).use { rows -> buildSet {
+            while (rows.moveToNext()) add(rows.getString(0))
+        } }
+        val owners = if (board == null) emptyMap() else db.rawQuery("SELECT task_id,quote_id,line_id FROM quote_scope_lines WHERE job_id=?", arrayOf(board.jobId)).use { rows -> buildMap {
+            while (rows.moveToNext()) put(rows.getString(0), rows.getString(1) to rows.getString(2))
+        } }
+        return QuoteScopeContext(readSnapshot(db).version, issued, requireNotNull(QuoteStore.latest(db, id)).revision,
+            QuoteScopeStore.bindings(db, id), linked, jobs, board?.let { BusinessStore.job(db, it.jobId) }, board, owners)
+    }
+    internal data class QuoteActualReview(val version: Long, val result: QuoteInvoiceReviewStore.Read)
+    @Synchronized
+    internal fun quoteActualReview(request: QuoteInvoiceReviewStore.Request): QuoteActualReview =
+        QuoteActualReview(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.read(helper.readableDatabase, request))
+    internal data class QuoteInvoiceCalculation(val version: Long, val result: QuoteInvoiceReviewStore.Review)
+    @Synchronized
+    internal fun calculateQuoteInvoice(request: QuoteInvoiceReviewStore.Request, choices: QuoteInvoiceReviewStore.Choices): QuoteInvoiceCalculation =
+        QuoteInvoiceCalculation(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.review(helper.readableDatabase, request, choices))
+    @Synchronized
+    internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft): Outcome =
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) { QuoteInvoiceStore.prepare(it, value, wallClock()) }
+    @Synchronized
+    internal fun quoteInvoices(id: String, before: Pair<Long, String>? = null, limit: Int = 20): List<QuoteInvoiceStore.Summary> = QuoteInvoiceStore.links(helper.readableDatabase, id, before, limit)
+    @Synchronized
+    internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
+        boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
+    @Synchronized
+    internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean): Outcome =
+        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) { QuoteStore.issue(it, quoteId, confirmed, wallClock()) }
+    @Synchronized
+    internal fun decideQuote(id: String, version: Long, quoteId: String, revision: Int, decision: String, note: String, confirmed: Boolean): Outcome =
+        boardChange(id, version, "QUOTE_DECIDE", listOf(quoteId, revision, decision, note, confirmed)) { QuoteStore.decide(it, quoteId, revision, decision, note, confirmed, wallClock()) }
     @Synchronized
     internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
@@ -886,7 +967,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 8) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 9) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -903,6 +984,7 @@ class TimerRepository internal constructor(context: Context,
             WidgetConfigurationStore.install(db)
             InvoiceCoverageStore.install(db, now())
             InvoicePaymentStore.install(db)
+            QuoteStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -913,7 +995,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..7 && newVersion == 8) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..8 && newVersion == 9) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -921,6 +1003,8 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 6) WidgetConfigurationStore.install(db)
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
             if (oldVersion < 8) InvoicePaymentStore.install(db)
+            if (oldVersion < 9) QuoteStore.install(db)
+            if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }
 

@@ -69,6 +69,41 @@ class _BusinessCommandState extends State<BusinessCommand>
   }
 
   String _conflict(String? value) => switch (value) {
+    'INVALID_MONEY' => 'Enter an exact nonnegative price within the supported length. Your draft is kept.',
+    'INVALID_CURRENCY' => 'Choose a supported currency. Your draft is kept.',
+    'CUSTOMER_UNAVAILABLE' => 'This customer is unavailable. Choose another customer or clear the selection.',
+    'EMAIL_TOO_LARGE' => 'The expanded email is too long. Shorten the email template or document details.',
+    'INVALID_QUOTE_INVOICE' => 'Review the selected actual work and add a private note before confirming the invoice.',
+    'INVALID_QUOTE_INVOICE_SOURCES' => 'Select completed tasks for task-rate work or finalized time for hourly work.',
+    'QUOTE_INVOICE_MAPPING_REQUIRED' => 'Review and link this job’s scope to the accepted revision before preparing its invoice.',
+    'QUOTE_INVOICE_SOURCES_CHANGED' => 'Selected work changed or was already invoiced. Refresh available work and review the remaining sources.',
+    'INVALID_REPORT_RANGE' =>
+      'Review the date range and timezone, then refresh available work.',
+    'INVALID_QUOTE_SCOPE' => 'Review selected lines, task names and your private scope note. Your draft is kept.',
+    'QUOTE_UNAVAILABLE' || 'QUOTE_LINE_UNAVAILABLE' => 'This issued quote or line is unavailable. Refresh its revision before planning.',
+    'QUOTE_ACCEPTANCE_REQUIRED' => 'Record explicit local acceptance for this revision before planning work.',
+    'QUOTE_HISTORICAL_REVIEW_REQUIRED' => 'Review and acknowledge the historical accepted revision before planning.',
+    'QUOTE_CURRENCY_PRECISION_CHANGED' => 'The currency precision changed since issue. Review a new quote revision before planning.',
+    'QUOTE_JOB_MODE_MISMATCH' || 'QUOTE_SCOPE_SPLIT_REQUIRED' => 'Choose a compatible job for each fixed-price or agreed hourly-rate group.',
+    'QUOTE_JOB_REVIEW_REQUIRED' => 'Review the existing job’s customer, tax and hourly rate differences before applying.',
+    'QUOTE_SCOPE_ALREADY_MAPPED' || 'QUOTE_TASK_ALREADY_MAPPED' => 'This line or task already belongs to a retained quote plan. Refresh and reuse its existing mapping.',
+    'QUOTE_SCOPE_KIND_CHANGED' => 'A retained line cannot change its billing kind. Add a new quote line for the changed scope.',
+    'QUOTE_SCOPE_OPEN_COLUMN_REQUIRED' =>
+      'Add an open board column before creating planning tasks.',
+    'TASK_UNAVAILABLE' => 'This retained task was removed. Choose existing work or add a new quote line; deleted identities cannot be recreated.',
+    'JOB_ID_EXISTS' || 'TASK_ID_EXISTS' => 'This planning identity already exists. Refresh the retained plan before applying.',
+    'INVALID_QUOTE' || 'INVALID_QUOTE_LINE' =>
+      'Review the quote title and line descriptions. Your draft is kept.',
+    'INVALID_QUOTE_DATE' => 'Enter a real validity date as YYYY-MM-DD, or leave it blank. Your draft is kept.',
+    'QUOTE_TOO_LARGE' => 'This quote is too large. Shorten its details or split its scope into separate quotes.',
+    'QUOTE_CONFIRMATION_REQUIRED' =>
+      'Review the quote before confirming issue.',
+    'QUOTE_DRAFT_UNAVAILABLE' => 'This draft was already issued or is no longer available. Refresh the quote.',
+    'QUOTE_REVISION_CHANGED' => 'A newer revision exists. Refresh and review it before recording a decision.',
+    'QUOTE_ALREADY_DECIDED' => 'This revision already has a local decision. Its recorded history is retained.',
+    'QUOTE_SEQUENCE_EXHAUSTED' || 'QUOTE_REVISION_EXHAUSTED' =>
+      'The quote numbering limit was reached. Existing documents are retained.',
+    'INVALID_QUOTE_DECISION' => 'Confirm the revision and add a note describing the local acceptance or decline.',
     'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',

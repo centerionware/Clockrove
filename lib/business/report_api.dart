@@ -405,6 +405,30 @@ class ReportApi {
     );
   }
 
+  Future<InvoicePage> previewStyle({
+    required String style,
+    required String currency,
+    required int digits,
+    required Uint8List? logo,
+    required int page,
+  }) async {
+    final value = (await _documents.invokeMapMethod<Object?, Object?>(
+      'settingsInvoicePreview',
+      {
+        'style': style,
+        'currency': currency,
+        'digits': digits,
+        'logo': logo,
+        'page': page,
+      },
+    ))!;
+    return InvoicePage(
+      value['page'] as int,
+      value['pages'] as int,
+      value['png'] as Uint8List,
+    );
+  }
+
   Future<void> emailCopy(String id, String copyId) => _documents
       .invokeMethod<void>('emailInvoice', {'invoiceId': id, 'copyId': copyId});
   Future<void> shareCopy(String id, String copyId) => _documents

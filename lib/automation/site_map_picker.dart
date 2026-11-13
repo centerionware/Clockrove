@@ -80,6 +80,27 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     }
   }
 
+  Future<void> _openExternalMap() async {
+    final point = _point;
+    if (point == null) return;
+    final latitude = point.latitude.toStringAsFixed(6);
+    final longitude = point.longitude.toStringAsFixed(6);
+    final uri = Uri.https('www.openstreetmap.org', '/', {
+      'mlat': latitude,
+      'mlon': longitude,
+    }).replace(fragment: 'map=17/$latitude/$longitude');
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Site coordinates remain editable if no browser is available.
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The map could not be opened.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -103,7 +124,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                       ),
                       const Text(AppStrings.mapPrivacy),
                       Text(
-                        'Radius: ${widget.radius.toStringAsFixed(0)} m. Accuracy and arrival/departure delivery can vary.',
+                        'Radius: ${widget.radius.toStringAsFixed(widget.radius < 10 ? 1 : 0)} m. Accuracy and arrival/departure delivery can vary.',
                       ),
                       if (widget.latitude != null &&
                           widget.latitude!.abs() > 85)
@@ -111,10 +132,21 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                           'This map cannot display polar locations. You can keep or edit those coordinates in the site form.',
                         ),
                       if (_failed)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            'Map tiles are unavailable. Go back to enter coordinates or use current location.',
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Text(
+                                'Map tiles are unavailable. Go back to enter coordinates or use current location.',
+                              ),
+                              if (_point != null)
+                                TextButton.icon(
+                                  onPressed: _openExternalMap,
+                                  icon: const Icon(Icons.open_in_new),
+                                  label: const Text('Open map'),
+                                ),
+                            ],
                           ),
                         ),
                     ],

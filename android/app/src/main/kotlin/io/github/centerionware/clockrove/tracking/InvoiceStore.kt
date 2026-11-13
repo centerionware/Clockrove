@@ -13,7 +13,7 @@ import org.json.JSONObject
 
 /** Immutable prepared invoice data; rendering is derived outside the write lock. */
 internal object InvoiceStore {
-    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE")
+    data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE", val quoteRevision: Int? = null)
     data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null, val unitPriceMinor: String? = null)
     data class Statement(val kind: String, val status: String, val created: Long, val paid: String, val due: String,
         val events: List<Line>, val reference: String = "") {
@@ -78,6 +78,14 @@ internal object InvoiceStore {
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         val preview = InvoiceCoverageStore.preview(db, ReportStore.read(db, selection))
+        return prepareReviewed(db, id, preview, at)
+    }
+    /** Quote caller supplies a native revalidated report, never client amounts. */
+    fun prepareReviewed(db: SQLiteDatabase, id: String, preview: InvoiceCoverageStore.Preview, at: Long,
+        agreement: QuoteInvoiceReviewStore.Reviewed? = null): String? {
+        val selection = preview.report.selection
+        if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
+        if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         coverageProblem(preview)?.let { return it }
         val report = preview.report
         val total = report.totals.single()
@@ -85,32 +93,39 @@ internal object InvoiceStore {
         val job = BusinessStore.job(db, selection.jobIds.single()); val company = BusinessStore.settings(db)
         if (!InvoiceEmailTemplate.valid(company.emailSubject, true)) return "INVALID_EMAIL_SUBJECT"
         if (!InvoiceEmailTemplate.valid(company.emailBody, false)) return "INVALID_EMAIL_BODY"
-        if (!TaxRate.valid(job.effectiveTaxUnits)) return "INVALID_TAX_RATE"
+        val taxUnits = agreement?.taxUnits ?: job.effectiveTaxUnits
+        if (!TaxRate.valid(taxUnits)) return "INVALID_TAX_RATE"
+        val accepted = agreement?.takeIf { it.acceptedParty }?.context?.issued?.payload?.let(::JSONObject)
+        val customer = accepted?.getString("customer") ?: job.customer?.name.orEmpty()
+        val email = accepted?.getString("email") ?: job.effectiveEmail
+        val contact = if (accepted == null) listOf(job.customer?.address.orEmpty(), email, job.customer?.phone.orEmpty()).filter { it.isNotBlank() }.joinToString("\n")
+            else listOf(accepted.getString("customerAddress"), email).filter { it.isNotBlank() }.joinToString("\n")
         val sequence = db.rawQuery("SELECT next_invoice_number FROM app_settings WHERE id=1", null).use { it.moveToFirst(); it.getLong(0).coerceAtLeast(1000) }
         if (sequence == Long.MAX_VALUE) return "INVOICE_SEQUENCE_EXHAUSTED"
         val number = "INV-$sequence"
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
-        val tax = TaxRate.amount(amountMinor, job.effectiveTaxUnits)
+        val tax = TaxRate.amount(amountMinor, taxUnits)
         val subtotal = amount(amountMinor, digits)
         val formatted = amount(amountMinor.add(tax), digits)
-        val lines = billableLines(report)
-        val values = mapOf("company_name" to company.companyName, "customer_name" to job.customer?.name.orEmpty(), "job_name" to job.settings.name,
+        val quoteCaption = agreement?.let { "Quote ${it.context.issued.number} · Revision ${it.context.issued.revision}" }
+        val lines = billableLines(report).map { line -> if (quoteCaption == null) line else line.copy(detail = line.detail + "\n" + quoteCaption) }
+        val values = mapOf("company_name" to company.companyName, "customer_name" to customer, "job_name" to job.settings.name,
             "invoice_number" to number, "amount" to formatted, "currency" to total.currency)
         val snapshot = Snapshot(number, at, company.invoiceStyle, total.currency, digits, company.companyName,
             listOf(company.companyEmail, company.companyPhone, company.companyAddress, company.companyWebsite).filter { it.isNotBlank() }.joinToString("\n"),
-            job.customer?.name.orEmpty(), listOf(job.customer?.address.orEmpty(), job.effectiveEmail, job.customer?.phone.orEmpty()).filter { it.isNotBlank() }.joinToString("\n"),
+            customer, contact,
             job.settings.name, "${selection.firstDate} — ${selection.lastDate} · ${selection.timezone}",
-            if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · hourly rate · total rounded half up to ${digits} decimal places",
-            company.invoiceHeader, company.invoiceFooter, formatted, job.effectiveEmail,
+            listOfNotNull(quoteCaption, if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · hourly rate · total rounded half up to ${digits} decimal places").joinToString(" · "),
+            company.invoiceHeader, company.invoiceFooter, formatted, email,
             InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
-            subtotal, job.effectiveTaxUnits, amount(tax, digits))
+            subtotal, taxUnits, amount(tax, digits))
         // A single SQLite cursor row must remain readable even when exact prices
         // or repeated template substitutions are very large. Reject before any
         // number, source claim or immutable document is committed; never truncate.
         val payload = snapshot.encode()
         if (payload.toByteArray(Charsets.UTF_8).size > 1_000_000) return "INVOICE_TOO_LARGE"
         val logoId = db.rawQuery("SELECT logo_id FROM app_settings WHERE id=1", null).use { it.moveToFirst(); if (it.isNull(0)) null else it.getString(0) }
-        db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, total.jobId, job.customer?.id, number, at, payload, logoId))
+        db.execSQL("INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,logo_id) VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(id, total.jobId, if (accepted == null) job.customer?.id else agreement!!.context.agreement.customerId, number, at, payload, logoId))
         InvoiceCoverageStore.reserve(db, id, report, at)
         db.execSQL("UPDATE app_settings SET next_invoice_number=? WHERE id=1", arrayOf<Any?>(sequence + 1))
         RevisionStore.snapshotRows(db, "invoices", "invoice", listOf("id", "job_id", "customer_id", "number", "created_ms", "payload", "logo_id"), at, "job_id", "id=?", arrayOf(id))

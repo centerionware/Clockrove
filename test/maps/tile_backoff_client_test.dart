@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:clockrove/maps/tile_backoff_client.dart';
@@ -75,6 +76,26 @@ void main() {
     now = now.add(const Duration(minutes: 1));
     await client.get(a);
     expect(calls, 3);
+  });
+
+  test('a stalled tile request times out instead of leaving a blank map loading forever', () async {
+    final request = Uri.parse('https://tiles.example/stalled');
+    final client = TileBackoffClient(
+      MockClient((_) => Completer<http.Response>().future),
+      requestTimeout: const Duration(milliseconds: 10),
+      state: TileBackoffState(),
+    );
+    addTearDown(client.close);
+    await expectLater(
+      client.get(request),
+      throwsA(
+        isA<http.ClientException>().having(
+          (error) => error.message,
+          'message',
+          contains('timed out'),
+        ),
+      ),
+    );
   });
 
   test('closing and reopening a map preserves a shared server pause', () async {

@@ -6,6 +6,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.Currency
+import org.json.JSONObject
 
 /** Strict transport codec. All prices cross the channel as decimal integer strings. */
 internal class BusinessHostApi(context: Context, messenger: BinaryMessenger) {
@@ -49,6 +50,70 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     fun call(call: MethodCall): Any? {
         val input = Input((call.arguments ?: emptyMap<String, Any?>()) as Map<*, *>)
         when (call.method) {
+            "currencyPrecision" -> {
+                val currency = input.string("currency"); require(BusinessStore.validCurrency(currency))
+                return mapOf("currency" to currency, "digits" to repository.quoteCurrencyDigits(input.nullable("quoteId"), currency))
+            }
+            "quotes" -> {
+                val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
+                val before = (raw as? Map<*, *>)?.let { Input(it).let { cursor -> QuoteStore.Cursor(cursor.integer("created"), cursor.string("id")) } }
+                val state = repository.quotes(before, if (input.value.containsKey("limit")) input.int("limit") else 20, input.nullable("status"))
+                return mapOf("version" to state.version, "today" to state.today, "timezone" to state.timezone,
+                    "next" to state.page.next?.let { mapOf("created" to it.created, "id" to it.id) },
+                    "entries" to state.page.entries.map { entry -> mapOf("quoteId" to entry.id, "number" to entry.number,
+                        "created" to entry.created, "title" to entry.title, "currency" to entry.currency, "total" to entry.total,
+                        "validUntil" to entry.validUntil, "revision" to entry.revision, "status" to entry.status,
+                        "hasDraft" to entry.hasDraft, "jobId" to entry.jobId, "customer" to entry.customer) })
+            }
+            "quoteRevision" -> return repository.quoteRevision(input.string("quoteId"), input.int("revision"))?.let(::quoteRevision)
+                ?: mapOf("unavailable" to true)
+            "quoteHistory" -> return repository.quoteHistory(input.string("quoteId"), if (input.value["before"] == null) null else input.int("before"),
+                if (input.value.containsKey("limit")) input.int("limit") else 20).map { mapOf("revision" to it.revision, "created" to it.created, "decision" to it.decision) }
+            "quoteScopeContext" -> return repository.quoteScopeContext(input.string("quoteId"), input.int("revision"), input.nullable("jobId")).let { state ->
+                mapOf("version" to state.version, "issued" to quoteRevision(state.issued), "latestRevision" to state.latestRevision,
+                    "linkedLines" to state.linkedLines.toList(),
+                    "bindings" to state.bindings.map { mapOf("lineId" to it.lineId, "jobId" to it.jobId, "taskId" to it.taskId, "kind" to it.kind, "originalRevision" to it.originalRevision) },
+                    "jobs" to state.jobs.map { mapOf("jobId" to it.id, "name" to it.name, "mode" to it.mode, "currency" to it.currency, "archived" to it.archived) },
+                    "target" to state.target?.let { target -> mapOf("jobId" to target.settings.id, "name" to target.settings.name,
+                        "mode" to target.settings.billingMode, "currency" to target.settings.currency, "digits" to Currency.getInstance(target.settings.currency).defaultFractionDigits,
+                        "archived" to target.archived, "customerId" to target.settings.customerId, "customerName" to target.customer?.name, "taxUnits" to target.effectiveTaxUnits,
+                        "hourlyMinor" to target.effectiveHourlyMinor?.toString()) },
+                    "tasks" to state.board?.cards.orEmpty().map { task -> mapOf("taskId" to task.id, "title" to task.title,
+                        "completed" to task.completedMillis, "billable" to task.billable, "unitPriceMinor" to task.priceMinor?.toString(), "quantityUnits" to task.quantityUnits.toString(),
+                        "ownerQuoteId" to state.taskOwners[task.id]?.first, "ownerLineId" to state.taskOwners[task.id]?.second) })
+            }
+            "quoteInvoiceContext" -> return quoteInvoiceContext(repository.quoteActualReview(quoteInvoiceRequest(input)))
+            "calculateQuoteInvoice" -> {
+                val request = quoteInvoiceRequest(Input(requireNotNull(input.value["request"] as? Map<*, *>)))
+                val choices = quoteInvoiceChoices(Input(requireNotNull(input.value["choices"] as? Map<*, *>)))
+                val state = repository.calculateQuoteInvoice(request, choices)
+                val value = state.result.value
+                val subtotal = value?.report?.totals?.single()?.amountMinor
+                val tax = value?.let { TaxRate.amount(requireNotNull(subtotal), it.taxUnits) }
+                val accepted = value?.takeIf { it.acceptedParty }?.context?.issued?.payload?.let(::JSONObject)
+                return mapOf("version" to state.version, "problem" to state.result.problem,
+                    "subtotalMinor" to subtotal?.toString(), "taxMinor" to tax?.toString(), "totalMinor" to subtotal?.add(requireNotNull(tax))?.toString(),
+                    "taxUnits" to value?.taxUnits, "currency" to value?.context?.agreement?.currency, "digits" to value?.context?.digits,
+                    "customer" to (accepted?.getString("customer") ?: value?.context?.job?.customer?.name.orEmpty()),
+                    "email" to (accepted?.getString("email") ?: value?.context?.job?.effectiveEmail.orEmpty()))
+            }
+            "quoteInvoices" -> {
+                val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
+                val before = (raw as Map<*, *>?)?.let { Input(it).let { cursor -> cursor.integer("created") to cursor.string("invoiceId") } }
+                val limit = if (input.value.containsKey("limit")) input.int("limit") else 20
+                val rows = repository.quoteInvoices(input.string("quoteId"), before, limit)
+                return mapOf("invoices" to rows.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "revision" to it.revision, "originalInvoiceId" to it.originalInvoiceId, "created" to it.created, "createdLabel" to ReportCsv.instant(it.created, "UTC")) },
+                    "next" to rows.lastOrNull()?.takeIf { rows.size == limit }?.let { mapOf("created" to it.created, "invoiceId" to it.invoiceId) })
+            }
+            "quoteScope" -> return repository.quoteScope(input.string("quoteId")).let { (version, bindings) ->
+                mapOf("version" to version, "bindings" to bindings.map { mapOf("lineId" to it.lineId, "jobId" to it.jobId,
+                    "taskId" to it.taskId, "kind" to it.kind, "originalRevision" to it.originalRevision) })
+            }
+            "quoteContext" -> return repository.quote(input.string("quoteId")).let { state ->
+                mapOf("version" to state.version, "draftJson" to state.draft?.encode(), "draftDigits" to state.draftDigits, "today" to state.today, "timezone" to state.timezone,
+                    "draftCustomer" to state.draftCustomer, "draftEmail" to state.draftEmail, "draftCompany" to state.draftCompany, "draftStyle" to state.draftStyle,
+                    "latest" to state.latest?.let(::quoteRevision))
+            }
             "resolveSessionTime" -> return SessionTime.resolve(input.string("localTime"), input.string("timezone")).map {
                 mapOf("instant" to it.instant, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
             }
@@ -106,11 +171,32 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice")
+        val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
         return when (call.method) {
+            "prepareQuoteInvoice" -> repository.prepareQuoteInvoice(id, version, QuoteInvoiceStore.Draft(v.string("invoiceId"),
+                quoteInvoiceRequest(Input(requireNotNull(v.value["request"] as? Map<*, *>))),
+                quoteInvoiceChoices(Input(requireNotNull(v.value["choices"] as? Map<*, *>)))))
+            "applyQuoteScope" -> {
+                val rows = requireNotNull(v.value["items"] as? List<*>); require(rows.size in 1..2000)
+                val items = rows.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { item ->
+                    QuoteScopeStore.Item(item.string("lineId"), item.string("taskId"), item.string("title"), item.bool("existing"))
+                } }
+                repository.applyQuoteScope(id, version, QuoteScopeStore.Draft(v.string("quoteId"), v.int("revision"), v.string("jobId"), items,
+                    v.string("note"), v.bool("confirmed"), v.nullable("newJobName"), v.bool("historicalReviewed"), v.bool("jobDifferencesReviewed")))
+            }
+            "saveQuote" -> {
+                val rows = requireNotNull(v.value["lines"] as? List<*>); require(rows.size in 1..2000)
+                val lines = rows.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { line ->
+                    QuoteStore.Line(line.string("lineId"), line.string("title"), line.string("detail"), line.string("kind"), line.string("quantityUnits"), line.string("unitPriceMinor"))
+                } }
+                repository.saveQuote(id, version, QuoteStore.Draft(v.string("quoteId"), v.nullable("customerId"), v.nullable("jobId"),
+                    v.string("title"), v.string("currency"), v.int("taxUnits"), lines, v.nullable("validUntil"), v.string("terms"), v.string("notes")))
+            }
+            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"))
+            "decideQuote" -> repository.decideQuote(id, version, v.string("quoteId"), v.int("revision"), v.string("decision"), v.string("note"), v.bool("confirmed"))
             "voidInvoice" -> repository.voidInvoice(id, version, InvoiceLifecycleStore.VoidDraft(v.string("invoiceId"), v.string("reason"), v.string("timezone"), v.bool("confirmed")))
             "replaceInvoice" -> {
                 val lines = requireNotNull(v.value["lines"] as? List<*>).map { entry ->
@@ -157,6 +243,37 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             else -> error("Unreachable")
         }
     }
+    private fun quoteInvoiceRequest(value: Input) = QuoteInvoiceReviewStore.Request(value.string("quoteId"), value.int("revision"),
+        ReportStore.Selection(value.string("firstDate"), value.string("lastDate"), value.string("timezone"), listOf(value.string("jobId"))))
+    private fun quoteInvoiceChoices(value: Input): QuoteInvoiceReviewStore.Choices {
+        val tasks = value.strings("taskIds"); require(tasks.size <= 2000)
+        val raw = requireNotNull(value.value["times"] as? List<*>); require(raw.size <= 5000)
+        val times = raw.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { QuoteInvoiceReviewStore.Time(it.string("sessionId"), it.integer("start"), it.integer("end")) } }
+        return QuoteInvoiceReviewStore.Choices(tasks, times, value.bool("currentPrices"), value.bool("currentTax"), value.bool("currentParty"),
+            value.string("note"), value.bool("confirmed"), value.bool("historicalReviewed"))
+    }
+    private fun quoteInvoiceContext(state: TimerRepository.QuoteActualReview): Map<String, Any?> {
+        val context = state.result.context ?: return mapOf("version" to state.version, "problem" to state.result.problem)
+        val report = context.coverage.report; val job = context.job; val zone = report.selection.timezone
+        return mapOf("version" to state.version, "problem" to state.result.problem, "issued" to quoteRevision(context.issued),
+            "historical" to context.historical, "mode" to job.settings.billingMode, "currency" to context.agreement.currency, "digits" to context.digits,
+            "jobName" to job.settings.name, "archived" to job.archived, "currentCustomer" to job.customer?.name.orEmpty(), "currentEmail" to job.effectiveEmail,
+            "currentContact" to listOf(job.customer?.address.orEmpty(), job.effectiveEmail, job.customer?.phone.orEmpty()).filter { it.isNotBlank() }.joinToString("\n"),
+            "estimatedHoursUnits" to context.lines.filter { it.kind == "HOURS" }.fold(java.math.BigInteger.ZERO) { sum, line -> sum.add(java.math.BigInteger(line.quantity)) }.toString(),
+            "currentTaxUnits" to job.effectiveTaxUnits, "currentHourlyMinor" to job.effectiveHourlyMinor?.toString(), "acceptedHourlyMinor" to context.acceptedRate?.toString(),
+            "tasks" to context.tasks.map { mapOf("taskId" to it.actual.id, "title" to it.actual.title, "lineId" to it.accepted.id,
+                "actualQuantityUnits" to it.actual.quantityUnits.toString(), "estimatedQuantityUnits" to it.accepted.quantity,
+                "currentUnitPriceMinor" to it.actual.priceMinor?.toString(), "acceptedUnitPriceMinor" to it.accepted.unitPrice,
+                "completedLabel" to ReportCsv.instant(it.actual.completed, zone)) },
+            "times" to report.intervals.map { mapOf("sessionId" to it.sessionId, "start" to it.start, "end" to it.end,
+                "durationMillis" to java.math.BigInteger.valueOf(it.end - it.start).toString(), "label" to "${ReportCsv.instant(it.start, zone)} — ${ReportCsv.instant(it.end, zone)} · $zone") },
+            "excluded" to context.coverage.excluded.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "title" to it.title) },
+            "unfinalized" to report.excluded.map { mapOf("sessionId" to it.sessionId, "reason" to it.reason) },
+            "legacy" to context.coverage.legacy.map { mapOf("invoiceId" to it.first, "number" to it.second) })
+    }
+    private fun quoteRevision(revision: QuoteStore.Revision): Map<String, Any?> = mapOf("quoteId" to revision.quoteId,
+        "revision" to revision.revision, "number" to revision.number, "payload" to revision.payload,
+        "created" to revision.created, "decision" to revision.decision, "decisionNote" to revision.decisionNote)
     private fun invoicePayments(context: TimerRepository.InvoicePaymentContext): Map<String, Any?> {
         val ledger = context.ledger; val document = ledger.document
         return mapOf("version" to context.version, "invoiceId" to ledger.invoice.id, "number" to document.number,
