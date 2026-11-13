@@ -23,9 +23,13 @@ import java.io.File
 class SettingsSaveDeviceTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val automation get() = instrumentation.uiAutomation
+    private fun matchesLabel(value: CharSequence?, label: String): Boolean {
+        val text = value?.toString()?.trim() ?: return false
+        return text == label || text.lineSequence().firstOrNull()?.trim() == label
+    }
     private fun find(label: String): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (node.isVisibleToUser && (node.text?.toString()?.trim() == label || node.contentDescription?.toString()?.trim() == label)) return node
+            if (node.isVisibleToUser && (matchesLabel(node.text, label) || matchesLabel(node.contentDescription, label))) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { result -> return result } }
             return null
         }
