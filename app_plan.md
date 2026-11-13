@@ -94,6 +94,18 @@ Exact-source-license wording, the name check, and store identity/account setup a
 
 ## 3. User-facing behavior
 
+### 3.0 Intuitive first-use experience
+
+The owner's usability bar is that the interface should be “so intuitive a
+trained monkey could use it.” Translate that into product behavior: a first-time
+user should be able to complete common tasks without training or guessing. Keep
+labels plain, make the next useful action obvious, use familiar and consistent
+controls, and reveal advanced choices only when they are relevant. Explain
+validation and permission failures in terms of what happened and how to fix it;
+do not make users infer hidden gestures or recover from silent failures. Review
+each feature's main path from a first-time user's perspective, and include
+representative first-use journeys in the full-release E2E and screenshot review.
+
 ### 3.1 Jobs and manual timekeeping
 
 - A job has a name, color, archive state, board, sites, and automation preferences.
@@ -110,6 +122,12 @@ Exact-source-license wording, the name check, and store identity/account setup a
 - Provide Timer, Tasks and Combined widget types. Combined uses a compact timer-only layout when small and adds a scrollable due-task list when large enough. Task taps open the corresponding job board without starting work.
 - Task lists include overdue work and the next seven calendar days in the current device timezone, excluding completed tasks and archived jobs. A task widget can show all active jobs or one selected job. Keep empty, missing-job and stale-task states explicit.
 - Each widget chooses a default job or picker mode.
+- Every widget has a transparent outer background with a visible, restrained
+  border; do not render an opaque card as the widget surface. Keep text, icons
+  and actions readable against varied launcher wallpapers in light and dark
+  conditions, and preserve comfortable spacing and tap targets. Review rendered
+  captures for each widget type at compact and expanded sizes against contrasting
+  wallpapers before release.
 - When idle, default-job mode starts that job. Picker mode opens the app to active jobs, with **New job** last.
 - If the default job was archived or removed, open the picker with an explanation.
 - When a timer is running, Timer and Combined widgets show the actual running job and offers clock-out, regardless of its configured default.

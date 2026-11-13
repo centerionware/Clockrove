@@ -5,6 +5,13 @@ reference implementation is `ClockroveTheme` and the timer screen, validated in
 Actions run 42996201315 and visually reviewed in both light and dark previews.
 It is not a full launch acceptance pass or physical-device result.
 
+The owner's usability bar is that the interface should be “so intuitive a
+trained monkey could use it.” Common first-use tasks should need no training or
+guessing: use plain labels, obvious next actions, consistent controls, and
+actionable explanations for errors and permission states. Expose advanced choices
+when relevant, and check each feature's main path from a first-time user's point
+of view. Full-release E2E review includes representative first-use journeys.
+
 Use the forest-green/neutral light palette and mint/deep-green dark palette in
 app_theme.dart. Keep one strong primary action per context, clear typography,
 tabular elapsed digits, generous spacing and quiet grouped surfaces. Content
@@ -23,6 +30,12 @@ delivery. Manual timing remains available when location permission is denied.
 Future boards/reports/backup screens should reuse the same palette, spacing,
 control hierarchy and explicit error states. Avoid unprompted technical details
 in product copy.
+
+Home-screen widgets use a transparent outer surface with a visible, restrained
+border instead of an opaque card background. Preserve readable foreground
+content and usable controls across light and dark launcher wallpapers. Review
+Actions-rendered captures of Timer, Tasks and Combined at compact and expanded
+sizes against contrasting wallpapers before release.
 
 Synthetic light/dark previews are rendered in GitHub Actions, not on the VM.
 Review actual images and interaction/accessibility test results before merging
