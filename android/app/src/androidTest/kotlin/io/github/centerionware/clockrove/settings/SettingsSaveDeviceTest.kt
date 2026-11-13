@@ -68,15 +68,24 @@ class SettingsSaveDeviceTest {
         bitmap.recycle()
     }
     private fun reveal(label: String) {
-        repeat(60) {
-            if (find(label) != null) return
-            fun scroll(node: AccessibilityNodeInfo): Boolean {
-                if (node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
-                for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
-                return false
+        fun scroll(node: AccessibilityNodeInfo, direction: Int): Boolean {
+            if (node.isScrollable && node.performAction(direction)) return true
+            for (index in 0 until node.childCount) {
+                node.getChild(index)?.let { if (scroll(it, direction)) return true }
             }
-            automation.rootInActiveWindow?.let(::scroll)
-            SystemClock.sleep(120)
+            return false
+        }
+        for (direction in listOf(
+            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+        )) {
+            var attempts = 0
+            while (attempts++ < 60 && find(label) == null) {
+                val root = automation.rootInActiveWindow ?: break
+                if (!scroll(root, direction)) break
+                SystemClock.sleep(120)
+            }
+            if (find(label) != null) return
         }
         waitFor(label)
     }
