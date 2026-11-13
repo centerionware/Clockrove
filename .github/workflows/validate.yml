@@ -122,8 +122,6 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Validate Android build
-        env:
-          CLOCKROVE_CI_CAMERA_FIXTURE: 'true'
         run: flutter build apk --debug --no-pub
       - name: Native unit tests
         working-directory: android
@@ -137,8 +135,6 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Real Android PDF generation and rendering on API 24 and 35
-        env:
-          CLOCKROVE_CI_CAMERA_FIXTURE: 'true'
         run: bash scripts/ci-android-pdf.sh
       - name: Check invoice viewer using actual Android-generated pages
         run: flutter test --no-pub test/invoice_document_preview_test.dart test/quote_document_preview_test.dart --dart-define=CLOCKROVE_DEVICE_PREVIEW=true

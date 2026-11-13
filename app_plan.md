@@ -87,9 +87,11 @@ remains M7.6 after M6.5, M6.6 and backup M7.
 
 The first debug-APK handler attempt (`fb90455`, run `43478660042`) reproduced the
 same API-35 ActivityNotFound fallback: merely registering a debug implicit
-handler was not reliable. The next revision gates a deterministic explicit
-component to the Actions-built debug APK only, with a separate CI environment
-flag; physical/release builds continue to launch the device's camera app.
+handler was not reliable. The next explicit-component attempt (`851d064`, run
+`43482510219`) also displayed that fallback on API 24, so its test capture did
+not pass. The current revision uses an instrumentation-set preference that
+routes only a debuggable app to the non-exported fixture component; ordinary
+debug and release builds continue to launch the device's camera app.
 
 After M6.5, complete M7 backup and the remaining requested business features.
 Only after all launch functionality is implemented, M7.6 is the whole-app

@@ -1,6 +1,9 @@
 package io.github.centerionware.quotetest
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.os.SystemClock
@@ -228,8 +231,19 @@ class TaskConversationDeviceTest {
                 android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
-        app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val cameraFixturePreferences = app.getSharedPreferences("clockrove_ci_test_flags", Context.MODE_PRIVATE)
+        assertTrue("CI camera fixture preference must be saved", cameraFixturePreferences.edit()
+            .putBoolean("camera_fixture", true).commit())
+        assertTrue("Task media journey requires the debug APK",
+            (app.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
+        val cameraFixture = ComponentName(
+            app.packageName,
+            "io.github.centerionware.clockrove.testsupport.TaskPhotoCameraActivity",
+        )
+        assertTrue("Debug camera fixture activity must be installed", app.packageManager
+            .getActivityInfo(cameraFixture, 0).enabled)
         try {
+            app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             click("Synthetic task photo job")
             waitFor("Task board")
             click("Job settings")
@@ -316,6 +330,7 @@ class TaskConversationDeviceTest {
                 }
             }
             instrumentation.waitForIdleSync()
+            cameraFixturePreferences.edit().remove("camera_fixture").commit()
         }
     }
 }

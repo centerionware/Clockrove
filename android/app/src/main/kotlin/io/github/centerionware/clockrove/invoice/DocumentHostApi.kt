@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.invoice
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
@@ -175,9 +176,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
 
     private fun isCiCameraFixtureEnabled(): Boolean =
         (activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
-            activity.applicationInfo.metaData?.getBoolean(
-                "io.github.centerionware.clockrove.CI_CAMERA_FIXTURE",
-            ) == true
+            activity.getSharedPreferences("clockrove_ci_test_flags", Context.MODE_PRIVATE)
+                .getBoolean("camera_fixture", false)
 
     fun activityResult(code: Int, status: Int, data: Intent?): Boolean {
         if (code == 0xcc44 || code == 0xcc45) {
