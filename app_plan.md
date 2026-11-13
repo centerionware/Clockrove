@@ -74,6 +74,17 @@ this run. Add the same touch fallback to the payment-device helper and rerun the
 exact head. No local build/test/formatter has run. Physical map, camera and GPS
 acceptance remains separate.
 
+The exact-head run `43473888142` then validated `baa38a4`: format, analysis,
+Flutter tests, Android build and native tests passed. API 24 passed the 23 base
+device cases plus billing, copies, payment, quote and task-media journeys. API 35
+passed those same cases through quote, but task-media could not resolve its
+deterministic camera activity and displayed the app's expected “No camera app is
+available” state. Moved the synthetic handler into the debug APK so the
+production `ACTION_IMAGE_CAPTURE` and temporary output-URI flow can be exercised
+reliably without adding a camera implementation to release builds. Validate this
+correction on API 24 and 35 before accepting M6.5. The whole-app UI/E2E milestone
+remains M7.6 after M6.5, M6.6 and backup M7.
+
 After M6.5, complete M7 backup and the remaining requested business features.
 Only after all launch functionality is implemented, M7.6 is the whole-app
 first-use UI overhaul and exhaustive actual-app E2E/screenshot inventory. The

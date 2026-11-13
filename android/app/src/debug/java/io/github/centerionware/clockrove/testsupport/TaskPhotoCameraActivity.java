@@ -1,4 +1,4 @@
-package io.github.centerionware.quotetest;
+package io.github.centerionware.clockrove.testsupport;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -12,7 +12,7 @@ import android.provider.MediaStore;
 import java.io.OutputStream;
 import java.util.Objects;
 
-/** Test camera for exercising the real ACTION_IMAGE_CAPTURE and URI grant path. */
+/** Debug-only deterministic camera for exercising Clockrove's real capture-intent path. */
 public final class TaskPhotoCameraActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -1,15 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity
-            android:name="io.github.centerionware.quotetest.TaskPhotoCameraActivity"
-            android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
-            <intent-filter android:priority="1000">
-                <action android:name="android.media.action.IMAGE_CAPTURE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name="io.github.centerionware.quotetest.TaskPhotoGalleryActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
