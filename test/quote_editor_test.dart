@@ -143,7 +143,7 @@ void main() {
       final descriptions = find.byWidgetPredicate(
         (widget) =>
             widget is TextField &&
-            widget.decoration.labelText == 'Description',
+            widget.decoration?.labelText == 'Description',
       );
       expect(descriptions, findsNWidgets(2));
       await _reveal(tester, descriptions.at(1), 400);
