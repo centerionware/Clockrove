@@ -2546,5 +2546,26 @@ accounts-receivable field. The field exists in the accessibility tree below the
 viewport with `visible=false`; API 24 completed the same payment journey. This is
 recorded as an API-35 test-scroll issue, not a PDF failure. The payment journey's
 `reveal` helper now searches child nodes before scrolling the container, matching
-the route helper used elsewhere. This edit awaits Actions; keep #39 draft until
-the full API-24/35 run passes and final-run PDF images are reviewed.
+the route helper used elsewhere. The correction was included in the subsequent
+full Actions run 43373569280, which passed; see the final acceptance record below.
+
+### 2026-11-13 — invoice hierarchy and preview passed Actions
+
+Run 43373569280 on source head `751f13b` passed the full Validate workflow:
+formatting, analysis, Flutter behavior, Android debug build, 563 native tests,
+and 30 actual Android cases each on API 24 and API 35, with zero failures,
+errors or skips. This includes all five invoice/quote PDF-copy cases on both
+APIs and the real quote issue/accept/plan/work/invoice journey and payment UI
+journey, each 1/1 per API. The customer-left/company-right layout, wrapped 47%
+columns, right-aligned subtotal/tax rows, bold amount digits and Settings preview
+were checked in the actual generated documents. Downloaded and visually reviewed
+the successful run's generated party-layout images, Settings preview images for
+Minimal/Classic/Modern on both APIs, and preview screen captures. The three styles
+remain distinct, party details wrap within their columns, and the preview is
+clearly marked sample-only with page navigation. No local build, test or
+formatter was run.
+
+Requirements and evidence are reflected in `docs/INVOICE_LIFECYCLE_PLAN.md`,
+`docs/UI_DESIGN.md` and `plan_status.md`. PR #39 contains the implementation and
+all feature gates passed at 751f13b; the pending plan-status update is documentation
+only and needs a fresh Actions check before the PR is marked ready and merged.
