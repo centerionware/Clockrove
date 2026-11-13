@@ -88,7 +88,13 @@ void main() {
     addTearDown(client.close);
     await expectLater(
       client.get(request),
-      throwsA(isA<http.ClientException>().having((error) => error.message, 'message', contains('timed out'))),
+      throwsA(
+        isA<http.ClientException>().having(
+          (error) => error.message,
+          'message',
+          contains('timed out'),
+        ),
+      ),
     );
   });
 

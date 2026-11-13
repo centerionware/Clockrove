@@ -36,7 +36,6 @@ class TileBackoffClient extends http.BaseClient {
     try {
       response = await _inner.send(request).timeout(requestTimeout);
     } on TimeoutException {
-      request.abort();
       throw http.ClientException('Map tile request timed out', request.url);
     }
     if (response.statusCode == 429 || response.statusCode == 503) {

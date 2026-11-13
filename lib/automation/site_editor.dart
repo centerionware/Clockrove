@@ -73,8 +73,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
       lon = double.tryParse(_longitude.text);
       if (!canCenter(lat, lon)) {
         setState(() {
-          _notice =
-              'The map needs a current location or coordinates. Allow precise location, try Use current location again, or enter coordinates.';
+          _notice = 'The map needs a current location or coordinates. Allow precise location, try Use current location again, or enter coordinates.';
         });
         return;
       }
@@ -296,8 +295,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   controller: _radius,
                   decoration: const InputDecoration(
                     labelText: 'Radius in metres',
-                    helperText:
-                        '1.8–10,000 m. Android recommends 100–150 m for geofences; tight radii can miss automatic arrival or departure.',
+                    helperText: '1.8–10,000 m. Android recommends 100–150 m for geofences; tight radii can miss automatic arrival or departure.',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,

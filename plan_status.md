@@ -74,17 +74,20 @@ iOS and future service remain deferred.
 
 | Item | Status | Evidence / next action |
 | --- | --- | --- |
-| Email invoice handoff always reports failure | Source fix in progress | Email used `ACTION_SEND` with an `ACTION_SENDTO` selector while attaching a PDF; changed it to attachment-capable `ACTION_SEND`. Native Android Actions tests and owner device acceptance remain required. |
-| Map opens as a blank/white area | Source resilience fix in progress | Added bounded tile-request timeout, failure state with coordinates and an external map fallback; unset site maps now request one explained current fix before centering. The actual OSM-rendering cause is not reproduced on this VM; verify map tiles and fallback through Actions artifacts and on the owner's phone. |
-| Manual clock-in does not record GPS | Source fix in progress | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. Actions/native validation and physical device delivery evidence remain pending. |
-| Small worksite radius | Source/schema change in progress | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; verify migration and site editor in Actions. |
+| Email invoice handoff always reports failure | Source fix implemented; Actions rerun pending | Email used `ACTION_SEND` with an `ACTION_SENDTO` selector while attaching a PDF; changed it to attachment-capable `ACTION_SEND`. Native Android Actions tests and owner device acceptance remain required. |
+| Map opens as a blank/white area | Source resilience fix implemented; Actions rerun pending | Added bounded tile-request timeout, failure state with coordinates and an external map fallback. If a site has no usable saved coordinates, the editor requests an explained fresh location and centers the map there; a widget test asserts the requested fix is the initial center. The actual OSM-rendering cause is not reproduced in this environment; verify map tiles and fallback through Actions artifacts and on the owner's phone. |
+| Manual clock-in does not record GPS | Source fix implemented; Actions rerun pending | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. Actions/native validation and physical device delivery evidence remain pending. |
+| Small worksite radius | Source/schema change implemented; Actions rerun pending | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; verify migration and site editor in Actions. |
 | Task and task-comment images | Added to product contract | Planned after tasks/comments: take/select images, local private storage, bounded size/count, metadata stripping, preview/removal, encrypted backup inclusion and parent deletion. Not implemented. |
 | Full app E2E screenshots and Cloudflare Pages documentation | Added as final public-release gate | Plan now requires an end-to-end coverage inventory for every feature, screen and selectable option, reviewed screenshots on minimum/current Android APIs, then versioned static user guides deployed on Cloudflare Pages for open release. Internal/closed tracks are not gated by exhaustive coverage. |
 
-These current bug fixes are source changes only until a fresh GitHub Actions run
-passes. No local build/test/formatter was run, per owner instruction. Quote run
-43337896079 passed at d03992c before these fixes were added and therefore does not
-validate the current worktree.
+Actions run 43341316880 stopped in Analyze: formatting emitted a patch for three
+files, and analysis found the unsupported `BaseRequest.abort()` call in the tile
+timeout handler. Applied those CI-reported formatting changes and removed the
+unsupported call. That run did not reach tests or build. The next exact-head
+GitHub Actions run must validate these changes; no local build/test/formatter was
+run, per owner instruction. Quote run 43337896079 passed at d03992c before these
+fixes were added and therefore does not validate the current worktree.
 
 The full quoted milestone remains incomplete until its integration gates pass.
 Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked

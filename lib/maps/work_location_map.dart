@@ -108,9 +108,9 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
       }
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.linkUnavailable)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(AppStrings.linkUnavailable)));
     }
   }
 
