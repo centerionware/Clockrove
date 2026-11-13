@@ -2534,3 +2534,17 @@ automated API-35 geometry assertion remains unverified until the `searchText`
 revision passes. No local build, test or formatter was run. Keep #39 draft until
 corrected formatting/PDF/quote acceptance passes and generated PDF images from
 the passing run have been reviewed.
+
+### 2026-11-13 — PDF geometry passes; API-35 Settings test navigation
+
+Actions run 43371370101 on `cc5843a9945675e02f293a40412d89241b470af0` passed the
+invoice preview and wrapped-party/right-edge geometry cases on both API 24 and
+API 35 (five immutable-copy cases, zero failures on each). Formatting, Flutter
+behavior, Android build and native tests also passed. The overall run failed later
+in the separate payment UI journey on API 35 while trying to reach the
+accounts-receivable field. The field exists in the accessibility tree below the
+viewport with `visible=false`; API 24 completed the same payment journey. This is
+recorded as an API-35 test-scroll issue, not a PDF failure. The payment journey's
+`reveal` helper now searches child nodes before scrolling the container, matching
+the route helper used elsewhere. This edit awaits Actions; keep #39 draft until
+the full API-24/35 run passes and final-run PDF images are reviewed.
