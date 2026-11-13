@@ -2580,10 +2580,22 @@ tests, and the five actual invoice-copy checks on both API 24 and API 35. API 24
 also passed the full quote journey. API 35 passed its 29 preceding device cases,
 then the quote journey failed after confirming the customer decision: Android
 restored focus to the private note and reopened the keyboard over “Record reviewed
-decision.” The failure screenshot and accessibility tree show the note focused
+decision.” The failure screenshot and accessibility tree showed the note focused
 with the IME visible. The quote detail now unfocuses the note around confirmation,
 and the real-device journey asserts that the keyboard remains closed before it
-records the decision. This source and test correction awaits a fresh full Actions
-run and final generated-document screenshot review. Keep PR #39 draft until that
-exact-head run passes on both APIs. No local build, test, or formatter was run;
-`gh` queries and artifact retrieval ran outside the sandbox as instructed.
+records the decision.
+
+Source head `e3c5532` / Actions run 43379382717 passed the full Validate workflow:
+formatting, analysis, Flutter behavior, Android debug build, all 563 native tests,
+and all 30 actual Android tests on each of API 24 and API 35, with zero failures,
+errors or skips. The quote issue/accept/plan/work/invoice journey, payment journey,
+and all five real PDF-copy checks passed 1/1, 1/1 and 5/5 per API respectively.
+Downloaded and visually reviewed the exact-head generated invoice PDFs in all
+three styles and party-layout samples for all styles on both APIs: customer
+details are left; company details and issue date are right. Long content wraps
+within the 47% columns, and subtotal/tax labels are regular while only the amount
+digits are bold at the right edge. Reviewed all three selected-style Settings preview pages and the preview
+screen on both APIs; it is clearly sample-only and provides page navigation. The
+preview and quote invoice figures/text were verified in the Android artifacts.
+No local build, test, or formatter was run; `gh` queries and artifact retrieval
+ran outside the sandbox as instructed.
