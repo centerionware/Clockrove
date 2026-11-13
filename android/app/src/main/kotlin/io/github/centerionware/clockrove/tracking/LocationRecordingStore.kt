@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 
 /** Global recording defaults and nullable per-job inherit/override values. */
@@ -31,10 +32,13 @@ internal object LocationRecordingStore {
 
     fun saveJob(db: SQLiteDatabase, jobId: String, enabled: Boolean?, at: Long) {
         if (enabled == null) db.execSQL("DELETE FROM job_location_recording WHERE job_id=?", arrayOf(jobId))
-        else db.execSQL(
-            "INSERT INTO job_location_recording(job_id,enabled) VALUES(?,?) ON CONFLICT(job_id) DO UPDATE SET enabled=excluded.enabled",
-            arrayOf<Any?>(jobId, if (enabled) 1 else 0),
-        )
+        else {
+            val setting = ContentValues(1).apply { put("enabled", if (enabled) 1 else 0) }
+            if (override(db, jobId) == null) {
+                setting.put("job_id", jobId)
+                db.insertOrThrow("job_location_recording", null, setting)
+            } else db.update("job_location_recording", setting, "job_id=?", arrayOf(jobId))
+        }
         RevisionStore.record(db, "job_location_recording", jobId, jobId,
             mapOf("job_id" to jobId, "enabled" to enabled?.let { if (it) 1 else 0 }), at)
     }
