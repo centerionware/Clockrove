@@ -258,6 +258,10 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
       _decision,
       _note.text.trim(),
     );
+    // Dismiss the note IME before showing the confirmation. On Android 15,
+    // restoring focus when the dialog closes can reopen it over the record
+    // action and leave the reviewed decision hidden.
+    FocusManager.instance.primaryFocus?.unfocus();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -282,6 +286,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
       ),
     );
     if (mounted && confirmed == true) {
+      FocusManager.instance.primaryFocus?.unfocus();
       setState(() {
         _decisionReview = review;
         _noteError = null;

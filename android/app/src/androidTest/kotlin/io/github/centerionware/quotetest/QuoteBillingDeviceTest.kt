@@ -265,6 +265,7 @@ class QuoteBillingDeviceTest {
             val quotePdf = requireNotNull(repository.quoteDocument(quoteId, 1).pdf)
             back(); scrollToStart(); enter("Private decision note", "Synthetic customer explicitly accepted this revision")
             reveal("Review customer decision"); click("Review customer decision"); click("Confirm review")
+            until("Customer decision review reopened the keyboard and obscured recording") { !keyboardVisible() }
             reveal("Record reviewed decision"); click("Record reviewed decision")
             until("Actual accepted decision was not committed") { repository.quote(quoteId).latest?.decision == "ACCEPTED" }
             capture("accepted-quote"); noWorkOrInvoices()

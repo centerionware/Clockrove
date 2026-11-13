@@ -2573,3 +2573,17 @@ the quote draft at the bottom of its form with only backward scrolling available
 The UI test now resets to the top before entering that title. This exact-head
 correction awaits Actions; do not mark #39 ready or merge until the complete
 API-24/35 run passes.
+
+The scroll correction is included in source head `69dc8b6`; Actions run
+43377293028 passed formatting, analysis, Flutter behavior, Android build, native
+tests, and the five actual invoice-copy checks on both API 24 and API 35. API 24
+also passed the full quote journey. API 35 passed its 29 preceding device cases,
+then the quote journey failed after confirming the customer decision: Android
+restored focus to the private note and reopened the keyboard over “Record reviewed
+decision.” The failure screenshot and accessibility tree show the note focused
+with the IME visible. The quote detail now unfocuses the note around confirmation,
+and the real-device journey asserts that the keyboard remains closed before it
+records the decision. This source and test correction awaits a fresh full Actions
+run and final generated-document screenshot review. Keep PR #39 draft until that
+exact-head run passes on both APIs. No local build, test, or formatter was run;
+`gh` queries and artifact retrieval ran outside the sandbox as instructed.
