@@ -84,10 +84,16 @@ iOS and future service remain deferred.
 Actions run 43341316880 stopped in Analyze: formatting emitted a patch for three
 files, and analysis found the unsupported `BaseRequest.abort()` call in the tile
 timeout handler. Applied those CI-reported formatting changes and removed the
-unsupported call. That run did not reach tests or build. The next exact-head
-GitHub Actions run must validate these changes; no local build/test/formatter was
-run, per owner instruction. Quote run 43337896079 passed at d03992c before these
-fixes were added and therefore does not validate the current worktree.
+unsupported call. Follow-up run 43342043446 passed formatting and analysis, then
+reported 155 Flutter tests passed, 3 failed and 14 skipped. Two failures were
+site-radius assertions still expecting the old 150 m minimum/default; updated to
+the new 1.8 m minimum and 30 m default. The third synthetic map-outage test did
+not force its fake image through Flutter's decoder before asserting the tile
+failure callback; added the deterministic decode step already used by the other
+map-outage test. Android build, native and real-device steps did not run. A fresh
+exact-head Actions run is required. No local build/test/formatter was run, per
+owner instruction. Quote run 43337896079 passed at d03992c before these fixes
+were added and therefore does not validate the current worktree.
 
 The full quoted milestone remains incomplete until its integration gates pass.
 Physical owner GPS/widget/upgrade/email and launch/legal/store gates remain tracked

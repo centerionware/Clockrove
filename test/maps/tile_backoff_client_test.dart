@@ -78,7 +78,7 @@ void main() {
     expect(calls, 3);
   });
 
-  test('a stalled tile request times out and aborts instead of leaving a blank map loading forever', () async {
+  test('a stalled tile request times out instead of leaving a blank map loading forever', () async {
     final request = Uri.parse('https://tiles.example/stalled');
     final client = TileBackoffClient(
       MockClient((_) => Completer<http.Response>().future),

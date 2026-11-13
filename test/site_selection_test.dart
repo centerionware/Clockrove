@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/automation/automation_api.dart';
@@ -241,6 +242,14 @@ void main() {
       await _newSite(tester);
       await _reveal(tester, 'Choose on map');
       await tester.tap(find.text('Choose on map'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => precacheImage(
+          MemoryImage(Uint8List(0)),
+          tester.element(find.byType(FlutterMap)),
+          onError: (_, _) {},
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.textContaining('Map tiles are unavailable'), findsOneWidget);
       expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
