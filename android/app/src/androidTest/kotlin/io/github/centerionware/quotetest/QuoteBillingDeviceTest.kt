@@ -115,13 +115,22 @@ class QuoteBillingDeviceTest {
         }
     }
     private fun scrollToStart() {
-        repeat(12) {
+        val deadline = SystemClock.uptimeMillis() + 15000
+        var stationaryPolls = 0
+        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
             }
-            if (automation.rootInActiveWindow?.let(::scroll) != true) return
-            SystemClock.sleep(120)
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                stationaryPolls = 0
+            } else {
+                // Flutter scroll actions can briefly return false while a
+                // previous movement is still settling. Keep polling so one
+                // transient result cannot leave the next action off-screen.
+                stationaryPolls++
+            }
+            SystemClock.sleep(150)
         }
     }
     private fun revealDetailStatus(label: String) {
