@@ -114,7 +114,7 @@ class QuoteScopeTest {
         val available = repository.quoteActualReview(request).result.context!!
         assertEquals(listOf("scope-task"), available.tasks.map { it.actual.id })
         assertEquals(BigInteger("29970"), available.coverage.report.totals.single().amountMinor)
-        val accepted = inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task"))) }
+        val accepted = inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task")).copy(note = "")) }
         assertNull(accepted.problem)
         assertEquals(BigInteger("37500"), accepted.value!!.report.totals.single().amountMinor)
         assertEquals(75000, accepted.value!!.taxUnits)
@@ -127,6 +127,13 @@ class QuoteScopeTest {
         assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims"))
         assertNull(repository.prepareInvoice("ordinary-bill", version, "ordinary", request.selection).conflict)
         assertEquals("QUOTE_INVOICE_SOURCES_CHANGED", inspect { QuoteInvoiceReviewStore.review(it, request, actualChoices(listOf("scope-task"))).problem })
+    }
+    @Test fun acceptedScopeCanCreateNewJobWithoutPrivateNote() {
+        quote()
+        val outcome = repository.applyQuoteScope("scope-without-note", version, scope().copy(note = ""))
+        assertNull(outcome.conflict)
+        assertEquals(1, count("jobs"))
+        assertEquals(1, count("kanban_cards"))
     }
     @Test fun quoteInvoiceHourlyReviewRequiresRealExactUnclaimedIntervalsAndKeepsWideAgreedRate() {
         val wide = "9".repeat(1000)

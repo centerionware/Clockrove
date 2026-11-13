@@ -182,7 +182,7 @@ void main() {
     },
   );
   testWidgets(
-    'local acceptance needs explicit reviewed revision and note, while cancelling changes nothing',
+    'local acceptance can be recorded without a private note',
     (tester) async {
       final api = _Quotes()
         ..current = QuoteData(
@@ -193,17 +193,6 @@ void main() {
           timezone: 'UTC',
         );
       await _show(tester, api);
-      final note = find.widgetWithText(TextField, 'Private decision note');
-      await tester.scrollUntilVisible(
-        note,
-        400,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        note,
-        'Customer agreed by phone on the recorded date.',
-      );
       await _tap(tester, 'Review customer decision');
       await _tap(tester, 'Cancel');
       expect(api.decisions, isEmpty);

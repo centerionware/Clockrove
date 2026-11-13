@@ -31,7 +31,7 @@ internal object QuoteScopeStore {
     private fun used(db: SQLiteDatabase, table: String, kind: String, value: String): Boolean = db.rawQuery(
         "SELECT id FROM $table WHERE id=? UNION ALL SELECT entity_id FROM entity_heads WHERE kind=? AND entity_id=? LIMIT 1", arrayOf(value, kind, value)).use { it.moveToFirst() }
     fun apply(db: SQLiteDatabase, value: Draft, at: Long): String? {
-        if (!value.confirmed || value.revision < 1 || value.note.trim().length !in 10..2000 || '\u0000' in value.note || at < 0 ||
+        if (!value.confirmed || value.revision < 1 || value.note.length > 2000 || '\u0000' in value.note || at < 0 ||
             !id.matches(value.jobId) || value.items.size !in 1..2000 || value.items.map { it.lineId }.toSet().size != value.items.size ||
             value.items.map { it.taskId }.toSet().size != value.items.size || value.items.any { !id.matches(it.taskId) || it.title.isBlank() || it.title.length > 240 || '\u0000' in it.title }) return "INVALID_QUOTE_SCOPE"
         val issued = QuoteStore.revision(db, value.quoteId, value.revision) ?: return "QUOTE_UNAVAILABLE"

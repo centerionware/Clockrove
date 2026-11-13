@@ -67,6 +67,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
       'REQUESTING' => AppStrings.locationRequesting,
       'START_REQUESTED' => AppStrings.locationStarting,
       'LOCATION_UNAVAILABLE' => AppStrings.locationUnavailable,
+      'DISABLED' => AppStrings.locationRecordingDisabled,
       'PROVIDER_ERROR' || 'START_RESTRICTED' => AppStrings.locationRestricted,
       _ => AppStrings.locationStopped,
     };
@@ -136,11 +137,12 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                     Wrap(
                       spacing: 8,
                       children: [
-                        if (!const {
-                          'REQUESTING',
-                          'START_REQUESTED',
-                          'LOCATION_UNAVAILABLE',
-                        }.contains(value.service))
+                        if (value.service != 'DISABLED' &&
+                            !const {
+                              'REQUESTING',
+                              'START_REQUESTED',
+                              'LOCATION_UNAVAILABLE',
+                            }.contains(value.service))
                           TextButton(
                             onPressed: _busy ? null : _enable,
                             child: const Text(AppStrings.enableLocation),

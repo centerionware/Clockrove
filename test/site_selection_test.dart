@@ -234,6 +234,27 @@ void main() {
     },
   );
   testWidgets(
+    'opening a new site map obtains and centers on one current location fix',
+    (tester) async {
+      final api = FixtureAutomationApi();
+      await _show(tester, api);
+      await _newSite(tester);
+      await _reveal(tester, 'Choose on map');
+      await tester.tap(find.text('Choose on map'));
+      await tester.pumpAndSettle();
+      expect(find.text('Use your current location?'), findsOneWidget);
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
+      expect(map.mapController!.camera.center.latitude, 51.5);
+      expect(map.mapController!.camera.center.longitude, -.1);
+      expect(api.positionRequests, 1);
+      expect(api.sites, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'map failure keeps attribution and permits returning to coordinate setup',
     (tester) async {
       final api = FixtureAutomationApi();

@@ -67,7 +67,7 @@ internal object QuoteInvoiceReviewStore {
 
     /** Must be re-evaluated inside the invoice command transaction before any write. */
     fun review(db: SQLiteDatabase, request: Request, choices: Choices): Review {
-        if (!choices.confirmed || choices.note.trim().length !in 10..2000 || '\u0000' in choices.note ||
+        if (!choices.confirmed || choices.note.length > 2000 || '\u0000' in choices.note ||
             choices.taskIds.size > 2000 || choices.times.size > 5000 ||
             choices.taskIds.distinct().size != choices.taskIds.size || choices.times.distinct().size != choices.times.size) return Review("INVALID_QUOTE_INVOICE")
         val read = read(db, request)

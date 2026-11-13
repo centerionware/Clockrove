@@ -109,6 +109,8 @@ for clockrove_api in 24 35; do
   # Do not replace it with a second, potentially blocking logcat attachment.
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-accessibility.txt" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-screen.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-screen.png" || true
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-combined.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-combined.png" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-accessibility.txt" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-setup.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-setup.png" || true
@@ -134,7 +136,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
-    'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 3,
+    'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 4,
     'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,
 }
 for classname, count in expected.items():
@@ -142,6 +144,9 @@ for classname, count in expected.items():
     assert actual == count, (classname, actual, count)
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
+for clockrove_settings_capture in location-recording-global-off location-recording-global-on; do
+  test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/$clockrove_settings_capture.png"
+done
   for clockrove_style in minimal classic modern; do
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png"
@@ -159,6 +164,7 @@ PY_DEVICE
   bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT

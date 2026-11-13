@@ -157,3 +157,53 @@ is committed; already higher sequences continue without resetting.
   from mocks or claim actual GPS/launcher/email delivery/device behavior without
   corresponding evidence. Internal testing may carry explicit device validation
   gaps; production readiness remains a separate gate.
+
+## Owner-prioritized follow-up after quote baseline #39
+
+This is the next implementation milestone after the quote baseline and PDF preview
+were merged. It is separate from the earlier combined release above, and must be
+complete before beginning the whole-app UI overhaul and exhaustive E2E gate.
+
+- In quote editing, search and select saved task templates from active, archived
+  and deleted jobs. Add each as a normal editable quote line. Notes/terms and
+  decision notes are optional; a customer can be recorded as accepted or declined
+  through a clear reviewed action without writing a note.
+- Once accepted, offer **Create job from quote** to pre-fill a new job's task
+  board with the accepted lines, quantities and prices. Let the owner review the
+  generated job/tasks before saving, and keep an explicit path for adding the
+  accepted scope to an existing job. Preserve quote provenance and prevent
+  duplicate jobs/tasks on retry. Never fabricate worked hours, completion,
+  invoices or payments.
+- Add private task comments and attach images either to the task or to one
+  comment. Support Android image selection and camera capture. A camera photo is
+  first written to a private temporary URI and shown in an in-app review; only
+  **Attach photo** commits it. Retake/cancel discards it. Existing images receive
+  a review before import. Enforce bounded type, size, count and storage; strip
+  EXIF/GPS metadata; support preview/removal and delete images with their parent.
+- Repair blank maps for site selection, current-location setup and report history.
+  With no saved site location, ask permission as needed and center on a fresh user
+  location if available. Keep coordinate/manual alternatives and clear offline,
+  tile-error, permission-denied and unsupported-coordinate states.
+- Add a global work-location recording option, default on, with per-job inherit,
+  on and off settings. Request a ten-minute fused update interval and persist no
+  more than one ordinary point per five-minute window, plus available session
+  boundary points. Record only actual measured points while work is running;
+  preserve manual timekeeping when disabled or permission is unavailable.
+- Validate the migration from released v9, storage limits/rollback, permission
+  paths, quote conversion idempotency, metadata stripping and cleanup. Add native,
+  Flutter and actual Android UI journeys on API 24 and current stable API. Capture
+  and review each new screen and distinct option in Actions; emulator proof does
+  not stand in for physical camera hardware or background GPS delivery.
+
+## Follow-on closed-testing gate
+
+After this follow-up, finish the remaining launch implementation milestones,
+including encrypted backup/merge and the planned business reporting/billing work.
+Then overhaul the entire app UI for intuitive first use and run actual-app E2E
+journeys for every feature, screen, selectable option, permission/error/empty
+state and destructive confirmation. Assert persisted and native side effects and
+retain a reviewed screenshot for every screen/state on API 24 and current stable
+Android. Do not move from internal to closed testing until all launch features and
+this full-app E2E/UI acceptance pass. Internal iterations can continue while the
+work is underway. Public Cloudflare Pages documentation remains part of the full
+open-release stage, built from the reviewed synthetic screenshots.

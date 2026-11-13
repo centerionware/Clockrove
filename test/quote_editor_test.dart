@@ -1,4 +1,5 @@
 import 'package:clockrove/business/quote_api.dart';
+import 'package:clockrove/business/business_api.dart';
 import 'package:clockrove/business/quote_editor.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/settings_api.dart';
@@ -34,6 +35,16 @@ class _Jobs extends ReportApi {
   Future<ReportContext> context() async => const ReportContext('UTC', []);
 }
 
+class _Templates extends BusinessApi {
+  _Templates(this.values);
+  final List<TaskTemplate> values;
+  @override
+  Future<List<TaskTemplate>> templates(String search) async => values
+      .where((template) =>
+          template.title.toLowerCase().contains(search.toLowerCase()))
+      .toList();
+}
+
 class _Quotes extends QuoteApi {
   _Quotes({this.currency = 'USD'});
   final String currency;
@@ -65,11 +76,16 @@ class _Quotes extends QuoteApi {
   }
 }
 
-Future<void> _show(WidgetTester tester, _Quotes api) async {
+Future<void> _show(
+  WidgetTester tester,
+  _Quotes api, {
+  List<TaskTemplate> templates = const [],
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         quoteApiProvider.overrideWithValue(api),
+        businessApiProvider.overrideWithValue(_Templates(templates)),
         businessSettingsApiProvider.overrideWithValue(_Business()),
         reportApiProvider.overrideWithValue(_Jobs()),
       ],
@@ -94,6 +110,54 @@ Future<void> _reveal(
 }
 
 void main() {
+  testWidgets(
+    'quote task template becomes a separate editable line with quantity and price',
+    (tester) async {
+      final api = _Quotes();
+      await _show(
+        tester,
+        api,
+        templates: const [
+          TaskTemplate(
+            'old-task',
+            'Install roof tile',
+            'Set tile in mortar',
+            '1250',
+            'USD',
+            'Archived garage',
+            '260000',
+          ),
+        ],
+      );
+      final useTemplate = find.text('Add line from task template');
+      await _reveal(tester, useTemplate, 400);
+      await tester.tap(useTemplate);
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a task template'), findsOneWidget);
+      expect(find.textContaining('Archived garage'), findsOneWidget);
+      await tester.tap(find.text('Install roof tile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Added as an editable quote line.'), findsOneWidget);
+      expect(find.text('USD 12.50 each'), findsOneWidget);
+      final descriptions = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextFormField &&
+            widget.decoration.labelText == 'Description',
+      );
+      expect(descriptions, findsNWidgets(2));
+      await _reveal(tester, descriptions.at(1), 400);
+      await tester.enterText(descriptions.at(1), 'Edited roof installation');
+      final save = find.widgetWithText(FilledButton, 'Save quote draft');
+      await _reveal(tester, save, 400);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(api.calls, hasLength(1));
+      expect(api.calls.single.draft.lines.last.title, 'Edited roof installation');
+      expect(api.calls.single.draft.lines.last.quantity, '260000');
+      expect(api.calls.single.draft.lines.last.unitPrice, '1250');
+    },
+  );
   testWidgets(
     'unknown quote save locks fields and retries the same immutable command',
     (tester) async {

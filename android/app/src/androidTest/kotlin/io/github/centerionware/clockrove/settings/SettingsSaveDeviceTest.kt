@@ -60,6 +60,13 @@ class SettingsSaveDeviceTest {
         }
         throw AssertionError("Actual app could not click $label")
     }
+    private fun capture(name: String) {
+        automation.waitForIdle(200, 3000)
+        val bitmap = requireNotNull(automation.takeScreenshot())
+        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "settings-captures").apply { mkdirs() }
+        File(directory, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+    }
     private fun reveal(label: String) {
         repeat(60) {
             if (find(label) != null) return
@@ -172,6 +179,50 @@ class SettingsSaveDeviceTest {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
             }
             bitmap.recycle()
+        } finally {
+            instrumentation.runOnMainSync {
+                for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {
+                    ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage).toList().forEach { it.finish() }
+                }
+            }
+            instrumentation.waitForIdleSync()
+        }
+    }
+
+    @Test fun locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings() {
+        val app = instrumentation.targetContext
+        val repository = TimerRepository.get(app)
+        var before = repository.businessSnapshot()
+        if (!before.settings.defaultLocationRecording) {
+            assertNull(repository.saveBusinessSettings("location-default-reset", before.version,
+                before.settings.copy(defaultLocationRecording = true)).conflict)
+            before = repository.businessSnapshot()
+        }
+        assertTrue(before.settings.defaultLocationRecording)
+        automation.serviceInfo = automation.serviceInfo.apply {
+            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+        }
+        app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        try {
+            click("App settings and customers"); click("Settings")
+            waitFor("Record work locations")
+            click("Record work locations")
+            capture("location-recording-global-off")
+            reveal("Save settings")
+            click("Save settings")
+            val disabledDeadline = SystemClock.uptimeMillis() + 30000
+            while (repository.businessSnapshot().settings.defaultLocationRecording && SystemClock.uptimeMillis() < disabledDeadline) SystemClock.sleep(100)
+            assertFalse("Global location recording did not save as off", repository.businessSnapshot().settings.defaultLocationRecording)
+
+            waitFor("App settings and customers"); click("App settings and customers"); click("Settings")
+            waitFor("Record work locations")
+            click("Record work locations")
+            capture("location-recording-global-on")
+            reveal("Save settings")
+            click("Save settings")
+            val enabledDeadline = SystemClock.uptimeMillis() + 30000
+            while (!repository.businessSnapshot().settings.defaultLocationRecording && SystemClock.uptimeMillis() < enabledDeadline) SystemClock.sleep(100)
+            assertTrue("Global location recording did not save as on", repository.businessSnapshot().settings.defaultLocationRecording)
         } finally {
             instrumentation.runOnMainSync {
                 for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {

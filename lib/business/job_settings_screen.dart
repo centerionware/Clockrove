@@ -76,6 +76,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
     ),
   );
   late bool _inheritTax = widget.initial.taxUnits == null;
+  late bool? _locationRecordingOverride =
+      widget.initial.locationRecordingOverride;
   String? _taxError;
   late String _mode = widget.initial.mode;
   late String? _customer = widget.initial.customerId;
@@ -220,6 +222,27 @@ class _JobFormState extends ConsumerState<_JobForm> {
               },
             ),
           ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<bool?>(
+          initialValue: _locationRecordingOverride,
+          decoration: const InputDecoration(
+            labelText: 'Work location recording',
+            helperText: 'Record actual locations only while this job is clocked in. Turning it off keeps saved history.',
+          ),
+          items: [
+            DropdownMenuItem<bool?>(
+              value: null,
+              child: Text(
+                'Use global default (${widget.business.settings.defaultLocationRecording ? 'on' : 'off'})',
+              ),
+            ),
+            const DropdownMenuItem<bool?>(value: true, child: Text('On for this job')),
+            const DropdownMenuItem<bool?>(value: false, child: Text('Off for this job')),
+          ],
+          onChanged: data?.archived == false
+              ? (value) => setState(() => _locationRecordingOverride = value)
+              : null,
+        ),
         const SizedBox(height: 32),
         Text(
           'Customer & invoice recipient',
@@ -319,6 +342,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
               emailOverride: _useCustomerEmail ? null : _email.text.trim(),
               taxUnits: _inheritTax ? null : parseTaxPercent(_tax.text),
               effectiveTaxUnits: data.effectiveTaxUnits,
+              locationRecordingOverride: _locationRecordingOverride,
+              effectiveLocationRecording: data.effectiveLocationRecording,
             );
             return () => ref.read(businessSettingsApiProvider).saveJob(id, p);
           },

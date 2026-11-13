@@ -72,6 +72,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   late String _currency = widget.initial.currency,
       _style = widget.initial.invoiceStyle;
   late int _digits = widget.initial.digits;
+  late bool _defaultLocationRecording =
+      widget.initial.defaultLocationRecording;
   @override
   void dispose() {
     for (final c in [
@@ -204,6 +206,16 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             labelText: 'Default hourly rate ($_currency)',
             helperText: 'Blank means no rate set. Override this in any job.',
           ),
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Record work locations'),
+          subtitle: const Text(
+            'Default on. Samples target about every 10 minutes while clocked in; delivery varies. Turning this off stops future samples and keeps saved history. Each job can override it.',
+          ),
+          value: _defaultLocationRecording,
+          onChanged: (value) => setState(() => _defaultLocationRecording = value),
         ),
         const SizedBox(height: 20),
         Semantics(
@@ -358,6 +370,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               invoiceStyle: _style,
               emailSubject: _subject.text,
               emailBody: _body.text,
+              defaultTaxUnits: widget.initial.defaultTaxUnits,
+              receivablesEmail: widget.initial.receivablesEmail,
+              defaultLocationRecording: _defaultLocationRecording,
             );
             return () =>
                 ref.read(businessSettingsApiProvider).settings(id, version, s);

@@ -35,6 +35,8 @@ abstract final class AppStrings {
   static const locationRequesting =
       'Location requested; ten-minute delivery is a target.';
   static const locationStarting = 'Starting work location…';
+  static const locationRecordingDisabled =
+      'Work location recording is turned off in Settings or for this job. The timer is independent.';
   static const locationUnavailable =
       'Waiting for location. Missing GPS does not end work.';
   static const locationStopped =

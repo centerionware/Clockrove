@@ -14,9 +14,11 @@ class QuoteScopeScreen extends ConsumerStatefulWidget {
     super.key,
     required this.quoteId,
     required this.revision,
+    this.createNewJob = false,
   });
   final String quoteId;
   final int revision;
+  final bool createNewJob;
   @override
   ConsumerState<QuoteScopeScreen> createState() => _QuoteScopeScreenState();
 }
@@ -33,7 +35,7 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Plan accepted scope'),
+      title: Text(widget.createNewJob ? 'Create job from quote' : 'Plan accepted scope'),
       actions: [
         IconButton(
           tooltip: 'Refresh scope groups',
@@ -79,6 +81,13 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
             const Text(
               'Planning creates no worked hours, completion, invoice or payment. Previously billed work remains excluded from new invoices.',
             ),
+            if (widget.createNewJob && quoteScopeGroups(source).length > 1)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  'This quote has different billing groups. Create one compatible job for each group you want to use.',
+                ),
+              ),
             if (data.historical)
               Text(
                 'This is a historical accepted revision. Latest issued revision: ${data.latestRevision}.',
@@ -107,23 +116,77 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
                           '${line.title} · ${taskQuantity(line.quantity)} ${group.kind == 'HOURS' ? 'estimated hours' : 'units'}',
                         ),
                       const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () async {
-                          await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute<bool>(
-                              builder: (_) => _ScopeFormScreen(
-                                initial: data,
-                                groupKey: group.key,
-                              ),
-                            ),
-                          );
-                          if (mounted) {
-                            _refresh();
-                          }
-                        },
-                        child: const Text('Review group plan'),
+                      FilledButton.icon(
+                        onPressed: () => _openGroup(
+                          context,
+                          data,
+                          group,
+                          createNewJob: widget.createNewJob,
+                        ),
+                        icon: Icon(
+                          widget.createNewJob
+                              ? Icons.add_business_outlined
+                              : Icons.playlist_add_check,
+                        ),
+                        label: Text(
+                          widget.createNewJob
+                              ? 'Create job with these tasks'
+                              : 'Review group plan',
+                        ),
                       ),
+                      if (!widget.createNewJob) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => _openGroup(
+                            context,
+                            data,
+                            group,
+                            createNewJob: true,
+                          ),
+                          child: const Text('Create a new job with these tasks'),
+                        ),
+                      ],
+                      for (final jobId in data.bindings
+                          .where(
+                            (binding) => group.lines.any(
+                              (line) => line.id == binding.lineId,
+                            ),
+                          )
+                          .map((binding) => binding.jobId)
+                          .toSet()) ...[
+                        Builder(
+                          builder: (context) {
+                            final job = data.jobs
+                                .where((candidate) => candidate.id == jobId)
+                                .firstOrNull;
+                            if (job == null) {
+                              return const Text(
+                                'Some quote tasks are mapped to a job that is no longer available.',
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 8),
+                                Text('Planned in ${job.name}'),
+                                OutlinedButton.icon(
+                                  onPressed: () => Navigator.push<void>(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => JobScreen(
+                                        jobId: job.id,
+                                        jobName: job.name,
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.view_kanban_outlined),
+                                  label: const Text('Open existing job'),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -133,12 +196,36 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
       },
     ),
   );
+
+  Future<void> _openGroup(
+    BuildContext context,
+    QuoteScopeData data,
+    QuoteScopeGroup group, {
+    required bool createNewJob,
+  }) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => _ScopeFormScreen(
+          initial: data,
+          groupKey: group.key,
+          createNewJob: createNewJob,
+        ),
+      ),
+    );
+    if (mounted) _refresh();
+  }
 }
 
 class _ScopeFormScreen extends ConsumerStatefulWidget {
-  const _ScopeFormScreen({required this.initial, required this.groupKey});
+  const _ScopeFormScreen({
+    required this.initial,
+    required this.groupKey,
+    this.createNewJob = false,
+  });
   final QuoteScopeData initial;
   final String groupKey;
+  final bool createNewJob;
   @override
   ConsumerState<_ScopeFormScreen> createState() => _ScopeFormState();
 }
@@ -228,18 +315,19 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
         .where((binding) => groupIds.contains(binding.lineId))
         .firstOrNull;
     final primary = _data.issued.draft.jobId;
-    _targetId =
-        prior?.jobId ??
-        _data.jobs
-            .where(
-              (job) =>
-                  job.id == primary &&
-                  job.mode == _group.mode &&
-                  job.currency == _data.issued.draft.currency &&
-                  !job.archived,
-            )
-            .firstOrNull
-            ?.id;
+    _targetId = widget.createNewJob
+        ? null
+        : prior?.jobId ??
+              _data.jobs
+                  .where(
+                    (job) =>
+                        job.id == primary &&
+                        job.mode == _group.mode &&
+                        job.currency == _data.issued.draft.currency &&
+                        !job.archived,
+                  )
+                  .firstOrNull
+                  ?.id;
     for (final line in _group.lines) {
       final binding = _binding(line.id);
       if (binding == null ||
@@ -350,11 +438,10 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
             _name.text.contains('\u0000'))) {
       throw const FormatException('Enter a job name of up to 240 characters.');
     }
-    if (_note.text.trim().length < 10 ||
-        _note.text.length > 2000 ||
+    if (_note.text.length > 2000 ||
         _note.text.contains('\u0000')) {
       throw const FormatException(
-        'Add a private review note of 10–2000 characters.',
+        'Private review notes can be up to 2000 characters.',
       );
     }
     final items = <QuoteScopeItem>[];
@@ -459,7 +546,8 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                     ),
                   ),
                 const SizedBox(height: 12),
-                Text('Private review note\n${draft.note}'),
+                if (draft.note.isNotEmpty)
+                  Text('Private review note\n${draft.note}'),
                 const Text(
                   'This creates no worked hours, completion, invoice, payment or billable reservation. Existing work stays unchanged. Previously billed work cannot be charged again.',
                 ),
@@ -778,6 +866,7 @@ class _ScopeFormState extends ConsumerState<_ScopeFormScreen> {
                   maxLengthEnforcement: MaxLengthEnforcement.none,
                   decoration: const InputDecoration(
                     labelText: 'Private scope review note',
+                    helperText: 'Optional. Your scope can be accepted without a note.',
                   ),
                   onChanged: (_) => setState(_changed),
                 ),
