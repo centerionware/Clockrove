@@ -61,12 +61,13 @@ failed on API 35: sample text extraction did not find “Kitchen tile installati
 and the left-column customer-name bounds assertion failed. Runs 43356553053 and
 43357698040 also failed in the PDF gate; 43357698040 included the added text and
 bounds diagnostics, but its log/artifact download is currently failing at
-GitHub's endpoint so I cannot inspect those values. The final formatting gate
-failed on the earlier runs after Dart emitted a patch. The assertion diagnostics
-remain in source, and I manually split the new long Flutter expectation. A fresh
-Actions run must verify that formatting correction, expose the PDF failure
-details and pass API 24/35 document/device checks; then inspect rendered artifacts
-before merging.
+GitHub's endpoint so I cannot inspect those values. Run 43360903562 again failed
+the PDF gate and the final formatting gate. A manually split expectation did not
+clear formatting, so the new widget-test invocation now follows the repository's
+existing multiline style. The assertion diagnostics and Unicode separator
+normalization remain in source. A fresh Actions run must pass formatting, expose
+the PDF failure details, and pass API 24/35 document/device checks; then inspect
+rendered artifacts before merging.
 Keep #39 draft. The owner-reported email/map/manual-GPS/site-radius fixes still
 need complete Actions and physical owner-device acceptance; task-image and
 full-release E2E/Cloudflare documentation plans are recorded below.
