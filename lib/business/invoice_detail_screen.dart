@@ -200,6 +200,27 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               ),
             ),
             const SizedBox(height: 16),
+            if (correctable)
+              ExpansionTile(
+                title: const Text('Correct this invoice'),
+                children: [
+                  if (data.paid == '0')
+                    TextButton.icon(
+                      onPressed: eligible ? () => _correction(false) : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      icon: const Icon(Icons.block_outlined),
+                      label: const Text('Void unpaid invoice'),
+                    ),
+                  TextButton.icon(
+                    onPressed: eligible ? () => _correction(true) : null,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Void & replace'),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 16),
             if (!voided && data.due != '0')
               Wrap(
                 spacing: 12,
@@ -273,26 +294,6 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                     ? () => _related(data.replacesInvoiceId!)
                     : null,
                 child: const Text('Open original invoice'),
-              ),
-            if (correctable)
-              ExpansionTile(
-                title: const Text('Correct this invoice'),
-                children: [
-                  if (data.paid == '0')
-                    TextButton.icon(
-                      onPressed: eligible ? () => _correction(false) : null,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                      icon: const Icon(Icons.block_outlined),
-                      label: const Text('Void unpaid invoice'),
-                    ),
-                  TextButton.icon(
-                    onPressed: eligible ? () => _correction(true) : null,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Void & replace'),
-                  ),
-                ],
               ),
             TextButton.icon(
               onPressed: eligible ? () => _open() : null,

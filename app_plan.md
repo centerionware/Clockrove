@@ -46,19 +46,19 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-The quote milestone passed on head d03992c / Actions run 43337896079. Formatting,
-analysis, Flutter behavior, Android build, and 561 native tests (47 XML; zero
-failures/errors/skips) passed. API 24 and API 35 each passed all 27 device cases;
-the actual quote issue/accept/plan/complete/invoice/exclusion journey passed 1/1
-on both. All three generated invoice styles were reviewed on both APIs, and
-API-35 extracted text confirms 30 × USD 12.50 = USD 375.00, 7.5% tax USD 28.13,
-total USD 403.13, retaining quote Q-1001 revision 1. Large-text 390×844 previews
-at 1.8 scale were reviewed in light and dark; labels no longer collide, the
-confirmation dialog is readable, and its wrapped action stays visible with the
-keyboard closed. The user-reported email/map/manual-GPS/site-radius fixes are now
-in the worktree with Actions validation pending; task-image and full-release E2E/
-Cloudflare documentation plans are recorded below. Keep #39 draft until those
-source changes pass Actions and the remaining owner/device gates are addressed.
+The quote milestone baseline passed on d03992c / Actions run 43337896079.
+Current owner-fix heads d3cf10a / 43345767366 and f088d0e / 43346642907 passed
+formatting, analysis, Flutter behavior, Android debug build and native test steps,
+but both failed in the real Android/PDF device step. The first failure's log says
+API 24's `InvoicePaymentDeviceTest.actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt`
+could not expose “Void & replace” after opening the correction section; the
+second run failed in the same Actions step. The correction section is now placed
+directly after the invoice balance summary so its action is near the invoice
+status and reachable before payment/copy controls. This UI source change has not
+yet been validated. Run full exact-head Actions, inspect the results, and keep
+#39 draft until every gate passes. The owner-reported email/map/manual-GPS/site-
+radius fixes still need complete Actions and physical owner-device acceptance;
+task-image and full-release E2E/Cloudflare documentation plans are recorded below.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
