@@ -44,7 +44,7 @@ remain deferred.
 | Follow-on: quotes and invoice detail | Merged #39; main validation passed and internal delivery accepted | PR exact-head run 43381832106 and main run 43384059350 passed the actual quote journey and 30 API-24/35 device tests each with zero failures/errors/skips. Keyboard-closed assertion passed before recording the customer decision. Play run 43385810795 accepted internal.29.1 / version code 216718138; physical install and tester availability remain separate. |
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
 | PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
-| M6.5 quote usability, task comments/images, map and GPS controls | Source implementation prepared; Actions and physical-device evidence pending | Adds searchable task templates, optional decision notes, reviewed new-job quote conversion, task comments and bounded private PNG attachments, gallery/camera review, global/per-job GPS recording controls, and no-location map centering. Adds v9→v10 migration coverage and actual Android journeys with synthetic fixtures/screenshots on API 24/35. `git diff --check` is the only local validation; no build, test or formatter ran here. Next: push the reviewed source branch, require exact-head Actions, inspect screenshots/results, fix any failures, then record owner-device GPS/camera/map acceptance separately. |
+| M6.5 quote usability, task comments/images, map and GPS controls | API 24 actual journeys pass on `a177984`; API 35 Actions correction in progress; physical-device evidence pending | Exact-head run [43443440401](https://github.com/centerionware/Clockrove/actions/runs/43443440401) passed format/analyze/Flutter tests/build/native tests and all API-24 actual journeys, including quote workflow and task/comment gallery-camera attachments. API-35 quote workflow stopped before task-media because the device helper could not reveal the Description field; the saved screenshot/tree show the quote form at the top with the keyboard open. Adding real swipe fallback to device helpers, then rerun the exact head and inspect both APIs' screenshots. No VM build/test/formatter. Record owner-device map/GPS/camera acceptance separately. |
 | M6.6 remaining requested business features | Planned after M6.5 | Invoice-only hourly minimum/rounding, task minimum fee, Supplies classification, actual costs, tax-preparation reports and pending map-provider settings remain before declaring launch functionality complete. |
 | Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
@@ -3124,3 +3124,19 @@ and dark; the fields and confirmation action are readable, and the keyboard
 remains closed after review. This confirms the quote fix at d03992c only; all
 later bugfix source changes remain pending Actions. No VM build/test/formatter
 was run.
+
+### 2026-11-13 — M6.5 attachment focus fix and API-35 test-helper follow-up
+
+On `395151b` / Actions run `43440475983`, API-24 instrumentation confirmed the
+comment photo was stored but the app returned to the board before exposing the
+attachment. Moved focus cleanup and refresh until after the camera-review dialog
+finishes closing and removed the test's post-acceptance Back action. On exact head
+`a177984` / run `43443440401`, the full API-24 quote and task-media journeys
+passed; the task-media result reports one test with zero failures/errors/skips,
+including comment ownership and both gallery/camera persistence. API 35 failed
+earlier in the quote journey: the accessibility helper could not reveal
+Description, and its screenshot shows the quote form at the top while the
+keyboard is open. The API-35 task-media journey therefore did not run. Added a
+touch-swipe fallback to the quote and task-media device helpers and am sending it
+through a new exact-head Actions run. No VM build, test or formatter ran. Physical
+map/GPS/camera acceptance remains unproven.

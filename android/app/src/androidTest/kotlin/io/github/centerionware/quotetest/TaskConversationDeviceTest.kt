@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -96,10 +97,39 @@ class TaskConversationDeviceTest {
                 for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
             }
-            automation.rootInActiveWindow?.let(::scroll)
+            val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+            if (!scrolled) swipeContent(up = true)
             SystemClock.sleep(100)
         }
         waitFor(label, editable)
+    }
+
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
 
     private fun scrollToStart() {
@@ -115,6 +145,12 @@ class TaskConversationDeviceTest {
             if (automation.rootInActiveWindow?.let(::scroll) == true) {
                 stationaryPolls = 0
             } else {
+                if (stationaryPolls == 0) {
+                    repeat(8) {
+                        swipeContent(up = false)
+                        SystemClock.sleep(120)
+                    }
+                }
                 stationaryPolls++
             }
             SystemClock.sleep(150)

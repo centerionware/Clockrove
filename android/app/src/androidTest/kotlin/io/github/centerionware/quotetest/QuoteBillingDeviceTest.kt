@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -108,11 +109,39 @@ class QuoteBillingDeviceTest {
                     for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                     return false
                 }
-                automation.rootInActiveWindow?.let(::scroll)
+                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+                if (!scrolled) swipeContent(up = true)
                 SystemClock.sleep(150)
                 false
             }
         }
+    }
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
     private fun scrollToStart() {
         val deadline = SystemClock.uptimeMillis() + 15000
@@ -125,6 +154,12 @@ class QuoteBillingDeviceTest {
             if (automation.rootInActiveWindow?.let(::scroll) == true) {
                 stationaryPolls = 0
             } else {
+                if (stationaryPolls == 0) {
+                    repeat(8) {
+                        swipeContent(up = false)
+                        SystemClock.sleep(120)
+                    }
+                }
                 // Flutter scroll actions can briefly return false while a
                 // previous movement is still settling. Keep polling so one
                 // transient result cannot leave the next action off-screen.

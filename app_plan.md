@@ -58,10 +58,16 @@ availability and physical installation remain separate.
 M6.5 source implementation is prepared on `milestone-quote-media-gps`: quote
 templates and optional decisions, reviewed quote-to-new-job conversion, task
 comments and private reviewed images, map centering when a site has no saved
-location, and global/per-job GPS recording controls. The next action is to push
-the reviewed branch and require exact-head GitHub Actions, inspect its API 24/35
-results and screenshots, and fix any failures. No local build/test/formatter has
-run. Physical map, camera and GPS acceptance remains separate.
+location, and global/per-job GPS recording controls. PR #43 head `a177984` /
+Actions run `43443440401` passed formatting, analysis, Flutter tests, Android
+build, native tests, API-24 actual journeys (including comment/gallery/camera
+attachments), and the API-24 document checks. It failed in the API-35 quote
+journey while the device helper tried to reveal the Description field; the saved
+failure screenshot shows the quote form still at the top with its keyboard open.
+API-35 task-media did not run. A test-only touch-swipe fallback is being added to
+the actual-device helpers and needs a fresh exact-head Actions run. No local
+build/test/formatter has run. Physical map, camera and GPS acceptance remains
+separate.
 
 After M6.5, complete M7 backup and the remaining requested business features.
 Only after all launch functionality is implemented, M7.6 is the whole-app
