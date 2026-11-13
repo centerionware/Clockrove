@@ -25,11 +25,17 @@ wait "$clockrove_copy_logcat_pid" 2>/dev/null || true
 trap - EXIT
 timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$clockrove_copy_previews/" || true
 timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$clockrove_copy_results/TEST-copies.xml"
-[[ "$clockrove_copy_failed" == false ]]
 python3 - "$clockrove_copy_results/TEST-copies.xml" <<'PY_DEVICE'
 import sys
 import xml.etree.ElementTree as E
 root = E.parse(sys.argv[1]).getroot()
+for case in root.findall('testcase'):
+    failure = case.find('failure')
+    if failure is None:
+        continue
+    detail = ' '.join(part for part in [failure.get('message', ''), (failure.text or '').strip()] if part)
+    detail = detail[:3000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+    print(f"::error title=Android PDF acceptance::{case.attrib.get('name', 'unknown test')}: {detail}")
 assert int(root.attrib['tests']) == 5, root.attrib
 assert all(int(root.attrib[k]) == 0 for k in ['failures', 'errors', 'skipped']), root.attrib
 cases = root.findall('testcase')
@@ -43,6 +49,7 @@ assert {(c.attrib['classname'], c.attrib['name']) for c in cases} == {
 }
 print('Verified actual Android immutable financial copies:', root.attrib)
 PY_DEVICE
+[[ "$clockrove_copy_failed" == false ]]
 for clockrove_copy_style in minimal classic modern; do
   test -s "$clockrove_copy_previews/clockrove-settings-preview-$clockrove_copy_style.png"
   test -s "$clockrove_copy_previews/clockrove-party-layout-$clockrove_copy_style.png"
