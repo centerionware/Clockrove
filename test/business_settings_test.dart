@@ -202,7 +202,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
     expect(find.text('Classic · sample invoice'), findsOneWidget);
-    expect(find.textContaining('does not create or send an invoice'), findsOneWidget);
+    expect(
+      find.textContaining('does not create or send an invoice'),
+      findsOneWidget,
+    );
     expect(find.text('Page 1 of 1'), findsOneWidget);
     expect(reports.styles, ['CLASSIC']);
     expect(tester.takeException(), isNull);

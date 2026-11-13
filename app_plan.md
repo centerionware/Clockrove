@@ -54,15 +54,21 @@ case after “Void & replace” was moved below the invoice balance. Its later a
 quote journey failed because “Open issued quote” was not exposed at
 `QuoteBillingDeviceTest.kt:260`; the test now includes accessibility-state
 diagnostics. Source head 4ffdab3 added the invoice PDF hierarchy and Settings
-preview. Actions run 43354950876 passed formatting, analysis, Flutter behavior,
-synthetic previews, Android debug build and native tests, then failed in the
-API-35 PDF checks: the sample text assertion did not find “Kitchen tile
-installation”, and the left-column customer-name bounds assertion failed. The
-assertions now include extracted text and observed bounds for diagnosis. Run
-43356553053 is rerunning the pre-diagnostic source at 8a566ca; resolve the PDF
-checks on a newer exact-head Actions run and inspect rendered artifacts before
-merging. Keep #39 draft. The owner-reported email/map/manual-GPS/site-radius fixes
-still need complete Actions and physical owner-device acceptance; task-image and
+preview. Actions run 43354950876 passed analysis, Flutter behavior, synthetic
+previews, Android debug build and native tests, but the Dart formatting check
+emitted a patch and its final formatting gate failed. Its real PDF gate also
+failed on API 35: sample text extraction did not find “Kitchen tile installation”,
+and the left-column customer-name bounds assertion failed. Runs 43356553053 and
+43357698040 also failed in the PDF gate; 43357698040 included the added text and
+bounds diagnostics, but its log/artifact download is currently failing at
+GitHub's endpoint so I cannot inspect those values. The final formatting gate
+failed on the earlier runs after Dart emitted a patch. The assertion diagnostics
+remain in source, and I manually split the new long Flutter expectation. A fresh
+Actions run must verify that formatting correction, expose the PDF failure
+details and pass API 24/35 document/device checks; then inspect rendered artifacts
+before merging.
+Keep #39 draft. The owner-reported email/map/manual-GPS/site-radius fixes still
+need complete Actions and physical owner-device acceptance; task-image and
 full-release E2E/Cloudflare documentation plans are recorded below.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /

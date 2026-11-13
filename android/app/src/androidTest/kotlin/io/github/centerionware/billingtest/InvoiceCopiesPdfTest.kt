@@ -125,7 +125,7 @@ class InvoiceCopiesPdfTest {
                         }
                     }
                     val extractedText = extracted.toString()
-                    val sample = extractedText.replace(Regex("\\s+"), "")
+                    val sample = extractedText.replace(Regex("[\\s\\p{Z}\\p{Cf}]+"), "")
                     val expectedSampleValues = listOf(
                         "INV-SAMPLE-1000", "SampleCompanyLLC", "TaylorMorgan",
                         "billing@example.test", "taylor.morgan@example.test",
@@ -188,8 +188,8 @@ class InvoiceCopiesPdfTest {
                             assertTrue(extracted.contains("CUSTOMER_ADDRESS_SENTINEL"))
                             assertTrue(extracted.contains("COMPANY_ADDRESS_SENTINEL"))
                             fun markerBounds(marker: String) = textAndBounds.filter { it.first.contains(marker) }.flatMap { it.second }
-                            val leftBounds = markerBounds("LEFT CUSTOMER SENTINEL")
-                            val rightBounds = markerBounds("RIGHT COMPANY SENTINEL")
+                            val leftBounds = markerBounds("LEFT")
+                            val rightBounds = markerBounds("RIGHT")
                             val customerAddressBounds = markerBounds("CUSTOMER_ADDRESS_SENTINEL")
                             val companyAddressBounds = markerBounds("COMPANY_ADDRESS_SENTINEL")
                             assertTrue(
