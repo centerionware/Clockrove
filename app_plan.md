@@ -56,22 +56,19 @@ all with zero failures/errors/skips. Automatic Play delivery 43391432210 accepte
 availability and physical installation remain separate.
 
 M6.5 quote, comments, private image attachment, GPS controls and map fallback
-source are on PR #43 (`milestone-quote-media-gps`). Exact head `8be7c17` / Actions
-run `43485231969` passed formatting, analysis, Flutter tests, Android build,
+source are on PR #43 (`milestone-quote-media-gps`). Exact head `81d227f` / Actions
+run `43489413018` passed formatting, analysis, Flutter tests, Android build,
 native tests, the actual Android journey suite on API 24 and 35, invoice viewer
 checks, and release tooling. Downloaded XML reports 32 actual Android tests per
 API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media),
 all with zero failures/errors/skips. Reviewed camera-review and task/comment
-attachment screenshots on both APIs; they show the explicit photo review before
-attachment and the saved comment-owned image afterward. The test fixture is a
-non-exported debug-only activity selected through an instrumentation-only app
-preference; release builds still use the phone's camera app. M6.5 emulator
-journeys pass at this head. Visual review caught an incorrect success message on
-comment photos (“Photo attached to this task”). Updated it to identify the
-comment destination and added assertions for both task and comment messages to
-the Android journey; this copy fix is awaiting its exact-head Actions run.
-Physical map display, GPS sampling and hardware-camera acceptance remain
-owner-device checks. No VM build/test/formatter has run.
+attachment screenshots on both APIs. They confirm explicit photo review,
+attachment persistence, comment ownership, and the correct “Photo attached to
+this comment” confirmation. The E2E journey asserts separate task/comment
+messages. Its non-exported camera fixture is debug-only and enabled by the
+instrumentation preference; release builds still use the phone's camera. M6.5
+emulator journeys pass. Physical map display, GPS sampling and hardware-camera
+acceptance remain owner-device checks. No VM build/test/formatter has run.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
