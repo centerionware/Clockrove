@@ -124,9 +124,19 @@ class InvoiceCopiesPdfTest {
                             renderer.openPage(0).use { page -> extracted.append(CopyPdfTextApi35.read(page)) }
                         }
                     }
-                    val sample = extracted.toString().replace(Regex("\\s+"), "")
-                    for (value in listOf("INV-SAMPLE-1000", "SampleCompanyLLC", "TaylorMorgan", "billing@example.test", "taylor.morgan@example.test", "Kitchen tile installation", "Install porcelain tile", "312.00", "7.5%", "23.40", "335.40", "Sample preview only")) {
-                        assertTrue("$style sample invoice is missing $value", sample.contains(value))
+                    val extractedText = extracted.toString()
+                    val sample = extractedText.replace(Regex("\\s+"), "")
+                    val expectedSampleValues = listOf(
+                        "INV-SAMPLE-1000", "SampleCompanyLLC", "TaylorMorgan",
+                        "billing@example.test", "taylor.morgan@example.test",
+                        "Kitchen tile installation", "Install porcelain tile", "312.00",
+                        "7.5%", "23.40", "335.40", "Sample preview only",
+                    )
+                    for (value in expectedSampleValues) {
+                        assertTrue(
+                            "$style sample invoice is missing $value; extracted text: ${extractedText.take(3000)}",
+                            sample.contains(value),
+                        )
                     }
                 } finally { file.delete() }
             }
@@ -182,8 +192,20 @@ class InvoiceCopiesPdfTest {
                             val rightBounds = markerBounds("RIGHT COMPANY SENTINEL")
                             val customerAddressBounds = markerBounds("CUSTOMER_ADDRESS_SENTINEL")
                             val companyAddressBounds = markerBounds("COMPANY_ADDRESS_SENTINEL")
-                            assertTrue("Customer name must be in the left 47% column", leftBounds.isNotEmpty() && leftBounds.all { it.left >= 43f && it.right <= 44f + columnWidth + 1f })
-                            assertTrue("Company name must be in the right 47% column", rightBounds.isNotEmpty() && rightBounds.all { it.left >= rightColumnX - 1f && it.right <= 552f })
+                            assertTrue(
+                                "Customer name must be in the left 47% column; bounds=$leftBounds, " +
+                                    "expected x=43..${44f + columnWidth + 1f}",
+                                leftBounds.isNotEmpty() && leftBounds.all {
+                                    it.left >= 43f && it.right <= 44f + columnWidth + 1f
+                                },
+                            )
+                            assertTrue(
+                                "Company name must be in the right 47% column; bounds=$rightBounds, " +
+                                    "expected x=${rightColumnX - 1f}..552",
+                                rightBounds.isNotEmpty() && rightBounds.all {
+                                    it.left >= rightColumnX - 1f && it.right <= 552f
+                                },
+                            )
                             assertTrue("Customer contact must wrap within the left 47% column", customerAddressBounds.isNotEmpty() && customerAddressBounds.all { it.left >= 43f && it.right <= 44f + columnWidth + 1f && it.width() <= columnWidth + 1f })
                             assertTrue("Company contact must wrap within the right 47% column", companyAddressBounds.isNotEmpty() && companyAddressBounds.all { it.left >= rightColumnX - 1f && it.right <= 552f && it.width() <= columnWidth + 1f })
                             val taxNumberBounds = markerBounds("8.88")

@@ -53,14 +53,17 @@ debug build and native tests. API 24 then passed the formerly failing
 case after “Void & replace” was moved below the invoice balance. Its later actual
 quote journey failed because “Open issued quote” was not exposed at
 `QuoteBillingDeviceTest.kt:260`; the test now includes accessibility-state
-diagnostics. Current head 4ffdab3 has the invoice PDF hierarchy and Settings
-preview source, contracts and CI checks. Exact-head Actions run 43354950876 has
-passed formatting, analysis, Flutter behavior, synthetic previews, Android debug
-build and native tests; real Android PDF/device validation is still in progress.
-Inspect its diagnostics and rendered artifacts, resolve any failure, and keep
-#39 draft until all gates pass. The owner-reported email/map/manual-GPS/site-radius
-fixes still need complete Actions and physical owner-device acceptance; task-image
-and full-release E2E/Cloudflare documentation plans are recorded below.
+diagnostics. Source head 4ffdab3 added the invoice PDF hierarchy and Settings
+preview. Actions run 43354950876 passed formatting, analysis, Flutter behavior,
+synthetic previews, Android debug build and native tests, then failed in the
+API-35 PDF checks: the sample text assertion did not find “Kitchen tile
+installation”, and the left-column customer-name bounds assertion failed. The
+assertions now include extracted text and observed bounds for diagnosis. Run
+43356553053 is rerunning the pre-diagnostic source at 8a566ca; resolve the PDF
+checks on a newer exact-head Actions run and inspect rendered artifacts before
+merging. Keep #39 draft. The owner-reported email/map/manual-GPS/site-radius fixes
+still need complete Actions and physical owner-device acceptance; task-image and
+full-release E2E/Cloudflare documentation plans are recorded below.
 
 Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
 50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
