@@ -74,6 +74,19 @@ class _LineFields {
         text: line == null ? '1' : taskQuantity(line.quantity),
       ),
       price = TextEditingController(text: money(line?.unitPrice, digits));
+  _LineFields.template(TaskTemplate template, int digits, String currency)
+    : id = newBusinessId(),
+      kind = 'ITEM',
+      title = TextEditingController(text: template.title),
+      detail = TextEditingController(text: template.description),
+      quantity = TextEditingController(
+        text: taskQuantity(template.quantityUnits),
+      ),
+      price = TextEditingController(
+        text: template.currency == currency
+            ? money(template.priceMinor, digits)
+            : '',
+      );
   final String id;
   String kind;
   final TextEditingController title, detail, quantity, price;
@@ -133,6 +146,129 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     _currency: _digits,
   };
   bool get _enabled => !_pending && !_reading;
+
+  Future<TaskTemplate?> _chooseTaskTemplate() async {
+    final search = TextEditingController();
+    var results = ref.read(businessApiProvider).templates('');
+    final selected = await showModalBottomSheet<TaskTemplate>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, updateSheet) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * .78,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                16 + MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Choose a task template',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Text(
+                    'The quote line is a separate copy. You can edit it without changing the saved task.',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: search,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      labelText: 'Search saved tasks',
+                    ),
+                    onChanged: (value) => updateSheet(() {
+                      results = ref.read(businessApiProvider).templates(value);
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: FutureBuilder<List<TaskTemplate>>(
+                      future: results,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: TextButton(
+                              onPressed: () => updateSheet(() {
+                                results = ref
+                                    .read(businessApiProvider)
+                                    .templates(search.text);
+                              }),
+                              child: const Text('Retry task templates'),
+                            ),
+                          );
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final templates = snapshot.data!;
+                        if (templates.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No saved tasks match. Add a quote line or create a task first.',
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: templates.length,
+                          itemBuilder: (context, index) {
+                            final template = templates[index];
+                            return ListTile(
+                              leading: const Icon(Icons.checklist_outlined),
+                              title: Text(template.title),
+                              subtitle: Text(
+                                [
+                                  template.source ?? 'Saved task',
+                                  'Quantity ${taskQuantity(template.quantityUnits)}',
+                                  if (template.priceMinor == null)
+                                    'Unit price not set'
+                                  else
+                                    '${template.currency} ${money(template.priceMinor, _currencies[template.currency] ?? _digits)} each',
+                                ].join(' · '),
+                              ),
+                              onTap: () =>
+                                  Navigator.pop(sheetContext, template),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    search.dispose();
+    return selected;
+  }
+
+  Future<void> _addTaskTemplate() async {
+    if (!_enabled || _lines.length >= 2000) return;
+    final template = await _chooseTaskTemplate();
+    if (!mounted || template == null) return;
+    final line = _LineFields.template(template, _digits, _currency);
+    setState(() {
+      _lines.add(line);
+      _notice = template.currency == _currency || template.priceMinor == null
+          ? 'Added as an editable quote line.'
+          : 'Added the task details. Its price uses ${template.currency}; enter a unit price in $_currency.';
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -629,6 +765,13 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                       ),
                 icon: const Icon(Icons.add),
                 label: const Text('Add quote line'),
+              ),
+              OutlinedButton.icon(
+                onPressed: !_enabled || _lines.length >= 2000
+                    ? null
+                    : _addTaskTemplate,
+                icon: const Icon(Icons.playlist_add),
+                label: const Text('Add line from task template'),
               ),
               const SizedBox(height: 20),
               _text(

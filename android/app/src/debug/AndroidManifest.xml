@@ -5,6 +5,10 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application>
+        <!-- Non-exported deterministic camera targeted only by Actions' debug
+             instrumentation. Release builds do not contain this component. -->
+        <activity android:name=".testsupport.TaskPhotoCameraActivity" android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name=".widget.WidgetTestHostActivity" android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>

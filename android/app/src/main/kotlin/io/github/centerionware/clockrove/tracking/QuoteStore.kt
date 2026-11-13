@@ -229,7 +229,7 @@ internal object QuoteStore {
         return inserted != -1L
     }
     fun decide(db: SQLiteDatabase, id: String, revision: Int, decision: String, note: String, confirmed: Boolean, at: Long): String? {
-        if (!confirmed || decision !in setOf("ACCEPTED", "DECLINED") || note.trim().length < 10 || !text(note, 2000)) return "INVALID_QUOTE_DECISION"
+        if (!confirmed || decision !in setOf("ACCEPTED", "DECLINED") || !text(note, 2000)) return "INVALID_QUOTE_DECISION"
         val latest = latest(db, id) ?: return "QUOTE_UNAVAILABLE"
         if (latest.revision != revision) return "QUOTE_REVISION_CHANGED"
         if (latest.decision != null) return "QUOTE_ALREADY_DECIDED"

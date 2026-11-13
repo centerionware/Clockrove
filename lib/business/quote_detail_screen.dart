@@ -112,12 +112,18 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     }
   }
 
-  Future<void> _scope(QuoteRevision revision) async {
+  Future<void> _scope(
+    QuoteRevision revision, {
+    bool createNewJob = false,
+  }) async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (_) =>
-            QuoteScopeScreen(quoteId: revision.id, revision: revision.revision),
+        builder: (_) => QuoteScopeScreen(
+          quoteId: revision.id,
+          revision: revision.revision,
+          createNewJob: createNewJob,
+        ),
       ),
     );
     if (mounted) {
@@ -244,11 +250,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     if (revision == null) {
       return;
     }
-    if (_note.text.trim().length < 10 ||
-        _note.text.length > 2000 ||
-        _note.text.contains('\u0000')) {
+    if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       setState(
-        () => _noteError = 'Add a note of 10–2000 characters describing how this revision was accepted or declined.',
+        () => _noteError = 'Private notes can be up to 2000 characters.',
       );
       return;
     }
@@ -270,7 +274,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
         ),
         content: SingleChildScrollView(
           child: Text(
-            '${revision.number} · ${revision.draft.title}\n${revision.draft.currency} ${revision.total}\n\n${revision.draft.validUntil == null ? 'No expiry date set.' : 'Validity date: ${revision.draft.validUntil}.'}\n\n${review.note}\n\nThis is your explicit local record against this revision. An email draft is not proof of customer acceptance. The record is retained; changed terms require a new issued revision.',
+            '${revision.number} · ${revision.draft.title}\n${revision.draft.currency} ${revision.total}\n\n${revision.draft.validUntil == null ? 'No expiry date set.' : 'Validity date: ${revision.draft.validUntil}.'}${review.note.isEmpty ? '' : '\n\nPrivate note: ${review.note}'}\n\nThis is your explicit local record against this revision. An email draft is not proof of customer acceptance. The record is retained; changed terms require a new issued revision.',
           ),
         ),
         actions: [
@@ -330,7 +334,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         ? 'No local decision recorded'
                         : quoteStatus(value.decision!),
                   ),
-                  if (value.decisionNote != null)
+                  if (value.decisionNote?.isNotEmpty == true)
                     Text('Private local note\n${value.decisionNote}'),
                   const SizedBox(height: 12),
                   FilledButton.icon(
@@ -458,6 +462,14 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                   label: const Text('Plan accepted scope'),
                 ),
               if (latest.decision == 'ACCEPTED')
+                FilledButton.tonalIcon(
+                  onPressed: _eligible
+                      ? () => _scope(latest, createNewJob: true)
+                      : null,
+                  icon: const Icon(Icons.add_business_outlined),
+                  label: const Text('Create job from quote'),
+                ),
+              if (latest.decision == 'ACCEPTED')
                 OutlinedButton.icon(
                   onPressed: _eligible ? () => _invoiceQuote(latest) : null,
                   icon: const Icon(Icons.receipt_long_outlined),
@@ -561,7 +573,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       if (latest.decision != null &&
                           _pendingKind != 'decision') ...[
                         Text(quoteStatus(latest.decision!)),
-                        if (latest.decisionNote != null)
+                        if (latest.decisionNote?.isNotEmpty == true)
                           Text(latest.decisionNote!),
                         const Text(
                           'This record belongs to this issued revision. Changed terms require a new revision.',
@@ -609,6 +621,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                             maxLengthEnforcement: MaxLengthEnforcement.none,
                             decoration: InputDecoration(
                               labelText: 'Private decision note',
+                              helperText: 'Optional. This note stays private.',
                               errorText: _noteError,
                             ),
                             onChanged: (_) => setState(() {

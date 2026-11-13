@@ -1,10 +1,10 @@
 # Billing, quotes, task notes and business reporting
 
 Owner-requested implementation queue, 2026-11-12. This is a contract for future
-work, not blanket feature or launch acceptance evidence. Widgets and the invoice
-foundation have merged; see app_plan.md and plan_status.md for exact validation and
-delivery evidence. Follow the Actions-only working agreement and keep each remaining
-slice independently reviewable.
+work, not blanket feature or launch acceptance evidence. Widgets, the invoice
+foundation and quote baseline have merged; see app_plan.md and plan_status.md for
+exact validation and delivery evidence. Follow the Actions-only working agreement
+and keep each remaining slice independently reviewable.
 
 ## Ordered delivery
 
@@ -30,9 +30,13 @@ needs a new task or the explicit invoice correction policy.
 6. Main-menu business Reports icon, financial summaries and exports using the
    validated invoice/payment/cost data.
 
-Carry the owner-requested payment/receipt/CC work as the immediate next iteration
-after the merged invoice foundation. These dependent slices are one business roadmap; scaffolding or
-mocked PDF/email/storage behavior does not complete a slice.
+The owner has pulled quote usability, task comments with image attachments, map
+repair and configurable GPS recording into the immediate follow-up milestone M6.5
+in `app_plan.md`. The full first-use UI overhaul and E2E/screenshot inventory is
+M7.6 and must pass before closed testing. This priority change does not mark the
+remaining financial reports, expense tracking or billing policies complete. These
+dependent slices are one business roadmap; scaffolding or mocked PDF/email/storage
+behavior does not complete a slice.
 
 ## One clear invoice journey
 
@@ -344,6 +348,23 @@ Quote navigation supports draft/issued/accepted/declined/expired filters, revisi
 history and linked job/invoices. Issued financial documents remain available when
 jobs are archived; deletion must preserve clear provenance and retained history.
 
+### Owner-prioritized quote usability
+
+Use the existing task-template library directly in quote creation. Search templates
+from active, archived and deleted jobs; selecting one adds a new quote line that
+can be edited without changing the saved template. Notes and terms are optional in
+draft, issue, accept/decline, scope planning and invoice review. The customer
+decision can be recorded with one clear Accept or Decline action and a confirmation;
+an optional private note is supplementary and never a prerequisite.
+
+After an accepted revision, offer **Create job from quote** and **Add to existing
+job** as clear alternatives. The new-job flow pre-fills the board with accepted
+quote items, quantities and prices, then lets the owner review the job and tasks
+before a single commit. Preserve the quote/revision/line links. This creates no
+worked time, completed tasks, invoice or payment. Repeating conversion reopens or
+updates the existing mapping and never duplicates jobs or tasks. Any future
+changes to accepted terms require a new quote revision.
+
 The concrete remaining conversion policy and acceptance matrix are in
 [QUOTE_ACTUAL_WORK_PLAN.md](QUOTE_ACTUAL_WORK_PLAN.md). It specifies explicit
 actual-source selection, accepted/current price/tax/party review, shared claims,
@@ -358,6 +379,18 @@ semantics. This is a local app: do not invent team identities/accounts. Comments
 stay private to task detail and are not automatically inserted into customer PDFs.
 Archived jobs retain readable comments; templates copy task definition/category,
 not old conversation, incurred costs, payments or completion history.
+
+Task detail can attach an existing image or take a new photo. Camera capture uses
+an app-private temporary destination, then opens an in-app review with Retake,
+Cancel and **Attach photo**. The attachment is committed only after the user
+accepts the reviewed photo; retake/cancel discards the temporary capture. Gallery
+images use the same review-before-import flow. Validate formats, dimensions,
+per-file/count/total-storage limits, strip EXIF/GPS metadata, and keep accepted
+bytes in app-private storage. Show a thumbnail, open a safe full preview and allow
+removal. Attachments belong to a task or a specific comment, are never copied by
+task templates or inserted into invoices/quotes, and are removed with their
+parent. Include them in future encrypted backup/restore with authenticated archive
+bounds and explicit storage cleanup.
 
 Keep a simple Supplies toggle on task entry/edit; off means Labor for new tasks.
 Persist a charge classification separately from customer price and incurred cost.

@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -101,19 +102,57 @@ class InvoicePaymentDeviceTest {
                     for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                     return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                 }
-                automation.rootInActiveWindow?.let(::scroll)
+                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+                if (!scrolled) swipeContent(up = true)
                 SystemClock.sleep(150)
                 false
             }
         }
     }
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
+    }
     private fun scrollToStart() {
+        var touchFallbackUsed = false
         repeat(12) {
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
             }
-            if (automation.rootInActiveWindow?.let(::scroll) != true) return
+            if (automation.rootInActiveWindow?.let(::scroll) != true) {
+                if (!touchFallbackUsed) {
+                    repeat(8) {
+                        swipeContent(up = false)
+                        SystemClock.sleep(120)
+                    }
+                    touchFallbackUsed = true
+                }
+                return
+            }
             SystemClock.sleep(120)
         }
     }
@@ -128,7 +167,8 @@ class InvoicePaymentDeviceTest {
                 // The incoming route can expose its app bar before scrolling is
                 // enabled. Keep polling the real route rather than treating one
                 // transient false action as proof that it is already at the top.
-                automation.rootInActiveWindow?.let(::scroll)
+                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+                if (!scrolled) swipeContent(up = false)
                 false
             }
         }
@@ -143,6 +183,7 @@ class InvoicePaymentDeviceTest {
     }
     private fun enter(label: String, value: String) {
         hideKeyboard()
+        if (find(label, true) == null) scrollToStart()
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))

@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="io.github.centerionware.quotetest.TaskPhotoGalleryActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="io.github.centerionware.quotetest.TaskPhotoFixtureProvider"
+            android:authorities="io.github.centerionware.clockrove.test.task-photo-fixtures"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

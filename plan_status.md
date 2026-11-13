@@ -1,8 +1,11 @@
 # Clockrove task status
 
 Updated 2026-11-13. Product contract: [app_plan.md](app_plan.md).
-Statuses describe evidence, not intent. Android launch requires milestones 1–8;
-iOS and future service remain deferred.
+Statuses describe evidence, not intent. M6.5 source work (quote UX, comments and
+image attachments, maps and GPS controls) is in progress. Complete M7 backup and
+the remaining business features before M7.6 (whole-app UI overhaul and exhaustive
+E2E/screenshots), which must pass before closed testing. iOS and future service
+remain deferred.
 
 | Task | Status | Evidence / next action |
 | --- | --- | --- |
@@ -40,18 +43,23 @@ iOS and future service remain deferred.
 | Payments, receipts, CC and void/replacement | Merged and main validated; internal upload accepted; physical email/upgrade pending | #37 plus maintenance #40/#41 on main 93673fb; full 43254952365 has 479 native / 50 actual Android, zero failures/errors/skips. Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC; installation/availability and physical email are separate |
 | Follow-on: quotes and invoice detail | Merged #39; main validation passed and internal delivery accepted | PR exact-head run 43381832106 and main run 43384059350 passed the actual quote journey and 30 API-24/35 device tests each with zero failures/errors/skips. Keyboard-closed assertion passed before recording the customer decision. Play run 43385810795 accepted internal.29.1 / version code 216718138; physical install and tester availability remain separate. |
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
+| PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
+| M6.5 quote usability, task comments/images, map and GPS controls | API-24/35 emulator journeys pass; owner-device map/GPS/camera evidence pending | Exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed all checks. Downloaded device XML reports 32 actual Android tests on each API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media), all zero failures/errors/skips. Reviewed API-24/35 screenshots: camera review, task attachment, comment-owned attachment and correct destination-specific confirmation. The Android journey asserts both task and comment confirmation strings. The non-exported synthetic camera fixture is instrumentation-only and absent from release builds. Physical map rendering, GPS sampling and real-camera acceptance remain pending; no VM build/test/formatter. |
+| M6.6 remaining requested business features | Planned after M6.5 | Invoice-only hourly minimum/rounding, task minimum fee, Supplies classification, actual costs, tax-preparation reports and pending map-provider settings remain before declaring launch functionality complete. |
 | Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
-| Follow-on: task comments, supplies and costs | Planned | Private comments/history; simple Supplies toggle; charge classification separate from recorded purchase/labor/overhead costs; template copies do not duplicate history or expenses |
+| Follow-on: task comments, supplies and costs | Comments pulled forward into M6.5; supplies/cost accounting remains planned | M6.5 implements private comments and image attachments. The separate Supplies toggle, actual cost ledger and company reports remain in the lifecycle queue; templates never copy conversation or costs. |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
+| M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
+| M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; not started | After all remaining launch features are complete, overhaul first-use UX across the entire app and create a complete inventory of features, screens, routes, settings, options, permissions, empty/error states and destructive confirmations. Actual-app journeys must assert native persistence/side effects and retain a reviewed screenshot for every item on API 24 and current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This is the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
 | M8.3 Protected workflows/Fastlane/internal delivery | Automatic signed internal delivery verified; launch/production gates remain | Main 93673fb / 43254952365 passed; Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC, permanent key and automatic version allocation. Owner installation/availability/production remain separate |
-| M8.4 Closed testing/production eligibility/paid release | Pending owner setup | Separate upload/submission/approval/live evidence required |
+| M8.4 Closed testing/production eligibility/paid release | Pending owner setup and M7.6 gate | Do not move from internal to closed testing until all launch features and M7.6 pass. Upload/submission/approval/live evidence remains separate. |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
 
@@ -81,8 +89,8 @@ iOS and future service remain deferred.
 | Map opens as a blank/white area | Source resilience fix implemented; full Android/device acceptance pending | Added bounded tile-request timeout, failure state with coordinates and an external map fallback. If a site has no usable saved coordinates, the editor requests an explained fresh location and centers the map there; a widget test asserts the requested fix is the initial center. The actual OSM-rendering cause is not reproduced here. Current full device stage fails in invoice UI before all cases complete; verify map tiles and fallback in a passing Actions artifact and on the owner's phone. |
 | Manual clock-in does not record GPS | Source fix implemented; full Android/device acceptance pending | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. The current full Actions device stage does not pass; native/device delivery evidence remains pending. |
 | Small worksite radius | Source/schema change implemented; full Android/device acceptance pending | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; the current full device stage does not pass, so migration and site-editor acceptance remain pending. |
-| Task and task-comment images | Added to product contract | Planned after tasks/comments: take/select images, local private storage, bounded size/count, metadata stripping, preview/removal, encrypted backup inclusion and parent deletion. Not implemented. |
-| Full app E2E screenshots and Cloudflare Pages documentation | Added as final public-release gate | Plan now requires an end-to-end coverage inventory for every feature, screen and selectable option, reviewed screenshots on minimum/current Android APIs, then versioned static user guides deployed on Cloudflare Pages for open release. Internal/closed tracks are not gated by exhaustive coverage. |
+| Task and task-comment images | Moved into M6.5 | Support existing-image selection and camera intent. Captured photos require in-app review and explicit **Attach photo** acceptance; cancel/retake discards the temp image. Enforce private bounded storage, metadata stripping, preview/removal and parent cleanup. |
+| Full app UI/E2E screenshots and Cloudflare Pages documentation | Split into M7.6 and final public-release docs stage | The complete end-to-end inventory and reviewed per-screen/option screenshots now gate closed testing. Static user guides on Cloudflare Pages remain part of the full public release. |
 
 Actions run 43341316880 stopped in Analyze: formatting emitted a patch for three
 files, and analysis found the unsupported `BaseRequest.abort()` call in the tile
@@ -3116,3 +3124,70 @@ and dark; the fields and confirmation action are readable, and the keyboard
 remains closed after review. This confirms the quote fix at d03992c only; all
 later bugfix source changes remain pending Actions. No VM build/test/formatter
 was run.
+
+### 2026-11-13 — M6.5 attachment focus fix and API-35 test-helper follow-up
+
+On `395151b` / Actions run `43440475983`, API-24 instrumentation confirmed the
+comment photo was stored but the app returned to the board before exposing the
+attachment. Moved focus cleanup and refresh until after the camera-review dialog
+finishes closing and removed the test's post-acceptance Back action. On exact head
+`a177984` / run `43443440401`, the full API-24 quote and task-media journeys
+passed; the task-media result reports one test with zero failures/errors/skips,
+including comment ownership and both gallery/camera persistence. API 35 failed
+earlier in the quote journey: the accessibility helper could not reveal
+Description, and its screenshot shows the quote form at the top while the
+keyboard is open. The API-35 task-media journey therefore did not run. Added a
+touch-swipe fallback to the quote and task-media device helpers and am sending it
+through a new exact-head Actions run. No VM build, test or formatter ran. Physical
+map/GPS/camera acceptance remains unproven.
+
+### 2026-11-13 — API-35 test journey needs touch scrolling in payment helper
+
+Head `6bf3238` / Actions run `43470341913` passed formatting, analysis, Flutter
+behavior tests, Android build and native tests. API 24 completed 23 actual
+native-device cases, financial lifecycle, immutable copies, payment, quote
+conversion and task/comment gallery-camera journeys, all with zero
+failures/errors/skips. API 35 passed the same 23 actual native cases, financial
+lifecycle and immutable-copy journey. The payment journey then failed to expose
+`Unit price (USD)` while correcting a partially paid invoice; its screenshot and
+accessibility dump show the replacement editor at the tax section, with the
+price row outside the viewport. This is an incomplete device-helper scroll path,
+not evidence of missing persisted replacement data. Added touch-swipe fallback
+to `InvoicePaymentDeviceTest` forward/backward scrolling and record/retry from a
+new exact-head Actions run. API-35 payment completion, quote, task-media, and the
+physical map/GPS/camera checks remain pending. No VM build/test/formatter ran.
+
+### 2026-11-13 — API-35 deterministic camera fixture follow-up
+
+Exact head `baa38a4` / Actions run `43473888142` passed formatting, analysis,
+Flutter tests, Android build and native tests. Downloaded and parsed device XML:
+API 24 passed 23 base cases plus 1 billing, 5 immutable-copy, 1 payment, 1
+quote and 1 task-media case, all with zero failures/errors/skips. API 35 passed
+the same first five suites; task-media failed when the Android app correctly
+handled `ActivityNotFoundException` and showed “No camera app is available”
+because the test APK's synthetic camera activity did not resolve on that
+platform. The API-35 screenshot and accessibility tree confirm this fallback;
+gallery selection and all earlier journeys passed. Moved the synthetic handler
+into the debug APK, leaving release camera behavior unchanged, so Actions can
+exercise the production capture intent and output-URI flow on both APIs. Fresh
+exact-head device evidence is pending. All build and test work remains in
+Actions; no VM build/test/formatter ran.
+
+The camera test remained incomplete until head `8be7c17` / run `43485231969`.
+That exact run passed all workflow steps and its downloaded XML reports 32 actual
+Android tests on each API, all zero failures/errors/skips, including task-media.
+Reviewed camera-review and final comment-owned attachment screenshots on API 24
+and 35. The task-media test sets a private preference in the debuggable app,
+verifies the non-exported fixture activity is installed, and clears the
+preference afterward. It confirms review-before-attach and persisted comment
+ownership. This fixture is absent from release builds. Physical map/GPS/real-
+camera acceptance remains separate.
+
+Head `81d227f` / run `43489413018` passed every Actions step after the
+destination-specific snackbar fix. The test now asserts the task-photo and
+comment-photo messages separately. Downloaded and parsed XML reports 32 actual
+Android tests on each API, zero failures/errors/skips, including the quote and
+task-media journeys. Reviewed API-24 and API-35 camera-review, task attachment,
+and comment-owned attachment screenshots; the latter visibly says “Photo
+attached to this comment.” Physical map/GPS/real-camera acceptance remains
+separate. No VM build/test/formatter ran.

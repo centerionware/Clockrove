@@ -36,7 +36,7 @@ class TimerRepository internal constructor(context: Context,
     data class Departure(val sessionId: String, val detectedUtcMillis: Long, val deadlineUtcMillis: Long)
     enum class DepartureResult { RECORDED, ALREADY_PENDING, CANCELLED, FINALIZED, NOT_DUE, NO_PENDING, STALE_SESSION, STALE_CANDIDATE, INVALID_BOUNDARY, EXPIRED, NEEDS_REVIEW }
     data class TrackingObservation(val running: Session?, val latest: LocationPoint?)
-    enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION }
+    enum class SampleResult { RECORDED, DUPLICATE, ID_CONFLICT, INVALID_SAMPLE, OUTSIDE_SESSION, THROTTLED, RECORDING_DISABLED }
 
 
     @Synchronized
@@ -191,6 +191,18 @@ class TimerRepository internal constructor(context: Context,
                 db.setTransactionSuccessful()
                 return SampleResult.OUTSIDE_SESSION
             }
+            if (!LocationRecordingStore.enabled(db, active.jobId)) {
+                db.setTransactionSuccessful()
+                return SampleResult.RECORDING_DISABLED
+            }
+            val tooSoon = db.rawQuery(
+                "SELECT measured_ms FROM location_points WHERE session_id=? ORDER BY measured_ms DESC,id DESC LIMIT 1",
+                arrayOf(point.sessionId),
+            ).use { it.moveToFirst() && point.measuredUtcMillis - it.getLong(0) < MIN_LOCATION_SAMPLE_INTERVAL_MS }
+            if (tooSoon) {
+                db.setTransactionSuccessful()
+                return SampleResult.THROTTLED
+            }
             db.execSQL("INSERT INTO location_points(id,session_id,measured_ms,received_ms,latitude,longitude,accuracy) VALUES (?,?,?,?,?,?,?)",
                 arrayOf<Any?>(point.id, point.sessionId, point.measuredUtcMillis, point.receivedUtcMillis,
                     point.latitude, point.longitude, point.accuracyMeters))
@@ -220,6 +232,14 @@ class TimerRepository internal constructor(context: Context,
             "SELECT * FROM location_points WHERE session_id=? ORDER BY measured_ms DESC,id DESC LIMIT 1",
             arrayOf(sessionId),
         ).use { if (it.moveToFirst()) decodePoint(it) else null }
+
+    @Synchronized
+    internal fun locationRecordingEnabled(jobId: String): Boolean =
+        LocationRecordingStore.enabled(helper.readableDatabase, jobId)
+
+    @Synchronized
+    internal fun defaultLocationRecordingEnabled(): Boolean =
+        LocationRecordingStore.defaultEnabled(helper.readableDatabase)
 
     private fun decodePoint(cursor: android.database.Cursor) = LocationPoint(
         cursor.getString(cursor.getColumnIndexOrThrow("id")),
@@ -374,6 +394,36 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun boardSnapshot(jobId: String): BoardSnapshot = BoardSnapshot(readSnapshot(helper.readableDatabase).version,
         BoardStore.read(helper.readableDatabase, jobId))
+    internal data class TaskConversationSnapshot(val version: Long, val conversation: TaskConversationStore.Conversation)
+    @Synchronized
+    internal fun taskConversation(jobId: String, taskId: String): TaskConversationSnapshot = TaskConversationSnapshot(
+        readSnapshot(helper.readableDatabase).version, TaskConversationStore.read(helper.readableDatabase, jobId, taskId),
+    )
+    @Synchronized
+    internal fun taskAttachment(attachmentId: String): TaskConversationStore.Attachment? =
+        TaskConversationStore.attachment(helper.readableDatabase, attachmentId)
+    @Synchronized
+    internal fun saveTaskComment(id: String, version: Long, jobId: String, taskId: String, commentId: String, body: String): Outcome =
+        boardChange(id, version, "TASK_COMMENT_SAVE", listOf(jobId, taskId, commentId, body)) {
+            TaskConversationStore.saveComment(it, jobId, taskId, commentId, body, wallClock())
+        }
+    @Synchronized
+    internal fun removeTaskComment(id: String, version: Long, jobId: String, taskId: String, commentId: String): Outcome =
+        boardChange(id, version, "TASK_COMMENT_REMOVE", listOf(jobId, taskId, commentId)) {
+            TaskConversationStore.removeComment(it, jobId, taskId, commentId, wallClock())
+        }
+    @Synchronized
+    internal fun attachTaskImage(id: String, version: Long, jobId: String, taskId: String, commentId: String?, attachmentId: String, image: ByteArray): Outcome {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(image).joinToString("") { "%02x".format(it) }
+        return boardChange(id, version, "TASK_IMAGE_ADD", listOf(jobId, taskId, commentId, attachmentId, digest)) {
+            TaskConversationStore.addAttachment(it, jobId, taskId, commentId, attachmentId, image, wallClock())
+        }
+    }
+    @Synchronized
+    internal fun removeTaskImage(id: String, version: Long, jobId: String, taskId: String, attachmentId: String): Outcome =
+        boardChange(id, version, "TASK_IMAGE_REMOVE", listOf(jobId, taskId, attachmentId)) {
+            TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId)
+        }
     @Synchronized
     internal fun taskTemplates(search: String = ""): List<BoardStore.Template> = BoardStore.templates(helper.readableDatabase, search)
     @Synchronized
@@ -967,7 +1017,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 9) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 10) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -985,6 +1035,8 @@ class TimerRepository internal constructor(context: Context,
             InvoiceCoverageStore.install(db, now())
             InvoicePaymentStore.install(db)
             QuoteStore.install(db)
+            LocationRecordingStore.install(db, now())
+            TaskConversationStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -995,7 +1047,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..8 && newVersion == 9) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..9 && newVersion == 10) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1004,11 +1056,16 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
             if (oldVersion < 8) InvoicePaymentStore.install(db)
             if (oldVersion < 9) QuoteStore.install(db)
+            if (oldVersion < 10) {
+                LocationRecordingStore.install(db, now())
+                TaskConversationStore.install(db)
+            }
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }
 
     companion object {
+        private const val MIN_LOCATION_SAMPLE_INTERVAL_MS = 300_000L
         @Volatile private var instance: TimerRepository? = null
         fun get(context: Context): TimerRepository = instance ?: synchronized(this) {
             instance ?: TimerRepository(context).also {

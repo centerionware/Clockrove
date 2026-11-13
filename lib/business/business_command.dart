@@ -73,13 +73,14 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_CURRENCY' => 'Choose a supported currency. Your draft is kept.',
     'CUSTOMER_UNAVAILABLE' => 'This customer is unavailable. Choose another customer or clear the selection.',
     'EMAIL_TOO_LARGE' => 'The expanded email is too long. Shorten the email template or document details.',
-    'INVALID_QUOTE_INVOICE' => 'Review the selected actual work and add a private note before confirming the invoice.',
+    'INVALID_QUOTE_INVOICE' => 'Review the selected actual work, dates and accepted price before confirming the invoice.',
     'INVALID_QUOTE_INVOICE_SOURCES' => 'Select completed tasks for task-rate work or finalized time for hourly work.',
     'QUOTE_INVOICE_MAPPING_REQUIRED' => 'Review and link this job’s scope to the accepted revision before preparing its invoice.',
     'QUOTE_INVOICE_SOURCES_CHANGED' => 'Selected work changed or was already invoiced. Refresh available work and review the remaining sources.',
     'INVALID_REPORT_RANGE' =>
       'Review the date range and timezone, then refresh available work.',
-    'INVALID_QUOTE_SCOPE' => 'Review selected lines, task names and your private scope note. Your draft is kept.',
+    'INVALID_QUOTE_SCOPE' =>
+      'Review selected quote lines and task names. Your draft is kept.',
     'QUOTE_UNAVAILABLE' || 'QUOTE_LINE_UNAVAILABLE' => 'This issued quote or line is unavailable. Refresh its revision before planning.',
     'QUOTE_ACCEPTANCE_REQUIRED' => 'Record explicit local acceptance for this revision before planning work.',
     'QUOTE_HISTORICAL_REVIEW_REQUIRED' => 'Review and acknowledge the historical accepted revision before planning.',
@@ -103,7 +104,18 @@ class _BusinessCommandState extends State<BusinessCommand>
     'QUOTE_ALREADY_DECIDED' => 'This revision already has a local decision. Its recorded history is retained.',
     'QUOTE_SEQUENCE_EXHAUSTED' || 'QUOTE_REVISION_EXHAUSTED' =>
       'The quote numbering limit was reached. Existing documents are retained.',
-    'INVALID_QUOTE_DECISION' => 'Confirm the revision and add a note describing the local acceptance or decline.',
+    'INVALID_QUOTE_DECISION' =>
+      'Confirm the current issued revision and customer decision.',
+    'INVALID_TASK_COMMENT' => 'Enter a comment of 1 to 2000 characters.',
+    'TASK_COMMENT_UNAVAILABLE' =>
+      'This comment was changed or removed. Refresh the task notes.',
+    'INVALID_TASK_IMAGE' =>
+      'Choose a valid photo within the displayed image limits.',
+    'TASK_IMAGE_LIMIT' =>
+      'This task already has 20 photos. Remove an image before adding another.',
+    'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 25 MB task-photo limit. Remove an image before adding another.',
+    'TASK_IMAGE_UNAVAILABLE' =>
+      'This photo was removed. Refresh the task before continuing.',
     'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',

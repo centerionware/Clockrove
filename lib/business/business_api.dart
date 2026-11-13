@@ -153,6 +153,94 @@ class TaskTemplate {
   );
 }
 
+class TaskAttachmentInfo {
+  const TaskAttachmentInfo({
+    required this.id,
+    required this.createdMillis,
+    required this.bytes,
+    this.commentId,
+  });
+  final String id;
+  final String? commentId;
+  final int createdMillis, bytes;
+  factory TaskAttachmentInfo.decode(Map<Object?, Object?> value) =>
+      TaskAttachmentInfo(
+        id: value['id'] as String,
+        commentId: value['commentId'] as String?,
+        createdMillis: value['created'] as int,
+        bytes: value['bytes'] as int,
+      );
+}
+
+class TaskComment {
+  const TaskComment({
+    required this.id,
+    required this.body,
+    required this.createdMillis,
+    required this.updatedMillis,
+    required this.attachments,
+  });
+  final String id, body;
+  final int createdMillis, updatedMillis;
+  final List<TaskAttachmentInfo> attachments;
+  factory TaskComment.decode(Map<Object?, Object?> value) => TaskComment(
+    id: value['id'] as String,
+    body: value['body'] as String,
+    createdMillis: value['created'] as int,
+    updatedMillis: value['updated'] as int,
+    attachments: (value['attachments'] as List)
+        .map((item) => TaskAttachmentInfo.decode(item as Map<Object?, Object?>))
+        .toList(),
+  );
+}
+
+class TaskCommentEvent {
+  const TaskCommentEvent(this.commentId, this.action, this.recordedMillis);
+  final String commentId, action;
+  final int recordedMillis;
+  factory TaskCommentEvent.decode(Map<Object?, Object?> value) =>
+      TaskCommentEvent(
+        value['commentId'] as String,
+        value['action'] as String,
+        value['recorded'] as int,
+      );
+}
+
+class TaskConversation {
+  const TaskConversation({
+    required this.version,
+    required this.jobId,
+    required this.taskId,
+    required this.archived,
+    required this.taskAttachments,
+    required this.comments,
+    required this.events,
+  });
+  final int version;
+  final String jobId, taskId;
+  final bool archived;
+  final List<TaskAttachmentInfo> taskAttachments;
+  final List<TaskComment> comments;
+  final List<TaskCommentEvent> events;
+  factory TaskConversation.decode(
+    Map<Object?, Object?> value,
+  ) => TaskConversation(
+    version: value['version'] as int,
+    jobId: value['jobId'] as String,
+    taskId: value['taskId'] as String,
+    archived: value['archived'] as bool,
+    taskAttachments: (value['taskAttachments'] as List)
+        .map((item) => TaskAttachmentInfo.decode(item as Map<Object?, Object?>))
+        .toList(),
+    comments: (value['comments'] as List)
+        .map((item) => TaskComment.decode(item as Map<Object?, Object?>))
+        .toList(),
+    events: (value['events'] as List)
+        .map((item) => TaskCommentEvent.decode(item as Map<Object?, Object?>))
+        .toList(),
+  );
+}
+
 class JobBoard {
   const JobBoard(
     this.version,
@@ -200,6 +288,23 @@ class BusinessApi {
       (await _channel.invokeListMethod<Object?>('templates', {
         'search': search,
       }))!.map((e) => TaskTemplate.decode(e as Map<Object?, Object?>)).toList();
+  Future<TaskConversation> taskConversation(
+    String jobId,
+    String taskId,
+  ) async => TaskConversation.decode(
+    (await _channel.invokeMapMethod<Object?, Object?>('taskConversation', {
+      'jobId': jobId,
+      'taskId': taskId,
+    }))!,
+  );
+  Future<Uint8List?> taskAttachment(String attachmentId) async {
+    final value = await _channel.invokeMapMethod<Object?, Object?>(
+      'taskAttachment',
+      {'attachmentId': attachmentId},
+    );
+    return value?['unavailable'] == true ? null : value?['image'] as Uint8List?;
+  }
+
   Future<TimerOutcome> _change(
     String method,
     String id,
@@ -260,6 +365,48 @@ class BusinessApi {
         'quantityUnits': c.quantityUnits,
         'currency': c.currency,
       });
+  Future<TimerOutcome> saveTaskComment(
+    String commandId,
+    TaskConversation conversation,
+    String commentId,
+    String body,
+  ) => _change('saveTaskComment', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'commentId': commentId,
+    'body': body,
+  });
+  Future<TimerOutcome> removeTaskComment(
+    String commandId,
+    TaskConversation conversation,
+    String commentId,
+  ) => _change('removeTaskComment', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'commentId': commentId,
+  });
+  Future<TimerOutcome> attachTaskImage(
+    String commandId,
+    TaskConversation conversation,
+    String attachmentId,
+    String? commentId,
+    Uint8List bytes,
+  ) => _change('attachTaskImage', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'attachmentId': attachmentId,
+    'commentId': commentId,
+    'image': bytes,
+  });
+  Future<TimerOutcome> removeTaskImage(
+    String commandId,
+    TaskConversation conversation,
+    String attachmentId,
+  ) => _change('removeTaskImage', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'attachmentId': attachmentId,
+  });
   Future<TimerOutcome> moveCard(
     String id,
     JobBoard b,

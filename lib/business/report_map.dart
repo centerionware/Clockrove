@@ -56,7 +56,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
   late final _client = TileBackoffClient(http.Client());
   late final _tiles = ref.read(workMapTilesProvider)(_client);
   final _controller = MapController();
-  late ReportPoint _selected = widget.points.first;
+  late ReportPoint? _selected = widget.points.isEmpty
+      ? null
+      : widget.points.first;
   bool _failed = false;
   @override
   void dispose() {
@@ -107,6 +109,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     final center = visible.isEmpty
         ? const LatLng(0, 0)
         : LatLng(visible.first.latitude, visible.first.longitude);
+    final selected = _selected;
     const ink = Color(0xff176b55);
     return Scaffold(
       appBar: AppBar(title: const Text('Report location history')),
@@ -122,13 +125,18 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      _selected.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      '${_selected.label} · ${_selected.accuracy.toStringAsFixed(0)} m accuracy',
-                    ),
+                    if (selected != null) ...[
+                      Text(
+                        selected.name,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        '${selected.label} · ${selected.accuracy.toStringAsFixed(0)} m accuracy',
+                      ),
+                    ] else
+                      const Text(
+                        'No recorded location samples in this report.',
+                      ),
                     Text('Report timezone: ${widget.timezone}'),
                     const Text(
                       'Lines connect measured samples within a session, with gaps over 30 minutes left open. They are not verified routes. Map requests share the viewed area with the tile provider.',
@@ -187,15 +195,16 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                             ),
                         ],
                       ),
-                      if (_selected.latitude.abs() <= 85.05112878)
+                      if (selected != null &&
+                          selected.latitude.abs() <= 85.05112878)
                         CircleLayer(
                           circles: [
                             CircleMarker(
                               point: LatLng(
-                                _selected.latitude,
-                                _selected.longitude,
+                                selected.latitude,
+                                selected.longitude,
                               ),
-                              radius: _selected.accuracy,
+                              radius: selected.accuracy,
                               useRadiusInMeter: true,
                               color: ink.withValues(alpha: .1),
                               borderColor: ink,
@@ -214,11 +223,11 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                                 tooltip: '${point.name} · ${point.label}',
                                 onPressed: () => _select(point),
                                 icon: Icon(
-                                  point.id == _selected.id
+                                  point.id == selected?.id
                                       ? Icons.location_on
                                       : Icons.circle,
                                   color: ink,
-                                  size: point.id == _selected.id ? 36 : 14,
+                                  size: point.id == selected?.id ? 36 : 14,
                                 ),
                               ),
                             ),

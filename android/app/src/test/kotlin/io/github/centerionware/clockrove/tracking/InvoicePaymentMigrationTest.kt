@@ -65,7 +65,7 @@ class InvoicePaymentMigrationTest {
         assertNull(repo.recordInvoicePayment("record", 42, InvoicePaymentStore.Draft("payment", "invoice", "3000", "USD", at, "UTC")).conflict)
         assertEquals(BigInteger.valueOf(7750), repo.invoicePayments("invoice").second.balance.due)
         inspect { db ->
-            assertEquals(9, db.version)
+            assertEquals(10, db.version)
             db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1002L, it.getLong(0)) }
             db.rawQuery("SELECT released_ms FROM invoice_task_claims WHERE id='claim'", null).use { assertTrue(it.moveToFirst()); assertTrue(it.isNull(0)) }
             db.rawQuery("SELECT fingerprint FROM commands WHERE id='old-command'", null).use { it.moveToFirst(); assertEquals("synthetic-opaque-receipt", it.getString(0)) }

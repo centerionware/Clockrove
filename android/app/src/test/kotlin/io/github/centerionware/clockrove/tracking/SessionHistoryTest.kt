@@ -34,10 +34,10 @@ class SessionHistoryTest {
         repository.execute(TimerRepository.Command("timer-${sequence++}", version, action, if (action == TimerRepository.Action.STOP) null else job, at, "UTC", 0, origin))
     private fun recordPoint(id: String, sessionId: String, at: Long) = repository.recordLocation(TimerRepository.LocationPoint(id, sessionId, at, at, 1.0, 2.0, 3.0))
     private fun observed(): String {
-        assertNull(timer(TimerRepository.Action.START, 1000, TimerRepository.Origin.WIDGET).conflict)
+        assertNull(timer(TimerRepository.Action.START, 1_000_000, TimerRepository.Origin.WIDGET).conflict)
         val session = repository.snapshot().running!!.id
-        for (at in listOf(1100L, 1200L, 1800L, 1900L)) assertEquals(TimerRepository.SampleResult.RECORDED, recordPoint("point-$at", session, at))
-        assertNull(timer(TimerRepository.Action.STOP, 2000).conflict)
+        for (at in listOf(1_100_000L, 1_400_000L, 1_700_000L, 2_000_000L)) assertEquals(TimerRepository.SampleResult.RECORDED, recordPoint("point-$at", session, at))
+        assertNull(timer(TimerRepository.Action.STOP, 2_100_000).conflict)
         return session
     }
     @Test fun manualEntriesStoreActualContextAndAncestryWithoutStartingWorkOrInventingGps() {
@@ -79,13 +79,13 @@ class SessionHistoryTest {
     }
     @Test fun shorteningPrunesBothEndsWithDeletionRevisionsAndExtensionAddsNoPoints() {
         val id = observed()
-        assertNull(correct(draft(id, 1200, 1800)).conflict)
-        assertEquals(listOf(1200L, 1800L), repository.locationPoints(id).map { it.measuredUtcMillis })
+        assertNull(correct(draft(id, 1_400_000, 1_800_000)).conflict)
+        assertEquals(listOf(1_400_000L, 1_700_000L), repository.locationPoints(id).map { it.measuredUtcMillis })
         inspect { db -> db.rawQuery("SELECT entity_id,deleted FROM entity_revisions WHERE kind='location' ORDER BY entity_id", null).use {
-            assertTrue(it.moveToNext()); assertEquals("point-1100", it.getString(0)); assertEquals(1, it.getInt(1))
-            assertTrue(it.moveToNext()); assertEquals("point-1900", it.getString(0)); assertFalse(it.moveToNext())
+            assertTrue(it.moveToNext()); assertEquals("point-1100000", it.getString(0)); assertEquals(1, it.getInt(1))
+            assertTrue(it.moveToNext()); assertEquals("point-2000000", it.getString(0)); assertFalse(it.moveToNext())
         } }
-        assertNull(correct(draft(id, 900, 2200)).conflict)
+        assertNull(correct(draft(id, 900_000, 2_200_000)).conflict)
         assertEquals(2, repository.locationPoints(id).size)
         val revisions = repository.sessionRevisions(job, id)
         assertTrue(revisions.any { it.payload?.contains("WIDGET") == true })
@@ -129,10 +129,10 @@ class SessionHistoryTest {
     @Test fun unexpectedFailureRollsBackPruningRevisionsVersionAndReceipt() {
         val id = observed(); val v = version; val revisions = repository.sessionRevisions(job, id)
         inspect { db -> db.execSQL("CREATE TRIGGER fail_correction BEFORE UPDATE ON sessions BEGIN SELECT RAISE(ABORT,'synthetic failure'); END") }
-        try { repository.correctSession("failed", v, draft(id, 1200, 1800)); fail("Unexpected success") } catch (_: android.database.SQLException) {}
+        try { repository.correctSession("failed", v, draft(id, 1_400_000, 1_800_000)); fail("Unexpected success") } catch (_: android.database.SQLException) {}
         assertEquals(v, version); assertEquals(4, repository.locationPoints(id).size); assertEquals(revisions, repository.sessionRevisions(job, id))
         inspect { db -> db.rawQuery("SELECT id FROM commands WHERE id='failed'", null).use { assertFalse(it.moveToFirst()) }; db.execSQL("DROP TRIGGER fail_correction") }
-        assertNull(repository.correctSession("failed", v, draft(id, 1200, 1800)).conflict)
+        assertNull(repository.correctSession("failed", v, draft(id, 1_400_000, 1_800_000)).conflict)
     }
     @Test fun concurrentOverlappingCommandsSerializeAndDuplicateCorrectionCommitsOnce() {
         val pool = Executors.newFixedThreadPool(2)

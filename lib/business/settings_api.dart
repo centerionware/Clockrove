@@ -21,6 +21,7 @@ class CompanySettings {
     required this.emailBody,
     this.defaultTaxUnits = 0,
     this.receivablesEmail = '',
+    this.defaultLocationRecording = true,
   });
   final String currency,
       companyName,
@@ -36,6 +37,7 @@ class CompanySettings {
   final int digits;
   final int defaultTaxUnits;
   final String receivablesEmail;
+  final bool defaultLocationRecording;
   final String? defaultHourlyMinor;
   factory CompanySettings.decode(Map<Object?, Object?> v) => CompanySettings(
     currency: v['currency'] as String,
@@ -53,6 +55,7 @@ class CompanySettings {
     emailBody: v['emailBody'] as String,
     defaultTaxUnits: v['defaultTaxUnits'] as int? ?? 0,
     receivablesEmail: v['receivablesEmail'] as String? ?? '',
+    defaultLocationRecording: v['defaultLocationRecording'] as bool? ?? true,
   );
   Map<String, Object?> encode() => {
     'currency': currency,
@@ -69,6 +72,7 @@ class CompanySettings {
     'emailBody': emailBody,
     'defaultTaxUnits': defaultTaxUnits,
     'receivablesEmail': receivablesEmail,
+    'defaultLocationRecording': defaultLocationRecording,
   };
 }
 
@@ -130,11 +134,15 @@ class JobPreferences {
     this.emailOverride,
     this.taxUnits,
     this.effectiveTaxUnits = 0,
+    this.locationRecordingOverride,
+    this.effectiveLocationRecording = true,
   });
   final int version, color, digits;
   final int? archivedMillis;
   final int? taxUnits;
   final int effectiveTaxUnits;
+  final bool? locationRecordingOverride;
+  final bool effectiveLocationRecording;
   final String id, name, mode, currency, effectiveEmail;
   final String? rate, effectiveRate, customerId, emailOverride;
   final bool archived;
@@ -159,6 +167,9 @@ class JobPreferences {
       emailOverride: s['customerEmailOverride'] as String?,
       taxUnits: s['taxUnits'] as int?,
       effectiveTaxUnits: v['effectiveTaxUnits'] as int? ?? 0,
+      locationRecordingOverride: s['locationRecordingOverride'] as bool?,
+      effectiveLocationRecording:
+          v['effectiveLocationRecording'] as bool? ?? true,
     );
   }
   Map<String, Object?> encode() => {
@@ -171,6 +182,7 @@ class JobPreferences {
     'customerId': customerId,
     'customerEmailOverride': emailOverride,
     'taxUnits': taxUnits,
+    'locationRecordingOverride': locationRecordingOverride,
   };
 }
 

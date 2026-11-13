@@ -6,6 +6,7 @@ import 'business_api.dart';
 import 'business_command.dart';
 import 'job_settings_screen.dart';
 import 'report_screen.dart';
+import 'task_conversation_screen.dart';
 
 class JobScreen extends ConsumerWidget {
   const JobScreen({super.key, required this.jobId, required this.jobName});
@@ -87,6 +88,17 @@ class _Board extends ConsumerWidget {
         MaterialPageRoute<void>(
           builder: (_) =>
               _TaskEditor(jobId: board.jobId, columnId: columnId, card: card),
+        ),
+      );
+  Future<void> _conversation(BuildContext context, TaskCard card) =>
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => TaskConversationScreen(
+            jobId: board.jobId,
+            taskId: card.id,
+            taskTitle: card.title,
+          ),
         ),
       );
   Future<void> _move(
@@ -184,9 +196,16 @@ class _Board extends ConsumerWidget {
             ],
           ),
         ),
-        trailing: board.archived
-            ? null
-            : PopupMenuButton<String>(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Task notes and photos',
+              icon: const Icon(Icons.forum_outlined),
+              onPressed: () => _conversation(context, card),
+            ),
+            if (!board.archived)
+              PopupMenuButton<String>(
                 tooltip: 'Task actions',
                 onSelected: (value) {
                   if (value == 'edit') {
@@ -223,6 +242,8 @@ class _Board extends ConsumerWidget {
                     ),
                 ],
               ),
+          ],
+        ),
       ),
     );
   }

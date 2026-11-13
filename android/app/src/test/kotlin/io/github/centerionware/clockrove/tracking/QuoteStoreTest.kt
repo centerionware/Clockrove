@@ -73,6 +73,13 @@ class QuoteStoreTest {
             try { db.execSQL("UPDATE quotes SET number='Q-9999'"); fail("immutable number") } catch (_: android.database.SQLException) { }
         }
     }
+    @Test fun customerDecisionCanBeRecordedWithoutAnOptionalPrivateNote() {
+        issue()
+        val outcome = repository.decideQuote("accept-without-note", version, "quote", 1, "ACCEPTED", "", true)
+        assertNull(outcome.conflict)
+        assertEquals("ACCEPTED", repository.quote("quote").latest!!.decision)
+        assertEquals("", repository.quote("quote").latest!!.decisionNote)
+    }
     @Test fun quantitiesEstimatedHoursWideTotalsAndHalfCentBoundariesStayExact() {
         val wide = "9".repeat(1000)
         val value = draft().copy(lines = listOf(QuoteStore.Line("hours", "Estimated hours", "No worked hours created", "HOURS", "9223372036854775807", wide)), taxUnits = 1000000)

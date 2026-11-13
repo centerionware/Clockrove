@@ -95,6 +95,28 @@ class _VisualReport extends ReportApi {
 }
 
 void main() {
+  testWidgets(
+    'empty report location map shows an empty state without crashing',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+          ],
+          child: const MaterialApp(
+            home: ReportMap(points: [], timezone: 'UTC'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('No recorded location samples in this report.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final dark in [false, true]) {
     for (final task in [false, true]) {
       testWidgets(

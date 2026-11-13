@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -108,20 +109,63 @@ class QuoteBillingDeviceTest {
                     for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                     return false
                 }
-                automation.rootInActiveWindow?.let(::scroll)
+                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+                if (!scrolled) swipeContent(up = true)
                 SystemClock.sleep(150)
                 false
             }
         }
     }
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
+    }
     private fun scrollToStart() {
-        repeat(12) {
+        val deadline = SystemClock.uptimeMillis() + 15000
+        var stationaryPolls = 0
+        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
             }
-            if (automation.rootInActiveWindow?.let(::scroll) != true) return
-            SystemClock.sleep(120)
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                stationaryPolls = 0
+            } else {
+                if (stationaryPolls == 0) {
+                    repeat(8) {
+                        swipeContent(up = false)
+                        SystemClock.sleep(120)
+                    }
+                }
+                // Flutter scroll actions can briefly return false while a
+                // previous movement is still settling. Keep polling so one
+                // transient result cannot leave the next action off-screen.
+                stationaryPolls++
+            }
+            SystemClock.sleep(150)
         }
     }
     private fun revealDetailStatus(label: String) {
@@ -150,6 +194,7 @@ class QuoteBillingDeviceTest {
     }
     private fun enter(label: String, value: String) {
         hideKeyboard()
+        if (find(label, true) == null) scrollToStart()
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
@@ -263,14 +308,14 @@ class QuoteBillingDeviceTest {
             noWorkOrInvoices(); assertEquals(0, count("kanban_cards"))
             scrollToStart(); reveal("Open issued quote"); click("Open issued quote"); waitFor("Page 1 of 1"); capture("issued-quote")
             val quotePdf = requireNotNull(repository.quoteDocument(quoteId, 1).pdf)
-            back(); scrollToStart(); enter("Private decision note", "Synthetic customer explicitly accepted this revision")
+            back(); scrollToStart()
             reveal("Review customer decision"); click("Review customer decision"); click("Confirm review")
             until("Customer decision review reopened the keyboard and obscured recording") { !keyboardVisible() }
             reveal("Record reviewed decision"); click("Record reviewed decision")
             until("Actual accepted decision was not committed") { repository.quote(quoteId).latest?.decision == "ACCEPTED" }
             capture("accepted-quote"); noWorkOrInvoices()
-            scrollToStart(); reveal("Plan accepted scope"); click("Plan accepted scope"); click("Review group plan")
-            waitFor("Review scope plan"); enter("Private scope review note", "Reviewed planned task quantity and accepted unit price")
+            scrollToStart(); reveal("Create job from quote"); click("Create job from quote"); click("Create job with these tasks")
+            waitFor("Review scope plan")
             reveal("Review selected plan"); click("Review selected plan"); click("Confirm review")
             until("Scope review reopened the keyboard and obscured plan application") { !keyboardVisible() }
             reveal("Apply reviewed plan"); click("Apply reviewed plan")
@@ -278,8 +323,8 @@ class QuoteBillingDeviceTest {
             val binding = repository.quoteScope(quoteId).second.single()
             val planned = repository.boardSnapshot(binding.jobId).board.cards.single()
             assertNull(planned.completedMillis); assertEquals(260000L, planned.quantityUnits); assertEquals(BigInteger("1250"), planned.priceMinor)
-            noWorkOrInvoices(); waitFor("Review group plan"); capture("planned-scope")
-            click("Review group plan"); waitFor("Review scope plan"); reveal("Open existing job"); click("Open existing job")
+            noWorkOrInvoices(); waitFor("Create job from quote"); capture("planned-scope")
+            reveal("Open existing job"); click("Open existing job")
             waitFor("Task board"); waitFor("Install tile"); click("Install tile"); waitFor("Edit task")
             enter("Unit price (USD)", "9.99"); enter("Quantity", "30"); reveal("Save task"); click("Save task")
             until("Actual task quantity edit was not saved") { repository.boardSnapshot(binding.jobId).board.cards.single().quantityUnits == 300000L }
@@ -290,11 +335,10 @@ class QuoteBillingDeviceTest {
             assertEquals(BigInteger("999"), repository.boardSnapshot(binding.jobId).board.cards.single().priceMinor)
             assertEquals(0, count("sessions")); assertEquals(0, count("invoices"))
             val completedDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getDefault() }.format(java.util.Date(requireNotNull(repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis)))
-            back(); waitFor("Review scope plan"); back(); waitFor("Plan accepted scope"); back()
+            back(); waitFor("Create job from quote"); back(); waitFor("Plan accepted scope")
             scrollToStart(); reveal("Invoice actual work"); click("Invoice actual work")
             waitFor("Load available work"); enter("First date (YYYY-MM-DD)", completedDate); enter("Last date (YYYY-MM-DD)", completedDate)
             reveal("Load available work"); click("Load available work"); reveal("Install tile"); click("Install tile"); capture("actual-source-selection")
-            enter("Private invoice review note", "Reviewed actual thirty units at accepted quote price")
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total USD 403.13"); capture("actual-invoice-review")
             click("Keep editing"); assertEquals(0, count("invoices"))
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); click("Confirm invoice review")

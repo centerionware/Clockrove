@@ -10,7 +10,11 @@ trained monkey could use it.” Common first-use tasks should need no training o
 guessing: use plain labels, obvious next actions, consistent controls, and
 actionable explanations for errors and permission states. Expose advanced choices
 when relevant, and check each feature's main path from a first-time user's point
-of view. Full-release E2E review includes representative first-use journeys.
+of view. After all launch features are implemented, the whole-app UI overhaul and
+exhaustive actual-app E2E/screenshot gate runs before closed testing. It covers
+every feature, screen and selectable option, with first-use journeys, native
+persistence checks and reviewed screenshots on API 24 and current stable Android.
+Public user documentation is a later Cloudflare Pages deliverable.
 
 Use the forest-green/neutral light palette and mint/deep-green dark palette in
 app_theme.dart. Keep one strong primary action per context, clear typography,

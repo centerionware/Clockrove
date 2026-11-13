@@ -46,39 +46,38 @@ explicit business rule, separate from numerical precision loss.
 
 ### Next concrete action
 
-The quote milestone baseline passed on d03992c / Actions run 43337896079.
-Owner-fix run 43350422474 passed formatting, analysis, Flutter behavior, Android
-debug build and native tests. API 24 then passed the formerly failing
-`InvoicePaymentDeviceTest.actualSettingsPartialPaymentSettlementCorrectionAndDeletedJobReceipt`
-case after “Void & replace” was moved below the invoice balance. Its later actual
-quote journey failed because “Open issued quote” was not exposed at
-`QuoteBillingDeviceTest.kt:260`; the test now includes accessibility-state
-diagnostics. Source head 4ffdab3 added the invoice PDF hierarchy and Settings
-preview. Actions run 43354950876 passed analysis, Flutter behavior, synthetic
-previews, Android debug build and native tests, but the Dart formatting check
-emitted a patch and its final formatting gate failed. Its real PDF gate also
-failed on API 35: sample text extraction did not find “Kitchen tile installation”,
-and the left-column customer-name bounds assertion failed. Runs 43356553053 and
-43357698040 also failed in the PDF gate; 43357698040 included the added text and
-bounds diagnostics, but its log/artifact download is currently failing at
-GitHub's endpoint so I cannot inspect those values. Run 43360903562 again failed
-the PDF gate and final formatting gate. Run 43362543850 at ee84038 also failed
-both gates; its green-looking formatter step is `continue-on-error`, and the
-final formatting check is authoritative. The test invocation now follows the
-repository's multiline style, but formatter output still needs exact inspection.
-The next CI edit emits formatter patches and JUnit failures as check annotations,
-which can be read through the authenticated check API. Then correct the reported
-issues, pass API 24/35 document/device checks, and inspect rendered artifacts
-before merging.
-Keep #39 draft. The owner-reported email/map/manual-GPS/site-radius fixes still
-need complete Actions and physical owner-device acceptance; task-image and
-full-release E2E/Cloudflare documentation plans are recorded below.
+The quote baseline, final rendered documents, and invoice-style preview merged
+in #39 at `8da7113`; main validation 43384059350 passed and Play accepted
+`0.1.0-internal.29.1` / version code `216718138` in delivery run 43385810795.
+Documentation follow-up #42 merged at `650e201`. Main validation 43389226159
+passed with 563 native tests and 30 actual Android tests on each of API 24 and 35,
+all with zero failures/errors/skips. Automatic Play delivery 43391432210 accepted
+`0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval,
+availability and physical installation remain separate.
 
-Maintenance #41 merged 93673fb; main 43254952365 passed full Actions (479 native /
-50 actual Android, zero failures/errors/skips; downloaded XML inspected). Automatic
-Play delivery 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC;
-review approval, availability and owner installation remain separate. Physical tracking/widgets/email journeys, provider settings, encrypted
-backup, rights/store/production gates remain open. All builds/tests use Actions.
+M6.5 quote, comments, private image attachment, GPS controls and map fallback
+source are on PR #43 (`milestone-quote-media-gps`). Exact head `81d227f` / Actions
+run `43489413018` passed formatting, analysis, Flutter tests, Android build,
+native tests, the actual Android journey suite on API 24 and 35, invoice viewer
+checks, and release tooling. Downloaded XML reports 32 actual Android tests per
+API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media),
+all with zero failures/errors/skips. Reviewed camera-review and task/comment
+attachment screenshots on both APIs. They confirm explicit photo review,
+attachment persistence, comment ownership, and the correct “Photo attached to
+this comment” confirmation. The E2E journey asserts separate task/comment
+messages. Its non-exported camera fixture is debug-only and enabled by the
+instrumentation preference; release builds still use the phone's camera. M6.5
+emulator journeys pass. Physical map display, GPS sampling and hardware-camera
+acceptance remain owner-device checks. No VM build/test/formatter has run.
+
+The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
+
+After M6.5, complete M7 backup and the remaining requested business features.
+Only after all launch functionality is implemented, M7.6 is the whole-app
+first-use UI overhaul and exhaustive actual-app E2E/screenshot inventory. The
+owner explicitly requires every feature, screen and option to pass this reviewed
+coverage before moving from internal to closed testing. All builds, tests,
+formatters and renders stay in GitHub Actions.
 
 ## 2. Product decisions
 
@@ -95,7 +94,7 @@ backup, rights/store/production gates remain open. All builds/tests use Actions.
 | Public source | Audit/personal-use source-available rights, not an open-source license |
 | Reuse intent | Private personal builds and changes permitted; redistribution/commercial reuse require permission; contributions permitted |
 | Timer | Exactly one active job, editable timesheets and manual entries, local change history |
-| Location history | Only while clocked in; target every ten minutes; keep until user deletes |
+| Location history | Recording on by default; global setting with per-job inherit/on/off; ten-minute target with a five-minute ordinary-sample floor; only while clocked in |
 | Automation | Multiple circular sites per job; manual actions win; configurable departure grace and paid-travel mode |
 | Boards | Custom columns and reorderable cards per job |
 | Maps | Free/no-account OSM tiles by default; optional user-configured OSM-compatible tiles and Google Maps |
@@ -151,7 +150,18 @@ representative first-use journeys in the full-release E2E and screenshot review.
 
 ### 3.3 Location recording and automation
 
-- Target a location sample at clock-in, approximately every ten minutes while working, and at clock-out when available without delaying clock-out.
+- Main Settings has a **Record work locations** preference, enabled by default.
+  Each job inherits that setting or explicitly overrides it on/off. Changing the
+  effective setting while clocked in reconciles the location foreground service;
+  turning recording off stops future collection but does not silently delete
+  previously saved work samples. Manual timekeeping remains available without
+  location permission, with recording disabled, or offline.
+- Request fused-location updates on a ten-minute target while recording is
+  enabled and a session is running. Persist no more than one ordinary sample in
+  any five-minute window; a first/last session boundary fix may be stored without
+  delaying clock-in/out. Android may deliver later or miss samples, so show actual
+  timestamps and accuracy and never imply guaranteed continuous tracking.
+- Save measured timestamp, reception timestamp where useful, coordinates, accuracy, and session association. Do not insert synthetic points for missed intervals.
 - Save measured timestamp, reception timestamp where useful, coordinates, accuracy, and session association. Do not insert synthetic points for missed intervals.
 - Use Android fused location, a location foreground service, and the platform geofencing API. Ordinary background timers and periodic WorkManager jobs are not evidence of ten-minute GPS delivery.
 - Explain the purpose of location access before requesting it. Request background access separately when enabling geofencing. Show an honest degraded state for denied permissions and platform restrictions.
@@ -191,7 +201,22 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 - Deleting a populated column requires selecting a destination for its cards before committing.
 - Cards have title, description, optional due date, and position. Support moving/reordering by drag and accessible menu actions.
 - Card due dates are calendar dates, not UTC instants. Preserve them across timezone changes.
-- Add private chronological task comments and a Supplies toggle in the owner-requested business iteration; see section 3.5a and the detailed lifecycle plan. After tasks and comments are implemented, support taking a photo or choosing images and attaching them to a task or individual comment. Store images locally in app-private storage, limit file types/count/size and total storage, strip location metadata, preview/remove attachments, and delete them with their parent. Include them in the explicit encrypted backup with strict archive limits. No team assignments or task timers; comments do not introduce an account system.
+- Add private chronological comments on each task, with clear add/edit/delete
+  actions and created/edited timestamps. Comments stay local, are not copied into
+  task templates or customer documents, and introduce no accounts or assignments.
+- A comment or task can attach an existing image or start the camera. For a new
+  photo, launch Android's camera intent with a private temporary output URI, then
+  show the captured image in a review screen with **Retake**, **Cancel** and
+  **Attach photo**. Do not add the image to the task/comment until the user taps
+  **Attach photo**; cancel/retake removes the temporary capture. Existing-image
+  selection also shows a review before import. Copy accepted images into
+  app-private storage, validate type/dimensions/size/count and total storage,
+  strip EXIF/location metadata, show previews and allow removal. Deleting a task
+  or comment deletes its owned images transactionally; templates never copy
+  comments or images. Include attachments in encrypted backup with strict
+  archive limits. No broad storage permission is required.
+- Keep the Supplies toggle on task entry/edit as a charge classification. Full
+  cost and tax-report behavior remains in section 3.5a and the lifecycle plan.
 
 ### 3.5 Calendar, list, map, and CSV
 
@@ -208,11 +233,14 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 ### 3.5a Billing lifecycle, quotes and business reports
 
 The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
-After current widgets are validated and merged, implement invoice integrity/tax,
-then payments (including partial), receipts, accounting CC and void/replacement.
-Quotes follow; then invoice-only hourly rounding/minimum-hours and task-job minimum-
-fee settings; then task comments, labor/supplies classification and actual costs;
-then a main-menu Reports icon with useful business/tax-preparation summaries.
+The invoice lifecycle, partial payments/receipts/CC/void-replacement, quote
+baseline, and quote PDF/settings-preview work are merged. Immediately next is
+M6.5 (quote usability, task comments/images, map repair and GPS controls), then
+the remaining backup and business milestones, then M7.6 (whole-app UI overhaul
+and exhaustive E2E/screenshots) before closed testing. Remaining invoice-only
+hourly rounding/minimum-hours and task-job minimum-fee settings, full task
+cost/tax reporting, and main-menu tax reports remain in the launch queue; M6.5
+does not mark them complete.
 
 - Bill each task and exact UTC portion of work only once, for unpaid and paid
   invoices alike. Native transactional source claims, safe legacy reconciliation,
@@ -449,8 +477,65 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 - Implement customizable boards and accessible card moves.
 - Build date selection, filtered list/totals, timezone handling and map history.
 - Add optional provider settings, credential handling, OSM attribution/caching, and CSV/document sharing.
-- Owner-prioritized next slice after widget merge: paid-invoice status, PAID receipts and accounting CC preference (section 3.5a).
+- The base board/calendar/map/CSV foundation is implemented; user-reported map
+  blank screens and GPS controls are addressed in M6.5 below.
 - Acceptance: board operations preserve cards; list/map/export filters agree; DST/range-boundary totals are correct; provider outage does not block local work; CSV formula/escaping tests pass.
+
+### Milestone 6.5 — quote usability, task comments and images, maps and GPS controls
+
+Implement this owner-prioritized milestone immediately after the merged quote
+baseline. It is one complete vertical slice; scaffolding or mocked native flows
+do not satisfy acceptance.
+
+- Make quote entry quick and obvious. Provide a searchable task-template picker
+  over reusable templates from active, archived and deleted jobs. Selecting a
+  template creates an ordinary editable quote line; users can change title,
+  details, quantity and unit price without mutating the template. New quote lines
+  remain available. Keep titles/line descriptions required where needed to
+  produce a meaningful quote, but notes/terms are optional everywhere; never
+  require a note to accept or decline. Explicit confirmation records the decision
+  against the issued revision. Email/PDF viewing is never treated as acceptance.
+- After acceptance, offer a plainly labeled **Create job from quote** action.
+  Pre-fill a new job's board with the accepted quote's task items, quantities and
+  agreed prices, preserving quote/line provenance. Let the owner review job name,
+  customer, billing mode, tasks and destination before committing. Also retain an
+  explicit **Add to existing job** path for a deliberate destination. Repeating
+  either conversion reuses the existing mapping and cannot create duplicate
+  jobs/tasks, worked time, completion, invoices or payments.
+- Add durable task comments and task/comment image attachments per section 3.4.
+  Test adding, editing, deleting, empty/cancelled/error states, gallery selection,
+  camera capture, review acceptance, retake, cancel, EXIF removal, private URI
+  access, storage limits, parent deletion and migration/restore behavior.
+- Repair every map entry point (site picker, current-location selection and
+  report history) so it never becomes an unexplained white screen. When a site
+  has no location, request permission/fix with a clear prompt and center on the
+  user's current position if available. With coordinates, center on that point.
+  Test loaded tiles, slow/failing/offline tiles, permission denial, invalid/polar
+  coordinates, retry and external-map fallback; map failure must not block jobs,
+  manual timekeeping, reports or exports.
+- Add the global GPS recording preference and per-job inherit/on/off override
+  from section 3.3. Verify default-on, permission-degraded states, clock-in via
+  manual/app/widget actions, service reconciliation after changes, ten-minute
+  request configuration, five-minute persistence throttling, exact real
+  timestamps/accuracy, and no off-clock/post-finalization samples. Sampling
+  limits and location-history pruning must share the serialized native boundary.
+- Acceptance requires migration tests from the released v9 database, native
+  storage/rollback/privacy tests, Flutter behavior tests, and actual Android
+  journeys on API 24 and current stable API. Capture every distinct M6.5 screen
+  and option state from Actions, inspect the images, and record exact commit/run/
+  artifacts. Physical GPS sampling and camera hardware claims remain separate
+  from emulator evidence and must be recorded honestly.
+
+### Milestone 6.6 — complete remaining requested business features
+
+Finish the planned launch features that remain after M6.5 before declaring the
+application functionally complete. This includes invoice-only hourly
+minimum/rounding modes and task-rate minimum fees; the Supplies classification,
+actual cost ledger and main-menu tax-preparation reports; and the pending secure
+map-provider settings. Follow the detailed contracts in sections 3.5a/3.6 and
+`docs/INVOICE_LIFECYCLE_PLAN.md`. Test native calculations, exact money, tax and
+cost reconciliation, settings inheritance, migrations, provider failures and
+report drilldowns. Do not classify an unimplemented item as covered by UI tests.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -458,6 +543,31 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 - Implement export envelope/schema, restore preview, revision ancestry resolution, deletion/overlap conflicts and transactional commit.
 - Exclude secrets and disable imported automation; resolve open backed-up sessions explicitly.
 - Acceptance: round-trip, conflict, wrong-password, corrupt/tampered archive, malicious-size/KDF, interrupted transaction and duplicate import tests pass without partial writes or credential leakage.
+
+### Milestone 7.6 — whole-app UI overhaul and exhaustive end-to-end verification
+
+After M6.5, M6.6 and M7 have implemented all launch functionality, review and
+overhaul the complete application for an intuitive first-use experience before
+entering closed testing.
+
+- Inventory every feature, screen, navigation route, setting, selectable option,
+  permission state, empty state, success/error flow and destructive confirmation.
+  Simplify labels, ordering, affordances and recovery guidance across the whole
+  app; preserve the product contracts and native data invariants.
+- Create an actual-app end-to-end path for every inventory item. Assert native
+  persistence and important side effects, not only rendered labels. Cover fresh
+  install and upgrade, light/dark and large text, cancellation/retry, invalid
+  inputs, permissions, map outages, image picker/camera review, quote conversion,
+  timekeeping, widgets, invoices/payments, reports, export and restore.
+- Run on API 24 and current Play-supported stable API with synthetic data. Save
+  a reviewed screenshot for every screen and distinct option/state, keep
+  per-case results and sanitized logs, and fix every unexplained failure or
+  usability blocker. All test/build/render runs execute in GitHub Actions.
+- **Closed-testing gate:** do not move the app from internal to closed testing
+  until all launch features and this full E2E/UI acceptance pass. Internal
+  iterations may continue while implementation and validation are underway.
+- Reuse this complete inventory for the final public-release gate below; the
+  static Cloudflare Pages documentation site remains a full public-release task.
 
 ### Milestone 8 — release readiness and automatic Android delivery
 
@@ -469,9 +579,10 @@ Exact-name web searches and searches restricted to indexed Google Play/Apple App
 
 ### Final full-open-release gate — end-to-end coverage and visual documentation
 
-This final gate is required before the full public launch. It is deliberately later
-than internal and closed testing so those test tracks can receive builds while
-coverage is being completed.
+This final gate is required before the full public launch. The exhaustive app UI
+and E2E inventory is completed under M7.6 before closed testing; this gate adds
+the public documentation deployment and checks that coverage remains complete for
+the release candidate.
 
 - Maintain a release coverage inventory generated from the app navigation, every
   user-facing feature/screen, and every selectable setting or action. Require an
@@ -483,9 +594,10 @@ coverage is being completed.
   synthetic data. Preserve per-case results, logs with private values removed,
   and a screenshot for every screen and distinct feature/option state. Review the
   captures for clipping, unreadable text, broken navigation and stale information.
-- Do not gate internal or closed testing on this exhaustive inventory. Gate the
-  full open release on complete coverage, zero unexplained failures, reviewed
-  screenshots, and closure of all release-blocking findings.
+- Internal delivery may continue during implementation. Closed testing requires
+  all launch features and M7.6 acceptance. Gate full open release on complete coverage, zero
+  unexplained failures, reviewed screenshots, and closure of all release-blocking
+  findings.
 - Build a static, end-user documentation site from the reviewed screenshots and
   step-by-step task guides. Include accessible captions/alt text, current app
   version labels, privacy-sensitive workflows, and feature limitations. Use only
@@ -526,8 +638,11 @@ Account creation, owner credentials, concrete license review, and physical devic
 | Manual precedence | Manual stop suppresses restart until exit/re-entry; auto events do not switch active jobs |
 | Recovery | Process death, reboot, force-stop/relaunch, permission revocation, notification permission limitations and battery saver |
 | GPS | Actual sample times/accuracy shown; gaps truthful; no retained idle/post-finalization trail; deletion does not delete timesheets |
+| GPS recording controls | Global default-on and per-job inherit/on/off behavior; ten-minute request target, five-minute ordinary persistence floor, session-boundary samples, and service reconciliation |
 | Widgets | Default and picker mode, New job last, missing default, stale state, running-other-job state, multiple widgets |
 | Boards | Column/card reorder, populated-column deletion, accessible moves, due dates across timezones |
+| Task comments/images | Comment add/edit/delete and ordering; gallery and camera-intent paths; review/attach, retake/cancel, private storage, EXIF removal, size/count limits and parent cleanup |
+| Quotes | Template selection creates editable lines; no required notes; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
 | Reports | Date/job filters match list/map/export; active/provisional exclusions explained; GPS points linked correctly |
 | CSV | Unicode, quotes, commas, multiline fields, spreadsheet formulas, exact durations and offset/timezone fields |
 | Maps | Default without keys; OSM attribution/cache/backoff; optional valid/invalid keys; provider change/restart; offline failure |
@@ -564,7 +679,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | Not started | Follow dependencies and acceptance checks above |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains; M6.5 source is prepared for exact-head Actions validation, then M6.6, M7 and the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.

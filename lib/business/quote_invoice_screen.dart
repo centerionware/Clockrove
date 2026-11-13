@@ -322,11 +322,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         'Current prices are missing. Choose accepted prices or update the job/task prices.',
       );
     }
-    if (_note.text.trim().length < 10 ||
-        _note.text.length > 2000 ||
-        _note.text.contains('\u0000')) {
+    if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       throw const FormatException(
-        'Add a private review note of 10–2000 characters.',
+        'Private review notes can be up to 2000 characters.',
       );
     }
     return QuoteInvoiceChoices(
@@ -432,7 +430,8 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   'Whole quote estimate ${data.currency} ${accepted.total}. This invoice includes only selected actual work; quantities, duration and per-invoice tax can differ.',
                 ),
                 const SizedBox(height: 12),
-                Text('Private review note\n${choices.note}'),
+                if (choices.note.isNotEmpty)
+                  Text('Private review note\n${choices.note}'),
                 const Text(
                   'This allocates the selected actual work to this quote and reserves it against duplicate billing. It creates no additional work or payment. Emailing is a separate action.',
                 ),
@@ -821,6 +820,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   maxLengthEnforcement: MaxLengthEnforcement.none,
                   decoration: const InputDecoration(
                     labelText: 'Private invoice review note',
+                    helperText: 'Optional. The selected work and prices are reviewed separately.',
                   ),
                   onChanged: (_) => setState(_changed),
                 ),

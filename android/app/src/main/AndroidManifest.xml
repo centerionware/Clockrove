@@ -58,6 +58,11 @@
             android:authorities="${applicationId}.invoices"
             android:exported="false"
             android:grantUriPermissions="true" />
+        <provider
+            android:name=".invoice.TaskCaptureProvider"
+            android:authorities="${applicationId}.task-capture"
+            android:exported="false"
+            android:grantUriPermissions="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -2,12 +2,18 @@ package io.github.centerionware.clockrove.invoice
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import io.github.centerionware.clockrove.tracking.TimerRepository
+import java.io.File
+import java.io.FileInputStream
 
 internal class DocumentHostApi(private val activity: Activity, messenger: BinaryMessenger) {
     private val repository = TimerRepository.get(activity.applicationContext)
@@ -16,6 +22,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
     private data class Save(val bytes: ByteArray, val result: MethodChannel.Result)
     private var save: Save? = null
     private var logoResult: MethodChannel.Result? = null
+    private var photoResult: MethodChannel.Result? = null
+    private var photoCaptureFile: File? = null
     private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
     @Volatile private var attached = true
     init {
@@ -32,7 +40,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     }
                     "pickLogo" -> main.post {
                         if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
-                        else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a document first", null)
+                        else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                         else {
                             logoResult = result
                             try { activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -42,6 +50,8 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             catch (_: ActivityNotFoundException) { logoResult = null; result.error("NO_DOCUMENT_PICKER", "No image document picker is installed", null) }
                         }
                     }
+                    "pickTaskPhoto" -> launchTaskPhoto(result, camera = false)
+                    "captureTaskPhoto" -> launchTaskPhoto(result, camera = true)
                     "invoicePreview", "quotePreview" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "quotePreview") "quoteId" else "invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
@@ -59,7 +69,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                         val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(snapshot.report)).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
-                            else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
+                            else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(bytes, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -75,7 +85,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                         val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
-                            else if (save != null || logoResult != null) result.error("DOCUMENT_PICKER_OPEN", "Finish choosing a destination first", null)
+                            else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(requireNotNull(record.pdf), result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -108,7 +118,94 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }
         }
     }
+    private fun externalActionPending() = save != null || logoResult != null || photoResult != null
+
+    private fun launchTaskPhoto(result: MethodChannel.Result, camera: Boolean) = main.post {
+        if (!attached || activity.isFinishing) {
+            result.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null)
+            return@post
+        }
+        if (externalActionPending()) {
+            result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
+            return@post
+        }
+        val requestCode = if (camera) 0xcc45 else 0xcc44
+        try {
+            val intent = if (camera) {
+                val directory = File(activity.cacheDir, "task-captures").apply { mkdirs() }
+                val file = File.createTempFile("capture-", ".jpg", directory)
+                val uri = Uri.parse("content://${activity.packageName}.task-capture/capture/${file.name}")
+                photoCaptureFile = file
+                Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
+                    clipData = ClipData.newUri(activity.contentResolver, "Clockrove task photo", uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            } else {
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/png", "image/jpeg", "image/webp"))
+                }
+            }
+            if (camera && isCiCameraFixtureEnabled()) {
+                intent.setClassName(
+                    activity,
+                    "io.github.centerionware.clockrove.testsupport.TaskPhotoCameraActivity",
+                )
+            }
+            photoResult = result
+            activity.startActivityForResult(intent, requestCode)
+        } catch (_: ActivityNotFoundException) {
+            photoResult = null
+            photoCaptureFile?.delete()
+            photoCaptureFile = null
+            result.error(if (camera) "NO_CAMERA_APP" else "NO_DOCUMENT_PICKER", if (camera) "No camera app is available" else "No image picker is installed", null)
+        } catch (_: SecurityException) {
+            photoResult = null
+            photoCaptureFile?.delete()
+            photoCaptureFile = null
+            result.error("PHOTO_SOURCE_UNAVAILABLE", "The selected photo source could not be opened", null)
+        } catch (_: RuntimeException) {
+            photoResult = null
+            photoCaptureFile?.delete()
+            photoCaptureFile = null
+            result.error("PHOTO_SOURCE_UNAVAILABLE", "The selected photo source could not be opened", null)
+        }
+    }
+
+    private fun isCiCameraFixtureEnabled(): Boolean =
+        (activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+            activity.getSharedPreferences("clockrove_ci_test_flags", Context.MODE_PRIVATE)
+                .getBoolean("camera_fixture", false)
+
     fun activityResult(code: Int, status: Int, data: Intent?): Boolean {
+        if (code == 0xcc44 || code == 0xcc45) {
+            val pending = photoResult ?: return true
+            photoResult = null
+            val camera = code == 0xcc45
+            val file = photoCaptureFile
+            photoCaptureFile = null
+            if (status != Activity.RESULT_OK) {
+                file?.delete()
+                pending.success(null)
+                return true
+            }
+            val uri = data?.data
+            writer.execute {
+                try {
+                    val input = if (camera) FileInputStream(requireNotNull(file).also { require(it.isFile && it.length() in 1..5_000_000) })
+                        else activity.contentResolver.openInputStream(requireNotNull(uri))
+                    val asset = requireNotNull(input).use { LogoImages.normalize(it) }
+                    main.post { if (attached) pending.success(asset.bytes) else pending.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null) }
+                } catch (_: Exception) {
+                    main.post { pending.error("INVALID_TASK_PHOTO", "Choose a PNG, JPEG or WebP image up to 5 MB and 16 megapixels", null) }
+                } finally {
+                    file?.delete()
+                }
+            }
+            return true
+        }
         if (code == 0xcc43) {
             val pending = logoResult ?: return true
             logoResult = null
@@ -137,5 +234,17 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         }
         return true
     }
-    fun detach() { attached = false; logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null); logoResult = null; save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null); save = null; writer.shutdown(); channel.setMethodCallHandler(null) }
+    fun detach() {
+        attached = false
+        logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
+        logoResult = null
+        save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
+        save = null
+        photoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to attach a task photo", null)
+        photoResult = null
+        photoCaptureFile?.delete()
+        photoCaptureFile = null
+        writer.shutdown()
+        channel.setMethodCallHandler(null)
+    }
 }

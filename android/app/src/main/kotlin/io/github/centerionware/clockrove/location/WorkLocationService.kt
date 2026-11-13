@@ -62,8 +62,12 @@ class WorkLocationService : Service() {
         if (closed) return
         val state = repository.snapshot()
         val running = state.running
-        if (running == null || !hasLocationPermission()) {
-            health = if (running == null) "IDLE" else "PERMISSION_MISSING"
+        if (running == null || !hasLocationPermission() || !repository.locationRecordingEnabled(running.jobId)) {
+            health = when {
+                running == null -> "IDLE"
+                !repository.locationRecordingEnabled(running.jobId) -> "DISABLED"
+                else -> "PERMISSION_MISSING"
+            }
             main.post { stopSelf() }
             return
         }
@@ -184,8 +188,35 @@ class WorkLocationService : Service() {
         internal fun markStartRequested() { health = "START_REQUESTED" }
         internal fun markStartRestricted() { health = "START_RESTRICTED" }
         internal fun startForManualTimer(context: android.content.Context) {
+            val repository = TimerRepository.get(context.applicationContext)
+            val running = try { repository.snapshot().running } catch (_: Exception) { null }
+            if (running == null || !repository.locationRecordingEnabled(running.jobId)) {
+                health = if (running == null) "IDLE" else "DISABLED"
+                return
+            }
             if (!hasLocationPermission(context)) {
                 health = "PERMISSION_MISSING"
+                return
+            }
+            if (health in setOf("START_REQUESTED", "STARTING", "REQUESTING", "LOCATION_UNAVAILABLE")) return
+            try {
+                markStartRequested()
+                val intent = Intent(context, WorkLocationService::class.java)
+                if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+            } catch (_: RuntimeException) {
+                markStartRestricted()
+            }
+        }
+        internal fun reconcile(context: android.content.Context, repository: TimerRepository) {
+            val running = try { repository.snapshot().running } catch (_: Exception) { null }
+            val enabled = running != null && repository.locationRecordingEnabled(running.jobId)
+            if (!enabled || !hasLocationPermission(context)) {
+                health = when {
+                    running == null -> "IDLE"
+                    !enabled -> "DISABLED"
+                    else -> "PERMISSION_MISSING"
+                }
+                context.stopService(Intent(context, WorkLocationService::class.java))
                 return
             }
             if (health in setOf("START_REQUESTED", "STARTING", "REQUESTING", "LOCATION_UNAVAILABLE")) return
