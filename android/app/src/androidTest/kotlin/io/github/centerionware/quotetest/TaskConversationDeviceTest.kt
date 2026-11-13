@@ -68,7 +68,7 @@ class TaskConversationDeviceTest {
             dump.append(" ".repeat(depth)).append(node.toString()).append('\n')
             for (index in 0 until node.childCount) node.getChild(index)?.let { describe(it, depth + 1) }
         }
-        root?.let(::describe)
+        if (root != null) describe(root, 0)
         File(captures, "accessibility-failure-$suffix.txt").writeText(dump.toString())
         automation.takeScreenshot()?.let { bitmap ->
             File(captures, "accessibility-failure-$suffix.png").outputStream().use {
