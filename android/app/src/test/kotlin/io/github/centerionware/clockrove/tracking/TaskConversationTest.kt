@@ -1,7 +1,7 @@
 package io.github.centerionware.clockrove.tracking
 
-import android.graphics.Bitmap
 import android.database.sqlite.SQLiteDatabase
+import android.util.Base64
 import io.flutter.plugin.common.MethodCall
 import org.junit.After
 import org.junit.Assert.*
@@ -11,7 +11,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.io.ByteArrayOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [24, 35])
@@ -21,12 +20,10 @@ class TaskConversationTest {
     private lateinit var job: String
     private lateinit var task: String
     private val version get() = repository.snapshot().version
-    private fun png(): ByteArray = ByteArrayOutputStream().use { output ->
-        val bitmap = Bitmap.createBitmap(3, 3, Bitmap.Config.ARGB_8888)
-        try { assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) }
-        finally { bitmap.recycle() }
-        output.toByteArray()
-    }
+    private fun png(): ByteArray = Base64.decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+        Base64.DEFAULT,
+    )
     private fun count(table: String) = SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
         db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); it.getInt(0) }
     }

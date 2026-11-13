@@ -45,7 +45,6 @@ class LocationRecordingTest {
 
         val secondSettings = repository.jobDetail(second).job.settings.copy(locationRecordingOverride = false)
         assertNull(repository.saveJobSettings("gps-job-off", version, secondSettings).conflict)
-        assertNull(repository.jobDetail(first).job.settings.locationRecordingOverride)
         assertEquals(true, repository.jobDetail(first).job.settings.locationRecordingOverride)
         assertEquals(false, repository.jobDetail(second).job.settings.locationRecordingOverride)
         repository.close()
