@@ -102,8 +102,35 @@ class TaskConversationDeviceTest {
         waitFor(label, editable)
     }
 
+    private fun scrollToStart() {
+        val deadline = SystemClock.uptimeMillis() + 15000
+        var stationaryPolls = 0
+        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
+            fun scroll(node: AccessibilityNodeInfo): Boolean {
+                for (index in 0 until node.childCount) {
+                    node.getChild(index)?.let { if (scroll(it)) return true }
+                }
+                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+            }
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                stationaryPolls = 0
+            } else {
+                stationaryPolls++
+            }
+            SystemClock.sleep(150)
+        }
+    }
+
     private fun keyboardVisible() = automation.windows.any {
         it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+    }
+
+    private fun hideKeyboard() {
+        if (!keyboardVisible()) return
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        val deadline = SystemClock.uptimeMillis() + 10000
+        while (keyboardVisible() && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100)
+        assertFalse("Keyboard did not close", keyboardVisible())
     }
 
     private fun keyboardWindows(): String = automation.windows.joinToString("\n") { window ->
@@ -129,7 +156,7 @@ class TaskConversationDeviceTest {
         assertTrue(editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
         }))
-        if (keyboardVisible()) instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        hideKeyboard()
     }
 
     private fun capture(name: String) {
@@ -187,6 +214,7 @@ class TaskConversationDeviceTest {
             reveal("Add comment")
             click("Add comment")
             waitFor("Synthetic site progress note")
+            hideKeyboard()
             capture("task-comment")
 
             reveal("Choose photo")
@@ -201,6 +229,8 @@ class TaskConversationDeviceTest {
             waitFor("Task photo attachment")
             capture("task-gallery-attached")
 
+            hideKeyboard()
+            scrollToStart()
             reveal("Take photo")
             click("Take photo")
             waitFor("Review photo")
