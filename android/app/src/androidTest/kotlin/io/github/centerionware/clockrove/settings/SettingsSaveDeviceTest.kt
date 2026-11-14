@@ -82,14 +82,16 @@ class SettingsSaveDeviceTest {
         val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
         val top = bounds.top + 220
         if (bottom - top < 300) return
-        val x = bounds.centerX()
+        // Swipe in the ListView's side gutter, away from text fields that can
+        // consume a drag as text selection on older Android releases.
+        val x = bounds.left + 32
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val command = automation.executeShellCommand(
             "input swipe $x $startY $x $endY 350",
         )
         ParcelFileDescriptor.AutoCloseInputStream(command).use { it.readBytes() }
-        automation.waitForIdle(100, 2000)
+        automation.waitForIdle(100, 1000)
     }
     private fun reveal(label: String) {
         for (up in listOf(true, false)) {
