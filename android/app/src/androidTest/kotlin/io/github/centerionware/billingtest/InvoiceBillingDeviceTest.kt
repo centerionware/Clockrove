@@ -69,6 +69,32 @@ class InvoiceBillingDeviceTest {
         }
         return automation.rootInActiveWindow?.let(::visit)
     }
+    private fun safeTapBounds(node: AccessibilityNodeInfo): android.graphics.Rect? {
+        val root = automation.rootInActiveWindow ?: return null
+        if (node.packageName != root.packageName || !node.isVisibleToUser) return null
+        val viewport = android.graphics.Rect().also(root::getBoundsInScreen)
+        if (viewport.isEmpty) return null
+        val systemBounds = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen) }
+        val topInset = systemBounds
+            .filter { it.top <= viewport.top + 8 && it.bottom > viewport.top }
+            .map { it.bottom }
+            .maxOrNull()
+        val navTop = systemBounds
+            .filter { it.top > viewport.top + 50 && it.bottom >= viewport.bottom - 8 }
+            .map { it.top }
+            .minOrNull()
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        if (topInset != null) viewport.top = maxOf(viewport.top, topInset)
+        viewport.bottom = minOf(viewport.bottom, navTop ?: viewport.bottom, imeTop ?: viewport.bottom)
+        val target = android.graphics.Rect().also(node::getBoundsInScreen)
+        if (!target.intersect(viewport) || target.width() < 8 || target.height() < 12) return null
+        return target
+    }
     private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
         var found: AccessibilityNodeInfo? = null
         until("Actual app never exposed $label") { found = find(label, editable); found != null }
@@ -77,14 +103,16 @@ class InvoiceBillingDeviceTest {
     private fun click(label: String) {
         // A semantic ACTION_CLICK can report success without delivering
         // Flutter's pointer event; API 24 also exposes some active buttons as
-        // non-clickable. find() only returns visible nodes, so tap the matched
-        // control's real screen bounds instead of relying on those flags.
-        tapNode(waitFor(label))
+        // non-clickable. Find a point inside both the target and the app's
+        // unobscured viewport before tapping so a Flutter node extending
+        // beneath Android's navigation bar can never hit Home.
+        reveal(label)
+        check(tapNode(waitFor(label))) { "Tap was obscured before reaching $label" }
         automation.waitForIdle(250, 3000)
     }
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
-            if (find(label, editable) != null) true else {
+            if (find(label, editable)?.let(::safeTapBounds) != null) true else {
                 fun scroll(node: AccessibilityNodeInfo): Boolean {
                     // Prefer the screen's vertical container to editable
                     // fields' own scroll actions, then use a real swipe if the
@@ -99,22 +127,22 @@ class InvoiceBillingDeviceTest {
                 // A Flutter ScrollView can acknowledge the accessibility action
                 // without exposing the requested child. Fall back to a real
                 // gesture whenever the target is still outside the viewport.
-                if (!scrolled || find(label, editable) == null) swipeContent(up = true)
+                if (!scrolled || find(label, editable)?.let(::safeTapBounds) == null) swipeContent(up = true)
                 SystemClock.sleep(150)
-                find(label, editable) != null
+                find(label, editable)?.let(::safeTapBounds) != null
             }
         }
     }
-    private fun scrollToStart() {
+    private fun scrollToStart(topLabel: String = "Billing basis") {
         hideKeyboard()
         // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
         // successful while remaining at the same offset. An accessibility
         // acknowledgement is not proof that the contents actually moved, so
         // use real downward-content swipes and stop only once the top section
-        // is actually exposed. The settings form can grow as options are added,
-        // so a fixed swipe count can leave the test in its lower sections.
+        // is safely exposed. Forms may reopen at a restored scroll position,
+        // so every new screen can name its own top anchor.
         repeat(40) {
-            if (find("Billing basis") != null) return
+            if (find(topLabel)?.let(::safeTapBounds) != null) return
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 if (node.isVisibleToUser && node.isScrollable &&
                     node.className?.toString() == "android.widget.ScrollView" &&
@@ -124,11 +152,14 @@ class InvoiceBillingDeviceTest {
             }
             // Some API-24 ScrollViews acknowledge the action without moving.
             // Check for the target again; retain the touch gesture as a fallback.
-            if (automation.rootInActiveWindow?.let(::scroll) == true && find("Billing basis") != null) return
+            if (automation.rootInActiveWindow?.let(::scroll) == true &&
+                find(topLabel)?.let(::safeTapBounds) != null) return
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
-        waitFor("Billing basis")
+        until("Could not restore screen to safe top anchor $topLabel") {
+            find(topLabel)?.let(::safeTapBounds) != null
+        }
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
@@ -190,11 +221,19 @@ class InvoiceBillingDeviceTest {
         }
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
-    private fun tapNode(node: AccessibilityNodeInfo) {
+    private fun tapNode(node: AccessibilityNodeInfo): Boolean {
         val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
-        check(!bounds.isEmpty) { "Cannot tap an empty accessibility target" }
-        val x = bounds.exactCenterX()
-        val y = bounds.exactCenterY()
+        val safeBounds = safeTapBounds(node)
+        // A focused EditText can reveal the IME between the caller's check and
+        // this tap. In that case its ACTION_CLICK already opened text entry;
+        // skip the now-obscured pointer event instead of tapping system UI.
+        if (safeBounds == null && keyboardVisible() &&
+            node.packageName == automation.rootInActiveWindow?.packageName) return false
+        check(safeBounds != null) {
+            "Refusing tap outside the app's unobscured viewport: target=$node bounds=$bounds"
+        }
+        val x = requireNotNull(safeBounds).exactCenterX()
+        val y = safeBounds.exactCenterY()
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long) {
             val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
@@ -205,6 +244,7 @@ class InvoiceBillingDeviceTest {
         inject(android.view.MotionEvent.ACTION_DOWN, downTime)
         SystemClock.sleep(80)
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis())
+        return true
     }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
@@ -243,18 +283,17 @@ class InvoiceBillingDeviceTest {
             SystemClock.sleep(150)
             if (!keyboardVisible()) tapNode(find(label, true) ?: field)
         }
-        until("Focused field did not expose text entry for $label") {
-            find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
-        }
         // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
         // acknowledgement can otherwise precede the keyboard opening and hiding.
         until("Keyboard did not open for $label") { keyboardVisible() }
         val node = waitFor(label, true)
-        assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
-            Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
-        val setTextDeadline = SystemClock.uptimeMillis() + 2000
-        while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
-            SystemClock.sleep(100)
+        if (node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })) {
+            val setTextDeadline = SystemClock.uptimeMillis() + 2000
+            while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
+                SystemClock.sleep(100)
+            }
         }
         // Some API-24 Flutter fields report ACTION_SET_TEXT success without
         // replacing the current value. Select the old text and type through
@@ -345,6 +384,7 @@ class InvoiceBillingDeviceTest {
         assertEquals(10000L, repository.boardSnapshot(job).board.cards.first().quantityUnits)
         try {
             launch(); click("App settings and customers"); click("Settings"); waitFor("Billing defaults")
+            scrollToStart("Billing defaults")
             enter("Default tax (%)", "7.5"); capture("global-tax-settings")
             reveal("Save settings"); click("Save settings")
             until("Actual main Settings did not save tax") { repository.businessSnapshot().settings.defaultTaxUnits == 75000 }

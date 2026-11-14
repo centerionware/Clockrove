@@ -3743,3 +3743,53 @@ task media, map and widget journeys. The direct text action plus readback fix
 resolved the API-35 billing failure; the API-24 IME fallback also remains
 green. No VM build, test, formatter or analyzer ran. PR #46 is ready to merge;
 merged-main validation and Play delivery are the next gates.
+
+### 2026-11-14 — M6.6 merged-main API 35 system-navigation tap
+
+PR #46 was squash-merged to `main` as `66e063a`. The exact updated PR head
+`91bd9b6` passed GitHub Actions run
+[43642895579](https://github.com/centerionware/Clockrove/actions/runs/43642895579):
+formatting, analysis, Flutter behavior tests, Android build, locked release
+checks and 614 native tests passed; downloaded JUnit XML confirms 37 device
+cases on each of API 24 and API 35 with zero failures, errors or skips.
+
+Post-merge main validation
+[43644644853](https://github.com/centerionware/Clockrove/actions/runs/43644644853)
+passed those same fast checks and all 37 API-24 device cases. API 35 passed its
+28-case base suite, then the extended billing journey failed before exposing
+**Job tax (%)**. The captured active accessibility window was Android Home,
+and the emulator log records `LAUNCHER_TASKBAR_HOME_BUTTON_TAP`; no app fatal
+exception was present. This is evidence of the device-test tap reaching system
+navigation, rather than a confirmed product crash. The 614 native tests passed,
+but the API-35 billing journey and following device journeys did not complete.
+
+A CI-only follow-up now clips tap targets to the active app viewport after
+excluding status/navigation bars and the IME, rejects targets from a different
+active package, and keeps scrolling until the requested control has a safe
+on-screen tap point. `click` uses this same safe reveal path. Exact-head Actions
+validation is pending; no VM build or test was run. Play delivery
+[43646438745](https://github.com/centerionware/Clockrove/actions/runs/43646438745)
+was skipped because the merged-main Validate run failed, so no Play upload is
+claimed. Retry the safe-tap follow-up through GitHub Actions, merge only when
+its device matrix is green, then verify the new main validation and Play run.
+
+The first PR #47 Actions run
+[43647325052](https://github.com/centerionware/Clockrove/actions/runs/43647325052)
+then exposed a restored-scroll-position case on API 24: the Settings form was
+at **Company & contact**, below **Default tax (%)**, so a downward-only reveal
+could not reach the field. Its screenshot shows Settings still open, with no
+system-navigation tap. `scrollToStart` now accepts a screen-specific top anchor;
+the global settings journey returns to **Billing defaults** before entering
+tax. Revalidate this follow-up on Actions; no VM build or test ran.
+
+The next exact head `a53727a` / run
+[43648400067](https://github.com/centerionware/Clockrove/actions/runs/43648400067)
+passed the 28-case API-24 base suite and the global-tax settings flow, then
+reached the job-tax editor. The test had focused **Job tax (%)** and opened the
+IME, but its delayed fallback pointer tap raced that transition and was
+correctly refused because the keyboard covered the target; the screenshot shows
+the active field and numeric keyboard. `enter` now treats that race as an
+already-focused field, waits for the IME, then uses `ACTION_SET_TEXT` with exact
+readback or select-all/IME typing. Only ordinary control clicks require their
+safe pointer tap to succeed. Revalidate on GitHub Actions; no VM build or test
+ran.
