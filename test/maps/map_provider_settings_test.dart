@@ -190,7 +190,11 @@ void main() {
       find.byKey(const ValueKey('map-attribution')),
       'Example maps',
     );
-    await tester.ensureVisible(find.text('Save map settings'));
+    await tester.scrollUntilVisible(
+      find.text('Save map settings'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save map settings'));
     await tester.pumpAndSettle();
 
@@ -239,7 +243,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('OpenStreetMap (default)').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save map settings'));
+    await tester.scrollUntilVisible(
+      find.text('Save map settings'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save map settings'));
     await tester.pumpAndSettle();
 
@@ -327,10 +335,18 @@ void main() {
     await tester.tap(find.text('Configure maps'));
     await tester.pumpAndSettle();
     final remove = find.text('Remove saved authentication value');
-    await tester.ensureVisible(remove);
+    await tester.scrollUntilVisible(
+      remove,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(remove);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save map settings'));
+    await tester.scrollUntilVisible(
+      find.text('Save map settings'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save map settings'));
     await tester.pumpAndSettle();
 

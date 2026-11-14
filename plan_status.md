@@ -16,15 +16,20 @@ and M7 backup remain before M7.6 (whole-app UI overhaul and exhaustive
 E2E/screenshots), which must pass before closed testing. iOS and future service
 remain deferred.
 
-Latest PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed
-formatting, analysis, all Flutter behavior tests, Android debug build, 614 native
-tests, and the full API-24/API-35 Android PDF/device and invoice-viewer stages.
-The downloaded XML reports 35 actual Android tests on each API, with zero
-failures, errors or skips; the 49-sample map journey passed on both APIs. The
-quote billing journey verifies that an Unclassified task prompts for Labor or
-Supplies, then saves the selected classification, edited quantity and price.
-Secure map-provider settings and owner-device acceptance remain outstanding;
-M6.6 is not complete. No VM build, test or formatter ran.
+PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting,
+analysis, all Flutter behavior tests, Android debug build, 614 native tests,
+and full API-24/API-35 PDF, device and invoice-viewer stages. Downloaded XML
+reports 35 actual Android tests on each API with zero failures, errors or skips;
+the 49-sample map journey passed on both APIs. The quote billing journey verifies
+that an Unclassified task prompts for Labor or Supplies, then saves the selected
+classification, edited quantity and price. Later map-provider source at exact
+head `040961a` passed formatting and analysis but failed Flutter behavior tests
+(174 passed, 19 failed, 14 skipped); Android build, native and device stages did
+not run. The quote Manage customers test passed in that run. Its map tests lacked
+a deterministic provider-settings fake, and provider-form tests searched lazy
+list children before scrolling; source-only fixture corrections are pending an
+exact-head rerun. Google Maps runtime configuration and owner-device acceptance
+remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 
 | Task | Status | Evidence / next action |
 | --- | --- | --- |
@@ -51,7 +56,7 @@ M6.6 is not complete. No VM build, test or formatter ran.
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
 | M6.2 Date/list/totals/map/timezones | Implemented, integrated and calendar checks verified | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks passed 43117726325 |
-| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests added; exact-head Actions pending; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. See the latest validation entry; M6.3 remains open until Actions and the Google Maps decision are complete. |
+| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests implemented; exact-head Actions red; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. Run [43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394) passed format/analyze but Flutter behavior tests failed 19 cases (174 passed, 14 skipped); Android build/native/device stages did not run. Quote customer management passed. Map-test provider fakes and lazy form scrolling are corrected in unverified source; an exact-head rerun and Google Maps decision remain required. |
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
@@ -3541,3 +3546,17 @@ formatter patch exported by Actions and changed the tile-client callback to an
 initializing formal for the reported lint. Behavior, build, native and emulator
 tests did not run. A fresh exact-head Actions run is required; no VM build,
 test, formatter or analyzer was run.
+
+### 2026-11-14 — map provider test harness correction
+
+At exact head `040961a` / Actions run
+[43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394),
+formatting and Analyze passed. Flutter behavior tests reported 174 passed, 19
+failed and 14 skipped. The quote customer-management test passed. The failures
+included map widgets left waiting on the unmocked asynchronous provider-settings
+channel and map-settings form tests asking `ensureVisible` for children that had
+not yet been materialized by the lazy list. Added a deterministic OSM settings
+API to the map widget fixtures and changed the provider form tests to scroll
+until their target rows are built. These are test-fixture corrections only;
+exact-head Actions must confirm them. Android build, native tests and device
+journeys did not run. No VM build, test, formatter or analyzer ran.

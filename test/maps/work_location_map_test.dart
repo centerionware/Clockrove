@@ -93,6 +93,9 @@ void main() {
               key: boundary,
               child: ProviderScope(
                 overrides: [
+                  mapProviderSettingsApiProvider.overrideWithValue(
+                    const TestMapProviderSettingsApi(),
+                  ),
                   workMapTilesProvider.overrideWithValue(
                     (_, _) => SyntheticTiles(),
                   ),
@@ -153,6 +156,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            mapProviderSettingsApiProvider.overrideWithValue(
+              const TestMapProviderSettingsApi(),
+            ),
             workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
           ],
           child: MaterialApp(
@@ -199,6 +205,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            mapProviderSettingsApiProvider.overrideWithValue(
+              const TestMapProviderSettingsApi(),
+            ),
             workMapTilesProvider.overrideWithValue(
               (_, _) => SyntheticTiles(fail: true),
             ),

@@ -4,6 +4,7 @@ import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/automation/automation_api.dart';
 import 'package:clockrove/automation/automation_screen.dart';
 import 'package:clockrove/automation/site_map_picker.dart';
+import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
@@ -38,6 +39,9 @@ Future<void> _show(
         overrides: [
           automationApiProvider.overrideWithValue(api),
           timerApiProvider.overrideWithValue(_Timer()),
+          mapProviderSettingsApiProvider.overrideWithValue(
+            const TestMapProviderSettingsApi(),
+          ),
           workMapTilesProvider.overrideWithValue(
             (_, _) => SyntheticTiles(fail: failTiles),
           ),

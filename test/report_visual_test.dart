@@ -4,6 +4,7 @@ import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/report_map.dart';
 import 'package:clockrove/business/report_screen.dart';
+import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
@@ -120,6 +121,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          mapProviderSettingsApiProvider.overrideWithValue(
+            const TestMapProviderSettingsApi(),
+          ),
           workMapTilesProvider.overrideWithValue(
             (_, _) => SyntheticTiles(fail: true),
           ),
@@ -158,6 +162,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            mapProviderSettingsApiProvider.overrideWithValue(
+              const TestMapProviderSettingsApi(),
+            ),
             workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
           ],
           child: const MaterialApp(
@@ -192,6 +199,9 @@ void main() {
                 overrides: [
                   reportApiProvider.overrideWithValue(_VisualReport(task)),
                   timerApiProvider.overrideWithValue(_Timer()),
+                  mapProviderSettingsApiProvider.overrideWithValue(
+                    const TestMapProviderSettingsApi(),
+                  ),
                 ],
                 child: MaterialApp(
                   debugShowCheckedModeBanner: false,
@@ -227,6 +237,9 @@ void main() {
           key: key,
           child: ProviderScope(
             overrides: [
+              mapProviderSettingsApiProvider.overrideWithValue(
+                const TestMapProviderSettingsApi(),
+              ),
               workMapTilesProvider.overrideWithValue(
                 (_, _) => SyntheticTiles(),
               ),
