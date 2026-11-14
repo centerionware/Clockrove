@@ -328,6 +328,9 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName); waitFor("Task board")
             click("Job settings"); waitFor("Job settings"); reveal("Use default tax rate"); click("Use default tax rate")
+            // Enabling the override inserts a field above the current viewport.
+            // Start from a known position before looking for that newly built field.
+            scrollToStart()
             enter("Job tax (%)", "101")
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")

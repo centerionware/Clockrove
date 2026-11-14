@@ -3589,3 +3589,22 @@ work-location map tests to settle the settings read before tile precaching. This
 sequencing change awaits exact-head Actions validation. Android build, native
 tests and device journeys did not run. No VM build, test, formatter or analyzer
 ran.
+
+### 2026-11-14 — quote customer manager and API-24 billing scroll correction
+
+At exact PR #45 head `d0eeae8`, Actions run
+[43619518818](https://github.com/centerionware/Clockrove/actions/runs/43619518818)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build and
+native unit tests. The quote form's **Manage customers** button is below its
+customer selector and uses the same `CustomersScreen` as Job settings; the
+quote add/save/return/select test passed.
+
+The real API-24 PDF/device stage generated and rendered the invoice PDFs and
+passed its 28-case base Android suite. The subsequent billing journey timed out
+looking for **Job tax (%)** after toggling off **Use default tax rate**. The
+retained screenshot and accessibility dump show Job settings still open, with
+the scroll position below where the newly inserted field appears. Updated the
+device journey to return to Billing basis before revealing and editing the
+field. This test-only correction is unverified and pushed for a fresh exact-head
+Actions run; API 35 and later device journeys were not reached on run
+`43619518818`. No build, test, formatter or analyzer ran on the VM.
