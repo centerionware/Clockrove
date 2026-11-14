@@ -3688,3 +3688,15 @@ field, but the platform reported `ACTION_SET_TEXT` success while retaining
 `12` instead of the requested `26`. The helper now selects the existing text and
 types through the active IME if the field value does not change. This remains a
 test-harness stabilization; exact-head Actions validation is pending.
+
+At exact PR #46 head `ae4bc08`, Actions run
+[43634037678](https://github.com/centerionware/Clockrove/actions/runs/43634037678)
+passed formatting, analysis, Flutter behavior tests, Android debug build,
+native tests and the full API-24 extended billing journey. API 35 reached the
+invalid job-tax validation check but timed out without exposing the expected
+message. Its screenshot shows Job settings still at the bottom with the Save
+button and no validation message. Because the device helper returned after a
+successful accessibility `ACTION_CLICK`, which can be acknowledged without a
+real Flutter pointer event, the billing test now taps the visible clickable
+screen bounds and waits for the UI to settle. This is a test-only correction;
+the next exact-head Actions run is pending. No build or test ran on the VM.

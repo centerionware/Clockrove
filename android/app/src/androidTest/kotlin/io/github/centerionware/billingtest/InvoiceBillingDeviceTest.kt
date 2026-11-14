@@ -77,8 +77,14 @@ class InvoiceBillingDeviceTest {
     private fun click(label: String) {
         var node = waitFor(label)
         while (true) {
-            // Flutter can acknowledge a click on a node without a TAP action.
-            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            // A semantic ACTION_CLICK can report success without delivering
+            // Flutter's pointer event on some emulator/API combinations. Use
+            // the visible clickable bounds so the test exercises a real tap.
+            if (node.isClickable) {
+                tapNode(node)
+                automation.waitForIdle(250, 3000)
+                return
+            }
             node = node.parent ?: throw AssertionError("Could not click $label")
         }
     }
