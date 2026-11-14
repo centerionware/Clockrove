@@ -81,13 +81,27 @@ internal object InvoiceCoverageStore {
                 if (owner == null) tasks.add(task) else if (total.mode == "TASK") excluded.add(Exclusion(owner.first, owner.second, taskId = task.id, title = task.title))
             }
         }
+        val defaultCurrency = BusinessStore.settings(db).currency
         val totals = source.totals.map { total ->
             val duration = intervals.filter { it.jobId == total.jobId }.fold(BigInteger.ZERO) { sum, interval -> sum.add(BigInteger.valueOf(interval.end - interval.start)) }
             val selected = tasks.filter { it.jobId == total.jobId }
             val missing = selected.count { it.priceMinor == null || it.currency != total.currency }
-            val amount = if (total.mode == "HOURLY") total.hourlyMinor?.let { ReportStore.hourlyAmount(duration, it) }
-                else if (missing > 0) null else selected.fold(BigInteger.ZERO) { sum, task -> sum.add(TaskQuantityStore.amount(requireNotNull(task.priceMinor), task.quantityUnits)) }
-            total.copy(durationMillis = duration, amountMinor = amount, missingPrices = missing)
+            val policy = InvoiceBillingPolicyStore.effective(db, total.jobId, total.currency, defaultCurrency)
+            if (total.mode == "HOURLY") {
+                val charge = InvoiceBillingPolicy.hourlyCharge(duration, total.hourlyMinor ?: BigInteger.ZERO,
+                    policy.hourlyMode, policy.minimumHours)
+                val rule = if (policy.hourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP) "Round total time up to the next hour" else "Minimum hours, then exact time"
+                total.copy(durationMillis = duration, amountMinor = charge.amountMinor.takeIf { total.hourlyMinor != null }, missingPrices = missing,
+                    billedHours = charge.billedHours, billingRule = rule, policyHourlyMode = policy.hourlyMode,
+                    policyMinimumHours = policy.minimumHours, policyTaskMinimumMinor = policy.taskMinimumMinor)
+            } else {
+                val base = if (missing > 0) null else selected.fold(BigInteger.ZERO) { sum, task -> sum.add(TaskQuantityStore.amount(requireNotNull(task.priceMinor), task.quantityUnits)) }
+                val adjustment = if (base != null && selected.isNotEmpty()) InvoiceBillingPolicy.taskMinimumAdjustment(base, policy.taskMinimumMinor) else BigInteger.ZERO
+                total.copy(durationMillis = duration, amountMinor = base?.add(adjustment), missingPrices = missing,
+                    minimumTaskAdjustmentMinor = adjustment, billingRule = if (adjustment.signum() > 0) "Minimum task fee" else null,
+                    policyHourlyMode = policy.hourlyMode, policyMinimumHours = policy.minimumHours,
+                    policyTaskMinimumMinor = policy.taskMinimumMinor)
+            }
         }
         return Preview(source.copy(intervals = intervals, tasks = tasks, totals = totals), excluded, legacy)
     }

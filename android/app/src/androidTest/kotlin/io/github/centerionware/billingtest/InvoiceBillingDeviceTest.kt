@@ -83,26 +83,73 @@ class InvoiceBillingDeviceTest {
         }
     }
     private fun reveal(label: String, editable: Boolean = false) {
-        repeat(35) {
-            if (find(label, editable) != null) return
-            fun scroll(node: AccessibilityNodeInfo): Boolean {
-                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+        until("Actual app never exposed $label") {
+            if (find(label, editable) != null) true else {
+                fun scroll(node: AccessibilityNodeInfo): Boolean {
+                    // Prefer the screen's vertical container to editable
+                    // fields' own scroll actions, then use a real swipe if the
+                    // platform does not expose a scroll action.
+                    if (node.isVisibleToUser && node.isScrollable &&
+                        node.className?.toString() == "android.widget.ScrollView" &&
+                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
+                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
+                    return false
+                }
+                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
+                if (!scrolled) swipeContent(up = true)
+                SystemClock.sleep(150)
+                false
             }
-            automation.rootInActiveWindow?.let(::scroll)
-            SystemClock.sleep(150)
         }
-        waitFor(label, editable)
     }
     private fun scrollToStart() {
-        repeat(12) {
+        val deadline = SystemClock.uptimeMillis() + 15000
+        var stationaryPolls = 0
+        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
                 return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
             }
-            if (automation.rootInActiveWindow?.let(::scroll) != true) return
-            SystemClock.sleep(120)
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                stationaryPolls = 0
+            } else {
+                if (stationaryPolls == 0) {
+                    repeat(8) {
+                        swipeContent(up = false)
+                        SystemClock.sleep(120)
+                    }
+                }
+                stationaryPolls++
+            }
+            SystemClock.sleep(150)
         }
+    }
+    private fun swipeContent(up: Boolean) {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
+        val top = bounds.top + 220
+        if (bottom - top < 300) return
+        val x = bounds.centerX().toFloat()
+        val startY = if (up) bottom - 80 else top + 80
+        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(android.view.MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(android.view.MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {

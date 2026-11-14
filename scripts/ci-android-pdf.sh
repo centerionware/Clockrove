@@ -53,8 +53,11 @@ for clockrove_api in 24 35; do
   unzip -oq "$RUNNER_TEMP/$clockrove_archive" -d "$ANDROID_HOME/system-images/android-$clockrove_api/default"
   grep -E "^Pkg.Revision\s*=\s*$clockrove_revision\s*$" "$ANDROID_HOME/system-images/android-$clockrove_api/default/x86_64/source.properties"
   # The SDK legacy-package scanner registers the fixed, manually extracted image.
-  "$sdkmanager" --sdk_root="$ANDROID_HOME" --list_installed > "$RUNNER_TEMP/clockrove-installed-$clockrove_api.txt"
-  echo no | "$avdmanager" create avd --force --name "clockrove-pdf-$clockrove_api" --package "system-images;android-$clockrove_api;default;x86_64" --device pixel_2
+  echo "Checking installed Android components for API $clockrove_api"
+  timeout --kill-after=10s 120s "$sdkmanager" --sdk_root="$ANDROID_HOME" --list_installed > "$RUNNER_TEMP/clockrove-installed-$clockrove_api.txt"
+  echo "Creating API $clockrove_api test AVD"
+  echo no | timeout --kill-after=10s 120s "$avdmanager" create avd --force --name "clockrove-pdf-$clockrove_api" --package "system-images;android-$clockrove_api;default;x86_64" --device pixel_2
+  echo "Starting API $clockrove_api emulator"
   "$ANDROID_HOME/emulator/emulator" -avd "clockrove-pdf-$clockrove_api" -port 5554 -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 -feature -Vulkan > "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" 2>&1 &
   clockrove_emulator_pid=$!
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
@@ -68,7 +71,8 @@ for clockrove_api in 24 35; do
     kill -KILL "$clockrove_emulator_pid" 2>/dev/null || true
   }
   trap clockrove_cleanup_emulator EXIT
-  timeout --kill-after=5s 180s adb -s emulator-5554 wait-for-device
+  echo "Waiting for API $clockrove_api emulator device"
+  timeout --kill-after=10s 180s adb -s emulator-5554 wait-for-device
   clockrove_booted=false
   clockrove_boot_deadline=$((SECONDS + 240))
   while (( SECONDS < clockrove_boot_deadline )); do
@@ -83,10 +87,11 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
-  adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
-  adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+  echo "Installing app and instrumentation APKs on API $clockrove_api"
+  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
+  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
-  adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
+  timeout --kill-after=10s 60s adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
   # Stream diagnostics while tests run, so a cancelled/hung run retains its last
   # framework state instead of losing everything before the final logcat pull.

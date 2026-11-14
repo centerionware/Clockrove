@@ -91,6 +91,8 @@ class LocationRecordingTest {
             db.execSQL("DROP TABLE task_comments")
             db.execSQL("DROP TABLE job_location_recording")
             db.execSQL("DROP TABLE location_recording_settings")
+            db.execSQL("DROP TABLE job_invoice_billing_policy")
+            db.execSQL("DROP TABLE invoice_billing_defaults")
             db.version = 9
         }
         repository = TimerRepository(app, wallClock = { 2_000_000 })
@@ -101,7 +103,7 @@ class LocationRecordingTest {
         assertTrue(repository.taskConversation(job, "migration-card").conversation.comments.isEmpty())
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
-            assertEquals(10, db.version)
+            assertEquals(11, db.version)
         }
     }
 }

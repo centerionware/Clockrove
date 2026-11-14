@@ -9,6 +9,7 @@ import 'logo_controls.dart';
 import 'email_template.dart';
 import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
+import 'invoice_billing_policy.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -40,12 +41,23 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError, _bodyError, _taxError, _receivablesError;
+  String? _subjectError,
+      _bodyError,
+      _taxError,
+      _receivablesError,
+      _minimumHoursErrorText,
+      _minimumTaskFeeError;
   late final _tax = TextEditingController(
     text: taxPercent(widget.initial.defaultTaxUnits),
   );
   late final _rate = TextEditingController(
     text: money(widget.initial.defaultHourlyMinor, widget.initial.digits),
+  );
+  late final _minimumHours = TextEditingController(
+    text: widget.initial.minimumBillableHours,
+  );
+  late final _minimumTaskFee = TextEditingController(
+    text: money(widget.initial.minimumTaskFeeMinor, widget.initial.digits),
   );
   late final _name = TextEditingController(text: widget.initial.companyName);
   late final _email = TextEditingController(text: widget.initial.companyEmail);
@@ -71,12 +83,15 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   late final _body = TextEditingController(text: widget.initial.emailBody);
   late String _currency = widget.initial.currency,
       _style = widget.initial.invoiceStyle;
+  late String _hourlyBillingMode = widget.initial.hourlyBillingMode;
   late int _digits = widget.initial.digits;
   late bool _defaultLocationRecording = widget.initial.defaultLocationRecording;
   @override
   void dispose() {
     for (final c in [
       _rate,
+      _minimumHours,
+      _minimumTaskFee,
       _tax,
       _name,
       _email,
@@ -129,16 +144,30 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     }
   }
 
+  String? _taskFeeError() {
+    if (_minimumTaskFee.text.trim().isEmpty) return null;
+    try {
+      parseMoney(_minimumTaskFee.text, _digits);
+      return null;
+    } on FormatException {
+      return 'Enter a valid amount in $_currency, or enter 0 to disable the minimum.';
+    }
+  }
+
   void _validateDraft() {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
     final tax = taxPercentError(_tax.text);
     final receivables = accountingEmailError(_receivables.text);
+    final minimumHours = minimumHoursError(_minimumHours.text);
+    final minimumTaskFee = _taskFeeError();
     setState(() {
       _subjectError = subject;
       _bodyError = body;
       _taxError = tax;
       _receivablesError = receivables;
+      _minimumHoursErrorText = minimumHours;
+      _minimumTaskFeeError = minimumTaskFee;
     });
     if (subject != null || body != null) {
       throw const FormatException(
@@ -147,6 +176,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     }
     if (tax != null) throw FormatException(tax);
     if (receivables != null) throw FormatException(receivables);
+    if (minimumHours != null) throw FormatException(minimumHours);
+    if (minimumTaskFee != null) throw FormatException(minimumTaskFee);
   }
 
   @override
@@ -188,6 +219,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
                 _currency = v;
                 _digits = currencies[v]!;
                 _rate.clear();
+                _minimumTaskFee.clear();
               });
             }
           },
@@ -195,7 +227,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            'Existing jobs keep their currency. Changing currency clears this default rate; enter a new amount explicitly.',
+            'Existing jobs keep their currency. Changing currency clears the default rate and per-task minimum; enter new amounts explicitly.',
           ),
         ),
         TextField(
@@ -205,6 +237,68 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             labelText: 'Default hourly rate ($_currency)',
             helperText: 'Blank means no rate set. Override this in any job.',
           ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Invoice billing rules',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'These rules affect new invoices only. Work reports and recorded time stay exact.',
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _hourlyBillingMode,
+          decoration: const InputDecoration(labelText: 'Hourly billing rule'),
+          items: const [
+            DropdownMenuItem(
+              value: minimumThenExactBilling,
+              child: Text('Minimum hours, then exact time'),
+            ),
+            DropdownMenuItem(
+              value: roundTotalUpBilling,
+              child: Text('Round total time up to the next hour'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value != null) setState(() => _hourlyBillingMode = value);
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _minimumHours,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Minimum billable hours',
+            helperText:
+                '0 disables the minimum. Applied only to hourly invoices.',
+            errorText: _minimumHoursErrorText,
+          ),
+          onChanged: (_) {
+            if (_minimumHoursErrorText != null) {
+              setState(
+                () => _minimumHoursErrorText = minimumHoursError(
+                  _minimumHours.text,
+                ),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _minimumTaskFee,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Minimum per-task invoice fee ($_currency)',
+            helperText: '0 disables it. A job in another currency needs its own override.',
+            errorText: _minimumTaskFeeError,
+          ),
+          onChanged: (_) {
+            if (_minimumTaskFeeError != null) {
+              setState(() => _minimumTaskFeeError = _taskFeeError());
+            }
+          },
         ),
         const SizedBox(height: 16),
         SwitchListTile(
@@ -371,6 +465,12 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               emailSubject: _subject.text,
               emailBody: _body.text,
               defaultLocationRecording: _defaultLocationRecording,
+              hourlyBillingMode: _hourlyBillingMode,
+              minimumBillableHours: canonicalMinimumHours(
+                _minimumHours.text.trim().isEmpty ? '0' : _minimumHours.text,
+              ),
+              minimumTaskFeeMinor:
+                  parseMoney(_minimumTaskFee.text, _digits) ?? '0',
             );
             return () =>
                 ref.read(businessSettingsApiProvider).settings(id, version, s);

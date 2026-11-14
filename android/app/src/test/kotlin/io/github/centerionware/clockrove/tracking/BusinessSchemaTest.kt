@@ -52,7 +52,7 @@ class BusinessSchemaTest {
     @Test fun newJobHasARealThreeColumnBoardAndDefaultPricingWithoutInventedRates() {
         val job = repository.createJob("Synthetic new board")
         inspect { db ->
-            assertEquals(10, db.version)
+            assertEquals(11, db.version)
             db.rawQuery("SELECT name,position,completed FROM kanban_columns WHERE job_id=? ORDER BY position", arrayOf(job)).use {
                 val names = mutableListOf<String>(); var index = 0
                 while (it.moveToNext()) { names.add(it.getString(0)); assertEquals(index, it.getInt(1)); assertEquals(if (index == 2) 1 else 0, it.getInt(2)); index++ }

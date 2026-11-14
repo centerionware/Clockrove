@@ -65,7 +65,10 @@ class InvoicePaymentMigrationTest {
         assertNull(repo.recordInvoicePayment("record", 42, InvoicePaymentStore.Draft("payment", "invoice", "3000", "USD", at, "UTC")).conflict)
         assertEquals(BigInteger.valueOf(7750), repo.invoicePayments("invoice").second.balance.due)
         inspect { db ->
-            assertEquals(10, db.version)
+            assertEquals(11, db.version)
+            db.rawQuery("SELECT hourly_mode,minimum_hours,task_minimum_minor FROM invoice_billing_defaults WHERE id=1", null).use {
+                assertTrue(it.moveToFirst()); assertEquals(InvoiceBillingPolicy.MINIMUM_THEN_EXACT, it.getString(0)); assertEquals("0", it.getString(1)); assertEquals("0", it.getString(2))
+            }
             db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1002L, it.getLong(0)) }
             db.rawQuery("SELECT released_ms FROM invoice_task_claims WHERE id='claim'", null).use { assertTrue(it.moveToFirst()); assertTrue(it.isNull(0)) }
             db.rawQuery("SELECT fingerprint FROM commands WHERE id='old-command'", null).use { it.moveToFirst(); assertEquals("synthetic-opaque-receipt", it.getString(0)) }

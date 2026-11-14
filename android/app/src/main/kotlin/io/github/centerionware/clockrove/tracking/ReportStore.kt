@@ -21,7 +21,10 @@ internal object ReportStore {
         val measured: Long, val latitude: Double, val longitude: Double, val accuracy: Double)
     data class Task(val id: String, val jobId: String, val title: String, val completed: Long, val priceMinor: BigInteger?, val currency: String, val quantityUnits: Long = TaskQuantityStore.one)
     data class Total(val jobId: String, val jobName: String, val mode: String, val currency: String,
-        val durationMillis: BigInteger, val hourlyMinor: BigInteger?, val amountMinor: BigInteger?, val missingPrices: Int)
+        val durationMillis: BigInteger, val hourlyMinor: BigInteger?, val amountMinor: BigInteger?, val missingPrices: Int,
+        val billedHours: String? = null, val minimumTaskAdjustmentMinor: BigInteger = BigInteger.ZERO,
+        val billingRule: String? = null, val policyHourlyMode: String? = null,
+        val policyMinimumHours: String? = null, val policyTaskMinimumMinor: BigInteger? = null)
     data class Report(val selection: Selection, val days: List<Day>, val intervals: List<Interval>, val excluded: List<Excluded>,
         val points: List<Point>, val tasks: List<Task>, val totals: List<Total>)
     private val utc = TimeZone.getTimeZone("UTC")

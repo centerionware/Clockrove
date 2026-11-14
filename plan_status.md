@@ -1,11 +1,11 @@
 # Clockrove task status
 
-Updated 2026-11-13. Product contract: [app_plan.md](app_plan.md).
-Statuses describe evidence, not intent. M6.5 source work (quote UX, comments and
-image attachments, maps and GPS controls) is in progress. Complete M7 backup and
-the remaining business features before M7.6 (whole-app UI overhaul and exhaustive
-E2E/screenshots), which must pass before closed testing. iOS and future service
-remain deferred.
+Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
+Statuses describe evidence, not intent. M6.5 source and CI acceptance are
+complete; the internal Play upload was accepted, with owner-device map, GPS and
+camera checks still pending. M6.6 business features and M7 backup remain before
+M7.6 (whole-app UI overhaul and exhaustive E2E/screenshots), which must pass
+before closed testing. iOS and future service remain deferred.
 
 | Task | Status | Evidence / next action |
 | --- | --- | --- |
@@ -44,9 +44,9 @@ remain deferred.
 | Follow-on: quotes and invoice detail | Merged #39; main validation passed and internal delivery accepted | PR exact-head run 43381832106 and main run 43384059350 passed the actual quote journey and 30 API-24/35 device tests each with zero failures/errors/skips. Keyboard-closed assertion passed before recording the customer decision. Play run 43385810795 accepted internal.29.1 / version code 216718138; physical install and tester availability remain separate. |
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
 | PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
-| M6.5 quote usability, task comments/images, map and GPS controls | API-24/35 emulator journeys pass; owner-device map/GPS/camera evidence pending | Exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed all checks. Downloaded device XML reports 32 actual Android tests on each API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media), all zero failures/errors/skips. Reviewed API-24/35 screenshots: camera review, task attachment, comment-owned attachment and correct destination-specific confirmation. The Android journey asserts both task and comment confirmation strings. The non-exported synthetic camera fixture is instrumentation-only and absent from release builds. Physical map rendering, GPS sampling and real-camera acceptance remain pending; no VM build/test/formatter. |
-| M6.6 remaining requested business features | Planned after M6.5 | Invoice-only hourly minimum/rounding, task minimum fee, Supplies classification, actual costs, tax-preparation reports and pending map-provider settings remain before declaring launch functionality complete. |
-| Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Planned after quotes | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times remain unchanged. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. Confirm invoice scope for rounding/minimum before implementation. |
+| M6.5 quote usability, task comments/images, map and GPS controls | API-24/35 emulator journeys pass; internal upload accepted; owner-device map/GPS/camera evidence pending | Exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed all checks. Downloaded device XML reports 32 actual Android tests on each API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media), all zero failures/errors/skips. Reviewed API-24/35 screenshots: camera review, task attachment, comment-owned attachment and correct destination-specific confirmation. The non-exported synthetic camera fixture is instrumentation-only and absent from release builds. Internal delivery run [43500590080](https://github.com/centerionware/Clockrove/actions/runs/43500590080) successfully uploaded `0.1.0-internal.31.1` / version code `216764535`; review approval and device availability are separate. Physical map rendering, GPS sampling and real-camera acceptance remain pending; no VM build/test/formatter. |
+| M6.6 remaining requested business features | Invoice-policy slice validated on exact PR head; merge and other slices remain | Hourly minimum/rounding and task minimum fee are implemented in PR #44. Exact head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed formatting, analysis, Flutter behavior, Android build, 587 native tests and 32 actual Android tests on each API, with zero failures/errors/skips; real PDF generation/viewer and release tooling passed. This run includes the previously inconsistent API-35 global location toggle, now covered with an accessibility click plus a touchscreen fallback, and both APIs show saved off/on states in reviewed captures. The earlier same-head failure is recorded in app_plan.md. Supplies classification, actual cost ledger, tax-preparation reports and secure map-provider settings remain; M6.6 is not complete. |
+| Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Exact-head validation passed; PR merge pending | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times and reports remain unchanged. PR head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed all 32 actual Android tests on each of API 24 and 35 and all 587 native tests, zero failures/errors/skips. This run passes the location toggle off/on/save/reopen journey that failed intermittently on prior head `f8d0587`; the helper uses an accessibility action with touchscreen fallback, and the API-24/35 switch-state captures were reviewed. No VM build/test/formatter. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
 | Follow-on: task comments, supplies and costs | Comments pulled forward into M6.5; supplies/cost accounting remains planned | M6.5 implements private comments and image attachments. The separate Supplies toggle, actual cost ledger and company reports remain in the lifecycle queue; templates never copy conversation or costs. |
 | Follow-on: company/tax-preparation reports | Planned after financial data foundation | Main-menu Reports icon; invoiced sales, cash, separate tax, outstanding, categories, actual costs, estimated profit/margins, dates/currencies and export/drilldown reconciliation |
@@ -3191,3 +3191,42 @@ task-media journeys. Reviewed API-24 and API-35 camera-review, task attachment,
 and comment-owned attachment screenshots; the latter visibly says “Photo
 attached to this comment.” Physical map/GPS/real-camera acceptance remains
 separate. No VM build/test/formatter ran.
+
+### 2026-11-13 — M6.5 merged to main
+
+PR #43 (`milestone-quote-media-gps`, exact head `4a58bb2dcbc4d28941ba22074b230c94f3a0f58d`)
+passed Actions run `43493099149` and was squash-merged at `81079883f97d4ebbbbbc403a4309654435fa9ab2`.
+The workflow completed successfully. Downloaded device artifacts report 32
+instrumentation tests on API 24 and 32 on API 35, with zero failures, errors or
+skips. Reviewed the API-35 comment-photo screenshot; the success message names
+the comment as the attachment destination. Main-commit validation run
+`43497031589` also completed successfully. Internal Play delivery run
+`43500590080` is still in progress. Maps, GPS sampling and real-camera behavior
+still require the owner's physical-device acceptance; emulator evidence does
+not establish those results. No VM build/test/formatter ran.
+
+### 2026-11-13 — M6.6 invoice billing policies in progress
+
+Adopted the documented per-job/per-invoice scope for hourly rounding and
+minimums, with task minimum fees applied once per job per invoice. A vertical
+slice now contains the schema-v11 policy store, exact hourly billing arithmetic,
+global and per-job settings, invoice preview/line rendering, frozen invoice and
+replacement policy metadata, and native/Flutter tests. This is source work only;
+the GitHub Actions check is still required before claiming it works or merging.
+Supplies classification, the actual-cost ledger and tax-preparation reports,
+and secure map-provider settings remain in M6.6. No VM build/test/formatter ran.
+
+### 2026-11-14 — PR #44 API 35 billing journey follow-up
+
+Exact head `02e89685c7296f8fb579724da8d8469d86bea70b`, Actions run
+`43564540421`: formatting, analysis, implemented-behavior tests, Android build
+and native unit tests passed. API 24 completed 32 actual device tests across the
+base, billing, invoice-copy, payment, quote and task-media suites with zero
+failures/errors/skips. API 35's 23-test base suite passed, including settings
+save/reopen and location-recording controls. Its billing journey failed while
+the test tried to scroll back to the inline message for an invalid tax value;
+the failure screenshot shows the real Job settings screen and no app crash, but
+does not establish that the validation message was visible. The device helper
+is being updated to use the proven vertical-scroll and real-swipe fallback.
+Fresh exact-head Actions evidence is still required; PR #44 is not ready to
+merge. No VM build/test/formatter ran.

@@ -184,6 +184,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "business" -> { val s = repository.businessSnapshot(); return mapOf("version" to s.version, "settings" to settings(s.settings), "customers" to s.customers.map(::customer)) }
             "job" -> { val s = repository.jobDetail(input.string("jobId")); return mapOf("version" to s.version, "settings" to job(s.job.settings), "archived" to s.job.archived,
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits,
+                "effectiveHourlyBillingMode" to s.job.effectiveHourlyBillingMode, "effectiveMinimumBillableHours" to s.job.effectiveMinimumBillableHours,
+                "effectiveMinimumTaskFeeMinor" to s.job.effectiveMinimumTaskFeeMinor.toString(),
                 "effectiveLocationRecording" to repository.locationRecordingEnabled(s.job.settings.id)) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
@@ -242,7 +244,10 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "removeTaskImage" -> repository.removeTaskImage(id, version, v.string("jobId"), v.string("taskId"), v.string("attachmentId"))
             "copyTemplate" -> repository.copyTaskTemplate(id, version, v.string("templateId"), v.string("cardId"), v.string("jobId"), v.string("columnId"), v.bool("copyPrice"))
             "removeTemplate" -> repository.removeTaskTemplate(id, version, v.string("templateId"))
-            "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody"), if (v.value.containsKey("defaultTaxUnits")) v.int("defaultTaxUnits") else 0, if (v.value.containsKey("receivablesEmail")) v.string("receivablesEmail") else "", if (v.value.containsKey("defaultLocationRecording")) v.bool("defaultLocationRecording") else true))
+            "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody"), if (v.value.containsKey("defaultTaxUnits")) v.int("defaultTaxUnits") else 0, if (v.value.containsKey("receivablesEmail")) v.string("receivablesEmail") else "", if (v.value.containsKey("defaultLocationRecording")) v.bool("defaultLocationRecording") else true,
+                if (v.value.containsKey("hourlyBillingMode")) v.string("hourlyBillingMode") else InvoiceBillingPolicy.MINIMUM_THEN_EXACT,
+                if (v.value.containsKey("minimumBillableHours")) v.string("minimumBillableHours") else "0",
+                v.money("minimumTaskFeeMinor") ?: java.math.BigInteger.ZERO))
             "saveCustomer" -> repository.saveCustomer(id, version, BusinessStore.Customer(v.string("customerId"), v.string("name"), v.string("email"), v.string("phone"), v.string("address"), v.string("notes"), v.bool("archived")))
             "removeCustomer" -> repository.removeCustomer(id, version, v.string("customerId"))
             "archiveJob" -> repository.archiveJob(id, version, v.string("jobId"))
@@ -259,7 +264,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 val spans = raw.map { entry -> Input(requireNotNull(entry as? Map<*, *>)).let { span -> LegacyInvoiceStore.Span(span.integer("start"), span.integer("end"), span.string("timezone")) } }
                 repository.reconcileInvoiceCoverage(id, version, LegacyInvoiceStore.Draft(v.string("invoiceId"), v.strings("taskIds"), spans, v.string("note"), v.bool("confirmed"), v.bool("noSources")))
             }
-            "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride"), if (v.value["taxUnits"] == null) null else v.int("taxUnits"), v.nullableBool("locationRecordingOverride")))
+            "saveJob" -> repository.saveJobSettings(id, version, BusinessStore.JobSettings(v.string("jobId"), v.string("name"), v.integer("colorArgb"), v.string("billingMode"), v.string("currency"), v.money("hourlyRateMinor"), v.nullable("customerId"), v.nullable("customerEmailOverride"), if (v.value["taxUnits"] == null) null else v.int("taxUnits"), v.nullableBool("locationRecordingOverride"), v.nullable("hourlyBillingMode"), v.nullable("minimumBillableHours"), v.money("minimumTaskFeeMinor")))
             else -> error("Unreachable")
         }
     }
@@ -318,11 +323,13 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         "defaultHourlyMinor" to v.defaultHourlyMinor?.toString(), "companyName" to v.companyName, "companyEmail" to v.companyEmail, "companyPhone" to v.companyPhone,
         "companyAddress" to v.companyAddress, "companyWebsite" to v.companyWebsite, "invoiceHeader" to v.invoiceHeader, "invoiceFooter" to v.invoiceFooter,
         "invoiceStyle" to v.invoiceStyle, "emailSubject" to v.emailSubject, "emailBody" to v.emailBody, "defaultTaxUnits" to v.defaultTaxUnits, "receivablesEmail" to v.receivablesEmail,
-        "defaultLocationRecording" to v.defaultLocationRecording)
+        "defaultLocationRecording" to v.defaultLocationRecording, "hourlyBillingMode" to v.hourlyBillingMode,
+        "minimumBillableHours" to v.minimumBillableHours, "minimumTaskFeeMinor" to v.minimumTaskFeeMinor.toString())
     private fun customer(v: BusinessStore.Customer): Map<String, Any?> = mapOf("customerId" to v.id, "name" to v.name, "email" to v.email, "phone" to v.phone, "address" to v.address, "notes" to v.notes, "archived" to v.archived)
     private fun job(v: BusinessStore.JobSettings): Map<String, Any?> = mapOf("jobId" to v.id, "name" to v.name, "colorArgb" to v.colorArgb, "billingMode" to v.billingMode,
         "currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits, "hourlyRateMinor" to v.hourlyRateMinor?.toString(), "customerId" to v.customerId, "customerEmailOverride" to v.customerEmailOverride, "taxUnits" to v.taxUnits,
-        "locationRecordingOverride" to v.locationRecordingOverride)
+        "locationRecordingOverride" to v.locationRecordingOverride, "hourlyBillingMode" to v.hourlyBillingMode,
+        "minimumBillableHours" to v.minimumBillableHours, "minimumTaskFeeMinor" to v.minimumTaskFeeMinor?.toString())
     private fun invoiceBillingPreview(s: TimerRepository.InvoiceBillingPreview): Map<String, Any?> {
         val preview = s.preview; val report = preview.report; val total = report.totals.single()
         val digits = Currency.getInstance(total.currency).defaultFractionDigits

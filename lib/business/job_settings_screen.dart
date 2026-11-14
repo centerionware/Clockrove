@@ -10,6 +10,7 @@ import 'settings_screen.dart';
 import 'lifecycle_api.dart';
 import 'job_deletion_dialog.dart';
 import 'tax_rate.dart';
+import 'invoice_billing_policy.dart';
 
 class JobSettingsScreen extends ConsumerWidget {
   const JobSettingsScreen({super.key, required this.jobId});
@@ -67,6 +68,18 @@ class _JobFormState extends ConsumerState<_JobForm> {
   late final _rate = TextEditingController(
     text: money(widget.initial.rate, widget.initial.digits),
   );
+  late final _minimumHours = TextEditingController(
+    text:
+        widget.initial.minimumBillableHours ??
+        widget.initial.effectiveMinimumBillableHours,
+  );
+  late final _minimumTaskFee = TextEditingController(
+    text: money(
+      widget.initial.minimumTaskFeeMinor ??
+          widget.initial.effectiveMinimumTaskFeeMinor,
+      widget.initial.digits,
+    ),
+  );
   late final _email = TextEditingController(
     text: widget.initial.effectiveEmail,
   );
@@ -76,9 +89,15 @@ class _JobFormState extends ConsumerState<_JobForm> {
     ),
   );
   late bool _inheritTax = widget.initial.taxUnits == null;
+  late bool _inheritHourlyMode = widget.initial.hourlyBillingMode == null;
+  late bool _inheritMinimumHours = widget.initial.minimumBillableHours == null;
+  late bool _inheritMinimumTaskFee = widget.initial.minimumTaskFeeMinor == null;
+  late String _hourlyBillingMode =
+      widget.initial.hourlyBillingMode ??
+      widget.initial.effectiveHourlyBillingMode;
   late bool? _locationRecordingOverride =
       widget.initial.locationRecordingOverride;
-  String? _taxError;
+  String? _taxError, _minimumHoursErrorText, _minimumTaskFeeError;
   late String _mode = widget.initial.mode;
   late String? _customer = widget.initial.customerId;
   late bool _useCustomerEmail = widget.initial.emailOverride == null;
@@ -87,9 +106,21 @@ class _JobFormState extends ConsumerState<_JobForm> {
   void dispose() {
     _name.dispose();
     _rate.dispose();
+    _minimumHours.dispose();
+    _minimumTaskFee.dispose();
     _email.dispose();
     _tax.dispose();
     super.dispose();
+  }
+
+  String? _taskFeeError(int digits, String currency) {
+    if (_minimumTaskFee.text.trim().isEmpty) return null;
+    try {
+      parseMoney(_minimumTaskFee.text, digits);
+      return null;
+    } on FormatException {
+      return 'Enter a valid amount in $currency, or enter 0 to disable the minimum.';
+    }
   }
 
   @override
@@ -222,6 +253,120 @@ class _JobFormState extends ConsumerState<_JobForm> {
               },
             ),
           ),
+        const SizedBox(height: 24),
+        Text(
+          'Invoice billing rules',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'These rules apply only to new invoices. Recorded time and work reports stay exact.',
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Use default hourly billing rule'),
+          subtitle: Text(
+            billingModeLabel(widget.business.settings.hourlyBillingMode),
+          ),
+          value: _inheritHourlyMode,
+          onChanged: data?.archived == false
+              ? (value) => setState(() => _inheritHourlyMode = value)
+              : null,
+        ),
+        if (!_inheritHourlyMode)
+          DropdownButtonFormField<String>(
+            initialValue: _hourlyBillingMode,
+            decoration: const InputDecoration(labelText: 'Hourly billing rule'),
+            items: const [
+              DropdownMenuItem(
+                value: minimumThenExactBilling,
+                child: Text('Minimum hours, then exact time'),
+              ),
+              DropdownMenuItem(
+                value: roundTotalUpBilling,
+                child: Text('Round total time up to the next hour'),
+              ),
+            ],
+            onChanged: data?.archived == false
+                ? (value) {
+                    if (value != null) {
+                      setState(() => _hourlyBillingMode = value);
+                    }
+                  }
+                : null,
+          ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Use default minimum billable hours'),
+          subtitle: Text(
+            '${widget.business.settings.minimumBillableHours} hours',
+          ),
+          value: _inheritMinimumHours,
+          onChanged: data?.archived == false
+              ? (value) => setState(() {
+                  _inheritMinimumHours = value;
+                  _minimumHoursErrorText = null;
+                })
+              : null,
+        ),
+        if (!_inheritMinimumHours)
+          TextField(
+            controller: _minimumHours,
+            readOnly: data?.archived ?? true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Minimum billable hours for this job',
+              helperText: '0 disables the minimum.',
+              errorText: _minimumHoursErrorText,
+            ),
+            onChanged: (_) {
+              if (_minimumHoursErrorText != null) {
+                setState(
+                  () => _minimumHoursErrorText = minimumHoursError(
+                    _minimumHours.text,
+                  ),
+                );
+              }
+            },
+          ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Use default minimum per-task fee'),
+          subtitle: Text(
+            widget.business.settings.currency == widget.initial.currency
+                ? '${widget.business.settings.currency} ${money(widget.business.settings.minimumTaskFeeMinor, widget.business.settings.digits)}'
+                : 'Global fee uses ${widget.business.settings.currency}; enter a ${widget.initial.currency} override for this job.',
+          ),
+          value: _inheritMinimumTaskFee,
+          onChanged: data?.archived == false
+              ? (value) => setState(() {
+                  _inheritMinimumTaskFee = value;
+                  _minimumTaskFeeError = null;
+                })
+              : null,
+        ),
+        if (!_inheritMinimumTaskFee)
+          TextField(
+            controller: _minimumTaskFee,
+            readOnly: data?.archived ?? true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText:
+                  'Minimum task-rate invoice fee (${widget.initial.currency})',
+              helperText: '0 disables it. This job uses its own currency.',
+              errorText: _minimumTaskFeeError,
+            ),
+            onChanged: (_) {
+              if (_minimumTaskFeeError != null) {
+                setState(
+                  () => _minimumTaskFeeError = _taskFeeError(
+                    data!.digits,
+                    data.currency,
+                  ),
+                );
+              }
+            },
+          ),
         const SizedBox(height: 8),
         DropdownButtonFormField<bool?>(
           initialValue: _locationRecordingOverride,
@@ -330,8 +475,20 @@ class _JobFormState extends ConsumerState<_JobForm> {
               throw const FormatException('Enter a job name.');
             }
             final taxError = _inheritTax ? null : taxPercentError(_tax.text);
-            setState(() => _taxError = taxError);
+            final hoursError = _inheritMinimumHours
+                ? null
+                : minimumHoursError(_minimumHours.text);
+            final feeError = _inheritMinimumTaskFee
+                ? null
+                : _taskFeeError(data!.digits, data.currency);
+            setState(() {
+              _taxError = taxError;
+              _minimumHoursErrorText = hoursError;
+              _minimumTaskFeeError = feeError;
+            });
             if (taxError != null) throw FormatException(taxError);
+            if (hoursError != null) throw FormatException(hoursError);
+            if (feeError != null) throw FormatException(feeError);
             final id = newBusinessId();
             final p = JobPreferences(
               version: data!.version,
@@ -350,6 +507,13 @@ class _JobFormState extends ConsumerState<_JobForm> {
               effectiveTaxUnits: data.effectiveTaxUnits,
               locationRecordingOverride: _locationRecordingOverride,
               effectiveLocationRecording: data.effectiveLocationRecording,
+              hourlyBillingMode: _inheritHourlyMode ? null : _hourlyBillingMode,
+              minimumBillableHours: _inheritMinimumHours
+                  ? null
+                  : canonicalMinimumHours(_minimumHours.text),
+              minimumTaskFeeMinor: _inheritMinimumTaskFee
+                  ? null
+                  : parseMoney(_minimumTaskFee.text, data.digits) ?? '0',
             );
             return () => ref.read(businessSettingsApiProvider).saveJob(id, p);
           },

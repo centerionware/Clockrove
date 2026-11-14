@@ -278,9 +278,10 @@ does not mark them complete.
   hours. Snapshot effective policies on each issued invoice so later setting
   changes do not mutate documents; resending/receipts/balance copies reuse the
   snapshot. A void/replacement flow must preview any changed billable quantities,
-  minimum-fee adjustment and paid credit before confirmation. Confirm whether the
-  chosen rounding/minimum scope per job per invoice matches the owner's intent
-  before implementation.
+  minimum-fee adjustment and paid credit before confirmation. Adopt the recommended
+  scope: aggregate selected unbilled work by job and effective hourly rate once
+  per invoice; apply task minimum fees per job per invoice. This keeps repeated
+  sessions from multiplying minimums or hour round-ups.
 - Main Settings has optional accounts-receivable email. Invoice/receipt/quote
   email drafts CC it when set, otherwise company primary email. Fill default-email
   To/CC/subject/body/PDF safely; the user sends. Keep both template guards.
@@ -2733,3 +2734,65 @@ code `216718138`, on the internal track. This confirms upload/submission
 acceptance only; it does not establish Google review approval, tester
 availability, physical installation or a public release. Build, validation and
 Play delivery all ran in GitHub Actions; nothing was built or tested on the VM.
+
+### 2026-11-14 — invoice billing policy checks passed on API 24 and 35
+
+PR #44 source head `3aaa48753ea377f8a887fdbe3df400f3de9fe4ad` passed the
+complete Validate workflow in Actions run [43566399956](https://github.com/centerionware/Clockrove/actions/runs/43566399956),
+attempt 2. Formatting, analysis, Flutter behavior tests, Android build, native
+tests, real PDF generation and viewer checks on API 24 and API 35, device-result
+exports, and locked release-tooling/version policy all passed. Exported device
+XML reports 32 actual Android cases on each API, with zero failures, errors or
+skips. This includes the real billing-policy journey that checks invalid-tax
+feedback, main Settings save/reopen, invoice quantities, prior-invoice
+exclusion, and retained invoice data. The API-35 unbilled invoice review capture
+was checked and shows the exact synthetic subtotal, 7.5% tax, and total.
+
+Attempt 1 of the same run lost the API-24 emulator to a process segfault after
+its 23-case base suite; the emulator went offline before billing tests. It did
+not report an application assertion failure. Attempt 2 used the same source
+head and passed both API suites. The workflow test-scroll helper now uses
+accessibility scrolling with a touchscreen swipe fallback to reveal the actual
+invalid-tax message. PR #44 remains open pending merge; M6.6 remains in progress
+because Supplies classification, actual costs, tax-preparation reports, and
+secure map-provider settings are outstanding. No build, test, or formatter ran
+on the VM.
+
+The plan-evidence commit `f8d0587ba2343e0c6f747676520e6066af700f64` received
+two independent full Actions runs. Dispatched run
+[43569496084](https://github.com/centerionware/Clockrove/actions/runs/43569496084)
+passed and its exported XML confirms 651 total native/device tests, zero
+failures/errors/skips, including all 32 actual Android cases on each API. The
+automatic PR run
+[43569578326](https://github.com/centerionware/Clockrove/actions/runs/43569578326)
+failed during the API-35 `locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`
+journey: the accessibility action returned successfully but the setting still
+read on. The emulator then went offline and segfaulted. The API-24 suite passed
+in that run. This disagrees with the dispatched run on the same commit and does
+not reproduce the owner's app crash, but it is a real acceptance-test failure;
+PR #44 must remain unmerged until resolved. The settings-device helper now adds
+a touchscreen tap at the visible switch bounds if the accessibility action does
+not change its state. A new exact-head API-24/35 run is required to establish
+whether this is an interaction-harness issue or an app defect.
+
+### 2026-11-14 — location toggle journey passes on the revised harness
+
+The helper correction is in exact PR head
+`1a1a183bf592309c16bedb2006c22f7129ad332d`. Actions run
+[43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697)
+passed formatting, analysis, Flutter behavior tests, Android build, all 587
+native tests, and the API-24/35 Android/PDF stage. Downloaded XML confirms 32
+actual Android cases per API, zero failures/errors/skips. This includes the real
+global location-recording toggle saved off and on, main Settings save/reopen,
+both billing journeys, immutable invoice copies, payments, quotes and task
+media. The invoice billing test still asserts the exact invalid-tax message.
+The API-24/35 location-toggle captures show the switch in both states and were
+reviewed. Locked release-tooling/version checks also passed. The UI test keeps
+the accessibility click and supports a real touchscreen tap at the switch
+bounds if the state does not change. The previous automatic PR run on the same
+documentation head had failed that toggle journey before the emulator
+segfaulted; this later exact-head PR run passed. PR #44 is mergeable and its
+checks are green, but remains open pending squash merge. M6.6 remains in
+progress because Supplies classification, actual costs, tax-preparation reports,
+and secure map-provider settings remain. All validation ran in GitHub Actions;
+no build, test, or formatter ran on the VM.

@@ -125,9 +125,10 @@ minimum fee is not a new time interval or task source. Freeze the effective poli
 inputs and resulting invoice lines/totals when issuing; resends, balance copies and
 receipts reuse that issued snapshot. A void/replacement preview shows the inherited
 or overridden policy, recalculated billable hours/fee and paid credit before
-confirmation, and retains the original voided invoice unchanged. Open product
-decision before coding: confirm the recommended per-job/per-rate/per-invoice scope
-for hourly rounding/minimums and per-job/per-invoice scope for task minimum fee.
+confirmation, and retains the original voided invoice unchanged. Adopt the
+recommended per-job/per-effective-rate/per-invoice scope for hourly
+rounding/minimums and per-job/per-invoice scope for task minimum fees. This avoids
+repeated session boundaries multiplying minimums or round-ups.
 
 Legacy review opens the original PDF and shows the job's current tasks and existing
 invoice reservations, without automatically selecting tasks by title or price.
