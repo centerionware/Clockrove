@@ -68,7 +68,7 @@ class InvoicePaymentMigrationTest {
         assertNull(repo.recordInvoicePayment("record", 42, InvoicePaymentStore.Draft("payment", "invoice", "3000", "USD", at, "UTC")).conflict)
         assertEquals(BigInteger.valueOf(7750), repo.invoicePayments("invoice").second.balance.due)
         inspect { db ->
-            assertEquals(13, db.version)
+            assertEquals(14, db.version)
             db.rawQuery("SELECT hourly_mode,minimum_hours,task_minimum_minor FROM invoice_billing_defaults WHERE id=1", null).use {
                 assertTrue(it.moveToFirst()); assertEquals(InvoiceBillingPolicy.MINIMUM_THEN_EXACT, it.getString(0)); assertEquals("0", it.getString(1)); assertEquals("0", it.getString(2))
             }

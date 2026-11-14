@@ -261,8 +261,21 @@ build, but the first native run had 15 of 594 failures: stale v12 schema
 assertions, a retry test that changed its expected state version, and full-BLOB
 reads exceeding SQLite's cursor window. The next run corrected the schema and
 retry failures, reducing the native failures to four, all where chunked image
-reads returned no image. The query was simplified and needs another exact-head
-Actions run; no Android device journeys ran. Actual-cost records,
+reads returned no image. At head `1e568f1` / run `43592371710`, formatting, analysis, Flutter behavior,
+Android build and all 594 native tests passed, including exact-byte reads above
+2 MB. The following real-Android instrumentation compilation failed because the
+synthetic gallery fixture chained `Intent.setClipData`, which returns `void`.
+The fixture now sets clip data and URI permission flags separately. At head
+`372c15a` / run `43593950549`, the quote customer add/save/return/select Flutter
+test passed along with formatting, analysis, Android build and all 594 native
+tests; PDF instrumentation exposed a stale expected `LogoImagesTest` count.
+That count is corrected to five. At head `0a06901` / run `43595000940`,
+formatting, analysis, Flutter tests, Android build and all 594 native tests
+passed, as did the first 25 real Android PDF tests. The subsequent API-24 billing
+journey failed because its return-to-top helper never exposed **Billing basis**
+after invalid tax input, so later emulator journeys and API 35 were skipped.
+The quote customer test itself passed; no Android-specific quote customer
+journey ran. Actual-cost records,
 tax-preparation reports and secure map-provider settings remain in M6.6. M7
 encrypted backup follows. M7.6 is the required whole-app UI overhaul and
 exhaustive end-to-end/screenshots gate after M6.6 and M7; it must pass before
@@ -574,6 +587,15 @@ map-provider settings. Follow the detailed contracts in sections 3.5a/3.6 and
 `docs/INVOICE_LIFECYCLE_PLAN.md`. Test native calculations, exact money, tax and
 cost reconciliation, settings inheritance, migrations, provider failures and
 report drilldowns. Do not classify an unimplemented item as covered by UI tests.
+
+Source progress: task Labor/Supplies classification and the actual-cost ledger
+are implemented on PR #45; the ledger includes schema v14, exact-money CRUD,
+soft deletion/revision history, equal-timestamp keyset paging, and an editor
+reachable from Reports. Its currency-aware entry form supports optional
+job/task/vendor/reference/notes. A task's Supplies label never creates a ledger
+cost automatically. Exact-head Actions evidence is pending; tax-preparation
+reports and secure map-provider settings are not implemented yet. Track current
+validation and blockers in `plan_status.md`.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -2918,14 +2940,12 @@ string `1`. Actions runs `43587087757`, `43587596151`, `43588048998`,
 `43588642154`, `43588980204`, `43589349628` and `43589666718` each passed both
 penny-related Flutter tests. Runs `43588642154`, `43588980204`, `43589349628` and
 `43589666718` also passed the task-photo selected-index and left/right swipe
-test. The latest run still failed the quote customer-management UI test because
-scrolling did not expose the nested customer-save control. The updated test now
-focuses on the quote's management-screen navigation and refreshed selector
-options after the shared customer provider changes; existing settings coverage
-verifies customer save/edit behavior. The same change adds
-Manage customers beneath the quote selector and refreshes its choices when the
-shared customer provider changes. A fresh exact-head Actions run is pending. No
-local tests or builds were run.
+test. The quote form has **Manage customers** directly below its customer
+selector and opens the same `CustomersScreen` as Job settings. The shared
+customer editor now keeps its save action visible while scrolling. The expanded
+widget journey adds and saves a customer through that screen, returns to the
+quote, selects the customer, then verifies the draft captures its ID. This
+follow-up awaits exact-head Actions. No VM build, test or formatter ran.
 
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device
@@ -2961,3 +2981,34 @@ Simplified the chunk SQL to query by immutable attachment ID and explicitly cast
 SQLite `substr` offsets/lengths, while checking the stored byte bound in Kotlin.
 A new exact-head Actions run is required; device journeys were skipped after
 native tests failed. No VM build, test or formatter ran.
+
+
+### 2026-11-14 — photo-read native pass; gallery fixture compile correction
+
+PR #45 head `1e568f1` / Actions run
+[43592371710](https://github.com/centerionware/Clockrove/actions/runs/43592371710)
+passed Flutter formatting, analysis, implemented-behavior tests, Android debug
+build and all 594 native unit tests. The native report confirms schema-v13
+migrations, batch-command replay and byte-for-byte reads of a 2.1 MB photo pass.
+The workflow stopped before device execution because the synthetic gallery
+activity chained `Intent.setClipData`, a Java `void` method, in a fluent
+expression. Updated the fixture to set `ClipData` and read permission flags
+separately. The exact-head Actions rerun remains required; no device journey ran
+on this head. No VM build, test or formatter ran.
+
+### 2026-11-14 — M6.6 actual-cost ledger editor and paging source
+
+Extended the native cost ledger from schema/CRUD source into a paged end-to-end
+source slice. The platform channel now accepts an `(occurred,id)` cursor and
+returns the next cursor, keeping ordering deterministic when multiple costs
+share a timestamp. The Flutter ledger screen lists costs in recorded timezone
+and currency, loads older pages, and opens an add/edit form with exact decimal
+validation, date/time, category, optional job/task and receipt details. Deletes
+are confirmed and soft-delete into the revision history. Cost commands track
+the latest committed native version so a user can retry after another app
+change without losing the form. Added native pagination and Flutter create,
+currency-precision and positive-amount tests; the ledger is reachable from the
+main Reports screen. This is source-only and awaits Actions formatting,
+analysis, widget/native tests, Android build and device coverage. No local
+build/test/formatter ran. Tax-preparation reports and secure map-provider
+settings remain in M6.6.
