@@ -64,7 +64,9 @@ class InvoiceBillingDeviceTest {
                 if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
             } == true
             val hintMatches = editable && android.os.Build.VERSION.SDK_INT >= 26 && matches(node.hintText)
-            if (node.isVisibleToUser && (!editable || node.isEditable) && (matches(node.text) || matches(node.contentDescription) || hintMatches)) return node
+            val errorMatches = matches(node.error)
+            if (node.isVisibleToUser && (!editable || node.isEditable) &&
+                (matches(node.text) || matches(node.contentDescription) || hintMatches || errorMatches)) return node
             return null
         }
         return automation.rootInActiveWindow?.let(::visit)

@@ -3813,3 +3813,16 @@ verifies the selected range and sends Ctrl+A when necessary before typing. Exact
 head Actions validation remains pending; API 35 was not reached. The gated Play
 delivery did not run because main validation failed. No VM build, test or
 formatter ran.
+
+PR #48 exact head `91f0950` / Actions run
+[43653156678](https://github.com/centerionware/Clockrove/actions/runs/43653156678)
+passed formatting, analysis, Flutter behavior tests, Android build and native
+tests. API 24 passed all 37 actual device cases, verifying that the selected
+range / Ctrl+A fallback fixed the large unit-price replacement. API 35 passed
+its 28 base device cases and the billing flow through invoice creation, then
+the test failed to find the invalid-tax message. The screenshot shows Clockrove
+still open near the bottom of Job settings. The lookup previously ignored
+`AccessibilityNodeInfo.error`, which Flutter may use to expose field validation
+messages; that property is now included. Validate this correction on the
+updated PR head through GitHub Actions. No VM build or test ran; API-35 billing
+and later journeys did not complete.

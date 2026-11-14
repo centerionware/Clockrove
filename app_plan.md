@@ -3198,3 +3198,14 @@ field focused, not an app crash. The test helper now checks the selected range
 and uses Ctrl+A before typing if the range was not actually selected. Validate
 this correction on an exact Actions head; API 35 and subsequent device journeys
 did not run on `43651548435`. No VM build, test or formatter ran.
+
+At PR #48 head `91f0950` / Actions run
+[43653156678](https://github.com/centerionware/Clockrove/actions/runs/43653156678),
+the corrected text-selection helper passed all 37 API-24 device cases,
+including the wide unit-price edit and invoice journey. API 35 passed its 28
+base cases and the billing flow through invoice creation, then the test could
+not discover the invalid-tax message. Its screenshot shows the app still open
+near the bottom of Job settings. The lookup previously ignored
+`AccessibilityNodeInfo.error`, which Flutter may use to expose field validation
+messages; that property is now included alongside visible text and descriptions.
+Rerun the exact PR head through Actions; no local build or test ran.
