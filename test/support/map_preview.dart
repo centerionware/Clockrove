@@ -2,12 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/maps/map_provider_settings.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 class TestMapProviderSettingsApi implements MapProviderSettingsApi {
   const TestMapProviderSettingsApi();
@@ -27,17 +25,6 @@ class TestMapProviderSettingsApi implements MapProviderSettingsApi {
 
   @override
   Future<Map<String, String>> tileAuthHeaders() async => const {};
-}
-
-void captureMapTestStateErrorStacks() {
-  final previous = FlutterError.onError;
-  FlutterError.onError = (details) {
-    if (details.exceptionAsString().contains('No element')) {
-      debugPrint('Map test framework error:\n${details.toString()}');
-    }
-    previous?.call(details);
-  };
-  addTearDown(() => FlutterError.onError = previous);
 }
 
 Future<void> loadMapPreviewFonts() async {

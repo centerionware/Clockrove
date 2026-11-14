@@ -102,7 +102,6 @@ void main() {
   testWidgets('49 recorded samples remain visible when map tiles fail', (
     tester,
   ) async {
-    captureMapTestStateErrorStacks();
     final points = List.generate(49, (index) {
       final minuteOfDay = 8 * 60 + index * 5;
       final hour = (minuteOfDay ~/ 60).toString().padLeft(2, '0');
@@ -135,6 +134,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await precacheImage(
         MemoryImage(Uint8List(0)),

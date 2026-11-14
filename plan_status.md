@@ -56,7 +56,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
 | M6.2 Date/list/totals/map/timezones | Implemented, integrated and calendar checks verified | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks passed 43117726325 |
-| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests implemented; exact-head Actions red; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. Run [43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394) passed format/analyze but Flutter behavior tests failed 19 cases (174 passed, 14 skipped). Follow-up [43617956145](https://github.com/centerionware/Clockrove/actions/runs/43617956145) reduced failures to 6 (187 passed, 14 skipped); format/analyze passed, but Android build/native/device stages did not run. Quote customer management passed. Test maps now use a deterministic provider fake. Remaining synthetic-tile StateErrors and settings-form assertions have source corrections awaiting exact-head Actions; Google Maps SDK setup remains unresolved. |
+| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests implemented; exact-head Actions red; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. Run [43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394) passed format/analyze but Flutter behavior tests failed 19 cases (174 passed, 14 skipped). Follow-up [43617956145](https://github.com/centerionware/Clockrove/actions/runs/43617956145) reduced failures to 6 (187 passed, 14 skipped). Run [43619088354](https://github.com/centerionware/Clockrove/actions/runs/43619088354) reduced these to 4 (189 passed, 14 skipped); format/analyze passed, while Android build/native/device stages did not run. Stack traces identified the remaining failures as test helpers querying `FlutterMap` before the async settings load completed. Tests now wait for map rendering before tile precaching. The quote customer test passed; Google Maps SDK setup remains unresolved. |
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
@@ -3575,3 +3575,17 @@ scrolled to the lazy save button, and added temporary framework-error stack
 capture to the remaining map widget tests to identify the underlying source.
 This source correction is unverified. Android build, native tests and device
 journeys did not run. No VM build, test, formatter or analyzer ran.
+
+### 2026-11-14 — wait for configured map before tile precache
+
+Exact head `c9d22c7` / Actions run
+[43619088354](https://github.com/centerionware/Clockrove/actions/runs/43619088354)
+passed format and Analyze and reported 189 Flutter behavior tests passed, 4
+failed and 14 skipped. Exported framework stacks show every remaining failure
+comes from test code calling `tester.element(find.byType(FlutterMap))` before
+`mapProviderSettingsProvider` finishes its initial asynchronous read; the map
+screen is still showing its loading state at that point. Updated report and
+work-location map tests to settle the settings read before tile precaching. This
+sequencing change awaits exact-head Actions validation. Android build, native
+tests and device journeys did not run. No VM build, test, formatter or analyzer
+ran.

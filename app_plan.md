@@ -613,9 +613,10 @@ The first exact-head run on `040961a` passed format and analysis but failed
 Flutter behavior tests before Android build/native/device stages. The follow-up
 at `309996e` also passed format and analysis and reduced the Flutter failures
 from 19 to 6 (187 passed, 14 skipped). Remaining failures exposed synthetic
-tile-map StateErrors during interaction and two settings-form assertions. The
-provider-form message/scroll assertions are corrected and stack capture was
-added to the map tests; exact-head Actions must validate the corrections.
+map tests querying `FlutterMap` before the asynchronous provider-settings load
+had materialized it, plus two settings-form assertions. The provider-form
+message/scroll assertions and map test sequencing are corrected; exact-head
+Actions must validate the changes.
 
 The Android provider-settings source adds an optional custom HTTPS raster-tile
 provider beside the keyless OSM default. Provider templates, attribution and
