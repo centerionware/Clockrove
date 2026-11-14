@@ -120,16 +120,27 @@ class InvoiceBillingDeviceTest {
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        fun scrollBounds(node: AccessibilityNodeInfo): android.graphics.Rect? {
+            if (node.isVisibleToUser && node.isScrollable &&
+                node.className?.toString() == "android.widget.ScrollView") {
+                return android.graphics.Rect().also(node::getBoundsInScreen)
+            }
+            for (i in 0 until node.childCount) {
+                node.getChild(i)?.let { scrollBounds(it)?.let { found -> return found } }
+            }
+            return null
+        }
+        val content = scrollBounds(root)?.takeUnless { it.isEmpty } ?: bounds
         val imeTop = automation.windows
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
             .minOrNull()
-        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
-        val top = bounds.top + 220
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
+        val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
-        // Start in the blank left gutter so dropdowns and text fields do not
-        // capture the return-to-top swipe.
-        val x = (bounds.left + 32).toFloat()
+        // Target the actual scrollable content. A swipe in the page margin can
+        // miss Flutter's hit-test tree even when the window itself is scrollable.
+        val x = content.centerX().toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()

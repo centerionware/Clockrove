@@ -593,9 +593,17 @@ are implemented on PR #45; the ledger includes schema v14, exact-money CRUD,
 soft deletion/revision history, equal-timestamp keyset paging, and an editor
 reachable from Reports. Its currency-aware entry form supports optional
 job/task/vendor/reference/notes. A task's Supplies label never creates a ledger
-cost automatically. Exact-head Actions evidence is pending; tax-preparation
-reports and secure map-provider settings are not implemented yet. Track current
-validation and blockers in `plan_status.md`.
+cost automatically. At head `9724065`, Actions run `43599388270` passed
+formatting, analysis, Flutter behavior tests, the Android debug build and all
+602 native unit tests. Its API-24 billing journey failed when the test could not
+scroll back to the top of Job settings after invalid-tax validation; API 35 and
+later device journeys did not run. The screenshot showed the lower Job settings
+form; its accessibility dump placed visible content at x=63..1017 while the
+test helper swiped at x=32. The test helper now targets the visible scroll
+container bounds and keeps the full swipe inside it; this source correction
+awaits exact-head Actions validation. Tax-preparation reports and secure
+map-provider settings are not implemented yet. Track current validation and
+blockers in `plan_status.md`.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -739,7 +747,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `3ce3e29` / run `43590405687` passed Flutter formatting, analysis, behavior tests and Android build; 15/594 native tests failed due to stale v12 assertions, a batch retry test's changed expected version and photo BLOB reads exceeding CursorWindow. Corrections are source-only pending exact-head rerun. The 49-sample report-map route passed on API 24 in run `43581546961`; API 35 coverage remains pending. Finish M6.6 actual costs, tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `9724065` / run `43599388270` passed formatting, analysis, Flutter behavior, Android build and all 602 native tests; its API-24 billing journey could not return to the top of Job settings after invalid-tax validation, so API 35 and later journeys did not run. The screenshot indicates the test swipe began outside the inset Flutter content; the helper now targets the visible scroll container and awaits Actions validation. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
