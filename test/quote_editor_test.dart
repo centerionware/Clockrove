@@ -157,8 +157,8 @@ void main() {
       find.widgetWithText(TextField, 'Customer name'),
       'New quote customer',
     );
+    await _reveal(tester, find.text('Save customer'), 400);
     final saveCustomer = find.widgetWithText(FilledButton, 'Save customer');
-    await tester.ensureVisible(saveCustomer);
     await tester.tap(saveCustomer);
     await tester.pumpAndSettle();
     expect(find.text('New quote customer'), findsOneWidget);

@@ -2905,13 +2905,15 @@ though `0.01` succeeded. The shared currency parser required an integer part;
 accepting `.01` as `0.01` fixes that input validation bug while preserving exact
 minor-unit conversion and existing currency-precision checks. Regression tests
 cover the parser and full payment form, asserting one cent persists as minor-unit
-string `1`. Actions runs `43587087757`, `43587596151` and `43588048998` each
-passed both penny-related Flutter tests. The latter two also failed the new
-viewer test's initial selected-photo assertion before its swipe assertions or
-Android validation. The source uses left-to-previous/right-to-next ordering; the
-current test taps a safe area inside the keyed photo tile away from its remove
-control. The CI formatter patch was applied. The latest source still requires a
-fresh Actions run. No local tests or builds were run.
+string `1`. Actions runs `43587087757`, `43587596151`, `43588048998` and
+`43588642154` each passed both penny-related Flutter tests. Run `43588642154`
+also passed the task-photo selected-index and left/right swipe test. It failed
+the new quote customer-management test because its Save customer button was
+below the lazy list and not built when `ensureVisible` ran; the test now scrolls
+to that button before tapping it. The same commit adds Manage customers beneath
+the quote selector and refreshes its choices when the shared customer provider
+changes. A fresh exact-head Actions run is pending. No local tests or builds
+were run.
 
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device
