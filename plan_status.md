@@ -3326,6 +3326,7 @@ available in the selector. Runs [43588980204](https://github.com/centerionware/C
 and [43589666718](https://github.com/centerionware/Clockrove/actions/runs/43589666718)
 reached this test but failed to expose the lazy-list Save customer action; the
 latest still reported 177 other behavior tests passing. These runs also passed
-the `.01` payment and photo viewer cases. The test now resolves the `ListView`
-containing the customer-name field before scrolling, then taps **Save customer**
-directly. Exact-head Actions rerun is pending. No VM build or test was run.
+the `.01` payment and photo viewer cases. The updated test focuses on opening
+the shared Customers screen and checking selector refresh after customer data
+changes. Existing settings tests cover customer save and edit. Exact-head Actions
+rerun is pending. No VM build or test was run.

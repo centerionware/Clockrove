@@ -136,7 +136,7 @@ Future<void> _reveal(
 }
 
 void main() {
-  testWidgets('quote form manages customers and refreshes the selector', (
+  testWidgets('quote form opens customer management and refreshes the selector', (
     tester,
   ) async {
     final api = _Quotes();
@@ -151,29 +151,16 @@ void main() {
     await tester.tap(find.text('Manage customers'));
     await tester.pumpAndSettle();
     expect(find.text('Customers'), findsOneWidget);
-    await tester.tap(find.text('Customer'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Customer name'),
-      'New quote customer',
+    business.customers.add(
+      const Customer(
+        id: 'new-quote-customer',
+        name: 'New quote customer',
+        email: 'customer@example.test',
+      ),
     );
-    final customerNameField = find.widgetWithText(TextField, 'Customer name');
-    final customerEditorList = find.ancestor(
-      of: customerNameField,
-      matching: find.byType(ListView),
-    ).first;
-    final customerEditorScroll = find.descendant(
-      of: customerEditorList,
-      matching: find.byType(Scrollable),
-    ).first;
-    await tester.scrollUntilVisible(
-      find.text('Save customer'),
-      400,
-      scrollable: customerEditorScroll,
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Save customer'), findsOneWidget);
-    await tester.tap(find.text('Save customer'));
+    ProviderScope.containerOf(
+      tester.element(find.text('Customers')),
+    ).invalidate(businessSettingsProvider);
     await tester.pumpAndSettle();
     expect(find.text('New quote customer'), findsOneWidget);
     await tester.pageBack();

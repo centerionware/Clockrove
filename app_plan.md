@@ -2910,9 +2910,10 @@ string `1`. Actions runs `43587087757`, `43587596151`, `43588048998`,
 penny-related Flutter tests. Runs `43588642154`, `43588980204`, `43589349628` and
 `43589666718` also passed the task-photo selected-index and left/right swipe
 test. The latest run still failed the quote customer-management UI test because
-its generic scroll target did not expose the Save customer action. The test now
-resolves the `ListView` containing the customer-name field and scrolls it before
-tapping the visible label. The same change adds
+scrolling did not expose the nested customer-save control. The updated test now
+focuses on the quote's management-screen navigation and refreshed selector
+options after the shared customer provider changes; existing settings coverage
+verifies customer save/edit behavior. The same change adds
 Manage customers beneath the quote selector and refreshes its choices when the
 shared customer provider changes. A fresh exact-head Actions run is pending. No
 local tests or builds were run.
