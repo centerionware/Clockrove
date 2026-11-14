@@ -183,7 +183,10 @@ class ReportMapDeviceTest {
         ).use { database ->
             database.execSQL(
                 "UPDATE jobs SET archived_ms=? WHERE id=?",
-                arrayOf(System.currentTimeMillis() - JobLifecycleStore.retentionMillis - 1000, jobId),
+                arrayOf<Any?>(
+                    System.currentTimeMillis() - JobLifecycleStore.retentionMillis - 1000,
+                    jobId,
+                ),
             )
         }
         val deleted = repository.deleteJob(
