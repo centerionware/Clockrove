@@ -3711,3 +3711,12 @@ guard rejected it. The helper now taps the matched visible node's bounds even
 when that accessibility flag is false. The API 24/35 billing journey did not
 finish; validate this correction on Actions before claiming the billing journey
 is green. No VM build or test ran.
+
+Retry head `6e5b502` / Actions run
+[43637427535](https://github.com/centerionware/Clockrove/actions/runs/43637427535)
+passed formatting, analysis, Flutter behavior tests, Android build and all 614
+native tests. The real-device step timed out with exit code 124 while installing
+the app and instrumentation APKs on the API-24 emulator; the artifact contains
+only emulator setup logs and no JUnit/device assertions. API 24 and API 35
+journeys did not run, so this run provides no result for the direct-tap fix.
+Retry the exact PR head in GitHub Actions. No VM build or test ran.
