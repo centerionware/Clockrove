@@ -3618,3 +3618,20 @@ second install timeout expired (exit code 124). Its captured emulator log ends
 at first boot; the tax journey did not execute and API 35 was not reached. This
 is an environment timeout, not evidence for or against the UI-test correction.
 Retry the same exact-head run. No build or test ran on the VM.
+
+### 2026-11-14 — exact-head PR #45 validation passes
+
+Exact source head `2f9e961` / Actions run
+[43622167264](https://github.com/centerionware/Clockrove/actions/runs/43622167264)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build,
+native unit tests, PDF generation/rendering and locked release-tooling/version
+checks. Downloaded XML confirms 37 actual Android tests on each API 24 and 35,
+with zero failures, errors or skips. This includes the billing journey after
+returning to the top of Job settings, editing and saving the job-tax override,
+quote billing, task media, invoice copies and payments. The quote form's
+Manage customers test passed its full add/save/return/select flow and verified
+the selected customer ID persists in the draft. The 49-sample map and provider
+settings were exercised in the same API matrix. This completes M6.6
+implementation and CI evidence; physical owner-device acceptance remains
+separate, and M7 backup plus the M7.6 full-app E2E/screenshots gate are still
+required before closed testing. No VM build, test, formatter or analyzer ran.
