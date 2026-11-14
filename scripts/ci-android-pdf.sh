@@ -116,6 +116,8 @@ for clockrove_api in 24 35; do
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-screen.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-screen.png" || true
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures"
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/" || true
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/map-captures"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/map-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/map-captures/" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-combined.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-combined.png" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-accessibility.txt" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-setup.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-setup.png" || true
@@ -140,6 +142,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 4,
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 4,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
+    'io.github.centerionware.clockrove.tracking.ReportMapDeviceTest': 1,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
     'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 4,
     'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,

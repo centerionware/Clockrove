@@ -324,7 +324,10 @@ void main() {
       await tester.ensureVisible(find.text('Save task'));
       await tester.tap(find.text('Save task'));
       await tester.pumpAndSettle();
-      expect(find.text('Choose Labor or Supplies before saving.'), findsOneWidget);
+      expect(
+        find.text('Choose Labor or Supplies before saving.'),
+        findsOneWidget,
+      );
       await tester.tap(find.widgetWithText(ChoiceChip, 'Supplies'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Save task'));

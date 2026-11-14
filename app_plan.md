@@ -522,6 +522,12 @@ do not satisfy acceptance.
   Test loaded tiles, slow/failing/offline tiles, permission denial, invalid/polar
   coordinates, retry and external-map fallback; map failure must not block jobs,
   manual timekeeping, reports or exports.
+- For the owner-reported report-map blank screen, test the actual job → report →
+  map route on API 24 and 35 with 49 synthetic persisted GPS measurements. Wait
+  for a decoded tile or a clear unavailable state, keep the selected coordinates,
+  route overlays and attribution visible, provide an external map action, and
+  capture the real Android screen. Deterministic tile-error widget coverage must
+  confirm failed tiles render a visible fallback instead of a white surface.
 - Add the global GPS recording preference and per-job inherit/on/off override
   from section 3.3. Verify default-on, permission-degraded states, clock-in via
   manual/app/widget actions, service reconciliation after changes, ten-minute

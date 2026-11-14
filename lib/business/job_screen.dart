@@ -999,7 +999,11 @@ class _TemplatesState extends ConsumerState<_Templates> {
                       child: ListTile(
                         title: Text(task.title),
                         subtitle: Text(
-                          '${task.source ?? 'Saved template'} · ${task.chargeType == 'SUPPLIES' ? 'Supplies' : task.chargeType == 'LABOR' ? 'Labor' : 'Unclassified'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
+                          '${task.source ?? 'Saved template'} · ${task.chargeType == 'SUPPLIES'
+                              ? 'Supplies'
+                              : task.chargeType == 'LABOR'
+                              ? 'Labor'
+                              : 'Unclassified'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
                         ),
                         onTap: () {
                           final board = ref

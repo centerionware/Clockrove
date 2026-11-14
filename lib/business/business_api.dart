@@ -110,7 +110,13 @@ class TaskCard {
     this.quantityUnits = '10000',
     this.chargeType = 'UNCLASSIFIED',
   });
-  final String id, columnId, title, description, currency, quantityUnits, chargeType;
+  final String id,
+      columnId,
+      title,
+      description,
+      currency,
+      quantityUnits,
+      chargeType;
   String? get amountMinor => taskAmount(priceMinor, quantityUnits);
   final String? dueDate, priceMinor;
   final int position;

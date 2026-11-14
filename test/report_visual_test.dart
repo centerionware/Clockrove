@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/report_map.dart';
@@ -6,6 +8,7 @@ import 'package:clockrove/maps/work_location_map.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -95,6 +98,60 @@ class _VisualReport extends ReportApi {
 }
 
 void main() {
+  testWidgets('49 recorded samples remain visible when map tiles fail', (
+    tester,
+  ) async {
+    final points = List.generate(49, (index) {
+      final minuteOfDay = 8 * 60 + index * 5;
+      final hour = (minuteOfDay ~/ 60).toString().padLeft(2, '0');
+      final minute = (minuteOfDay % 60).toString().padLeft(2, '0');
+      return ReportPoint(
+        'point-$index',
+        'route-session',
+        'job',
+        'Synthetic GPS job',
+        _VisualReport.start + index * 300000,
+        '2026-11-11T$hour:$minute:00.000Z',
+        37.4219983 + index * 0.00003,
+        -122.084 + index * 0.00003,
+        8,
+      );
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workMapTilesProvider.overrideWithValue(
+            (_) => SyntheticTiles(fail: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: ClockroveTheme.light(),
+          home: ReportMap(points: points, timezone: 'UTC'),
+        ),
+      ),
+    );
+    await tester.runAsync(() async {
+      await precacheImage(
+        MemoryImage(Uint8List(0)),
+        tester.element(find.byType(FlutterMap)),
+        onError: (_, _) {},
+      );
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Report location history'), findsOneWidget);
+    expect(find.text('Synthetic GPS job'), findsOneWidget);
+    expect(
+      find.text(
+        'Map tiles are unavailable. Your recorded location is still available.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Open map'), findsOneWidget);
+    expect(find.text('37.421998, -122.084000'), findsOneWidget);
+    expect(find.byIcon(Icons.map_outlined), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'empty report location map shows an empty state without crashing',
     (tester) async {
