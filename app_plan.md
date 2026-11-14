@@ -758,7 +758,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `afdf6d8` / Actions run `43608664165` passed formatting, analysis, all Flutter behavior tests, Android debug build and 614 native tests. API 24 passed the corrected image-limit case, then its quote billing journey found the test had not selected Labor or Supplies for a quote-generated Unclassified task. The UI correctly displayed its classification guard. The journey now asserts the message, chooses Labor and retries the save; API 35 and subsequent journeys were not reached, so rerun is required. The API-24 billing-settings scroll journey still needs an exact-head pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting, analysis, all Flutter behavior tests, Android debug build, 614 native tests, PDF generation/rendering, invoice-viewer checks and 35 actual Android tests each on API 24 and 35 with zero failures/errors/skips. The quote billing journey verifies the Labor/Supplies guard for an Unclassified quote task, then saves its classification, changed quantity and unit price. The 49-sample map, GPS settings, billing, invoice copies, payments, quote and task-media journeys passed on both APIs. Secure map-provider settings and owner-device acceptance remain before M6.6 can complete. The API-24 billing-settings scroll journey still needs an exact-head pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -3139,3 +3139,19 @@ Unclassified task. Updated the device test to assert that message, choose Labor
 and retry before checking the exact quantity and price. API 35 and subsequent
 journeys were not reached. A fresh exact-head Actions run is required. No VM
 build, test or formatter ran.
+
+
+### 2026-11-14 — exact-head API 24/35 verification passed
+
+Exact code head `c9d20cc` / Actions run
+[43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build, 614
+native tests, PDF generation/rendering, invoice-viewer checks and all actual
+Android device journeys. Downloaded XML reports 35 tests per API 24 and 35, with
+zero failures, errors or skips. The quote task guard and classification retry
+passed, and reviewed board captures show quantity 30 with a USD 9.99 unit price.
+The actual-work invoice journey passed on both APIs. The quote form's Manage
+customers button remains immediately below the customer selector and uses the
+same shared management screen as Job settings; its add/save/return/select Flutter
+test passed. Secure map-provider settings and owner-device acceptance remain
+open. No VM build, test or formatter ran.
