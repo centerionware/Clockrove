@@ -3720,3 +3720,15 @@ the app and instrumentation APKs on the API-24 emulator; the artifact contains
 only emulator setup logs and no JUnit/device assertions. API 24 and API 35
 journeys did not run, so this run provides no result for the direct-tap fix.
 Retry the exact PR head in GitHub Actions. No VM build or test ran.
+
+At exact head `413b206` / Actions run
+[43638528694](https://github.com/centerionware/Clockrove/actions/runs/43638528694),
+formatting, analysis, Flutter behavior tests, Android build and 614 native tests
+passed. API 24 passed all 37 actual device cases, including the full billing
+journey. API 35 passed its 28-case base suite, then the extended billing test
+failed at Job tax (%) because the field stopped exposing `ACTION_SET_TEXT` after
+focus. The source test now tries `ACTION_SET_TEXT` before opening the IME and
+accepts the result only after reading back the exact value; the existing IME
+typing fallback remains for API 24 cases that acknowledge but ignore the text
+action. API 35 later journeys did not run. Fresh exact-head Actions validation
+is pending. No VM build or test ran.

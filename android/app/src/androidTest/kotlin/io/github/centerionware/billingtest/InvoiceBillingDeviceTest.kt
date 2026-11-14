@@ -217,7 +217,24 @@ class InvoiceBillingDeviceTest {
     private fun enter(label: String, value: String) {
         hideKeyboard()
         reveal(label, true)
-        val field = waitFor(label, true)
+        var field = waitFor(label, true)
+        // Try the editable node's text action before opening the IME. Accept
+        // it only after reading back the exact value; some APIs acknowledge
+        // this action without changing the Flutter controller.
+        if (field.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })) {
+            val directSetDeadline = SystemClock.uptimeMillis() + 2000
+            while (SystemClock.uptimeMillis() < directSetDeadline &&
+                find(label, true)?.text?.toString() != value) {
+                SystemClock.sleep(100)
+            }
+            if (find(label, true)?.text?.toString() == value) {
+                hideKeyboard()
+                return
+            }
+        }
+        field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         // Some Flutter EditableText nodes accept ACTION_CLICK without focusing
         // the underlying field on older Android releases. Use a screen touch
