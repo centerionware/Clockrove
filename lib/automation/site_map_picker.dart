@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_strings.dart';
+import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
 
@@ -25,14 +26,19 @@ class SiteMapPicker extends ConsumerStatefulWidget {
 
 class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
   final _controller = MapController();
-  late final _client = TileBackoffClient(http.Client());
-  late final TileProvider _tiles;
+  late final _client = TileBackoffClient(
+    http.Client(),
+    protectedHeaders: () => ref
+        .read(mapProviderSettingsApiProvider)
+        .tileAuthHeaders(),
+  );
+  MapProviderSettings? _tileSettings;
+  TileProvider? _tiles;
   LatLng? _point;
   bool _failed = false;
   @override
   void initState() {
     super.initState();
-    _tiles = ref.read(workMapTilesProvider)(_client);
     final lat = widget.latitude;
     final lon = widget.longitude;
     if (lat != null &&
@@ -43,6 +49,16 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
         lon.abs() <= 180) {
       _point = LatLng(lat, lon);
     }
+  }
+
+  TileProvider _tilesFor(MapProviderSettings settings) {
+    if (!identical(_tileSettings, settings)) {
+      _tileSettings = settings;
+      _client.resetProtectedHeaders();
+      _failed = false;
+      _tiles = ref.read(workMapTilesProvider)(_client, settings);
+    }
+    return _tiles!;
   }
 
   @override
@@ -60,10 +76,11 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     });
   }
 
-  Future<void> _attribution() async {
+  Future<void> _attribution(MapProviderSettings settings) async {
+    if (settings.attributionUrl.isEmpty) return;
     try {
       if (await launchUrl(
-        Uri.parse('https://www.openstreetmap.org/copyright'),
+        Uri.parse(settings.attributionUrl),
         mode: LaunchMode.externalApplication,
       )) {
         return;
@@ -74,7 +91,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('The attribution link could not be opened.'),
+          content: Text('The map attribution link could not be opened.'),
         ),
       );
     }
@@ -103,6 +120,26 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsState = ref.watch(mapProviderSettingsProvider);
+    if (settingsState.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Choose site centre')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (settingsState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Choose site centre')),
+        body: Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(mapProviderSettingsProvider),
+            child: const Text('Map settings could not be loaded. Retry.'),
+          ),
+        ),
+      );
+    }
+    final mapSettings = settingsState.requireValue;
+    final tiles = _tilesFor(mapSettings);
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Choose site centre')),
@@ -181,11 +218,10 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: mapSettings.urlTemplate,
                           userAgentPackageName:
                               'io.github.centerionware.clockrove',
-                          tileProvider: _tiles,
+                          tileProvider: tiles,
                           panBuffer: 0,
                           maxNativeZoom: 19,
                           errorTileCallback: (_, _, _) => _failure(),
@@ -276,8 +312,8 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextButton(
-                      onPressed: _attribution,
-                      child: const Text('© OpenStreetMap contributors'),
+                      onPressed: () => _attribution(mapSettings),
+                      child: Text(mapSettings.attribution),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),

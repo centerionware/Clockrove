@@ -6,27 +6,26 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_strings.dart';
+import 'map_provider_settings.dart';
 import 'tile_backoff_client.dart';
 
 /// A new provider per screen; tests supply synthetic tiles without public traffic.
-final workMapTilesProvider = Provider<TileProvider Function(http.Client)>((
-  ref,
-) {
-  return (client) => NetworkTileProvider(
-    httpClient: client,
-    // flutter_map adds its package User-Agent to this map during TileLayer
-    // initialization, so this must be a fresh mutable map for each screen.
-    headers: {
-      'User-Agent':
-          'Clockrove/0.1 (io.github.centerionware.clockrove; '
-          '+https://github.com/centerionware/Clockrove)',
-    },
-    cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
-      maxCacheSize: 100000000,
-    ),
-    attemptDecodeOfHttpErrorResponses: false,
-  );
-});
+final workMapTilesProvider =
+    Provider<TileProvider Function(http.Client, MapProviderSettings)>((ref) {
+      return (client, settings) {
+        // Credentials are request headers, never part of tile URLs/cache keys.
+        // flutter_map adds its package User-Agent to this fresh mutable map.
+        final headers = mapTileRequestHeaders(settings);
+        return NetworkTileProvider(
+          httpClient: client,
+          headers: headers,
+          cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+            maxCacheSize: 100000000,
+          ),
+          attemptDecodeOfHttpErrorResponses: false,
+        );
+      };
+    });
 
 /// A failed network tile must leave a visible map surface instead of exposing
 /// the blank map background. The point/trace overlays remain interactive.
@@ -119,7 +118,8 @@ class WorkLocationMap extends ConsumerStatefulWidget {
 
 class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
   late final TileBackoffClient _client;
-  late final TileProvider _tiles;
+  MapProviderSettings? _tileSettings;
+  TileProvider? _tiles;
   final _controller = MapController();
   bool _failed = false;
   bool _loaded = false;
@@ -127,8 +127,23 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
   @override
   void initState() {
     super.initState();
-    _client = TileBackoffClient(http.Client());
-    _tiles = ref.read(workMapTilesProvider)(_client);
+    _client = TileBackoffClient(
+      http.Client(),
+      protectedHeaders: () => ref
+          .read(mapProviderSettingsApiProvider)
+          .tileAuthHeaders(),
+    );
+  }
+
+  TileProvider _tilesFor(MapProviderSettings settings) {
+    if (!identical(_tileSettings, settings)) {
+      _tileSettings = settings;
+      _client.resetProtectedHeaders();
+      _failed = false;
+      _loaded = false;
+      _tiles = ref.read(workMapTilesProvider)(_client, settings);
+    }
+    return _tiles!;
   }
 
   @override
@@ -156,10 +171,11 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     });
   }
 
-  Future<void> _attribution() async {
+  Future<void> _attribution(MapProviderSettings settings) async {
+    if (settings.attributionUrl.isEmpty) return;
     try {
       final opened = await launchUrl(
-        Uri.parse('https://www.openstreetmap.org/copyright'),
+        Uri.parse(settings.attributionUrl),
         mode: LaunchMode.externalApplication,
       );
       if (opened) return;
@@ -203,6 +219,26 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsState = ref.watch(mapProviderSettingsProvider);
+    if (settingsState.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (settingsState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
+        body: Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(mapProviderSettingsProvider),
+            child: const Text('Map settings could not be loaded. Retry.'),
+          ),
+        ),
+      );
+    }
+    final mapSettings = settingsState.requireValue;
+    final tiles = _tilesFor(mapSettings);
     final point = LatLng(widget.latitude, widget.longitude);
     const mapInk = Color(0xFF176B55);
     final colors = Theme.of(context).colorScheme;
@@ -267,11 +303,10 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: mapSettings.urlTemplate,
                           userAgentPackageName:
                               'io.github.centerionware.clockrove',
-                          tileProvider: _tiles,
+                          tileProvider: tiles,
                           panBuffer: 0,
                           maxNativeZoom: 19,
                           tileBuilder: (context, image, tile) {
@@ -368,8 +403,8 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
               ColoredBox(
                 color: colors.surface,
                 child: TextButton(
-                  onPressed: _attribution,
-                  child: const Text('© OpenStreetMap contributors'),
+                  onPressed: () => _attribution(mapSettings),
+                  child: Text(mapSettings.attribution),
                 ),
               ),
             ],

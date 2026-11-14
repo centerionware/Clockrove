@@ -39,7 +39,7 @@ Future<void> _show(
           automationApiProvider.overrideWithValue(api),
           timerApiProvider.overrideWithValue(_Timer()),
           workMapTilesProvider.overrideWithValue(
-            (_) => SyntheticTiles(fail: failTiles),
+            (_, _) => SyntheticTiles(fail: failTiles),
           ),
         ],
         child: MaterialApp(

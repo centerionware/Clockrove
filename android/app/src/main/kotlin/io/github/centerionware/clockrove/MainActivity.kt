@@ -11,6 +11,7 @@ open class MainActivity : FlutterActivity() {
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
     private var businessApi: io.github.centerionware.clockrove.tracking.BusinessHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
+    private var mapProviderApi: io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi? = null
     private var debugApi: io.flutter.plugin.common.MethodChannel? = null
     private var visible = false
 
@@ -46,6 +47,7 @@ open class MainActivity : FlutterActivity() {
             }
         }
         documentApi = io.github.centerionware.clockrove.invoice.DocumentHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
+        mapProviderApi = io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         businessApi = io.github.centerionware.clockrove.tracking.BusinessHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         timerApi = TimerHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         trackingApi = TrackingHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
@@ -56,6 +58,8 @@ open class MainActivity : FlutterActivity() {
         debugApi = null
         documentApi?.detach()
         documentApi = null
+        mapProviderApi?.detach()
+        mapProviderApi = null
         businessApi?.detach()
         businessApi = null
         automationApi?.detach()

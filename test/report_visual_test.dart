@@ -121,7 +121,7 @@ void main() {
       ProviderScope(
         overrides: [
           workMapTilesProvider.overrideWithValue(
-            (_) => SyntheticTiles(fail: true),
+            (_, _) => SyntheticTiles(fail: true),
           ),
         ],
         child: MaterialApp(
@@ -158,7 +158,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+            workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
           ],
           child: const MaterialApp(
             home: ReportMap(points: [], timezone: 'UTC'),
@@ -227,7 +227,7 @@ void main() {
           key: key,
           child: ProviderScope(
             overrides: [
-              workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+              workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
             ],
             child: MaterialApp(
               debugShowCheckedModeBanner: false,

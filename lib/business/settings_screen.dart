@@ -10,6 +10,7 @@ import 'email_template.dart';
 import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
+import '../maps/map_provider_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -310,6 +311,20 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           value: _defaultLocationRecording,
           onChanged: (value) =>
               setState(() => _defaultLocationRecording = value),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const ValueKey('open-map-provider-settings'),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const MapProviderSettingsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Map provider settings'),
+          ),
         ),
         const SizedBox(height: 20),
         Semantics(

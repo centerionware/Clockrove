@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,7 +13,69 @@ import '../support/map_preview.dart';
 
 final _tile = TileProvider.transparentImage;
 
+class _ProviderSettingsApi implements MapProviderSettingsApi {
+  const _ProviderSettingsApi(this.settings);
+  final MapProviderSettings settings;
+
+  @override
+  Future<MapProviderSettings> read() async => settings;
+
+  @override
+  Future<MapProviderSettings> reset() async => const MapProviderSettings();
+
+  @override
+  Future<MapProviderSettings> save(
+    MapProviderSettings settings, {
+    String? authSecret,
+    bool removeCredential = false,
+  }) async => settings;
+
+  @override
+  Future<Map<String, String>> tileAuthHeaders() async => const {};
+}
+
 void main() {
+  testWidgets('recorded map uses the selected tile server and attribution', (
+    tester,
+  ) async {
+    const settings = MapProviderSettings(
+      provider: 'CUSTOM',
+      urlTemplate: 'https://tiles.example.test/{z}/{x}/{y}.png',
+      attribution: 'Example map data',
+      attributionUrl: 'https://example.test/attribution',
+      authHeader: 'X-API-Key',
+      hasCredential: true,
+    );
+    MapProviderSettings? usedSettings;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapProviderSettingsApiProvider.overrideWithValue(
+            const _ProviderSettingsApi(settings),
+          ),
+          workMapTilesProvider.overrideWithValue((_, value) {
+            usedSettings = value;
+            return SyntheticTiles();
+          }),
+        ],
+        child: MaterialApp(
+          home: WorkLocationMap(
+            latitude: 51.5,
+            longitude: -.1,
+            measuredUtc: DateTime.utc(2026, 11, 11),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final layer = tester.widget<TileLayer>(find.byType(TileLayer).first);
+    expect(layer.urlTemplate, settings.urlTemplate);
+    expect(find.text(settings.attribution), findsOneWidget);
+    expect(usedSettings?.authHeader, settings.authHeader);
+    expect(usedSettings?.hasCredential, isTrue);
+  });
+
   for (final dark in [false, true]) {
     testWidgets(
       'recorded point, accuracy, attribution and accessible zoom ${dark ? "dark" : "light"}',
@@ -31,7 +94,7 @@ void main() {
               child: ProviderScope(
                 overrides: [
                   workMapTilesProvider.overrideWithValue(
-                    (_) => SyntheticTiles(),
+                    (_, _) => SyntheticTiles(),
                   ),
                 ],
                 child: MaterialApp(
@@ -90,7 +153,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            workMapTilesProvider.overrideWithValue((_) => SyntheticTiles()),
+            workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
           ],
           child: MaterialApp(
             theme: ClockroveTheme.light(),
@@ -137,7 +200,7 @@ void main() {
         ProviderScope(
           overrides: [
             workMapTilesProvider.overrideWithValue(
-              (_) => SyntheticTiles(fail: true),
+              (_, _) => SyntheticTiles(fail: true),
             ),
           ],
           child: MaterialApp(

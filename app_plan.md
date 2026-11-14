@@ -606,9 +606,29 @@ tests, PDF generation/rendering, invoice-viewer checks, and 35 actual Android
 tests each on API 24 and 35 with zero failures/errors/skips. The API-24 billing
 settings scroll journey and the 49-sample map route both passed on API 24/35.
 The report tests and exact-money/cost migration checks passed in CI. Secure
-map-provider settings remain unimplemented; record their completion separately
-before marking M6.6 done. Current validation and remaining blockers are in
-`plan_status.md`.
+custom raster-provider settings are now implemented in source with their Dart
+and Android emulator tests, awaiting exact-head Actions. Google Maps SDK runtime
+configuration and owner-device acceptance remain open; see `plan_status.md`.
+
+The Android provider-settings source adds an optional custom HTTPS raster-tile
+provider beside the keyless OSM default. Provider templates, attribution and
+header fields are validated; public settings snapshots contain only a credential
+presence flag, while the secret is retrieved separately for tile requests.
+Authentication travels in request headers only, redirects are disabled so
+credentials cannot cross hosts, and transport diagnostics redact URLs. Android
+stores the complete configuration as AES-GCM ciphertext under an Android
+Keystore key in app-private storage; reset removes both. If protected settings
+cannot be read, maps fall back to OSM.
+
+The separately requested Google Maps SDK option remains open. Google's current
+[Flutter configuration guide](https://developers.google.com/maps/flutter-package/config)
+places the Android key in `AndroidManifest.xml`; its
+[Android key guidance](https://developers.google.com/maps/documentation/android-sdk/get-api-key)
+requires package-name and signing-certificate restrictions. A user-entered
+Keystore value is not a supported runtime initialization path for the standard
+Flutter SDK, so do not claim Google Maps is available or store an unrestricted
+key in the app. Decide and prove a restricted build-time key or native adapter
+path with an owner-provided Google project/key before closing this requirement.
 
 ### Milestone 7 — encrypted backup and safe merge
 

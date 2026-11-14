@@ -51,7 +51,7 @@ M6.6 is not complete. No VM build, test or formatter ran.
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
 | M6.2 Date/list/totals/map/timezones | Implemented, integrated and calendar checks verified | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks passed 43117726325 |
-| M6.3 Provider settings/secure credentials/tile policy | Pending | Outage must preserve manual functionality |
+| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests added; exact-head Actions pending; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. See the latest validation entry; M6.3 remains open until Actions and the Google Maps decision are complete. |
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
@@ -3507,3 +3507,29 @@ updated task as `30 × USD 9.99 each`; its invoice journey retains the accepted
 quote unit price and verifies exact subtotal, tax and total. The customer-manager
 Flutter test also passed in the full behavior suite. Secure map-provider settings
 and owner-device acceptance remain open. No VM build, test or formatter ran.
+
+### 2026-11-14 — secure custom map-provider source and tests
+
+Added Android Settings support for an optional HTTPS raster-tile server while
+keeping keyless OpenStreetMap as the default. Custom templates, attribution,
+authentication headers and credentials are bounded and validated. Public
+settings snapshots expose only whether a credential exists; the secret is
+fetched through a separate channel for tile requests and released when the map
+client closes. Android
+encrypts provider settings with AES-GCM under an Android Keystore key in
+app-private preferences; reset removes the encrypted data and key. Tile
+credentials are headers only, redirects are disabled, and transport exceptions
+do not expose URLs. A Keystore read failure falls back to OSM so map use does
+not depend on saved provider settings.
+
+Added Dart validation/settings-form/map-selection/credential-redaction tests,
+tile redirect and transport-redaction tests, and Android emulator tests for
+Keystore round-trip, ciphertext-at-rest, invalid URL rejection and reset. These
+are source-only until exact-head GitHub Actions runs; no VM build, test,
+formatter or analyzer was run. The Google Maps Flutter SDK remains a separate
+open requirement: Google's current setup configures the Android key in
+`AndroidManifest.xml` and recommends package/signing-certificate restrictions.
+The standard Flutter SDK does not document runtime initialization from a
+user-entered Keystore value. See the official [Flutter setup guide](https://developers.google.com/maps/flutter-package/config)
+and [Android key restrictions](https://developers.google.com/maps/documentation/android-sdk/get-api-key).
+M6.3/M6.6 remain incomplete until the key strategy is decided and verified.

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
 import 'report_api.dart';
@@ -67,12 +68,29 @@ class ReportMap extends ConsumerStatefulWidget {
 }
 
 class _ReportMapState extends ConsumerState<ReportMap> {
-  late final _client = TileBackoffClient(http.Client());
-  late final _tiles = ref.read(workMapTilesProvider)(_client);
+  late final _client = TileBackoffClient(
+    http.Client(),
+    protectedHeaders: () => ref
+        .read(mapProviderSettingsApiProvider)
+        .tileAuthHeaders(),
+  );
+  MapProviderSettings? _tileSettings;
+  TileProvider? _tiles;
   final _controller = MapController();
   late ReportPoint? _selected = _firstMapPoint(widget.points);
   bool _failed = false;
   bool _loaded = false;
+
+  TileProvider _tilesFor(MapProviderSettings settings) {
+    if (!identical(_tileSettings, settings)) {
+      _tileSettings = settings;
+      _client.resetProtectedHeaders();
+      _failed = false;
+      _loaded = false;
+      _tiles = ref.read(workMapTilesProvider)(_client, settings);
+    }
+    return _tiles!;
+  }
   @override
   void dispose() {
     _client.close();
@@ -138,10 +156,11 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     }
   }
 
-  Future<void> _attribution() async {
+  Future<void> _attribution(MapProviderSettings settings) async {
+    if (settings.attributionUrl.isEmpty) return;
     try {
       if (await launchUrl(
-        Uri.parse('https://www.openstreetmap.org/copyright'),
+        Uri.parse(settings.attributionUrl),
         mode: LaunchMode.externalApplication,
       )) {
         return;
@@ -150,7 +169,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('OpenStreetMap attribution link could not be opened.'),
+          content: Text('The map attribution link could not be opened.'),
         ),
       );
     }
@@ -158,6 +177,26 @@ class _ReportMapState extends ConsumerState<ReportMap> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsState = ref.watch(mapProviderSettingsProvider);
+    if (settingsState.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Report location history')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (settingsState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Report location history')),
+        body: Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(mapProviderSettingsProvider),
+            child: const Text('Map settings could not be loaded. Retry.'),
+          ),
+        ),
+      );
+    }
+    final mapSettings = settingsState.requireValue;
+    final tiles = _tilesFor(mapSettings);
     final visible = widget.points.where(_isMapPoint).toList();
     final center = visible.isEmpty
         ? const LatLng(0, 0)
@@ -224,11 +263,10 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: mapSettings.urlTemplate,
                         userAgentPackageName:
                             'io.github.centerionware.clockrove',
-                        tileProvider: _tiles,
+                        tileProvider: tiles,
                         maxNativeZoom: 19,
                         tileBuilder: (context, image, tile) {
                           _tileUpdated(tile);
@@ -331,10 +369,10 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       child: TextButton(
-                        onPressed: _attribution,
-                        child: const Text(
-                          '© OpenStreetMap contributors',
-                          style: TextStyle(color: ink),
+                        onPressed: () => _attribution(mapSettings),
+                        child: Text(
+                          mapSettings.attribution,
+                          style: const TextStyle(color: ink),
                         ),
                       ),
                     ),

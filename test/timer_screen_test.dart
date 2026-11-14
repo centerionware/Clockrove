@@ -198,7 +198,7 @@ void main() {
           automationApiProvider.overrideWithValue(FixtureAutomationApi()),
           trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
           workMapTilesProvider.overrideWithValue(
-            (_) => SyntheticTiles(fail: true),
+            (_, _) => SyntheticTiles(fail: true),
           ),
         ],
         child: MaterialApp(
