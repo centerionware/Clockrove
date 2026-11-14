@@ -3781,3 +3781,15 @@ could not reach the field. Its screenshot shows Settings still open, with no
 system-navigation tap. `scrollToStart` now accepts a screen-specific top anchor;
 the global settings journey returns to **Billing defaults** before entering
 tax. Revalidate this follow-up on Actions; no VM build or test ran.
+
+The next exact head `a53727a` / run
+[43648400067](https://github.com/centerionware/Clockrove/actions/runs/43648400067)
+passed the 28-case API-24 base suite and the global-tax settings flow, then
+reached the job-tax editor. The test had focused **Job tax (%)** and opened the
+IME, but its delayed fallback pointer tap raced that transition and was
+correctly refused because the keyboard covered the target; the screenshot shows
+the active field and numeric keyboard. `enter` now treats that race as an
+already-focused field, waits for the IME, then uses `ACTION_SET_TEXT` with exact
+readback or select-all/IME typing. Only ordinary control clicks require their
+safe pointer tap to succeed. Revalidate on GitHub Actions; no VM build or test
+ran.

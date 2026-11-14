@@ -107,7 +107,7 @@ class InvoiceBillingDeviceTest {
         // unobscured viewport before tapping so a Flutter node extending
         // beneath Android's navigation bar can never hit Home.
         reveal(label)
-        tapNode(waitFor(label))
+        check(tapNode(waitFor(label))) { "Tap was obscured before reaching $label" }
         automation.waitForIdle(250, 3000)
     }
     private fun reveal(label: String, editable: Boolean = false) {
@@ -221,9 +221,14 @@ class InvoiceBillingDeviceTest {
         }
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
-    private fun tapNode(node: AccessibilityNodeInfo) {
+    private fun tapNode(node: AccessibilityNodeInfo): Boolean {
         val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
         val safeBounds = safeTapBounds(node)
+        // A focused EditText can reveal the IME between the caller's check and
+        // this tap. In that case its ACTION_CLICK already opened text entry;
+        // skip the now-obscured pointer event instead of tapping system UI.
+        if (safeBounds == null && keyboardVisible() &&
+            node.packageName == automation.rootInActiveWindow?.packageName) return false
         check(safeBounds != null) {
             "Refusing tap outside the app's unobscured viewport: target=$node bounds=$bounds"
         }
@@ -239,6 +244,7 @@ class InvoiceBillingDeviceTest {
         inject(android.view.MotionEvent.ACTION_DOWN, downTime)
         SystemClock.sleep(80)
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis())
+        return true
     }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
@@ -277,18 +283,17 @@ class InvoiceBillingDeviceTest {
             SystemClock.sleep(150)
             if (!keyboardVisible()) tapNode(find(label, true) ?: field)
         }
-        until("Focused field did not expose text entry for $label") {
-            find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
-        }
         // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
         // acknowledgement can otherwise precede the keyboard opening and hiding.
         until("Keyboard did not open for $label") { keyboardVisible() }
         val node = waitFor(label, true)
-        assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
-            Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
-        val setTextDeadline = SystemClock.uptimeMillis() + 2000
-        while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
-            SystemClock.sleep(100)
+        if (node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })) {
+            val setTextDeadline = SystemClock.uptimeMillis() + 2000
+            while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
+                SystemClock.sleep(100)
+            }
         }
         // Some API-24 Flutter fields report ACTION_SET_TEXT success without
         // replacing the current value. Select the old text and type through
