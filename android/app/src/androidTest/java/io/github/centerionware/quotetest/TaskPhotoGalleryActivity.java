@@ -32,10 +32,9 @@ public final class TaskPhotoGalleryActivity extends Activity {
             Uri secondUri = Uri.parse(authority + secondFile.getName());
             ClipData selected = ClipData.newUri(getContentResolver(), "Clockrove task photos", firstUri);
             selected.addItem(new ClipData.Item(secondUri));
-            Intent result = new Intent()
-                    .setDataAndType(firstUri, "image/jpeg")
-                    .setClipData(selected)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent result = new Intent().setDataAndType(firstUri, "image/jpeg");
+            result.setClipData(selected);
+            result.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             setResult(RESULT_OK, result);
         } catch (Exception exception) {
             setResult(RESULT_CANCELED);

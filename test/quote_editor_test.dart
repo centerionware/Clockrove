@@ -30,6 +30,7 @@ const _company = CompanySettings(
 class _Business extends BusinessSettingsApi {
   final List<Customer> customers = [];
   int version = 1;
+  Customer? savedCustomer;
   @override
   Future<BusinessSettings> read() async =>
       BusinessSettings(version, _company, List.unmodifiable(customers));
@@ -40,6 +41,7 @@ class _Business extends BusinessSettingsApi {
     int version,
     Customer customer,
   ) async {
+    savedCustomer = customer;
     customers.removeWhere((existing) => existing.id == customer.id);
     customers.add(customer);
     this.version++;
@@ -137,7 +139,7 @@ Future<void> _reveal(
 
 void main() {
   testWidgets(
-    'quote form opens customer management and refreshes the selector',
+    'quote form creates and selects a customer through shared management',
     (tester) async {
       final api = _Quotes();
       final business = _Business();
@@ -151,23 +153,37 @@ void main() {
       await tester.tap(find.text('Manage customers'));
       await tester.pumpAndSettle();
       expect(find.text('Customers'), findsOneWidget);
-      business.customers.add(
-        const Customer(
-          id: 'new-quote-customer',
-          name: 'New quote customer',
-          email: 'customer@example.test',
-        ),
-      );
-      ProviderScope.containerOf(tester.element(find.text('Customers')))
-          .invalidate(businessSettingsProvider);
+      await tester.tap(find.text('Customer'));
       await tester.pumpAndSettle();
-      expect(find.text('New quote customer'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Customer name'),
+        'New quote customer',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email'),
+        'customer@example.test',
+      );
+      await tester.tap(find.text('Save customer'));
+      await tester.pumpAndSettle();
+      expect(business.savedCustomer?.id, isNotNull);
+      expect(business.savedCustomer?.name, 'New quote customer');
+      expect(business.savedCustomer?.email, 'customer@example.test');
       await tester.pageBack();
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(DropdownButtonFormField<String>).first);
       await tester.pumpAndSettle();
+      final newCustomer = find.text('New quote customer');
+      expect(newCustomer, findsOneWidget);
+      await tester.tap(newCustomer);
+      await tester.pumpAndSettle();
       expect(find.text('New quote customer'), findsOneWidget);
+
+      await _reveal(tester, find.text('Save quote draft'), 400);
+      await tester.tap(find.text('Save quote draft'));
+      await tester.pumpAndSettle();
+      expect(api.calls, hasLength(1));
+      expect(api.calls.single.draft.customerId, business.savedCustomer!.id);
     },
   );
 
