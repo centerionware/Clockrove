@@ -3676,3 +3676,11 @@ this correction is pending. Play delivery run
 was skipped after merged-main validation failed; no Play upload is claimed.
 Physical owner-device acceptance remains pending. No build, test, formatter or
 analyzer ran on the VM.
+
+The first exact-head run after this correction reached API 24 and passed its 28
+base device cases, but the extended billing journey intermittently failed to
+focus the visible **Default tax (%)** field through accessibility
+`ACTION_CLICK`. The captured screen showed the field in the viewport without an
+open keyboard. The test now retries with an actual touch at the field's
+accessible screen bounds when that semantic click does not open the IME. This
+remains a test-harness stabilization; exact-head Actions validation is pending.

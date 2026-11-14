@@ -190,6 +190,22 @@ class InvoiceBillingDeviceTest {
         }
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
+    private fun tapNode(node: AccessibilityNodeInfo) {
+        val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
+        check(!bounds.isEmpty) { "Cannot tap an empty accessibility target" }
+        val x = bounds.exactCenterX()
+        val y = bounds.exactCenterY()
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long) {
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            }
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(android.view.MotionEvent.ACTION_DOWN, downTime)
+        SystemClock.sleep(80)
+        inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis())
+    }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
         if (keyboardVisible()) {
@@ -203,6 +219,13 @@ class InvoiceBillingDeviceTest {
         reveal(label, true)
         val field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        // Some Flutter EditableText nodes accept ACTION_CLICK without focusing
+        // the underlying field on older Android releases. Use a screen touch
+        // when that semantic action does not open the IME.
+        if (!keyboardVisible()) {
+            SystemClock.sleep(150)
+            if (!keyboardVisible()) tapNode(find(label, true) ?: field)
+        }
         until("Focused field did not expose text entry for $label") {
             find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
         }
