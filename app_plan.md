@@ -610,9 +610,12 @@ custom raster-provider settings are now implemented in source with their Dart
 and Android emulator tests, awaiting exact-head Actions. Google Maps SDK runtime
 configuration and owner-device acceptance remain open; see `plan_status.md`.
 The first exact-head run on `040961a` passed format and analysis but failed
-Flutter behavior tests before Android build/native/device stages. Map widget
-fixtures and lazy settings-form scrolling have been corrected in source; the
-exact-head Actions rerun is pending. Do not treat these corrections as verified.
+Flutter behavior tests before Android build/native/device stages. The follow-up
+at `309996e` also passed format and analysis and reduced the Flutter failures
+from 19 to 6 (187 passed, 14 skipped). Remaining failures exposed synthetic
+tile-map StateErrors during interaction and two settings-form assertions. The
+provider-form message/scroll assertions are corrected and stack capture was
+added to the map tests; exact-head Actions must validate the corrections.
 
 The Android provider-settings source adds an optional custom HTTPS raster-tile
 provider beside the keyless OSM default. Provider templates, attribution and

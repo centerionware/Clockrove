@@ -56,7 +56,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M5.2 Grace/re-entry/late events/pruning/health/recovery | Native transition and recovery checks verified; physical proof pending | Departure/alarm/geofence tests on main; #17 recovery passed 43101725472 and merged; screen-off/OEM/reboot/GPS evidence remains |
 | M6.1 Boards and accessible moves | Implemented, integrated and Actions verified | PRs #20/#23 native card/column CRUD/reorder/completion and templates, drag plus accessible moves, reviewed light/dark previews; #29 refreshed move-dialog regression passed 43117726325 |
 | M6.2 Date/list/totals/map/timezones | Implemented, integrated and calendar checks verified | PRs #22/#28 selected date/range/list/map/totals and exact billing on main; six report/map previews reviewed; #29 ICU midnight overlap/gap/skipped-date checks passed 43117726325 |
-| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests implemented; exact-head Actions red; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. Run [43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394) passed format/analyze but Flutter behavior tests failed 19 cases (174 passed, 14 skipped); Android build/native/device stages did not run. Quote customer management passed. Map-test provider fakes and lazy form scrolling are corrected in unverified source; an exact-head rerun and Google Maps decision remain required. |
+| M6.3 Provider settings/secure credentials/tile policy | Custom HTTPS raster-provider source and tests implemented; exact-head Actions red; Google SDK runtime setup unresolved | OSM fallback, encrypted Android Keystore storage, validated attribution/HTTPS/header settings, redirect blocking and URL-redacted transport errors. Run [43616875394](https://github.com/centerionware/Clockrove/actions/runs/43616875394) passed format/analyze but Flutter behavior tests failed 19 cases (174 passed, 14 skipped). Follow-up [43617956145](https://github.com/centerionware/Clockrove/actions/runs/43617956145) reduced failures to 6 (187 passed, 14 skipped); format/analyze passed, but Android build/native/device stages did not run. Quote customer management passed. Test maps now use a deterministic provider fake. Remaining synthetic-tile StateErrors and settings-form assertions have source corrections awaiting exact-head Actions; Google Maps SDK setup remains unresolved. |
 | M6.4 CSV and document sharing | Implemented and combined document checks passed | PRs #22/#26–28 safe work/GPS CSV, immutable PDF snapshots/styles, private URI grants and email/save/share UI; final logo/pagination/decoded-viewer checks passed 43117726325 |
 | Business iteration: pricing and customers | Implemented and merged | PRs #21/#24 global hourly default/currency, job hourly/task override and customer management; exact native calculations and customer reference tests pass |
 | Business iteration: archive/restore/delete | Implemented and integrated settings checks passed | PRs #25/#28 enforce continuous 30-day native retention, stopped timer guard, restore qualification and retained templates/customers; #29 adds eligible deletion directly in job settings |
@@ -3559,4 +3559,19 @@ not yet been materialized by the lazy list. Added a deterministic OSM settings
 API to the map widget fixtures and changed the provider form tests to scroll
 until their target rows are built. These are test-fixture corrections only;
 exact-head Actions must confirm them. Android build, native tests and device
+journeys did not run. No VM build, test, formatter or analyzer ran.
+
+### 2026-11-14 — map CI follow-up and remaining synthetic-tile errors
+
+Exact head `309996e` / Actions run
+[43617956145](https://github.com/centerionware/Clockrove/actions/runs/43617956145)
+passed format and Analyze. Flutter behavior tests reported 187 passed, 6 failed
+and 14 skipped. Adding a deterministic provider-settings fake resolved 13 map
+test failures. The remaining map tests reported `StateError: Bad state: No
+element` while exercising synthetic raster tiles and zoom interactions; the run
+also exposed an incorrect expected HTTP-validation message and one settings
+test still using `ensureVisible` on a lazy child. Updated the expected text,
+scrolled to the lazy save button, and added temporary framework-error stack
+capture to the remaining map widget tests to identify the underlying source.
+This source correction is unverified. Android build, native tests and device
 journeys did not run. No VM build, test, formatter or analyzer ran.

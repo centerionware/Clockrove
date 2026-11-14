@@ -80,6 +80,7 @@ void main() {
     testWidgets(
       'recorded point, accuracy, attribution and accessible zoom ${dark ? "dark" : "light"}',
       (tester) async {
+        captureMapTestStateErrorStacks();
         final semantics = tester.ensureSemantics();
         try {
           tester.view.physicalSize = const Size(420, 920);
@@ -149,6 +150,7 @@ void main() {
   testWidgets(
     'large landscape text keeps attribution and map controls usable',
     (tester) async {
+      captureMapTestStateErrorStacks();
       tester.view.physicalSize = const Size(640, 320);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);

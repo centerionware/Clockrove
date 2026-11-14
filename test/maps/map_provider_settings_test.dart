@@ -198,8 +198,13 @@ void main() {
     await tester.tap(find.text('Save map settings'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Use a valid HTTPS tile URL without embedded credentials.'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
-      find.text('Enter an HTTPS tile URL with {z}, {x}, and {y} placeholders.'),
+      find.text('Use a valid HTTPS tile URL without embedded credentials.'),
       findsOneWidget,
     );
     expect(api.saves, 0);
@@ -291,7 +296,11 @@ void main() {
     );
     await tester.tap(find.text('Configure maps'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save map settings'));
+    await tester.scrollUntilVisible(
+      find.text('Save map settings'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save map settings'));
     await tester.pumpAndSettle();
 
