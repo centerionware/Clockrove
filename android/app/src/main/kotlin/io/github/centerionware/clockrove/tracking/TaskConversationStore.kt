@@ -77,8 +77,8 @@ internal object TaskConversationStore {
 
     fun attachment(db: SQLiteDatabase, attachmentId: String): Attachment? {
         val metadata = db.rawQuery(
-            "SELECT id,task_id,comment_id,length(data) FROM task_attachments WHERE id=? AND length(data) BETWEEN 1 AND ?",
-            arrayOf(attachmentId, MAX_IMAGE_BYTES.toString()),
+            "SELECT id,task_id,comment_id,length(data) FROM task_attachments WHERE id=?",
+            arrayOf(attachmentId),
         ).use { rows ->
             if (!rows.moveToFirst()) return null
             AttachmentMetadata(
@@ -86,13 +86,14 @@ internal object TaskConversationStore {
                 if (rows.isNull(2)) null else rows.getString(2), rows.getInt(3),
             )
         }
+        if (metadata.bytes !in 1..MAX_IMAGE_BYTES) return null
         val image = ByteArrayOutputStream(metadata.bytes)
         var offset = 0
         while (offset < metadata.bytes) {
             val requested = minOf(ATTACHMENT_READ_CHUNK_BYTES, metadata.bytes - offset)
             val chunk = db.rawQuery(
-                "SELECT substr(data,?,?) FROM task_attachments WHERE id=? AND length(data)=?",
-                arrayOf((offset + 1).toString(), requested.toString(), metadata.id, metadata.bytes.toString()),
+                "SELECT substr(data,CAST(? AS INTEGER),CAST(? AS INTEGER)) FROM task_attachments WHERE id=?",
+                arrayOf((offset + 1).toString(), requested.toString(), metadata.id),
             ).use { rows ->
                 if (!rows.moveToFirst()) return null
                 rows.getBlob(0)

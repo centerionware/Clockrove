@@ -257,10 +257,12 @@ before the main baseline is considered green. PR #45 adds task Labor/Supplies
 classification, expanded task-photo handling, report-map repair, leading-
 decimal payments and quote customer management. Its exact-head Actions run
 `43590405687` passed formatting, analysis, Flutter behavior tests and Android
-build, but 15 of 594 native tests failed: stale v12 schema assertions, a retry
-test that changed its expected state version, and full-BLOB reads exceeding
-SQLite's cursor window. These source/test issues are corrected and await a new
-run; no Android device journeys ran on that head. Actual-cost records,
+build, but the first native run had 15 of 594 failures: stale v12 schema
+assertions, a retry test that changed its expected state version, and full-BLOB
+reads exceeding SQLite's cursor window. The next run corrected the schema and
+retry failures, reducing the native failures to four, all where chunked image
+reads returned no image. The query was simplified and needs another exact-head
+Actions run; no Android device journeys ran. Actual-cost records,
 tax-preparation reports and secure map-provider settings remain in M6.6. M7
 encrypted backup follows. M7.6 is the required whole-app UI overhaul and
 exhaustive end-to-end/screenshots gate after M6.6 and M7; it must pass before
@@ -2945,3 +2947,17 @@ regression now checks every byte of an image larger than the previous storage
 limit. Applied the formatter-source patch exported by Actions. Exact-head rerun
 is pending; device journeys did not run because native tests failed. No VM
 build, test or formatter ran.
+
+
+### 2026-11-14 — chunked task-photo retrieval follow-up
+
+At PR #45 head `5752499` / Actions run
+[43591679777](https://github.com/centerionware/Clockrove/actions/runs/43591679777),
+formatting, analysis, Flutter behavior tests and the Android debug build passed.
+The native suite improved from 15 failures to four of 594; all four were
+`TaskConversationTest` reads returning no image for both the small-image and
+expanded-image cases. Schema-v13 assertions and idempotent batch retry now pass.
+Simplified the chunk SQL to query by immutable attachment ID and explicitly cast
+SQLite `substr` offsets/lengths, while checking the stored byte bound in Kotlin.
+A new exact-head Actions run is required; device journeys were skipped after
+native tests failed. No VM build, test or formatter ran.
