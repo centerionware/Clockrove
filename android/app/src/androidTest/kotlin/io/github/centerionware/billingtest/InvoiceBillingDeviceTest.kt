@@ -75,18 +75,12 @@ class InvoiceBillingDeviceTest {
         return requireNotNull(found)
     }
     private fun click(label: String) {
-        var node = waitFor(label)
-        while (true) {
-            // A semantic ACTION_CLICK can report success without delivering
-            // Flutter's pointer event on some emulator/API combinations. Use
-            // the visible clickable bounds so the test exercises a real tap.
-            if (node.isClickable) {
-                tapNode(node)
-                automation.waitForIdle(250, 3000)
-                return
-            }
-            node = node.parent ?: throw AssertionError("Could not click $label")
-        }
+        // A semantic ACTION_CLICK can report success without delivering
+        // Flutter's pointer event; API 24 also exposes some active buttons as
+        // non-clickable. find() only returns visible nodes, so tap the matched
+        // control's real screen bounds instead of relying on those flags.
+        tapNode(waitFor(label))
+        automation.waitForIdle(250, 3000)
     }
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {

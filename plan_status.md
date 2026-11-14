@@ -3700,3 +3700,14 @@ successful accessibility `ACTION_CLICK`, which can be acknowledged without a
 real Flutter pointer event, the billing test now taps the visible clickable
 screen bounds and waits for the UI to settle. This is a test-only correction;
 the next exact-head Actions run is pending. No build or test ran on the VM.
+
+The next exact head, `c9f8b6e` / Actions run
+[43636374365](https://github.com/centerionware/Clockrove/actions/runs/43636374365),
+passed formatting, analysis, Flutter behavior tests, the Android debug build and
+614 native tests. The billing device journey stopped on API 24 at the final
+**Save job settings** click: Android 7's accessibility node reported the visible
+Flutter button as `clickable=false`, so the helper's new clickable-only tap
+guard rejected it. The helper now taps the matched visible node's bounds even
+when that accessibility flag is false. The API 24/35 billing journey did not
+finish; validate this correction on Actions before claiming the billing journey
+is green. No VM build or test ran.
