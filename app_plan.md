@@ -3078,3 +3078,10 @@ filters and drilldowns; exact minor-unit CSV and a paginated summary/detail PDF.
 Native reconciliation, date/currency/filter, CSV-injection, Flutter filter/
 export and Android PDF-render tests are added. None has run in Actions yet and
 no local build/test/formatter was run. Secure map-provider settings remain.
+
+At commit `974a7a2` / Actions run `43604844157`, the formatting check passed;
+Analyze reported one `curly_braces_in_flow_control_structures` lint in the new
+report filter error handler. Behavior tests, Android compilation/native tests
+and device journeys were skipped. Added braces to the reported conditional;
+push the correction and require a fresh exact-head run. No VM build, test or
+formatter ran.

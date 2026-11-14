@@ -46,7 +46,9 @@ class _BusinessFinancialReportScreenState
         );
       });
     } catch (_) {
-      if (mounted) setState(() => _loadError = 'Report filters could not be loaded.');
+      if (mounted) {
+        setState(() => _loadError = 'Report filters could not be loaded.');
+      }
     }
   }
 
