@@ -136,40 +136,40 @@ Future<void> _reveal(
 }
 
 void main() {
-  testWidgets('quote form opens customer management and refreshes the selector', (
-    tester,
-  ) async {
-    final api = _Quotes();
-    final business = _Business();
-    await _show(tester, api, business: business);
+  testWidgets(
+    'quote form opens customer management and refreshes the selector',
+    (tester) async {
+      final api = _Quotes();
+      final business = _Business();
+      await _show(tester, api, business: business);
 
-    final selector = find.byType(DropdownButtonFormField<String>).first;
-    expect(
-      tester.getTopLeft(find.text('Manage customers')).dy,
-      greaterThan(tester.getBottomLeft(selector).dy),
-    );
-    await tester.tap(find.text('Manage customers'));
-    await tester.pumpAndSettle();
-    expect(find.text('Customers'), findsOneWidget);
-    business.customers.add(
-      const Customer(
-        id: 'new-quote-customer',
-        name: 'New quote customer',
-        email: 'customer@example.test',
-      ),
-    );
-    ProviderScope.containerOf(
-      tester.element(find.text('Customers')),
-    ).invalidate(businessSettingsProvider);
-    await tester.pumpAndSettle();
-    expect(find.text('New quote customer'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
+      final selector = find.byType(DropdownButtonFormField<String>).first;
+      expect(
+        tester.getTopLeft(find.text('Manage customers')).dy,
+        greaterThan(tester.getBottomLeft(selector).dy),
+      );
+      await tester.tap(find.text('Manage customers'));
+      await tester.pumpAndSettle();
+      expect(find.text('Customers'), findsOneWidget);
+      business.customers.add(
+        const Customer(
+          id: 'new-quote-customer',
+          name: 'New quote customer',
+          email: 'customer@example.test',
+        ),
+      );
+      ProviderScope.containerOf(tester.element(find.text('Customers')))
+          .invalidate(businessSettingsProvider);
+      await tester.pumpAndSettle();
+      expect(find.text('New quote customer'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
-    await tester.pumpAndSettle();
-    expect(find.text('New quote customer'), findsOneWidget);
-  });
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.pumpAndSettle();
+      expect(find.text('New quote customer'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'quote task template becomes a separate editable line with quantity and price',

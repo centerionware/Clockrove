@@ -113,12 +113,13 @@ class TaskConversationTest {
         assertTrue(repository.taskConversation(job, task).conversation.taskAttachments.isEmpty())
 
         val selected = listOf("first-selection" to valid, "second-selection" to valid)
+        val commandVersion = version
         val accepted = repository.attachTaskImages(
-            "batch-valid", version, job, task, null,
+            "batch-valid", commandVersion, job, task, null,
             selected,
         )
         assertNull(accepted.conflict)
-        assertEquals(accepted, repository.attachTaskImages("batch-valid", version, job, task, null, selected))
+        assertEquals(accepted, repository.attachTaskImages("batch-valid", commandVersion, job, task, null, selected))
         assertEquals(
             listOf("first-selection", "second-selection"),
             repository.taskConversation(job, task).conversation.taskAttachments.map { it.id },
@@ -155,6 +156,6 @@ class TaskConversationTest {
             "expanded-image-add", version, job, task, null, "expanded-image", largerImage,
         )
         assertNull(added.conflict)
-        assertEquals(largerImage.size, repository.taskAttachment("expanded-image")!!.bytes.size)
+        assertArrayEquals(largerImage, repository.taskAttachment("expanded-image")!!.bytes)
     }
 }

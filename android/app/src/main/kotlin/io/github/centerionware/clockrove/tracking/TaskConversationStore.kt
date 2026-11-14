@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove.tracking
 
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 /** Local comments and normalized private task photos. All writes run in the timer transaction. */
@@ -9,6 +10,7 @@ internal object TaskConversationStore {
     private const val MAX_IMAGE_BYTES = ImageLimits.NORMALIZED_BYTES
     private const val MAX_IMAGES_PER_TASK = ImageLimits.TASK_IMAGES_PER_TASK
     private const val MAX_IMAGE_BYTES_PER_JOB = ImageLimits.TASK_IMAGE_BYTES_PER_JOB
+    private const val ATTACHMENT_READ_CHUNK_BYTES = 512 * 1024
     private val id = Regex("[A-Za-z0-9_-]{1,128}")
 
     data class AttachmentInfo(val id: String, val commentId: String?, val createdMillis: Long, val bytes: Int)
@@ -18,6 +20,7 @@ internal object TaskConversationStore {
     data class Conversation(val taskId: String, val jobId: String, val archived: Boolean,
         val taskAttachments: List<AttachmentInfo>, val comments: List<Comment>, val events: List<Event>)
     data class Attachment(val id: String, val taskId: String, val commentId: String?, val bytes: ByteArray)
+    private data class AttachmentMetadata(val id: String, val taskId: String, val commentId: String?, val bytes: Int)
 
     fun install(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE task_comments(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 2000),created_ms INTEGER NOT NULL,updated_ms INTEGER NOT NULL CHECK(updated_ms>=created_ms))")
@@ -72,9 +75,34 @@ internal object TaskConversationStore {
         return Conversation(taskId, jobId, archived, attachmentInfo(db, taskId), comments, events)
     }
 
-    fun attachment(db: SQLiteDatabase, attachmentId: String): Attachment? = db.rawQuery(
-        "SELECT id,task_id,comment_id,data FROM task_attachments WHERE id=? AND length(data)<=?", arrayOf(attachmentId, MAX_IMAGE_BYTES.toString()),
-    ).use { if (it.moveToFirst()) Attachment(it.getString(0), it.getString(1), if (it.isNull(2)) null else it.getString(2), it.getBlob(3)) else null }
+    fun attachment(db: SQLiteDatabase, attachmentId: String): Attachment? {
+        val metadata = db.rawQuery(
+            "SELECT id,task_id,comment_id,length(data) FROM task_attachments WHERE id=? AND length(data) BETWEEN 1 AND ?",
+            arrayOf(attachmentId, MAX_IMAGE_BYTES.toString()),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            AttachmentMetadata(
+                rows.getString(0), rows.getString(1),
+                if (rows.isNull(2)) null else rows.getString(2), rows.getInt(3),
+            )
+        }
+        val image = ByteArrayOutputStream(metadata.bytes)
+        var offset = 0
+        while (offset < metadata.bytes) {
+            val requested = minOf(ATTACHMENT_READ_CHUNK_BYTES, metadata.bytes - offset)
+            val chunk = db.rawQuery(
+                "SELECT substr(data,?,?) FROM task_attachments WHERE id=? AND length(data)=?",
+                arrayOf((offset + 1).toString(), requested.toString(), metadata.id, metadata.bytes.toString()),
+            ).use { rows ->
+                if (!rows.moveToFirst()) return null
+                rows.getBlob(0)
+            }
+            if (chunk.size != requested) return null
+            image.write(chunk)
+            offset += chunk.size
+        }
+        return Attachment(metadata.id, metadata.taskId, metadata.commentId, image.toByteArray())
+    }
 
     private fun event(db: SQLiteDatabase, taskId: String, commentId: String, action: String, at: Long) {
         db.execSQL("INSERT INTO task_comment_events VALUES(?,?,?,?,?)", arrayOf<Any?>(UUID.randomUUID().toString(), taskId, commentId, action, at))

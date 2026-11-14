@@ -253,12 +253,19 @@ scroll back to the job-tax field; the captured app remained on Job settings and
 did not show an application crash. The automatic Play delivery run
 `43575491279` was skipped, so that merge has no new internal-upload evidence.
 The test helper now uses real scroll gestures and must pass a fresh Actions run
-before the main baseline is considered green. Remaining M6.6 work includes task
-labor/supplies classification, actual-cost records, tax-preparation reports,
-and secure map-provider settings. M7 encrypted backup follows. M7.6 is the
-required whole-app UI overhaul and exhaustive end-to-end/screenshots gate after
-M6.6 and M7; it must pass before closed testing. Physical map/GPS/camera
-acceptance remains separate from emulator evidence.
+before the main baseline is considered green. PR #45 adds task Labor/Supplies
+classification, expanded task-photo handling, report-map repair, leading-
+decimal payments and quote customer management. Its exact-head Actions run
+`43590405687` passed formatting, analysis, Flutter behavior tests and Android
+build, but 15 of 594 native tests failed: stale v12 schema assertions, a retry
+test that changed its expected state version, and full-BLOB reads exceeding
+SQLite's cursor window. These source/test issues are corrected and await a new
+run; no Android device journeys ran on that head. Actual-cost records,
+tax-preparation reports and secure map-provider settings remain in M6.6. M7
+encrypted backup follows. M7.6 is the required whole-app UI overhaul and
+exhaustive end-to-end/screenshots gate after M6.6 and M7; it must pass before
+closed testing. Physical map/GPS/camera acceptance remains separate from
+emulator evidence.
 
 - Bill each task and exact UTC portion of work only once, for unpaid and paid
   invoices alike. Native transactional source claims, safe legacy reconciliation,
@@ -708,7 +715,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification, report-map fix, expanded multi-image attachment/viewer, and `.01` payment parsing. Run `43584358180` passed the 49-sample map journey on API 24, then stopped at the invoice billing scroll assertion; API 35 and later journeys did not run. Current helper scrolls until `Billing basis` is visible and starts swipes in the blank left gutter; exact-head Actions verification is pending. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `3ce3e29` / run `43590405687` passed Flutter formatting, analysis, behavior tests and Android build; 15/594 native tests failed due to stale v12 assertions, a batch retry test's changed expected version and photo BLOB reads exceeding CursorWindow. Corrections are source-only pending exact-head rerun. The 49-sample report-map route passed on API 24 in run `43581546961`; API 35 coverage remains pending. Finish M6.6 actual costs, tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2921,3 +2928,20 @@ local tests or builds were run.
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device
 assertions await GitHub Actions.
+
+### 2026-11-14 — M6.6 exact-head CI findings and corrective source
+
+At PR #45 head `3ce3e29` / Actions run
+[43590405687](https://github.com/centerionware/Clockrove/actions/runs/43590405687),
+Flutter formatting, analysis, implemented-behavior tests and Android debug
+build passed. Native unit tests completed 594 cases with 15 failures; the
+exported XML artifacts and Gradle log were reviewed. Current-schema assertions
+expected v12 after the v13 expanded-photo migration. The batch-image retry test
+supplied a new state version instead of the original command version. Reading a
+stored image as one SQLite BLOB exceeded Android's CursorWindow. Updated the
+current-schema assertions to v13, fixed the retry test to reuse its original
+version and changed photo retrieval to bounded 512 KiB BLOB slices; the
+regression now checks every byte of an image larger than the previous storage
+limit. Applied the formatter-source patch exported by Actions. Exact-head rerun
+is pending; device journeys did not run because native tests failed. No VM
+build, test or formatter ran.

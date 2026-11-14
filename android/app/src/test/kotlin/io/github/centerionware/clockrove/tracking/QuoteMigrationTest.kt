@@ -46,7 +46,7 @@ class QuoteMigrationTest {
         assertEquals("ar@example.test", repo.businessSnapshot().settings.receivablesEmail)
         assertNull(repo.quote("not-created").latest)
         inspect { db ->
-            assertEquals(12, db.version)
+            assertEquals(13, db.version)
             for (table in listOf("quotes", "quote_drafts", "quote_revisions", "quote_decisions", "quote_scope_lines", "quote_scope_revisions", "quote_invoice_links")) db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
             db.rawQuery("SELECT next_number FROM quote_counter", null).use { it.moveToFirst(); assertEquals(1000L, it.getLong(0)) }
             db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1001L, it.getLong(0)) }

@@ -60,7 +60,7 @@ class InvoiceCoverageMigrationTest {
         assertEquals("legacy-widget-token", repo.widgetSnapshot(17).configuration.token)
         assertEquals("legacy-point", repo.locationPoints("legacy-work").single().id)
         inspect { db ->
-            assertEquals(12, db.version)
+            assertEquals(13, db.version)
             db.rawQuery("SELECT state,reviewed_ms FROM invoice_coverage WHERE invoice_id='legacy-invoice'", null).use { assertTrue(it.moveToFirst()); assertEquals("LEGACY", it.getString(0)); assertTrue(it.isNull(1)) }
             db.rawQuery("SELECT fingerprint,version FROM commands WHERE id='legacy-command'", null).use { assertTrue(it.moveToFirst()); assertEquals("synthetic-opaque-fingerprint", it.getString(0)); assertEquals(42L, it.getLong(1)) }
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
