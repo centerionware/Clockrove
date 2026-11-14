@@ -158,8 +158,7 @@ void main() {
       'New quote customer',
     );
     await _reveal(tester, find.text('Save customer'), 400);
-    final saveCustomer = find.widgetWithText(FilledButton, 'Save customer');
-    await tester.tap(saveCustomer);
+    await tester.tap(find.text('Save customer'));
     await tester.pumpAndSettle();
     expect(find.text('New quote customer'), findsOneWidget);
     await tester.pageBack();

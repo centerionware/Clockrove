@@ -3309,5 +3309,22 @@ leading-dot values such as `.01` to `0.01` before exact Decimal parsing, leaving
 currency precision checks and minor-unit conversion unchanged. Parser and full
 payment-form regression tests assert `.01` records exactly one cent (`1` minor
 unit). The API-24/35 payment journey also enters `.01`, captures the form and
-asserts that the stored payment is one minor unit. These changes are source-only
-until the next GitHub Actions run; no VM tests or builds ran.
+asserts that the stored payment is one minor unit. The parser and full payment
+form cases passed in runs 43587087757, 43587596151, 43588048998, 43588642154
+and 43588980204. The actual API-24/35 payment journey still has not run on these
+heads because unrelated Flutter-test failures stop CI before Android validation.
+No VM tests or builds ran.
+
+### 2026-11-14 — quote customer management and exact-head rerun
+
+Added **Manage customers** directly below the quote customer selector using the
+same `CustomersScreen` as Job settings. The quote form watches the shared
+customer provider, so additions and edits appear in the selector after return.
+Widget coverage creates a customer from the quote flow and checks that it is
+available in the selector. The first attempt failed because the test did not
+scroll to the lazy-list Save customer control; run [43588980204](https://github.com/centerionware/Clockrove/actions/runs/43588980204)
+then failed to find that visible label under a `FilledButton` wrapper. Its other
+177 behavior tests passed, including `.01` payment parsing/form entry and the
+multi-photo review plus selected-index left/right viewer. The test now taps the
+visible **Save customer** label directly; exact-head Actions rerun is pending.
+No VM build or test was run.
