@@ -1,6 +1,7 @@
 package io.github.centerionware.clockrove.settings
 
 import android.content.Intent
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -81,22 +82,14 @@ class SettingsSaveDeviceTest {
         val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
         val top = bounds.top + 220
         if (bottom - top < 300) return
-        val x = bounds.centerX().toFloat()
+        val x = bounds.centerX()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
-        val downTime = SystemClock.uptimeMillis()
-        fun inject(action: Int, eventTime: Long, y: Float) {
-            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
-            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
-        }
-        inject(android.view.MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
-        for (step in 1..8) {
-            val eventTime = SystemClock.uptimeMillis() + 16
-            val y = startY + (endY - startY) * step / 8
-            inject(android.view.MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
-            SystemClock.sleep(16)
-        }
-        inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
+        val command = automation.executeShellCommand(
+            "input swipe $x $startY $x $endY 350",
+        )
+        ParcelFileDescriptor.AutoCloseInputStream(command).use { it.readBytes() }
+        automation.waitForIdle(100, 2000)
     }
     private fun reveal(label: String) {
         for (up in listOf(true, false)) {
