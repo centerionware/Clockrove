@@ -1,9 +1,9 @@
 package io.github.centerionware.clockrove.settings
 
 import android.content.Intent
-import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -29,8 +29,20 @@ class SettingsSaveDeviceTest {
         val text = value?.toString()?.trim() ?: return false
         return text == label || text.lineSequence().firstOrNull()?.trim() == label
     }
-    private fun find(label: String, editable: Boolean = false): AccessibilityNodeInfo? {
+    private fun find(label: String, editable: Boolean = false, checkable: Boolean = false): AccessibilityNodeInfo? {
+        val fieldId = when (label) { "Default tax (%)" -> "default-tax-percent"; else -> null }
+        fun editableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (node.isEditable && node.className?.toString() == "android.widget.EditText") return node
+            for (index in 0 until node.childCount) node.getChild(index)?.let { editableNode(it)?.let { found -> return found } }
+            return null
+        }
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (!node.refresh()) return null
+            if (editable && fieldId != null && node.isVisibleToUser && node.viewIdResourceName == fieldId) {
+                editableNode(node)?.let { return it }
+            }
+            if (checkable && node.isVisibleToUser && node.isCheckable &&
+                (matchesLabel(node.text, label) || matchesLabel(node.contentDescription, label) || node.contentDescription?.toString()?.contains(label) == true)) return node
             val matches = matchesLabel(node.text, label) || matchesLabel(node.contentDescription, label) ||
                 (editable && android.os.Build.VERSION.SDK_INT >= 26 && node.hintText?.toString()?.contains(label) == true)
             if (node.isVisibleToUser && matches && (!editable || (node.isEditable &&
@@ -40,10 +52,10 @@ class SettingsSaveDeviceTest {
         }
         return automation.rootInActiveWindow?.let(::visit)
     }
-    private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
+    private fun waitFor(label: String, editable: Boolean = false, checkable: Boolean = false): AccessibilityNodeInfo {
         val until = SystemClock.uptimeMillis() + 30000
         while (SystemClock.uptimeMillis() < until) {
-            find(label, editable)?.let { return it }
+            find(label, editable, checkable)?.let { return it }
             SystemClock.sleep(100)
         }
         val file = File(instrumentation.targetContext.getExternalFilesDir(null), "settings-accessibility.txt")
@@ -83,10 +95,25 @@ class SettingsSaveDeviceTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         automation.waitForIdle(200, 3000)
     }
+    private fun setSwitch(label: String, checked: Boolean) {
+        reveal(label, checkable = true)
+        val current = waitFor(label, checkable = true)
+        if (current.isChecked != checked) {
+            assertTrue("Could not change $label", current.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        }
+        val deadline = SystemClock.uptimeMillis() + 5000
+        while (SystemClock.uptimeMillis() < deadline) {
+            automation.waitForIdle(100, 1000)
+            if (find(label, checkable = true)?.isChecked == checked) return
+            SystemClock.sleep(100)
+        }
+        dumpAccessibility("switch-state")
+        assertEquals("$label did not change to the requested state", checked, find(label, checkable = true)?.isChecked)
+    }
     private fun click(label: String) {
         var node: AccessibilityNodeInfo? = waitFor(label)
         while (node != null) {
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            if ((node.isCheckable || node.isClickable) && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
             node = node.parent
         }
         throw AssertionError("Actual app could not click $label")
@@ -108,27 +135,58 @@ class SettingsSaveDeviceTest {
         val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
         val top = bounds.top + 220
         if (bottom - top < 300) return
-        // Swipe in the ListView's side gutter, away from text fields that can
-        // consume a drag as text selection on older Android releases.
-        val x = bounds.left + 32
+        val x = bounds.centerX().toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
-        val command = automation.executeShellCommand(
-            "input swipe $x $startY $x $endY 350",
-        )
-        ParcelFileDescriptor.AutoCloseInputStream(command).use { it.readBytes() }
-        automation.waitForIdle(100, 1000)
-    }
-    private fun reveal(label: String, editable: Boolean = false) {
-        for (up in listOf(true, false)) {
-            var attempts = 0
-            while (attempts++ < 60 && find(label, editable) == null) {
-                swipeContent(up)
-                SystemClock.sleep(150)
-            }
-            if (find(label, editable) != null) return
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
-        waitFor(label, editable)
+        inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
+        for (step in 1..8) {
+            val eventTime = SystemClock.uptimeMillis() + 16
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, eventTime, y.toFloat())
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
+    }
+    private fun reveal(label: String, editable: Boolean = false, checkable: Boolean = false) {
+        for (forward in listOf(true, false)) {
+            var attempts = 0
+            while (attempts++ < 60 && find(label, editable, checkable) == null) {
+                val scrollAction = if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                fun scroll(node: AccessibilityNodeInfo): Boolean {
+                    for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
+                    return node.isScrollable && node.performAction(scrollAction)
+                }
+                val moved = automation.rootInActiveWindow?.let(::scroll) == true
+                SystemClock.sleep(150)
+                if (find(label, editable, checkable) != null) return
+                if (!moved) {
+                    swipeContent(up = forward)
+                    SystemClock.sleep(150)
+                }
+            }
+            if (find(label, editable, checkable) != null) return
+        }
+        waitFor(label, editable, checkable)
+    }
+    private fun dumpAccessibility(name: String) {
+        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "settings-diagnostics").apply { mkdirs() }
+        val dump = StringBuilder()
+        fun describe(node: AccessibilityNodeInfo, depth: Int) {
+            if (dump.length > 200000 || depth > 50) return
+            dump.append(" ".repeat(depth)).append(node.toString()).append('\n')
+            for (index in 0 until node.childCount) node.getChild(index)?.let { describe(it, depth + 1) }
+        }
+        automation.rootInActiveWindow?.let { describe(it, 0) }
+        File(directory, "$name-accessibility.txt").writeText(dump.toString())
+        automation.takeScreenshot()?.let { bitmap ->
+            File(directory, "$name-screen.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
     }
     @Test fun templatesValidateAndExpandOnActualAndroidWithoutRegexInitialization() {
         try {
@@ -171,7 +229,8 @@ class SettingsSaveDeviceTest {
         val app = instrumentation.targetContext
         val repository = TimerRepository.get(app)
         val before = repository.businessSnapshot()
-        val savedCompanyName = "${before.settings.companyName} E2E saved"
+        val savedTaxUnits = if (before.settings.defaultTaxUnits == 12500) 15000 else 12500
+        val savedTaxPercent = if (savedTaxUnits == 12500) "1.25" else "1.5"
         // Enable semantics before Flutter creates its accessibility bridge.
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
@@ -181,18 +240,18 @@ class SettingsSaveDeviceTest {
             click("App settings and customers")
             click("Settings")
             waitFor("Billing defaults")
-            enterText("Company name", savedCompanyName)
+            enterText("Default tax (%)", savedTaxPercent)
             reveal("Save settings")
             click("Save settings")
             val until = SystemClock.uptimeMillis() + 30000
-            while (repository.businessSnapshot().settings.companyName != savedCompanyName && SystemClock.uptimeMillis() < until) SystemClock.sleep(100)
+            while (repository.businessSnapshot().settings.defaultTaxUnits != savedTaxUnits && SystemClock.uptimeMillis() < until) SystemClock.sleep(100)
             val committed = repository.businessSnapshot()
             assertTrue("Changed settings were never committed by the actual app", committed.version > before.version)
-            assertEquals("The edited company name was not persisted", savedCompanyName, committed.settings.companyName)
+            assertEquals("The edited tax default was not persisted", savedTaxUnits, committed.settings.defaultTaxUnits)
             waitFor("App settings and customers")
             click("App settings and customers"); click("Settings")
             waitFor("Billing defaults")
-            assertEquals("The edited setting did not survive reopening Settings", savedCompanyName, repository.businessSnapshot().settings.companyName)
+            assertEquals("The edited setting did not survive reopening Settings", savedTaxUnits, repository.businessSnapshot().settings.defaultTaxUnits)
             capture("main-settings-save-reopened")
         } finally {
             instrumentation.runOnMainSync {
@@ -266,7 +325,7 @@ class SettingsSaveDeviceTest {
         try {
             click("App settings and customers"); click("Settings")
             reveal("Record work locations")
-            click("Record work locations")
+            setSwitch("Record work locations", checked = false)
             capture("location-recording-global-off")
             reveal("Save settings")
             click("Save settings")
@@ -276,7 +335,7 @@ class SettingsSaveDeviceTest {
 
             waitFor("App settings and customers"); click("App settings and customers"); click("Settings")
             reveal("Record work locations")
-            click("Record work locations")
+            setSwitch("Record work locations", checked = true)
             capture("location-recording-global-on")
             reveal("Save settings")
             click("Save settings")
