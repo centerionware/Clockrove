@@ -3732,3 +3732,14 @@ accepts the result only after reading back the exact value; the existing IME
 typing fallback remains for API 24 cases that acknowledge but ignore the text
 action. API 35 later journeys did not run. Fresh exact-head Actions validation
 is pending. No VM build or test ran.
+
+Exact PR #46 head `274ce49` / Actions run
+[43640563667](https://github.com/centerionware/Clockrove/actions/runs/43640563667)
+passed formatting, analysis, Flutter behavior tests, Android debug build,
+locked release checks and all 614 native tests. Downloaded JUnit XML confirms
+37 actual Android cases on each API 24 and 35, zero failures/errors/skips,
+including both extended billing journeys, invoice copies, payments, quotes,
+task media, map and widget journeys. The direct text action plus readback fix
+resolved the API-35 billing failure; the API-24 IME fallback also remains
+green. No VM build, test, formatter or analyzer ran. PR #46 is ready to merge;
+merged-main validation and Play delivery are the next gates.
