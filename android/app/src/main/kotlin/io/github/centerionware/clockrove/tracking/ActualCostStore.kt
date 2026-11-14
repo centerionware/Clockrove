@@ -146,7 +146,7 @@ internal object ActualCostStore {
         val previous = stored(db, id) ?: return "ACTUAL_COST_UNAVAILABLE"
         if (previous.deleted != null) return "ACTUAL_COST_UNAVAILABLE"
         val deleted = maxOf(at, previous.entry.updated, previous.entry.created)
-        db.execSQL("UPDATE actual_costs SET updated_ms=?,deleted_ms=? WHERE id=? AND deleted_ms IS NULL", arrayOf(deleted, deleted, id))
+        db.execSQL("UPDATE actual_costs SET updated_ms=?,deleted_ms=? WHERE id=? AND deleted_ms IS NULL", arrayOf<Any>(deleted, deleted, id))
         val values = mapOf(
             "id" to id, "job_id" to previous.entry.jobId, "job_name" to previous.entry.jobName,
             "task_id" to previous.entry.taskId, "task_name" to previous.entry.taskName,

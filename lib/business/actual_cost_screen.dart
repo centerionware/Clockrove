@@ -442,7 +442,8 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                     validator: (v) {
                       try {
                         final value = parseMoney(v ?? '', _digits);
-                        if (value == null || BigInt.parse(value) <= BigInt.zero) {
+                        if (value == null ||
+                            BigInt.parse(value) <= BigInt.zero) {
                           return 'Enter an amount greater than zero.';
                         }
                         return null;

@@ -3019,3 +3019,11 @@ source patch and stopped at analysis. It identified an accidentally placed
 findings in the new screen. Applied the exported formatter patch and corrected
 the constructor and analyzer findings. The corrected source still needs an
 exact-head Actions rerun. No VM build, test or formatter ran.
+
+At corrected head `d5983c9` / run `43597717786`, formatting, analysis, Flutter
+behavior tests and UI preview export passed. Android compilation stopped on a
+Kotlin reified-array type-inference warning promoted to an error for a mixed
+`Long`/`String` SQL bind array. Added an explicit `Any` type and applied the
+workflow's two-line formatter correction. Native tests and Android journeys did
+not run on this head; exact-head Actions rerun remains required. No VM build,
+test or formatter ran.
