@@ -2774,3 +2774,25 @@ PR #44 must remain unmerged until resolved. The settings-device helper now adds
 a touchscreen tap at the visible switch bounds if the accessibility action does
 not change its state. A new exact-head API-24/35 run is required to establish
 whether this is an interaction-harness issue or an app defect.
+
+### 2026-11-14 — location toggle journey passes on the revised harness
+
+The helper correction is in exact PR head
+`1a1a183bf592309c16bedb2006c22f7129ad332d`. Actions run
+[43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697)
+passed formatting, analysis, Flutter behavior tests, Android build, all 587
+native tests, and the API-24/35 Android/PDF stage. Downloaded XML confirms 32
+actual Android cases per API, zero failures/errors/skips. This includes the real
+global location-recording toggle saved off and on, main Settings save/reopen,
+both billing journeys, immutable invoice copies, payments, quotes and task
+media. The invoice billing test still asserts the exact invalid-tax message.
+The API-24/35 location-toggle captures show the switch in both states and were
+reviewed. Locked release-tooling/version checks also passed. The UI test keeps
+the accessibility click and supports a real touchscreen tap at the switch
+bounds if the state does not change. The previous automatic PR run on the same
+documentation head had failed that toggle journey before the emulator
+segfaulted; this later exact-head PR run passed. PR #44 is mergeable and its
+checks are green, but remains open pending squash merge. M6.6 remains in
+progress because Supplies classification, actual costs, tax-preparation reports,
+and secure map-provider settings remain. All validation ran in GitHub Actions;
+no build, test, or formatter ran on the VM.
