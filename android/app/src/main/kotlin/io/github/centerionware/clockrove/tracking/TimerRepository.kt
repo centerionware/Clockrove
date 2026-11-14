@@ -452,7 +452,13 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun saveCard(id: String, version: Long, value: BoardStore.Draft): Outcome =
         boardChange(id, version, "CARD_SAVE", listOf(value.id, value.jobId, value.columnId, value.title, value.description, value.dueDate,
-            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) + (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits))) { BoardStore.saveCard(it, value, wallClock()) }
+            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) +
+            (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits)) +
+            // Keep the historical LABOR default fingerprint stable so an
+            // in-flight command from an older app version remains idempotent.
+            (if (value.chargeType == TaskClassification.LABOR) emptyList() else listOf(value.chargeType))) {
+            BoardStore.saveCard(it, value, wallClock())
+        }
     @Synchronized
     internal fun moveCard(id: String, version: Long, jobId: String, cardId: String, destination: String, position: Int): Outcome =
         boardChange(id, version, "CARD_MOVE", listOf(jobId, cardId, destination, position)) { BoardStore.moveCard(it, jobId, cardId, destination, position, wallClock()) }
@@ -1017,7 +1023,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 11) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 12) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1048,7 +1054,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..10 && newVersion == 11) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..11 && newVersion == 12) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1062,6 +1068,7 @@ class TimerRepository internal constructor(context: Context,
                 TaskConversationStore.install(db)
             }
             if (oldVersion < 11) InvoiceBillingPolicyStore.install(db, now())
+            if (oldVersion < 12) TaskClassificationStore.install(db, now())
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }

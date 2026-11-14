@@ -1,6 +1,7 @@
 package io.github.centerionware.clockrove.tracking
 
 import android.database.sqlite.SQLiteDatabase
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -35,8 +36,29 @@ class InvoiceSnapshotTest {
         assertEquals("INV-1000", data.number); assertEquals("123.45", data.total); assertEquals("Synthetic Co", data.company)
         assertEquals("Synthetic Customer", data.customer); assertEquals("recipient@example.test", data.email)
         assertTrue(data.body.contains("123.45")); assertTrue(data.period.contains("UTC")); assertTrue(data.basis.contains("billed"))
-        assertEquals("123.45", data.lines.first().amount); assertEquals(2, data.lines.size); assertNull(record.pdf)
+        assertEquals("123.45", data.lines.first().amount); assertEquals(TaskClassification.LABOR, data.lines.first().chargeType)
+        assertEquals(2, data.lines.size); assertNull(record.pdf)
         assertEquals(data, InvoiceStore.Snapshot.decode(data.encode()))
+        val olderPayload = JSONObject(data.encode()).apply {
+            val lines = getJSONArray("lines")
+            for (index in 0 until lines.length()) lines.getJSONObject(index).remove("chargeType")
+        }.toString()
+        assertTrue(InvoiceStore.Snapshot.decode(olderPayload).lines.all { it.chargeType == TaskClassification.UNCLASSIFIED })
+    }
+    @Test fun taskInvoiceFreezesSuppliesClassificationForLaterReports() {
+        repository.saveJobSettings("task-rate", version, repository.jobDetail(job).job.settings.copy(billingMode = "TASK"))
+        val board = repository.boardSnapshot(job).board
+        assertNull(repository.saveCard("supplies-task", version, BoardStore.Draft(
+            id = "tile-materials", jobId = job, columnId = board.columns.last().id, title = "Synthetic tile materials",
+            priceMinor = java.math.BigInteger.valueOf(2000), currency = board.currency,
+            quantityUnits = 260000, chargeType = TaskClassification.SUPPLIES)).conflict)
+
+        assertNull(prepare("prepare-supplies", "supplies-invoice").conflict)
+        val frozen = InvoiceStore.Snapshot.decode(repository.invoice("supplies-invoice").payload)
+        assertEquals("INV-1000", frozen.number)
+        assertEquals("520.00", frozen.subtotal)
+        assertEquals(TaskClassification.SUPPLIES, frozen.lines.single().chargeType)
+        assertEquals(frozen, InvoiceStore.Snapshot.decode(frozen.encode()))
     }
     @Test fun editsNeverRewritePreparedSnapshotAndRetryDoesNotAllocateAnotherNumber() {
         val originalVersion = version; val first = repository.prepareInvoice("same", originalVersion, "invoice", selection)

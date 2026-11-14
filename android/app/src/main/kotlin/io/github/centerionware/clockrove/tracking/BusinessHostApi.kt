@@ -150,9 +150,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "currency" to s.board.currency, "fractionDigits" to Currency.getInstance(s.board.currency).defaultFractionDigits, "archived" to s.board.archived,
                 "columns" to s.board.columns.map { mapOf("id" to it.id, "name" to it.name, "position" to it.position, "completed" to it.completed) },
                 "cards" to s.board.cards.map { mapOf("id" to it.id, "columnId" to it.columnId, "title" to it.title, "description" to it.description, "dueDate" to it.dueDate,
-                    "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency) }) }
+                    "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "chargeType" to it.chargeType) }) }
             "templates" -> return repository.taskTemplates(input.string("search")).map { mapOf("id" to it.id, "title" to it.title, "description" to it.description,
-                "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName) }
+                "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName, "chargeType" to it.chargeType) }
             "taskConversation" -> return repository.taskConversation(input.string("jobId"), input.string("taskId")).let { snapshot ->
                 val conversation = snapshot.conversation
                 mapOf("version" to snapshot.version, "jobId" to conversation.jobId, "taskId" to conversation.taskId, "archived" to conversation.archived,
@@ -235,7 +235,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "saveColumn" -> repository.saveColumn(id, version, v.string("columnId"), v.string("jobId"), v.string("name"), v.bool("completed"))
             "reorderColumns" -> repository.reorderColumns(id, version, v.string("jobId"), v.strings("columnIds"))
             "removeColumn" -> repository.removeColumn(id, version, v.string("jobId"), v.string("columnId"), v.nullable("destinationId"))
-            "saveCard" -> repository.saveCard(id, version, BoardStore.Draft(v.string("cardId"), v.string("jobId"), v.string("columnId"), v.string("title"), v.string("description"), v.nullable("dueDate"), v.bool("billable"), v.money("priceMinor"), v.string("currency"), v.quantity()))
+            "saveCard" -> repository.saveCard(id, version, BoardStore.Draft(v.string("cardId"), v.string("jobId"), v.string("columnId"), v.string("title"), v.string("description"), v.nullable("dueDate"), v.bool("billable"), v.money("priceMinor"), v.string("currency"), v.quantity(), v.value["chargeType"] as? String ?: TaskClassification.LABOR))
             "moveCard" -> repository.moveCard(id, version, v.string("jobId"), v.string("cardId"), v.string("destinationId"), v.int("position"))
             "removeCard" -> repository.removeCard(id, version, v.string("jobId"), v.string("cardId"))
             "saveTaskComment" -> repository.saveTaskComment(id, version, v.string("jobId"), v.string("taskId"), v.string("commentId"), v.string("body"))
@@ -362,7 +362,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone), "endLabel" to ReportCsv.instant(it.end, r.selection.timezone)) },
             "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone)) },
             "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy, "measuredLabel" to ReportCsv.instant(it.measured, r.selection.timezone)) },
-            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
+            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "chargeType" to it.chargeType, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
             "totals" to r.totals.map { mapOf("jobId" to it.jobId, "jobName" to it.jobName, "mode" to it.mode, "currency" to it.currency, "fractionDigits" to Currency.getInstance(it.currency).defaultFractionDigits,
                 "durationMillis" to it.durationMillis.toString(), "hourlyMinor" to it.hourlyMinor?.toString(), "amountMinor" to it.amountMinor?.toString(), "missingPrices" to it.missingPrices) })
     }

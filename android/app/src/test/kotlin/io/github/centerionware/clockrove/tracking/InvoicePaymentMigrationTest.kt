@@ -57,7 +57,10 @@ class InvoicePaymentMigrationTest {
         assertEquals("", repo.businessSnapshot().settings.receivablesEmail)
         assertEquals(BigInteger(wide), repo.boardSnapshot("job").board.cards.single().priceMinor)
         assertEquals(260000L, repo.boardSnapshot("job").board.cards.single().quantityUnits)
+        assertEquals(TaskClassification.UNCLASSIFIED, repo.boardSnapshot("job").board.cards.single().chargeType)
         assertEquals(BigInteger(wide), repo.taskTemplates().single().priceMinor)
+        assertEquals(TaskClassification.UNCLASSIFIED, repo.taskTemplates().single().chargeType)
+        assertEquals(TaskClassification.UNCLASSIFIED, InvoiceStore.Snapshot.decode(payload).lines.single().chargeType)
         assertEquals(payload, repo.invoice("invoice").payload); assertArrayEquals(pdf, repo.invoice("invoice").pdf)
         assertEquals("synthetic-v7-widget-token", repo.widgetSnapshot(17).configuration.token)
         assertTrue(repo.invoicePayments("invoice").second.payments.isEmpty())
@@ -65,13 +68,21 @@ class InvoicePaymentMigrationTest {
         assertNull(repo.recordInvoicePayment("record", 42, InvoicePaymentStore.Draft("payment", "invoice", "3000", "USD", at, "UTC")).conflict)
         assertEquals(BigInteger.valueOf(7750), repo.invoicePayments("invoice").second.balance.due)
         inspect { db ->
-            assertEquals(11, db.version)
+            assertEquals(12, db.version)
             db.rawQuery("SELECT hourly_mode,minimum_hours,task_minimum_minor FROM invoice_billing_defaults WHERE id=1", null).use {
                 assertTrue(it.moveToFirst()); assertEquals(InvoiceBillingPolicy.MINIMUM_THEN_EXACT, it.getString(0)); assertEquals("0", it.getString(1)); assertEquals("0", it.getString(2))
             }
             db.rawQuery("SELECT next_invoice_number FROM app_settings", null).use { it.moveToFirst(); assertEquals(1002L, it.getLong(0)) }
             db.rawQuery("SELECT released_ms FROM invoice_task_claims WHERE id='claim'", null).use { assertTrue(it.moveToFirst()); assertTrue(it.isNull(0)) }
             db.rawQuery("SELECT fingerprint FROM commands WHERE id='old-command'", null).use { it.moveToFirst(); assertEquals("synthetic-opaque-receipt", it.getString(0)) }
+            db.rawQuery("SELECT r.payload,r.origin FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='card' AND h.entity_id='tile'", null).use {
+                assertTrue(it.moveToFirst()); assertEquals(TaskClassification.UNCLASSIFIED, org.json.JSONObject(it.getString(0)).getString("charge_type"))
+                assertEquals("MIGRATION", it.getString(1))
+            }
+            db.rawQuery("SELECT r.payload,r.origin FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='template' AND h.entity_id='template'", null).use {
+                assertTrue(it.moveToFirst()); assertEquals(TaskClassification.UNCLASSIFIED, org.json.JSONObject(it.getString(0)).getString("charge_type"))
+                assertEquals("MIGRATION", it.getString(1))
+            }
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }
     }

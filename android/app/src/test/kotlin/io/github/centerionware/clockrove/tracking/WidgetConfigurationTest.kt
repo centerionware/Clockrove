@@ -207,7 +207,7 @@ class WidgetConfigurationTest {
         assertNull(repository.widgetSnapshot(1).configuration.token)
         assertEquals("", repository.businessSnapshot().settings.receivablesEmail)
         inspect { db ->
-            assertEquals(11, db.version)
+            assertEquals(12, db.version)
             db.rawQuery("SELECT COUNT(*) FROM invoice_payments", null).use { assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0)) }
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }

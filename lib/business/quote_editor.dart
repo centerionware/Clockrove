@@ -226,6 +226,11 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               subtitle: Text(
                                 [
                                   template.source ?? 'Saved task',
+                                  template.chargeType == 'SUPPLIES'
+                                      ? 'Supplies'
+                                      : template.chargeType == 'LABOR'
+                                      ? 'Labor'
+                                      : 'Unclassified',
                                   'Quantity ${taskQuantity(template.quantityUnits)}',
                                   if (template.priceMinor == null)
                                     'Unit price not set'

@@ -103,25 +103,14 @@ class InvoiceBillingDeviceTest {
         }
     }
     private fun scrollToStart() {
-        val deadline = SystemClock.uptimeMillis() + 15000
-        var stationaryPolls = 0
-        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
-            fun scroll(node: AccessibilityNodeInfo): Boolean {
-                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-            }
-            if (automation.rootInActiveWindow?.let(::scroll) == true) {
-                stationaryPolls = 0
-            } else {
-                if (stationaryPolls == 0) {
-                    repeat(8) {
-                        swipeContent(up = false)
-                        SystemClock.sleep(120)
-                    }
-                }
-                stationaryPolls++
-            }
-            SystemClock.sleep(150)
+        hideKeyboard()
+        // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
+        // successful while remaining at the same offset. An accessibility
+        // acknowledgement is not proof that the contents actually moved, so
+        // use real upward-content swipes to return to the tax field.
+        repeat(8) {
+            swipeContent(up = false)
+            SystemClock.sleep(120)
         }
     }
     private fun swipeContent(up: Boolean) {
@@ -266,7 +255,9 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName)
             waitFor("Task board"); reveal("Install 1 sq ft tile"); click("Install 1 sq ft tile")
-            waitFor("Edit task"); enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            waitFor("Edit task")
+            enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            reveal("Supplies"); click("Supplies"); capture("supplies-classification")
             reveal("Save task"); click("Save task")
             until("Wide unit price was narrowed during actual UI save") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.priceMinor == java.math.BigInteger("100000000000000000000")
@@ -277,7 +268,9 @@ class InvoiceBillingDeviceTest {
             enter("Unit price (USD)", "5.00")
             reveal("Save task"); capture("quantity-editor"); click("Save task")
             until("Actual task editor did not commit quantity and unit price") {
-                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) }
+                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let {
+                    it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) && it.chargeType == "SUPPLIES"
+                }
             }
             waitFor("Task board"); capture("quantity-board")
             click("Job report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
@@ -290,6 +283,7 @@ class InvoiceBillingDeviceTest {
             assertEquals("130.00", frozen.subtotal); assertEquals("9.75", frozen.taxAmount); assertEquals("139.75", frozen.total)
             assertEquals("Install 1 sq ft tile", frozen.lines.single().title)
             assertEquals("260000", frozen.lines.single().quantityUnits); assertEquals("500", frozen.lines.single().unitPriceMinor)
+            assertEquals("SUPPLIES", frozen.lines.single().chargeType)
             waitFor("Page 1 of 1"); capture("issued-invoice")
             assertTrue(requireNotNull(repository.invoice(issued.id).pdf).size > 1000)
             assertEquals(1002L, sequence())

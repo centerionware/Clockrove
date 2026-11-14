@@ -233,14 +233,22 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 ### 3.5a Billing lifecycle, quotes and business reports
 
 The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
-The invoice lifecycle, partial payments/receipts/CC/void-replacement, quote
-baseline, and quote PDF/settings-preview work are merged. Immediately next is
-M6.5 (quote usability, task comments/images, map repair and GPS controls), then
-the remaining backup and business milestones, then M7.6 (whole-app UI overhaul
-and exhaustive E2E/screenshots) before closed testing. Remaining invoice-only
-hourly rounding/minimum-hours and task-job minimum-fee settings, full task
-cost/tax reporting, and main-menu tax reports remain in the launch queue; M6.5
-does not mark them complete.
+The invoice lifecycle, payments/receipts/CC/void-replacement, quotes,
+quote usability, task comments/images, map repair and GPS controls are merged.
+PR #44 adds invoice-only hourly minimum/rounding and task-rate minimum-fee
+policies; its exact-head Actions passed and it is squash-merged as
+`48fe0f89727bc017c4d8b30f8fd60f4915b16cb6`. Main validation `43574603359`
+failed in the API-24 billing instrumentation journey when the test could not
+scroll back to the job-tax field; the captured app remained on Job settings and
+did not show an application crash. The automatic Play delivery run
+`43575491279` was skipped, so that merge has no new internal-upload evidence.
+The test helper now uses real scroll gestures and must pass a fresh Actions run
+before the main baseline is considered green. Remaining M6.6 work includes task
+labor/supplies classification, actual-cost records, tax-preparation reports,
+and secure map-provider settings. M7 encrypted backup follows. M7.6 is the
+required whole-app UI overhaul and exhaustive end-to-end/screenshots gate after
+M6.6 and M7; it must pass before closed testing. Physical map/GPS/camera
+acceptance remains separate from emulator evidence.
 
 - Bill each task and exact UTC portion of work only once, for unpaid and paid
   invoices alike. Native transactional source claims, safe legacy reconciliation,
@@ -680,7 +688,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains; M6.5 source is prepared for exact-head Actions validation, then M6.6, M7 and the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains; M6.5 and invoice-policy work in PR #44 are merged with exact-head Actions evidence. Main validation `43574603359` failed an API-24 billing UI scroll assertion and Play delivery `43575491279` was skipped; revalidate the corrected harness in Actions. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2753,10 +2761,10 @@ its 23-case base suite; the emulator went offline before billing tests. It did
 not report an application assertion failure. Attempt 2 used the same source
 head and passed both API suites. The workflow test-scroll helper now uses
 accessibility scrolling with a touchscreen swipe fallback to reveal the actual
-invalid-tax message. PR #44 remains open pending merge; M6.6 remains in progress
-because Supplies classification, actual costs, tax-preparation reports, and
-secure map-provider settings are outstanding. No build, test, or formatter ran
-on the VM.
+invalid-tax message. At this point PR #44 was still open; M6.6 remained in
+progress because Supplies classification, actual costs, tax-preparation reports,
+and secure map-provider settings were outstanding. The later exact-head pass and
+squash merge are recorded below. No build, test, or formatter ran on the VM.
 
 The plan-evidence commit `f8d0587ba2343e0c6f747676520e6066af700f64` received
 two independent full Actions runs. Dispatched run
@@ -2769,8 +2777,8 @@ failed during the API-35 `locationRecordingDefaultCanBeTurnedOffAndBackOnInActua
 journey: the accessibility action returned successfully but the setting still
 read on. The emulator then went offline and segfaulted. The API-24 suite passed
 in that run. This disagrees with the dispatched run on the same commit and does
-not reproduce the owner's app crash, but it is a real acceptance-test failure;
-PR #44 must remain unmerged until resolved. The settings-device helper now adds
+not reproduce the owner's app crash, but it is a real acceptance-test failure.
+PR #44 remained unmerged until the discrepancy was resolved. The settings-device helper now adds
 a touchscreen tap at the visible switch bounds if the accessibility action does
 not change its state. A new exact-head API-24/35 run is required to establish
 whether this is an interaction-harness issue or an app defect.
@@ -2791,8 +2799,34 @@ reviewed. Locked release-tooling/version checks also passed. The UI test keeps
 the accessibility click and supports a real touchscreen tap at the switch
 bounds if the state does not change. The previous automatic PR run on the same
 documentation head had failed that toggle journey before the emulator
-segfaulted; this later exact-head PR run passed. PR #44 is mergeable and its
-checks are green, but remains open pending squash merge. M6.6 remains in
-progress because Supplies classification, actual costs, tax-preparation reports,
-and secure map-provider settings remain. All validation ran in GitHub Actions;
-no build, test, or formatter ran on the VM.
+segfaulted; this later exact-head PR run passed. PR #44 was then squash-merged to
+`main` as `48fe0f89727bc017c4d8b30f8fd60f4915b16cb6`. Main validation run
+`43574603359` and automatic internal delivery were still pending when this entry
+was written. M6.6 remains in progress because Supplies classification, actual
+costs, tax-preparation reports, and secure map-provider settings remain. All
+validation ran in GitHub Actions; no build, test, or formatter ran on the VM.
+
+### 2026-11-14 — merged-main billing check and Supplies classification start
+
+The merged-main Validate run
+[43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359)
+failed in API-24 billing instrumentation: the harness could not rediscover
+`Job tax (%)` after attempting to return to the top of Job settings. The saved
+failure screenshot shows the actual settings page near its lower fields and no
+application crash; this does not prove whether the navigation issue is solely in
+the harness. Play delivery
+[43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279)
+was skipped. The current feature branch replaces the acknowledged accessibility
+scroll with repeated real return-to-top swipes. A fresh Actions run must verify
+the correction before main is considered green.
+
+The M6.6 Supplies-classification slice is source-only: schema v12, explicit
+Labor/Supplies selection with legacy rows requiring classification, reusable
+template propagation, immutable invoice-line snapshots, migration/command tests,
+and an actual-app UI assertion have been added. Historical rows and old invoice
+snapshots default to `UNCLASSIFIED`; classification is never guessed from price.
+No Actions run has yet validated this branch. The only local validation was
+`git diff --check`; no VM build, test, or formatter ran. Next: inspect the full
+diff, validate this branch in GitHub Actions, then continue actual costs,
+tax-preparation reports and secure map-provider settings before M7 backup and
+the required M7.6 full-app UI/E2E gate.

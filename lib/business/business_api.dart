@@ -108,8 +108,9 @@ class TaskCard {
     this.priceMinor,
     this.completedMillis,
     this.quantityUnits = '10000',
+    this.chargeType = 'UNCLASSIFIED',
   });
-  final String id, columnId, title, description, currency, quantityUnits;
+  final String id, columnId, title, description, currency, quantityUnits, chargeType;
   String? get amountMinor => taskAmount(priceMinor, quantityUnits);
   final String? dueDate, priceMinor;
   final int position;
@@ -127,6 +128,7 @@ class TaskCard {
     priceMinor: v['priceMinor'] as String?,
     completedMillis: v['completedMillis'] as int?,
     quantityUnits: v['quantityUnits'] as String? ?? '10000',
+    chargeType: v['chargeType'] as String? ?? 'UNCLASSIFIED',
   );
 }
 
@@ -139,8 +141,9 @@ class TaskTemplate {
     this.currency,
     this.source, [
     this.quantityUnits = '10000',
+    this.chargeType = 'UNCLASSIFIED',
   ]);
-  final String id, title, description, currency, quantityUnits;
+  final String id, title, description, currency, quantityUnits, chargeType;
   final String? priceMinor, source;
   factory TaskTemplate.decode(Map<Object?, Object?> v) => TaskTemplate(
     v['id'] as String,
@@ -150,6 +153,7 @@ class TaskTemplate {
     v['currency'] as String,
     v['sourceJobName'] as String?,
     v['quantityUnits'] as String? ?? '10000',
+    v['chargeType'] as String? ?? 'UNCLASSIFIED',
   );
 }
 
@@ -364,6 +368,7 @@ class BusinessApi {
         'priceMinor': c.priceMinor,
         'quantityUnits': c.quantityUnits,
         'currency': c.currency,
+        'chargeType': c.chargeType,
       });
   Future<TimerOutcome> saveTaskComment(
     String commandId,

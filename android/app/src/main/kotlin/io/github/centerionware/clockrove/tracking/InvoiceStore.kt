@@ -14,7 +14,8 @@ import org.json.JSONObject
 /** Immutable prepared invoice data; rendering is derived outside the write lock. */
 internal object InvoiceStore {
     data class Record(val id: String, val jobId: String, val number: String, val payload: String, val pdf: ByteArray?, val logo: ByteArray?, val copyId: String? = null, val documentKind: String = "INVOICE", val quoteRevision: Int? = null)
-    data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null, val unitPriceMinor: String? = null)
+    data class Line(val title: String, val detail: String, val amount: String, val quantityUnits: String? = null,
+        val unitPriceMinor: String? = null, val chargeType: String = TaskClassification.UNCLASSIFIED)
     data class Statement(val kind: String, val status: String, val created: Long, val paid: String, val due: String,
         val events: List<Line>, val reference: String = "") {
         fun encode(): JSONObject = JSONObject(mapOf("kind" to kind, "status" to status, "created" to created,
@@ -36,7 +37,7 @@ internal object InvoiceStore {
         fun encode(): String = JSONObject(mapOf("number" to number, "created" to created, "style" to style, "currency" to currency, "digits" to digits,
             "company" to company, "companyContact" to companyContact, "customer" to customer, "customerContact" to customerContact,
             "job" to job, "period" to period, "basis" to basis, "header" to header, "footer" to footer, "total" to total, "email" to email,
-            "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount, "quantityUnits" to it.quantityUnits, "unitPriceMinor" to it.unitPriceMinor)) }),
+            "subject" to subject, "body" to body, "lines" to JSONArray(lines.map { JSONObject(mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount, "quantityUnits" to it.quantityUnits, "unitPriceMinor" to it.unitPriceMinor, "chargeType" to it.chargeType)) }),
             "subtotal" to subtotal, "taxRateUnits" to taxRateUnits, "taxAmount" to taxAmount, "statement" to statement?.encode(),
             "billingPolicy" to billingPolicy)).toString()
         companion object {
@@ -44,7 +45,7 @@ internal object InvoiceStore {
                 return Snapshot(v.getString("number"), v.getLong("created"), v.getString("style"), v.getString("currency"), v.getInt("digits"),
                     v.getString("company"), v.getString("companyContact"), v.getString("customer"), v.getString("customerContact"), v.getString("job"),
                     v.getString("period"), v.getString("basis"), v.getString("header"), v.getString("footer"), v.getString("total"), v.getString("email"),
-                    v.getString("subject"), v.getString("body"), (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount"), if (row.isNull("quantityUnits")) null else row.getString("quantityUnits"), if (row.isNull("unitPriceMinor")) null else row.getString("unitPriceMinor")) },
+                    v.getString("subject"), v.getString("body"), (0 until rows.length()).map { val row = rows.getJSONObject(it); Line(row.getString("title"), row.getString("detail"), row.getString("amount"), if (row.isNull("quantityUnits")) null else row.getString("quantityUnits"), if (row.isNull("unitPriceMinor")) null else row.getString("unitPriceMinor"), row.optString("chargeType", TaskClassification.UNCLASSIFIED)) },
                     if (v.isNull("subtotal")) null else v.getString("subtotal"),
                     if (v.isNull("taxRateUnits")) null else v.getInt("taxRateUnits"),
                     if (v.isNull("taxAmount")) null else v.getString("taxAmount"),
@@ -62,12 +63,12 @@ internal object InvoiceStore {
         return if (total.mode == "TASK") report.tasks.map { task ->
             val price = task.priceMinor?.takeIf { task.currency == total.currency }
             Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(it, digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
-                price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString())
+                price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString(), task.chargeType)
         } + listOfNotNull(total.minimumTaskAdjustmentMinor.takeIf { it.signum() > 0 }?.let { fee ->
             Line("Task-rate minimum fee", "Adjustment to the configured minimum invoice fee", amount(fee, digits))
         })
         else listOf(Line("Finalized work", "Actual work: ${duration(total.durationMillis)}\nBilled hours: ${total.billedHours ?: "0"}\n${total.billingRule ?: "Exact recorded time"} · ${total.hourlyMinor?.let { amount(it, digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
-            total.amountMinor?.let { amount(it, digits) }.orEmpty())) + report.intervals.map {
+            total.amountMinor?.let { amount(it, digits) }.orEmpty(), chargeType = TaskClassification.LABOR)) + report.intervals.map {
                 Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
             }
     }

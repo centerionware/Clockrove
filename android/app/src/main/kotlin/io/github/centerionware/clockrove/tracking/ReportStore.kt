@@ -19,7 +19,8 @@ internal object ReportStore {
     data class Excluded(val sessionId: String, val jobId: String, val start: Long, val end: Long?, val reason: String)
     data class Point(val id: String, val sessionId: String, val jobId: String, val jobName: String,
         val measured: Long, val latitude: Double, val longitude: Double, val accuracy: Double)
-    data class Task(val id: String, val jobId: String, val title: String, val completed: Long, val priceMinor: BigInteger?, val currency: String, val quantityUnits: Long = TaskQuantityStore.one)
+    data class Task(val id: String, val jobId: String, val title: String, val completed: Long, val priceMinor: BigInteger?, val currency: String,
+        val quantityUnits: Long = TaskQuantityStore.one, val chargeType: String = TaskClassification.UNCLASSIFIED)
     data class Total(val jobId: String, val jobName: String, val mode: String, val currency: String,
         val durationMillis: BigInteger, val hourlyMinor: BigInteger?, val amountMinor: BigInteger?, val missingPrices: Int,
         val billedHours: String? = null, val minimumTaskAdjustmentMinor: BigInteger = BigInteger.ZERO,
@@ -90,8 +91,8 @@ internal object ReportStore {
                     } }
                 }
             } }
-            db.rawQuery("SELECT c.id,c.title,c.completed_ms,CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(c.price_minor AS TEXT) END,c.currency,COALESCE(q.quantity_units,10000) FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id LEFT JOIN card_money m ON m.id=c.id WHERE c.job_id=? AND c.billable=1 AND c.completed_ms>=? AND c.completed_ms<? ORDER BY c.completed_ms,c.id",
-                arrayOf(id, first.toString(), end.toString())).use { rows -> while (rows.moveToNext()) tasks.add(Task(rows.getString(0), id, rows.getString(1), rows.getLong(2), if (rows.isNull(3)) null else MoneyMath.parse(rows.getString(3)), rows.getString(4), rows.getLong(5))) }
+            db.rawQuery("SELECT c.id,c.title,c.completed_ms,CASE WHEN m.id IS NOT NULL THEN m.minor_text ELSE CAST(c.price_minor AS TEXT) END,c.currency,COALESCE(q.quantity_units,10000),c.charge_type FROM kanban_cards c LEFT JOIN task_quantities q ON q.card_id=c.id LEFT JOIN card_money m ON m.id=c.id WHERE c.job_id=? AND c.billable=1 AND c.completed_ms>=? AND c.completed_ms<? ORDER BY c.completed_ms,c.id",
+                arrayOf(id, first.toString(), end.toString())).use { rows -> while (rows.moveToNext()) tasks.add(Task(rows.getString(0), id, rows.getString(1), rows.getLong(2), if (rows.isNull(3)) null else MoneyMath.parse(rows.getString(3)), rows.getString(4), rows.getLong(5), rows.getString(6))) }
         }
         val totals = jobs.map { job ->
             val duration = intervals.filter { it.jobId == job.settings.id }.fold(BigInteger.ZERO) { value, interval -> value.add(BigInteger.valueOf(interval.end - interval.start)) }
