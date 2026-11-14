@@ -22,9 +22,12 @@ void main() {
   test('payment input preserves extended totals and rejects excess currency precision', () {
     final wide = '1234567890' * 105;
     expect(parsePaymentMoney('$wide.01', 2), '${wide}01');
+    expect(parsePaymentMoney('.01', 2), '1');
+    expect(parsePaymentMoney('.1', 2), '10');
+    expect(money(parsePaymentMoney('.01', 2)!, 2), '0.01');
     expect(money('${wide}01', 2), '$wide.01');
     expect(() => parseMoney('$wide.01', 2), throwsFormatException);
-    for (final invalid in ['1.001', '1e3', '-1', 'NaN', 'Infinity', '1,00']) {
+    for (final invalid in ['.', '1.001', '1e3', '-1', 'NaN', 'Infinity', '1,00']) {
       expect(() => parsePaymentMoney(invalid, 2), throwsFormatException);
     }
   });

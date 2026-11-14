@@ -205,6 +205,8 @@ void main() {
   test('money parsing preserves exact values, blank and explicit zero', () {
     expect(parseMoney('', 2), isNull);
     expect(parseMoney('0', 2), '0');
+    expect(parseMoney('.01', 2), '1');
+    expect(money(parseMoney('.01', 2)!, 2), '0.01');
     expect(parseMoney('90071992547409.93', 2), '9007199254740993');
     expect(money('9007199254740993', 2), '90071992547409.93');
     expect(parseMoney('123', 0), '123');

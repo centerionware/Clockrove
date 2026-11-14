@@ -123,6 +123,17 @@ class TaskConversationDeviceTest {
         automation.waitForIdle(100, 1000)
     }
 
+    private fun swipePhotoViewer(left: Boolean) {
+        val root = automation.rootInActiveWindow ?: error("Photo viewer is not open")
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val y = bounds.centerY()
+        val startX = if (left) bounds.right - 100 else bounds.left + 100
+        val endX = if (left) bounds.left + 100 else bounds.right - 100
+        automation.executeShellCommand("input swipe $startX $y $endX $y 350").use {
+            ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+        }
+    }
+
     private fun scrollToStart() {
         repeat(8) {
             swipeContent(up = false)
@@ -237,15 +248,15 @@ class TaskConversationDeviceTest {
             hideKeyboard()
             capture("task-comment")
 
-            reveal("Choose photo")
-            click("Choose photo")
-            waitFor("Review photo")
+            reveal("Choose photos")
+            click("Choose photos")
+            waitFor("Review 2 photos")
             assertEquals("Gallery image must wait for explicit review", 0, attachmentCount())
             capture("task-gallery-review")
-            click("Attach photo")
+            click("Attach photos")
             val galleryDeadline = SystemClock.uptimeMillis() + 30000
-            while (attachmentCount() != 1 && SystemClock.uptimeMillis() < galleryDeadline) SystemClock.sleep(100)
-            assertEquals(1, attachmentCount())
+            while (attachmentCount() != 2 && SystemClock.uptimeMillis() < galleryDeadline) SystemClock.sleep(100)
+            assertEquals(2, attachmentCount())
             hideKeyboard()
             scrollToStart()
             waitFor("Task photo attachment")
@@ -257,12 +268,12 @@ class TaskConversationDeviceTest {
             click("Take photo")
             waitFor("Review photo")
             capture("task-camera-review")
-            assertEquals("Reviewing a camera photo must not save it yet", 1, attachmentCount())
+            assertEquals("Reviewing a camera photo must not save it yet", 2, attachmentCount())
             assertCameraTemporaryFilesWereRemoved()
             click("Attach photo")
             val attachDeadline = SystemClock.uptimeMillis() + 30000
-            while (attachmentCount() != 2 && SystemClock.uptimeMillis() < attachDeadline) SystemClock.sleep(100)
-            assertEquals(2, attachmentCount())
+            while (attachmentCount() != 3 && SystemClock.uptimeMillis() < attachDeadline) SystemClock.sleep(100)
+            assertEquals(3, attachmentCount())
             waitFor("Photo attached to this task.")
             assertCameraTemporaryFilesWereRemoved()
             scrollToStart()
@@ -274,12 +285,12 @@ class TaskConversationDeviceTest {
             reveal("Take photo for comment")
             click("Take photo for comment")
             waitFor("Review photo")
-            assertEquals(2, attachmentCount())
+            assertEquals(3, attachmentCount())
             assertCameraTemporaryFilesWereRemoved()
             click("Attach photo")
             val commentPhotoDeadline = SystemClock.uptimeMillis() + 30000
-            while (attachmentCount() != 3 && SystemClock.uptimeMillis() < commentPhotoDeadline) SystemClock.sleep(100)
-            assertEquals(3, attachmentCount())
+            while (attachmentCount() != 4 && SystemClock.uptimeMillis() < commentPhotoDeadline) SystemClock.sleep(100)
+            assertEquals(4, attachmentCount())
             waitFor("Photo attached to this comment.")
             assertCameraTemporaryFilesWereRemoved()
             val attachedToComment = SQLiteDatabase.openDatabase(
@@ -293,8 +304,13 @@ class TaskConversationDeviceTest {
             scrollToStart()
             reveal("Task photo attachment")
             click("Task photo attachment")
-            waitFor("Task photo")
+            waitFor("Photo 1 of 4")
             capture("task-photo-viewer")
+            swipePhotoViewer(left = true)
+            waitFor("Photo 2 of 4")
+            capture("task-photo-viewer-next")
+            swipePhotoViewer(left = false)
+            waitFor("Photo 1 of 4")
         } finally {
             instrumentation.runOnMainSync {
                 for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {

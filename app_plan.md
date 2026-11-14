@@ -44,6 +44,10 @@ amounts without writes, and preserve the entered draft. Never wrap, clamp or
 truncate an amount to fit a machine integer. Currency-boundary rounding is an
 explicit business rule, separate from numerical precision loss.
 
+For user-entered currency amounts, accept a leading-decimal shorthand such as
+`.01` as `0.01`. Normalize it before exact decimal parsing; never reject it as
+invalid syntax or route it through binary floating point.
+
 ### Next concrete action
 
 The quote baseline, final rendered documents, and invoice-style preview merged
@@ -209,12 +213,18 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
   show the captured image in a review screen with **Retake**, **Cancel** and
   **Attach photo**. Do not add the image to the task/comment until the user taps
   **Attach photo**; cancel/retake removes the temporary capture. Existing-image
-  selection also shows a review before import. Copy accepted images into
-  app-private storage, validate type/dimensions/size/count and total storage,
-  strip EXIF/location metadata, show previews and allow removal. Deleting a task
-  or comment deletes its owned images transactionally; templates never copy
-  comments or images. Include attachments in encrypted backup with strict
-  archive limits. No broad storage permission is required.
+  selection allows up to 10 photos per batch and shows every selected image in a
+  swipeable review before import. **Attach photos** stores the batch as one
+  transaction; a failure adds none of them. Source PNG/JPEG/WebP files may be up
+  to 50 MB and 250 megapixels, with each dimension bounded at 32,768 pixels.
+  Downsample and re-encode accepted images to metadata-free, private PNGs no
+  larger than 1,024 pixels on either edge and 5 MB each. Limit a batch to 30 MB
+  normalized, a task to 20 photos, and a job to 100 MB of photos. Show previews
+  and allow removal. Opening any photo shows all task and comment photos in
+  chronological order; swipe left for the next photo and right for the previous
+  one. Deleting a task or comment deletes its owned images transactionally;
+  templates never copy comments or images. Include attachments in encrypted
+  backup with strict archive limits. No broad storage permission is required.
 - Keep the Supplies toggle on task entry/edit as a charge classification. Full
   cost and tax-report behavior remains in section 3.5a and the lifecycle plan.
 
@@ -513,8 +523,10 @@ do not satisfy acceptance.
   jobs/tasks, worked time, completion, invoices or payments.
 - Add durable task comments and task/comment image attachments per section 3.4.
   Test adding, editing, deleting, empty/cancelled/error states, gallery selection,
-  camera capture, review acceptance, retake, cancel, EXIF removal, private URI
-  access, storage limits, parent deletion and migration/restore behavior.
+  multi-image selection and one-command atomic attachment, camera capture, review
+  acceptance, retake, cancel, EXIF removal, private URI access, expanded image
+  limits, previous/next full-screen photo swipes, parent deletion and
+  migration/restore behavior.
 - Repair every map entry point (site picker, current-location selection and
   report history) so it never becomes an unexplained white screen. When a site
   has no location, request permission/fix with a clear prompt and center on the
@@ -658,7 +670,7 @@ Account creation, owner credentials, concrete license review, and physical devic
 | GPS recording controls | Global default-on and per-job inherit/on/off behavior; ten-minute request target, five-minute ordinary persistence floor, session-boundary samples, and service reconciliation |
 | Widgets | Default and picker mode, New job last, missing default, stale state, running-other-job state, multiple widgets |
 | Boards | Column/card reorder, populated-column deletion, accessible moves, due dates across timezones |
-| Task comments/images | Comment add/edit/delete and ordering; gallery and camera-intent paths; review/attach, retake/cancel, private storage, EXIF removal, size/count limits and parent cleanup |
+| Task comments/images | Comment add/edit/delete and ordering; multi-image gallery batches and camera-intent paths; review/atomic attach, retake/cancel, private storage, EXIF removal, 50 MB/250 MP source limits, 5 MB normalized-image limit, 10-at-once/20-per-task/100 MB-per-job caps, ordered swipeable viewer and parent cleanup |
 | Quotes | Template selection creates editable lines; no required notes; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
 | Reports | Date/job filters match list/map/export; active/provisional exclusions explained; GPS points linked correctly |
 | CSV | Unicode, quotes, commas, multiline fields, spreadsheet formulas, exact durations and offset/timezone fields |
@@ -696,7 +708,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification and the report-map fix; Actions run `43581546961` passed the 49-sample map journey on API 24 and the captured screen shows loaded map tiles. API 35 was not reached because the later API-24 invoice journey could not return to `Job tax (%)`. The helper now scrolls until the visible `Billing basis` anchor; run `43583501631` failed compiling the helper due to a Boolean/Int argument mismatch, now corrected. Exact-head Actions verification is pending. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification, report-map fix, expanded multi-image attachment/viewer, and `.01` payment parsing. Run `43584358180` passed the 49-sample map journey on API 24, then stopped at the invoice billing scroll assertion; API 35 and later journeys did not run. Current helper scrolls until `Billing basis` is visible and starts swipes in the blank left gutter; exact-head Actions verification is pending. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2857,12 +2869,45 @@ state, and captures the screen. API-24 XML reports 24 tests, zero failures,
 errors or skips, including this journey. The captured screen was visually
 reviewed and shows OpenStreetMap tiles, the selected coordinate, attribution,
 and the external **Open map** action. A separate widget test covers tile-error
-fallback rendering. API 35 has not yet run: the earlier workflow stopped after
-the API-24 invoice journey failed to return to `Job tax (%)`. The helper now
-scrolls until the visible `Billing basis` anchor confirms the top section rather
-than using a fixed swipe count. The first exact-head run after that edit,
-`43583501631`, failed Android-test compilation because the new `waitFor` call
-passed an integer where its second parameter is Boolean; that argument has been
-removed. No device tests ran in that attempt; a fresh exact-head run is pending.
-The map fix is on the PR branch and not yet merged. No build, test, or formatter
-ran on the VM.
+fallback rendering. API 35 has not yet run: workflow `43584358180` passed the
+API-24 map journey, then the invoice journey failed to return to `Job tax (%)`.
+The helper scrolls until the visible `Billing basis` anchor confirms the top
+section and now starts swipes in the blank left gutter to avoid controls. The
+earlier exact-head run `43583501631` failed Android-test compilation because a
+`waitFor` call passed an integer where its second parameter is Boolean; that
+argument was removed. A fresh exact-head run is pending. The map fix is on the
+PR branch and not yet merged. No build, test, or formatter ran on the VM.
+
+### 2026-11-14 — larger task-photo imports and swipeable photo review
+
+Expanded company-logo and task-photo imports to 50 MB/250 MP, with source
+dimensions bounded at 32,768 px and decoding sampled before large bitmaps are
+allocated. Normalized private PNGs may be up to 5 MB. Task photos now permit 20
+per task, 30 MB per selected batch and 100 MB per job; schema v13 widens the old
+attachment constraint while preserving saved images. The existing-image picker
+allows up to 10 images, reviews the entire selection in a horizontal carousel,
+and attaches the set in one transaction. Full-screen viewing starts at the
+chosen photo and swipes left to the next and right to the previous across
+task-level and comment-level images in timestamp order. Native migration/batch
+tests, a Flutter multi-select/review/swipe test, and an actual Android
+multi-selection/viewer journey are added but have not run yet. Latest Actions
+run [43584358180](https://github.com/centerionware/Clockrove/actions/runs/43584358180)
+passed the 49-sample map journey on API 24, then failed in the separate billing
+test because its return-to-top swipe could not expose `Billing basis`; the
+updated helper swipes in the blank left gutter. API 35 was not reached. The new
+image and helper changes await a fresh exact-head Actions run; no VM build,
+test or formatter ran.
+
+### 2026-11-14 — leading-decimal money input correction
+
+The owner reported `.01` being rejected when recording an invoice payment even
+though `0.01` succeeded. The shared currency parser required an integer part;
+accepting `.01` as `0.01` fixes that input validation bug while preserving exact
+minor-unit conversion and existing currency-precision checks. Regression tests
+cover the parser and full payment form, asserting one cent persists as minor-unit
+string `1`. These tests are pending the next GitHub Actions run; no local tests
+or builds were run.
+
+The actual API-24/35 Android payment journey also enters `.01`, captures the
+form, and verifies the retained payment is exactly one minor unit. These device
+assertions await GitHub Actions.

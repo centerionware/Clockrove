@@ -113,7 +113,11 @@ class _BusinessCommandState extends State<BusinessCommand>
       'Choose a valid photo within the displayed image limits.',
     'TASK_IMAGE_LIMIT' =>
       'This task already has 20 photos. Remove an image before adding another.',
-    'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 25 MB task-photo limit. Remove an image before adding another.',
+    'TASK_IMAGE_SELECTION_LIMIT' =>
+      'Choose up to 10 photos at a time. You can add another group afterward.',
+    'TASK_IMAGE_BATCH_STORAGE_LIMIT' =>
+      'This selection is over 30 MB after compression. Choose fewer photos at a time.',
+    'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 100 MB task-photo limit. Remove an image before adding another.',
     'TASK_IMAGE_UNAVAILABLE' =>
       'This photo was removed. Refresh the task before continuing.',
     'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',

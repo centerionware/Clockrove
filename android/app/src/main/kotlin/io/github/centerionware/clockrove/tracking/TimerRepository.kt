@@ -420,6 +420,15 @@ class TimerRepository internal constructor(context: Context,
         }
     }
     @Synchronized
+    internal fun attachTaskImages(id: String, version: Long, jobId: String, taskId: String, commentId: String?, attachments: List<Pair<String, ByteArray>>): Outcome {
+        val digests = attachments.map { (attachmentId, image) ->
+            listOf(attachmentId, java.security.MessageDigest.getInstance("SHA-256").digest(image).joinToString("") { "%02x".format(it) })
+        }
+        return boardChange(id, version, "TASK_IMAGES_ADD", listOf(jobId, taskId, commentId, digests)) {
+            TaskConversationStore.addAttachments(it, jobId, taskId, commentId, attachments, wallClock())
+        }
+    }
+    @Synchronized
     internal fun removeTaskImage(id: String, version: Long, jobId: String, taskId: String, attachmentId: String): Outcome =
         boardChange(id, version, "TASK_IMAGE_REMOVE", listOf(jobId, taskId, attachmentId)) {
             TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId)
@@ -1023,7 +1032,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 12) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 13) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1054,7 +1063,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..11 && newVersion == 12) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..12 && newVersion == 13) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1069,6 +1078,7 @@ class TimerRepository internal constructor(context: Context,
             }
             if (oldVersion < 11) InvoiceBillingPolicyStore.install(db, now())
             if (oldVersion < 12) TaskClassificationStore.install(db, now())
+            if (oldVersion < 13) TaskConversationStore.migrateImageByteLimit(db)
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }

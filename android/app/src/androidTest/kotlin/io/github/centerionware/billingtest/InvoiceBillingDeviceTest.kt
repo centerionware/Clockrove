@@ -127,7 +127,9 @@ class InvoiceBillingDeviceTest {
         val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
         val top = bounds.top + 220
         if (bottom - top < 300) return
-        val x = bounds.centerX().toFloat()
+        // Start in the blank left gutter so dropdowns and text fields do not
+        // capture the return-to-top swipe.
+        val x = (bounds.left + 32).toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()

@@ -15,6 +15,7 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.style.StyleSpan
 import io.github.centerionware.clockrove.tracking.InvoiceStore
+import io.github.centerionware.clockrove.tracking.ImageLimits
 import io.github.centerionware.clockrove.tracking.TaxRate
 import java.io.ByteArrayOutputStream
 
@@ -23,7 +24,7 @@ internal object InvoicePdf {
     fun generate(snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE"): ByteArray {
         require(documentKind in setOf("INVOICE", "QUOTE"))
         val logo = logoBytes?.let {
-            require(it.size <= 2_000_000) { "INVALID_LOGO" }
+            require(it.size <= ImageLimits.NORMALIZED_BYTES) { "INVALID_LOGO" }
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(it, 0, it.size, options)
             require(options.outWidth in 1..2048 && options.outHeight in 1..2048) { "INVALID_LOGO" }

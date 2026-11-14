@@ -244,6 +244,26 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('payment form accepts .01 and records exactly one cent', (
+    tester,
+  ) async {
+    final api = _Payments();
+    await _show(
+      tester,
+      api,
+      const InvoicePaymentEditor(invoiceId: 'invoice'),
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Payment amount (USD)'),
+      '.01',
+    );
+    await _reveal(tester, 'Confirm payment');
+    await tester.tap(find.text('Confirm payment'));
+    await tester.pumpAndSettle();
+    expect(api.calls.single.draft.amount, '1');
+    expect(find.text('Open'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'mark paid proposes remaining balance and unknown reply retries the same intent after committed refresh',
     (tester) async {

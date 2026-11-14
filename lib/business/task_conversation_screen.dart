@@ -58,9 +58,9 @@ class _TaskConversationScreenState
   }) async {
     if (conversation.archived) return;
     while (mounted) {
-      Uint8List? image;
+      List<Uint8List>? images;
       try {
-        image = await _photoChannel.invokeMethod<Uint8List>(
+        images = await _photoChannel.invokeListMethod<Uint8List>(
           camera ? 'captureTaskPhoto' : 'pickTaskPhoto',
         );
       } on PlatformException catch (error) {
@@ -71,53 +71,83 @@ class _TaskConversationScreenState
         }
         return;
       }
-      if (!mounted || image == null) return;
+      if (!mounted || images == null || images.isEmpty) return;
+      final selectedImages = images;
+      var reviewIndex = 0;
+      final reviewController = PageController();
       final decision = await showDialog<_PhotoReviewResult>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Review photo'),
-          content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(dialogContext).height * .55,
-              maxWidth: 520,
-            ),
-            child: Image.memory(image!, fit: BoxFit.contain),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, _PhotoReviewResult.cancelled),
-              child: const Text('Cancel'),
-            ),
-            if (camera)
-              TextButton.icon(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, _PhotoReviewResult.retake),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retake'),
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(selectedImages.length == 1 ? 'Review photo' : 'Review ${selectedImages.length} photos'),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(dialogContext).height * .55,
+                maxWidth: 520,
               ),
-            BusinessCommand(
-              label: 'Attach photo',
-              create: () {
-                final id = newBusinessId();
-                final attachmentId = newBusinessId();
-                final api = ref.read(businessApiProvider);
-                return () => api.attachTaskImage(
-                  id,
-                  conversation,
-                  attachmentId,
-                  commentId,
-                  image!,
-                );
-              },
-              onCommitted: () {
-                Navigator.pop(dialogContext, _PhotoReviewResult.attached);
-              },
+              child: SizedBox(
+                height: MediaQuery.sizeOf(dialogContext).height * .48,
+                width: 480,
+                child: Column(
+                  children: [
+                    if (selectedImages.length > 1) ...[
+                      Text('Photo ${reviewIndex + 1} of ${selectedImages.length}'),
+                      const SizedBox(height: 8),
+                    ],
+                    Expanded(
+                      child: PageView.builder(
+                        controller: reviewController,
+                        itemCount: selectedImages.length,
+                        onPageChanged: (index) =>
+                            setDialogState(() => reviewIndex = index),
+                        itemBuilder: (context, index) => Image.memory(
+                          selectedImages[index],
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, _PhotoReviewResult.cancelled),
+                child: const Text('Cancel'),
+              ),
+              if (camera)
+                TextButton.icon(
+                  onPressed: () =>
+                      Navigator.pop(dialogContext, _PhotoReviewResult.retake),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retake'),
+                ),
+              BusinessCommand(
+                label: selectedImages.length == 1 ? 'Attach photo' : 'Attach photos',
+                create: () {
+                  final id = newBusinessId();
+                  final attachments = [
+                    for (final image in selectedImages) MapEntry(newBusinessId(), image),
+                  ];
+                  final api = ref.read(businessApiProvider);
+                  return () => api.attachTaskImages(
+                    id,
+                    conversation,
+                    attachments,
+                    commentId,
+                  );
+                },
+                onCommitted: () {
+                  Navigator.pop(dialogContext, _PhotoReviewResult.attached);
+                },
+              ),
+            ],
+          ),
         ),
       );
+      reviewController.dispose();
       if (decision == _PhotoReviewResult.retake && camera) continue;
       if (decision == _PhotoReviewResult.attached && mounted) {
         // Dismissing the review route can restore focus to the comment editor.
@@ -128,9 +158,7 @@ class _TaskConversationScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              commentId == null
-                  ? 'Photo attached to this task.'
-                  : 'Photo attached to this comment.',
+              '${selectedImages.length == 1 ? 'Photo' : '${selectedImages.length} photos'} attached to this ${commentId == null ? 'task' : 'comment'}.',
             ),
           ),
         );
@@ -139,21 +167,27 @@ class _TaskConversationScreenState
     }
   }
 
-  Future<void> _viewPhoto(TaskAttachmentInfo attachment) async {
-    final image = await ref
-        .read(businessApiProvider)
-        .taskAttachment(attachment.id);
-    if (!mounted) return;
-    if (image == null) {
-      setState(
-        () => _notice =
-            'This attachment is no longer available. Refresh the task.',
-      );
-      return;
-    }
+  Future<void> _viewPhoto(
+    TaskConversation conversation,
+    TaskAttachmentInfo attachment,
+  ) async {
+    final related = <TaskAttachmentInfo>[
+      ...conversation.taskAttachments,
+      for (final comment in conversation.comments) ...comment.attachments,
+    ]..sort((left, right) {
+      final byTime = left.createdMillis.compareTo(right.createdMillis);
+      return byTime != 0 ? byTime : left.id.compareTo(right.id);
+    });
+    final initialIndex = related.indexWhere((item) => item.id == attachment.id);
+    if (!mounted || initialIndex < 0) return;
     await Navigator.push<void>(
       context,
-      MaterialPageRoute<void>(builder: (_) => _TaskPhotoViewer(image: image)),
+      MaterialPageRoute<void>(
+        builder: (_) => _TaskPhotoViewer(
+          attachments: related,
+          initialIndex: initialIndex,
+        ),
+      ),
     );
   }
 
@@ -182,7 +216,7 @@ class _TaskConversationScreenState
       for (final attachment in attachments)
         _TaskAttachmentThumb(
           attachment: attachment,
-          onTap: () => _viewPhoto(attachment),
+          onTap: () => _viewPhoto(conversation, attachment),
           onRemove: conversation.archived
               ? null
               : () => _confirmRemovePhoto(conversation, attachment),
@@ -306,7 +340,7 @@ class _TaskConversationScreenState
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: false),
                     icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Choose photo'),
+                    label: const Text('Choose photos'),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: true),
@@ -379,7 +413,7 @@ class _TaskConversationScreenState
                                 camera: false,
                               ),
                               icon: const Icon(Icons.photo_library_outlined),
-                              label: const Text('Choose photo for comment'),
+                              label: const Text('Choose photos for comment'),
                             ),
                             TextButton.icon(
                               onPressed: () => _choosePhoto(
@@ -477,16 +511,83 @@ class _TaskConversationScreenState
   );
 }
 
-class _TaskPhotoViewer extends StatelessWidget {
-  const _TaskPhotoViewer({required this.image});
-  final Uint8List image;
+class _TaskPhotoViewer extends ConsumerStatefulWidget {
+  const _TaskPhotoViewer({required this.attachments, required this.initialIndex});
+  final List<TaskAttachmentInfo> attachments;
+  final int initialIndex;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Task photo')),
-    body: Center(
-      child: InteractiveViewer(child: Image.memory(image, fit: BoxFit.contain)),
-    ),
+  ConsumerState<_TaskPhotoViewer> createState() => _TaskPhotoViewerState();
+}
+
+class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
+  late final PageController _controller;
+  final Map<String, Future<Uint8List?>> _images = {};
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialIndex;
+    _controller = PageController(initialPage: _index);
+  }
+
+  Future<Uint8List?> _load(String id) => _images.putIfAbsent(
+    id,
+    () => ref.read(businessApiProvider).taskAttachment(id),
   );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = widget.attachments.length;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(count == 1 ? 'Task photo' : 'Photo ${_index + 1} of $count'),
+      ),
+      body: PageView.builder(
+        controller: _controller,
+        itemCount: count,
+        onPageChanged: (index) => setState(() => _index = index),
+        itemBuilder: (context, index) {
+          final attachment = widget.attachments[index];
+          return FutureBuilder<Uint8List?>(
+            future: _load(attachment.id),
+            builder: (context, snapshot) {
+              if (snapshot.hasError || (snapshot.hasData && snapshot.data == null)) {
+                return const Center(
+                  child: Text(
+                    'This photo is no longer available.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+              return Center(
+                child: Semantics(
+                  image: true,
+                  label: 'Task photo ${index + 1} of $count',
+                  child: Image.memory(snapshot.data!, fit: BoxFit.contain),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _TaskAttachmentThumb extends ConsumerWidget {

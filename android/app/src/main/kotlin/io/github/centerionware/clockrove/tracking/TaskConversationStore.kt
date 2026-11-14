@@ -6,9 +6,9 @@ import java.util.UUID
 
 /** Local comments and normalized private task photos. All writes run in the timer transaction. */
 internal object TaskConversationStore {
-    private const val MAX_IMAGE_BYTES = 2_000_000
-    private const val MAX_IMAGES_PER_TASK = 20
-    private const val MAX_IMAGE_BYTES_PER_JOB = 25_000_000L
+    private const val MAX_IMAGE_BYTES = ImageLimits.NORMALIZED_BYTES
+    private const val MAX_IMAGES_PER_TASK = ImageLimits.TASK_IMAGES_PER_TASK
+    private const val MAX_IMAGE_BYTES_PER_JOB = ImageLimits.TASK_IMAGE_BYTES_PER_JOB
     private val id = Regex("[A-Za-z0-9_-]{1,128}")
 
     data class AttachmentInfo(val id: String, val commentId: String?, val createdMillis: Long, val bytes: Int)
@@ -24,8 +24,21 @@ internal object TaskConversationStore {
         db.execSQL("CREATE INDEX task_comments_order ON task_comments(task_id,created_ms,id)")
         db.execSQL("CREATE TABLE task_comment_events(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,comment_id TEXT NOT NULL,action TEXT NOT NULL CHECK(action IN('ADDED','EDITED','DELETED')),recorded_ms INTEGER NOT NULL)")
         db.execSQL("CREATE INDEX task_comment_events_order ON task_comment_events(task_id,recorded_ms,id)")
-        db.execSQL("CREATE TABLE task_attachments(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,comment_id TEXT REFERENCES task_comments(id) ON DELETE CASCADE,created_ms INTEGER NOT NULL,mime TEXT NOT NULL CHECK(mime='image/png'),data BLOB NOT NULL CHECK(length(data) BETWEEN 1 AND $MAX_IMAGE_BYTES))")
+        createAttachmentsTable(db, "task_attachments")
         db.execSQL("CREATE INDEX task_attachments_task ON task_attachments(task_id,created_ms,id)")
+    }
+
+    /** Rebuild the old size-constrained table while retaining every existing attachment. */
+    fun migrateImageByteLimit(db: SQLiteDatabase) {
+        createAttachmentsTable(db, "task_attachments_expanded")
+        db.execSQL("INSERT INTO task_attachments_expanded(id,task_id,comment_id,created_ms,mime,data) SELECT id,task_id,comment_id,created_ms,mime,data FROM task_attachments")
+        db.execSQL("DROP TABLE task_attachments")
+        db.execSQL("ALTER TABLE task_attachments_expanded RENAME TO task_attachments")
+        db.execSQL("CREATE INDEX task_attachments_task ON task_attachments(task_id,created_ms,id)")
+    }
+
+    private fun createAttachmentsTable(db: SQLiteDatabase, table: String) {
+        db.execSQL("CREATE TABLE $table(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,comment_id TEXT REFERENCES task_comments(id) ON DELETE CASCADE,created_ms INTEGER NOT NULL,mime TEXT NOT NULL CHECK(mime='image/png'),data BLOB NOT NULL CHECK(length(data) BETWEEN 1 AND $MAX_IMAGE_BYTES))")
     }
 
     private fun exists(db: SQLiteDatabase, jobId: String, taskId: String, editable: Boolean): Boolean {
@@ -94,19 +107,34 @@ internal object TaskConversationStore {
     }
 
     fun addAttachment(db: SQLiteDatabase, jobId: String, taskId: String, commentId: String?, attachmentId: String, image: ByteArray, at: Long): String? {
-        if (!id.matches(attachmentId) || at < 0 || image.size !in 1..MAX_IMAGE_BYTES ||
-            image.size < 8 || !image.copyOfRange(0, 8).contentEquals(byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10))) return "INVALID_TASK_IMAGE"
+        return addAttachments(db, jobId, taskId, commentId, listOf(attachmentId to image), at)
+    }
+
+    fun addAttachments(db: SQLiteDatabase, jobId: String, taskId: String, commentId: String?, attachments: List<Pair<String, ByteArray>>, at: Long): String? {
+        if (attachments.isEmpty()) return "INVALID_TASK_IMAGE"
+        if (attachments.size > ImageLimits.TASK_IMAGES_PER_SELECTION) return "TASK_IMAGE_SELECTION_LIMIT"
+        if (at < 0 || attachments.any { (attachmentId, image) ->
+                !id.matches(attachmentId) || image.size !in 1..MAX_IMAGE_BYTES || image.size < 8 ||
+                    !image.copyOfRange(0, 8).contentEquals(byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10))
+            }) return "INVALID_TASK_IMAGE"
+        if (attachments.map { it.first }.toSet().size != attachments.size) return "TASK_IMAGE_ID_EXISTS"
         if (!exists(db, jobId, taskId, editable = true)) return "TASK_UNAVAILABLE"
         if (commentId != null && db.rawQuery("SELECT id FROM task_comments WHERE id=? AND task_id=?", arrayOf(commentId, taskId)).use { !it.moveToFirst() }) return "TASK_COMMENT_UNAVAILABLE"
-        if (db.rawQuery("SELECT id FROM task_attachments WHERE id=?", arrayOf(attachmentId)).use { it.moveToFirst() }) return "TASK_IMAGE_ID_EXISTS"
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(image, 0, image.size, bounds)
-        if (bounds.outWidth !in 1..1024 || bounds.outHeight !in 1..1024 || bounds.outWidth.toLong() * bounds.outHeight > 1_048_576) return "INVALID_TASK_IMAGE"
+        for ((attachmentId, image) in attachments) {
+            if (db.rawQuery("SELECT id FROM task_attachments WHERE id=?", arrayOf(attachmentId)).use { it.moveToFirst() }) return "TASK_IMAGE_ID_EXISTS"
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(image, 0, image.size, bounds)
+            if (bounds.outWidth !in 1..1024 || bounds.outHeight !in 1..1024 || bounds.outWidth.toLong() * bounds.outHeight > 1_048_576) return "INVALID_TASK_IMAGE"
+        }
         val count = db.rawQuery("SELECT COUNT(*) FROM task_attachments WHERE task_id=?", arrayOf(taskId)).use { it.moveToFirst(); it.getInt(0) }
-        if (count >= MAX_IMAGES_PER_TASK) return "TASK_IMAGE_LIMIT"
+        if (count + attachments.size > MAX_IMAGES_PER_TASK) return "TASK_IMAGE_LIMIT"
+        val batchBytes = attachments.sumOf { it.second.size.toLong() }
+        if (batchBytes > ImageLimits.TASK_IMAGE_BATCH_BYTES) return "TASK_IMAGE_BATCH_STORAGE_LIMIT"
         val jobBytes = db.rawQuery("SELECT COALESCE(SUM(length(a.data)),0) FROM task_attachments a JOIN kanban_cards c ON c.id=a.task_id WHERE c.job_id=?", arrayOf(jobId)).use { it.moveToFirst(); it.getLong(0) }
-        if (jobBytes + image.size > MAX_IMAGE_BYTES_PER_JOB) return "TASK_IMAGE_STORAGE_LIMIT"
-        db.execSQL("INSERT INTO task_attachments(id,task_id,comment_id,created_ms,mime,data) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(attachmentId, taskId, commentId, at, "image/png", image))
+        if (jobBytes + batchBytes > MAX_IMAGE_BYTES_PER_JOB) return "TASK_IMAGE_STORAGE_LIMIT"
+        attachments.forEachIndexed { index, (attachmentId, image) ->
+            db.execSQL("INSERT INTO task_attachments(id,task_id,comment_id,created_ms,mime,data) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(attachmentId, taskId, commentId, Math.addExact(at, index.toLong()), "image/png", image))
+        }
         return null
     }
 

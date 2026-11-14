@@ -42,7 +42,12 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         fun int(key: String): Int { val v = integer(key); require(v in Int.MIN_VALUE..Int.MAX_VALUE); return v.toInt() }
         fun bool(key: String) = requireNotNull(value[key] as? Boolean)
         fun nullableBool(key: String): Boolean? { val v = value[key]; require(v == null || v is Boolean); return v as Boolean? }
-        fun bytes(key: String): ByteArray = requireNotNull(value[key] as? ByteArray).also { require(it.size in 1..2_000_000) }
+        fun bytes(key: String): ByteArray = requireNotNull(value[key] as? ByteArray).also { require(it.size in 1..ImageLimits.NORMALIZED_BYTES) }
+        fun taskImages(key: String): List<Pair<String, ByteArray>> {
+            val rows = requireNotNull(value[key] as? List<*>)
+            require(rows.size in 1..ImageLimits.TASK_IMAGES_PER_SELECTION)
+            return rows.map { raw -> Input(requireNotNull(raw as? Map<*, *>)).let { it.string("attachmentId") to it.bytes("image") } }
+        }
         fun money(key: String): java.math.BigInteger? = nullable(key)?.let(MoneyMath::parse)
         fun quantity(): Long = if (!value.containsKey("quantityUnits")) TaskQuantityStore.one else requireNotNull(money("quantityUnits")).let { require(it.signum() > 0 && it <= java.math.BigInteger.valueOf(Long.MAX_VALUE)); it.toLong() }
         fun strings(key: String): List<String> = requireNotNull(value[key] as? List<*>).map { requireNotNull(it as? String) }
@@ -189,7 +194,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "effectiveLocationRecording" to repository.locationRecordingEnabled(s.job.settings.id)) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice", "saveTaskComment", "removeTaskComment", "attachTaskImage", "removeTaskImage")
+        val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice", "saveTaskComment", "removeTaskComment", "attachTaskImage", "attachTaskImages", "removeTaskImage")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -241,6 +246,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "saveTaskComment" -> repository.saveTaskComment(id, version, v.string("jobId"), v.string("taskId"), v.string("commentId"), v.string("body"))
             "removeTaskComment" -> repository.removeTaskComment(id, version, v.string("jobId"), v.string("taskId"), v.string("commentId"))
             "attachTaskImage" -> repository.attachTaskImage(id, version, v.string("jobId"), v.string("taskId"), v.nullable("commentId"), v.string("attachmentId"), v.bytes("image"))
+            "attachTaskImages" -> repository.attachTaskImages(id, version, v.string("jobId"), v.string("taskId"), v.nullable("commentId"), v.taskImages("images"))
             "removeTaskImage" -> repository.removeTaskImage(id, version, v.string("jobId"), v.string("taskId"), v.string("attachmentId"))
             "copyTemplate" -> repository.copyTaskTemplate(id, version, v.string("templateId"), v.string("cardId"), v.string("jobId"), v.string("columnId"), v.bool("copyPrice"))
             "removeTemplate" -> repository.removeTaskTemplate(id, version, v.string("templateId"))

@@ -22,11 +22,14 @@ String? parsePaymentMoney(String input, int digits) =>
     _parseMoney(input, digits, 4096);
 
 String? _parseMoney(String input, int digits, int maxDigits) {
-  final value = input.trim();
-  if (value.isEmpty) return null;
-  if (value.length > maxDigits + 5) {
+  final entered = input.trim();
+  if (entered.isEmpty) return null;
+  if (entered.length > maxDigits + 5) {
     throw const FormatException('Amount is too long.');
   }
+  // Accept the common currency shorthand `.01` as `0.01`, without changing
+  // the decimal parser or passing the amount through floating-point math.
+  final value = entered.startsWith('.') ? '0$entered' : entered;
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
     throw const FormatException(
       'Enter a positive decimal amount, or leave blank.',
@@ -408,6 +411,20 @@ class BusinessApi {
     'attachmentId': attachmentId,
     'commentId': commentId,
     'image': bytes,
+  });
+  Future<TimerOutcome> attachTaskImages(
+    String commandId,
+    TaskConversation conversation,
+    List<MapEntry<String, Uint8List>> images,
+    String? commentId,
+  ) => _change('attachTaskImages', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'commentId': commentId,
+    'images': [
+      for (final image in images)
+        {'attachmentId': image.key, 'image': image.value},
+    ],
   });
   Future<TimerOutcome> removeTaskImage(
     String commandId,
