@@ -3682,5 +3682,9 @@ base device cases, but the extended billing journey intermittently failed to
 focus the visible **Default tax (%)** field through accessibility
 `ACTION_CLICK`. The captured screen showed the field in the viewport without an
 open keyboard. The test now retries with an actual touch at the field's
-accessible screen bounds when that semantic click does not open the IME. This
-remains a test-harness stabilization; exact-head Actions validation is pending.
+accessible screen bounds when that semantic click does not open the IME. The
+next API-24 attempt passed the default-tax input and reached the task quantity
+field, but the platform reported `ACTION_SET_TEXT` success while retaining
+`12` instead of the requested `26`. The helper now selects the existing text and
+types through the active IME if the field value does not change. This remains a
+test-harness stabilization; exact-head Actions validation is pending.

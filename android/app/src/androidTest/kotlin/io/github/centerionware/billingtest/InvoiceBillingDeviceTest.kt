@@ -235,6 +235,25 @@ class InvoiceBillingDeviceTest {
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
+        val setTextDeadline = SystemClock.uptimeMillis() + 2000
+        while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
+            SystemClock.sleep(100)
+        }
+        // Some API-24 Flutter fields report ACTION_SET_TEXT success without
+        // replacing the current value. Select the old text and type through
+        // the active IME before treating the field as failed.
+        if (find(label, true)?.text?.toString() != value) {
+            val current = waitFor(label, true)
+            val length = current.text?.length ?: 0
+            assertTrue("Could not select existing text for $label", current.performAction(
+                AccessibilityNodeInfo.ACTION_SET_SELECTION,
+                Bundle().apply {
+                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
+                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
+                },
+            ))
+            instrumentation.sendStringSync(value)
+        }
         until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }
         hideKeyboard()
     }
