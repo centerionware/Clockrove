@@ -696,7 +696,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification and the report-map fix; Actions run `43581546961` passed the 49-sample map journey on API 24 and the captured screen shows loaded map tiles. API 35 was not reached because the API-24 invoice journey failed to return to `Job tax (%)` after validation; its helper now scrolls until the visible `Billing basis` anchor confirms the top section. Exact-head Actions verification is pending. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification and the report-map fix; Actions run `43581546961` passed the 49-sample map journey on API 24 and the captured screen shows loaded map tiles. API 35 was not reached because the later API-24 invoice journey could not return to `Job tax (%)`. The helper now scrolls until the visible `Billing basis` anchor; run `43583501631` failed compiling the helper due to a Boolean/Int argument mismatch, now corrected. Exact-head Actions verification is pending. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2857,9 +2857,12 @@ state, and captures the screen. API-24 XML reports 24 tests, zero failures,
 errors or skips, including this journey. The captured screen was visually
 reviewed and shows OpenStreetMap tiles, the selected coordinate, attribution,
 and the external **Open map** action. A separate widget test covers tile-error
-fallback rendering. API 35 has not yet run: the same workflow stops earlier at
-an API-24 invoice-billing UI assertion for `Job tax (%)`. The helper now scrolls
-until the visible `Billing basis` anchor confirms the top section instead of
-using a fixed swipe count; exact-head Actions verification is pending. The map
-fix is on the PR branch and not yet merged. No build, test, or formatter ran on
-the VM.
+fallback rendering. API 35 has not yet run: the earlier workflow stopped after
+the API-24 invoice journey failed to return to `Job tax (%)`. The helper now
+scrolls until the visible `Billing basis` anchor confirms the top section rather
+than using a fixed swipe count. The first exact-head run after that edit,
+`43583501631`, failed Android-test compilation because the new `waitFor` call
+passed an integer where its second parameter is Boolean; that argument has been
+removed. No device tests ran in that attempt; a fresh exact-head run is pending.
+The map fix is on the PR branch and not yet merged. No build, test, or formatter
+ran on the VM.

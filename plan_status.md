@@ -1,12 +1,16 @@
 # Clockrove task status
 
 Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
-Statuses describe evidence, not intent. M6.5 source and CI acceptance are
-complete; the internal Play upload was accepted, with owner-device map, GPS and
-camera checks still pending. PR #44's exact-head Actions passed, but its main
-validation later failed an API-24 job-tax scroll assertion and Play delivery was
-skipped. The scroll helper is being corrected and needs a fresh Actions pass.
-M6.6 business features and M7 backup remain before
+Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
+slice passed API-24/35 CI and its internal Play upload was accepted; the newly
+requested 49-sample report-map regression is now verified on API 24, with API 35
+pending. Owner-device map, GPS and camera checks remain pending. PR #44's
+exact-head Actions passed, but merged-main validation later failed an API-24
+job-tax scroll assertion and Play delivery was skipped. PR #45 now scrolls to a
+visible top-section anchor. Exact-head run `43583501631` failed Android-test
+compilation because a helper call passed an integer where its second argument
+is Boolean; the call has been corrected and needs a fresh Actions run. M6.6 business
+features and M7 backup remain before
 M7.6 (whole-app UI overhaul and exhaustive E2E/screenshots), which must pass
 before closed testing. iOS and future service remain deferred.
 
@@ -47,7 +51,7 @@ before closed testing. iOS and future service remain deferred.
 | Follow-on: quotes and invoice detail | Merged #39; main validation passed and internal delivery accepted | PR exact-head run 43381832106 and main run 43384059350 passed the actual quote journey and 30 API-24/35 device tests each with zero failures/errors/skips. Keyboard-closed assertion passed before recording the customer decision. Play run 43385810795 accepted internal.29.1 / version code 216718138; physical install and tester availability remain separate. |
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
 | PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
-| M6.5 quote usability, task comments/images, map and GPS controls | API-24/35 emulator journeys pass; internal upload accepted; owner-device map/GPS/camera evidence pending | Exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed all checks. Downloaded device XML reports 32 actual Android tests on each API (23 base, 1 billing, 5 immutable copies, 1 payment, 1 quote and 1 task-media), all zero failures/errors/skips. Reviewed API-24/35 screenshots: camera review, task attachment, comment-owned attachment and correct destination-specific confirmation. The non-exported synthetic camera fixture is instrumentation-only and absent from release builds. Internal delivery run [43500590080](https://github.com/centerionware/Clockrove/actions/runs/43500590080) successfully uploaded `0.1.0-internal.31.1` / version code `216764535`; review approval and device availability are separate. Physical map rendering, GPS sampling and real-camera acceptance remain pending; no VM build/test/formatter. |
+| M6.5 quote usability, task comments/images, map and GPS controls | Core quote/task-media/GPS CI passed; 49-sample report-map follow-up partially verified; owner-device evidence pending | Exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed all checks. XML reports 32 actual Android tests on each API, including quote and task-media, with zero failures/errors/skips; reviewed camera-review, task/comment attachment screenshots. Internal delivery [43500590080](https://github.com/centerionware/Clockrove/actions/runs/43500590080) accepted `0.1.0-internal.31.1` / `216764535`. The later report-map regression test with 49 persisted samples passed on API 24 in run [43581546961](https://github.com/centerionware/Clockrove/actions/runs/43581546961); its screenshot shows loaded OSM tiles and recorded point. API 35 was not reached because the following API-24 billing test could not return to Job tax. PR #45 helper now waits for the visible Billing basis anchor. Exact-head run [43583501631](https://github.com/centerionware/Clockrove/actions/runs/43583501631) failed compiling the helper due to an integer passed where its Boolean parameter was expected; the call has been corrected, but no device tests ran. Owner-device map/GPS/camera evidence remains pending; no VM build/test/formatter. |
 | M6.6 remaining requested business features | Invoice-policy slice merged #44; main run failed, delivery skipped; classification source in progress | Hourly minimum/rounding and task minimum fee are implemented in PR #44. Exact head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed formatting, analysis, Flutter behavior, Android build, 587 native tests and 32 actual Android tests on each API, zero failures/errors/skips. PR #44 squash-merged as `48fe0f8`. Main run [43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359) failed the API-24 actual billing journey because the test could not return to the job-tax field; its screenshot shows Job settings and no application crash. Play delivery [43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279) was skipped. The test helper now uses physical swipes; new supplies-classification migration/task/template/invoice coverage is source-only until Actions runs. Actual cost ledger, tax-preparation reports and secure map-provider settings remain; M6.6 is not complete. |
 | Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Merged #44; PR exact-head passed; main validation unresolved | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times and reports remain unchanged. PR head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed all 32 actual Android tests on each API 24 and 35 and all 587 native tests. This run passes the location toggle off/on/save/reopen journey; API-24/35 switch-state captures were reviewed. Main run [43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359) later failed at the invalid-tax-field scroll assertion, and Play delivery [43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279) was skipped. The updated return-to-top gesture requires a new Actions result. No VM build/test/formatter. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
@@ -3267,9 +3271,13 @@ persisted 49 synthetic GPS samples, navigated through job → report → map, an
 passed. Its exported XML reports 24 API-24 tests with zero failures, errors or
 skips. The captured screen was visually inspected: OpenStreetMap tiles loaded,
 the coordinate and attribution are visible, and **Open map** is available. The
-map-error widget fallback also has deterministic test coverage. The full run
-then failed at the separate invoice-billing journey while finding `Job tax (%)`,
+map-error widget fallback also has deterministic test coverage. The earlier full
+run failed at the separate invoice-billing journey while finding `Job tax (%)`,
 so API 35 was not reached. The helper now scrolls until the visible `Billing
-basis` anchor confirms the top section instead of using a fixed swipe count;
-exact-head Actions verification is pending. The map change remains in PR #45
-and is not merged yet. No VM build, test, or formatter ran.
+basis` anchor confirms the top section instead of using a fixed swipe count. The
+exact-head rerun [43583501631](https://github.com/centerionware/Clockrove/actions/runs/43583501631)
+failed during Android-test compilation: `waitFor` was called with an integer in
+its Boolean parameter position. The argument has been removed. No device tests
+ran in that attempt; a new run is required to verify the scroll correction and
+API 35. The map change remains in PR #45 and is not merged yet. No VM build,
+test, or formatter ran.

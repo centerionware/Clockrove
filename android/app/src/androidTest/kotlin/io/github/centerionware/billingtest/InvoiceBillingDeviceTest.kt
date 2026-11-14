@@ -115,7 +115,7 @@ class InvoiceBillingDeviceTest {
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
-        waitFor("Billing basis", 1000)
+        waitFor("Billing basis")
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
