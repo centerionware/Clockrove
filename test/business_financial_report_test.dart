@@ -16,9 +16,11 @@ class _Reports extends ReportApi {
   bool? savedPdf;
 
   @override
-  Future<ReportContext> context() async => const ReportContext('UTC', [
-    ReportJob('job', 'Synthetic tile renovation', false),
-  ], [ReportCustomer('customer', 'Synthetic customer', false)]);
+  Future<ReportContext> context() async => const ReportContext(
+    'UTC',
+    [ReportJob('job', 'Synthetic tile renovation', false)],
+    [ReportCustomer('customer', 'Synthetic customer', false)],
+  );
 
   @override
   Future<BusinessFinancialReport> businessReport(
@@ -96,7 +98,6 @@ void main() {
     expect(find.text('Business report'), findsOneWidget);
     expect(find.text('Invoiced sales · tax exclusive'), findsOneWidget);
     expect(find.text('USD 150.00'), findsOneWidget);
-    expect(find.text('CSV amount columns contain exact minor-unit integers as text.'), findsOneWidget);
 
     await tester.tap(find.text('All customers'));
     await tester.pumpAndSettle();
@@ -109,6 +110,12 @@ void main() {
       find.text('Export CSV'),
       200,
       scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text(
+        'CSV amount columns contain exact minor-unit integers as text.',
+      ),
+      findsOneWidget,
     );
     await tester.tap(find.text('Export CSV'));
     await tester.pumpAndSettle();

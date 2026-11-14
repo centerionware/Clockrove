@@ -758,7 +758,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `9724065` / run `43599388270` passed formatting, analysis, Flutter behavior, Android build and all 602 native tests; its API-24 billing journey could not return to the top of Job settings after invalid-tax validation, so API 35 and later journeys did not run. Rerun `43601098250` failed the same API-24 assertion. The helper now targets the first visible scroll child at x≈64, marks injected motion as touchscreen, and verifies scroll-action movement before using a gesture; exact-head Actions validation is pending. M6.6 report/customer snapshot source and tests are underway but unvalidated. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 report source at `1abdcfd` / run `43605155898` passed Analyze. The Actions formatter generated a patch for three report files. Flutter behavior tests reported 180 passed, one failed and 14 skipped because the new report test looked for an off-screen lazy-list note before scrolling; that test and patch are corrected locally and need a fresh exact-head run. Android build, native tests and device journeys are not yet validated on the report changes. The API-24 billing-settings scroll journey still needs an exact-head device pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -3085,3 +3085,13 @@ report filter error handler. Behavior tests, Android compilation/native tests
 and device journeys were skipped. Added braces to the reported conditional;
 push the correction and require a fresh exact-head run. No VM build, test or
 formatter ran.
+
+At commit `1abdcfd` / Actions run `43605155898`, Analyze passed. The workflow
+provided a formatting patch for the report screen, API and widget test. Flutter
+behavior tests reported 180 passed, one failed and 14 skipped: the new filter/
+export widget test tried to find the exact-amount CSV note before its lazy-list
+row had been built. Android build, native tests and device journeys were
+skipped. Applied the workflow's patch and moved that expectation after scrolling
+to the export controls. This corrective source needs a new exact-head Actions
+run. The API-24 billing-settings scroll journey remains unvalidated on the
+current test helper. No VM build, test or formatter ran.

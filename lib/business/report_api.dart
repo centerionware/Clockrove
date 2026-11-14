@@ -111,7 +111,12 @@ class BusinessReportSummary {
     required this.unknownTaxInvoiceCount,
   });
   final String currency, invoicedSales, cashReceived, taxBilled, taxCollected;
-  final String outstanding, labor, supplies, unclassified, directCosts, overhead;
+  final String outstanding,
+      labor,
+      supplies,
+      unclassified,
+      directCosts,
+      overhead;
   final String grossProfit, netProfit, cashSurplus;
   final int digits, costCount, unattributedCostCount;
   final int legacyInvoiceCount, unknownTaxInvoiceCount;
@@ -164,7 +169,14 @@ class BusinessInvoiceMovement {
     required this.relatedInvoiceId,
     required this.reason,
   });
-  final String id, invoiceId, number, kind, occurredLabel, job, customer, currency;
+  final String id,
+      invoiceId,
+      number,
+      kind,
+      occurredLabel,
+      job,
+      customer,
+      currency;
   final String? jobId, salesMinor, taxMinor, legacyTotalMinor, laborMinor;
   final String? suppliesMinor, unclassifiedMinor, relatedInvoiceId;
   final int occurred, digits;
@@ -298,28 +310,33 @@ class BusinessFinancialReport {
   final List<BusinessInvoiceMovement> invoices;
   final List<BusinessCashMovement> cash;
   final List<BusinessCostMovement> costs;
-  factory BusinessFinancialReport.decode(Map<Object?, Object?> value) =>
-      BusinessFinancialReport(
-        version: value['version'] as int,
-        timezone: value['timezone'] as String,
-        firstDate: value['firstDate'] as String,
-        lastDate: value['lastDate'] as String,
-        asOfExclusiveMillis: value['asOfExclusiveMillis'] as int,
-        excludedUnknownCustomerCostCount:
-            value['excludedUnknownCustomerCostCount'] as int,
-        summaries: (value['summaries'] as List)
-            .map((row) => BusinessReportSummary.decode(row as Map<Object?, Object?>))
-            .toList(),
-        invoices: (value['invoices'] as List)
-            .map((row) => BusinessInvoiceMovement.decode(row as Map<Object?, Object?>))
-            .toList(),
-        cash: (value['cash'] as List)
-            .map((row) => BusinessCashMovement.decode(row as Map<Object?, Object?>))
-            .toList(),
-        costs: (value['costs'] as List)
-            .map((row) => BusinessCostMovement.decode(row as Map<Object?, Object?>))
-            .toList(),
-      );
+  factory BusinessFinancialReport.decode(
+    Map<Object?, Object?> value,
+  ) => BusinessFinancialReport(
+    version: value['version'] as int,
+    timezone: value['timezone'] as String,
+    firstDate: value['firstDate'] as String,
+    lastDate: value['lastDate'] as String,
+    asOfExclusiveMillis: value['asOfExclusiveMillis'] as int,
+    excludedUnknownCustomerCostCount:
+        value['excludedUnknownCustomerCostCount'] as int,
+    summaries: (value['summaries'] as List)
+        .map(
+          (row) => BusinessReportSummary.decode(row as Map<Object?, Object?>),
+        )
+        .toList(),
+    invoices: (value['invoices'] as List)
+        .map(
+          (row) => BusinessInvoiceMovement.decode(row as Map<Object?, Object?>),
+        )
+        .toList(),
+    cash: (value['cash'] as List)
+        .map((row) => BusinessCashMovement.decode(row as Map<Object?, Object?>))
+        .toList(),
+    costs: (value['costs'] as List)
+        .map((row) => BusinessCostMovement.decode(row as Map<Object?, Object?>))
+        .toList(),
+  );
 }
 
 class ReportTotal {
