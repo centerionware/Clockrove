@@ -671,7 +671,7 @@ Account creation, owner credentials, concrete license review, and physical devic
 | Widgets | Default and picker mode, New job last, missing default, stale state, running-other-job state, multiple widgets |
 | Boards | Column/card reorder, populated-column deletion, accessible moves, due dates across timezones |
 | Task comments/images | Comment add/edit/delete and ordering; multi-image gallery batches and camera-intent paths; review/atomic attach, retake/cancel, private storage, EXIF removal, 50 MB/250 MP source limits, 5 MB normalized-image limit, 10-at-once/20-per-task/100 MB-per-job caps, ordered swipeable viewer and parent cleanup |
-| Quotes | Template selection creates editable lines; no required notes; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
+| Quotes | Template selection creates editable lines; no required notes; customer selector has the same Manage customers flow as Job settings and refreshes options on return; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
 | Reports | Date/job filters match list/map/export; active/provisional exclusions explained; GPS points linked correctly |
 | CSV | Unicode, quotes, commas, multiline fields, spreadsheet formulas, exact durations and offset/timezone fields |
 | Maps | Default without keys; OSM attribution/cache/backoff; optional valid/invalid keys; provider change/restart; offline failure |
@@ -2905,12 +2905,13 @@ though `0.01` succeeded. The shared currency parser required an integer part;
 accepting `.01` as `0.01` fixes that input validation bug while preserving exact
 minor-unit conversion and existing currency-precision checks. Regression tests
 cover the parser and full payment form, asserting one cent persists as minor-unit
-string `1`. Actions run `43587087757` passed both penny-related Flutter tests,
-but failed the new viewer test's initial selected-photo assertion before Android
-validation; its swipe assertions had not run. The source now follows the
-requested left-to-previous/right-to-next direction, and the test taps the
-specific keyed photo. The CI formatter patch was applied. A fresh Actions run is
-required for full verification. No local tests or builds were run.
+string `1`. Actions runs `43587087757`, `43587596151` and `43588048998` each
+passed both penny-related Flutter tests. The latter two also failed the new
+viewer test's initial selected-photo assertion before its swipe assertions or
+Android validation. The source uses left-to-previous/right-to-next ordering; the
+current test taps a safe area inside the keyed photo tile away from its remove
+control. The CI formatter patch was applied. The latest source still requires a
+fresh Actions run. No local tests or builds were run.
 
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device

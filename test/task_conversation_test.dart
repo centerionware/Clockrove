@@ -423,7 +423,9 @@ void main() {
         const ValueKey('task-attachment-comment-photo-middle'),
       );
       expect(tester.widget<InkWell>(commentPhoto).onTap, isNotNull);
-      await tester.tap(commentPhoto);
+      await tester.tapAt(
+        tester.getCenter(commentPhoto) + const Offset(-20, 20),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Photo 2 of 3'), findsOneWidget);
       await tester.drag(find.byType(PageView).last, const Offset(-300, 0));

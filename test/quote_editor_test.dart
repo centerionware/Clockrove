@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:clockrove/business/quote_api.dart';
 import 'package:clockrove/business/business_api.dart';
 import 'package:clockrove/business/quote_editor.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/settings_api.dart';
 import 'package:clockrove/tracking/timer_api.dart';
+import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,9 +28,28 @@ const _company = CompanySettings(
 );
 
 class _Business extends BusinessSettingsApi {
+  final List<Customer> customers = [];
+  int version = 1;
   @override
   Future<BusinessSettings> read() async =>
-      const BusinessSettings(1, _company, []);
+      BusinessSettings(version, _company, List.unmodifiable(customers));
+
+  @override
+  Future<TimerOutcome> customer(
+    String id,
+    int version,
+    Customer customer,
+  ) async {
+    customers.removeWhere((existing) => existing.id == customer.id);
+    customers.add(customer);
+    this.version++;
+    return TimerOutcome(this.version, null);
+  }
+}
+
+class _Timer extends TimerApi {
+  @override
+  Stream<int> get committedVersions => const Stream.empty();
 }
 
 class _Jobs extends ReportApi {
@@ -81,6 +103,7 @@ class _Quotes extends QuoteApi {
 Future<void> _show(
   WidgetTester tester,
   _Quotes api, {
+  _Business? business,
   List<TaskTemplate> templates = const [],
 }) async {
   await tester.pumpWidget(
@@ -88,8 +111,9 @@ Future<void> _show(
       overrides: [
         quoteApiProvider.overrideWithValue(api),
         businessApiProvider.overrideWithValue(_Templates(templates)),
-        businessSettingsApiProvider.overrideWithValue(_Business()),
+        businessSettingsApiProvider.overrideWithValue(business ?? _Business()),
         reportApiProvider.overrideWithValue(_Jobs()),
+        timerApiProvider.overrideWithValue(_Timer()),
       ],
       child: const MaterialApp(home: QuoteEditor(quoteId: 'quote')),
     ),
@@ -112,6 +136,40 @@ Future<void> _reveal(
 }
 
 void main() {
+  testWidgets('quote form manages customers and refreshes the selector', (
+    tester,
+  ) async {
+    final api = _Quotes();
+    final business = _Business();
+    await _show(tester, api, business: business);
+
+    final selector = find.byType(DropdownButtonFormField<String>).first;
+    expect(
+      tester.getTopLeft(find.text('Manage customers')).dy,
+      greaterThan(tester.getBottomLeft(selector).dy),
+    );
+    await tester.tap(find.text('Manage customers'));
+    await tester.pumpAndSettle();
+    expect(find.text('Customers'), findsOneWidget);
+    await tester.tap(find.text('Customer'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Customer name'),
+      'New quote customer',
+    );
+    final saveCustomer = find.widgetWithText(FilledButton, 'Save customer');
+    await tester.ensureVisible(saveCustomer);
+    await tester.tap(saveCustomer);
+    await tester.pumpAndSettle();
+    expect(find.text('New quote customer'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('New quote customer'), findsOneWidget);
+  });
+
   testWidgets(
     'quote task template becomes a separate editable line with quantity and price',
     (tester) async {
