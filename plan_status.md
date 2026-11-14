@@ -3793,3 +3793,23 @@ already-focused field, waits for the IME, then uses `ACTION_SET_TEXT` with exact
 readback or select-all/IME typing. Only ordinary control clicks require their
 safe pointer tap to succeed. Revalidate on GitHub Actions; no VM build or test
 ran.
+
+### 2026-11-14 — PR #47 passed; API-24 text replacement follow-up
+
+PR #47 head `b9548a3` / Actions run
+[43649614516](https://github.com/centerionware/Clockrove/actions/runs/43649614516)
+passed formatting, analysis, Flutter behavior tests, Android build, 614 native
+tests and 37 actual device cases on each API 24 and 35, with zero failures,
+errors or skips. Squash-merged to main as `2f84790`.
+
+Main validation
+[43651548435](https://github.com/centerionware/Clockrove/actions/runs/43651548435)
+passed the fast checks, Android build and all 614 native tests. API 24 passed
+the 28-case base device suite, then its billing journey failed when the test
+helper appended replacement text to a long unit-price field. `ACTION_SET_SELECTION`
+reported success but moved the caret without selecting the text; the screenshot
+shows the app remained open, so this was not a product crash. The helper now
+verifies the selected range and sends Ctrl+A when necessary before typing. Exact
+head Actions validation remains pending; API 35 was not reached. The gated Play
+delivery did not run because main validation failed. No VM build, test or
+formatter ran.

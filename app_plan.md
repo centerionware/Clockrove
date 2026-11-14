@@ -3177,3 +3177,24 @@ customers button remains immediately below the customer selector and uses the
 same shared management screen as Job settings; its add/save/return/select Flutter
 test passed. Secure map-provider settings and owner-device acceptance remain
 open. No VM build, test or formatter ran.
+
+### 2026-11-14 — merged CI navigation guard and API-24 text replacement follow-up
+
+PR #47 head `b9548a3` / Actions run
+[43649614516](https://github.com/centerionware/Clockrove/actions/runs/43649614516)
+passed formatting, analysis, Flutter behavior tests, Android build, 614 native
+tests and 37 actual device cases each on API 24 and API 35, with zero failures,
+errors or skips. The CI-only safe viewport, scroll reset and IME-wait changes
+were squash-merged as `2f84790`.
+
+Post-merge main run
+[43651548435](https://github.com/centerionware/Clockrove/actions/runs/43651548435)
+passed formatting, analysis, Flutter behavior tests, Android build and 614
+native tests. API 24 passed its 28-case base journey; the extended billing
+journey found that the device helper could append replacement text to a long
+unit-price value after Android reported `ACTION_SET_SELECTION` success without
+selecting the range. The failure screenshot shows Clockrove still open with the
+field focused, not an app crash. The test helper now checks the selected range
+and uses Ctrl+A before typing if the range was not actually selected. Validate
+this correction on an exact Actions head; API 35 and subsequent device journeys
+did not run on `43651548435`. No VM build, test or formatter ran.

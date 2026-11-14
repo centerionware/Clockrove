@@ -301,13 +301,43 @@ class InvoiceBillingDeviceTest {
         if (find(label, true)?.text?.toString() != value) {
             val current = waitFor(label, true)
             val length = current.text?.length ?: 0
-            assertTrue("Could not select existing text for $label", current.performAction(
+            current.performAction(
                 AccessibilityNodeInfo.ACTION_SET_SELECTION,
                 Bundle().apply {
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
                 },
-            ))
+            )
+            // API 24 can report ACTION_SET_SELECTION success while merely
+            // moving the caret to the start of a long Flutter text value.
+            // Verify the range; if the platform did not actually select it,
+            // use the editor's standard Ctrl+A shortcut before replacing text.
+            val selected = find(label, true)
+            val selectionStart = selected?.textSelectionStart ?: -1
+            val selectionEnd = selected?.textSelectionEnd ?: -1
+            if (selectionStart != 0 || selectionEnd != length) {
+                val downTime = SystemClock.uptimeMillis()
+                instrumentation.sendKeySync(
+                    KeyEvent(
+                        downTime,
+                        downTime,
+                        KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_A,
+                        0,
+                        KeyEvent.META_CTRL_ON,
+                    ),
+                )
+                instrumentation.sendKeySync(
+                    KeyEvent(
+                        downTime,
+                        downTime + 1,
+                        KeyEvent.ACTION_UP,
+                        KeyEvent.KEYCODE_A,
+                        0,
+                        KeyEvent.META_CTRL_ON,
+                    ),
+                )
+            }
             instrumentation.sendStringSync(value)
         }
         until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }
