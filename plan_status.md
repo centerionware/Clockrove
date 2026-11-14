@@ -3647,3 +3647,23 @@ reset to Billing basis before the second inheritance toggle. This is a test
 harness correction; it requires a fresh exact-head Actions run. API 35 and later
 journeys did not run on `43624729471`. No VM build, test, formatter or analyzer
 ran.
+
+### 2026-11-14 — second settings visit and PR #45 merge
+
+Exact PR head `942659a` / Actions run
+[43626467570](https://github.com/centerionware/Clockrove/actions/runs/43626467570)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build,
+native unit tests, PDF generation/rendering and locked release-tooling/version
+checks. The test now resets the form to **Billing basis** before both tax-rate
+toggle visits. Downloaded device XML confirms 37 actual Android tests per API
+24 and 35 with zero failures, errors or skips; the financial journey, quote,
+invoice copies, payments, task media, 49-sample map, and map provider settings
+passed. The quote Manage customers test created and saved a customer, returned
+to the quote, selected it and verified that its ID persisted in the draft.
+
+PR #45 was squash-merged to `main` as `69e1dab` after all exact-head checks
+passed. Main validation run
+[43628166015](https://github.com/centerionware/Clockrove/actions/runs/43628166015)
+was running when this evidence was recorded; its result and any Play internal
+delivery must be recorded separately. Physical owner-device acceptance remains
+pending. No build, test, formatter or analyzer ran on the VM.
