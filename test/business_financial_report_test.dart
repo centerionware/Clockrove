@@ -101,7 +101,10 @@ void main() {
 
     await tester.tap(find.text('All customers'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Synthetic customer'));
+    final customerCheckbox = find.byType(CheckboxListTile).first;
+    await tester.tap(customerCheckbox);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(customerCheckbox).value, isTrue);
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
     expect(reports.lastSelection?.customers, ['customer']);
