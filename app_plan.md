@@ -588,33 +588,27 @@ map-provider settings. Follow the detailed contracts in sections 3.5a/3.6 and
 cost reconciliation, settings inheritance, migrations, provider failures and
 report drilldowns. Do not classify an unimplemented item as covered by UI tests.
 
-Source progress: task Labor/Supplies classification and the actual-cost ledger
-are implemented on PR #45; the ledger includes schema v14, exact-money CRUD,
-soft deletion/revision history, equal-timestamp keyset paging, and an editor
-reachable from Reports. Its currency-aware entry form supports optional
-job/task/vendor/reference/notes. A task's Supplies label never creates a ledger
-cost automatically. Customer snapshots for new costs, schema-v15 migration,
-and a business financial report with exact currency-grouped summaries,
-event-date drilldowns, job/customer filters and CSV/PDF export are now source
-work on the same PR. CSV amount columns preserve exact minor-unit integers as
-text; PDF export is bounded and tells the user to shorten the range when it is
-too large. Native, Flutter and PDF-render tests are added, but no Actions run has
-validated this source yet. Historical costs remain customer-unattributed after
-migration instead of being assigned based on today's job settings.
+Source progress: task Labor/Supplies classification, the actual-cost ledger and
+filtered business financial reports are implemented on PR #45. The ledger has
+schema v14, exact-money CRUD, soft deletion/revision history, equal-timestamp
+keyset paging, and a Reports editor reachable from the main menu. Cost entries
+support optional job/task/vendor/reference/notes; Supplies task classification
+does not book costs automatically. Schema v15 records customer snapshots for
+new costs while migrated historical costs remain unattributed. Reports include
+exact currency-grouped summaries, event-date drilldowns, job/customer filters,
+and CSV/PDF export; CSV amount columns preserve exact minor-unit integers as
+text and PDF export is bounded.
 
-At head `9724065`, Actions run `43599388270` passed formatting, analysis,
-Flutter behavior tests, Android debug build and all 602 native unit tests. Its
-API-24 billing journey failed when it could not scroll to the top of Job settings
-after invalid-tax validation; API 35 and later device journeys did not run. Run
-`43601098250` failed at the same assertion even after the swipe was moved into
-the visible scroll container. Its screenshot still shows Job settings, and the
-accessibility dump places the first visible Flutter child at x=63..1017. The
-current helper now starts at the first child's left edge inside the scroll view,
-sets the injected touch source to touchscreen, and checks whether a backward
-accessibility action actually exposed **Billing basis** before falling back to
-the gesture. This harness correction awaits another exact-head Actions run.
-Secure map-provider settings remain unimplemented. Track current validation
-and blockers in `plan_status.md`.
+Exact code head `c9d20cc` / Actions run
+[43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
+passed formatting, analysis, Flutter behavior, Android debug build, 614 native
+tests, PDF generation/rendering, invoice-viewer checks, and 35 actual Android
+tests each on API 24 and 35 with zero failures/errors/skips. The API-24 billing
+settings scroll journey and the 49-sample map route both passed on API 24/35.
+The report tests and exact-money/cost migration checks passed in CI. Secure
+map-provider settings remain unimplemented; record their completion separately
+before marking M6.6 done. Current validation and remaining blockers are in
+`plan_status.md`.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -758,7 +752,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting, analysis, all Flutter behavior tests, Android debug build, 614 native tests, PDF generation/rendering, invoice-viewer checks and 35 actual Android tests each on API 24 and 35 with zero failures/errors/skips. The quote billing journey verifies the Labor/Supplies guard for an Unclassified quote task, then saves its classification, changed quantity and unit price. The 49-sample map, GPS settings, billing, invoice copies, payments, quote and task-media journeys passed on both APIs. Secure map-provider settings and owner-device acceptance remain before M6.6 can complete. The API-24 billing-settings scroll journey still needs an exact-head pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting, analysis, all Flutter behavior tests, Android debug build, 614 native tests, PDF generation/rendering, invoice-viewer checks and 35 actual Android tests each on API 24 and 35 with zero failures/errors/skips. The quote billing journey verifies the Labor/Supplies guard for an Unclassified quote task, then saves its classification, changed quantity and unit price. The 49-sample map, GPS settings, billing, invoice copies, payments, quote and task-media journeys passed on both APIs. Secure map-provider settings and owner-device acceptance remain before M6.6 can complete. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
