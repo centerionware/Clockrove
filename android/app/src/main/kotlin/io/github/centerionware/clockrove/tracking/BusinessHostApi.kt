@@ -184,7 +184,16 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "invoiceBillingPreview" -> return invoiceBillingPreview(repository.invoiceBillingPreview(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))))
             "legacyInvoiceContext" -> return legacyInvoiceContext(repository.legacyInvoiceContext(input.string("invoiceId")))
             "archivedJobs" -> { val s = repository.archiveSnapshot(); return mapOf("version" to s.version, "jobs" to s.jobs.map { mapOf("id" to it.id, "name" to it.name, "archivedMillis" to it.archivedMillis, "canDelete" to it.canDelete) }) }
-            "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
+            "reportContext" -> {
+                val customers = repository.businessSnapshot().customers
+                return mapOf("timezone" to java.util.TimeZone.getDefault().id,
+                    "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) },
+                    "customers" to customers.map { mapOf("id" to it.id, "name" to it.name, "archived" to it.archived) })
+            }
+            "businessReport" -> return businessReport(repository.businessReport(BusinessReportStore.Selection(
+                input.string("firstDate"), input.string("lastDate"), input.string("timezone"),
+                input.strings("jobIds"), input.strings("customerIds"),
+            )))
             "companyLogo" -> { val s = repository.logo(); return mapOf("version" to s.version, "id" to s.id, "width" to s.width, "height" to s.height, "png" to s.bytes) }
             "business" -> { val s = repository.businessSnapshot(); return mapOf("version" to s.version, "settings" to settings(s.settings), "customers" to s.customers.map(::customer)) }
             "actualCosts" -> {
@@ -193,6 +202,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 val s = repository.actualCosts(before, if (input.value.containsKey("limit")) input.int("limit") else 100)
                 return mapOf("version" to s.version, "next" to s.page.next?.let { mapOf("occurred" to it.occurred, "id" to it.id) }, "entries" to s.page.entries.map { entry -> mapOf(
                     "id" to entry.id, "jobId" to entry.jobId, "jobName" to entry.jobName,
+                    "customerId" to entry.customerId, "customerName" to entry.customerName,
                     "taskId" to entry.taskId, "taskName" to entry.taskName,
                     "amountMinor" to entry.amountMinor.toString(), "currency" to entry.currency,
                     "fractionDigits" to Currency.getInstance(entry.currency).defaultFractionDigits,
@@ -392,5 +402,59 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "chargeType" to it.chargeType, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
             "totals" to r.totals.map { mapOf("jobId" to it.jobId, "jobName" to it.jobName, "mode" to it.mode, "currency" to it.currency, "fractionDigits" to Currency.getInstance(it.currency).defaultFractionDigits,
                 "durationMillis" to it.durationMillis.toString(), "hourlyMinor" to it.hourlyMinor?.toString(), "amountMinor" to it.amountMinor?.toString(), "missingPrices" to it.missingPrices) })
+    }
+
+    private fun businessReport(s: TimerRepository.BusinessReportSnapshot): Map<String, Any?> {
+        val r = s.report
+        return mapOf(
+            "version" to s.version,
+            "timezone" to r.selection.timezone,
+            "firstDate" to r.selection.firstDate,
+            "lastDate" to r.selection.lastDate,
+            "asOfExclusiveMillis" to r.asOfExclusiveMillis,
+            "excludedUnknownCustomerCostCount" to r.excludedUnknownCustomerCostCount,
+            "summaries" to r.summaries.map { value -> mapOf(
+                "currency" to value.currency, "digits" to value.digits,
+                "invoicedSalesMinor" to value.invoicedSales.toString(), "cashReceivedMinor" to value.cashReceived.toString(),
+                "taxBilledMinor" to value.taxBilled.toString(), "taxCollectedMinor" to value.taxCollected.toString(),
+                "outstandingMinor" to value.outstanding.toString(), "laborMinor" to value.labor.toString(),
+                "suppliesMinor" to value.supplies.toString(), "unclassifiedMinor" to value.unclassified.toString(),
+                "directCostsMinor" to value.directCosts.toString(), "overheadMinor" to value.overhead.toString(),
+                "grossProfitMinor" to value.grossProfit.toString(), "netProfitMinor" to value.netProfit.toString(),
+                "grossMarginPercent" to value.grossMarginPercent, "netMarginPercent" to value.netMarginPercent,
+                "cashSurplusMinor" to value.cashSurplus.toString(), "costCount" to value.costCount,
+                "unattributedCostCount" to value.unattributedCostCount,
+                "legacyInvoiceCount" to value.legacyInvoiceCount, "unknownTaxInvoiceCount" to value.unknownTaxInvoiceCount,
+            ) },
+            "invoices" to r.invoices.map { value -> mapOf(
+                "id" to value.id, "invoiceId" to value.invoiceId, "number" to value.number, "kind" to value.kind,
+                "occurred" to value.occurred, "occurredLabel" to ReportCsv.instant(value.occurred, r.selection.timezone),
+                "jobId" to value.jobId, "job" to value.job, "customerId" to value.customerId, "customer" to value.customer,
+                "currency" to value.currency, "digits" to value.digits,
+                "salesMinor" to value.salesMinor?.toString(), "taxMinor" to value.taxMinor?.toString(),
+                "legacyTotalMinor" to value.legacyTotalMinor?.toString(), "laborMinor" to value.laborMinor?.toString(),
+                "suppliesMinor" to value.suppliesMinor?.toString(), "unclassifiedMinor" to value.unclassifiedMinor?.toString(),
+                "relatedInvoiceId" to value.relatedInvoiceId, "reason" to value.reason,
+            ) },
+            "cash" to r.cash.map { value -> mapOf(
+                "id" to value.id, "invoiceId" to value.invoiceId, "paymentId" to value.paymentId,
+                "number" to value.number, "kind" to value.kind, "occurred" to value.occurred,
+                "occurredLabel" to ReportCsv.instant(value.occurred, r.selection.timezone),
+                "jobId" to value.jobId, "job" to value.job, "customerId" to value.customerId, "customer" to value.customer,
+                "currency" to value.currency, "digits" to value.digits, "cashMinor" to value.cashMinor.toString(),
+                "creditMinor" to value.creditMinor.toString(), "salesMinor" to value.salesMinor?.toString(),
+                "taxMinor" to value.taxMinor?.toString(), "reference" to value.reference,
+            ) },
+            "costs" to r.costs.map { value -> mapOf(
+                "id" to value.id, "jobId" to value.jobId, "job" to value.job,
+                "customerId" to value.customerId, "customer" to value.customer,
+                "taskId" to value.taskId, "task" to value.task,
+                "occurred" to value.occurred, "occurredLabel" to ReportCsv.instant(value.occurred, r.selection.timezone),
+                "timezone" to value.timezone, "offsetSeconds" to value.offsetSeconds,
+                "currency" to value.currency, "digits" to value.digits, "category" to value.category,
+                "amountMinor" to value.amountMinor.toString(), "vendor" to value.vendor,
+                "reference" to value.reference, "note" to value.note,
+            ) },
+        )
     }
 }

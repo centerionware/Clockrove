@@ -185,6 +185,8 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
                           entry.taskName.isEmpty
                               ? entry.jobName
                               : '${entry.jobName} · ${entry.taskName}',
+                        if (entry.customerName.isNotEmpty)
+                          'Customer ${entry.customerName}',
                         if (entry.reference.isNotEmpty)
                           'Reference ${entry.reference}',
                         if (entry.note.isNotEmpty) entry.note,

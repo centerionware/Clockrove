@@ -139,6 +139,7 @@ assert int(root.attrib['tests']) > 0, 'No actual Android tests ran'
 assert all(int(root.attrib[k]) == 0 for k in ['failures','errors','skipped']), root.attrib
 classes = {case.attrib['classname'] for case in root.findall('testcase')}
 expected = {
+    'io.github.centerionware.clockrove.invoice.BusinessReportPdfTest': 1,
     'io.github.centerionware.clockrove.invoice.InvoicePdfTest': 4,
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 5,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,

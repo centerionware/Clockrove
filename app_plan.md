@@ -593,17 +593,28 @@ are implemented on PR #45; the ledger includes schema v14, exact-money CRUD,
 soft deletion/revision history, equal-timestamp keyset paging, and an editor
 reachable from Reports. Its currency-aware entry form supports optional
 job/task/vendor/reference/notes. A task's Supplies label never creates a ledger
-cost automatically. At head `9724065`, Actions run `43599388270` passed
-formatting, analysis, Flutter behavior tests, the Android debug build and all
-602 native unit tests. Its API-24 billing journey failed when the test could not
-scroll back to the top of Job settings after invalid-tax validation; API 35 and
-later device journeys did not run. The screenshot showed the lower Job settings
-form; its accessibility dump placed visible content at x=63..1017 while the
-test helper swiped at x=32. The test helper now targets the visible scroll
-container bounds and keeps the full swipe inside it; this source correction
-awaits exact-head Actions validation. Tax-preparation reports and secure
-map-provider settings are not implemented yet. Track current validation and
-blockers in `plan_status.md`.
+cost automatically. Customer snapshots for new costs, schema-v15 migration,
+and a business financial report with exact currency-grouped summaries,
+event-date drilldowns, job/customer filters and CSV/PDF export are now source
+work on the same PR. CSV amount columns preserve exact minor-unit integers as
+text; PDF export is bounded and tells the user to shorten the range when it is
+too large. Native, Flutter and PDF-render tests are added, but no Actions run has
+validated this source yet. Historical costs remain customer-unattributed after
+migration instead of being assigned based on today's job settings.
+
+At head `9724065`, Actions run `43599388270` passed formatting, analysis,
+Flutter behavior tests, Android debug build and all 602 native unit tests. Its
+API-24 billing journey failed when it could not scroll to the top of Job settings
+after invalid-tax validation; API 35 and later device journeys did not run. Run
+`43601098250` failed at the same assertion even after the swipe was moved into
+the visible scroll container. Its screenshot still shows Job settings, and the
+accessibility dump places the first visible Flutter child at x=63..1017. The
+current helper now starts at the first child's left edge inside the scroll view,
+sets the injected touch source to touchscreen, and checks whether a backward
+accessibility action actually exposed **Billing basis** before falling back to
+the gesture. This harness correction awaits another exact-head Actions run.
+Secure map-provider settings remain unimplemented. Track current validation
+and blockers in `plan_status.md`.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -747,7 +758,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `9724065` / run `43599388270` passed formatting, analysis, Flutter behavior, Android build and all 602 native tests; its API-24 billing journey could not return to the top of Job settings after invalid-tax validation, so API 35 and later journeys did not run. The screenshot indicates the test swipe began outside the inset Flutter content; the helper now targets the visible scroll container and awaits Actions validation. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `9724065` / run `43599388270` passed formatting, analysis, Flutter behavior, Android build and all 602 native tests; its API-24 billing journey could not return to the top of Job settings after invalid-tax validation, so API 35 and later journeys did not run. Rerun `43601098250` failed the same API-24 assertion. The helper now targets the first visible scroll child at x≈64, marks injected motion as touchscreen, and verifies scroll-action movement before using a gesture; exact-head Actions validation is pending. M6.6 report/customer snapshot source and tests are underway but unvalidated. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 tax reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -3045,3 +3056,25 @@ upgrade attempted to create it twice. The two fixtures now drop the v14 table
 before setting their simulated older version. The cost-ledger CRUD, migration
 and paging cases passed in this run; rerun is required to validate the fixture
 correction. Device journeys did not run. No VM build, test or formatter ran.
+
+### 2026-11-14 — M6.6 report source and repeat API-24 scroll failure
+
+PR #45 head `53e906a` / Actions run `43601098250` passed formatting, analysis,
+Flutter behavior tests, Android debug build and all 602 native tests. The API-24
+billing journey failed the same **Billing basis** rediscovery after invalid-tax
+validation, despite the helper moving its gesture inside the visible scroll
+container. The screenshot still shows Job settings open, and the accessibility
+dump shows the first visible Flutter child at x=63..1017. The current harness
+starts at that child's left edge, marks injected motion as touchscreen and
+checks whether an accessibility backward action moved to the target before
+using the touch fallback. Another exact-head run is required; API 35 and later
+device journeys did not run on `43601098250`.
+
+In parallel, M6.6 report source adds schema-v15 customer snapshots for actual
+costs, preserving old entries as unattributed; native aggregation for exact
+currency groups, invoice/void issue-date movements, cash/credit effective-date
+movements, as-of balances and recorded costs; a Reports entry with job/customer
+filters and drilldowns; exact minor-unit CSV and a paginated summary/detail PDF.
+Native reconciliation, date/currency/filter, CSV-injection, Flutter filter/
+export and Android PDF-render tests are added. None has run in Actions yet and
+no local build/test/formatter was run. Secure map-provider settings remain.

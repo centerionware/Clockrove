@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'business_api.dart';
 import 'actual_cost_screen.dart';
+import 'business_financial_report_screen.dart';
 import 'invoice_review_screen.dart';
 import 'invoice_history_screen.dart';
 import 'report_api.dart';
@@ -294,6 +295,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             Icons.account_balance_wallet_outlined,
                           ),
                           label: const Text('Actual cost ledger'),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => BusinessFinancialReportScreen(
+                                initialJobIds: selection.jobs,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.assessment_outlined),
+                          label: const Text('Tax & financial report'),
                         ),
                       ),
                       for (final total in report.totals)

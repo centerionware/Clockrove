@@ -268,6 +268,8 @@ class ActualCostEntry {
     required this.note,
     this.jobId,
     this.jobName = '',
+    this.customerId,
+    this.customerName = '',
     this.taskId,
     this.taskName = '',
     this.offsetSeconds = 0,
@@ -276,14 +278,16 @@ class ActualCostEntry {
   });
   final String id, amountMinor, currency, category, timezone;
   final int digits;
-  final String vendor, reference, note, jobName, taskName;
-  final String? jobId, taskId;
+  final String vendor, reference, note, jobName, customerName, taskName;
+  final String? jobId, customerId, taskId;
   final int occurred, offsetSeconds, created, updated;
   factory ActualCostEntry.decode(Map<Object?, Object?> value) =>
       ActualCostEntry(
         id: value['id'] as String,
         jobId: value['jobId'] as String?,
         jobName: value['jobName'] as String,
+        customerId: value['customerId'] as String?,
+        customerName: value['customerName'] as String? ?? '',
         taskId: value['taskId'] as String?,
         taskName: value['taskName'] as String,
         amountMinor: value['amountMinor'] as String,

@@ -79,6 +79,40 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             }
                         }
                     }
+                    "saveBusinessReport" -> {
+                        val selection = io.github.centerionware.clockrove.tracking.BusinessReportStore.Selection(
+                            requireNotNull(call.argument<String>("firstDate")),
+                            requireNotNull(call.argument<String>("lastDate")),
+                            requireNotNull(call.argument<String>("timezone")),
+                            requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) },
+                            requireNotNull(call.argument<List<*>>("customerIds")).map { requireNotNull(it as? String) },
+                        )
+                        val snapshot = repository.businessReport(selection)
+                        val rawVersion = call.argument<Any>("version")
+                        require(rawVersion is Int || rawVersion is Long)
+                        val expected = (rawVersion as Number).toLong()
+                        if (snapshot.version != expected) {
+                            result.error("STALE_STATE", "Business data changed. Refresh the report before exporting.", null)
+                            return@setMethodCallHandler
+                        }
+                        val pdf = requireNotNull(call.argument<Boolean>("pdf"))
+                        val bytes = if (pdf) BusinessReportPdf.generate(snapshot.report)
+                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(snapshot.report).toByteArray(Charsets.UTF_8)
+                        val extension = if (pdf) "pdf" else "csv"
+                        main.post {
+                            if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
+                            else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
+                            else {
+                                save = Save(bytes, result)
+                                try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                    type = if (pdf) "application/pdf" else "text/csv"
+                                    putExtra(Intent.EXTRA_TITLE, "Clockrove-business-${selection.firstDate}-${selection.lastDate}.$extension")
+                                }, 0xcc42) }
+                                catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
+                            }
+                        }
+                    }
                     "saveInvoice", "saveQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
@@ -113,6 +147,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                 }
             } catch (failure: IllegalArgumentException) {
                 if (failure.message == "PAYMENT_HISTORY_TOO_LARGE") result.error("PAYMENT_HISTORY_TOO_LARGE", "This history is too long for one PDF. Open individual saved receipts instead.", null)
+                else if (failure.message == "BUSINESS_REPORT_PDF_TOO_LARGE") result.error("REPORT_TOO_LARGE", "Choose a shorter period for PDF export, or export the full report as CSV.", null)
                 else result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null)
             }
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }

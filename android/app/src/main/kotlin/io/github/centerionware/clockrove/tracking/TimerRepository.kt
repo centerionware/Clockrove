@@ -519,6 +519,10 @@ class TimerRepository internal constructor(context: Context,
     internal data class ReportSnapshot(val version: Long, val report: ReportStore.Report)
     @Synchronized
     internal fun report(selection: ReportStore.Selection): ReportSnapshot = ReportSnapshot(readSnapshot(helper.readableDatabase).version, ReportStore.read(helper.readableDatabase, selection))
+    internal data class BusinessReportSnapshot(val version: Long, val report: BusinessReportStore.Report)
+    @Synchronized
+    internal fun businessReport(selection: BusinessReportStore.Selection): BusinessReportSnapshot =
+        BusinessReportSnapshot(readSnapshot(helper.readableDatabase).version, BusinessReportStore.read(helper.readableDatabase, selection))
 
     internal data class ArchiveSnapshot(val version: Long, val jobs: List<JobLifecycleStore.Archived>)
     @Synchronized
@@ -1045,7 +1049,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 14) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 15) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1077,7 +1081,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..13 && newVersion == 14) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..14 && newVersion == 15) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1094,6 +1098,7 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion < 12) TaskClassificationStore.install(db, now())
             if (oldVersion < 13) TaskConversationStore.migrateImageByteLimit(db)
             if (oldVersion < 14) ActualCostStore.install(db)
+            if (oldVersion == 14) ActualCostStore.migrateCustomerSnapshot(db)
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }

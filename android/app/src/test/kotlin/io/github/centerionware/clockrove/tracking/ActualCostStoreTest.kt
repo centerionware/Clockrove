@@ -93,6 +93,59 @@ class ActualCostStoreTest {
         assertTrue(repository.actualCosts().page.entries.isEmpty())
     }
 
+    @Test fun customerFilterUsesTheCustomerCapturedWhenCostWasRecorded() {
+        val original = BusinessStore.Customer("cost-customer-a", "Original customer")
+        val replacement = BusinessStore.Customer("cost-customer-b", "Later customer")
+        assertNull(repository.saveCustomer("customer-a", version, original).conflict)
+        assertNull(repository.saveCustomer("customer-b", version, replacement).conflict)
+        assertNull(repository.saveJobSettings("assign-original", version,
+            repository.jobDetail(jobId).job.settings.copy(customerId = original.id)).conflict)
+        assertNull(repository.saveActualCost("cost-snapshot", version, draft(id = "customer-cost", task = null, amount = "100")).conflict)
+        assertNull(repository.saveJobSettings("assign-later", version,
+            repository.jobDetail(jobId).job.settings.copy(customerId = replacement.id)).conflict)
+        assertNull(repository.saveActualCost("edit-snapshot", version, draft(id = "customer-cost", task = null, amount = "200")).conflict)
+
+        val entry = repository.actualCosts().page.entries.single()
+        assertEquals(original.id, entry.customerId)
+        assertEquals(original.name, entry.customerName)
+    }
+
+    @Test fun v14CustomerSnapshotMigrationPreservesCostsWithoutGuessingTheirCustomer() {
+        val currentCustomer = BusinessStore.Customer("legacy-current-customer", "Current customer")
+        assertNull(repository.saveCustomer("legacy-customer-save", version, currentCustomer).conflict)
+        assertNull(repository.saveJobSettings("legacy-job-customer", version,
+            repository.jobDetail(jobId).job.settings.copy(customerId = currentCustomer.id)).conflict)
+        assertNull(repository.saveActualCost("legacy-cost-save", version, draft(
+            id = "legacy-cost", task = null, amount = "1234",
+        )).conflict)
+        repository.close()
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            db.execSQL("DROP INDEX actual_costs_date")
+            db.execSQL("DROP INDEX actual_costs_job_date")
+            db.execSQL("ALTER TABLE actual_costs RENAME TO actual_costs_future")
+            db.execSQL("CREATE TABLE actual_costs(id TEXT PRIMARY KEY,job_id TEXT,job_name TEXT,task_id TEXT,task_name TEXT,amount_minor TEXT,currency TEXT,category TEXT,occurred_ms INTEGER,timezone TEXT,offset_seconds INTEGER,vendor TEXT,reference TEXT,note TEXT,created_ms INTEGER,updated_ms INTEGER,deleted_ms INTEGER)")
+            db.execSQL("INSERT INTO actual_costs SELECT id,job_id,job_name,task_id,task_name,amount_minor,currency,category,occurred_ms,timezone,offset_seconds,vendor,reference,note,created_ms,updated_ms,deleted_ms FROM actual_costs_future")
+            db.execSQL("DROP TABLE actual_costs_future")
+            db.execSQL("CREATE INDEX actual_costs_date ON actual_costs(occurred_ms,id)")
+            db.execSQL("CREATE INDEX actual_costs_job_date ON actual_costs(job_id,occurred_ms,id)")
+            db.version = 14
+        }
+
+        repository = TimerRepository(app, wallClock = { clock })
+        val entry = repository.actualCosts().page.entries.single()
+        assertEquals(BigInteger("1234"), entry.amountMinor)
+        assertNull(entry.customerId)
+        assertEquals("", entry.customerName)
+        assertNull(repository.saveActualCost("legacy-cost-edit", version, draft(
+            id = "legacy-cost", task = null, amount = "1235",
+        )).conflict)
+        assertNull(repository.actualCosts().page.entries.single().customerId)
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            assertEquals(15, db.version)
+            assertEquals(1, db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='actual_costs_customer_date'", null).use { it.moveToFirst(); it.getInt(0) })
+        }
+    }
+
     @Test fun v13UpgradeAddsAnEmptyCostLedgerWithoutChangingExistingTasks() {
         val beforeBoard = repository.boardSnapshot(jobId).board
         repository.close()
@@ -105,7 +158,7 @@ class ActualCostStoreTest {
         assertTrue(repository.actualCosts().page.entries.isEmpty())
         assertEquals(beforeBoard.cards.map { it.id }, repository.boardSnapshot(jobId).board.cards.map { it.id })
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            assertEquals(14, db.version)
+            assertEquals(15, db.version)
             assertEquals(0, db.rawQuery("SELECT COUNT(*) FROM actual_costs", null).use { it.moveToFirst(); it.getInt(0) })
         }
     }

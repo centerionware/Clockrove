@@ -112,6 +112,16 @@ class InvoiceBillingDeviceTest {
         // so a fixed swipe count can leave the test in its lower sections.
         repeat(40) {
             if (find("Billing basis") != null) return
+            fun scroll(node: AccessibilityNodeInfo): Boolean {
+                if (node.isVisibleToUser && node.isScrollable &&
+                    node.className?.toString() == "android.widget.ScrollView" &&
+                    node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
+                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
+                return false
+            }
+            // Some API-24 ScrollViews acknowledge the action without moving.
+            // Check for the target again; retain the touch gesture as a fallback.
+            if (automation.rootInActiveWindow?.let(::scroll) == true && find("Billing basis") != null) return
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
@@ -120,17 +130,20 @@ class InvoiceBillingDeviceTest {
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
-        fun scrollBounds(node: AccessibilityNodeInfo): android.graphics.Rect? {
+        data class Target(val bounds: android.graphics.Rect, val firstChild: android.graphics.Rect?)
+        fun scrollTarget(node: AccessibilityNodeInfo): Target? {
             if (node.isVisibleToUser && node.isScrollable &&
                 node.className?.toString() == "android.widget.ScrollView") {
-                return android.graphics.Rect().also(node::getBoundsInScreen)
+                val child = node.getChild(0)?.let { android.graphics.Rect().also(it::getBoundsInScreen) }
+                return Target(android.graphics.Rect().also(node::getBoundsInScreen), child)
             }
             for (i in 0 until node.childCount) {
-                node.getChild(i)?.let { scrollBounds(it)?.let { found -> return found } }
+                node.getChild(i)?.let { scrollTarget(it)?.let { found -> return found } }
             }
             return null
         }
-        val content = scrollBounds(root)?.takeUnless { it.isEmpty } ?: bounds
+        val target = scrollTarget(root)
+        val content = target?.bounds?.takeUnless { it.isEmpty } ?: bounds
         val imeTop = automation.windows
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
@@ -138,14 +151,17 @@ class InvoiceBillingDeviceTest {
         val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
         val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
-        // Target the actual scrollable content. A swipe in the page margin can
-        // miss Flutter's hit-test tree even when the window itself is scrollable.
-        val x = content.centerX().toFloat()
+        // Start just inside the scroll view's first child. Page margins miss
+        // Flutter's hit-test tree; tapping a control's center can consume a drag.
+        val child = target?.firstChild?.takeUnless { it.isEmpty }
+        val x = (child?.let { (it.left + 1).coerceAtMost(it.right - 1) } ?: content.centerX()).toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
-            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            }
             try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
         inject(android.view.MotionEvent.ACTION_DOWN, downTime, startY.toFloat())

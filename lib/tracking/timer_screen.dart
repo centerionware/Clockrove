@@ -9,6 +9,7 @@ import '../automation/automation_screen.dart';
 import '../business/job_screen.dart';
 import '../business/settings_screen.dart';
 import '../business/report_screen.dart';
+import '../business/business_financial_report_screen.dart';
 import '../business/archive_screen.dart';
 import '../business/invoice_history_screen.dart';
 import '../business/quote_screens.dart';
@@ -195,6 +196,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   'settings' => const SettingsScreen(),
                   'customers' => const CustomersScreen(),
                   'reports' => const ReportScreen(),
+                  'business_reports' => const BusinessFinancialReportScreen(),
                   'invoices' => const InvoiceHistory(),
                   'quotes' => const QuotesScreen(),
                   _ => const ArchiveScreen(),
@@ -205,6 +207,16 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               PopupMenuItem(value: 'settings', child: Text('Settings')),
               PopupMenuItem(value: 'customers', child: Text('Customers')),
               PopupMenuItem(value: 'reports', child: Text('Reports')),
+              PopupMenuItem(
+                value: 'business_reports',
+                child: Row(
+                  children: [
+                    Icon(Icons.assessment_outlined),
+                    SizedBox(width: 12),
+                    Text('Tax & finances'),
+                  ],
+                ),
+              ),
               PopupMenuItem(value: 'invoices', child: Text('Invoices')),
               PopupMenuItem(value: 'quotes', child: Text('Quotes')),
               PopupMenuItem(value: 'archive', child: Text('Archived jobs')),

@@ -116,6 +116,7 @@ internal object ReportCsv {
     }
     private data class Numeric(val value: String)
     private fun numeric(value: Any) = Numeric(value.toString())
+    private fun exactMinor(value: BigInteger?) = value?.let { "'${it}" }.orEmpty()
     private fun row(vararg values: Any) = values.joinToString(",") { if (it is Numeric) "\"${it.value}\"" else text(it.toString()) } + "\r\n"
     internal fun instant(value: Long, zone: String) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
     fun work(report: ReportStore.Report): String = buildString {
@@ -126,5 +127,47 @@ internal object ReportCsv {
     fun gps(report: ReportStore.Report): String = buildString {
         append(row("point_id", "session_id", "job_id", "job_name", "measured_timestamp", "latitude", "longitude", "accuracy_meters", "report_timezone"))
         report.points.forEach { p -> append(row(p.id, p.sessionId, p.jobId, p.jobName, instant(p.measured, report.selection.timezone), numeric(p.latitude), numeric(p.longitude), numeric(p.accuracy), report.selection.timezone)) }
+    }
+
+    /** Exact minor-unit values are exported as spreadsheet text, never as rounded floating-point cells. */
+    fun business(report: BusinessReportStore.Report): String = buildString {
+        append(row(
+            "record_type", "date", "timezone", "currency", "fraction_digits", "job", "customer", "document",
+            "activity", "sales_minor_text", "tax_minor_text", "cash_minor_text", "credit_minor_text",
+            "cost_minor_text", "cost_category", "labor_minor_text", "supplies_minor_text", "unclassified_minor_text",
+            "legacy_total_minor_text", "reference", "detail", "overhead_minor_text", "outstanding_minor_text",
+            "tax_collected_minor_text", "gross_profit_minor_text", "net_profit_minor_text", "cash_surplus_minor_text",
+            "gross_margin_percent", "net_margin_percent", "excluded_unknown_customer_cost_count",
+        ))
+        report.summaries.forEach { value -> append(row(
+            "SUMMARY", "${report.selection.firstDate}..${report.selection.lastDate}", report.selection.timezone,
+            value.currency, value.digits, "", "", "", "", exactMinor(value.invoicedSales), exactMinor(value.taxBilled),
+            exactMinor(value.cashReceived), "", exactMinor(value.directCosts), "", exactMinor(value.labor),
+            exactMinor(value.supplies), exactMinor(value.unclassified), "", "",
+            "", exactMinor(value.overhead), exactMinor(value.outstanding), exactMinor(value.taxCollected),
+            exactMinor(value.grossProfit), exactMinor(value.netProfit), exactMinor(value.cashSurplus),
+            value.grossMarginPercent.orEmpty(), value.netMarginPercent.orEmpty(), report.excludedUnknownCustomerCostCount,
+        )) }
+        report.invoices.forEach { value -> append(row(
+            "INVOICE", instant(value.occurred, report.selection.timezone), report.selection.timezone,
+            value.currency, value.digits, value.job, value.customer, value.number, value.kind,
+            exactMinor(value.salesMinor), exactMinor(value.taxMinor), "", "", "", "",
+            exactMinor(value.laborMinor), exactMinor(value.suppliesMinor), exactMinor(value.unclassifiedMinor),
+            exactMinor(value.legacyTotalMinor), "", listOf(value.reason, value.relatedInvoiceId?.let { "Replacement $it" }.orEmpty())
+                .filter { it.isNotBlank() }.joinToString(" · "), "", "", "", "", "", "", "", "", "",
+        )) }
+        report.cash.forEach { value -> append(row(
+            "CASH_EVENT", instant(value.occurred, report.selection.timezone), report.selection.timezone,
+            value.currency, value.digits, value.job, value.customer, value.number, value.kind,
+            exactMinor(value.salesMinor), exactMinor(value.taxMinor), exactMinor(value.cashMinor), exactMinor(value.creditMinor),
+            "", "", "", "", "", "", value.reference, "", "", "", "", "", "", "", "", "", "",
+        )) }
+        report.costs.forEach { value -> append(row(
+            "ACTUAL_COST", instant(value.occurred, value.timezone), value.timezone,
+            value.currency, value.digits, value.job, value.customer, "", "", "", "", "", "",
+            exactMinor(value.amountMinor), value.category, "", "", "", "", value.reference,
+            listOf(value.task, value.vendor, value.note).filter { it.isNotBlank() }.joinToString(" · "),
+            "", "", "", "", "", "", "", "", "",
+        )) }
     }
 }
