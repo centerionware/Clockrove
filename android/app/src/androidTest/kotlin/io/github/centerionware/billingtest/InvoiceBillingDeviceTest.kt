@@ -133,16 +133,16 @@ class InvoiceBillingDeviceTest {
             }
         }
     }
-    private fun scrollToStart() {
+    private fun scrollToStart(topLabel: String = "Billing basis") {
         hideKeyboard()
         // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
         // successful while remaining at the same offset. An accessibility
         // acknowledgement is not proof that the contents actually moved, so
         // use real downward-content swipes and stop only once the top section
-        // is actually exposed. The settings form can grow as options are added,
-        // so a fixed swipe count can leave the test in its lower sections.
+        // is safely exposed. Forms may reopen at a restored scroll position,
+        // so every new screen can name its own top anchor.
         repeat(40) {
-            if (find("Billing basis") != null) return
+            if (find(topLabel)?.let(::safeTapBounds) != null) return
             fun scroll(node: AccessibilityNodeInfo): Boolean {
                 if (node.isVisibleToUser && node.isScrollable &&
                     node.className?.toString() == "android.widget.ScrollView" &&
@@ -152,11 +152,14 @@ class InvoiceBillingDeviceTest {
             }
             // Some API-24 ScrollViews acknowledge the action without moving.
             // Check for the target again; retain the touch gesture as a fallback.
-            if (automation.rootInActiveWindow?.let(::scroll) == true && find("Billing basis") != null) return
+            if (automation.rootInActiveWindow?.let(::scroll) == true &&
+                find(topLabel)?.let(::safeTapBounds) != null) return
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
-        waitFor("Billing basis")
+        until("Could not restore screen to safe top anchor $topLabel") {
+            find(topLabel)?.let(::safeTapBounds) != null
+        }
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
@@ -376,6 +379,7 @@ class InvoiceBillingDeviceTest {
         assertEquals(10000L, repository.boardSnapshot(job).board.cards.first().quantityUnits)
         try {
             launch(); click("App settings and customers"); click("Settings"); waitFor("Billing defaults")
+            scrollToStart("Billing defaults")
             enter("Default tax (%)", "7.5"); capture("global-tax-settings")
             reveal("Save settings"); click("Save settings")
             until("Actual main Settings did not save tax") { repository.businessSnapshot().settings.defaultTaxUnits == 75000 }

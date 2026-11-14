@@ -3772,3 +3772,12 @@ validation is pending; no VM build or test was run. Play delivery
 was skipped because the merged-main Validate run failed, so no Play upload is
 claimed. Retry the safe-tap follow-up through GitHub Actions, merge only when
 its device matrix is green, then verify the new main validation and Play run.
+
+The first PR #47 Actions run
+[43647325052](https://github.com/centerionware/Clockrove/actions/runs/43647325052)
+then exposed a restored-scroll-position case on API 24: the Settings form was
+at **Company & contact**, below **Default tax (%)**, so a downward-only reveal
+could not reach the field. Its screenshot shows Settings still open, with no
+system-navigation tap. `scrollToStart` now accepts a screen-specific top anchor;
+the global settings journey returns to **Billing defaults** before entering
+tax. Revalidate this follow-up on Actions; no VM build or test ran.
