@@ -69,6 +69,32 @@ class InvoiceBillingDeviceTest {
         }
         return automation.rootInActiveWindow?.let(::visit)
     }
+    private fun safeTapBounds(node: AccessibilityNodeInfo): android.graphics.Rect? {
+        val root = automation.rootInActiveWindow ?: return null
+        if (node.packageName != root.packageName || !node.isVisibleToUser) return null
+        val viewport = android.graphics.Rect().also(root::getBoundsInScreen)
+        if (viewport.isEmpty) return null
+        val systemBounds = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen) }
+        val topInset = systemBounds
+            .filter { it.top <= viewport.top + 8 && it.bottom > viewport.top }
+            .map { it.bottom }
+            .maxOrNull()
+        val navTop = systemBounds
+            .filter { it.top > viewport.top + 50 && it.bottom >= viewport.bottom - 8 }
+            .map { it.top }
+            .minOrNull()
+        val imeTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
+            .minOrNull()
+        if (topInset != null) viewport.top = maxOf(viewport.top, topInset)
+        viewport.bottom = minOf(viewport.bottom, navTop ?: viewport.bottom, imeTop ?: viewport.bottom)
+        val target = android.graphics.Rect().also(node::getBoundsInScreen)
+        if (!target.intersect(viewport) || target.width() < 8 || target.height() < 12) return null
+        return target
+    }
     private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
         var found: AccessibilityNodeInfo? = null
         until("Actual app never exposed $label") { found = find(label, editable); found != null }
@@ -77,14 +103,16 @@ class InvoiceBillingDeviceTest {
     private fun click(label: String) {
         // A semantic ACTION_CLICK can report success without delivering
         // Flutter's pointer event; API 24 also exposes some active buttons as
-        // non-clickable. find() only returns visible nodes, so tap the matched
-        // control's real screen bounds instead of relying on those flags.
+        // non-clickable. Find a point inside both the target and the app's
+        // unobscured viewport before tapping so a Flutter node extending
+        // beneath Android's navigation bar can never hit Home.
+        reveal(label)
         tapNode(waitFor(label))
         automation.waitForIdle(250, 3000)
     }
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
-            if (find(label, editable) != null) true else {
+            if (find(label, editable)?.let(::safeTapBounds) != null) true else {
                 fun scroll(node: AccessibilityNodeInfo): Boolean {
                     // Prefer the screen's vertical container to editable
                     // fields' own scroll actions, then use a real swipe if the
@@ -99,9 +127,9 @@ class InvoiceBillingDeviceTest {
                 // A Flutter ScrollView can acknowledge the accessibility action
                 // without exposing the requested child. Fall back to a real
                 // gesture whenever the target is still outside the viewport.
-                if (!scrolled || find(label, editable) == null) swipeContent(up = true)
+                if (!scrolled || find(label, editable)?.let(::safeTapBounds) == null) swipeContent(up = true)
                 SystemClock.sleep(150)
-                find(label, editable) != null
+                find(label, editable)?.let(::safeTapBounds) != null
             }
         }
     }
@@ -192,9 +220,12 @@ class InvoiceBillingDeviceTest {
     }
     private fun tapNode(node: AccessibilityNodeInfo) {
         val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
-        check(!bounds.isEmpty) { "Cannot tap an empty accessibility target" }
-        val x = bounds.exactCenterX()
-        val y = bounds.exactCenterY()
+        val safeBounds = safeTapBounds(node)
+        check(safeBounds != null) {
+            "Refusing tap outside the app's unobscured viewport: target=$node bounds=$bounds"
+        }
+        val x = requireNotNull(safeBounds).exactCenterX()
+        val y = safeBounds.exactCenterY()
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long) {
             val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
