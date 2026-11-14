@@ -758,7 +758,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 report source at `1abdcfd` / run `43605155898` passed Analyze but required the Actions-generated format patch and had one Flutter behavior failure (180 passed, 1 failed, 14 skipped) because the report test queried an off-screen lazy-list note. At `0905c50` / run `43605752509`, formatting and Analyze passed but a new Flutter behavior failure remained (180 passed, 1 failed, 14 skipped): the customer-selection test observed an empty selection. The test now taps the checkbox tile and asserts checked state before applying; another exact-head run is required. Android build, native tests and device journeys are not yet validated on report changes. The API-24 billing-settings scroll journey still needs an exact-head device pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 at `ccae99f` / Actions run `43606286116` passed formatting, analysis, all Flutter behavior tests and Android debug build, then native tests reported four fixture failures among 614 cases across SDK variants: the CSV formula assertion used a combined detail cell that began with safe text, and a test tried to mutate an immutable existing job currency. The fixtures are corrected to test formula-only detail and set the JPY default before creating the JPY job; rerun required. PDF/device stages did not run. The API-24 billing-settings scroll journey still needs an exact-head device pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -3103,3 +3103,13 @@ tap sequence; the CSV-note visibility issue was fixed. The test now taps the
 checkbox tile and asserts its selected state before applying. Android build,
 native tests and device journeys were skipped. A fresh exact-head Actions run
 is required. No VM build, test or formatter ran.
+
+At commit `ccae99f` / Actions run `43606286116`, formatting, Analyze, all
+Flutter behavior tests and the Android debug build passed. Native unit tests
+reported 614 cases with four failures across SDK variants. The report CSV test
+put a formula note after safe detail text, so the cell did not need formula
+protection; the JPY grouping test attempted to modify an existing job's fixed
+currency. Updated the fixtures to put the formula in the entire detail cell and
+change the default currency before creating a new JPY job. PDF generation and
+device journeys were skipped. Validate the correction in a fresh Actions run.
+No VM build, test or formatter ran.

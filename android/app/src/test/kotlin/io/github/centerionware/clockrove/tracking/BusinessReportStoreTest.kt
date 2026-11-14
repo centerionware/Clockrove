@@ -73,8 +73,8 @@ class BusinessReportStoreTest {
         assertNull(repository.recordInvoicePayment("partial-payment", version,
             InvoicePaymentStore.Draft("financial-payment", "financial-invoice", "5000", "USD", clock, "UTC", reference = "Synthetic deposit")).conflict)
         assertNull(repository.saveActualCost("direct-cost", version, ActualCostStore.Draft(
-            "materials-cost", job, "financial-supply", "2000", "USD", ActualCostStore.MATERIALS,
-            clock, "UTC", "Synthetic supplier", "M-1", "=1+2",
+            "materials-cost", job, null, "2000", "USD", ActualCostStore.MATERIALS,
+            clock, "UTC", "", "M-1", "=1+2",
         )).conflict)
         assertNull(repository.saveActualCost("overhead-cost", version, ActualCostStore.Draft(
             "overhead-cost-row", null, null, "1000", "USD", ActualCostStore.OVERHEAD,
@@ -140,9 +140,13 @@ class BusinessReportStoreTest {
         assertEquals(BigInteger("5000"), june16.summaries.single().cashReceived)
         assertEquals(BigInteger("11125"), june16.summaries.single().outstanding)
 
+        val defaults = repository.businessSnapshot().settings
+        assertNull(repository.saveBusinessSettings(
+            "set-jpy-default", version, defaults.copy(currency = "JPY"),
+        ).conflict)
         val jpy = repository.createJob("Synthetic JPY job")
         val jpySettings = repository.jobDetail(jpy).job.settings
-        assertNull(repository.saveJobSettings("jpy-job-settings", version, jpySettings.copy(currency = "JPY")).conflict)
+        assertEquals("JPY", jpySettings.currency)
         assertNull(repository.saveActualCost("jpy-expense", version, ActualCostStore.Draft(
             "jpy-cost", jpy, null, "7", "JPY", ActualCostStore.OTHER_DIRECT, clock, "UTC", "", "", "",
         )).conflict)
