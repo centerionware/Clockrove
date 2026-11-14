@@ -3608,3 +3608,13 @@ device journey to return to Billing basis before revealing and editing the
 field. This test-only correction is unverified and pushed for a fresh exact-head
 Actions run; API 35 and later device journeys were not reached on run
 `43619518818`. No build, test, formatter or analyzer ran on the VM.
+
+At exact head `39b30dc`, Actions run
+[43620954797](https://github.com/centerionware/Clockrove/actions/runs/43620954797)
+again passed formatting, Analyze, all Flutter behavior tests, Android debug
+build and native unit tests. Before any Android device test ran, the API-24
+emulator stopped responding during APK installation and the workflow's 120
+second install timeout expired (exit code 124). Its captured emulator log ends
+at first boot; the tax journey did not execute and API 35 was not reached. This
+is an environment timeout, not evidence for or against the UI-test correction.
+Retry the same exact-head run. No build or test ran on the VM.
