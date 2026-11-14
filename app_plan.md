@@ -2757,3 +2757,20 @@ invalid-tax message. PR #44 remains open pending merge; M6.6 remains in progress
 because Supplies classification, actual costs, tax-preparation reports, and
 secure map-provider settings are outstanding. No build, test, or formatter ran
 on the VM.
+
+The plan-evidence commit `f8d0587ba2343e0c6f747676520e6066af700f64` received
+two independent full Actions runs. Dispatched run
+[43569496084](https://github.com/centerionware/Clockrove/actions/runs/43569496084)
+passed and its exported XML confirms 651 total native/device tests, zero
+failures/errors/skips, including all 32 actual Android cases on each API. The
+automatic PR run
+[43569578326](https://github.com/centerionware/Clockrove/actions/runs/43569578326)
+failed during the API-35 `locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`
+journey: the accessibility action returned successfully but the setting still
+read on. The emulator then went offline and segfaulted. The API-24 suite passed
+in that run. This disagrees with the dispatched run on the same commit and does
+not reproduce the owner's app crash, but it is a real acceptance-test failure;
+PR #44 must remain unmerged until resolved. The settings-device helper now adds
+a touchscreen tap at the visible switch bounds if the accessibility action does
+not change its state. A new exact-head API-24/35 run is required to establish
+whether this is an interaction-harness issue or an app defect.

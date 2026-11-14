@@ -116,14 +116,39 @@ class SettingsSaveDeviceTest {
         if (current.isChecked != checked) {
             assertTrue("Could not change $label", current.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         }
-        val deadline = SystemClock.uptimeMillis() + 5000
+        if (waitForSwitchState(label, checked, 5000)) return
+
+        // Some emulator/API combinations acknowledge Flutter's accessibility
+        // ACTION_CLICK without dispatching the SwitchListTile tap. Exercise the
+        // same visible control through a touchscreen event before failing.
+        val stillCurrent = waitFor(label, checkable = true)
+        if (stillCurrent.isChecked != checked) {
+            val bounds = android.graphics.Rect().also(stillCurrent::getBoundsInScreen)
+            assertFalse("$label has no tappable visible bounds", bounds.isEmpty)
+            val x = bounds.exactCenterX()
+            val y = bounds.exactCenterY()
+            val downTime = SystemClock.uptimeMillis()
+            fun inject(action: Int, eventTime: Long): Boolean {
+                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+                return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+            }
+            assertTrue("Could not tap $label", inject(MotionEvent.ACTION_DOWN, downTime))
+            SystemClock.sleep(60)
+            assertTrue("Could not release $label", inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis()))
+        }
+        if (!waitForSwitchState(label, checked, 5000)) {
+            dumpAccessibility("switch-state")
+            assertEquals("$label did not change after touch input", checked, find(label, checkable = true)?.isChecked)
+        }
+    }
+    private fun waitForSwitchState(label: String, checked: Boolean, timeoutMillis: Long): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
         while (SystemClock.uptimeMillis() < deadline) {
             automation.waitForIdle(100, 1000)
-            if (find(label, checkable = true)?.isChecked == checked) return
+            if (find(label, checkable = true)?.isChecked == checked) return true
             SystemClock.sleep(100)
         }
-        dumpAccessibility("switch-state")
-        assertEquals("$label did not change to the requested state", checked, find(label, checkable = true)?.isChecked)
+        return false
     }
     private fun click(label: String) {
         var node: AccessibilityNodeInfo? = waitFor(label)
