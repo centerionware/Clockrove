@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.settings
 import android.content.Intent
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -28,18 +29,21 @@ class SettingsSaveDeviceTest {
         val text = value?.toString()?.trim() ?: return false
         return text == label || text.lineSequence().firstOrNull()?.trim() == label
     }
-    private fun find(label: String): AccessibilityNodeInfo? {
+    private fun find(label: String, editable: Boolean = false): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (node.isVisibleToUser && (matchesLabel(node.text, label) || matchesLabel(node.contentDescription, label))) return node
+            val matches = matchesLabel(node.text, label) || matchesLabel(node.contentDescription, label) ||
+                (editable && android.os.Build.VERSION.SDK_INT >= 26 && node.hintText?.toString()?.contains(label) == true)
+            if (node.isVisibleToUser && matches && (!editable || (node.isEditable &&
+                node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }))) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { result -> return result } }
             return null
         }
         return automation.rootInActiveWindow?.let(::visit)
     }
-    private fun waitFor(label: String): AccessibilityNodeInfo {
+    private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
         val until = SystemClock.uptimeMillis() + 30000
         while (SystemClock.uptimeMillis() < until) {
-            find(label)?.let { return it }
+            find(label, editable)?.let { return it }
             SystemClock.sleep(100)
         }
         val file = File(instrumentation.targetContext.getExternalFilesDir(null), "settings-accessibility.txt")
@@ -56,6 +60,28 @@ class SettingsSaveDeviceTest {
             bitmap.recycle()
         }
         throw AssertionError("Actual app never exposed $label")
+    }
+    private fun enterText(label: String, value: String) {
+        reveal(label, editable = true)
+        val field = waitFor(label, editable = true)
+        assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        val keyboardDeadline = SystemClock.uptimeMillis() + 10000
+        while (automation.windows.none { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+            SystemClock.uptimeMillis() < keyboardDeadline) SystemClock.sleep(100)
+        assertTrue("Keyboard did not open for $label", automation.windows.any {
+            it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+        })
+        reveal(label, editable = true)
+        val editable = waitFor(label, editable = true)
+        assertTrue("Could not enter $label", editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+            android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
+        val enteredDeadline = SystemClock.uptimeMillis() + 5000
+        while (find(label, editable = true)?.text?.toString() != value && SystemClock.uptimeMillis() < enteredDeadline) {
+            SystemClock.sleep(100)
+        }
+        assertEquals("Entered value was not shown for $label", value, find(label, editable = true)?.text?.toString())
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        automation.waitForIdle(200, 3000)
     }
     private fun click(label: String) {
         var node: AccessibilityNodeInfo? = waitFor(label)
@@ -93,16 +119,16 @@ class SettingsSaveDeviceTest {
         ParcelFileDescriptor.AutoCloseInputStream(command).use { it.readBytes() }
         automation.waitForIdle(100, 1000)
     }
-    private fun reveal(label: String) {
+    private fun reveal(label: String, editable: Boolean = false) {
         for (up in listOf(true, false)) {
             var attempts = 0
-            while (attempts++ < 60 && find(label) == null) {
+            while (attempts++ < 60 && find(label, editable) == null) {
                 swipeContent(up)
                 SystemClock.sleep(150)
             }
-            if (find(label) != null) return
+            if (find(label, editable) != null) return
         }
-        waitFor(label)
+        waitFor(label, editable)
     }
     @Test fun templatesValidateAndExpandOnActualAndroidWithoutRegexInitialization() {
         try {
@@ -145,6 +171,7 @@ class SettingsSaveDeviceTest {
         val app = instrumentation.targetContext
         val repository = TimerRepository.get(app)
         val before = repository.businessSnapshot()
+        val savedCompanyName = "${before.settings.companyName} E2E saved"
         // Enable semantics before Flutter creates its accessibility bridge.
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
@@ -154,15 +181,19 @@ class SettingsSaveDeviceTest {
             click("App settings and customers")
             click("Settings")
             waitFor("Billing defaults")
+            enterText("Company name", savedCompanyName)
             reveal("Save settings")
             click("Save settings")
             val until = SystemClock.uptimeMillis() + 30000
-            while (repository.businessSnapshot().version == before.version && SystemClock.uptimeMillis() < until) SystemClock.sleep(100)
-            assertTrue("Settings were never committed by the actual app", repository.businessSnapshot().version > before.version)
+            while (repository.businessSnapshot().settings.companyName != savedCompanyName && SystemClock.uptimeMillis() < until) SystemClock.sleep(100)
+            val committed = repository.businessSnapshot()
+            assertTrue("Changed settings were never committed by the actual app", committed.version > before.version)
+            assertEquals("The edited company name was not persisted", savedCompanyName, committed.settings.companyName)
             waitFor("App settings and customers")
             click("App settings and customers"); click("Settings")
             waitFor("Billing defaults")
-            assertEquals(before.settings, repository.businessSnapshot().settings)
+            assertEquals("The edited setting did not survive reopening Settings", savedCompanyName, repository.businessSnapshot().settings.companyName)
+            capture("main-settings-save-reopened")
         } finally {
             instrumentation.runOnMainSync {
                 for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {
@@ -170,6 +201,11 @@ class SettingsSaveDeviceTest {
                 }
             }
             instrumentation.waitForIdleSync()
+            val current = repository.businessSnapshot()
+            if (current.settings != before.settings) {
+                val cleanupId = "settings-device-cleanup-${java.util.UUID.randomUUID()}"
+                assertNull("Could not restore synthetic Settings test data", repository.saveBusinessSettings(cleanupId, current.version, before.settings).conflict)
+            }
         }
     }
 
