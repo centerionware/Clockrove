@@ -420,6 +420,15 @@ class TimerRepository internal constructor(context: Context,
         }
     }
     @Synchronized
+    internal fun attachTaskImages(id: String, version: Long, jobId: String, taskId: String, commentId: String?, attachments: List<Pair<String, ByteArray>>): Outcome {
+        val digests = attachments.map { (attachmentId, image) ->
+            listOf(attachmentId, java.security.MessageDigest.getInstance("SHA-256").digest(image).joinToString("") { "%02x".format(it) })
+        }
+        return boardChange(id, version, "TASK_IMAGES_ADD", listOf(jobId, taskId, commentId, digests)) {
+            TaskConversationStore.addAttachments(it, jobId, taskId, commentId, attachments, wallClock())
+        }
+    }
+    @Synchronized
     internal fun removeTaskImage(id: String, version: Long, jobId: String, taskId: String, attachmentId: String): Outcome =
         boardChange(id, version, "TASK_IMAGE_REMOVE", listOf(jobId, taskId, attachmentId)) {
             TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId)
@@ -452,7 +461,13 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun saveCard(id: String, version: Long, value: BoardStore.Draft): Outcome =
         boardChange(id, version, "CARD_SAVE", listOf(value.id, value.jobId, value.columnId, value.title, value.description, value.dueDate,
-            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) + (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits))) { BoardStore.saveCard(it, value, wallClock()) }
+            value.billable, MoneyMath.fingerprint(value.priceMinor), value.currency) +
+            (if (value.quantityUnits == TaskQuantityStore.one) emptyList() else listOf(value.quantityUnits)) +
+            // Keep the historical LABOR default fingerprint stable so an
+            // in-flight command from an older app version remains idempotent.
+            (if (value.chargeType == TaskClassification.LABOR) emptyList() else listOf(value.chargeType))) {
+            BoardStore.saveCard(it, value, wallClock())
+        }
     @Synchronized
     internal fun moveCard(id: String, version: Long, jobId: String, cardId: String, destination: String, position: Int): Outcome =
         boardChange(id, version, "CARD_MOVE", listOf(jobId, cardId, destination, position)) { BoardStore.moveCard(it, jobId, cardId, destination, position, wallClock()) }
@@ -487,6 +502,19 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun saveJobSettings(id: String, version: Long, value: BusinessStore.JobSettings): Outcome =
         boardChange(id, version, "JOB_SETTINGS", value.values()) { BusinessStore.saveJob(it, value, wallClock()) }
+
+    internal data class ActualCostsSnapshot(val version: Long, val page: ActualCostStore.Page)
+    @Synchronized
+    internal fun actualCosts(before: ActualCostStore.Cursor? = null, limit: Int = 100): ActualCostsSnapshot =
+        ActualCostsSnapshot(readSnapshot(helper.readableDatabase).version, ActualCostStore.list(helper.readableDatabase, before, limit))
+    @Synchronized
+    internal fun saveActualCost(id: String, version: Long, value: ActualCostStore.Draft): Outcome =
+        boardChange(id, version, "ACTUAL_COST_SAVE", listOf(value.id, value.jobId, value.taskId,
+            value.amountMinor, value.currency, value.category, value.occurred, value.timezone,
+            value.vendor, value.reference, value.note)) { ActualCostStore.save(it, value, wallClock()) }
+    @Synchronized
+    internal fun removeActualCost(id: String, version: Long, costId: String): Outcome =
+        boardChange(id, version, "ACTUAL_COST_REMOVE", listOf(costId)) { ActualCostStore.remove(it, costId, wallClock()) }
 
     internal data class ReportSnapshot(val version: Long, val report: ReportStore.Report)
     @Synchronized
@@ -1017,7 +1045,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 11) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 14) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1038,6 +1066,7 @@ class TimerRepository internal constructor(context: Context,
             LocationRecordingStore.install(db, now())
             TaskConversationStore.install(db)
             InvoiceBillingPolicyStore.install(db, now())
+            ActualCostStore.install(db)
         }
         private fun createLocationTable(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
@@ -1048,7 +1077,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..10 && newVersion == 11) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..13 && newVersion == 14) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1062,6 +1091,9 @@ class TimerRepository internal constructor(context: Context,
                 TaskConversationStore.install(db)
             }
             if (oldVersion < 11) InvoiceBillingPolicyStore.install(db, now())
+            if (oldVersion < 12) TaskClassificationStore.install(db, now())
+            if (oldVersion < 13) TaskConversationStore.migrateImageByteLimit(db)
+            if (oldVersion < 14) ActualCostStore.install(db)
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         }
     }

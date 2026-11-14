@@ -113,7 +113,10 @@ class _BusinessCommandState extends State<BusinessCommand>
       'Choose a valid photo within the displayed image limits.',
     'TASK_IMAGE_LIMIT' =>
       'This task already has 20 photos. Remove an image before adding another.',
-    'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 25 MB task-photo limit. Remove an image before adding another.',
+    'TASK_IMAGE_SELECTION_LIMIT' =>
+      'Choose up to 10 photos at a time. You can add another group afterward.',
+    'TASK_IMAGE_BATCH_STORAGE_LIMIT' => 'This selection is over 30 MB after compression. Choose fewer photos at a time.',
+    'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 100 MB task-photo limit. Remove an image before adding another.',
     'TASK_IMAGE_UNAVAILABLE' =>
       'This photo was removed. Refresh the task before continuing.',
     'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
@@ -162,6 +165,12 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
     'INVALID_ACCOUNTS_RECEIVABLE_EMAIL' => 'Enter one valid accounts receivable email address in Settings, or leave it blank to use the company email.',
     'INVALID_PAYMENT_AMOUNT' => 'Enter a positive amount within this invoice’s currency precision. Your draft is kept.',
+    'INVALID_ACTUAL_COST_AMOUNT' => 'Enter a positive amount using this currency’s decimal places. Your draft is kept.',
+    'INVALID_ACTUAL_COST' => 'Review the cost date, currency, category and details. Your draft is kept.',
+    'COST_JOB_UNAVAILABLE' => 'This job is unavailable. Refresh the job list or leave the cost unlinked.',
+    'COST_TASK_UNAVAILABLE' => 'This task is unavailable. Choose another task or leave the cost unlinked.',
+    'ACTUAL_COST_UNAVAILABLE' =>
+      'This cost was removed or changed. Refresh the ledger before continuing.',
     'PAYMENT_EXCEEDS_BALANCE' => 'This exceeds the remaining balance. Refresh the invoice and review the payment amount.',
     'PAYMENT_CURRENCY_MISMATCH' => 'Use the invoice’s original currency. Settings changes never convert its balance.',
     'INVALID_PAYMENT' => 'Review the received date, timezone and field lengths. A payment cannot be dated in the future.',

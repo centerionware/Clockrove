@@ -9,6 +9,20 @@ import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
 import 'report_api.dart';
 
+bool _isMapPoint(ReportPoint point) =>
+    point.latitude.isFinite &&
+    point.longitude.isFinite &&
+    point.latitude.abs() <= 85.05112878 &&
+    point.longitude >= -180 &&
+    point.longitude <= 180;
+
+ReportPoint? _firstMapPoint(Iterable<ReportPoint> points) {
+  for (final point in points) {
+    if (_isMapPoint(point)) return point;
+  }
+  return null;
+}
+
 /// Trace breaks at session boundaries, gaps over 30 minutes and the antimeridian.
 List<List<ReportPoint>> reportSegments(List<ReportPoint> points) {
   final sessions = <String, List<ReportPoint>>{};
@@ -20,7 +34,7 @@ List<List<ReportPoint>> reportSegments(List<ReportPoint> points) {
     samples.sort((a, b) => a.measured.compareTo(b.measured));
     var current = <ReportPoint>[];
     for (final point in samples) {
-      if (point.latitude.abs() > 85.05112878) {
+      if (!_isMapPoint(point)) {
         if (current.length > 1) {
           segments.add(current);
         }
@@ -56,10 +70,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
   late final _client = TileBackoffClient(http.Client());
   late final _tiles = ref.read(workMapTilesProvider)(_client);
   final _controller = MapController();
-  late ReportPoint? _selected = widget.points.isEmpty
-      ? null
-      : widget.points.first;
+  late ReportPoint? _selected = _firstMapPoint(widget.points);
   bool _failed = false;
+  bool _loaded = false;
   @override
   void dispose() {
     _client.close();
@@ -73,12 +86,54 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     });
   }
 
+  void _tileUpdated(TileImage tile) {
+    if (!tile.readyToDisplay) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (tile.loadError && !_failed) {
+        setState(() => _failed = true);
+      } else if (!tile.loadError && !_loaded) {
+        setState(() => _loaded = true);
+      }
+    });
+  }
+
   void _select(ReportPoint point) {
     setState(() => _selected = point);
-    if (point.latitude.abs() <= 85.05112878) {
+    if (_isMapPoint(point)) {
       _controller.move(
         LatLng(point.latitude, point.longitude),
         _controller.camera.zoom,
+      );
+    }
+  }
+
+  Future<void> _openExternalMap() async {
+    final point = _selected;
+    if (point == null || !_isMapPoint(point)) return;
+    final latitude = point.latitude.toStringAsFixed(6);
+    final longitude = point.longitude.toStringAsFixed(6);
+    final webMap = Uri.https('www.openstreetmap.org', '/', {
+      'mlat': latitude,
+      'mlon': longitude,
+    }).replace(fragment: 'map=17/$latitude/$longitude');
+    for (final uri in [
+      Uri(
+        scheme: 'geo',
+        path: '$latitude,$longitude',
+        queryParameters: {'q': '$latitude,$longitude'},
+      ),
+      webMap,
+    ]) {
+      try {
+        if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+      } catch (_) {
+        // Map launch failures do not affect the stored GPS history.
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No map app or browser could be opened.')),
       );
     }
   }
@@ -103,9 +158,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = widget.points
-        .where((p) => p.latitude.abs() <= 85.05112878)
-        .toList();
+    final visible = widget.points.where(_isMapPoint).toList();
     final center = visible.isEmpty
         ? const LatLng(0, 0)
         : LatLng(visible.first.latitude, visible.first.longitude);
@@ -131,6 +184,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
+                        '${selected.latitude.toStringAsFixed(6)}, ${selected.longitude.toStringAsFixed(6)}',
+                      ),
+                      Text(
                         '${selected.label} · ${selected.accuracy.toStringAsFixed(0)} m accuracy',
                       ),
                     ] else
@@ -143,14 +199,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                     ),
                     if (visible.length != widget.points.length)
                       const Text(
-                        'Polar samples remain in the list and CSV; this map cannot display them.',
-                      ),
-                    if (_failed)
-                      Text(
-                        'Map tiles are unavailable. Reports and exports still work.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        'Some samples are outside the map coordinate range. They remain in the list and CSV.',
                       ),
                   ],
                 ),
@@ -181,6 +230,10 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                             'io.github.centerionware.clockrove',
                         tileProvider: _tiles,
                         maxNativeZoom: 19,
+                        tileBuilder: (context, image, tile) {
+                          _tileUpdated(tile);
+                          return workMapTileContent(context, image, tile);
+                        },
                         errorTileCallback: (_, _, _) => _failure(),
                       ),
                       PolylineLayer(
@@ -234,6 +287,16 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                         ],
                       ),
                     ],
+                  ),
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    right: 72,
+                    child: WorkMapTileStatus(
+                      loading: !_loaded && !_failed,
+                      failed: _failed,
+                      onOpenMap: _openExternalMap,
+                    ),
                   ),
                   Positioned(
                     right: 12,

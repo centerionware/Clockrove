@@ -10,7 +10,7 @@ abstract final class AppStrings {
   static const mapPrivacy =
       'Map requests share the viewed area with OpenStreetMap.';
   static const mapUnavailable =
-      'Map tiles are unavailable. You can return to your timer at any time.';
+      'Map tiles are unavailable. Your recorded location is still available.';
   static const linkUnavailable = 'Could not open the link.';
   static const running = 'Clocked in';
   static const chooseJob = 'Choose a job below to start your workday.';

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:clockrove/business/quote_api.dart';
 import 'package:clockrove/business/business_api.dart';
 import 'package:clockrove/business/quote_editor.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/settings_api.dart';
 import 'package:clockrove/tracking/timer_api.dart';
+import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,9 +28,30 @@ const _company = CompanySettings(
 );
 
 class _Business extends BusinessSettingsApi {
+  final List<Customer> customers = [];
+  int version = 1;
+  Customer? savedCustomer;
   @override
   Future<BusinessSettings> read() async =>
-      const BusinessSettings(1, _company, []);
+      BusinessSettings(version, _company, List.unmodifiable(customers));
+
+  @override
+  Future<TimerOutcome> customer(
+    String id,
+    int version,
+    Customer customer,
+  ) async {
+    savedCustomer = customer;
+    customers.removeWhere((existing) => existing.id == customer.id);
+    customers.add(customer);
+    this.version++;
+    return TimerOutcome(this.version, null);
+  }
+}
+
+class _Timer extends TimerApi {
+  @override
+  Stream<int> get committedVersions => const Stream.empty();
 }
 
 class _Jobs extends ReportApi {
@@ -81,6 +105,7 @@ class _Quotes extends QuoteApi {
 Future<void> _show(
   WidgetTester tester,
   _Quotes api, {
+  _Business? business,
   List<TaskTemplate> templates = const [],
 }) async {
   await tester.pumpWidget(
@@ -88,8 +113,9 @@ Future<void> _show(
       overrides: [
         quoteApiProvider.overrideWithValue(api),
         businessApiProvider.overrideWithValue(_Templates(templates)),
-        businessSettingsApiProvider.overrideWithValue(_Business()),
+        businessSettingsApiProvider.overrideWithValue(business ?? _Business()),
         reportApiProvider.overrideWithValue(_Jobs()),
+        timerApiProvider.overrideWithValue(_Timer()),
       ],
       child: const MaterialApp(home: QuoteEditor(quoteId: 'quote')),
     ),
@@ -112,6 +138,55 @@ Future<void> _reveal(
 }
 
 void main() {
+  testWidgets(
+    'quote form creates and selects a customer through shared management',
+    (tester) async {
+      final api = _Quotes();
+      final business = _Business();
+      await _show(tester, api, business: business);
+
+      final selector = find.byType(DropdownButtonFormField<String>).first;
+      expect(
+        tester.getTopLeft(find.text('Manage customers')).dy,
+        greaterThan(tester.getBottomLeft(selector).dy),
+      );
+      await tester.tap(find.text('Manage customers'));
+      await tester.pumpAndSettle();
+      expect(find.text('Customers'), findsOneWidget);
+      await tester.tap(find.text('Customer'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Customer name'),
+        'New quote customer',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Email'),
+        'customer@example.test',
+      );
+      await tester.tap(find.text('Save customer'));
+      await tester.pumpAndSettle();
+      expect(business.savedCustomer?.id, isNotNull);
+      expect(business.savedCustomer?.name, 'New quote customer');
+      expect(business.savedCustomer?.email, 'customer@example.test');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.pumpAndSettle();
+      final newCustomer = find.text('New quote customer');
+      expect(newCustomer, findsOneWidget);
+      await tester.tap(newCustomer);
+      await tester.pumpAndSettle();
+      expect(find.text('New quote customer'), findsOneWidget);
+
+      await _reveal(tester, find.text('Save quote draft'), 400);
+      await tester.tap(find.text('Save quote draft'));
+      await tester.pumpAndSettle();
+      expect(api.calls, hasLength(1));
+      expect(api.calls.single.draft.customerId, business.savedCustomer!.id);
+    },
+  );
+
   testWidgets(
     'quote task template becomes a separate editable line with quantity and price',
     (tester) async {

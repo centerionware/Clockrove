@@ -22,11 +22,14 @@ String? parsePaymentMoney(String input, int digits) =>
     _parseMoney(input, digits, 4096);
 
 String? _parseMoney(String input, int digits, int maxDigits) {
-  final value = input.trim();
-  if (value.isEmpty) return null;
-  if (value.length > maxDigits + 5) {
+  final entered = input.trim();
+  if (entered.isEmpty) return null;
+  if (entered.length > maxDigits + 5) {
     throw const FormatException('Amount is too long.');
   }
+  // Accept the common currency shorthand `.01` as `0.01`, without changing
+  // the decimal parser or passing the amount through floating-point math.
+  final value = entered.startsWith('.') ? '0$entered' : entered;
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
     throw const FormatException(
       'Enter a positive decimal amount, or leave blank.',
@@ -108,8 +111,15 @@ class TaskCard {
     this.priceMinor,
     this.completedMillis,
     this.quantityUnits = '10000',
+    this.chargeType = 'UNCLASSIFIED',
   });
-  final String id, columnId, title, description, currency, quantityUnits;
+  final String id,
+      columnId,
+      title,
+      description,
+      currency,
+      quantityUnits,
+      chargeType;
   String? get amountMinor => taskAmount(priceMinor, quantityUnits);
   final String? dueDate, priceMinor;
   final int position;
@@ -127,6 +137,7 @@ class TaskCard {
     priceMinor: v['priceMinor'] as String?,
     completedMillis: v['completedMillis'] as int?,
     quantityUnits: v['quantityUnits'] as String? ?? '10000',
+    chargeType: v['chargeType'] as String? ?? 'UNCLASSIFIED',
   );
 }
 
@@ -139,8 +150,9 @@ class TaskTemplate {
     this.currency,
     this.source, [
     this.quantityUnits = '10000',
+    this.chargeType = 'UNCLASSIFIED',
   ]);
-  final String id, title, description, currency, quantityUnits;
+  final String id, title, description, currency, quantityUnits, chargeType;
   final String? priceMinor, source;
   factory TaskTemplate.decode(Map<Object?, Object?> v) => TaskTemplate(
     v['id'] as String,
@@ -150,6 +162,7 @@ class TaskTemplate {
     v['currency'] as String,
     v['sourceJobName'] as String?,
     v['quantityUnits'] as String? ?? '10000',
+    v['chargeType'] as String? ?? 'UNCLASSIFIED',
   );
 }
 
@@ -241,6 +254,79 @@ class TaskConversation {
   );
 }
 
+class ActualCostEntry {
+  const ActualCostEntry({
+    required this.id,
+    required this.amountMinor,
+    required this.currency,
+    this.digits = 2,
+    required this.category,
+    required this.occurred,
+    required this.timezone,
+    required this.vendor,
+    required this.reference,
+    required this.note,
+    this.jobId,
+    this.jobName = '',
+    this.taskId,
+    this.taskName = '',
+    this.offsetSeconds = 0,
+    this.created = 0,
+    this.updated = 0,
+  });
+  final String id, amountMinor, currency, category, timezone;
+  final int digits;
+  final String vendor, reference, note, jobName, taskName;
+  final String? jobId, taskId;
+  final int occurred, offsetSeconds, created, updated;
+  factory ActualCostEntry.decode(Map<Object?, Object?> value) =>
+      ActualCostEntry(
+        id: value['id'] as String,
+        jobId: value['jobId'] as String?,
+        jobName: value['jobName'] as String,
+        taskId: value['taskId'] as String?,
+        taskName: value['taskName'] as String,
+        amountMinor: value['amountMinor'] as String,
+        currency: value['currency'] as String,
+        digits: value['fractionDigits'] as int? ?? 2,
+        category: value['category'] as String,
+        occurred: value['occurred'] as int,
+        timezone: value['timezone'] as String,
+        offsetSeconds: value['offsetSeconds'] as int,
+        vendor: value['vendor'] as String,
+        reference: value['reference'] as String,
+        note: value['note'] as String,
+        created: value['created'] as int,
+        updated: value['updated'] as int,
+      );
+}
+
+class ActualCostsSnapshot {
+  const ActualCostsSnapshot(this.version, this.entries, this.next);
+  final int version;
+  final List<ActualCostEntry> entries;
+  final ActualCostCursor? next;
+  factory ActualCostsSnapshot.decode(Map<Object?, Object?> value) =>
+      ActualCostsSnapshot(
+        value['version'] as int,
+        (value['entries'] as List)
+            .map((row) => ActualCostEntry.decode(row as Map<Object?, Object?>))
+            .toList(),
+        value['next'] == null
+            ? null
+            : ActualCostCursor.decode(value['next'] as Map<Object?, Object?>),
+      );
+}
+
+class ActualCostCursor {
+  const ActualCostCursor(this.occurred, this.id);
+  final int occurred;
+  final String id;
+  factory ActualCostCursor.decode(Map<Object?, Object?> value) =>
+      ActualCostCursor(value['occurred'] as int, value['id'] as String);
+  Map<String, Object?> encode() => {'occurred': occurred, 'id': id};
+}
+
 class JobBoard {
   const JobBoard(
     this.version,
@@ -305,6 +391,22 @@ class BusinessApi {
     return value?['unavailable'] == true ? null : value?['image'] as Uint8List?;
   }
 
+  Future<ActualCostsSnapshot> actualCosts({
+    ActualCostCursor? before,
+    int limit = 100,
+  }) async => ActualCostsSnapshot.decode(
+    (await _channel.invokeMapMethod<Object?, Object?>('actualCosts', {
+      'before': before?.encode(),
+      'limit': limit,
+    }))!,
+  );
+
+  Future<int> currencyDigits(String currency) async =>
+      ((await _channel.invokeMapMethod<Object?, Object?>('currencyPrecision', {
+            'currency': currency,
+          }))!['digits']
+          as int);
+
   Future<TimerOutcome> _change(
     String method,
     String id,
@@ -364,6 +466,7 @@ class BusinessApi {
         'priceMinor': c.priceMinor,
         'quantityUnits': c.quantityUnits,
         'currency': c.currency,
+        'chargeType': c.chargeType,
       });
   Future<TimerOutcome> saveTaskComment(
     String commandId,
@@ -398,6 +501,20 @@ class BusinessApi {
     'commentId': commentId,
     'image': bytes,
   });
+  Future<TimerOutcome> attachTaskImages(
+    String commandId,
+    TaskConversation conversation,
+    List<MapEntry<String, Uint8List>> images,
+    String? commentId,
+  ) => _change('attachTaskImages', commandId, conversation.version, {
+    'jobId': conversation.jobId,
+    'taskId': conversation.taskId,
+    'commentId': commentId,
+    'images': [
+      for (final image in images)
+        {'attachmentId': image.key, 'image': image.value},
+    ],
+  });
   Future<TimerOutcome> removeTaskImage(
     String commandId,
     TaskConversation conversation,
@@ -407,6 +524,28 @@ class BusinessApi {
     'taskId': conversation.taskId,
     'attachmentId': attachmentId,
   });
+  Future<TimerOutcome> saveActualCost(
+    String commandId,
+    int version,
+    ActualCostEntry entry,
+  ) => _change('saveActualCost', commandId, version, {
+    'costId': entry.id,
+    'jobId': entry.jobId,
+    'taskId': entry.taskId,
+    'amountMinor': entry.amountMinor,
+    'currency': entry.currency,
+    'category': entry.category,
+    'occurred': entry.occurred,
+    'timezone': entry.timezone,
+    'vendor': entry.vendor,
+    'reference': entry.reference,
+    'note': entry.note,
+  });
+  Future<TimerOutcome> removeActualCost(
+    String commandId,
+    int version,
+    String costId,
+  ) => _change('removeActualCost', commandId, version, {'costId': costId});
   Future<TimerOutcome> moveCard(
     String id,
     JobBoard b,
@@ -440,6 +579,10 @@ class BusinessApi {
 }
 
 final businessApiProvider = Provider<BusinessApi>((ref) => const BusinessApi());
+final actualCostsProvider = FutureProvider<ActualCostsSnapshot>((ref) {
+  ref.watch(timerVersionsProvider);
+  return ref.watch(businessApiProvider).actualCosts();
+});
 final boardProvider = FutureProvider.family<JobBoard, String>((ref, id) {
   ref.watch(timerVersionsProvider);
   return ref.watch(businessApiProvider).board(id);

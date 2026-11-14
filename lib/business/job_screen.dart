@@ -192,6 +192,9 @@ class _Board extends ConsumerWidget {
                 Text(
                   '${taskQuantity(card.quantityUnits)} × ${card.currency} ${money(card.priceMinor, board.digits)} each',
                 ),
+              if (card.chargeType == 'SUPPLIES') const Text('Supplies'),
+              if (card.chargeType == 'UNCLASSIFIED')
+                const Text('Needs labor or supplies classification'),
               if (card.completedMillis != null) const Text('Completed'),
             ],
           ),
@@ -511,6 +514,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   );
   late final _id = widget.card?.id ?? newBusinessId();
   late bool _billable = widget.card?.billable ?? true;
+  late String _chargeType = widget.card?.chargeType ?? 'LABOR';
   late String? _due = widget.card?.dueDate;
   @override
   void dispose() {
@@ -645,6 +649,43 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       value: _billable,
                       onChanged: (v) => setState(() => _billable = v),
                     ),
+                    if (_chargeType == 'UNCLASSIFIED') ...[
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Choose how this existing task is classified for reports.',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Labor'),
+                            selected: _chargeType == 'LABOR',
+                            onSelected: (_) =>
+                                setState(() => _chargeType = 'LABOR'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Supplies'),
+                            selected: _chargeType == 'SUPPLIES',
+                            onSelected: (_) =>
+                                setState(() => _chargeType = 'SUPPLIES'),
+                          ),
+                        ],
+                      ),
+                    ] else
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Supplies'),
+                        subtitle: const Text(
+                          'Turn on for materials. Off means labor.',
+                        ),
+                        value: _chargeType == 'SUPPLIES',
+                        onChanged: (value) => setState(
+                          () => _chargeType = value ? 'SUPPLIES' : 'LABOR',
+                        ),
+                      ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.calendar_today_outlined),
@@ -667,6 +708,11 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             'Check the highlighted fields.',
                           );
                         }
+                        if (_chargeType == 'UNCLASSIFIED') {
+                          throw const FormatException(
+                            'Choose Labor or Supplies before saving.',
+                          );
+                        }
                         final command = newBusinessId();
                         final card = TaskCard(
                           id: _id,
@@ -679,6 +725,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                           dueDate: _due,
                           priceMinor: parseMoney(_price.text, board.digits),
                           quantityUnits: parseTaskQuantity(_quantity.text),
+                          chargeType: _chargeType,
                         );
                         return () => ref
                             .read(businessApiProvider)
@@ -952,7 +999,11 @@ class _TemplatesState extends ConsumerState<_Templates> {
                       child: ListTile(
                         title: Text(task.title),
                         subtitle: Text(
-                          '${task.source ?? 'Saved template'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
+                          '${task.source ?? 'Saved template'} · ${task.chargeType == 'SUPPLIES'
+                              ? 'Supplies'
+                              : task.chargeType == 'LABOR'
+                              ? 'Labor'
+                              : 'Unclassified'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
                         ),
                         onTap: () {
                           final board = ref

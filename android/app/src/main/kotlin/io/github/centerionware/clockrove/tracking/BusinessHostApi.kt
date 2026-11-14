@@ -42,7 +42,12 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         fun int(key: String): Int { val v = integer(key); require(v in Int.MIN_VALUE..Int.MAX_VALUE); return v.toInt() }
         fun bool(key: String) = requireNotNull(value[key] as? Boolean)
         fun nullableBool(key: String): Boolean? { val v = value[key]; require(v == null || v is Boolean); return v as Boolean? }
-        fun bytes(key: String): ByteArray = requireNotNull(value[key] as? ByteArray).also { require(it.size in 1..2_000_000) }
+        fun bytes(key: String): ByteArray = requireNotNull(value[key] as? ByteArray).also { require(it.size in 1..ImageLimits.NORMALIZED_BYTES) }
+        fun taskImages(key: String): List<Pair<String, ByteArray>> {
+            val rows = requireNotNull(value[key] as? List<*>)
+            require(rows.size in 1..ImageLimits.TASK_IMAGES_PER_SELECTION)
+            return rows.map { raw -> Input(requireNotNull(raw as? Map<*, *>)).let { it.string("attachmentId") to it.bytes("image") } }
+        }
         fun money(key: String): java.math.BigInteger? = nullable(key)?.let(MoneyMath::parse)
         fun quantity(): Long = if (!value.containsKey("quantityUnits")) TaskQuantityStore.one else requireNotNull(money("quantityUnits")).let { require(it.signum() > 0 && it <= java.math.BigInteger.valueOf(Long.MAX_VALUE)); it.toLong() }
         fun strings(key: String): List<String> = requireNotNull(value[key] as? List<*>).map { requireNotNull(it as? String) }
@@ -150,9 +155,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "currency" to s.board.currency, "fractionDigits" to Currency.getInstance(s.board.currency).defaultFractionDigits, "archived" to s.board.archived,
                 "columns" to s.board.columns.map { mapOf("id" to it.id, "name" to it.name, "position" to it.position, "completed" to it.completed) },
                 "cards" to s.board.cards.map { mapOf("id" to it.id, "columnId" to it.columnId, "title" to it.title, "description" to it.description, "dueDate" to it.dueDate,
-                    "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency) }) }
+                    "position" to it.position, "completedMillis" to it.completedMillis, "billable" to it.billable, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "chargeType" to it.chargeType) }) }
             "templates" -> return repository.taskTemplates(input.string("search")).map { mapOf("id" to it.id, "title" to it.title, "description" to it.description,
-                "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName) }
+                "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "sourceJobName" to it.sourceJobName, "chargeType" to it.chargeType) }
             "taskConversation" -> return repository.taskConversation(input.string("jobId"), input.string("taskId")).let { snapshot ->
                 val conversation = snapshot.conversation
                 mapOf("version" to snapshot.version, "jobId" to conversation.jobId, "taskId" to conversation.taskId, "archived" to conversation.archived,
@@ -182,6 +187,21 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "reportContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "jobs" to repository.reportChoices().map { mapOf("id" to it.first, "name" to it.second, "archived" to it.third) })
             "companyLogo" -> { val s = repository.logo(); return mapOf("version" to s.version, "id" to s.id, "width" to s.width, "height" to s.height, "png" to s.bytes) }
             "business" -> { val s = repository.businessSnapshot(); return mapOf("version" to s.version, "settings" to settings(s.settings), "customers" to s.customers.map(::customer)) }
+            "actualCosts" -> {
+                val raw = input.value["before"]; require(raw == null || raw is Map<*, *>)
+                val before = (raw as? Map<*, *>)?.let { Input(it).let { cursor -> ActualCostStore.Cursor(cursor.integer("occurred"), cursor.string("id")) } }
+                val s = repository.actualCosts(before, if (input.value.containsKey("limit")) input.int("limit") else 100)
+                return mapOf("version" to s.version, "next" to s.page.next?.let { mapOf("occurred" to it.occurred, "id" to it.id) }, "entries" to s.page.entries.map { entry -> mapOf(
+                    "id" to entry.id, "jobId" to entry.jobId, "jobName" to entry.jobName,
+                    "taskId" to entry.taskId, "taskName" to entry.taskName,
+                    "amountMinor" to entry.amountMinor.toString(), "currency" to entry.currency,
+                    "fractionDigits" to Currency.getInstance(entry.currency).defaultFractionDigits,
+                    "category" to entry.category, "occurred" to entry.occurred,
+                    "timezone" to entry.timezone, "offsetSeconds" to entry.offsetSeconds,
+                    "vendor" to entry.vendor, "reference" to entry.reference, "note" to entry.note,
+                    "created" to entry.created, "updated" to entry.updated,
+                ) })
+            }
             "job" -> { val s = repository.jobDetail(input.string("jobId")); return mapOf("version" to s.version, "settings" to job(s.job.settings), "archived" to s.job.archived,
                 "archivedMillis" to s.job.archivedMillis, "canDelete" to s.canDelete, "customer" to s.job.customer?.let(::customer), "effectiveEmail" to s.job.effectiveEmail, "effectiveHourlyMinor" to s.job.effectiveHourlyMinor?.toString(), "effectiveTaxUnits" to s.job.effectiveTaxUnits,
                 "effectiveHourlyBillingMode" to s.job.effectiveHourlyBillingMode, "effectiveMinimumBillableHours" to s.job.effectiveMinimumBillableHours,
@@ -189,7 +209,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 "effectiveLocationRecording" to repository.locationRecordingEnabled(s.job.settings.id)) }
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
-        val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice", "saveTaskComment", "removeTaskComment", "attachTaskImage", "removeTaskImage")
+        val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice", "saveTaskComment", "removeTaskComment", "attachTaskImage", "attachTaskImages", "removeTaskImage", "saveActualCost", "removeActualCost")
         if (call.method !in supported) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
@@ -235,13 +255,20 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "saveColumn" -> repository.saveColumn(id, version, v.string("columnId"), v.string("jobId"), v.string("name"), v.bool("completed"))
             "reorderColumns" -> repository.reorderColumns(id, version, v.string("jobId"), v.strings("columnIds"))
             "removeColumn" -> repository.removeColumn(id, version, v.string("jobId"), v.string("columnId"), v.nullable("destinationId"))
-            "saveCard" -> repository.saveCard(id, version, BoardStore.Draft(v.string("cardId"), v.string("jobId"), v.string("columnId"), v.string("title"), v.string("description"), v.nullable("dueDate"), v.bool("billable"), v.money("priceMinor"), v.string("currency"), v.quantity()))
+            "saveCard" -> repository.saveCard(id, version, BoardStore.Draft(v.string("cardId"), v.string("jobId"), v.string("columnId"), v.string("title"), v.string("description"), v.nullable("dueDate"), v.bool("billable"), v.money("priceMinor"), v.string("currency"), v.quantity(), v.value["chargeType"] as? String ?: TaskClassification.LABOR))
             "moveCard" -> repository.moveCard(id, version, v.string("jobId"), v.string("cardId"), v.string("destinationId"), v.int("position"))
             "removeCard" -> repository.removeCard(id, version, v.string("jobId"), v.string("cardId"))
             "saveTaskComment" -> repository.saveTaskComment(id, version, v.string("jobId"), v.string("taskId"), v.string("commentId"), v.string("body"))
             "removeTaskComment" -> repository.removeTaskComment(id, version, v.string("jobId"), v.string("taskId"), v.string("commentId"))
             "attachTaskImage" -> repository.attachTaskImage(id, version, v.string("jobId"), v.string("taskId"), v.nullable("commentId"), v.string("attachmentId"), v.bytes("image"))
+            "attachTaskImages" -> repository.attachTaskImages(id, version, v.string("jobId"), v.string("taskId"), v.nullable("commentId"), v.taskImages("images"))
             "removeTaskImage" -> repository.removeTaskImage(id, version, v.string("jobId"), v.string("taskId"), v.string("attachmentId"))
+            "saveActualCost" -> repository.saveActualCost(id, version, ActualCostStore.Draft(
+                v.string("costId"), v.nullable("jobId"), v.nullable("taskId"), v.string("amountMinor"),
+                v.string("currency"), v.string("category"), v.integer("occurred"), v.string("timezone"),
+                v.string("vendor"), v.string("reference"), v.string("note"),
+            ))
+            "removeActualCost" -> repository.removeActualCost(id, version, v.string("costId"))
             "copyTemplate" -> repository.copyTaskTemplate(id, version, v.string("templateId"), v.string("cardId"), v.string("jobId"), v.string("columnId"), v.bool("copyPrice"))
             "removeTemplate" -> repository.removeTaskTemplate(id, version, v.string("templateId"))
             "saveSettings" -> repository.saveBusinessSettings(id, version, BusinessStore.Settings(v.string("currency"), v.money("defaultHourlyMinor"), v.string("companyName"), v.string("companyEmail"), v.string("companyPhone"), v.string("companyAddress"), v.string("companyWebsite"), v.string("invoiceHeader"), v.string("invoiceFooter"), v.string("invoiceStyle"), v.string("emailSubject"), v.string("emailBody"), if (v.value.containsKey("defaultTaxUnits")) v.int("defaultTaxUnits") else 0, if (v.value.containsKey("receivablesEmail")) v.string("receivablesEmail") else "", if (v.value.containsKey("defaultLocationRecording")) v.bool("defaultLocationRecording") else true,
@@ -362,7 +389,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone), "endLabel" to ReportCsv.instant(it.end, r.selection.timezone)) },
             "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone)) },
             "points" to r.points.map { mapOf("id" to it.id, "sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "measured" to it.measured, "latitude" to it.latitude, "longitude" to it.longitude, "accuracy" to it.accuracy, "measuredLabel" to ReportCsv.instant(it.measured, r.selection.timezone)) },
-            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
+            "tasks" to r.tasks.map { mapOf("id" to it.id, "jobId" to it.jobId, "title" to it.title, "completed" to it.completed, "priceMinor" to it.priceMinor?.toString(), "quantityUnits" to it.quantityUnits.toString(), "currency" to it.currency, "chargeType" to it.chargeType, "completedLabel" to ReportCsv.instant(it.completed, r.selection.timezone)) },
             "totals" to r.totals.map { mapOf("jobId" to it.jobId, "jobName" to it.jobName, "mode" to it.mode, "currency" to it.currency, "fractionDigits" to Currency.getInstance(it.currency).defaultFractionDigits,
                 "durationMillis" to it.durationMillis.toString(), "hourlyMinor" to it.hourlyMinor?.toString(), "amountMinor" to it.amountMinor?.toString(), "missingPrices" to it.missingPrices) })
     }

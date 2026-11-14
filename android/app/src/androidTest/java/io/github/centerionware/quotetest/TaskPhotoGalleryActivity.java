@@ -1,6 +1,7 @@
 package io.github.centerionware.quotetest;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -15,27 +16,40 @@ public final class TaskPhotoGalleryActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Bitmap bitmap = null;
+        Bitmap first = null;
+        Bitmap second = null;
         try {
-            File file = new File(getCacheDir(), "task-photo-fixture.jpg");
-            bitmap = Bitmap.createBitmap(5, 4, Bitmap.Config.ARGB_8888);
-            bitmap.eraseColor(Color.rgb(176, 96, 32));
-            try (FileOutputStream output = new FileOutputStream(file)) {
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)) {
-                    throw new IllegalStateException("Could not create synthetic gallery image");
-                }
-            }
-            Uri uri = Uri.parse(
-                    "content://" + getPackageName() + ".task-photo-fixtures/task-photo-fixture.jpg");
-            Intent result = new Intent()
-                    .setDataAndType(uri, "image/jpeg")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            File firstFile = new File(getCacheDir(), "task-photo-fixture-one.jpg");
+            File secondFile = new File(getCacheDir(), "task-photo-fixture-two.jpg");
+            first = Bitmap.createBitmap(5, 4, Bitmap.Config.ARGB_8888);
+            second = Bitmap.createBitmap(5, 4, Bitmap.Config.ARGB_8888);
+            first.eraseColor(Color.rgb(176, 96, 32));
+            second.eraseColor(Color.rgb(48, 112, 184));
+            write(first, firstFile);
+            write(second, secondFile);
+            String authority = "content://" + getPackageName() + ".task-photo-fixtures/";
+            Uri firstUri = Uri.parse(authority + firstFile.getName());
+            Uri secondUri = Uri.parse(authority + secondFile.getName());
+            ClipData selected = ClipData.newUri(getContentResolver(), "Clockrove task photos", firstUri);
+            selected.addItem(new ClipData.Item(secondUri));
+            Intent result = new Intent().setDataAndType(firstUri, "image/jpeg");
+            result.setClipData(selected);
+            result.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             setResult(RESULT_OK, result);
         } catch (Exception exception) {
             setResult(RESULT_CANCELED);
         } finally {
-            if (bitmap != null) bitmap.recycle();
+            if (first != null) first.recycle();
+            if (second != null) second.recycle();
             finish();
+        }
+    }
+
+    private static void write(Bitmap bitmap, File file) throws Exception {
+        try (FileOutputStream output = new FileOutputStream(file)) {
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)) {
+                throw new IllegalStateException("Could not create synthetic gallery image");
+            }
         }
     }
 }

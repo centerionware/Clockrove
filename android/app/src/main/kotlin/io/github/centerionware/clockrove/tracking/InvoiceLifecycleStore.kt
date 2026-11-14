@@ -100,7 +100,7 @@ internal object InvoiceLifecycleStore {
             if (line.quantityUnits == null && amount != null && detail == old.detail && amount != PaymentMath.parseMajor(old.amount, source.digits)) {
                 detail = "Adjusted amount. Original basis:\n$detail"
             }
-            edited.add(InvoiceStore.Line(line.title, detail, amount?.let { InvoiceStore.amount(it, source.digits) }.orEmpty(), line.quantityUnits, line.unitPriceMinor))
+            edited.add(InvoiceStore.Line(line.title, detail, amount?.let { InvoiceStore.amount(it, source.digits) }.orEmpty(), line.quantityUnits, line.unitPriceMinor, old.chargeType))
         }
         val held = claims(db, value.invoiceId)
         if (value.releaseClaimIds.size > 7000 || value.releaseClaimIds.distinct().size != value.releaseClaimIds.size ||
@@ -132,7 +132,7 @@ internal object InvoiceLifecycleStore {
         val billingPolicy = org.json.JSONObject(mapOf(
             "kind" to "REPLACEMENT", "predecessorPolicy" to source.billingPolicy,
             "reviewedLines" to JSONArray(edited.map { line -> mapOf("title" to line.title, "detail" to line.detail,
-                "amount" to line.amount, "quantityUnits" to line.quantityUnits, "unitPriceMinor" to line.unitPriceMinor) }),
+                "amount" to line.amount, "quantityUnits" to line.quantityUnits, "unitPriceMinor" to line.unitPriceMinor, "chargeType" to line.chargeType) }),
             "addedWorkPolicy" to added?.totals?.singleOrNull()?.let { policy -> mapOf(
                 "mode" to policy.mode, "hourlyMode" to policy.policyHourlyMode,
                 "minimumHours" to policy.policyMinimumHours, "minimumTaskFeeMinor" to policy.policyTaskMinimumMinor?.toString(),

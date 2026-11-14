@@ -103,38 +103,44 @@ class InvoiceBillingDeviceTest {
         }
     }
     private fun scrollToStart() {
-        val deadline = SystemClock.uptimeMillis() + 15000
-        var stationaryPolls = 0
-        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
-            fun scroll(node: AccessibilityNodeInfo): Boolean {
-                for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-            }
-            if (automation.rootInActiveWindow?.let(::scroll) == true) {
-                stationaryPolls = 0
-            } else {
-                if (stationaryPolls == 0) {
-                    repeat(8) {
-                        swipeContent(up = false)
-                        SystemClock.sleep(120)
-                    }
-                }
-                stationaryPolls++
-            }
-            SystemClock.sleep(150)
+        hideKeyboard()
+        // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
+        // successful while remaining at the same offset. An accessibility
+        // acknowledgement is not proof that the contents actually moved, so
+        // use real downward-content swipes and stop only once the top section
+        // is actually exposed. The settings form can grow as options are added,
+        // so a fixed swipe count can leave the test in its lower sections.
+        repeat(40) {
+            if (find("Billing basis") != null) return
+            swipeContent(up = false)
+            SystemClock.sleep(120)
         }
+        waitFor("Billing basis")
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        fun scrollBounds(node: AccessibilityNodeInfo): android.graphics.Rect? {
+            if (node.isVisibleToUser && node.isScrollable &&
+                node.className?.toString() == "android.widget.ScrollView") {
+                return android.graphics.Rect().also(node::getBoundsInScreen)
+            }
+            for (i in 0 until node.childCount) {
+                node.getChild(i)?.let { scrollBounds(it)?.let { found -> return found } }
+            }
+            return null
+        }
+        val content = scrollBounds(root)?.takeUnless { it.isEmpty } ?: bounds
         val imeTop = automation.windows
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
             .minOrNull()
-        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
-        val top = bounds.top + 220
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
+        val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
-        val x = bounds.centerX().toFloat()
+        // Target the actual scrollable content. A swipe in the page margin can
+        // miss Flutter's hit-test tree even when the window itself is scrollable.
+        val x = content.centerX().toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
@@ -266,7 +272,9 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName)
             waitFor("Task board"); reveal("Install 1 sq ft tile"); click("Install 1 sq ft tile")
-            waitFor("Edit task"); enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            waitFor("Edit task")
+            enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            reveal("Supplies"); click("Supplies"); capture("supplies-classification")
             reveal("Save task"); click("Save task")
             until("Wide unit price was narrowed during actual UI save") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.priceMinor == java.math.BigInteger("100000000000000000000")
@@ -277,7 +285,9 @@ class InvoiceBillingDeviceTest {
             enter("Unit price (USD)", "5.00")
             reveal("Save task"); capture("quantity-editor"); click("Save task")
             until("Actual task editor did not commit quantity and unit price") {
-                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) }
+                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let {
+                    it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) && it.chargeType == "SUPPLIES"
+                }
             }
             waitFor("Task board"); capture("quantity-board")
             click("Job report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
@@ -290,6 +300,7 @@ class InvoiceBillingDeviceTest {
             assertEquals("130.00", frozen.subtotal); assertEquals("9.75", frozen.taxAmount); assertEquals("139.75", frozen.total)
             assertEquals("Install 1 sq ft tile", frozen.lines.single().title)
             assertEquals("260000", frozen.lines.single().quantityUnits); assertEquals("500", frozen.lines.single().unitPriceMinor)
+            assertEquals("SUPPLIES", frozen.lines.single().chargeType)
             waitFor("Page 1 of 1"); capture("issued-invoice")
             assertTrue(requireNotNull(repository.invoice(issued.id).pdf).size > 1000)
             assertEquals(1002L, sequence())
