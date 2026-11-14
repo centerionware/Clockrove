@@ -157,7 +157,14 @@ void main() {
       find.widgetWithText(TextField, 'Customer name'),
       'New quote customer',
     );
-    await _reveal(tester, find.text('Save customer'), 400);
+    final customerEditorScroll = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.text('Save customer'),
+      400,
+      scrollable: customerEditorScroll,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Save customer'), findsOneWidget);
     await tester.tap(find.text('Save customer'));
     await tester.pumpAndSettle();
     expect(find.text('New quote customer'), findsOneWidget);
