@@ -3321,11 +3321,11 @@ Added **Manage customers** directly below the quote customer selector using the
 same `CustomersScreen` as Job settings. The quote form watches the shared
 customer provider, so additions and edits appear in the selector after return.
 Widget coverage creates a customer from the quote flow and checks that it is
-available in the selector. The first attempt failed because the test did not
-scroll to the lazy-list Save customer control; run [43588980204](https://github.com/centerionware/Clockrove/actions/runs/43588980204)
-then failed to find the Save customer label after a generic scroll. Its other
-177 behavior tests passed, including `.01` payment parsing/form entry and the
-multi-photo review plus selected-index left/right viewer. The test now targets
-the customer editor's own scrollable, verifies the visible **Save customer**
-label and taps it directly; exact-head Actions rerun is pending. No VM build or
-test was run.
+available in the selector. Runs [43588980204](https://github.com/centerionware/Clockrove/actions/runs/43588980204),
+[43589349628](https://github.com/centerionware/Clockrove/actions/runs/43589349628)
+and [43589666718](https://github.com/centerionware/Clockrove/actions/runs/43589666718)
+reached this test but failed to expose the lazy-list Save customer action; the
+latest still reported 177 other behavior tests passing. These runs also passed
+the `.01` payment and photo viewer cases. The test now resolves the `ListView`
+containing the customer-name field before scrolling, then taps **Save customer**
+directly. Exact-head Actions rerun is pending. No VM build or test was run.

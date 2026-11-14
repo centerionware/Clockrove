@@ -157,7 +157,15 @@ void main() {
       find.widgetWithText(TextField, 'Customer name'),
       'New quote customer',
     );
-    final customerEditorScroll = find.byType(Scrollable).last;
+    final customerNameField = find.widgetWithText(TextField, 'Customer name');
+    final customerEditorList = find.ancestor(
+      of: customerNameField,
+      matching: find.byType(ListView),
+    ).first;
+    final customerEditorScroll = find.descendant(
+      of: customerEditorList,
+      matching: find.byType(Scrollable),
+    ).first;
     await tester.scrollUntilVisible(
       find.text('Save customer'),
       400,

@@ -2906,12 +2906,13 @@ accepting `.01` as `0.01` fixes that input validation bug while preserving exact
 minor-unit conversion and existing currency-precision checks. Regression tests
 cover the parser and full payment form, asserting one cent persists as minor-unit
 string `1`. Actions runs `43587087757`, `43587596151`, `43588048998`,
-`43588642154` and `43588980204` each passed both penny-related Flutter tests.
-Runs `43588642154`, `43588980204` and `43589349628` also passed the task-photo
-selected-index and left/right swipe test. Run `43589349628` still failed the
-quote customer-management UI test because the generic scroll helper did not
-expose the Save customer action. The test now scrolls the customer editor's
-own list, confirms the label is present, then taps it directly. The same change adds
+`43588642154`, `43588980204`, `43589349628` and `43589666718` each passed both
+penny-related Flutter tests. Runs `43588642154`, `43588980204`, `43589349628` and
+`43589666718` also passed the task-photo selected-index and left/right swipe
+test. The latest run still failed the quote customer-management UI test because
+its generic scroll target did not expose the Save customer action. The test now
+resolves the `ListView` containing the customer-name field and scrolls it before
+tapping the visible label. The same change adds
 Manage customers beneath the quote selector and refreshes its choices when the
 shared customer provider changes. A fresh exact-head Actions run is pending. No
 local tests or builds were run.
