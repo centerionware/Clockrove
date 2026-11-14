@@ -2906,10 +2906,11 @@ accepting `.01` as `0.01` fixes that input validation bug while preserving exact
 minor-unit conversion and existing currency-precision checks. Regression tests
 cover the parser and full payment form, asserting one cent persists as minor-unit
 string `1`. Actions run `43587087757` passed both penny-related Flutter tests,
-formatting aside, but failed the new photo-viewer swipe assertion before Android
-validation. The source now follows the requested left-to-previous/right-to-next
-direction; the CI formatter patch was applied. A fresh Actions run is required
-for full verification. No local tests or builds were run.
+but failed the new viewer test's initial selected-photo assertion before Android
+validation; its swipe assertions had not run. The source now follows the
+requested left-to-previous/right-to-next direction, and the test taps the
+specific keyed photo. The CI formatter patch was applied. A fresh Actions run is
+required for full verification. No local tests or builds were run.
 
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device

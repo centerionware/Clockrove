@@ -620,6 +620,7 @@ class _TaskAttachmentThumb extends ConsumerWidget {
       FutureBuilder<Uint8List?>(
         future: ref.read(businessApiProvider).taskAttachment(attachment.id),
         builder: (context, snapshot) => InkWell(
+          key: ValueKey('task-attachment-${attachment.id}'),
           onTap: snapshot.data == null ? null : onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(

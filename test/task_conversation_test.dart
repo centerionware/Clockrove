@@ -419,7 +419,11 @@ void main() {
         ..seedTaskPhoto('task-photo-newest', 30);
       await show(tester, api);
 
-      await tester.tap(find.bySemanticsLabel('Comment photo attachment'));
+      final commentPhoto = find.byKey(
+        const ValueKey('task-attachment-comment-photo-middle'),
+      );
+      expect(tester.widget<InkWell>(commentPhoto).onTap, isNotNull);
+      await tester.tap(commentPhoto);
       await tester.pumpAndSettle();
       expect(find.text('Photo 2 of 3'), findsOneWidget);
       await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
