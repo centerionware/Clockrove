@@ -758,7 +758,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `d6405b5` / Actions run `43607466254` passed formatting, analysis, all Flutter behavior tests, Android debug build and 614 native tests. The API-24 PDF device stage then failed an oversized-logo fixture that still assumed the former 2 MB image limit; the fixture now derives its boundary from `ImageLimits.NORMALIZED_BYTES`. API 35 and subsequent journeys were not reached; rerun required. The API-24 billing-settings scroll journey still needs an exact-head pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 head `afdf6d8` / Actions run `43608664165` passed formatting, analysis, all Flutter behavior tests, Android debug build and 614 native tests. API 24 passed the corrected image-limit case, then its quote billing journey found the test had not selected Labor or Supplies for a quote-generated Unclassified task. The UI correctly displayed its classification guard. The journey now asserts the message, chooses Labor and retries the save; API 35 and subsequent journeys were not reached, so rerun is required. The API-24 billing-settings scroll journey still needs an exact-head pass. The 49-sample report-map route passed API 24 in run `43581546961`. Finish M6.6 reports and secure provider settings, then M7 and the required M7.6 full-app UI/E2E gate before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -3126,3 +3126,16 @@ fixture failure: its oversized-logo payload was 2,000,001 bytes, below the newer
 `ImageLimits.NORMALIZED_BYTES + 1`, so it stays aligned with the product limit.
 API 35 and later device journeys were not reached. The correction requires a
 fresh exact-head Actions run. No VM build, test or formatter ran.
+
+
+### 2026-11-14 — quote task classification in device journey
+
+Exact head `afdf6d8` / Actions run
+[43608664165](https://github.com/centerionware/Clockrove/actions/runs/43608664165)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build and
+614 native tests. API 24 passed the corrected 5 MB image-limit test, then its
+quote billing journey showed the expected task-classification guard for a new
+Unclassified task. Updated the device test to assert that message, choose Labor
+and retry before checking the exact quantity and price. API 35 and subsequent
+journeys were not reached. A fresh exact-head Actions run is required. No VM
+build, test or formatter ran.

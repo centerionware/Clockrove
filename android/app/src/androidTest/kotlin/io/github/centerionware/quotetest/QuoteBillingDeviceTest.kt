@@ -327,6 +327,8 @@ class QuoteBillingDeviceTest {
             reveal("Open existing job"); click("Open existing job")
             waitFor("Task board"); waitFor("Install tile"); click("Install tile"); waitFor("Edit task")
             enter("Unit price (USD)", "9.99"); enter("Quantity", "30"); reveal("Save task"); click("Save task")
+            waitFor("Choose Labor or Supplies before saving.")
+            click("Labor"); reveal("Save task"); click("Save task")
             until("Actual task quantity edit was not saved") { repository.boardSnapshot(binding.jobId).board.cards.single().quantityUnits == 300000L }
             waitFor("Task board"); capture("actual-task-quantity")
             click("Task actions"); click("Move to Done"); click("Move task")
