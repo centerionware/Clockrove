@@ -158,9 +158,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = widget.points
-        .where(_isMapPoint)
-        .toList();
+    final visible = widget.points.where(_isMapPoint).toList();
     final center = visible.isEmpty
         ? const LatLng(0, 0)
         : LatLng(visible.first.latitude, visible.first.longitude);

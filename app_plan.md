@@ -528,6 +528,8 @@ do not satisfy acceptance.
   route overlays and attribution visible, provide an external map action, and
   capture the real Android screen. Deterministic tile-error widget coverage must
   confirm failed tiles render a visible fallback instead of a white surface.
+  Tile provider headers must be mutable per screen because flutter_map injects
+  its package User-Agent while initializing the tile layer.
 - Add the global GPS recording preference and per-job inherit/on/off override
   from section 3.3. Verify default-on, permission-degraded states, clock-in via
   manual/app/widget actions, service reconciliation after changes, ten-minute

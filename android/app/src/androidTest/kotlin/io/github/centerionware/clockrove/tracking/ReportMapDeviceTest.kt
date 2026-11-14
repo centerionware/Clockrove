@@ -8,6 +8,8 @@ import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import io.github.centerionware.clockrove.MainActivity
 import java.io.File
 import java.text.SimpleDateFormat
@@ -27,6 +29,7 @@ class ReportMapDeviceTest {
     private val app get() = instrumentation.targetContext
     private val automation get() = instrumentation.uiAutomation
     private val captures get() = File(app.getExternalFilesDir(null), "map-captures").apply { mkdirs() }
+    private var seededJobId: String? = null
 
     private fun find(label: String): AccessibilityNodeInfo? {
         fun matches(value: CharSequence?) = value?.toString()?.lineSequence()
@@ -99,9 +102,10 @@ class ReportMapDeviceTest {
         inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY)
     }
 
-    private fun seedGpsHistory(): TimerRepository {
+    private fun seedGpsHistory() {
         val repository = TimerRepository.get(app)
         val jobId = repository.createJob("Synthetic GPS map journey")
+        seededJobId = jobId
         val timezone = TimeZone.getDefault()
         val startCalendar = Calendar.getInstance(timezone).apply {
             set(Calendar.HOUR_OF_DAY, 8)
@@ -161,7 +165,33 @@ class ReportMapDeviceTest {
             49,
             repository.report(ReportStore.Selection(first, today, timezone.id, listOf(jobId))).report.points.size,
         )
-        return repository
+    }
+
+    private fun removeGpsHistory() {
+        val jobId = seededJobId ?: return
+        val repository = TimerRepository.get(app)
+        val archived = repository.archiveJob(
+            "map-test-archive-$jobId",
+            repository.snapshot().version,
+            jobId,
+        )
+        assertEquals("Synthetic map test job could not be archived", null, archived.conflict)
+        SQLiteDatabase.openDatabase(
+            app.getDatabasePath("clockrove.db").path,
+            null,
+            SQLiteDatabase.OPEN_READWRITE,
+        ).use { database ->
+            database.execSQL(
+                "UPDATE jobs SET archived_ms=? WHERE id=?",
+                arrayOf(System.currentTimeMillis() - JobLifecycleStore.retentionMillis - 1000, jobId),
+            )
+        }
+        val deleted = repository.deleteJob(
+            "map-test-delete-$jobId",
+            archived.version,
+            jobId,
+        )
+        assertEquals("Synthetic map test job could not be removed", null, deleted.conflict)
     }
 
     private fun capture(name: String) {
@@ -190,34 +220,49 @@ class ReportMapDeviceTest {
         }
     }
 
+    private fun closeActivities() {
+        instrumentation.runOnMainSync {
+            listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)
+                .flatMap { ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(it).toList() }
+                .distinct()
+                .forEach { it.finish() }
+        }
+        instrumentation.waitForIdleSync()
+    }
+
     @Test fun opensMapForFortyNineRecordedSamplesAndShowsTileState() {
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
-        seedGpsHistory()
-        app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-        waitFor("App settings and customers")
-        click("Synthetic GPS map journey")
-        waitFor("Job report")
-        click("Job report")
-        waitFor("Work report")
-        reveal("Map · 49 measured samples")
-        click("Map · 49 measured samples")
-        waitFor("Report location history")
-        waitFor("Synthetic GPS map journey")
-        waitFor("37.421998, -122.084000")
+        try {
+            seedGpsHistory()
+            app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            waitFor("App settings and customers")
+            click("Synthetic GPS map journey")
+            waitFor("Job report")
+            click("Job report")
+            waitFor("Work report")
+            reveal("Map · 49 measured samples")
+            click("Map · 49 measured samples")
+            waitFor("Report location history")
+            waitFor("Synthetic GPS map journey")
+            waitFor("37.421998, -122.084000")
 
-        val tileDeadline = SystemClock.uptimeMillis() + 30000
-        val terminalStates = listOf(
-            "Map tiles loaded",
-            "Map tiles are unavailable. Your recorded location is still available.",
-        )
-        while (SystemClock.uptimeMillis() < tileDeadline && terminalStates.none { find(it) != null }) {
-            SystemClock.sleep(150)
+            val tileDeadline = SystemClock.uptimeMillis() + 30000
+            val terminalStates = listOf(
+                "Map tiles loaded",
+                "Map tiles are unavailable. Your recorded location is still available.",
+            )
+            while (SystemClock.uptimeMillis() < tileDeadline && terminalStates.none { find(it) != null }) {
+                SystemClock.sleep(150)
+            }
+            assertNotNull("Map remained blank/loading without a tile status", terminalStates.firstNotNullOfOrNull(::find))
+            waitFor("Open map")
+            waitFor("© OpenStreetMap contributors")
+            capture("report-map-49-samples")
+        } finally {
+            closeActivities()
+            removeGpsHistory()
         }
-        assertNotNull("Map remained blank/loading without a tile status", terminalStates.firstNotNullOfOrNull(::find))
-        waitFor("Open map")
-        waitFor("© OpenStreetMap contributors")
-        capture("report-map-49-samples")
     }
 }

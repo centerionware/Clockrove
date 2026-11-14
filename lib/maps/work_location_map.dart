@@ -14,7 +14,9 @@ final workMapTilesProvider = Provider<TileProvider Function(http.Client)>((
 ) {
   return (client) => NetworkTileProvider(
     httpClient: client,
-    headers: const {
+    // flutter_map adds its package User-Agent to this map during TileLayer
+    // initialization, so this must be a fresh mutable map for each screen.
+    headers: {
       'User-Agent':
           'Clockrove/0.1 (io.github.centerionware.clockrove; '
           '+https://github.com/centerionware/Clockrove)',
@@ -37,7 +39,10 @@ Widget workMapTileContent(BuildContext context, Widget image, TileImage tile) {
       border: Border.all(color: colors.outlineVariant, width: 0.5),
     ),
     child: Center(
-      child: Icon(Icons.map_outlined, color: colors.primary.withValues(alpha: 0.7)),
+      child: Icon(
+        Icons.map_outlined,
+        color: colors.primary.withValues(alpha: 0.7),
+      ),
     ),
   );
 }
