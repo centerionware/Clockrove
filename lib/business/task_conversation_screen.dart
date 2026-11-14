@@ -80,7 +80,11 @@ class _TaskConversationScreenState
         barrierDismissible: false,
         builder: (dialogContext) => StatefulBuilder(
           builder: (dialogContext, setDialogState) => AlertDialog(
-            title: Text(selectedImages.length == 1 ? 'Review photo' : 'Review ${selectedImages.length} photos'),
+            title: Text(
+              selectedImages.length == 1
+                  ? 'Review photo'
+                  : 'Review ${selectedImages.length} photos',
+            ),
             content: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(dialogContext).height * .55,
@@ -92,7 +96,9 @@ class _TaskConversationScreenState
                 child: Column(
                   children: [
                     if (selectedImages.length > 1) ...[
-                      Text('Photo ${reviewIndex + 1} of ${selectedImages.length}'),
+                      Text(
+                        'Photo ${reviewIndex + 1} of ${selectedImages.length}',
+                      ),
                       const SizedBox(height: 8),
                     ],
                     Expanded(
@@ -125,11 +131,14 @@ class _TaskConversationScreenState
                   label: const Text('Retake'),
                 ),
               BusinessCommand(
-                label: selectedImages.length == 1 ? 'Attach photo' : 'Attach photos',
+                label: selectedImages.length == 1
+                    ? 'Attach photo'
+                    : 'Attach photos',
                 create: () {
                   final id = newBusinessId();
                   final attachments = [
-                    for (final image in selectedImages) MapEntry(newBusinessId(), image),
+                    for (final image in selectedImages)
+                      MapEntry(newBusinessId(), image),
                   ];
                   final api = ref.read(businessApiProvider);
                   return () => api.attachTaskImages(
@@ -171,22 +180,21 @@ class _TaskConversationScreenState
     TaskConversation conversation,
     TaskAttachmentInfo attachment,
   ) async {
-    final related = <TaskAttachmentInfo>[
-      ...conversation.taskAttachments,
-      for (final comment in conversation.comments) ...comment.attachments,
-    ]..sort((left, right) {
-      final byTime = left.createdMillis.compareTo(right.createdMillis);
-      return byTime != 0 ? byTime : left.id.compareTo(right.id);
-    });
+    final related =
+        <TaskAttachmentInfo>[
+          ...conversation.taskAttachments,
+          for (final comment in conversation.comments) ...comment.attachments,
+        ]..sort((left, right) {
+          final byTime = left.createdMillis.compareTo(right.createdMillis);
+          return byTime != 0 ? byTime : left.id.compareTo(right.id);
+        });
     final initialIndex = related.indexWhere((item) => item.id == attachment.id);
     if (!mounted || initialIndex < 0) return;
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => _TaskPhotoViewer(
-          attachments: related,
-          initialIndex: initialIndex,
-        ),
+        builder: (_) =>
+            _TaskPhotoViewer(attachments: related, initialIndex: initialIndex),
       ),
     );
   }
@@ -512,7 +520,10 @@ class _TaskConversationScreenState
 }
 
 class _TaskPhotoViewer extends ConsumerStatefulWidget {
-  const _TaskPhotoViewer({required this.attachments, required this.initialIndex});
+  const _TaskPhotoViewer({
+    required this.attachments,
+    required this.initialIndex,
+  });
   final List<TaskAttachmentInfo> attachments;
   final int initialIndex;
 
@@ -551,10 +562,13 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(count == 1 ? 'Task photo' : 'Photo ${_index + 1} of $count'),
+        title: Text(
+          count == 1 ? 'Task photo' : 'Photo ${_index + 1} of $count',
+        ),
       ),
       body: PageView.builder(
         controller: _controller,
+        reverse: true,
         itemCount: count,
         onPageChanged: (index) => setState(() => _index = index),
         itemBuilder: (context, index) {
@@ -562,7 +576,8 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
           return FutureBuilder<Uint8List?>(
             future: _load(attachment.id),
             builder: (context, snapshot) {
-              if (snapshot.hasError || (snapshot.hasData && snapshot.data == null)) {
+              if (snapshot.hasError ||
+                  (snapshot.hasData && snapshot.data == null)) {
                 return const Center(
                   child: Text(
                     'This photo is no longer available.',

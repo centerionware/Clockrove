@@ -409,25 +409,28 @@ void main() {
     expect(find.text('2 photos attached to this task.'), findsOneWidget);
   });
 
-  testWidgets('full-screen task photo swipes through task and comment images in time order', (tester) async {
-    final api = _Business()
-      ..seedTaskPhoto('task-photo-oldest', 10)
-      ..seedComment('Progress update')
-      ..seedCommentPhoto('existing-comment', 'comment-photo-middle', 20)
-      ..seedTaskPhoto('task-photo-newest', 30);
-    await show(tester, api);
+  testWidgets(
+    'full-screen task photo swipes through task and comment images in time order',
+    (tester) async {
+      final api = _Business()
+        ..seedTaskPhoto('task-photo-oldest', 10)
+        ..seedComment('Progress update')
+        ..seedCommentPhoto('existing-comment', 'comment-photo-middle', 20)
+        ..seedTaskPhoto('task-photo-newest', 30);
+      await show(tester, api);
 
-    await tester.tap(find.bySemanticsLabel('Comment photo attachment'));
-    await tester.pumpAndSettle();
-    expect(find.text('Photo 2 of 3'), findsOneWidget);
-    await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Photo 3 of 3'), findsOneWidget);
-    await tester.drag(find.byType(PageView).last, const Offset(300, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Photo 2 of 3'), findsOneWidget);
-    await tester.drag(find.byType(PageView).last, const Offset(300, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Photo 1 of 3'), findsOneWidget);
-  });
+      await tester.tap(find.bySemanticsLabel('Comment photo attachment'));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 2 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 1 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 2 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 3 of 3'), findsOneWidget);
+    },
+  );
 }

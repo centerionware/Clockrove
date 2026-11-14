@@ -248,11 +248,7 @@ void main() {
     tester,
   ) async {
     final api = _Payments();
-    await _show(
-      tester,
-      api,
-      const InvoicePaymentEditor(invoiceId: 'invoice'),
-    );
+    await _show(tester, api, const InvoicePaymentEditor(invoiceId: 'invoice'));
     await tester.enterText(
       find.widgetWithText(TextField, 'Payment amount (USD)'),
       '.01',

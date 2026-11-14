@@ -302,15 +302,15 @@ class TaskConversationDeviceTest {
             capture("comment-camera-attached")
 
             scrollToStart()
-            reveal("Task photo attachment")
-            click("Task photo attachment")
-            waitFor("Photo 1 of 4")
+            reveal("Comment photo attachment")
+            click("Comment photo attachment")
+            waitFor("Photo 4 of 4")
             capture("task-photo-viewer")
             swipePhotoViewer(left = true)
-            waitFor("Photo 2 of 4")
-            capture("task-photo-viewer-next")
+            waitFor("Photo 3 of 4")
+            capture("task-photo-viewer-previous")
             swipePhotoViewer(left = false)
-            waitFor("Photo 1 of 4")
+            waitFor("Photo 4 of 4")
         } finally {
             instrumentation.runOnMainSync {
                 for (stage in listOf(Stage.RESUMED, Stage.STARTED, Stage.CREATED)) {

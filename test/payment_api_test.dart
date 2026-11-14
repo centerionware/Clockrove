@@ -27,7 +27,15 @@ void main() {
     expect(money(parsePaymentMoney('.01', 2)!, 2), '0.01');
     expect(money('${wide}01', 2), '$wide.01');
     expect(() => parseMoney('$wide.01', 2), throwsFormatException);
-    for (final invalid in ['.', '1.001', '1e3', '-1', 'NaN', 'Infinity', '1,00']) {
+    for (final invalid in [
+      '.',
+      '1.001',
+      '1e3',
+      '-1',
+      'NaN',
+      'Infinity',
+      '1,00',
+    ]) {
       expect(() => parsePaymentMoney(invalid, 2), throwsFormatException);
     }
   });

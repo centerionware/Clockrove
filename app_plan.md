@@ -221,7 +221,7 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
   larger than 1,024 pixels on either edge and 5 MB each. Limit a batch to 30 MB
   normalized, a task to 20 photos, and a job to 100 MB of photos. Show previews
   and allow removal. Opening any photo shows all task and comment photos in
-  chronological order; swipe left for the next photo and right for the previous
+  chronological order; swipe left for the previous photo and right for the next
   one. Deleting a task or comment deletes its owned images transactionally;
   templates never copy comments or images. Include attachments in encrypted
   backup with strict archive limits. No broad storage permission is required.
@@ -2887,7 +2887,7 @@ per task, 30 MB per selected batch and 100 MB per job; schema v13 widens the old
 attachment constraint while preserving saved images. The existing-image picker
 allows up to 10 images, reviews the entire selection in a horizontal carousel,
 and attaches the set in one transaction. Full-screen viewing starts at the
-chosen photo and swipes left to the next and right to the previous across
+chosen photo and swipes left to the previous image and right to the next across
 task-level and comment-level images in timestamp order. Native migration/batch
 tests, a Flutter multi-select/review/swipe test, and an actual Android
 multi-selection/viewer journey are added but have not run yet. Latest Actions
@@ -2905,8 +2905,11 @@ though `0.01` succeeded. The shared currency parser required an integer part;
 accepting `.01` as `0.01` fixes that input validation bug while preserving exact
 minor-unit conversion and existing currency-precision checks. Regression tests
 cover the parser and full payment form, asserting one cent persists as minor-unit
-string `1`. These tests are pending the next GitHub Actions run; no local tests
-or builds were run.
+string `1`. Actions run `43587087757` passed both penny-related Flutter tests,
+formatting aside, but failed the new photo-viewer swipe assertion before Android
+validation. The source now follows the requested left-to-previous/right-to-next
+direction; the CI formatter patch was applied. A fresh Actions run is required
+for full verification. No local tests or builds were run.
 
 The actual API-24/35 Android payment journey also enters `.01`, captures the
 form, and verifies the retained payment is exactly one minor unit. These device
