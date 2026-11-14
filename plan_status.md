@@ -3249,8 +3249,26 @@ M6.6 Supplies classification source work is underway on
 legacy migration to `UNCLASSIFIED`; propagation through reusable templates,
 reports and immutable invoice lines; command identity; and old-snapshot
 compatibility. Tests were added for those native behaviors and the actual task
-editor/invoice journey. They have not run yet. `git diff --check` is the only
-local check; no build/test/formatter ran on this VM. Actual cost ledger,
-tax-preparation reports, secure map-provider settings, M7 backup, and the
-mandatory M7.6 UI-overhaul/E2E/screenshots gate remain. Closed testing stays
-blocked on all feature work and full M7.6 acceptance.
+editor/invoice journey. Invoice/task changes remain under Actions validation.
+`git diff --check` is the only local check; no build/test/formatter ran on this
+VM. Actual cost ledger, tax-preparation reports, secure map-provider settings,
+M7 backup, and the mandatory M7.6 UI-overhaul/E2E/screenshots gate remain. Closed
+testing stays blocked on all feature work and full M7.6 acceptance.
+
+### 2026-11-14 — report-map white screen reproduced and fixed
+
+PR #45 head `232a722` / GitHub Actions run
+[43581546961](https://github.com/centerionware/Clockrove/actions/runs/43581546961)
+reproduced the white screen on API 24 as
+`Unsupported operation: Cannot modify unmodifiable map`. `NetworkTileProvider`
+adds its package User-Agent to headers while initializing the tile layer; both
+map screens now give it a fresh mutable map. The new actual-Android journey
+persisted 49 synthetic GPS samples, navigated through job → report → map, and
+passed. Its exported XML reports 24 API-24 tests with zero failures, errors or
+skips. The captured screen was visually inspected: OpenStreetMap tiles loaded,
+the coordinate and attribution are visible, and **Open map** is available. The
+map-error widget fallback also has deterministic test coverage. The full run
+then failed at the separate invoice-billing journey while finding `Job tax (%)`,
+so API 35 was not reached. Fix that harness blocker and rerun both API levels;
+the map change remains in PR #45 and is not merged yet. No VM build, test, or
+formatter ran.

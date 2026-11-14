@@ -696,7 +696,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains; M6.5 and invoice-policy work in PR #44 are merged with exact-head Actions evidence. Main validation `43574603359` failed an API-24 billing UI scroll assertion and Play delivery `43575491279` was skipped; revalidate the corrected harness in Actions. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains. PR #45 includes M6.6 Supplies classification and the report-map fix; Actions run `43581546961` passed the 49-sample map journey on API 24 and the captured screen shows loaded map tiles. API 35 was not reached because API-24 invoice-billing instrumentation fails at `Job tax (%)`; verify both APIs after correcting that separate blocker. Finish M6.6 and M7, then pass the required M7.6 full-app UI/E2E gate before closed testing |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2833,8 +2833,31 @@ Labor/Supplies selection with legacy rows requiring classification, reusable
 template propagation, immutable invoice-line snapshots, migration/command tests,
 and an actual-app UI assertion have been added. Historical rows and old invoice
 snapshots default to `UNCLASSIFIED`; classification is never guessed from price.
-No Actions run has yet validated this branch. The only local validation was
-`git diff --check`; no VM build, test, or formatter ran. Next: inspect the full
-diff, validate this branch in GitHub Actions, then continue actual costs,
+Actions run `43581546961` passed formatting, analysis, Flutter behavior tests,
+Android build, and native unit tests. The API-24 actual-map journey passed, but
+the later billing suite failed before the API-35 device stage; the separate
+Supplies task-editor journey also remains pending because it runs after billing.
+Only `git diff --check` ran locally; no VM build/test/formatter ran. Resolve the
+`Job tax (%)` harness assertion, rerun both APIs, then continue actual costs,
 tax-preparation reports and secure map-provider settings before M7 backup and
 the required M7.6 full-app UI/E2E gate.
+
+### 2026-11-14 — report-map white screen reproduced and fixed
+
+PR #45 head `232a722` / GitHub Actions run
+[43581546961](https://github.com/centerionware/Clockrove/actions/runs/43581546961)
+reproduced the reported white screen on API 24 as
+`Unsupported operation: Cannot modify unmodifiable map`. `NetworkTileProvider`
+adds its package User-Agent to the supplied headers during `TileLayer`
+initialization; the report and single-location map screens had supplied a
+constant map. Each screen now creates a mutable header map. The new Android
+instrumentation journey writes 49 synthetic persisted GPS samples, opens the
+actual job → report → map flow, waits for a loaded tile or visible unavailable
+state, and captures the screen. API-24 XML reports 24 tests, zero failures,
+errors or skips, including this journey. The captured screen was visually
+reviewed and shows OpenStreetMap tiles, the selected coordinate, attribution,
+and the external **Open map** action. A separate widget test covers tile-error
+fallback rendering. API 35 has not yet run: the same workflow stops earlier at
+an API-24 invoice-billing UI assertion for `Job tax (%)`. The map fix is on the
+PR branch and is not yet merged; rerun API 24 and 35 after the billing harness
+blocker is corrected. No build, test, or formatter ran on the VM.
