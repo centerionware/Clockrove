@@ -139,6 +139,7 @@ class TaskConversationTest {
             db.beginTransaction()
             try {
                 db.execSQL("DROP TABLE task_attachments")
+                db.execSQL("DROP TABLE actual_costs")
                 db.execSQL("CREATE TABLE task_attachments(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,comment_id TEXT REFERENCES task_comments(id) ON DELETE CASCADE,created_ms INTEGER NOT NULL,mime TEXT NOT NULL CHECK(mime='image/png'),data BLOB NOT NULL CHECK(length(data) BETWEEN 1 AND 2000000))")
                 db.execSQL("CREATE INDEX task_attachments_task ON task_attachments(task_id,created_ms,id)")
                 db.execSQL("INSERT INTO task_attachments VALUES(?,?,?,?,?,?)", arrayOf("legacy-image", task, null, 1L, "image/png", legacyImage))

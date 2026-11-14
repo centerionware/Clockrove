@@ -93,6 +93,7 @@ class LocationRecordingTest {
             db.execSQL("DROP TABLE location_recording_settings")
             db.execSQL("DROP TABLE job_invoice_billing_policy")
             db.execSQL("DROP TABLE invoice_billing_defaults")
+            db.execSQL("DROP TABLE actual_costs")
             db.version = 9
         }
         repository = TimerRepository(app, wallClock = { 2_000_000 })

@@ -3027,3 +3027,13 @@ Kotlin reified-array type-inference warning promoted to an error for a mixed
 workflow's two-line formatter correction. Native tests and Android journeys did
 not run on this head; exact-head Actions rerun remains required. No VM build,
 test or formatter ran.
+
+At head `b355e6f` / Actions run `43598420647`, formatting, analysis, Flutter
+behavior tests, UI preview export and Android debug build passed. Native tests
+ran 602 cases and reported four failures, all in older-schema fixtures for
+location recording and task-image migration; these fixtures downgraded the
+version number but retained the newly installed v14 actual-cost table, so the
+upgrade attempted to create it twice. The two fixtures now drop the v14 table
+before setting their simulated older version. The cost-ledger CRUD, migration
+and paging cases passed in this run; rerun is required to validate the fixture
+correction. Device journeys did not run. No VM build, test or formatter ran.

@@ -3365,3 +3365,15 @@ failed because the synthetic multi-image fixture chained `Intent.setClipData`,
 which returns `void`. The fixture now assigns `ClipData` separately and adds
 the grant flag as a separate call. Fresh Actions validation is pending. No Android
 device journeys ran on that head; no VM build, test or formatter ran.
+
+### 2026-11-14 — actual-cost ledger native fixture corrections
+
+At exact head `b355e6f` / Actions run
+[43598420647](https://github.com/centerionware/Clockrove/actions/runs/43598420647),
+formatting, analysis, Flutter behavior tests, UI preview export and Android debug
+build passed. Native tests ran 602 cases with four failures in two existing
+older-schema fixtures. Both fixtures reduced `user_version` while retaining the
+new v14 `actual_costs` table, so migration correctly rejected the duplicate
+table creation. The fixtures now drop `actual_costs` before downgrading. The new
+ledger tests passed; the fixture corrections need an exact-head Actions rerun.
+Device journeys did not run. No VM build, test or formatter ran.
