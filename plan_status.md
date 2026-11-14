@@ -3664,6 +3664,15 @@ to the quote, selected it and verified that its ID persisted in the draft.
 PR #45 was squash-merged to `main` as `69e1dab` after all exact-head checks
 passed. Main validation run
 [43628166015](https://github.com/centerionware/Clockrove/actions/runs/43628166015)
-was running when this evidence was recorded; its result and any Play internal
-delivery must be recorded separately. Physical owner-device acceptance remains
-pending. No build, test, formatter or analyzer ran on the VM.
+failed on API 35 while revealing **View original PDF** in the retained-invoice
+journey. API 24 passed that journey. The API-35 accessibility dump placed the
+button below the visible app viewport, while the app root extended beneath the
+system navigation bar; the fallback swipe therefore started in the system bar
+and did not scroll. This is test-harness evidence, not a production PDF failure.
+The helper now keeps swipes above system bars and falls back to a real swipe if
+an accessibility scroll action does not reveal the target. Exact-head CI for
+this correction is pending. Play delivery run
+[43630004858](https://github.com/centerionware/Clockrove/actions/runs/43630004858)
+was skipped after merged-main validation failed; no Play upload is claimed.
+Physical owner-device acceptance remains pending. No build, test, formatter or
+analyzer ran on the VM.

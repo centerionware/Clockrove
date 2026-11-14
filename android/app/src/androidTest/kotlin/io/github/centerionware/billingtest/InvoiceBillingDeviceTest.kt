@@ -96,9 +96,12 @@ class InvoiceBillingDeviceTest {
                     return false
                 }
                 val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                if (!scrolled) swipeContent(up = true)
+                // A Flutter ScrollView can acknowledge the accessibility action
+                // without exposing the requested child. Fall back to a real
+                // gesture whenever the target is still outside the viewport.
+                if (!scrolled || find(label, editable) == null) swipeContent(up = true)
                 SystemClock.sleep(150)
-                false
+                find(label, editable) != null
             }
         }
     }
@@ -148,7 +151,21 @@ class InvoiceBillingDeviceTest {
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
             .minOrNull()
-        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
+        // On API 35 the app's Flutter root extends underneath Android's
+        // navigation bar. Starting a swipe at the root's bottom edge lets the
+        // system bar consume it instead of scrolling the page.
+        val systemBottomTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen) }
+            .filter { it.top > bounds.top + 50 && it.bottom >= bounds.bottom - 8 }
+            .map { it.top }
+            .minOrNull()
+        val bottom = minOf(
+            bounds.bottom,
+            imeTop ?: bounds.bottom,
+            systemBottomTop ?: bounds.bottom,
+            content.bottom,
+        ) - 20
         val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
         // Start just inside the scroll view's first child. Page margins miss
