@@ -73,26 +73,40 @@ class SettingsSaveDeviceTest {
         }
         throw AssertionError("Actual app never exposed $label")
     }
+    private fun waitUntil(description: String, timeoutMillis: Long = 30000, predicate: () -> Boolean) {
+        val until = SystemClock.uptimeMillis() + timeoutMillis
+        while (SystemClock.uptimeMillis() < until) {
+            if (predicate()) return
+            SystemClock.sleep(100)
+        }
+        dumpAccessibility("input-readiness")
+        throw AssertionError(description)
+    }
+    private fun keyboardVisible() = automation.windows.any {
+        it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+    }
+    private fun hideKeyboard() {
+        if (!keyboardVisible()) return
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        waitUntil("Keyboard did not close after Back") { !keyboardVisible() }
+        automation.waitForIdle(250, 3000)
+    }
     private fun enterText(label: String, value: String) {
+        hideKeyboard()
         reveal(label, editable = true)
         val field = waitFor(label, editable = true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-        val keyboardDeadline = SystemClock.uptimeMillis() + 10000
-        while (automation.windows.none { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
-            SystemClock.uptimeMillis() < keyboardDeadline) SystemClock.sleep(100)
-        assertTrue("Keyboard did not open for $label", automation.windows.any {
-            it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
-        })
-        reveal(label, editable = true)
+        waitUntil("Focused field did not expose text entry for $label") {
+            find(label, editable = true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        }
+        waitUntil("Keyboard did not open for $label") { keyboardVisible() }
         val editable = waitFor(label, editable = true)
         assertTrue("Could not enter $label", editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
-        val enteredDeadline = SystemClock.uptimeMillis() + 5000
-        while (find(label, editable = true)?.text?.toString() != value && SystemClock.uptimeMillis() < enteredDeadline) {
-            SystemClock.sleep(100)
+        waitUntil("Entered value was not shown for $label", 5000) {
+            find(label, editable = true)?.text?.toString() == value
         }
-        assertEquals("Entered value was not shown for $label", value, find(label, editable = true)?.text?.toString())
-        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        hideKeyboard()
         automation.waitForIdle(200, 3000)
     }
     private fun setSwitch(label: String, checked: Boolean) {
