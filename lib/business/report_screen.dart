@@ -290,7 +290,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               builder: (_) => const ActualCostScreen(),
                             ),
                           ),
-                          icon: const Icon(Icons.account_balance_wallet_outlined),
+                          icon: const Icon(
+                            Icons.account_balance_wallet_outlined,
+                          ),
                           label: const Text('Actual cost ledger'),
                         ),
                       ),

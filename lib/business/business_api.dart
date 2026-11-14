@@ -107,7 +107,6 @@ class TaskCard {
     required this.position,
     required this.billable,
     required this.currency,
-    this.digits = 2,
     this.dueDate,
     this.priceMinor,
     this.completedMillis,
@@ -404,8 +403,9 @@ class BusinessApi {
 
   Future<int> currencyDigits(String currency) async =>
       ((await _channel.invokeMapMethod<Object?, Object?>('currencyPrecision', {
-        'currency': currency,
-      }))!['digits'] as int);
+            'currency': currency,
+          }))!['digits']
+          as int);
 
   Future<TimerOutcome> _change(
     String method,

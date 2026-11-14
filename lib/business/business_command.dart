@@ -169,7 +169,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_ACTUAL_COST' => 'Review the cost date, currency, category and details. Your draft is kept.',
     'COST_JOB_UNAVAILABLE' => 'This job is unavailable. Refresh the job list or leave the cost unlinked.',
     'COST_TASK_UNAVAILABLE' => 'This task is unavailable. Choose another task or leave the cost unlinked.',
-    'ACTUAL_COST_UNAVAILABLE' => 'This cost was removed or changed. Refresh the ledger before continuing.',
+    'ACTUAL_COST_UNAVAILABLE' =>
+      'This cost was removed or changed. Refresh the ledger before continuing.',
     'PAYMENT_EXCEEDS_BALANCE' => 'This exceeds the remaining balance. Refresh the invoice and review the payment amount.',
     'PAYMENT_CURRENCY_MISMATCH' => 'Use the invoice’s original currency. Settings changes never convert its balance.',
     'INVALID_PAYMENT' => 'Review the received date, timezone and field lengths. A payment cannot be dated in the future.',

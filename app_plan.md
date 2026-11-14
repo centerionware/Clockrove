@@ -3012,3 +3012,10 @@ main Reports screen. This is source-only and awaits Actions formatting,
 analysis, widget/native tests, Android build and device coverage. No local
 build/test/formatter ran. Tax-preparation reports and secure map-provider
 settings remain in M6.6.
+
+Exact-head follow-up: run `43597344579` on `d29c347` generated a formatter
+source patch and stopped at analysis. It identified an accidentally placed
+`digits` constructor initializer on `TaskCard`, plus unused/deprecated/lint
+findings in the new screen. Applied the exported formatter patch and corrected
+the constructor and analyzer findings. The corrected source still needs an
+exact-head Actions rerun. No VM build, test or formatter ran.
