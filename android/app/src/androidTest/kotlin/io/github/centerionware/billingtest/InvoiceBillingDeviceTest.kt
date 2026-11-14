@@ -107,11 +107,15 @@ class InvoiceBillingDeviceTest {
         // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
         // successful while remaining at the same offset. An accessibility
         // acknowledgement is not proof that the contents actually moved, so
-        // use real upward-content swipes to return to the tax field.
-        repeat(8) {
+        // use real downward-content swipes and stop only once the top section
+        // is actually exposed. The settings form can grow as options are added,
+        // so a fixed swipe count can leave the test in its lower sections.
+        repeat(40) {
+            if (find("Billing basis") != null) return
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
+        waitFor("Billing basis", 1000)
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return

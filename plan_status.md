@@ -3269,6 +3269,7 @@ skips. The captured screen was visually inspected: OpenStreetMap tiles loaded,
 the coordinate and attribution are visible, and **Open map** is available. The
 map-error widget fallback also has deterministic test coverage. The full run
 then failed at the separate invoice-billing journey while finding `Job tax (%)`,
-so API 35 was not reached. Fix that harness blocker and rerun both API levels;
-the map change remains in PR #45 and is not merged yet. No VM build, test, or
-formatter ran.
+so API 35 was not reached. The helper now scrolls until the visible `Billing
+basis` anchor confirms the top section instead of using a fixed swipe count;
+exact-head Actions verification is pending. The map change remains in PR #45
+and is not merged yet. No VM build, test, or formatter ran.
