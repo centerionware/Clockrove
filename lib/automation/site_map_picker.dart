@@ -28,9 +28,8 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
   final _controller = MapController();
   late final _client = TileBackoffClient(
     http.Client(),
-    protectedHeaders: () => ref
-        .read(mapProviderSettingsApiProvider)
-        .tileAuthHeaders(),
+    protectedHeaders: () =>
+        ref.read(mapProviderSettingsApiProvider).tileAuthHeaders(),
   );
   MapProviderSettings? _tileSettings;
   TileProvider? _tiles;

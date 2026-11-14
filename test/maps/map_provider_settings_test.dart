@@ -139,25 +139,28 @@ void main() {
       expect(settings.toString(), contains('credentialConfigured: true'));
     });
 
-    test('unavailable Keystore configuration safely falls back to OSM', () async {
-      const channel = MethodChannel('clockrove/map-provider/v1');
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-            throw PlatformException(code: 'MAP_SETTINGS_UNAVAILABLE');
-          });
-      addTearDown(
-        () => TestDefaultBinaryMessengerBinding
-            .instance
-            .defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, null),
-      );
+    test(
+      'unavailable Keystore configuration safely falls back to OSM',
+      () async {
+        const channel = MethodChannel('clockrove/map-provider/v1');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              throw PlatformException(code: 'MAP_SETTINGS_UNAVAILABLE');
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null),
+        );
 
-      final result = await const MethodChannelMapProviderSettingsApi().read();
+        final result = await const MethodChannelMapProviderSettingsApi().read();
 
-      expect(result.provider, 'OSM');
-      expect(result.urlTemplate, defaultMapTileUrl);
-      expect(result.hasCredential, isFalse);
-    });
+        expect(result.provider, 'OSM');
+        expect(result.urlTemplate, defaultMapTileUrl);
+        expect(result.hasCredential, isFalse);
+      },
+    );
   });
 
   testWidgets('custom provider URL validation prevents saving HTTP tiles', (

@@ -129,9 +129,8 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     super.initState();
     _client = TileBackoffClient(
       http.Client(),
-      protectedHeaders: () => ref
-          .read(mapProviderSettingsApiProvider)
-          .tileAuthHeaders(),
+      protectedHeaders: () =>
+          ref.read(mapProviderSettingsApiProvider).tileAuthHeaders(),
     );
   }
 

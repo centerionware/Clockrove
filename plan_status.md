@@ -3533,3 +3533,11 @@ The standard Flutter SDK does not document runtime initialization from a
 user-entered Keystore value. See the official [Flutter setup guide](https://developers.google.com/maps/flutter-package/config)
 and [Android key restrictions](https://developers.google.com/maps/documentation/android-sdk/get-api-key).
 M6.3/M6.6 remain incomplete until the key strategy is decided and verified.
+
+Exact head `027a616` / Actions run
+[43616592751](https://github.com/centerionware/Clockrove/actions/runs/43616592751)
+passed dependency resolution but failed formatting and Analyze. Applied the
+formatter patch exported by Actions and changed the tile-client callback to an
+initializing formal for the reported lint. Behavior, build, native and emulator
+tests did not run. A fresh exact-head Actions run is required; no VM build,
+test, formatter or analyzer was run.

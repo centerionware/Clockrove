@@ -227,7 +227,9 @@ void main() {
           key: key,
           child: ProviderScope(
             overrides: [
-              workMapTilesProvider.overrideWithValue((_, _) => SyntheticTiles()),
+              workMapTilesProvider.overrideWithValue(
+                (_, _) => SyntheticTiles(),
+              ),
             ],
             child: MaterialApp(
               debugShowCheckedModeBanner: false,

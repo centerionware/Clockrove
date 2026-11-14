@@ -70,9 +70,8 @@ class ReportMap extends ConsumerStatefulWidget {
 class _ReportMapState extends ConsumerState<ReportMap> {
   late final _client = TileBackoffClient(
     http.Client(),
-    protectedHeaders: () => ref
-        .read(mapProviderSettingsApiProvider)
-        .tileAuthHeaders(),
+    protectedHeaders: () =>
+        ref.read(mapProviderSettingsApiProvider).tileAuthHeaders(),
   );
   MapProviderSettings? _tileSettings;
   TileProvider? _tiles;
@@ -91,6 +90,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     }
     return _tiles!;
   }
+
   @override
   void dispose() {
     _client.close();

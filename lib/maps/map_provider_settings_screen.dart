@@ -42,9 +42,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
   late final _attributionUrl = TextEditingController(
     text: widget.initial.attributionUrl,
   );
-  late final _header = TextEditingController(
-    text: widget.initial.authHeader,
-  );
+  late final _header = TextEditingController(text: widget.initial.authHeader);
   final _secret = TextEditingController();
   bool _forgetCredential = false;
   bool _busy = false;
@@ -77,12 +75,10 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
 
   Future<void> _save() async {
     final draft = _draft();
-    final credential =
-        _provider == 'CUSTOM' && _secret.text.isNotEmpty ? _secret.text : null;
-    final error = mapProviderSettingsError(
-      draft,
-      authSecret: credential ?? '',
-    );
+    final credential = _provider == 'CUSTOM' && _secret.text.isNotEmpty
+        ? _secret.text
+        : null;
+    final error = mapProviderSettingsError(draft, authSecret: credential ?? '');
     setState(() {
       _validationError = error;
       _message = null;
@@ -104,8 +100,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _message =
-              'Map settings could not be saved. Check the values and try again.',
+          () => _message = 'Map settings could not be saved. Check the values and try again.',
         );
       }
     } finally {

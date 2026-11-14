@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const defaultMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const defaultMapAttribution = '© OpenStreetMap contributors';
-const defaultMapAttributionUrl =
-    'https://www.openstreetmap.org/copyright';
+const defaultMapAttributionUrl = 'https://www.openstreetmap.org/copyright';
 
 /// Public runtime tile settings. The secret stays in native protected storage
 /// and is fetched separately only when a map needs authenticated tile requests.
@@ -233,7 +232,10 @@ class MethodChannelMapProviderSettingsApi implements MapProviderSettingsApi {
     String? authSecret,
     bool removeCredential = false,
   }) async {
-    final error = mapProviderSettingsError(settings, authSecret: authSecret ?? '');
+    final error = mapProviderSettingsError(
+      settings,
+      authSecret: authSecret ?? '',
+    );
     if (error != null) throw FormatException(error);
     final value = await _channel.invokeMapMethod<Object?, Object?>(
       'save',

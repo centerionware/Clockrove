@@ -15,9 +15,8 @@ class TileBackoffClient extends http.BaseClient {
     DateTime Function()? now,
     TileBackoffState? state,
     this.requestTimeout = const Duration(seconds: 12),
-    Future<Map<String, String>> Function()? protectedHeaders,
+    this._protectedHeaders,
   }) : _now = now ?? DateTime.now,
-       _protectedHeaders = protectedHeaders,
        _state = state ?? _sharedState;
 
   static final _sharedState = TileBackoffState();
