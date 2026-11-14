@@ -3647,3 +3647,99 @@ reset to Billing basis before the second inheritance toggle. This is a test
 harness correction; it requires a fresh exact-head Actions run. API 35 and later
 journeys did not run on `43624729471`. No VM build, test, formatter or analyzer
 ran.
+
+### 2026-11-14 — second settings visit and PR #45 merge
+
+Exact PR head `942659a` / Actions run
+[43626467570](https://github.com/centerionware/Clockrove/actions/runs/43626467570)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build,
+native unit tests, PDF generation/rendering and locked release-tooling/version
+checks. The test now resets the form to **Billing basis** before both tax-rate
+toggle visits. Downloaded device XML confirms 37 actual Android tests per API
+24 and 35 with zero failures, errors or skips; the financial journey, quote,
+invoice copies, payments, task media, 49-sample map, and map provider settings
+passed. The quote Manage customers test created and saved a customer, returned
+to the quote, selected it and verified that its ID persisted in the draft.
+
+PR #45 was squash-merged to `main` as `69e1dab` after all exact-head checks
+passed. Main validation run
+[43628166015](https://github.com/centerionware/Clockrove/actions/runs/43628166015)
+failed on API 35 while revealing **View original PDF** in the retained-invoice
+journey. API 24 passed that journey. The API-35 accessibility dump placed the
+button below the visible app viewport, while the app root extended beneath the
+system navigation bar; the fallback swipe therefore started in the system bar
+and did not scroll. This is test-harness evidence, not a production PDF failure.
+The helper now keeps swipes above system bars and falls back to a real swipe if
+an accessibility scroll action does not reveal the target. Exact-head CI for
+this correction is pending. Play delivery run
+[43630004858](https://github.com/centerionware/Clockrove/actions/runs/43630004858)
+was skipped after merged-main validation failed; no Play upload is claimed.
+Physical owner-device acceptance remains pending. No build, test, formatter or
+analyzer ran on the VM.
+
+The first exact-head run after this correction reached API 24 and passed its 28
+base device cases, but the extended billing journey intermittently failed to
+focus the visible **Default tax (%)** field through accessibility
+`ACTION_CLICK`. The captured screen showed the field in the viewport without an
+open keyboard. The test now retries with an actual touch at the field's
+accessible screen bounds when that semantic click does not open the IME. The
+next API-24 attempt passed the default-tax input and reached the task quantity
+field, but the platform reported `ACTION_SET_TEXT` success while retaining
+`12` instead of the requested `26`. The helper now selects the existing text and
+types through the active IME if the field value does not change. This remains a
+test-harness stabilization; exact-head Actions validation is pending.
+
+At exact PR #46 head `ae4bc08`, Actions run
+[43634037678](https://github.com/centerionware/Clockrove/actions/runs/43634037678)
+passed formatting, analysis, Flutter behavior tests, Android debug build,
+native tests and the full API-24 extended billing journey. API 35 reached the
+invalid job-tax validation check but timed out without exposing the expected
+message. Its screenshot shows Job settings still at the bottom with the Save
+button and no validation message. Because the device helper returned after a
+successful accessibility `ACTION_CLICK`, which can be acknowledged without a
+real Flutter pointer event, the billing test now taps the visible clickable
+screen bounds and waits for the UI to settle. This is a test-only correction;
+the next exact-head Actions run is pending. No build or test ran on the VM.
+
+The next exact head, `c9f8b6e` / Actions run
+[43636374365](https://github.com/centerionware/Clockrove/actions/runs/43636374365),
+passed formatting, analysis, Flutter behavior tests, the Android debug build and
+614 native tests. The billing device journey stopped on API 24 at the final
+**Save job settings** click: Android 7's accessibility node reported the visible
+Flutter button as `clickable=false`, so the helper's new clickable-only tap
+guard rejected it. The helper now taps the matched visible node's bounds even
+when that accessibility flag is false. The API 24/35 billing journey did not
+finish; validate this correction on Actions before claiming the billing journey
+is green. No VM build or test ran.
+
+Retry head `6e5b502` / Actions run
+[43637427535](https://github.com/centerionware/Clockrove/actions/runs/43637427535)
+passed formatting, analysis, Flutter behavior tests, Android build and all 614
+native tests. The real-device step timed out with exit code 124 while installing
+the app and instrumentation APKs on the API-24 emulator; the artifact contains
+only emulator setup logs and no JUnit/device assertions. API 24 and API 35
+journeys did not run, so this run provides no result for the direct-tap fix.
+Retry the exact PR head in GitHub Actions. No VM build or test ran.
+
+At exact head `413b206` / Actions run
+[43638528694](https://github.com/centerionware/Clockrove/actions/runs/43638528694),
+formatting, analysis, Flutter behavior tests, Android build and 614 native tests
+passed. API 24 passed all 37 actual device cases, including the full billing
+journey. API 35 passed its 28-case base suite, then the extended billing test
+failed at Job tax (%) because the field stopped exposing `ACTION_SET_TEXT` after
+focus. The source test now tries `ACTION_SET_TEXT` before opening the IME and
+accepts the result only after reading back the exact value; the existing IME
+typing fallback remains for API 24 cases that acknowledge but ignore the text
+action. API 35 later journeys did not run. Fresh exact-head Actions validation
+is pending. No VM build or test ran.
+
+Exact PR #46 head `274ce49` / Actions run
+[43640563667](https://github.com/centerionware/Clockrove/actions/runs/43640563667)
+passed formatting, analysis, Flutter behavior tests, Android debug build,
+locked release checks and all 614 native tests. Downloaded JUnit XML confirms
+37 actual Android cases on each API 24 and 35, zero failures/errors/skips,
+including both extended billing journeys, invoice copies, payments, quotes,
+task media, map and widget journeys. The direct text action plus readback fix
+resolved the API-35 billing failure; the API-24 IME fallback also remains
+green. No VM build, test, formatter or analyzer ran. PR #46 is ready to merge;
+merged-main validation and Play delivery are the next gates.

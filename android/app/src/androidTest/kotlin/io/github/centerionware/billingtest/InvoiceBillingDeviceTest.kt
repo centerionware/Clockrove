@@ -75,12 +75,12 @@ class InvoiceBillingDeviceTest {
         return requireNotNull(found)
     }
     private fun click(label: String) {
-        var node = waitFor(label)
-        while (true) {
-            // Flutter can acknowledge a click on a node without a TAP action.
-            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
-            node = node.parent ?: throw AssertionError("Could not click $label")
-        }
+        // A semantic ACTION_CLICK can report success without delivering
+        // Flutter's pointer event; API 24 also exposes some active buttons as
+        // non-clickable. find() only returns visible nodes, so tap the matched
+        // control's real screen bounds instead of relying on those flags.
+        tapNode(waitFor(label))
+        automation.waitForIdle(250, 3000)
     }
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
@@ -96,9 +96,12 @@ class InvoiceBillingDeviceTest {
                     return false
                 }
                 val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                if (!scrolled) swipeContent(up = true)
+                // A Flutter ScrollView can acknowledge the accessibility action
+                // without exposing the requested child. Fall back to a real
+                // gesture whenever the target is still outside the viewport.
+                if (!scrolled || find(label, editable) == null) swipeContent(up = true)
                 SystemClock.sleep(150)
-                false
+                find(label, editable) != null
             }
         }
     }
@@ -148,7 +151,21 @@ class InvoiceBillingDeviceTest {
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
             .minOrNull()
-        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
+        // On API 35 the app's Flutter root extends underneath Android's
+        // navigation bar. Starting a swipe at the root's bottom edge lets the
+        // system bar consume it instead of scrolling the page.
+        val systemBottomTop = automation.windows
+            .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM }
+            .map { android.graphics.Rect().also(it::getBoundsInScreen) }
+            .filter { it.top > bounds.top + 50 && it.bottom >= bounds.bottom - 8 }
+            .map { it.top }
+            .minOrNull()
+        val bottom = minOf(
+            bounds.bottom,
+            imeTop ?: bounds.bottom,
+            systemBottomTop ?: bounds.bottom,
+            content.bottom,
+        ) - 20
         val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
         // Start just inside the scroll view's first child. Page margins miss
@@ -173,6 +190,22 @@ class InvoiceBillingDeviceTest {
         }
         inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY.toFloat())
     }
+    private fun tapNode(node: AccessibilityNodeInfo) {
+        val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
+        check(!bounds.isEmpty) { "Cannot tap an empty accessibility target" }
+        val x = bounds.exactCenterX()
+        val y = bounds.exactCenterY()
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long) {
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            }
+            try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        inject(android.view.MotionEvent.ACTION_DOWN, downTime)
+        SystemClock.sleep(80)
+        inject(android.view.MotionEvent.ACTION_UP, SystemClock.uptimeMillis())
+    }
     private fun keyboardVisible() = automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     private fun hideKeyboard() {
         if (keyboardVisible()) {
@@ -184,8 +217,32 @@ class InvoiceBillingDeviceTest {
     private fun enter(label: String, value: String) {
         hideKeyboard()
         reveal(label, true)
-        val field = waitFor(label, true)
+        var field = waitFor(label, true)
+        // Try the editable node's text action before opening the IME. Accept
+        // it only after reading back the exact value; some APIs acknowledge
+        // this action without changing the Flutter controller.
+        if (field.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })) {
+            val directSetDeadline = SystemClock.uptimeMillis() + 2000
+            while (SystemClock.uptimeMillis() < directSetDeadline &&
+                find(label, true)?.text?.toString() != value) {
+                SystemClock.sleep(100)
+            }
+            if (find(label, true)?.text?.toString() == value) {
+                hideKeyboard()
+                return
+            }
+        }
+        field = waitFor(label, true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        // Some Flutter EditableText nodes accept ACTION_CLICK without focusing
+        // the underlying field on older Android releases. Use a screen touch
+        // when that semantic action does not open the IME.
+        if (!keyboardVisible()) {
+            SystemClock.sleep(150)
+            if (!keyboardVisible()) tapNode(find(label, true) ?: field)
+        }
         until("Focused field did not expose text entry for $label") {
             find(label, true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
         }
@@ -195,6 +252,25 @@ class InvoiceBillingDeviceTest {
         val node = waitFor(label, true)
         assertTrue("Could not enter $label", node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
+        val setTextDeadline = SystemClock.uptimeMillis() + 2000
+        while (SystemClock.uptimeMillis() < setTextDeadline && find(label, true)?.text?.toString() != value) {
+            SystemClock.sleep(100)
+        }
+        // Some API-24 Flutter fields report ACTION_SET_TEXT success without
+        // replacing the current value. Select the old text and type through
+        // the active IME before treating the field as failed.
+        if (find(label, true)?.text?.toString() != value) {
+            val current = waitFor(label, true)
+            val length = current.text?.length ?: 0
+            assertTrue("Could not select existing text for $label", current.performAction(
+                AccessibilityNodeInfo.ACTION_SET_SELECTION,
+                Bundle().apply {
+                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
+                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
+                },
+            ))
+            instrumentation.sendStringSync(value)
+        }
         until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }
         hideKeyboard()
     }
