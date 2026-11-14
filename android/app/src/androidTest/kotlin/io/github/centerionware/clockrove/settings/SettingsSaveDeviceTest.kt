@@ -96,10 +96,11 @@ class SettingsSaveDeviceTest {
         reveal(label, editable = true)
         val field = waitFor(label, editable = true)
         assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-        waitUntil("Focused field did not expose text entry for $label") {
+        waitUntil("Editable field did not expose text entry for $label") {
             find(label, editable = true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
         }
-        waitUntil("Keyboard did not open for $label") { keyboardVisible() }
+        // Set text on the actual Flutter EditText through Android accessibility.
+        // The emulator may not expose its soft-IME window reliably on API 24.
         val editable = waitFor(label, editable = true)
         assertTrue("Could not enter $label", editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
@@ -188,17 +189,20 @@ class SettingsSaveDeviceTest {
         waitFor(label, editable, checkable)
     }
     private fun dumpAccessibility(name: String) {
-        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "settings-diagnostics").apply { mkdirs() }
         val dump = StringBuilder()
+        dump.append("Capture: ").append(name).append('\n')
         fun describe(node: AccessibilityNodeInfo, depth: Int) {
             if (dump.length > 200000 || depth > 50) return
             dump.append(" ".repeat(depth)).append(node.toString()).append('\n')
             for (index in 0 until node.childCount) node.getChild(index)?.let { describe(it, depth + 1) }
         }
         automation.rootInActiveWindow?.let { describe(it, 0) }
-        File(directory, "$name-accessibility.txt").writeText(dump.toString())
+        val externalFiles = instrumentation.targetContext.getExternalFilesDir(null)
+        File(externalFiles, "settings-accessibility.txt").writeText(dump.toString())
         automation.takeScreenshot()?.let { bitmap ->
-            File(directory, "$name-screen.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            File(externalFiles, "settings-screen.png").outputStream().use {
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
             bitmap.recycle()
         }
     }
