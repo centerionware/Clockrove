@@ -79,6 +79,40 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                             }
                         }
                     }
+                    "saveBusinessReport" -> {
+                        val selection = io.github.centerionware.clockrove.tracking.BusinessReportStore.Selection(
+                            requireNotNull(call.argument<String>("firstDate")),
+                            requireNotNull(call.argument<String>("lastDate")),
+                            requireNotNull(call.argument<String>("timezone")),
+                            requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) },
+                            requireNotNull(call.argument<List<*>>("customerIds")).map { requireNotNull(it as? String) },
+                        )
+                        val snapshot = repository.businessReport(selection)
+                        val rawVersion = call.argument<Any>("version")
+                        require(rawVersion is Int || rawVersion is Long)
+                        val expected = (rawVersion as Number).toLong()
+                        if (snapshot.version != expected) {
+                            result.error("STALE_STATE", "Business data changed. Refresh the report before exporting.", null)
+                            return@setMethodCallHandler
+                        }
+                        val pdf = requireNotNull(call.argument<Boolean>("pdf"))
+                        val bytes = if (pdf) BusinessReportPdf.generate(snapshot.report)
+                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(snapshot.report).toByteArray(Charsets.UTF_8)
+                        val extension = if (pdf) "pdf" else "csv"
+                        main.post {
+                            if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
+                            else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
+                            else {
+                                save = Save(bytes, result)
+                                try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                    type = if (pdf) "application/pdf" else "text/csv"
+                                    putExtra(Intent.EXTRA_TITLE, "Clockrove-business-${selection.firstDate}-${selection.lastDate}.$extension")
+                                }, 0xcc42) }
+                                catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
+                            }
+                        }
+                    }
                     "saveInvoice", "saveQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
@@ -113,6 +147,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                 }
             } catch (failure: IllegalArgumentException) {
                 if (failure.message == "PAYMENT_HISTORY_TOO_LARGE") result.error("PAYMENT_HISTORY_TOO_LARGE", "This history is too long for one PDF. Open individual saved receipts instead.", null)
+                else if (failure.message == "BUSINESS_REPORT_PDF_TOO_LARGE") result.error("REPORT_TOO_LARGE", "Choose a shorter period for PDF export, or export the full report as CSV.", null)
                 else result.error("DOCUMENT_UNAVAILABLE", "The selected document is unavailable", null)
             }
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }
@@ -146,6 +181,7 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "image/*"
                     putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/png", "image/jpeg", "image/webp"))
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
                 }
             }
             if (camera && isCiCameraFixtureEnabled()) {
@@ -191,19 +227,43 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
                 pending.success(null)
                 return true
             }
-            val uri = data?.data
             writer.execute {
                 try {
-                    val input = if (camera) FileInputStream(requireNotNull(file).also { require(it.isFile && it.length() in 1..5_000_000) })
-                        else activity.contentResolver.openInputStream(requireNotNull(uri))
-                    val asset = requireNotNull(input).use { LogoImages.normalize(it) }
-                    main.post { if (attached) pending.success(asset.bytes) else pending.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null) }
+                    val images = if (camera) {
+                        val capture = requireNotNull(file).also { require(it.isFile && it.length() in 1..io.github.centerionware.clockrove.tracking.ImageLimits.SOURCE_BYTES) }
+                        listOf(FileInputStream(capture).use { LogoImages.normalize(activity, it).bytes })
+                    } else {
+                        val selected = data?.clipData?.let { clip ->
+                            (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+                        } ?: listOfNotNull(data?.data)
+                        val uris = selected.distinctBy { it.toString() }
+                        if (uris.isEmpty()) throw TaskPhotoImportException("PHOTO_SOURCE_UNAVAILABLE", "No photos were selected")
+                        if (uris.size > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGES_PER_SELECTION) {
+                            throw TaskPhotoImportException("TASK_IMAGE_SELECTION_LIMIT", "Choose up to 10 photos at a time")
+                        }
+                        val normalized = ArrayList<ByteArray>(uris.size)
+                        var totalBytes = 0L
+                        for (uri in uris) {
+                            val input = requireNotNull(activity.contentResolver.openInputStream(uri))
+                            val bytes = input.use { LogoImages.normalize(activity, it).bytes }
+                            totalBytes += bytes.size
+                            if (totalBytes > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGE_BATCH_BYTES) {
+                                throw TaskPhotoImportException("TASK_IMAGE_BATCH_STORAGE_LIMIT", "Select a smaller group of photos (30 MB maximum per selection)")
+                            }
+                            normalized.add(bytes)
+                        }
+                        normalized
+                    }
+                    main.post { if (attached) pending.success(images) else pending.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null) }
+                } catch (failure: TaskPhotoImportException) {
+                    main.post { pending.error(failure.code, failure.message, null) }
                 } catch (_: Exception) {
-                    main.post { pending.error("INVALID_TASK_PHOTO", "Choose a PNG, JPEG or WebP image up to 5 MB and 16 megapixels", null) }
+                    main.post { pending.error("INVALID_TASK_PHOTO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) }
                 } finally {
                     file?.delete()
                 }
             }
+
             return true
         }
         if (code == 0xcc43) {
@@ -213,10 +273,10 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
             if (status != Activity.RESULT_OK || uri == null) { pending.success(null); return true }
             writer.execute {
                 try {
-                    val asset = requireNotNull(activity.contentResolver.openInputStream(uri)).use { LogoImages.normalize(it) }
+                    val asset = requireNotNull(activity.contentResolver.openInputStream(uri)).use { LogoImages.normalize(activity, it) }
                     LogoImages.remember(activity, asset)
                     main.post { pending.success(mapOf("token" to asset.id, "width" to asset.width, "height" to asset.height, "png" to asset.bytes)) }
-                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", "Choose a PNG, JPEG or WebP image up to 5 MB and 16 megapixels", null) } }
+                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) } }
             }
             return true
         }
@@ -234,6 +294,9 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
         }
         return true
     }
+
+    private class TaskPhotoImportException(val code: String, override val message: String) : Exception(message)
+
     fun detach() {
         attached = false
         logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)

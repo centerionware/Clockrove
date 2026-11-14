@@ -44,6 +44,10 @@ amounts without writes, and preserve the entered draft. Never wrap, clamp or
 truncate an amount to fit a machine integer. Currency-boundary rounding is an
 explicit business rule, separate from numerical precision loss.
 
+For user-entered currency amounts, accept a leading-decimal shorthand such as
+`.01` as `0.01`. Normalize it before exact decimal parsing; never reject it as
+invalid syntax or route it through binary floating point.
+
 ### Next concrete action
 
 The quote baseline, final rendered documents, and invoice-style preview merged
@@ -209,12 +213,18 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
   show the captured image in a review screen with **Retake**, **Cancel** and
   **Attach photo**. Do not add the image to the task/comment until the user taps
   **Attach photo**; cancel/retake removes the temporary capture. Existing-image
-  selection also shows a review before import. Copy accepted images into
-  app-private storage, validate type/dimensions/size/count and total storage,
-  strip EXIF/location metadata, show previews and allow removal. Deleting a task
-  or comment deletes its owned images transactionally; templates never copy
-  comments or images. Include attachments in encrypted backup with strict
-  archive limits. No broad storage permission is required.
+  selection allows up to 10 photos per batch and shows every selected image in a
+  swipeable review before import. **Attach photos** stores the batch as one
+  transaction; a failure adds none of them. Source PNG/JPEG/WebP files may be up
+  to 50 MB and 250 megapixels, with each dimension bounded at 32,768 pixels.
+  Downsample and re-encode accepted images to metadata-free, private PNGs no
+  larger than 1,024 pixels on either edge and 5 MB each. Limit a batch to 30 MB
+  normalized, a task to 20 photos, and a job to 100 MB of photos. Show previews
+  and allow removal. Opening any photo shows all task and comment photos in
+  chronological order; swipe left for the previous photo and right for the next
+  one. Deleting a task or comment deletes its owned images transactionally;
+  templates never copy comments or images. Include attachments in encrypted
+  backup with strict archive limits. No broad storage permission is required.
 - Keep the Supplies toggle on task entry/edit as a charge classification. Full
   cost and tax-report behavior remains in section 3.5a and the lifecycle plan.
 
@@ -233,14 +243,44 @@ Missing GPS alone is not proof of departure. Reboot/process death/force-stop mus
 ### 3.5a Billing lifecycle, quotes and business reports
 
 The ordered owner-requested contract is [docs/INVOICE_LIFECYCLE_PLAN.md](docs/INVOICE_LIFECYCLE_PLAN.md).
-The invoice lifecycle, partial payments/receipts/CC/void-replacement, quote
-baseline, and quote PDF/settings-preview work are merged. Immediately next is
-M6.5 (quote usability, task comments/images, map repair and GPS controls), then
-the remaining backup and business milestones, then M7.6 (whole-app UI overhaul
-and exhaustive E2E/screenshots) before closed testing. Remaining invoice-only
-hourly rounding/minimum-hours and task-job minimum-fee settings, full task
-cost/tax reporting, and main-menu tax reports remain in the launch queue; M6.5
-does not mark them complete.
+The invoice lifecycle, payments/receipts/CC/void-replacement, quotes,
+quote usability, task comments/images, map repair and GPS controls are merged.
+PR #44 adds invoice-only hourly minimum/rounding and task-rate minimum-fee
+policies; its exact-head Actions passed and it is squash-merged as
+`48fe0f89727bc017c4d8b30f8fd60f4915b16cb6`. Main validation `43574603359`
+failed in the API-24 billing instrumentation journey when the test could not
+scroll back to the job-tax field; the captured app remained on Job settings and
+did not show an application crash. The automatic Play delivery run
+`43575491279` was skipped, so that merge has no new internal-upload evidence.
+The test helper now uses real scroll gestures and must pass a fresh Actions run
+before the main baseline is considered green. PR #45 adds task Labor/Supplies
+classification, expanded task-photo handling, report-map repair, leading-
+decimal payments and quote customer management. Its exact-head Actions run
+`43590405687` passed formatting, analysis, Flutter behavior tests and Android
+build, but the first native run had 15 of 594 failures: stale v12 schema
+assertions, a retry test that changed its expected state version, and full-BLOB
+reads exceeding SQLite's cursor window. The next run corrected the schema and
+retry failures, reducing the native failures to four, all where chunked image
+reads returned no image. At head `1e568f1` / run `43592371710`, formatting, analysis, Flutter behavior,
+Android build and all 594 native tests passed, including exact-byte reads above
+2 MB. The following real-Android instrumentation compilation failed because the
+synthetic gallery fixture chained `Intent.setClipData`, which returns `void`.
+The fixture now sets clip data and URI permission flags separately. At head
+`372c15a` / run `43593950549`, the quote customer add/save/return/select Flutter
+test passed along with formatting, analysis, Android build and all 594 native
+tests; PDF instrumentation exposed a stale expected `LogoImagesTest` count.
+That count is corrected to five. At head `0a06901` / run `43595000940`,
+formatting, analysis, Flutter tests, Android build and all 594 native tests
+passed, as did the first 25 real Android PDF tests. The subsequent API-24 billing
+journey failed because its return-to-top helper never exposed **Billing basis**
+after invalid tax input, so later emulator journeys and API 35 were skipped.
+The quote customer test itself passed; no Android-specific quote customer
+journey ran. Actual-cost records,
+tax-preparation reports and secure map-provider settings remain in M6.6. M7
+encrypted backup follows. M7.6 is the required whole-app UI overhaul and
+exhaustive end-to-end/screenshots gate after M6.6 and M7; it must pass before
+closed testing. Physical map/GPS/camera acceptance remains separate from
+emulator evidence.
 
 - Bill each task and exact UTC portion of work only once, for unpaid and paid
   invoices alike. Native transactional source claims, safe legacy reconciliation,
@@ -505,8 +545,10 @@ do not satisfy acceptance.
   jobs/tasks, worked time, completion, invoices or payments.
 - Add durable task comments and task/comment image attachments per section 3.4.
   Test adding, editing, deleting, empty/cancelled/error states, gallery selection,
-  camera capture, review acceptance, retake, cancel, EXIF removal, private URI
-  access, storage limits, parent deletion and migration/restore behavior.
+  multi-image selection and one-command atomic attachment, camera capture, review
+  acceptance, retake, cancel, EXIF removal, private URI access, expanded image
+  limits, previous/next full-screen photo swipes, parent deletion and
+  migration/restore behavior.
 - Repair every map entry point (site picker, current-location selection and
   report history) so it never becomes an unexplained white screen. When a site
   has no location, request permission/fix with a clear prompt and center on the
@@ -514,6 +556,14 @@ do not satisfy acceptance.
   Test loaded tiles, slow/failing/offline tiles, permission denial, invalid/polar
   coordinates, retry and external-map fallback; map failure must not block jobs,
   manual timekeeping, reports or exports.
+- For the owner-reported report-map blank screen, test the actual job → report →
+  map route on API 24 and 35 with 49 synthetic persisted GPS measurements. Wait
+  for a decoded tile or a clear unavailable state, keep the selected coordinates,
+  route overlays and attribution visible, provide an external map action, and
+  capture the real Android screen. Deterministic tile-error widget coverage must
+  confirm failed tiles render a visible fallback instead of a white surface.
+  Tile provider headers must be mutable per screen because flutter_map injects
+  its package User-Agent while initializing the tile layer.
 - Add the global GPS recording preference and per-job inherit/on/off override
   from section 3.3. Verify default-on, permission-degraded states, clock-in via
   manual/app/widget actions, service reconciliation after changes, ten-minute
@@ -537,6 +587,56 @@ map-provider settings. Follow the detailed contracts in sections 3.5a/3.6 and
 `docs/INVOICE_LIFECYCLE_PLAN.md`. Test native calculations, exact money, tax and
 cost reconciliation, settings inheritance, migrations, provider failures and
 report drilldowns. Do not classify an unimplemented item as covered by UI tests.
+
+Source progress: task Labor/Supplies classification, the actual-cost ledger and
+filtered business financial reports are implemented on PR #45. The ledger has
+schema v14, exact-money CRUD, soft deletion/revision history, equal-timestamp
+keyset paging, and a Reports editor reachable from the main menu. Cost entries
+support optional job/task/vendor/reference/notes; Supplies task classification
+does not book costs automatically. Schema v15 records customer snapshots for
+new costs while migrated historical costs remain unattributed. Reports include
+exact currency-grouped summaries, event-date drilldowns, job/customer filters,
+and CSV/PDF export; CSV amount columns preserve exact minor-unit integers as
+text and PDF export is bounded.
+
+Exact code head `c9d20cc` / Actions run
+[43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
+passed formatting, analysis, Flutter behavior, Android debug build, 614 native
+tests, PDF generation/rendering, invoice-viewer checks, and 35 actual Android
+tests each on API 24 and 35 with zero failures/errors/skips. The API-24 billing
+settings scroll journey and the 49-sample map route both passed on API 24/35.
+The report tests and exact-money/cost migration checks passed in CI. Secure
+custom raster-provider settings are now implemented in source with their Dart
+and Android emulator tests, awaiting exact-head Actions. Google Maps SDK runtime
+configuration and owner-device acceptance remain open; see `plan_status.md`.
+The first exact-head run on `040961a` passed format and analysis but failed
+Flutter behavior tests before Android build/native/device stages. The follow-up
+at `309996e` also passed format and analysis and reduced the Flutter failures
+from 19 to 6 (187 passed, 14 skipped). Remaining failures exposed synthetic
+map tests querying `FlutterMap` before the asynchronous provider-settings load
+had materialized it, plus two settings-form assertions. The provider-form
+message/scroll assertions and map test sequencing are corrected; exact-head
+Actions must validate the changes.
+
+The Android provider-settings source adds an optional custom HTTPS raster-tile
+provider beside the keyless OSM default. Provider templates, attribution and
+header fields are validated; public settings snapshots contain only a credential
+presence flag, while the secret is retrieved separately for tile requests.
+Authentication travels in request headers only, redirects are disabled so
+credentials cannot cross hosts, and transport diagnostics redact URLs. Android
+stores the complete configuration as AES-GCM ciphertext under an Android
+Keystore key in app-private storage; reset removes both. If protected settings
+cannot be read, maps fall back to OSM.
+
+The separately requested Google Maps SDK option remains open. Google's current
+[Flutter configuration guide](https://developers.google.com/maps/flutter-package/config)
+places the Android key in `AndroidManifest.xml`; its
+[Android key guidance](https://developers.google.com/maps/documentation/android-sdk/get-api-key)
+requires package-name and signing-certificate restrictions. A user-entered
+Keystore value is not a supported runtime initialization path for the standard
+Flutter SDK, so do not claim Google Maps is available or store an unrestricted
+key in the app. Decide and prove a restricted build-time key or native adapter
+path with an owner-provided Google project/key before closing this requirement.
 
 ### Milestone 7 — encrypted backup and safe merge
 
@@ -642,8 +742,8 @@ Account creation, owner credentials, concrete license review, and physical devic
 | GPS recording controls | Global default-on and per-job inherit/on/off behavior; ten-minute request target, five-minute ordinary persistence floor, session-boundary samples, and service reconciliation |
 | Widgets | Default and picker mode, New job last, missing default, stale state, running-other-job state, multiple widgets |
 | Boards | Column/card reorder, populated-column deletion, accessible moves, due dates across timezones |
-| Task comments/images | Comment add/edit/delete and ordering; gallery and camera-intent paths; review/attach, retake/cancel, private storage, EXIF removal, size/count limits and parent cleanup |
-| Quotes | Template selection creates editable lines; no required notes; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
+| Task comments/images | Comment add/edit/delete and ordering; multi-image gallery batches and camera-intent paths; review/atomic attach, retake/cancel, private storage, EXIF removal, 50 MB/250 MP source limits, 5 MB normalized-image limit, 10-at-once/20-per-task/100 MB-per-job caps, ordered swipeable viewer and parent cleanup |
+| Quotes | Template selection creates editable lines; no required notes; customer selector has the same Manage customers flow as Job settings and refreshes options on return; accepted quote can prefill a reviewed new job or map to an existing job without duplicate tasks or fabricated work |
 | Reports | Date/job filters match list/map/export; active/provisional exclusions explained; GPS points linked correctly |
 | CSV | Unicode, quotes, commas, multiline fields, spreadsheet formulas, exact durations and offset/timezone fields |
 | Maps | Default without keys; OSM attribution/cache/backoff; optional valid/invalid keys; provider change/restart; offline failure |
@@ -680,7 +780,7 @@ Remaining gates are concrete, not assumed complete:
 | GitHub repository | Identity verified; not created | centerionware via user 1000; intended repository absent; publication awaits terms review |
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
-| Milestones 2–8 | In progress; see `plan_status.md` | M2–M6 have substantial source/Actions evidence but physical acceptance remains; M6.5 source is prepared for exact-head Actions validation, then M6.6, M7 and the required M7.6 full-app UI/E2E gate before closed testing |
+| Milestones 2–8 | In progress; see `plan_status.md` | PR #45 source head `2f9e961` / Actions run `43622167264` passed formatting, analysis, Flutter behavior tests, Android debug build, native tests, PDF generation/viewer checks, locked release tooling and the full API 24/35 emulator suite. XML confirms 37 actual Android tests per API with zero failures/errors/skips, including billing, invoice copies, payments, quotes, task media, and the corrected job-tax override journey. The quote Manage customers add/save/return/select flow passed; the 49-sample route and map settings ran in the device suite. The subsequent plan-only head `1b2f949` exposed a test-only scroll-position issue when reopening Job settings to restore default tax. Reset the position before that second toggle; this correction needs exact-head Actions validation before PR merge. M6.6 source and one full CI pass are evidenced; physical owner-device acceptance remains. Keyless OpenStreetMap is default, authenticated custom HTTPS tiles use Android Keystore, and optional Google Maps Flutter SDK adoption is a separate product decision. M7 backup and the M7.6 full-app UI/E2E gate remain before closed testing. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.
@@ -2753,10 +2853,10 @@ its 23-case base suite; the emulator went offline before billing tests. It did
 not report an application assertion failure. Attempt 2 used the same source
 head and passed both API suites. The workflow test-scroll helper now uses
 accessibility scrolling with a touchscreen swipe fallback to reveal the actual
-invalid-tax message. PR #44 remains open pending merge; M6.6 remains in progress
-because Supplies classification, actual costs, tax-preparation reports, and
-secure map-provider settings are outstanding. No build, test, or formatter ran
-on the VM.
+invalid-tax message. At this point PR #44 was still open; M6.6 remained in
+progress because Supplies classification, actual costs, tax-preparation reports,
+and secure map-provider settings were outstanding. The later exact-head pass and
+squash merge are recorded below. No build, test, or formatter ran on the VM.
 
 The plan-evidence commit `f8d0587ba2343e0c6f747676520e6066af700f64` received
 two independent full Actions runs. Dispatched run
@@ -2769,8 +2869,8 @@ failed during the API-35 `locationRecordingDefaultCanBeTurnedOffAndBackOnInActua
 journey: the accessibility action returned successfully but the setting still
 read on. The emulator then went offline and segfaulted. The API-24 suite passed
 in that run. This disagrees with the dispatched run on the same commit and does
-not reproduce the owner's app crash, but it is a real acceptance-test failure;
-PR #44 must remain unmerged until resolved. The settings-device helper now adds
+not reproduce the owner's app crash, but it is a real acceptance-test failure.
+PR #44 remained unmerged until the discrepancy was resolved. The settings-device helper now adds
 a touchscreen tap at the visible switch bounds if the accessibility action does
 not change its state. A new exact-head API-24/35 run is required to establish
 whether this is an interaction-harness issue or an app defect.
@@ -2791,8 +2891,289 @@ reviewed. Locked release-tooling/version checks also passed. The UI test keeps
 the accessibility click and supports a real touchscreen tap at the switch
 bounds if the state does not change. The previous automatic PR run on the same
 documentation head had failed that toggle journey before the emulator
-segfaulted; this later exact-head PR run passed. PR #44 is mergeable and its
-checks are green, but remains open pending squash merge. M6.6 remains in
-progress because Supplies classification, actual costs, tax-preparation reports,
-and secure map-provider settings remain. All validation ran in GitHub Actions;
-no build, test, or formatter ran on the VM.
+segfaulted; this later exact-head PR run passed. PR #44 was then squash-merged to
+`main` as `48fe0f89727bc017c4d8b30f8fd60f4915b16cb6`. Main validation run
+`43574603359` and automatic internal delivery were still pending when this entry
+was written. M6.6 remains in progress because Supplies classification, actual
+costs, tax-preparation reports, and secure map-provider settings remain. All
+validation ran in GitHub Actions; no build, test, or formatter ran on the VM.
+
+### 2026-11-14 — merged-main billing check and Supplies classification start
+
+The merged-main Validate run
+[43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359)
+failed in API-24 billing instrumentation: the harness could not rediscover
+`Job tax (%)` after attempting to return to the top of Job settings. The saved
+failure screenshot shows the actual settings page near its lower fields and no
+application crash; this does not prove whether the navigation issue is solely in
+the harness. Play delivery
+[43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279)
+was skipped. The current feature branch replaces the acknowledged accessibility
+scroll with repeated real return-to-top swipes. A fresh Actions run must verify
+the correction before main is considered green.
+
+The M6.6 Supplies-classification slice is source-only: schema v12, explicit
+Labor/Supplies selection with legacy rows requiring classification, reusable
+template propagation, immutable invoice-line snapshots, migration/command tests,
+and an actual-app UI assertion have been added. Historical rows and old invoice
+snapshots default to `UNCLASSIFIED`; classification is never guessed from price.
+Actions run `43581546961` passed formatting, analysis, Flutter behavior tests,
+Android build, and native unit tests. The API-24 actual-map journey passed, but
+the later billing suite failed before the API-35 device stage; the separate
+Supplies task-editor journey also remains pending because it runs after billing.
+Only `git diff --check` ran locally; no VM build/test/formatter ran. Resolve the
+`Job tax (%)` harness assertion, rerun both APIs, then continue actual costs,
+tax-preparation reports and secure map-provider settings before M7 backup and
+the required M7.6 full-app UI/E2E gate.
+
+### 2026-11-14 — report-map white screen reproduced and fixed
+
+PR #45 head `232a722` / GitHub Actions run
+[43581546961](https://github.com/centerionware/Clockrove/actions/runs/43581546961)
+reproduced the reported white screen on API 24 as
+`Unsupported operation: Cannot modify unmodifiable map`. `NetworkTileProvider`
+adds its package User-Agent to the supplied headers during `TileLayer`
+initialization; the report and single-location map screens had supplied a
+constant map. Each screen now creates a mutable header map. The new Android
+instrumentation journey writes 49 synthetic persisted GPS samples, opens the
+actual job → report → map flow, waits for a loaded tile or visible unavailable
+state, and captures the screen. API-24 XML reports 24 tests, zero failures,
+errors or skips, including this journey. The captured screen was visually
+reviewed and shows OpenStreetMap tiles, the selected coordinate, attribution,
+and the external **Open map** action. A separate widget test covers tile-error
+fallback rendering. API 35 has not yet run: workflow `43584358180` passed the
+API-24 map journey, then the invoice journey failed to return to `Job tax (%)`.
+The helper scrolls until the visible `Billing basis` anchor confirms the top
+section and now starts swipes in the blank left gutter to avoid controls. The
+earlier exact-head run `43583501631` failed Android-test compilation because a
+`waitFor` call passed an integer where its second parameter is Boolean; that
+argument was removed. A fresh exact-head run is pending. The map fix is on the
+PR branch and not yet merged. No build, test, or formatter ran on the VM.
+
+### 2026-11-14 — larger task-photo imports and swipeable photo review
+
+Expanded company-logo and task-photo imports to 50 MB/250 MP, with source
+dimensions bounded at 32,768 px and decoding sampled before large bitmaps are
+allocated. Normalized private PNGs may be up to 5 MB. Task photos now permit 20
+per task, 30 MB per selected batch and 100 MB per job; schema v13 widens the old
+attachment constraint while preserving saved images. The existing-image picker
+allows up to 10 images, reviews the entire selection in a horizontal carousel,
+and attaches the set in one transaction. Full-screen viewing starts at the
+chosen photo and swipes left to the previous image and right to the next across
+task-level and comment-level images in timestamp order. Native migration/batch
+tests, a Flutter multi-select/review/swipe test, and an actual Android
+multi-selection/viewer journey are added but have not run yet. Latest Actions
+run [43584358180](https://github.com/centerionware/Clockrove/actions/runs/43584358180)
+passed the 49-sample map journey on API 24, then failed in the separate billing
+test because its return-to-top swipe could not expose `Billing basis`; the
+updated helper swipes in the blank left gutter. API 35 was not reached. The new
+image and helper changes await a fresh exact-head Actions run; no VM build,
+test or formatter ran.
+
+### 2026-11-14 — leading-decimal money input correction
+
+The owner reported `.01` being rejected when recording an invoice payment even
+though `0.01` succeeded. The shared currency parser required an integer part;
+accepting `.01` as `0.01` fixes that input validation bug while preserving exact
+minor-unit conversion and existing currency-precision checks. Regression tests
+cover the parser and full payment form, asserting one cent persists as minor-unit
+string `1`. Actions runs `43587087757`, `43587596151`, `43588048998`,
+`43588642154`, `43588980204`, `43589349628` and `43589666718` each passed both
+penny-related Flutter tests. Runs `43588642154`, `43588980204`, `43589349628` and
+`43589666718` also passed the task-photo selected-index and left/right swipe
+test. The quote form has **Manage customers** directly below its customer
+selector and opens the same `CustomersScreen` as Job settings. The shared
+customer editor now keeps its save action visible while scrolling. The expanded
+widget journey adds and saves a customer through that screen, returns to the
+quote, selects the customer, then verifies the draft captures its ID. This
+follow-up awaits exact-head Actions. No VM build, test or formatter ran.
+
+The actual API-24/35 Android payment journey also enters `.01`, captures the
+form, and verifies the retained payment is exactly one minor unit. These device
+assertions await GitHub Actions.
+
+### 2026-11-14 — M6.6 exact-head CI findings and corrective source
+
+At PR #45 head `3ce3e29` / Actions run
+[43590405687](https://github.com/centerionware/Clockrove/actions/runs/43590405687),
+Flutter formatting, analysis, implemented-behavior tests and Android debug
+build passed. Native unit tests completed 594 cases with 15 failures; the
+exported XML artifacts and Gradle log were reviewed. Current-schema assertions
+expected v12 after the v13 expanded-photo migration. The batch-image retry test
+supplied a new state version instead of the original command version. Reading a
+stored image as one SQLite BLOB exceeded Android's CursorWindow. Updated the
+current-schema assertions to v13, fixed the retry test to reuse its original
+version and changed photo retrieval to bounded 512 KiB BLOB slices; the
+regression now checks every byte of an image larger than the previous storage
+limit. Applied the formatter-source patch exported by Actions. Exact-head rerun
+is pending; device journeys did not run because native tests failed. No VM
+build, test or formatter ran.
+
+
+### 2026-11-14 — chunked task-photo retrieval follow-up
+
+At PR #45 head `5752499` / Actions run
+[43591679777](https://github.com/centerionware/Clockrove/actions/runs/43591679777),
+formatting, analysis, Flutter behavior tests and the Android debug build passed.
+The native suite improved from 15 failures to four of 594; all four were
+`TaskConversationTest` reads returning no image for both the small-image and
+expanded-image cases. Schema-v13 assertions and idempotent batch retry now pass.
+Simplified the chunk SQL to query by immutable attachment ID and explicitly cast
+SQLite `substr` offsets/lengths, while checking the stored byte bound in Kotlin.
+A new exact-head Actions run is required; device journeys were skipped after
+native tests failed. No VM build, test or formatter ran.
+
+
+### 2026-11-14 — photo-read native pass; gallery fixture compile correction
+
+PR #45 head `1e568f1` / Actions run
+[43592371710](https://github.com/centerionware/Clockrove/actions/runs/43592371710)
+passed Flutter formatting, analysis, implemented-behavior tests, Android debug
+build and all 594 native unit tests. The native report confirms schema-v13
+migrations, batch-command replay and byte-for-byte reads of a 2.1 MB photo pass.
+The workflow stopped before device execution because the synthetic gallery
+activity chained `Intent.setClipData`, a Java `void` method, in a fluent
+expression. Updated the fixture to set `ClipData` and read permission flags
+separately. The exact-head Actions rerun remains required; no device journey ran
+on this head. No VM build, test or formatter ran.
+
+### 2026-11-14 — M6.6 actual-cost ledger editor and paging source
+
+Extended the native cost ledger from schema/CRUD source into a paged end-to-end
+source slice. The platform channel now accepts an `(occurred,id)` cursor and
+returns the next cursor, keeping ordering deterministic when multiple costs
+share a timestamp. The Flutter ledger screen lists costs in recorded timezone
+and currency, loads older pages, and opens an add/edit form with exact decimal
+validation, date/time, category, optional job/task and receipt details. Deletes
+are confirmed and soft-delete into the revision history. Cost commands track
+the latest committed native version so a user can retry after another app
+change without losing the form. Added native pagination and Flutter create,
+currency-precision and positive-amount tests; the ledger is reachable from the
+main Reports screen. This is source-only and awaits Actions formatting,
+analysis, widget/native tests, Android build and device coverage. No local
+build/test/formatter ran. Tax-preparation reports and secure map-provider
+settings remain in M6.6.
+
+Exact-head follow-up: run `43597344579` on `d29c347` generated a formatter
+source patch and stopped at analysis. It identified an accidentally placed
+`digits` constructor initializer on `TaskCard`, plus unused/deprecated/lint
+findings in the new screen. Applied the exported formatter patch and corrected
+the constructor and analyzer findings. The corrected source still needs an
+exact-head Actions rerun. No VM build, test or formatter ran.
+
+At corrected head `d5983c9` / run `43597717786`, formatting, analysis, Flutter
+behavior tests and UI preview export passed. Android compilation stopped on a
+Kotlin reified-array type-inference warning promoted to an error for a mixed
+`Long`/`String` SQL bind array. Added an explicit `Any` type and applied the
+workflow's two-line formatter correction. Native tests and Android journeys did
+not run on this head; exact-head Actions rerun remains required. No VM build,
+test or formatter ran.
+
+At head `b355e6f` / Actions run `43598420647`, formatting, analysis, Flutter
+behavior tests, UI preview export and Android debug build passed. Native tests
+ran 602 cases and reported four failures, all in older-schema fixtures for
+location recording and task-image migration; these fixtures downgraded the
+version number but retained the newly installed v14 actual-cost table, so the
+upgrade attempted to create it twice. The two fixtures now drop the v14 table
+before setting their simulated older version. The cost-ledger CRUD, migration
+and paging cases passed in this run; rerun is required to validate the fixture
+correction. Device journeys did not run. No VM build, test or formatter ran.
+
+### 2026-11-14 — M6.6 report source and repeat API-24 scroll failure
+
+PR #45 head `53e906a` / Actions run `43601098250` passed formatting, analysis,
+Flutter behavior tests, Android debug build and all 602 native tests. The API-24
+billing journey failed the same **Billing basis** rediscovery after invalid-tax
+validation, despite the helper moving its gesture inside the visible scroll
+container. The screenshot still shows Job settings open, and the accessibility
+dump shows the first visible Flutter child at x=63..1017. The current harness
+starts at that child's left edge, marks injected motion as touchscreen and
+checks whether an accessibility backward action moved to the target before
+using the touch fallback. Another exact-head run is required; API 35 and later
+device journeys did not run on `43601098250`.
+
+In parallel, M6.6 report source adds schema-v15 customer snapshots for actual
+costs, preserving old entries as unattributed; native aggregation for exact
+currency groups, invoice/void issue-date movements, cash/credit effective-date
+movements, as-of balances and recorded costs; a Reports entry with job/customer
+filters and drilldowns; exact minor-unit CSV and a paginated summary/detail PDF.
+Native reconciliation, date/currency/filter, CSV-injection, Flutter filter/
+export and Android PDF-render tests are added. None has run in Actions yet and
+no local build/test/formatter was run. Secure map-provider settings remain.
+
+At commit `974a7a2` / Actions run `43604844157`, the formatting check passed;
+Analyze reported one `curly_braces_in_flow_control_structures` lint in the new
+report filter error handler. Behavior tests, Android compilation/native tests
+and device journeys were skipped. Added braces to the reported conditional;
+push the correction and require a fresh exact-head run. No VM build, test or
+formatter ran.
+
+At commit `1abdcfd` / Actions run `43605155898`, Analyze passed. The workflow
+provided a formatting patch for the report screen, API and widget test. Flutter
+behavior tests reported 180 passed, one failed and 14 skipped: the new filter/
+export widget test tried to find the exact-amount CSV note before its lazy-list
+row had been built. Android build, native tests and device journeys were
+skipped. Applied the workflow's patch and moved that expectation after scrolling
+to the export controls. This corrective source needs a new exact-head Actions
+run. The API-24 billing-settings scroll journey remains unvalidated on the
+current test helper. No VM build, test or formatter ran.
+
+At commit `0905c50` / Actions run `43605752509`, formatting and Analyze passed,
+but Flutter behavior again reported 180 passed, one failed and 14 skipped. The
+customer-filter test's mock report API still saw an empty selection after the
+tap sequence; the CSV-note visibility issue was fixed. The test now taps the
+checkbox tile and asserts its selected state before applying. Android build,
+native tests and device journeys were skipped. A fresh exact-head Actions run
+is required. No VM build, test or formatter ran.
+
+At commit `ccae99f` / Actions run `43606286116`, formatting, Analyze, all
+Flutter behavior tests and the Android debug build passed. Native unit tests
+reported 614 cases with four failures across SDK variants. The report CSV test
+put a formula note after safe detail text, so the cell did not need formula
+protection; the JPY grouping test attempted to modify an existing job's fixed
+currency. Updated the fixtures to put the formula in the entire detail cell and
+change the default currency before creating a new JPY job. PDF generation and
+device journeys were skipped. Validate the correction in a fresh Actions run.
+No VM build, test or formatter ran.
+
+
+### 2026-11-14 — API-24 device fixture correction
+
+At PR #45 head `d6405b5`, Actions run
+[43607466254](https://github.com/centerionware/Clockrove/actions/runs/43607466254)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build and
+614 native tests. The API-24 real Android PDF stage ran five tests and found one
+fixture failure: its oversized-logo payload was 2,000,001 bytes, below the newer
+5,000,000-byte normalized-image limit. Updated the device test to use
+`ImageLimits.NORMALIZED_BYTES + 1`, so it stays aligned with the product limit.
+API 35 and later device journeys were not reached. The correction requires a
+fresh exact-head Actions run. No VM build, test or formatter ran.
+
+
+### 2026-11-14 — quote task classification in device journey
+
+Exact head `afdf6d8` / Actions run
+[43608664165](https://github.com/centerionware/Clockrove/actions/runs/43608664165)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build and
+614 native tests. API 24 passed the corrected 5 MB image-limit test, then its
+quote billing journey showed the expected task-classification guard for a new
+Unclassified task. Updated the device test to assert that message, choose Labor
+and retry before checking the exact quantity and price. API 35 and subsequent
+journeys were not reached. A fresh exact-head Actions run is required. No VM
+build, test or formatter ran.
+
+
+### 2026-11-14 — exact-head API 24/35 verification passed
+
+Exact code head `c9d20cc` / Actions run
+[43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
+passed formatting, Analyze, all Flutter behavior tests, Android debug build, 614
+native tests, PDF generation/rendering, invoice-viewer checks and all actual
+Android device journeys. Downloaded XML reports 35 tests per API 24 and 35, with
+zero failures, errors or skips. The quote task guard and classification retry
+passed, and reviewed board captures show quantity 30 with a USD 9.99 unit price.
+The actual-work invoice journey passed on both APIs. The quote form's Manage
+customers button remains immediately below the customer selector and uses the
+same shared management screen as Job settings; its add/save/return/select Flutter
+test passed. Secure map-provider settings and owner-device acceptance remain
+open. No VM build, test or formatter ran.

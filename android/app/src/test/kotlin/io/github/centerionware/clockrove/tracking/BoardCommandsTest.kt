@@ -114,6 +114,39 @@ class BoardCommandsTest {
         assertNull(repository.snapshot().running)
         assertEquals("TASK_ALREADY_EXISTS", repository.copyTaskTemplate("bad-copy", repository.snapshot().version, template.id, "fresh", other, target.board.columns.first().id, true).conflict)
     }
+    @Test fun taskClassificationPersistsOnCardsTemplatesAndCopiesAndRejectsUnknownValues() {
+        assertNull(save(draft("supplies").copy(chargeType = TaskClassification.SUPPLIES)).conflict)
+        val source = state.board.cards.single()
+        val template = repository.taskTemplates().single()
+        assertEquals(TaskClassification.SUPPLIES, source.chargeType)
+        assertEquals(TaskClassification.SUPPLIES, template.chargeType)
+
+        val receivingJob = repository.createJob("Synthetic classification receiver")
+        val receiving = repository.boardSnapshot(receivingJob)
+        assertNull(repository.copyTaskTemplate("copy-supplies", receiving.version, template.id, "copied-supplies", receivingJob,
+            receiving.board.columns.first().id, true).conflict)
+        assertEquals(TaskClassification.SUPPLIES, repository.boardSnapshot(receivingJob).board.cards.single().chargeType)
+        assertEquals(TaskClassification.SUPPLIES, repository.taskTemplates().single { it.id != template.id }.chargeType)
+
+        val before = state
+        val templatesBeforeInvalid = repository.taskTemplates().size
+        assertEquals("INVALID_TASK", save(draft("unknown").copy(chargeType = "MATERIALS")).conflict)
+        assertEquals(before, state)
+        assertEquals(templatesBeforeInvalid, repository.taskTemplates().size)
+        inspect { db ->
+            db.rawQuery("SELECT r.payload FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='card' AND h.entity_id='supplies'", null).use {
+                assertTrue(it.moveToFirst()); assertEquals(TaskClassification.SUPPLIES, org.json.JSONObject(it.getString(0)).getString("charge_type"))
+            }
+        }
+    }
+    @Test fun classificationIsPartOfCommandIdentityWithoutChangingLegacyLaborRetries() {
+        val before = state.version
+        val labor = draft("retry-task").copy(chargeType = TaskClassification.LABOR)
+        assertNull(repository.saveCard("classification-retry", before, labor).conflict)
+        assertEquals("COMMAND_ID_REUSED", repository.saveCard("classification-retry", before,
+            labor.copy(chargeType = TaskClassification.SUPPLIES)).conflict)
+        assertEquals(TaskClassification.LABOR, state.board.cards.single().chargeType)
+    }
     @Test fun archivedSourcesRemainSearchableAndTemplateRemovalDoesNotDeleteCards() {
         save(draft("old"))
         val template = repository.taskTemplates("reusable").single()

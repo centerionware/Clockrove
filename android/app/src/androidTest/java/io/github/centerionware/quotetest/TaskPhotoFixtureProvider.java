@@ -9,13 +9,14 @@ import android.os.ParcelFileDescriptor;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.Collections;
+import java.util.Arrays;
 
 /** Read-only content URI used by the test gallery picker; contains synthetic pixels only. */
 public final class TaskPhotoFixtureProvider extends ContentProvider {
     private static final String AUTHORITY =
             "io.github.centerionware.clockrove.test.task-photo-fixtures";
-    private static final String FIXTURE_NAME = "task-photo-fixture.jpg";
+    private static final java.util.List<String> FIXTURE_NAMES = Arrays.asList(
+            "task-photo-fixture-one.jpg", "task-photo-fixture-two.jpg");
 
     @Override
     public boolean onCreate() {
@@ -25,14 +26,15 @@ public final class TaskPhotoFixtureProvider extends ContentProvider {
     private File fixture(Uri uri) throws FileNotFoundException {
         if (!"content".equals(uri.getScheme())
                 || !AUTHORITY.equals(uri.getAuthority())
-                || !Collections.singletonList(FIXTURE_NAME).equals(uri.getPathSegments())) {
+                || uri.getPathSegments().size() != 1
+                || !FIXTURE_NAMES.contains(uri.getLastPathSegment())) {
             throw new FileNotFoundException("Synthetic photo unavailable");
         }
         try {
             Context context = getContext();
             if (context == null) throw new FileNotFoundException("Synthetic photo unavailable");
             File root = context.getCacheDir().getCanonicalFile();
-            File file = new File(root, FIXTURE_NAME).getCanonicalFile();
+            File file = new File(root, uri.getLastPathSegment()).getCanonicalFile();
             if (!root.equals(file.getParentFile()) || !file.isFile()) {
                 throw new FileNotFoundException("Synthetic photo unavailable");
             }

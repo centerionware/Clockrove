@@ -10,6 +10,7 @@ import 'email_template.dart';
 import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
+import '../maps/map_provider_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -311,6 +312,20 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           onChanged: (value) =>
               setState(() => _defaultLocationRecording = value),
         ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const ValueKey('open-map-provider-settings'),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const MapProviderSettingsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Map provider settings'),
+          ),
+        ),
         const SizedBox(height: 20),
         Semantics(
           identifier: 'default-tax-percent',
@@ -589,6 +604,40 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
           widget.customer == null ? 'New customer' : 'Customer details',
         ),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: BusinessCommand(
+            key: ValueKey('save-customer/$_id'),
+            label: 'Save customer',
+            enabled: data != null,
+            create: () {
+              if (_name.text.trim().isEmpty) {
+                throw const FormatException('Enter a customer name.');
+              }
+              final id = newBusinessId();
+              final version = data!.version;
+              final c = Customer(
+                id: _id,
+                name: _name.text.trim(),
+                email: _email.text.trim(),
+                phone: _phone.text,
+                address: _address.text,
+                notes: _notes.text,
+                archived: _archived,
+              );
+              return () => ref
+                  .read(businessSettingsApiProvider)
+                  .customer(id, version, c);
+            },
+            onCommitted: () {
+              ref.invalidate(businessSettingsProvider);
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -619,33 +668,6 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
             onChanged: (v) => setState(() => _archived = v),
           ),
           const SizedBox(height: 24),
-          BusinessCommand(
-            label: 'Save customer',
-            enabled: data != null,
-            create: () {
-              if (_name.text.trim().isEmpty) {
-                throw const FormatException('Enter a customer name.');
-              }
-              final id = newBusinessId();
-              final version = data!.version;
-              final c = Customer(
-                id: _id,
-                name: _name.text.trim(),
-                email: _email.text.trim(),
-                phone: _phone.text,
-                address: _address.text,
-                notes: _notes.text,
-                archived: _archived,
-              );
-              return () => ref
-                  .read(businessSettingsApiProvider)
-                  .customer(id, version, c);
-            },
-            onCommitted: () {
-              ref.invalidate(businessSettingsProvider);
-              Navigator.pop(context);
-            },
-          ),
           if (widget.customer != null) ...[
             const SizedBox(height: 32),
             OutlinedButton.icon(

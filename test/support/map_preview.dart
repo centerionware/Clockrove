@@ -1,10 +1,31 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+
+class TestMapProviderSettingsApi implements MapProviderSettingsApi {
+  const TestMapProviderSettingsApi();
+
+  @override
+  Future<MapProviderSettings> read() async => const MapProviderSettings();
+
+  @override
+  Future<MapProviderSettings> reset() async => const MapProviderSettings();
+
+  @override
+  Future<MapProviderSettings> save(
+    MapProviderSettings settings, {
+    String? authSecret,
+    bool removeCredential = false,
+  }) async => settings;
+
+  @override
+  Future<Map<String, String>> tileAuthHeaders() async => const {};
+}
 
 Future<void> loadMapPreviewFonts() async {
   final sdk = Platform.environment['FLUTTER_ROOT'];

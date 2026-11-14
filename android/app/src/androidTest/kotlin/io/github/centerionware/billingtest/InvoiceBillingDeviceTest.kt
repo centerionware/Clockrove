@@ -103,43 +103,65 @@ class InvoiceBillingDeviceTest {
         }
     }
     private fun scrollToStart() {
-        val deadline = SystemClock.uptimeMillis() + 15000
-        var stationaryPolls = 0
-        while (SystemClock.uptimeMillis() < deadline && stationaryPolls < 5) {
+        hideKeyboard()
+        // On API 24 the Flutter ScrollView reports ACTION_SCROLL_BACKWARD as
+        // successful while remaining at the same offset. An accessibility
+        // acknowledgement is not proof that the contents actually moved, so
+        // use real downward-content swipes and stop only once the top section
+        // is actually exposed. The settings form can grow as options are added,
+        // so a fixed swipe count can leave the test in its lower sections.
+        repeat(40) {
+            if (find("Billing basis") != null) return
             fun scroll(node: AccessibilityNodeInfo): Boolean {
+                if (node.isVisibleToUser && node.isScrollable &&
+                    node.className?.toString() == "android.widget.ScrollView" &&
+                    node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
                 for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                return node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                return false
             }
-            if (automation.rootInActiveWindow?.let(::scroll) == true) {
-                stationaryPolls = 0
-            } else {
-                if (stationaryPolls == 0) {
-                    repeat(8) {
-                        swipeContent(up = false)
-                        SystemClock.sleep(120)
-                    }
-                }
-                stationaryPolls++
-            }
-            SystemClock.sleep(150)
+            // Some API-24 ScrollViews acknowledge the action without moving.
+            // Check for the target again; retain the touch gesture as a fallback.
+            if (automation.rootInActiveWindow?.let(::scroll) == true && find("Billing basis") != null) return
+            swipeContent(up = false)
+            SystemClock.sleep(120)
         }
+        waitFor("Billing basis")
     }
     private fun swipeContent(up: Boolean) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        data class Target(val bounds: android.graphics.Rect, val firstChild: android.graphics.Rect?)
+        fun scrollTarget(node: AccessibilityNodeInfo): Target? {
+            if (node.isVisibleToUser && node.isScrollable &&
+                node.className?.toString() == "android.widget.ScrollView") {
+                val child = node.getChild(0)?.let { android.graphics.Rect().also(it::getBoundsInScreen) }
+                return Target(android.graphics.Rect().also(node::getBoundsInScreen), child)
+            }
+            for (i in 0 until node.childCount) {
+                node.getChild(i)?.let { scrollTarget(it)?.let { found -> return found } }
+            }
+            return null
+        }
+        val target = scrollTarget(root)
+        val content = target?.bounds?.takeUnless { it.isEmpty } ?: bounds
         val imeTop = automation.windows
             .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             .map { android.graphics.Rect().also(it::getBoundsInScreen).top }
             .minOrNull()
-        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom) - 80
-        val top = bounds.top + 220
+        val bottom = minOf(bounds.bottom, imeTop ?: bounds.bottom, content.bottom) - 20
+        val top = maxOf(bounds.top + 220, content.top + 10)
         if (bottom - top < 300) return
-        val x = bounds.centerX().toFloat()
+        // Start just inside the scroll view's first child. Page margins miss
+        // Flutter's hit-test tree; tapping a control's center can consume a drag.
+        val child = target?.firstChild?.takeUnless { it.isEmpty }
+        val x = (child?.let { (it.left + 1).coerceAtMost(it.right - 1) } ?: content.centerX()).toFloat()
         val startY = if (up) bottom - 80 else top + 80
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
-            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            }
             try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
         inject(android.view.MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
@@ -266,7 +288,9 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName)
             waitFor("Task board"); reveal("Install 1 sq ft tile"); click("Install 1 sq ft tile")
-            waitFor("Edit task"); enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            waitFor("Edit task")
+            enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
+            reveal("Supplies"); click("Supplies"); capture("supplies-classification")
             reveal("Save task"); click("Save task")
             until("Wide unit price was narrowed during actual UI save") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.priceMinor == java.math.BigInteger("100000000000000000000")
@@ -277,7 +301,9 @@ class InvoiceBillingDeviceTest {
             enter("Unit price (USD)", "5.00")
             reveal("Save task"); capture("quantity-editor"); click("Save task")
             until("Actual task editor did not commit quantity and unit price") {
-                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let { it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) }
+                repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let {
+                    it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) && it.chargeType == "SUPPLIES"
+                }
             }
             waitFor("Task board"); capture("quantity-board")
             click("Job report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
@@ -290,6 +316,7 @@ class InvoiceBillingDeviceTest {
             assertEquals("130.00", frozen.subtotal); assertEquals("9.75", frozen.taxAmount); assertEquals("139.75", frozen.total)
             assertEquals("Install 1 sq ft tile", frozen.lines.single().title)
             assertEquals("260000", frozen.lines.single().quantityUnits); assertEquals("500", frozen.lines.single().unitPriceMinor)
+            assertEquals("SUPPLIES", frozen.lines.single().chargeType)
             waitFor("Page 1 of 1"); capture("issued-invoice")
             assertTrue(requireNotNull(repository.invoice(issued.id).pdf).size > 1000)
             assertEquals(1002L, sequence())
@@ -301,6 +328,9 @@ class InvoiceBillingDeviceTest {
 
             closeActivities(); launch(); reveal(jobName); click(jobName); waitFor("Task board")
             click("Job settings"); waitFor("Job settings"); reveal("Use default tax rate"); click("Use default tax rate")
+            // Enabling the override inserts a field above the current viewport.
+            // Start from a known position before looking for that newly built field.
+            scrollToStart()
             enter("Job tax (%)", "101")
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")
@@ -314,7 +344,7 @@ class InvoiceBillingDeviceTest {
             assertEquals(0, repository.jobDetail(job).job.effectiveTaxUnits)
             assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
             waitFor("Task board"); click("Job settings"); waitFor("Job settings")
-            reveal("Use default tax rate"); click("Use default tax rate")
+            scrollToStart(); reveal("Use default tax rate"); click("Use default tax rate")
             reveal("Save job settings"); click("Save job settings")
             until("Default tax inheritance was not restored") { repository.jobDetail(job).job.settings.taxUnits == null }
             assertEquals(75000, repository.jobDetail(job).job.effectiveTaxUnits)

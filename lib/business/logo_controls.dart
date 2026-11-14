@@ -102,7 +102,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
       if (mounted) {
         setState(
           () => _error =
-              'Choose a PNG, JPEG or WebP logo up to 5 MB and 16 megapixels.',
+              'Choose a PNG, JPEG or WebP logo up to 50 MB and 250 megapixels.',
         );
       }
     } finally {

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 
@@ -197,8 +198,11 @@ void main() {
           timerApiProvider.overrideWithValue(api),
           automationApiProvider.overrideWithValue(FixtureAutomationApi()),
           trackingApiProvider.overrideWithValue(PreviewTrackingApi()),
+          mapProviderSettingsApiProvider.overrideWithValue(
+            const TestMapProviderSettingsApi(),
+          ),
           workMapTilesProvider.overrideWithValue(
-            (_) => SyntheticTiles(fail: true),
+            (_, _) => SyntheticTiles(fail: true),
           ),
         ],
         child: MaterialApp(

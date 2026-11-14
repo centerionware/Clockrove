@@ -7,6 +7,7 @@ import 'business_command.dart';
 import 'quote_api.dart';
 import 'report_api.dart';
 import 'settings_api.dart';
+import 'settings_screen.dart';
 import 'tax_rate.dart';
 
 class QuoteEditor extends ConsumerStatefulWidget {
@@ -226,6 +227,11 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               subtitle: Text(
                                 [
                                   template.source ?? 'Saved task',
+                                  template.chargeType == 'SUPPLIES'
+                                      ? 'Supplies'
+                                      : template.chargeType == 'LABOR'
+                                      ? 'Labor'
+                                      : 'Unclassified',
                                   'Quantity ${taskQuantity(template.quantityUnits)}',
                                   if (template.priceMinor == null)
                                     'Unit price not set'
@@ -614,7 +620,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
 
   @override
   Widget build(BuildContext context) {
-    final customers = _data.business.customers;
+    final customers =
+        ref.watch(businessSettingsProvider).value?.customers ??
+        _data.business.customers;
     final jobs = _data.jobs.jobs;
     return PopScope(
       canPop: !_pending,
@@ -696,6 +704,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 onChanged: !_enabled
                     ? null
                     : (value) => setState(() => _customer = value),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CustomersScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.people_outline),
+                label: const Text('Manage customers'),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

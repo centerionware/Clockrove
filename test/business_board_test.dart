@@ -44,6 +44,7 @@ class _BoardApi extends BusinessApi {
         currency: 'USD',
         priceMinor: '125000',
         dueDate: '2026-11-20',
+        chargeType: 'LABOR',
       ),
       TaskCard(
         id: 'grout',
@@ -204,6 +205,8 @@ void main() {
   test('money parsing preserves exact values, blank and explicit zero', () {
     expect(parseMoney('', 2), isNull);
     expect(parseMoney('0', 2), '0');
+    expect(parseMoney('.01', 2), '1');
+    expect(money(parseMoney('.01', 2)!, 2), '0.01');
     expect(parseMoney('90071992547409.93', 2), '9007199254740993');
     expect(money('9007199254740993', 2), '90071992547409.93');
     expect(parseMoney('123', 0), '123');
@@ -296,15 +299,46 @@ void main() {
       find.widgetWithText(TextFormField, 'Quantity'),
       '26',
     );
+    final supplies = find.widgetWithText(SwitchListTile, 'Supplies');
+    await tester.ensureVisible(supplies);
+    await tester.tap(supplies);
     await tester.ensureVisible(find.text('Save task'));
     await tester.tap(find.text('Save task'));
     await tester.pumpAndSettle();
     expect(api.saved?.quantityUnits, '260000');
     expect(api.saved?.priceMinor, '500');
     expect(api.saved?.amountMinor, '13000');
+    expect(api.saved?.chargeType, 'SUPPLIES');
     expect(find.text('Edit task'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'legacy unclassified tasks require a clear labor or supplies choice',
+    (tester) async {
+      final api = _SavingApi();
+      await _show(tester, api: api);
+      await tester.tap(find.text('Choose grout finish'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Choose how this existing task is classified for reports.'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.text('Save task'));
+      await tester.tap(find.text('Save task'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Choose Labor or Supplies before saving.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Supplies'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save task'));
+      await tester.tap(find.text('Save task'));
+      await tester.pumpAndSettle();
+      expect(api.saved?.chargeType, 'SUPPLIES');
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'real board screen exposes pricing, due dates and accessible moves',
     (tester) async {

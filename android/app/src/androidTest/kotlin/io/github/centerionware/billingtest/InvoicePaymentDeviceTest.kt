@@ -280,14 +280,16 @@ class InvoicePaymentDeviceTest {
             scrollToStart(); reveal("Payment amount (USD)", true)
             assertEquals("30.001", waitFor("Payment amount (USD)", true).text.toString())
             capture("invalid-payment")
-            enter("Payment amount (USD)", "30.00")
+            enter("Payment amount (USD)", ".01")
             enter("Internal note (optional)", "PRIVATE UI PAYMENT NOTE")
+            capture("leading-dot-cent-payment")
             reveal("Confirm payment"); click("Confirm payment")
-            until("Actual partial payment was not recorded") { repository.invoicePayments("payment-invoice").second.balance.paid == BigInteger.valueOf(3000) }
+            until("Actual one-cent payment was not recorded") { repository.invoicePayments("payment-invoice").second.balance.paid == BigInteger.ONE }
             val first = repository.invoicePayments("payment-invoice").second.payments.single()
+            assertEquals(BigInteger.ONE, first.amount)
             receipt(repository, "receipt-${first.id}", "partial-receipt")
             val partial = repository.invoiceCopy("receipt-${first.id}")
-            assertEquals("77.50", InvoiceStore.Snapshot.decode(partial.payload).statement!!.due)
+            assertEquals("107.49", InvoiceStore.Snapshot.decode(partial.payload).statement!!.due)
             assertFalse(partial.payload.contains("PRIVATE UI PAYMENT NOTE"))
             val mail = InvoiceDocuments.email(app, partial, repository.businessSnapshot().settings)
             assertArrayEquals(arrayOf("customer@example.test"), mail.getStringArrayExtra(Intent.EXTRA_EMAIL))
@@ -296,7 +298,7 @@ class InvoicePaymentDeviceTest {
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
             revealDetailStatus("Partially paid"); capture("partial-balance")
             reveal("Mark paid"); click("Mark paid")
-            assertEquals("77.50", waitFor("Payment amount (USD)", true).text.toString())
+            assertEquals("107.49", waitFor("Payment amount (USD)", true).text.toString())
             reveal("Confirm payment"); click("Confirm payment")
             until("Actual remaining payment did not settle the invoice") { repository.invoicePayments("payment-invoice").second.balance.due == BigInteger.ZERO }
             val second = repository.invoicePayments("payment-invoice").second.payments.single { it.id != first.id }
@@ -306,14 +308,14 @@ class InvoicePaymentDeviceTest {
             assertEquals("0.00", InvoiceStore.Snapshot.decode(paid.payload).statement!!.due)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
             revealDetailStatus("Paid"); reveal("Correct payment"); click("Correct payment")
-            waitFor("Reverse the recorded payment of USD 30.00.")
+            waitFor("Reverse the recorded payment of USD 0.01.")
             enter("Reason for correction", "Corrected duplicate transfer entry")
             reveal("Confirm reversal"); click("Confirm reversal")
             until("Actual correction did not reverse its payment") { repository.invoicePayments("payment-invoice").second.payments.first { it.id == first.id }.reversalId != null }
             val reversal = repository.invoicePayments("payment-invoice").second.payments.first { it.id == first.id }.reversalId!!
             receipt(repository, "correction-$reversal", "correction-receipt")
-            assertEquals(BigInteger.valueOf(7750), repository.invoicePayments("payment-invoice").second.balance.paid)
-            assertEquals(BigInteger.valueOf(3000), repository.invoicePayments("payment-invoice").second.balance.due)
+            assertEquals(BigInteger.valueOf(10749), repository.invoicePayments("payment-invoice").second.balance.paid)
+            assertEquals(BigInteger.ONE, repository.invoicePayments("payment-invoice").second.balance.due)
             assertArrayEquals(paid.pdf, repository.invoiceCopy("receipt-${second.id}").pdf)
             assertEquals(original.payload, repository.invoice("payment-invoice").payload)
             assertArrayEquals(original.pdf, repository.invoice("payment-invoice").pdf)
@@ -323,7 +325,7 @@ class InvoicePaymentDeviceTest {
             closeActivities(); launch(); click("App settings and customers"); click("Invoices"); click("INV-1000")
             waitFor("Job deleted · financial records retained"); waitFor("Partially paid"); capture("retained-balance")
             reveal("Mark paid"); click("Mark paid")
-            assertEquals("30.00", waitFor("Payment amount (USD)", true).text.toString())
+            assertEquals("0.01", waitFor("Payment amount (USD)", true).text.toString())
             reveal("Confirm payment"); click("Confirm payment")
             until("Deleted-job invoice could not be settled") { repository.invoicePayments("payment-invoice").second.balance.due == BigInteger.ZERO }
             val final = repository.invoicePayments("payment-invoice").second.payments.single { it.id != first.id && it.id != second.id }

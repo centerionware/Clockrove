@@ -7,7 +7,7 @@ import android.os.ParcelFileDescriptor
 internal object InvoiceBlobs {
     fun original(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoices", "pdf", id, 20_000_000)
     fun copy(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoice_copies", "pdf", id, 20_000_000)
-    fun logo(db: SQLiteDatabase, id: String): ByteArray? = read(db, "logo_assets", "bytes", id, 2_000_000)
+    fun logo(db: SQLiteDatabase, id: String): ByteArray? = read(db, "logo_assets", "bytes", id, ImageLimits.NORMALIZED_BYTES)
     fun quote(db: SQLiteDatabase, id: String): ByteArray? = read(db, "quote_pdfs", "bytes", id, 20_000_000)
 
     private fun read(db: SQLiteDatabase, table: String, column: String, id: String, maximum: Int): ByteArray? {

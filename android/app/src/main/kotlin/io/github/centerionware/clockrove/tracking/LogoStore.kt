@@ -11,7 +11,7 @@ internal object LogoStore {
     fun apply(db: SQLiteDatabase, token: String, load: () -> Asset?, at: Long): String? {
         if (!token.matches(Regex("[a-f0-9]{64}"))) return "INVALID_LOGO"
         val asset = load() ?: return "LOGO_IMPORT_EXPIRED"
-        if (asset.id != token || hash(asset.bytes) != token || asset.bytes.size !in 1..2_000_000 || asset.width !in 1..1024 || asset.height !in 1..1024) return "INVALID_LOGO"
+        if (asset.id != token || hash(asset.bytes) != token || asset.bytes.size !in 1..ImageLimits.NORMALIZED_BYTES || asset.width !in 1..1024 || asset.height !in 1..1024) return "INVALID_LOGO"
         val signature = byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10)
         if (asset.bytes.size < 24 || !asset.bytes.copyOfRange(0, 8).contentEquals(signature) ||
             java.nio.ByteBuffer.wrap(asset.bytes, 16, 8).let { it.int != asset.width || it.int != asset.height }) return "INVALID_LOGO"

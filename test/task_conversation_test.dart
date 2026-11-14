@@ -32,6 +32,36 @@ class _Business extends BusinessApi {
     );
   }
 
+  void seedTaskPhoto(String id, int createdMillis) {
+    _taskAttachments.add(
+      TaskAttachmentInfo(
+        id: id,
+        createdMillis: createdMillis,
+        bytes: _pixel.length,
+      ),
+    );
+    _images[id] = Uint8List.fromList(_pixel);
+  }
+
+  void seedCommentPhoto(String commentId, String id, int createdMillis) {
+    final index = _comments.indexWhere((comment) => comment.id == commentId);
+    final previous = _comments[index];
+    final attachment = TaskAttachmentInfo(
+      id: id,
+      createdMillis: createdMillis,
+      bytes: _pixel.length,
+      commentId: commentId,
+    );
+    _comments[index] = TaskComment(
+      id: previous.id,
+      body: previous.body,
+      createdMillis: previous.createdMillis,
+      updatedMillis: previous.updatedMillis,
+      attachments: [...previous.attachments, attachment],
+    );
+    _images[id] = Uint8List.fromList(_pixel);
+  }
+
   TaskConversation _snapshot() => TaskConversation(
     version: _version,
     jobId: 'job',
@@ -132,6 +162,39 @@ class _Business extends BusinessApi {
         updatedMillis: previous.updatedMillis,
         attachments: [...previous.attachments, info],
       );
+    }
+    _version++;
+    return TimerOutcome(_version, null);
+  }
+
+  @override
+  Future<TimerOutcome> attachTaskImages(
+    String commandId,
+    TaskConversation conversation,
+    List<MapEntry<String, Uint8List>> images,
+    String? commentId,
+  ) async {
+    for (final image in images) {
+      _images[image.key] = image.value;
+      final info = TaskAttachmentInfo(
+        id: image.key,
+        createdMillis: _at++,
+        bytes: image.value.length,
+        commentId: commentId,
+      );
+      if (commentId == null) {
+        _taskAttachments.add(info);
+      } else {
+        final index = _comments.indexWhere((item) => item.id == commentId);
+        final previous = _comments[index];
+        _comments[index] = TaskComment(
+          id: previous.id,
+          body: previous.body,
+          createdMillis: previous.createdMillis,
+          updatedMillis: previous.updatedMillis,
+          attachments: [...previous.attachments, info],
+        );
+      }
     }
     _version++;
     return TimerOutcome(_version, null);
@@ -241,7 +304,7 @@ void main() {
           .setMockMethodCallHandler(photoChannel, (call) async {
             expect(call.method, 'captureTaskPhoto');
             captures++;
-            return Uint8List.fromList(_pixel);
+            return [Uint8List.fromList(_pixel)];
           });
       addTearDown(
         () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -278,14 +341,14 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(photoChannel, (call) async {
           expect(call.method, 'pickTaskPhoto');
-          return Uint8List.fromList(_pixel);
+          return [Uint8List.fromList(_pixel)];
         });
     addTearDown(
       () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(photoChannel, null),
     );
     await show(tester, api);
-    final choosePhoto = find.text('Choose photo for comment');
+    final choosePhoto = find.text('Choose photos for comment');
     await tester.tap(choosePhoto);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Attach photo'));
@@ -310,10 +373,70 @@ void main() {
             .setMockMethodCallHandler(photoChannel, null),
       );
       await show(tester, api);
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photo'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photos'));
       await tester.pumpAndSettle();
       expect(find.text('No image picker is installed'), findsOneWidget);
       expect(api._images, isEmpty);
+    },
+  );
+
+  testWidgets('multiple gallery photos are reviewed and attached together', (
+    tester,
+  ) async {
+    final api = _Business();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(photoChannel, (call) async {
+          expect(call.method, 'pickTaskPhoto');
+          return [Uint8List.fromList(_pixel), Uint8List.fromList(_pixel)];
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(photoChannel, null),
+    );
+    await show(tester, api);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Review 2 photos'), findsOneWidget);
+    expect(find.text('Photo 1 of 2'), findsOneWidget);
+    expect(api._images, isEmpty);
+    await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Photo 2 of 2'), findsOneWidget);
+    await tester.tap(find.text('Attach photos'));
+    await tester.pumpAndSettle();
+    expect(api._taskAttachments, hasLength(2));
+    expect(api._images, hasLength(2));
+    expect(find.text('2 photos attached to this task.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'full-screen task photo swipes through task and comment images in time order',
+    (tester) async {
+      final api = _Business()
+        ..seedTaskPhoto('task-photo-oldest', 10)
+        ..seedComment('Progress update')
+        ..seedCommentPhoto('existing-comment', 'comment-photo-middle', 20)
+        ..seedTaskPhoto('task-photo-newest', 30);
+      await show(tester, api);
+
+      final commentPhoto = find.byKey(
+        const ValueKey('task-attachment-comment-photo-middle'),
+      );
+      expect(tester.widget<InkWell>(commentPhoto).onTap, isNotNull);
+      await tester.tapAt(
+        tester.getCenter(commentPhoto) + const Offset(-20, 20),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 2 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 1 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 2 of 3'), findsOneWidget);
+      await tester.drag(find.byType(PageView).last, const Offset(300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo 3 of 3'), findsOneWidget);
     },
   );
 }

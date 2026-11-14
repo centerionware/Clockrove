@@ -38,9 +38,305 @@ class ReportJob {
 }
 
 class ReportContext {
-  const ReportContext(this.timezone, this.jobs);
+  const ReportContext(this.timezone, this.jobs, [this.customers = const []]);
   final String timezone;
   final List<ReportJob> jobs;
+  final List<ReportCustomer> customers;
+}
+
+class ReportCustomer {
+  const ReportCustomer(this.id, this.name, this.archived);
+  final String id, name;
+  final bool archived;
+}
+
+class BusinessReportSelection {
+  BusinessReportSelection(
+    this.firstDate,
+    this.lastDate,
+    this.timezone, {
+    List<String> jobs = const [],
+    List<String> customers = const [],
+  }) : jobs = List.unmodifiable(jobs),
+       customers = List.unmodifiable(customers);
+  final String firstDate, lastDate, timezone;
+  final List<String> jobs, customers;
+  Map<String, Object?> encode() => {
+    'firstDate': firstDate,
+    'lastDate': lastDate,
+    'timezone': timezone,
+    'jobIds': jobs,
+    'customerIds': customers,
+  };
+  @override
+  bool operator ==(Object other) =>
+      other is BusinessReportSelection &&
+      firstDate == other.firstDate &&
+      lastDate == other.lastDate &&
+      timezone == other.timezone &&
+      jobs.join('\u0000') == other.jobs.join('\u0000') &&
+      customers.join('\u0000') == other.customers.join('\u0000');
+  @override
+  int get hashCode => Object.hash(
+    firstDate,
+    lastDate,
+    timezone,
+    Object.hashAll(jobs),
+    Object.hashAll(customers),
+  );
+}
+
+class BusinessReportSummary {
+  const BusinessReportSummary({
+    required this.currency,
+    required this.digits,
+    required this.invoicedSales,
+    required this.cashReceived,
+    required this.taxBilled,
+    required this.taxCollected,
+    required this.outstanding,
+    required this.labor,
+    required this.supplies,
+    required this.unclassified,
+    required this.directCosts,
+    required this.overhead,
+    required this.grossProfit,
+    required this.netProfit,
+    required this.grossMarginPercent,
+    required this.netMarginPercent,
+    required this.cashSurplus,
+    required this.costCount,
+    required this.unattributedCostCount,
+    required this.legacyInvoiceCount,
+    required this.unknownTaxInvoiceCount,
+  });
+  final String currency, invoicedSales, cashReceived, taxBilled, taxCollected;
+  final String outstanding,
+      labor,
+      supplies,
+      unclassified,
+      directCosts,
+      overhead;
+  final String grossProfit, netProfit, cashSurplus;
+  final int digits, costCount, unattributedCostCount;
+  final int legacyInvoiceCount, unknownTaxInvoiceCount;
+  final String? grossMarginPercent, netMarginPercent;
+  factory BusinessReportSummary.decode(Map<Object?, Object?> value) =>
+      BusinessReportSummary(
+        currency: value['currency'] as String,
+        digits: value['digits'] as int,
+        invoicedSales: value['invoicedSalesMinor'] as String,
+        cashReceived: value['cashReceivedMinor'] as String,
+        taxBilled: value['taxBilledMinor'] as String,
+        taxCollected: value['taxCollectedMinor'] as String,
+        outstanding: value['outstandingMinor'] as String,
+        labor: value['laborMinor'] as String,
+        supplies: value['suppliesMinor'] as String,
+        unclassified: value['unclassifiedMinor'] as String,
+        directCosts: value['directCostsMinor'] as String,
+        overhead: value['overheadMinor'] as String,
+        grossProfit: value['grossProfitMinor'] as String,
+        netProfit: value['netProfitMinor'] as String,
+        grossMarginPercent: value['grossMarginPercent'] as String?,
+        netMarginPercent: value['netMarginPercent'] as String?,
+        cashSurplus: value['cashSurplusMinor'] as String,
+        costCount: value['costCount'] as int,
+        unattributedCostCount: value['unattributedCostCount'] as int,
+        legacyInvoiceCount: value['legacyInvoiceCount'] as int,
+        unknownTaxInvoiceCount: value['unknownTaxInvoiceCount'] as int,
+      );
+}
+
+class BusinessInvoiceMovement {
+  const BusinessInvoiceMovement({
+    required this.id,
+    required this.invoiceId,
+    required this.number,
+    required this.kind,
+    required this.occurred,
+    required this.occurredLabel,
+    required this.jobId,
+    required this.job,
+    required this.customer,
+    required this.currency,
+    required this.digits,
+    required this.salesMinor,
+    required this.taxMinor,
+    required this.legacyTotalMinor,
+    required this.laborMinor,
+    required this.suppliesMinor,
+    required this.unclassifiedMinor,
+    required this.relatedInvoiceId,
+    required this.reason,
+  });
+  final String id,
+      invoiceId,
+      number,
+      kind,
+      occurredLabel,
+      job,
+      customer,
+      currency;
+  final String? jobId, salesMinor, taxMinor, legacyTotalMinor, laborMinor;
+  final String? suppliesMinor, unclassifiedMinor, relatedInvoiceId;
+  final int occurred, digits;
+  final String reason;
+  factory BusinessInvoiceMovement.decode(Map<Object?, Object?> value) =>
+      BusinessInvoiceMovement(
+        id: value['id'] as String,
+        invoiceId: value['invoiceId'] as String,
+        number: value['number'] as String,
+        kind: value['kind'] as String,
+        occurred: value['occurred'] as int,
+        occurredLabel: value['occurredLabel'] as String,
+        jobId: value['jobId'] as String?,
+        job: value['job'] as String,
+        customer: value['customer'] as String,
+        currency: value['currency'] as String,
+        digits: value['digits'] as int,
+        salesMinor: value['salesMinor'] as String?,
+        taxMinor: value['taxMinor'] as String?,
+        legacyTotalMinor: value['legacyTotalMinor'] as String?,
+        laborMinor: value['laborMinor'] as String?,
+        suppliesMinor: value['suppliesMinor'] as String?,
+        unclassifiedMinor: value['unclassifiedMinor'] as String?,
+        relatedInvoiceId: value['relatedInvoiceId'] as String?,
+        reason: value['reason'] as String,
+      );
+}
+
+class BusinessCashMovement {
+  const BusinessCashMovement({
+    required this.id,
+    required this.invoiceId,
+    required this.paymentId,
+    required this.number,
+    required this.kind,
+    required this.occurred,
+    required this.occurredLabel,
+    required this.job,
+    required this.customer,
+    required this.currency,
+    required this.digits,
+    required this.cashMinor,
+    required this.creditMinor,
+    required this.salesMinor,
+    required this.taxMinor,
+    required this.reference,
+  });
+  final String id, invoiceId, paymentId, number, kind, occurredLabel;
+  final String job, customer, currency, cashMinor, creditMinor;
+  final String? salesMinor, taxMinor;
+  final String reference;
+  final int occurred, digits;
+  factory BusinessCashMovement.decode(Map<Object?, Object?> value) =>
+      BusinessCashMovement(
+        id: value['id'] as String,
+        invoiceId: value['invoiceId'] as String,
+        paymentId: value['paymentId'] as String,
+        number: value['number'] as String,
+        kind: value['kind'] as String,
+        occurred: value['occurred'] as int,
+        occurredLabel: value['occurredLabel'] as String,
+        job: value['job'] as String,
+        customer: value['customer'] as String,
+        currency: value['currency'] as String,
+        digits: value['digits'] as int,
+        cashMinor: value['cashMinor'] as String,
+        creditMinor: value['creditMinor'] as String,
+        salesMinor: value['salesMinor'] as String?,
+        taxMinor: value['taxMinor'] as String?,
+        reference: value['reference'] as String,
+      );
+}
+
+class BusinessCostMovement {
+  const BusinessCostMovement({
+    required this.id,
+    required this.job,
+    required this.customer,
+    required this.task,
+    required this.occurred,
+    required this.occurredLabel,
+    required this.timezone,
+    required this.offsetSeconds,
+    required this.currency,
+    required this.digits,
+    required this.category,
+    required this.amountMinor,
+    required this.vendor,
+    required this.reference,
+    required this.note,
+  });
+  final String id, job, customer, task, occurredLabel, timezone, currency;
+  final int occurred, offsetSeconds, digits;
+  final String category, amountMinor, vendor, reference, note;
+  factory BusinessCostMovement.decode(Map<Object?, Object?> value) =>
+      BusinessCostMovement(
+        id: value['id'] as String,
+        job: value['job'] as String,
+        customer: value['customer'] as String,
+        task: value['task'] as String,
+        occurred: value['occurred'] as int,
+        occurredLabel: value['occurredLabel'] as String,
+        timezone: value['timezone'] as String,
+        offsetSeconds: value['offsetSeconds'] as int,
+        currency: value['currency'] as String,
+        digits: value['digits'] as int,
+        category: value['category'] as String,
+        amountMinor: value['amountMinor'] as String,
+        vendor: value['vendor'] as String,
+        reference: value['reference'] as String,
+        note: value['note'] as String,
+      );
+}
+
+class BusinessFinancialReport {
+  const BusinessFinancialReport({
+    required this.version,
+    required this.timezone,
+    required this.firstDate,
+    required this.lastDate,
+    required this.asOfExclusiveMillis,
+    required this.excludedUnknownCustomerCostCount,
+    required this.summaries,
+    required this.invoices,
+    required this.cash,
+    required this.costs,
+  });
+  final int version, asOfExclusiveMillis, excludedUnknownCustomerCostCount;
+  final String timezone, firstDate, lastDate;
+  final List<BusinessReportSummary> summaries;
+  final List<BusinessInvoiceMovement> invoices;
+  final List<BusinessCashMovement> cash;
+  final List<BusinessCostMovement> costs;
+  factory BusinessFinancialReport.decode(
+    Map<Object?, Object?> value,
+  ) => BusinessFinancialReport(
+    version: value['version'] as int,
+    timezone: value['timezone'] as String,
+    firstDate: value['firstDate'] as String,
+    lastDate: value['lastDate'] as String,
+    asOfExclusiveMillis: value['asOfExclusiveMillis'] as int,
+    excludedUnknownCustomerCostCount:
+        value['excludedUnknownCustomerCostCount'] as int,
+    summaries: (value['summaries'] as List)
+        .map(
+          (row) => BusinessReportSummary.decode(row as Map<Object?, Object?>),
+        )
+        .toList(),
+    invoices: (value['invoices'] as List)
+        .map(
+          (row) => BusinessInvoiceMovement.decode(row as Map<Object?, Object?>),
+        )
+        .toList(),
+    cash: (value['cash'] as List)
+        .map((row) => BusinessCashMovement.decode(row as Map<Object?, Object?>))
+        .toList(),
+    costs: (value['costs'] as List)
+        .map((row) => BusinessCostMovement.decode(row as Map<Object?, Object?>))
+        .toList(),
+  );
 }
 
 class ReportTotal {
@@ -320,11 +616,27 @@ class ReportApi {
           j['archived'] as bool,
         );
       }).toList(),
+      ((v['customers'] as List?) ?? const []).map((raw) {
+        final customer = raw as Map<Object?, Object?>;
+        return ReportCustomer(
+          customer['id'] as String,
+          customer['name'] as String,
+          customer['archived'] as bool,
+        );
+      }).toList(),
     );
   }
 
   Future<WorkReport> report(ReportSelection s) async => WorkReport.decode(
     (await _channel.invokeMapMethod<Object?, Object?>('report', s.encode()))!,
+  );
+  Future<BusinessFinancialReport> businessReport(
+    BusinessReportSelection selection,
+  ) async => BusinessFinancialReport.decode(
+    (await _channel.invokeMapMethod<Object?, Object?>(
+      'businessReport',
+      selection.encode(),
+    ))!,
   );
   Future<InvoiceBillingPreview> invoiceBillingPreview(
     ReportSelection selection,
@@ -455,6 +767,17 @@ class ReportApi {
         'gps': gps,
       }) ??
       false;
+  Future<bool> saveBusinessReport(
+    BusinessReportSelection selection,
+    int version, {
+    required bool pdf,
+  }) async =>
+      await _documents.invokeMethod<bool>('saveBusinessReport', {
+        ...selection.encode(),
+        'version': version,
+        'pdf': pdf,
+      }) ??
+      false;
   Future<bool> save(String id) async =>
       await _documents.invokeMethod<bool>('saveInvoice', {'invoiceId': id}) ??
       false;
@@ -476,3 +799,11 @@ final reportProvider = FutureProvider.family<WorkReport, ReportSelection>((
   ref.watch(timerVersionsProvider);
   return ref.watch(reportApiProvider).report(selection);
 });
+final businessReportProvider =
+    FutureProvider.family<BusinessFinancialReport, BusinessReportSelection>((
+      ref,
+      selection,
+    ) {
+      ref.watch(timerVersionsProvider);
+      return ref.watch(reportApiProvider).businessReport(selection);
+    });

@@ -7,6 +7,67 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('provider credentials are never forwarded across redirects', () async {
+    var calls = 0;
+    var credentialReads = 0;
+    final client = TileBackoffClient(
+      MockClient((request) async {
+        calls++;
+        expect(request.followRedirects, isFalse);
+        expect(request.headers['x-api-key'], 'private-test-token');
+        return calls == 1
+            ? http.Response(
+                '',
+                302,
+                headers: {'location': 'https://other.example/tile'},
+              )
+            : http.Response('', 200);
+      }),
+      state: TileBackoffState(),
+      protectedHeaders: () async {
+        credentialReads++;
+        return const {'X-API-Key': 'private-test-token'};
+      },
+    );
+    addTearDown(client.close);
+
+    final response = await client.get(
+      Uri.parse('https://tiles.example/1/0/0.png'),
+    );
+    final nextResponse = await client.get(
+      Uri.parse('https://tiles.example/1/0/1.png'),
+    );
+
+    expect(response.statusCode, 302);
+    expect(nextResponse.statusCode, 200);
+    expect(calls, 2);
+    expect(credentialReads, 1);
+  });
+
+  test('tile transport errors redact URLs and possible credentials', () async {
+    const privatePath = 'token-that-must-not-escape';
+    final client = TileBackoffClient(
+      MockClient((_) async {
+        throw http.ClientException(
+          'Request failed https://tiles.example/$privatePath',
+        );
+      }),
+      state: TileBackoffState(),
+    );
+    addTearDown(client.close);
+
+    await expectLater(
+      client.get(Uri.parse('https://tiles.example/$privatePath')),
+      throwsA(
+        isA<http.ClientException>().having(
+          (error) => error.message,
+          'message',
+          isNot(contains(privatePath)),
+        ),
+      ),
+    );
+  });
+
   test(
     '429 pauses later requests without retrying and preserves cache headers',
     () async {

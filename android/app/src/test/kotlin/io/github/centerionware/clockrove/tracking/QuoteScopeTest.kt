@@ -40,6 +40,7 @@ class QuoteScopeTest {
         val board = repository.boardSnapshot("scope-job").board; val task = board.cards.single()
         assertNull(task.completedMillis); assertFalse(board.columns.single { it.id == task.columnId }.completed)
         assertEquals(BigInteger("1250"), task.priceMinor); assertEquals(260000L, task.quantityUnits); assertTrue(task.billable)
+        assertEquals(TaskClassification.UNCLASSIFIED, task.chargeType)
         assertEquals("TASK", repository.jobDetail("scope-job").job.settings.billingMode)
         assertEquals(75000, repository.jobDetail("scope-job").job.effectiveTaxUnits)
         assertEquals("scope-task", repository.quoteScope("quote").second.single().taskId)
@@ -70,6 +71,7 @@ class QuoteScopeTest {
         assertNull(repository.applyQuoteScope("hours", version, value).conflict)
         val task = repository.boardSnapshot("scope-job").board.cards.single()
         assertFalse(task.billable); assertNull(task.priceMinor); assertNull(task.completedMillis)
+        assertEquals(TaskClassification.UNCLASSIFIED, task.chargeType)
         assertTrue(task.description.contains("Estimated 1.5 hours"))
         val job = repository.jobDetail("scope-job").job
         assertEquals("HOURLY", job.settings.billingMode); assertEquals(BigInteger(wide), job.effectiveHourlyMinor)

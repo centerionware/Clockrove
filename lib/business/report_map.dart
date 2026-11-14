@@ -5,9 +5,24 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
 import 'report_api.dart';
+
+bool _isMapPoint(ReportPoint point) =>
+    point.latitude.isFinite &&
+    point.longitude.isFinite &&
+    point.latitude.abs() <= 85.05112878 &&
+    point.longitude >= -180 &&
+    point.longitude <= 180;
+
+ReportPoint? _firstMapPoint(Iterable<ReportPoint> points) {
+  for (final point in points) {
+    if (_isMapPoint(point)) return point;
+  }
+  return null;
+}
 
 /// Trace breaks at session boundaries, gaps over 30 minutes and the antimeridian.
 List<List<ReportPoint>> reportSegments(List<ReportPoint> points) {
@@ -20,7 +35,7 @@ List<List<ReportPoint>> reportSegments(List<ReportPoint> points) {
     samples.sort((a, b) => a.measured.compareTo(b.measured));
     var current = <ReportPoint>[];
     for (final point in samples) {
-      if (point.latitude.abs() > 85.05112878) {
+      if (!_isMapPoint(point)) {
         if (current.length > 1) {
           segments.add(current);
         }
@@ -53,13 +68,29 @@ class ReportMap extends ConsumerStatefulWidget {
 }
 
 class _ReportMapState extends ConsumerState<ReportMap> {
-  late final _client = TileBackoffClient(http.Client());
-  late final _tiles = ref.read(workMapTilesProvider)(_client);
+  late final _client = TileBackoffClient(
+    http.Client(),
+    protectedHeaders: () =>
+        ref.read(mapProviderSettingsApiProvider).tileAuthHeaders(),
+  );
+  MapProviderSettings? _tileSettings;
+  TileProvider? _tiles;
   final _controller = MapController();
-  late ReportPoint? _selected = widget.points.isEmpty
-      ? null
-      : widget.points.first;
+  late ReportPoint? _selected = _firstMapPoint(widget.points);
   bool _failed = false;
+  bool _loaded = false;
+
+  TileProvider _tilesFor(MapProviderSettings settings) {
+    if (!identical(_tileSettings, settings)) {
+      _tileSettings = settings;
+      _client.resetProtectedHeaders();
+      _failed = false;
+      _loaded = false;
+      _tiles = ref.read(workMapTilesProvider)(_client, settings);
+    }
+    return _tiles!;
+  }
+
   @override
   void dispose() {
     _client.close();
@@ -73,9 +104,21 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     });
   }
 
+  void _tileUpdated(TileImage tile) {
+    if (!tile.readyToDisplay) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (tile.loadError && !_failed) {
+        setState(() => _failed = true);
+      } else if (!tile.loadError && !_loaded) {
+        setState(() => _loaded = true);
+      }
+    });
+  }
+
   void _select(ReportPoint point) {
     setState(() => _selected = point);
-    if (point.latitude.abs() <= 85.05112878) {
+    if (_isMapPoint(point)) {
       _controller.move(
         LatLng(point.latitude, point.longitude),
         _controller.camera.zoom,
@@ -83,10 +126,41 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     }
   }
 
-  Future<void> _attribution() async {
+  Future<void> _openExternalMap() async {
+    final point = _selected;
+    if (point == null || !_isMapPoint(point)) return;
+    final latitude = point.latitude.toStringAsFixed(6);
+    final longitude = point.longitude.toStringAsFixed(6);
+    final webMap = Uri.https('www.openstreetmap.org', '/', {
+      'mlat': latitude,
+      'mlon': longitude,
+    }).replace(fragment: 'map=17/$latitude/$longitude');
+    for (final uri in [
+      Uri(
+        scheme: 'geo',
+        path: '$latitude,$longitude',
+        queryParameters: {'q': '$latitude,$longitude'},
+      ),
+      webMap,
+    ]) {
+      try {
+        if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+      } catch (_) {
+        // Map launch failures do not affect the stored GPS history.
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No map app or browser could be opened.')),
+      );
+    }
+  }
+
+  Future<void> _attribution(MapProviderSettings settings) async {
+    if (settings.attributionUrl.isEmpty) return;
     try {
       if (await launchUrl(
-        Uri.parse('https://www.openstreetmap.org/copyright'),
+        Uri.parse(settings.attributionUrl),
         mode: LaunchMode.externalApplication,
       )) {
         return;
@@ -95,7 +169,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('OpenStreetMap attribution link could not be opened.'),
+          content: Text('The map attribution link could not be opened.'),
         ),
       );
     }
@@ -103,9 +177,27 @@ class _ReportMapState extends ConsumerState<ReportMap> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = widget.points
-        .where((p) => p.latitude.abs() <= 85.05112878)
-        .toList();
+    final settingsState = ref.watch(mapProviderSettingsProvider);
+    if (settingsState.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Report location history')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (settingsState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Report location history')),
+        body: Center(
+          child: TextButton(
+            onPressed: () => ref.invalidate(mapProviderSettingsProvider),
+            child: const Text('Map settings could not be loaded. Retry.'),
+          ),
+        ),
+      );
+    }
+    final mapSettings = settingsState.requireValue;
+    final tiles = _tilesFor(mapSettings);
+    final visible = widget.points.where(_isMapPoint).toList();
     final center = visible.isEmpty
         ? const LatLng(0, 0)
         : LatLng(visible.first.latitude, visible.first.longitude);
@@ -131,6 +223,9 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
+                        '${selected.latitude.toStringAsFixed(6)}, ${selected.longitude.toStringAsFixed(6)}',
+                      ),
+                      Text(
                         '${selected.label} · ${selected.accuracy.toStringAsFixed(0)} m accuracy',
                       ),
                     ] else
@@ -143,14 +238,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                     ),
                     if (visible.length != widget.points.length)
                       const Text(
-                        'Polar samples remain in the list and CSV; this map cannot display them.',
-                      ),
-                    if (_failed)
-                      Text(
-                        'Map tiles are unavailable. Reports and exports still work.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        'Some samples are outside the map coordinate range. They remain in the list and CSV.',
                       ),
                   ],
                 ),
@@ -175,12 +263,15 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: mapSettings.urlTemplate,
                         userAgentPackageName:
                             'io.github.centerionware.clockrove',
-                        tileProvider: _tiles,
+                        tileProvider: tiles,
                         maxNativeZoom: 19,
+                        tileBuilder: (context, image, tile) {
+                          _tileUpdated(tile);
+                          return workMapTileContent(context, image, tile);
+                        },
                         errorTileCallback: (_, _, _) => _failure(),
                       ),
                       PolylineLayer(
@@ -236,6 +327,16 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                     ],
                   ),
                   Positioned(
+                    left: 12,
+                    top: 12,
+                    right: 72,
+                    child: WorkMapTileStatus(
+                      loading: !_loaded && !_failed,
+                      failed: _failed,
+                      onOpenMap: _openExternalMap,
+                    ),
+                  ),
+                  Positioned(
                     right: 12,
                     top: 12,
                     child: Card(
@@ -268,10 +369,10 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       child: TextButton(
-                        onPressed: _attribution,
-                        child: const Text(
-                          '© OpenStreetMap contributors',
-                          style: TextStyle(color: ink),
+                        onPressed: () => _attribution(mapSettings),
+                        child: Text(
+                          mapSettings.attribution,
+                          style: const TextStyle(color: ink),
                         ),
                       ),
                     ),

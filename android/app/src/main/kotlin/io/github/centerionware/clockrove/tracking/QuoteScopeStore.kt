@@ -95,7 +95,8 @@ internal object QuoteScopeStore {
                     val description = listOf(line.detail, if (kind == "HOURS") "Estimated ${TaskQuantityStore.format(line.quantity.toLong())} hours. Record actual work with the job timer; this planning task is not a charge." else "").filter { it.isNotEmpty() }.joinToString("\n\n")
                     checkNull(BoardStore.saveCard(db, BoardStore.Draft(item.taskId, value.jobId, requireNotNull(column), item.title, description,
                         billable = kind == "ITEM", priceMinor = if (kind == "ITEM") MoneyMath.parse(line.unitPrice) else null, currency = source.currency,
-                        quantityUnits = if (kind == "ITEM") line.quantity.toLong() else TaskQuantityStore.one), at))
+                        quantityUnits = if (kind == "ITEM") line.quantity.toLong() else TaskQuantityStore.one,
+                        chargeType = TaskClassification.UNCLASSIFIED), at))
                 }
                 db.execSQL("INSERT INTO quote_scope_lines VALUES(?,?,?,?,?,?,?)", arrayOf<Any?>(value.quoteId, item.lineId, value.jobId, item.taskId, kind, value.revision, at))
                 RevisionStore.record(db, "quote_scope_line", "${value.quoteId}:${item.lineId}", value.jobId, mapOf("quote_id" to value.quoteId, "line_id" to item.lineId,
