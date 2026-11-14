@@ -3635,3 +3635,15 @@ settings were exercised in the same API matrix. This completes M6.6
 implementation and CI evidence; physical owner-device acceptance remains
 separate, and M7 backup plus the M7.6 full-app E2E/screenshots gate are still
 required before closed testing. No VM build, test, formatter or analyzer ran.
+
+At plan-evidence head `1b2f949`, Actions run
+[43624729471](https://github.com/centerionware/Clockrove/actions/runs/43624729471)
+passed formatting, Analyze, Flutter behavior tests, Android debug build, native
+tests and the 28-case base device suite, but the extended API-24 billing
+journey failed when it reopened Job settings and could not reveal **Use default
+tax rate** from the retained lower scroll position. The prior override entry,
+validation, save and task-board return had succeeded. Updated the device test to
+reset to Billing basis before the second inheritance toggle. This is a test
+harness correction; it requires a fresh exact-head Actions run. API 35 and later
+journeys did not run on `43624729471`. No VM build, test, formatter or analyzer
+ran.

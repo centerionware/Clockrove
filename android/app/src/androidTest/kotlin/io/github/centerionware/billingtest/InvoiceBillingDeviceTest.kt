@@ -344,7 +344,7 @@ class InvoiceBillingDeviceTest {
             assertEquals(0, repository.jobDetail(job).job.effectiveTaxUnits)
             assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
             waitFor("Task board"); click("Job settings"); waitFor("Job settings")
-            reveal("Use default tax rate"); click("Use default tax rate")
+            scrollToStart(); reveal("Use default tax rate"); click("Use default tax rate")
             reveal("Save job settings"); click("Save job settings")
             until("Default tax inheritance was not restored") { repository.jobDetail(job).job.settings.taxUnits == null }
             assertEquals(75000, repository.jobDetail(job).job.effectiveTaxUnits)
