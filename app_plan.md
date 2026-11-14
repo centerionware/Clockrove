@@ -2734,3 +2734,26 @@ code `216718138`, on the internal track. This confirms upload/submission
 acceptance only; it does not establish Google review approval, tester
 availability, physical installation or a public release. Build, validation and
 Play delivery all ran in GitHub Actions; nothing was built or tested on the VM.
+
+### 2026-11-14 — invoice billing policy checks passed on API 24 and 35
+
+PR #44 source head `3aaa48753ea377f8a887fdbe3df400f3de9fe4ad` passed the
+complete Validate workflow in Actions run [43566399956](https://github.com/centerionware/Clockrove/actions/runs/43566399956),
+attempt 2. Formatting, analysis, Flutter behavior tests, Android build, native
+tests, real PDF generation and viewer checks on API 24 and API 35, device-result
+exports, and locked release-tooling/version policy all passed. Exported device
+XML reports 32 actual Android cases on each API, with zero failures, errors or
+skips. This includes the real billing-policy journey that checks invalid-tax
+feedback, main Settings save/reopen, invoice quantities, prior-invoice
+exclusion, and retained invoice data. The API-35 unbilled invoice review capture
+was checked and shows the exact synthetic subtotal, 7.5% tax, and total.
+
+Attempt 1 of the same run lost the API-24 emulator to a process segfault after
+its 23-case base suite; the emulator went offline before billing tests. It did
+not report an application assertion failure. Attempt 2 used the same source
+head and passed both API suites. The workflow test-scroll helper now uses
+accessibility scrolling with a touchscreen swipe fallback to reveal the actual
+invalid-tax message. PR #44 remains open pending merge; M6.6 remains in progress
+because Supplies classification, actual costs, tax-preparation reports, and
+secure map-provider settings are outstanding. No build, test, or formatter ran
+on the VM.
