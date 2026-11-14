@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteException
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.centerionware.clockrove.tracking.ImageLimits
 import io.github.centerionware.clockrove.tracking.InvoiceBlobs
 import io.github.centerionware.clockrove.tracking.InvoiceCopyStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
@@ -73,7 +74,7 @@ class InvoiceBlobStorageDeviceTest {
                 assertArrayEquals(small, InvoiceBlobs.original(db, "original"))
                 db.execSQL("UPDATE invoices SET pdf=NULL WHERE id='original'")
                 assertNull(InvoiceBlobs.original(db, "original"))
-                db.execSQL("UPDATE logo_assets SET bytes=? WHERE id='logo'", arrayOf(ByteArray(2_000_001)))
+                db.execSQL("UPDATE logo_assets SET bytes=? WHERE id='logo'", arrayOf(ByteArray(ImageLimits.NORMALIZED_BYTES + 1)))
                 try { InvoiceBlobs.logo(db, "logo"); fail("Oversized logo bytes must be rejected before allocation") }
                 catch (expected: IllegalStateException) { assertEquals("INVALID_INVOICE_BLOB", expected.message) }
                 android.util.Log.i("ClockroveDocumentStorage", "Verified bounded original/copy/logo reads; cursorRejected=$cursorRejected api=${Build.VERSION.SDK_INT}")
