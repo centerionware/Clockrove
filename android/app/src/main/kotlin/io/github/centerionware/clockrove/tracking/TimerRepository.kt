@@ -10,6 +10,10 @@ class TimerRepository internal constructor(context: Context,
     private val eventDigest: (String) -> String = GeofenceEventDigest::digest,
     private val wallClock: () -> Long = System::currentTimeMillis) {
     private val helper = Store(context.applicationContext, wallClock)
+    private val backupExportStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        BackupExportStore(context.applicationContext, wallClock)
+    }
+    private val backupExportStore by backupExportStoreDelegate
     private val listeners = mutableSetOf<(Long) -> Unit>()
 
     enum class Action { START, STOP, SWITCH }
@@ -41,6 +45,38 @@ class TimerRepository internal constructor(context: Context,
 
     @Synchronized
     fun snapshot(): Snapshot = readSnapshot(helper.readableDatabase)
+
+    @Synchronized
+    internal fun getBackupSnapshotInfo(): BackupExportStore.Info =
+        backupExportStore.info(helper.readableDatabase)
+
+    @Synchronized
+    internal fun startBackupSnapshot(): BackupExportStore.Started =
+        backupExportStore.start(helper.readableDatabase)
+
+    @Synchronized
+    internal fun readBackupSnapshotPage(
+        snapshotId: String,
+        cursor: String?,
+        maxBytes: Int?,
+    ): BackupExportStore.Page = backupExportStore.readPage(snapshotId, cursor, maxBytes)
+
+    @Synchronized
+    internal fun readBackupBlob(
+        snapshotId: String,
+        blobId: String,
+        offset: Long,
+        maxBytes: Int?,
+    ): BackupExportStore.BlobChunk = backupExportStore.readBlob(snapshotId, blobId, offset, maxBytes)
+
+    @Synchronized
+    internal fun closeBackupSnapshot(snapshotId: String): Boolean =
+        backupExportStore.close(snapshotId)
+
+    @Synchronized
+    internal fun discardBackupSnapshot() {
+        if (backupExportStoreDelegate.isInitialized()) backupExportStore.closeAll()
+    }
 
     /** Fixture convenience; production creation uses the versioned command below. */
     @Synchronized
@@ -1004,7 +1040,16 @@ class TimerRepository internal constructor(context: Context,
     }
 
     @Synchronized
-    internal fun close() { listeners.clear(); helper.close() }
+    internal fun close() {
+        listeners.clear()
+        try {
+            if (backupExportStoreDelegate.isInitialized()) backupExportStore.closeAll()
+        } catch (_: Exception) {
+            // A failed best-effort staging cleanup is retried at the next store initialization.
+        } finally {
+            helper.close()
+        }
+    }
 
     @Synchronized
     fun subscribe(listener: (Long) -> Unit): AutoCloseable {
