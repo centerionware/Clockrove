@@ -321,41 +321,24 @@ class InvoiceBillingDeviceTest {
         // replacing the current value. Select the old text and type through
         // the active IME before treating the field as failed.
         if (find(label, true)?.text?.toString() != value) {
-            val current = waitFor(label, true)
-            val length = current.text?.length ?: 0
-            current.performAction(
-                AccessibilityNodeInfo.ACTION_SET_SELECTION,
-                Bundle().apply {
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
-                },
-            )
-            // API 24 and 35 can report a successful selected range while only
-            // moving the caret. For populated fields, use the editor's normal
-            // Ctrl+A shortcut before replacing text. Keep empty fields on the
-            // plain IME typing path; Ctrl+A can interfere with a blank field.
-            if (length > 0) {
-                val downTime = SystemClock.uptimeMillis()
-                instrumentation.sendKeySync(
-                    KeyEvent(
-                        downTime,
-                        downTime,
-                        KeyEvent.ACTION_DOWN,
-                        KeyEvent.KEYCODE_A,
-                        0,
-                        KeyEvent.META_CTRL_ON,
-                    ),
-                )
-                instrumentation.sendKeySync(
-                    KeyEvent(
-                        downTime,
-                        downTime + 1,
-                        KeyEvent.ACTION_UP,
-                        KeyEvent.KEYCODE_A,
-                        0,
-                        KeyEvent.META_CTRL_ON,
-                    ),
-                )
+            // Selection metadata and Ctrl+A can both acknowledge without
+            // selecting Flutter text. Clear through the focused editor, then
+            // observe emptiness before sending replacement characters.
+            var clearAttempts = 0
+            until("Existing text was not cleared for $label") {
+                val current = find(label, true)
+                if (current == null || !current.isFocused || !keyboardVisible()) {
+                    false
+                } else if (current.text.isNullOrEmpty()) {
+                    true
+                } else {
+                    check(clearAttempts++ < 16) { "Text clearing stopped making progress for $label" }
+                    val length = requireNotNull(current.text).length
+                    check(length <= 4096) { "Unexpected editor length for $label" }
+                    instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_MOVE_END)
+                    repeat(length) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DEL) }
+                    false
+                }
             }
             instrumentation.sendStringSync(value)
         }
@@ -501,7 +484,8 @@ class InvoiceBillingDeviceTest {
             enter("Job tax (%)", "101")
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")
-            scrollToStart(); reveal("Tax percentage must be between 0 and 100.")
+            scrollToStart(); reveal("Job tax (%)", true)
+            waitFor("Tax percentage must be between 0 and 100.")
             assertEquals(beforeInvalidTax, repository.jobDetail(job))
             scrollToStart(); reveal("Job tax (%)", true)
             assertTrue("Invalid tax draft was lost", waitFor("Job tax (%)", true).text?.toString()?.contains("101") == true)
