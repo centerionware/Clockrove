@@ -4012,3 +4012,18 @@ journey together.
 The preceding `36e27ba` run `43673656562` had failed API-24 error visibility:
 the screenshot showed the focused tax editor clipped at the navigation bar.
 No local build or test ran.
+
+### 2026-11-15 — GPS deletion and billing exact-head validation passed
+
+On PR #51 exact head `c247e01`, GitHub Actions run
+[43678616256](https://github.com/centerionware/Clockrove/actions/runs/43678616256)
+completed successfully. Formatting, analysis, Flutter behavior tests, Android
+build, native unit tests, API-24/API-35 Android PDF generation and rendering,
+actual-document invoice-viewer checks, artifact exports, and locked release-tool
+validation all passed. The Android journey script validated the expected JUnit
+counts on both APIs, including one `GpsRangeDeletionDeviceTest` case per API,
+and required all nine GPS screenshots on each API. The run also includes the
+14%-viewport tax-error visibility repair integrated from PR #54. This is PR-head
+emulator evidence; physical GPS sampling/map acceptance, backup archive and
+restore work, and M7.6 full-app UI/E2E acceptance remain outstanding. No VM
+build, test, or formatter ran.
