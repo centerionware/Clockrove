@@ -42,7 +42,7 @@ class InvoiceBillingDeviceTest {
         try { diagnostic() } catch (diagnosticFailure: Throwable) { failure.addSuppressed(diagnosticFailure) }
         throw failure
     }
-    private fun find(label: String, editable: Boolean = false): AccessibilityNodeInfo? {
+    private fun find(label: String, editable: Boolean = false, checkable: Boolean = false): AccessibilityNodeInfo? {
         val fieldId = when (label) {
             "Why this work belongs to the invoice" -> "legacy-invoice-review-note"
             "Default tax (%)" -> "default-tax-percent"
@@ -56,15 +56,19 @@ class InvoiceBillingDeviceTest {
             for (i in 0 until node.childCount) node.getChild(i)?.let { editableNode(it)?.let { found -> return found } }
             return null
         }
+        fun matches(value: CharSequence?) = value?.toString()?.let {
+            if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
+        } == true
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
             if (!node.refresh()) return null
             if (editable && node.isVisibleToUser && fieldId != null && node.viewIdResourceName == fieldId) return editableNode(node)
+            if (checkable && node.isVisibleToUser && node.isCheckable &&
+                (matches(node.text) || node.contentDescription?.toString()?.contains(label) == true)) return node
             for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it)?.let { found -> return found } }
-            fun matches(value: CharSequence?) = value?.toString()?.let {
-                if (editable) it.contains(label) else it.lineSequence().any { line -> line.trim() == label }
-            } == true
             val hintMatches = editable && android.os.Build.VERSION.SDK_INT >= 26 && matches(node.hintText)
-            if (node.isVisibleToUser && (!editable || node.isEditable) && (matches(node.text) || matches(node.contentDescription) || hintMatches)) return node
+            val errorMatches = matches(node.error)
+            if (!checkable && node.isVisibleToUser && (!editable || node.isEditable) &&
+                (matches(node.text) || matches(node.contentDescription) || hintMatches || errorMatches)) return node
             return null
         }
         return automation.rootInActiveWindow?.let(::visit)
@@ -95,10 +99,15 @@ class InvoiceBillingDeviceTest {
         if (!target.intersect(viewport) || target.width() < 8 || target.height() < 12) return null
         return target
     }
-    private fun waitFor(label: String, editable: Boolean = false): AccessibilityNodeInfo {
+    private fun waitFor(label: String, editable: Boolean = false, checkable: Boolean = false): AccessibilityNodeInfo {
         var found: AccessibilityNodeInfo? = null
-        until("Actual app never exposed $label") { found = find(label, editable); found != null }
+        until("Actual app never exposed $label") { found = find(label, editable, checkable); found != null }
         return requireNotNull(found)
+    }
+    private fun waitForSwitch(label: String, checked: Boolean) {
+        until("$label did not become ${if (checked) "enabled" else "disabled"}") {
+            find(label, checkable = true)?.isChecked == checked
+        }
     }
     private fun click(label: String) {
         // A semantic ACTION_CLICK can report success without delivering
@@ -301,13 +310,40 @@ class InvoiceBillingDeviceTest {
         if (find(label, true)?.text?.toString() != value) {
             val current = waitFor(label, true)
             val length = current.text?.length ?: 0
-            assertTrue("Could not select existing text for $label", current.performAction(
+            current.performAction(
                 AccessibilityNodeInfo.ACTION_SET_SELECTION,
                 Bundle().apply {
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
                 },
-            ))
+            )
+            // API 24 and 35 can report a successful selected range while only
+            // moving the caret. For populated fields, use the editor's normal
+            // Ctrl+A shortcut before replacing text. Keep empty fields on the
+            // plain IME typing path; Ctrl+A can interfere with a blank field.
+            if (length > 0) {
+                val downTime = SystemClock.uptimeMillis()
+                instrumentation.sendKeySync(
+                    KeyEvent(
+                        downTime,
+                        downTime,
+                        KeyEvent.ACTION_DOWN,
+                        KeyEvent.KEYCODE_A,
+                        0,
+                        KeyEvent.META_CTRL_ON,
+                    ),
+                )
+                instrumentation.sendKeySync(
+                    KeyEvent(
+                        downTime,
+                        downTime + 1,
+                        KeyEvent.ACTION_UP,
+                        KeyEvent.KEYCODE_A,
+                        0,
+                        KeyEvent.META_CTRL_ON,
+                    ),
+                )
+            }
             instrumentation.sendStringSync(value)
         }
         until("Entered text was not exposed for $label") { find(label, true)?.text?.toString() == value }
@@ -443,7 +479,9 @@ class InvoiceBillingDeviceTest {
             assertEquals(1002L, sequence()); assertEquals(2, repository.invoices(job).invoices.size)
 
             closeActivities(); launch(); reveal(jobName); click(jobName); waitFor("Task board")
-            click("Job settings"); waitFor("Job settings"); reveal("Use default tax rate"); click("Use default tax rate")
+            click("Job settings"); waitFor("Job settings"); reveal("Use default tax rate")
+            assertTrue("New job should inherit the global tax default", waitFor("Use default tax rate", checkable = true).isChecked)
+            click("Use default tax rate"); waitForSwitch("Use default tax rate", false)
             // Enabling the override inserts a field above the current viewport.
             // Start from a known position before looking for that newly built field.
             scrollToStart()
@@ -460,8 +498,12 @@ class InvoiceBillingDeviceTest {
             assertEquals(0, repository.jobDetail(job).job.effectiveTaxUnits)
             assertEquals(75000, repository.businessSnapshot().settings.defaultTaxUnits)
             waitFor("Task board"); click("Job settings"); waitFor("Job settings")
-            scrollToStart(); reveal("Use default tax rate"); click("Use default tax rate")
+            scrollToStart(); reveal("Use default tax rate")
+            assertFalse("Saved zero tax override should disable default inheritance", waitFor("Use default tax rate", checkable = true).isChecked)
+            click("Use default tax rate"); waitForSwitch("Use default tax rate", true)
+            capture("job-tax-default-inheritance")
             reveal("Save job settings"); click("Save job settings")
+            until("Saving inherited tax did not close Job settings") { find("Task board") != null }
             until("Default tax inheritance was not restored") { repository.jobDetail(job).job.settings.taxUnits == null }
             assertEquals(75000, repository.jobDetail(job).job.effectiveTaxUnits)
             assertEquals(frozen, InvoiceStore.Snapshot.decode(repository.invoice(issued.id).payload))

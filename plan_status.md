@@ -3793,3 +3793,70 @@ already-focused field, waits for the IME, then uses `ACTION_SET_TEXT` with exact
 readback or select-all/IME typing. Only ordinary control clicks require their
 safe pointer tap to succeed. Revalidate on GitHub Actions; no VM build or test
 ran.
+
+### 2026-11-14 — PR #47 passed; API-24 text replacement follow-up
+
+PR #47 head `b9548a3` / Actions run
+[43649614516](https://github.com/centerionware/Clockrove/actions/runs/43649614516)
+passed formatting, analysis, Flutter behavior tests, Android build, 614 native
+tests and 37 actual device cases on each API 24 and 35, with zero failures,
+errors or skips. Squash-merged to main as `2f84790`.
+
+Main validation
+[43651548435](https://github.com/centerionware/Clockrove/actions/runs/43651548435)
+passed the fast checks, Android build and all 614 native tests. API 24 passed
+the 28-case base device suite, then its billing journey failed when the test
+helper appended replacement text to a long unit-price field. `ACTION_SET_SELECTION`
+reported success but moved the caret without selecting the text; the screenshot
+shows the app remained open, so this was not a product crash. The helper now
+verifies the selected range and sends Ctrl+A when necessary before typing. Exact
+head Actions validation remains pending; API 35 was not reached. The gated Play
+delivery did not run because main validation failed. No VM build, test or
+formatter ran.
+
+PR #48 exact head `91f0950` / Actions run
+[43653156678](https://github.com/centerionware/Clockrove/actions/runs/43653156678)
+passed formatting, analysis, Flutter behavior tests, Android build and native
+tests. API 24 passed all 37 actual device cases, verifying that the selected
+range / Ctrl+A fallback fixed the large unit-price replacement. API 35 passed
+its 28 base device cases and the billing flow through invoice creation, then
+the test failed to find the invalid-tax message. The screenshot shows Clockrove
+still open near the bottom of Job settings. The lookup previously ignored
+`AccessibilityNodeInfo.error`, which Flutter may use to expose field validation
+messages; that property is now included. Validate this correction on the
+updated PR head through GitHub Actions. No VM build or test ran; API-35 billing
+and later journeys did not complete.
+
+Updated PR #48 run
+[43655152043](https://github.com/centerionware/Clockrove/actions/runs/43655152043)
+passed all 37 API-24 device cases, including the long unit-price replacement.
+API 35 passed its 28 base cases, then failed earlier in the extended billing
+journey because the fallback sent Ctrl+A to an empty multiline review-note field
+when Android did not expose selection endpoints. The failure screenshot shows
+Clockrove open on the review form with the note still blank. Ctrl+A is now
+restricted to non-empty values; this leaves empty fields on the ordinary IME
+typing path. The invalid-tax lookup remains unverified on API 35. Exact-head
+Actions rerun is required; no VM build or test ran.
+
+PR #48 run
+[43656883319](https://github.com/centerionware/Clockrove/actions/runs/43656883319)
+passed the fast checks, Android build and native tests, then API 24's extended
+billing journey failed while replacing quantity. The screenshot shows `126`
+(seeded `1` plus typed `26`) although accessibility reported the old range as
+selected. The device helper no longer trusts selection-range metadata: Ctrl+A
+is sent for every non-empty field, while empty fields remain on ordinary IME
+typing. API 35 was not reached. Validate the exact updated head in GitHub
+Actions; no VM build or test ran.
+
+PR #48 exact head `a49ed46` / Actions run
+[43657992279](https://github.com/centerionware/Clockrove/actions/runs/43657992279)
+passed formatting, analysis, Flutter behavior tests, Android build and all 614
+native tests. API 24 passed its 28-case base suite and progressed through the
+extended invoice/tax journey, then failed while restoring inherited job tax:
+after enabling **Use default tax rate** and tapping Save, the native repository
+still exposed the explicit zero override. The screenshot leaves Job settings
+open; this is a device-test assertion, not an app crash. API 35 and later device
+journeys were not reached. The next test revision reads the switch's real
+checked state before and after each toggle, captures inherited state before
+saving, and separately asserts that Save closes the form and persists a null
+override. Validate on GitHub Actions; no VM build or test ran.
