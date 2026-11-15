@@ -3968,3 +3968,48 @@ prove that the app deselected it. The test now reveals the target and reads its
 actual checkable node on each poll, keeping the checked-state assertion. API 35
 was not reached. Validate this exact correction in Actions before applying the
 shared scroll helper to PR #55. No VM build, test, format or analysis ran.
+### 2026-11-15 — full-screen task-photo swipe direction
+
+The full-screen photo viewer set `PageView.reverse: true`, so a leftward drag
+decremented the attachment index and a rightward drag incremented it. Removed
+that reversal and updated the existing viewer journey to assert left swipe
+advances and right swipe returns across the chronological photo list. Source
+change is in PR #55, head `32ac062`. Exact-head Actions run
+[43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
+passed formatting, analysis, Flutter behavior tests, Android debug build and
+native unit tests. Its real Android PDF/device stage failed in the API-24 invoice
+journey because **View original PDF** was not exposed; the photo viewer device
+journey was not reached, so Android swipe direction remains unverified.
+
+PR #55 now also contains the shared Android billing-test harness corrections
+from PR #54 commits `36e27ba`, `3ca1267`, `88d88b8`, `00531dc` and `32d6154`:
+observe old editor text cleared before replacement, use short settled scroll
+increments to avoid skipping fields, leave room to expose tax validation, and
+reveal the covered-task row before reading its checkable state. These changes
+affect test automation, not production billing behavior. Exact-head PR #55
+Actions validation on API 24 and 35 is pending. No VM build, test, formatter or
+analyzer ran.
+
+PR #55 combined head `04cd124` / Actions run
+[43680373221](https://github.com/centerionware/Clockrove/actions/runs/43680373221)
+passed formatting, analysis, Flutter behavior tests, Android debug build and
+native tests, then API 24 failed in
+`actualTaskCommentAndReviewedCameraPhotosPersistInPrivateStorage`: after a
+left swipe from the last photo (4 of 4), the viewer correctly remained on photo
+4, while the device test expected photo 3. This expectation retained the old
+reversed behavior. Updated the device journey to verify right swipe 4→3 and
+left swipe 3→4, matching the requested left-advances/right-returns behavior.
+Validate the corrected exact head in GitHub Actions; API 35 was not reached. No
+VM build or test ran.
+
+The corrected exact head `1f3662e` passed the full validation workflow in
+[Actions run 43681914649](https://github.com/centerionware/Clockrove/actions/runs/43681914649),
+including the Flutter behavior tests and API-24/35 Android device suites. The
+photo journey verified right swipe 4→3 and left swipe 3→4. This establishes the
+requested direction on emulators. No VM build, test, formatter or analyzer ran.
+
+To prevent passing PR checks from becoming stale after main advances, active
+ruleset `Protect Main` (ID `27171072`) now requires strict status checks for its
+existing `android` check. PR #55's base matched current main at
+`f0dc15f7a7e3f86d5c9fc387a847f425f8f1a7e4` when verified. The workflow does not
+use a merge queue, so no `merge_group` trigger was added.
