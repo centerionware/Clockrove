@@ -3905,3 +3905,15 @@ reveal the covered-task row before reading its checkable state. These changes
 affect test automation, not production billing behavior. Exact-head PR #55
 Actions validation on API 24 and 35 is pending. No VM build, test, formatter or
 analyzer ran.
+
+PR #55 combined head `04cd124` / Actions run
+[43680373221](https://github.com/centerionware/Clockrove/actions/runs/43680373221)
+passed formatting, analysis, Flutter behavior tests, Android debug build and
+native tests, then API 24 failed in
+`actualTaskCommentAndReviewedCameraPhotosPersistInPrivateStorage`: after a
+left swipe from the last photo (4 of 4), the viewer correctly remained on photo
+4, while the device test expected photo 3. This expectation retained the old
+reversed behavior. Updated the device journey to verify right swipe 4→3 and
+left swipe 3→4, matching the requested left-advances/right-returns behavior.
+Validate the corrected exact head in GitHub Actions; API 35 was not reached. No
+VM build or test ran.
