@@ -3909,3 +3909,31 @@ explicit contract decision. The relevant official sources are linked in
 No build, test, formatter, or device check ran on the VM. No owner key or device
 was available, so Google rendering, missing/invalid-key fallback and billing
 restriction behavior remain unproven.
+
+### 2026-11-15 — merged-main API-35 billing repair passed
+
+PR #49 was merged as `aca488f`. Merged-main Actions run
+[43667760290](https://github.com/centerionware/Clockrove/actions/runs/43667760290)
+passed the 614 native cases and 37 actual Android device cases on each of API 24
+and API 35, with zero failures, errors or skips. The earlier exact-head and
+merged-main discrepancy is resolved for this billing journey. This validation
+does not accept the remaining launch milestones or M7.6.
+
+### 2026-11-15 — GPS-only range deletion implementation added
+
+On an isolated branch based on `aca488f`, database schema 16 adds immutable
+`location_deletion_ranges` coverage and migrates existing GPS identities into
+coordinate-free revisions. Native preview and deletion use the serialized
+versioned command boundary; deletion uses half-open measured-UTC bounds, bounded
+keyset batches, per-known-point tombstones and one transaction while leaving
+sessions/timesheets intact. New point revisions link to matching range revisions
+without retaining coordinates. The history screen now offers an inclusive
+local-date range, current-job/all-jobs scope, point-count preview, explicit
+confirmation and preserved-export/backup disclosure. Committed state versions
+refresh the history and report/map providers.
+
+Native migration, boundary, scope, revision-payload, ancestry, duplicate-command,
+stale-version, empty-range, rollback and bridge tests plus Flutter API/widget
+tests were added for GitHub Actions. No build, test or formatter ran on the VM,
+per owner instruction. Exact-head Actions validation and backup exporter/restore
+integration remain pending; M7 and M7.6 are not accepted.

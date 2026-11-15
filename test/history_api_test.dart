@@ -185,4 +185,52 @@ void main() {
       expect(() => audit.events.clear(), throwsUnsupportedError);
     },
   );
+
+  test('GPS range preview and deletion preserve half-open UTC bounds and scope', () async {
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      if (call.method == 'previewLocationRangeDeletion') {
+        return {'version': 28, 'pointCount': 4};
+      }
+      return {'version': 29, 'conflict': null};
+    });
+    const api = HistoryApi();
+    final preview = await api.previewLocationRangeDeletion(
+      jobId: null,
+      start: 1793511000000,
+      end: 1793597400000,
+      timezone: 'America/New_York',
+    );
+    expect(preview.version, 28);
+    expect(preview.pointCount, 4);
+    final outcome = await api.deleteLocationRange(
+      'delete-range',
+      preview.version,
+      jobId: null,
+      start: 1793511000000,
+      end: 1793597400000,
+      timezone: 'America/New_York',
+    );
+    expect(outcome.committed, isTrue);
+    expect(calls.map((call) => call.method), [
+      'previewLocationRangeDeletion',
+      'deleteLocationRange',
+    ]);
+    expect(calls[0].arguments, {
+      'jobId': null,
+      'start': 1793511000000,
+      'end': 1793597400000,
+      'timezone': 'America/New_York',
+    });
+    final command = calls[1].arguments as Map;
+    expect(command['id'], 'delete-range');
+    expect(command['version'], 28);
+    expect(command['value'], {
+      'jobId': null,
+      'start': 1793511000000,
+      'end': 1793597400000,
+      'timezone': 'America/New_York',
+    });
+  });
 }

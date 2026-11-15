@@ -113,6 +113,68 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
     }
   }
 
+  Future<void> _deleteGpsByRange() async {
+    final api = ref.read(historyApiProvider);
+    try {
+      final initialContext = await api.context();
+      if (!mounted) return;
+      final localNow = DateTime.fromMillisecondsSinceEpoch(
+        initialContext.now,
+        isUtc: true,
+      ).toLocal();
+      final today = DateTime(localNow.year, localNow.month, localNow.day);
+      final selected = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(1),
+        lastDate: today,
+        initialDateRange: DateTimeRange(
+          start: DateTime(today.year, today.month, today.day - 6),
+          end: today,
+        ),
+        helpText: 'Select GPS dates',
+        confirmText: 'Review',
+      );
+      if (selected == null || !mounted) return;
+
+      // Construct both calendar boundaries in the device timezone. Building
+      // the day after the inclusive end date handles 23/25-hour DST days.
+      final start = DateTime(
+        selected.start.year,
+        selected.start.month,
+        selected.start.day,
+      ).millisecondsSinceEpoch;
+      final end = DateTime(
+        selected.end.year,
+        selected.end.month,
+        selected.end.day + 1,
+      ).millisecondsSinceEpoch;
+      final currentContext = await api.context();
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => _GpsRangeDeletionDialog(
+          jobId: widget.jobId,
+          jobName: widget.jobName,
+          startDate: selected.start,
+          endDate: selected.end,
+          start: start,
+          end: end,
+          timezone: currentContext.timezone,
+        ),
+      );
+      if (confirmed == true && mounted) {
+        ref.invalidate(timerSnapshotProvider);
+        _load();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('GPS history could not be prepared. No data was deleted.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(timerVersionsProvider, (_, next) {
@@ -158,6 +220,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
             icon: const Icon(Icons.add),
             label: const Text('Add work entry'),
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _deleteGpsByRange,
+            icon: const Icon(Icons.delete_sweep_outlined),
+            label: const Text('Delete GPS by date range'),
+          ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -200,6 +268,194 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
               onPressed: _busy ? null : () => _load(more: true),
               child: const Text('Load older entries'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GpsRangeDeletionDialog extends ConsumerStatefulWidget {
+  const _GpsRangeDeletionDialog({
+    required this.jobId,
+    required this.jobName,
+    required this.startDate,
+    required this.endDate,
+    required this.start,
+    required this.end,
+    required this.timezone,
+  });
+  final String jobId, jobName, timezone;
+  final DateTime startDate, endDate;
+  final int start, end;
+
+  @override
+  ConsumerState<_GpsRangeDeletionDialog> createState() =>
+      _GpsRangeDeletionDialogState();
+}
+
+class _GpsRangeDeletionDialogState
+    extends ConsumerState<_GpsRangeDeletionDialog> {
+  String? _scopeJobId;
+  LocationRangeDeletionPreview? _preview;
+  bool _loading = false, _pending = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _scopeJobId = widget.jobId;
+    _refreshPreview();
+  }
+
+  Future<void> _refreshPreview() async {
+    if (_loading || _pending) return;
+    final scope = _scopeJobId;
+    setState(() {
+      _loading = true;
+      _preview = null;
+      _error = null;
+    });
+    try {
+      final preview = await ref
+          .read(historyApiProvider)
+          .previewLocationRangeDeletion(
+            jobId: scope,
+            start: widget.start,
+            end: widget.end,
+            timezone: widget.timezone,
+          );
+      if (mounted && scope == _scopeJobId) {
+        setState(() => _preview = preview);
+      }
+    } catch (_) {
+      if (mounted && scope == _scopeJobId) {
+        setState(
+          () => _error = 'The point count could not be loaded. No data was deleted.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _selectScope(String? jobId) {
+    if (_pending || jobId == _scopeJobId) return;
+    setState(() {
+      _scopeJobId = jobId;
+      _preview = null;
+    });
+    _refreshPreview();
+  }
+
+  String _calendarDate(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(timerVersionsProvider, (_, next) {
+      if (next.hasValue && !_pending) _refreshPreview();
+    });
+    final preview = _preview;
+    final count = preview?.pointCount ?? 0;
+    final label = count == 1 ? '1 GPS point' : '$count GPS points';
+    return PopScope(
+      canPop: !_pending,
+      child: AlertDialog(
+        title: const Text('Delete GPS history?'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${_calendarDate(widget.startDate)} through '
+                '${_calendarDate(widget.endDate)} · ${widget.timezone}',
+              ),
+              const SizedBox(height: 8),
+              RadioListTile<String?>(
+                contentPadding: EdgeInsets.zero,
+                value: widget.jobId,
+                groupValue: _scopeJobId,
+                onChanged: _loading || _pending ? null : _selectScope,
+                title: Text('This job only · ${widget.jobName}'),
+              ),
+              RadioListTile<String?>(
+                contentPadding: EdgeInsets.zero,
+                value: null,
+                groupValue: _scopeJobId,
+                onChanged: _loading || _pending ? null : _selectScope,
+                title: const Text('All jobs'),
+              ),
+              if (_loading) const LinearProgressIndicator(),
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                TextButton(
+                  onPressed: _loading || _pending ? null : _refreshPreview,
+                  child: const Text('Refresh point count'),
+                ),
+              ],
+              if (!_loading && _error == null && preview != null) ...[
+                Text('Matching saved GPS points: $label.'),
+                const SizedBox(height: 8),
+                Text(
+                  count == 0
+                      ? 'No points match now. A deletion marker will still be saved so an older backup cannot silently restore points in these dates.'
+                      : 'Only GPS points are removed. Work entries and timesheets remain.',
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Existing exported files and backup files are not erased. Older backups that contain these points will require an explicit restore choice.',
+                ),
+                TextButton(
+                  onPressed: _loading || _pending ? null : _refreshPreview,
+                  child: const Text('Refresh point count'),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _pending ? null : () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: Theme.of(context).colorScheme.error,
+                onPrimary: Theme.of(context).colorScheme.onError,
+              ),
+            ),
+            child: BusinessCommand(
+              label: 'Delete GPS points',
+              enabled: !_loading && !_pending && preview != null,
+              onPendingChanged: (value) {
+                if (mounted) setState(() => _pending = value);
+                if (!value) _refreshPreview();
+              },
+              create: () {
+                final capturedPreview = _preview!;
+                final capturedScope = _scopeJobId;
+                final id = newBusinessId();
+                return () => ref
+                    .read(historyApiProvider)
+                    .deleteLocationRange(
+                      id,
+                      capturedPreview.version,
+                      jobId: capturedScope,
+                      start: widget.start,
+                      end: widget.end,
+                      timezone: widget.timezone,
+                    );
+              },
+              onCommitted: () => Navigator.pop(context, true),
+            ),
+          ),
         ],
       ),
     );

@@ -131,6 +131,12 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 mapOf("localTime" to it.localTime, "offsetSeconds" to it.offsetSeconds, "label" to it.label)
             }
             "historyContext" -> return mapOf("timezone" to java.util.TimeZone.getDefault().id, "now" to System.currentTimeMillis())
+            "previewLocationRangeDeletion" -> {
+                val range = GpsDeletionStore.Range(input.nullable("jobId"), input.integer("start"),
+                    input.integer("end"), input.string("timezone"))
+                val preview = repository.previewLocationRangeDeletion(range)
+                return mapOf("version" to preview.version, "pointCount" to preview.pointCount)
+            }
             "sessionDetail" -> return repository.sessionDetail(input.string("jobId"), input.string("sessionId")).let {
                 mapOf("version" to it.version, "entry" to it.entry?.let(::historyEntry))
             }
@@ -220,7 +226,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "report" -> { val s = repository.report(ReportStore.Selection(input.string("firstDate"), input.string("lastDate"), input.string("timezone"), input.strings("jobIds"))); return report(s) }
         }
         val supported = setOf("prepareQuoteInvoice", "applyQuoteScope", "saveQuote", "issueQuote", "decideQuote", "saveColumn", "reorderColumns", "removeColumn", "saveCard", "moveCard", "removeCard", "copyTemplate", "removeTemplate", "saveSettings", "saveCustomer", "removeCustomer", "saveJob", "archiveJob", "restoreJob", "deleteJob", "prepareInvoice", "reconcileInvoiceCoverage", "applyLogo", "removeLogo", "createManualSession", "correctSession", "deleteSession", "recordInvoicePayment", "reverseInvoicePayment", "prepareInvoiceBalanceCopy", "voidInvoice", "replaceInvoice", "saveTaskComment", "removeTaskComment", "attachTaskImage", "attachTaskImages", "removeTaskImage", "saveActualCost", "removeActualCost")
-        if (call.method !in supported) return null
+        val supportedMutations = supported + "deleteLocationRange"
+        if (call.method !in supportedMutations) return null
         val id = input.string("id"); val version = input.integer("version"); require(version >= 0)
         val v = Input(requireNotNull(input.value["value"] as? Map<*, *>))
         return when (call.method) {
@@ -262,6 +269,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 if (call.method == "createManualSession") repository.createManualSession(id, version, draft) else repository.correctSession(id, version, draft)
             }
             "deleteSession" -> repository.deleteSession(id, version, v.string("sessionId"))
+            "deleteLocationRange" -> repository.deleteLocationRange(id, version, GpsDeletionStore.Range(v.nullable("jobId"),
+                v.integer("start"), v.integer("end"), v.string("timezone")))
             "saveColumn" -> repository.saveColumn(id, version, v.string("columnId"), v.string("jobId"), v.string("name"), v.bool("completed"))
             "reorderColumns" -> repository.reorderColumns(id, version, v.string("jobId"), v.strings("columnIds"))
             "removeColumn" -> repository.removeColumn(id, version, v.string("jobId"), v.string("columnId"), v.nullable("destinationId"))

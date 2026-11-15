@@ -104,7 +104,7 @@ class LocationRecordingTest {
         assertTrue(repository.taskConversation(job, "migration-card").conversation.comments.isEmpty())
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
-            assertEquals(15, db.version)
+            assertEquals(16, db.version)
         }
     }
 }
