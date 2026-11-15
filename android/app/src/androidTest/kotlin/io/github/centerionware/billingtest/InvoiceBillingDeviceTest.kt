@@ -485,6 +485,14 @@ class InvoiceBillingDeviceTest {
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")
             scrollToStart(); reveal("Job tax (%)", true)
+            // A clipped editor can be tappable while its inline error remains
+            // below the viewport. Leave room beneath it before checking errors.
+            val taxBounds = android.graphics.Rect().also(waitFor("Job tax (%)", true)::getBoundsInScreen)
+            val viewport = requireNotNull(automation.rootInActiveWindow?.let(::safeTapBounds))
+            if (taxBounds.bottom > viewport.bottom - viewport.height() / 4) {
+                swipeContent(up = true)
+                automation.waitForIdle(250, 3000)
+            }
             waitFor("Tax percentage must be between 0 and 100.")
             assertEquals(beforeInvalidTax, repository.jobDetail(job))
             scrollToStart(); reveal("Job tax (%)", true)

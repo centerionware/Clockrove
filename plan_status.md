@@ -3896,3 +3896,10 @@ editor delete keys and observes an empty focused field before typing. The
 validation journey locates the tax editor before checking its inline error,
 retaining exact error, draft and committed-state assertions. These corrections
 require exact-head Actions validation. No VM builds or tests ran.
+
+PR #54 head `36e27ba`, run `43673656562`, passed earlier checks then
+failed API-24 tax-error visibility. Its screenshot shows the red `101` editor
+clipped at the navigation bar; the inline error lies below the viewport.
+The test now checks available space under the editor and scrolls once when
+needed before asserting the unchanged exact error. Empty-before-replacement
+behavior remains pending full API-24/35 acceptance. No VM execution ran.
