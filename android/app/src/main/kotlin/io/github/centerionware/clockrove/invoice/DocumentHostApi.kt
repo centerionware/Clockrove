@@ -15,7 +15,11 @@ import io.github.centerionware.clockrove.tracking.TimerRepository
 import java.io.File
 import java.io.FileInputStream
 
-internal class DocumentHostApi(private val activity: Activity, messenger: BinaryMessenger) {
+internal class DocumentHostApi(
+    private val activity: Activity,
+    messenger: BinaryMessenger,
+    private val backupActionPending: () -> Boolean = { false },
+) {
     private val repository = TimerRepository.get(activity.applicationContext)
     private val main = Handler(Looper.getMainLooper())
     private val channel = MethodChannel(messenger, "clockrove/documents/v1", io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
@@ -153,7 +157,9 @@ internal class DocumentHostApi(private val activity: Activity, messenger: Binary
             catch (_: Exception) { result.error("DOCUMENT_UNAVAILABLE", "The document could not be prepared. Your saved invoice is retained.", null) }
         }
     }
-    private fun externalActionPending() = save != null || logoResult != null || photoResult != null
+    fun hasPendingExternalAction(): Boolean = save != null || logoResult != null || photoResult != null
+
+    private fun externalActionPending() = hasPendingExternalAction() || backupActionPending()
 
     private fun launchTaskPhoto(result: MethodChannel.Result, camera: Boolean) = main.post {
         if (!attached || activity.isFinishing) {

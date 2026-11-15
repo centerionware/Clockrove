@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-15. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
 slice passed API-24/35 CI and its internal Play upload was accepted; the newly
 requested 49-sample report-map regression passed on API 24, with API 35 and
@@ -76,6 +76,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
 | M7.2 Encrypted archive/schema/preview | Pending; native snapshot/export boundary source prepared on `m7-native-snapshot`, exact-head Actions pending | Schema-15 detached staging, deterministic bounded pages, complete media reads, authenticated opaque handles, snapshot lifecycle and synthetic tests are in source. No VM build/test/formatter ran. Dart archive/encryption/UI, authenticated preview, restore choices and GPS deletion-range portability remain outstanding; the latter awaits its schema migration. See `docs/BACKUP_FORMAT.md`. |
+| M7.2 SAF backup document save bridge | Source and native tests drafted on `worker2/backup-document-save`; Actions pending | Adds `clockrove/backup-files/v1` with SAF create, opaque UUID handles, sequential chunks capped at 192 KiB, a 64 MiB + 72 byte limit, private `noBackupFilesDir` staging, off-UI provider writes, and cancellation/TTL cleanup. Completed saves retain an idempotent result through the TTL; later cancel cannot delete the saved URI. Robolectric tests cover ordering, bounds, expiry, cancellation during finish, incomplete cleanup and write failure. No VM build/test/formatter ran, and no Actions evidence exists yet. Next: finish read-only review, commit/push this isolated branch, then require exact-head Actions before integration. Dart encryption/export orchestration, restore and merge remain separate M7 work. |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
 | M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; not started | After all remaining launch features are complete, overhaul first-use UX across the entire app and create a complete inventory of features, screens, routes, settings, options, permissions, empty/error states and destructive confirmations. Actual-app journeys must assert native persistence/side effects and retain a reviewed screenshot for every item on API 24 and current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This is the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
@@ -3883,3 +3884,18 @@ accessibility dump shows the tax EditText unfocused. The input fallback accepted
 keyboard visibility without proving target focus. Require the target editable
 node's focused state, with bounded wait and safe pointer fallback, before typing.
 Exact-head rerun pending; no VM tests/builds ran.
+
+### 2026-11-15 — SAF backup document bridge source review
+
+The isolated `worker2/backup-document-save` branch adds the Android
+`ACTION_CREATE_DOCUMENT` bridge and private encrypted-byte staging store. The
+native store caps archives at 64 MiB + 72 bytes and chunks at 192 KiB, writes
+provider streams on a dedicated worker, enforces sequential offsets, and cleans
+incomplete destinations and private stage files after cancel, expiry or failure.
+Successful finish results remain retryable for the TTL without deleting the
+user's saved URI. Robolectric tests cover ordering/bounds, finish and cancel
+idempotency, in-flight cancellation, partial/write/close failures, startup
+cleanup, and terminal-result expiry. Read-only source review and
+`git diff --check` passed. No VM build, test or formatter ran; exact-head Actions
+validation is pending. Dart archive encryption/export orchestration and restore
+preview/merge remain separate M7 work.

@@ -12,6 +12,7 @@ open class MainActivity : FlutterActivity() {
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
     private var businessApi: io.github.centerionware.clockrove.tracking.BusinessHostApi? = null
     private var backupApi: BackupHostApi? = null
+    private var backupFileApi: io.github.centerionware.clockrove.backup.BackupDocumentHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
     private var mapProviderApi: io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi? = null
     private var debugApi: io.flutter.plugin.common.MethodChannel? = null
@@ -24,6 +25,7 @@ open class MainActivity : FlutterActivity() {
     }
     override fun onStop() { visible = false; automationApi?.foregroundStopped(); super.onStop() }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        if (backupFileApi?.activityResult(requestCode, resultCode, data) == true) return
         if (documentApi?.activityResult(requestCode, resultCode, data) == true) return
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -48,7 +50,15 @@ open class MainActivity : FlutterActivity() {
                 }
             }
         }
-        documentApi = io.github.centerionware.clockrove.invoice.DocumentHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
+        documentApi = io.github.centerionware.clockrove.invoice.DocumentHostApi(
+            this,
+            flutterEngine.dartExecutor.binaryMessenger,
+        ) { backupFileApi?.hasPendingAction() == true }
+        backupFileApi = io.github.centerionware.clockrove.backup.BackupDocumentHostApi(
+            this,
+            flutterEngine.dartExecutor.binaryMessenger,
+            documentActionPending = { documentApi?.hasPendingExternalAction() == true },
+        )
         mapProviderApi = io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         businessApi = io.github.centerionware.clockrove.tracking.BusinessHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         backupApi = BackupHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
@@ -59,6 +69,8 @@ open class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         debugApi?.setMethodCallHandler(null)
         debugApi = null
+        backupFileApi?.detach()
+        backupFileApi = null
         documentApi?.detach()
         documentApi = null
         mapProviderApi?.detach()
