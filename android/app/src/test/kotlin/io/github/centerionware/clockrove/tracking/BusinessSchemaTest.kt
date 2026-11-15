@@ -52,7 +52,7 @@ class BusinessSchemaTest {
     @Test fun newJobHasARealThreeColumnBoardAndDefaultPricingWithoutInventedRates() {
         val job = repository.createJob("Synthetic new board")
         inspect { db ->
-            assertEquals(15, db.version)
+            assertEquals(16, db.version)
             db.rawQuery("SELECT name,position,completed FROM kanban_columns WHERE job_id=? ORDER BY position", arrayOf(job)).use {
                 val names = mutableListOf<String>(); var index = 0
                 while (it.moveToNext()) { names.add(it.getString(0)); assertEquals(index, it.getInt(1)); assertEquals(if (index == 2) 1 else 0, it.getInt(2)); index++ }
@@ -79,7 +79,14 @@ class BusinessSchemaTest {
             assertEquals(clock, number(db, "SELECT archived_ms FROM jobs WHERE id='old-archive'"))
             assertEquals(6L, number(db, "SELECT COUNT(*) FROM kanban_columns"))
             assertEquals(1L, number(db, "SELECT COUNT(*) FROM entity_heads WHERE kind='session' AND entity_id='old-session'"))
+            assertEquals(1L, number(db, "SELECT COUNT(*) FROM entity_heads WHERE kind='location' AND entity_id='old-point'"))
             assertEquals(1L, number(db, "SELECT COUNT(*) FROM entity_heads WHERE kind='automation' AND entity_id='old-job'"))
+            db.rawQuery("SELECT r.payload FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='location' AND h.entity_id='old-point'", null).use {
+                assertTrue(it.moveToFirst()); val payload = JSONObject(it.getString(0))
+                assertEquals("old-point", payload.getString("id")); assertEquals("old-session", payload.getString("session_id"))
+                assertFalse(payload.has("latitude")); assertFalse(payload.has("longitude")); assertFalse(payload.has("accuracy"))
+            }
+            assertEquals(0L, number(db, "SELECT COUNT(*) FROM location_deletion_ranges"))
             db.rawQuery("SELECT payload FROM entity_revisions WHERE kind='site'", null).use {
                 assertTrue(it.moveToFirst()); val payload = JSONObject(it.getString(0))
                 assertEquals(10.0, payload.getDouble("latitude"), 0.0); assertFalse(payload.has("registration_key")); assertFalse(payload.has("observed_ms"))

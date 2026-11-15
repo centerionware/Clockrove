@@ -81,7 +81,7 @@ class SessionHistoryTest {
         val id = observed()
         assertNull(correct(draft(id, 1_400_000, 1_800_000)).conflict)
         assertEquals(listOf(1_400_000L, 1_700_000L), repository.locationPoints(id).map { it.measuredUtcMillis })
-        inspect { db -> db.rawQuery("SELECT entity_id,deleted FROM entity_revisions WHERE kind='location' ORDER BY entity_id", null).use {
+        inspect { db -> db.rawQuery("SELECT entity_id,deleted FROM entity_revisions WHERE kind='location' AND deleted=1 ORDER BY entity_id", null).use {
             assertTrue(it.moveToNext()); assertEquals("point-1100000", it.getString(0)); assertEquals(1, it.getInt(1))
             assertTrue(it.moveToNext()); assertEquals("point-2000000", it.getString(0)); assertFalse(it.moveToNext())
         } }

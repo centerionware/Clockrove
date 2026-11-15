@@ -122,7 +122,7 @@ internal class BackupExportStore(
 
     companion object {
         const val ARCHIVE_FORMAT_VERSION = 1
-        const val CURRENT_SCHEMA_VERSION = 15
+        const val CURRENT_SCHEMA_VERSION = 16
         const val MAX_SNAPSHOT_BYTES = 60L * 1024L * 1024L
         const val MAX_PAGE_BYTES = 256 * 1024
         const val MIN_PAGE_BYTES = 1024
@@ -163,6 +163,7 @@ internal class BackupExportStore(
             Dataset("jobs"),
             Dataset("kanban_cards"),
             Dataset("kanban_columns"),
+            Dataset("location_deletion_ranges"),
             Dataset("location_points"),
             Dataset("location_recording_settings"),
             Dataset("logo_assets", blobFields = listOf(BlobField("bytes", "id"))),

@@ -128,6 +128,7 @@ class ActualCostStoreTest {
             db.execSQL("DROP TABLE actual_costs_future")
             db.execSQL("CREATE INDEX actual_costs_date ON actual_costs(occurred_ms,id)")
             db.execSQL("CREATE INDEX actual_costs_job_date ON actual_costs(job_id,occurred_ms,id)")
+            db.execSQL("DROP TABLE location_deletion_ranges") // Added in schema 16.
             db.version = 14
         }
 
@@ -141,7 +142,7 @@ class ActualCostStoreTest {
         )).conflict)
         assertNull(repository.actualCosts().page.entries.single().customerId)
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            assertEquals(15, db.version)
+            assertEquals(16, db.version)
             assertEquals(1, db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='actual_costs_customer_date'", null).use { it.moveToFirst(); it.getInt(0) })
         }
     }
@@ -151,6 +152,7 @@ class ActualCostStoreTest {
         repository.close()
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
             db.execSQL("DROP TABLE actual_costs")
+            db.execSQL("DROP TABLE location_deletion_ranges") // Added in schema 16.
             db.version = 13
         }
 
@@ -158,7 +160,7 @@ class ActualCostStoreTest {
         assertTrue(repository.actualCosts().page.entries.isEmpty())
         assertEquals(beforeBoard.cards.map { it.id }, repository.boardSnapshot(jobId).board.cards.map { it.id })
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            assertEquals(15, db.version)
+            assertEquals(16, db.version)
             assertEquals(0, db.rawQuery("SELECT COUNT(*) FROM actual_costs", null).use { it.moveToFirst(); it.getInt(0) })
         }
     }
