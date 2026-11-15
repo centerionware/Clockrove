@@ -776,11 +776,20 @@ internal class BackupExportStore(
 
     private fun scheduleExpiry(handle: Handle) {
         expiryTask?.cancel()
+        expiryTask = null
         val idle = (elapsedClock() - handle.lastAccessElapsedMillis).coerceAtLeast(0L)
         val delay = (idleTtlMillis - idle).coerceAtLeast(1L)
-        expiryTask = scheduler.schedule(
-            delay,
-        ) { expireIfIdle(handle.id) }
+        try {
+            expiryTask = scheduler.schedule(delay) { expireIfIdle(handle.id) }
+        } catch (_: Exception) {
+            if (active?.id == handle.id) active = null
+            cancelExpiry()
+            handle.secret.fill(0)
+            // Leave failed deletions pending for the next store interaction. The
+            // scheduler just failed, so don't depend on it for another cleanup task.
+            deleteArtifacts(handle.id)
+            throw Failure("STORAGE_UNAVAILABLE", "The backup snapshot expiry could not be scheduled.")
+        }
     }
 
     @Synchronized
