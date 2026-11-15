@@ -441,6 +441,12 @@ Suggested feature structure: app shell/navigation; jobs; tracking; boards; histo
 3. **Version-tag release:** validate semantic version/tag consistency, main ancestry and checks; assign a unique monotonically increasing Android versionCode; build/sign and submit production automatically. Serialize publishing to avoid racing store edits/version codes. Failed reruns must not reuse an already-published versionCode incorrectly.
 4. **Manual recovery:** workflow dispatch can retry explicitly selected eligible releases and prepare store testing tracks without bypassing checks. This supplements, not replaces, automatic main/tag delivery.
 
+Android emulator setup bounds each app/instrumentation APK installation to 120
+seconds and retries once only when that command times out or is forcibly killed.
+Keep installation logs per attempt; on final failure capture bounded emulator
+state, recent logcat and installed-package diagnostics. Do not retry or suppress
+the actual test suite as part of this recovery.
+
 Pin external actions to reviewed commit SHAs and toolchains to exact versions. Commit lockfiles. Use Fastlane with a locked Ruby bundle for publishing. Temporary secret files must be cleaned up and never uploaded/cached. In GitHub summaries distinguish validation, signing, upload, submission, approval, and live release.
 
 Before account/credentials are supplied, run validation and report **publishing not configured**. A missing credential is an explicit skip/block, never a successful deployment. Do not upload public binaries as a substitute for the paid store release.

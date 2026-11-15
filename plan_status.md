@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-15. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
 slice passed API-24/35 CI and its internal Play upload was accepted; the newly
 requested 49-sample report-map regression passed on API 24, with API 35 and
@@ -41,6 +41,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M1.6 Install/pin compatible tools | Pinned tools verified in Actions | Flutter 3.47.9/Dart 3.13.7, JDK 17.0.17+10, SDK 36, Ruby 3.3.6/Bundler 2.5.23/Fastlane 2.228.0 and lockfiles; successful Actions setup/build/tests |
 | M1.7 Android Flutter scaffold and lockfiles | Build verified in Actions | Agreed application ID; Actions locked resolution, formatting and analysis pass; debug APK built in run 42980838050 |
 | M1.8 Nonprivileged validation CI | Verified foundation run | .github/workflows/validate.yml; pinned actions/tools; no publishing secrets; source-only diagnostic/lockfile artifacts |
+| CI emulator APK install recovery | Implemented; Actions evidence pending | The PDF/device script now retries an app or instrumentation APK install once only after timeout, keeps per-attempt output, and records bounded emulator/logcat/package diagnostics after the final failure. The reported API-24 exit-124 run ID is not yet identified in this checkout; exact branch validation is required before calling this reliable. |
 | M1.9 Create public repository | Public, owner-authorized | https://github.com/centerionware/Clockrove; verified PUBLIC after explicit owner instruction; source terms remain draft |
 | M1 acceptance | Technical foundation verified; rights draft pending | debug/AAB/native validation succeeded; public by owner authorization; effective source rights still require adoption |
 | M2.1 SQLite/manual timer/widget/notification prototype | Native source and CI checks verified; device proof pending | Serialized commands, typed bridge, manual controls, widget and independent notification stop are on main; full physical journey remains unproven |
