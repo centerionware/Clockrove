@@ -7,7 +7,9 @@ void main() {
   const password = 'synthetic-backup-passphrase';
 
   test('encrypts and authenticates a bounded backup envelope', () async {
-    final plaintext = Uint8List.fromList(List<int>.generate(4096, (i) => i % 251));
+    final plaintext = Uint8List.fromList(
+      List<int>.generate(4096, (i) => i % 251),
+    );
     final encrypted = await BackupCrypto.encrypt(
       password: password,
       archive: plaintext,
@@ -26,7 +28,10 @@ void main() {
       throwsA(isA<FormatException>()),
     );
     await expectLater(
-      BackupCrypto.decrypt(password: 'another synthetic passphrase', envelope: encrypted),
+      BackupCrypto.decrypt(
+        password: 'another synthetic passphrase',
+        envelope: encrypted,
+      ),
       throwsA(isA<FormatException>()),
     );
   });

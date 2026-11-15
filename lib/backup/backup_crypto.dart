@@ -25,7 +25,14 @@ abstract final class BackupCrypto {
   static const int _nonceLength = 12;
   static const int _macLength = 16;
   static const List<int> _magic = [
-    0x43, 0x4c, 0x4b, 0x52, 0x4f, 0x56, 0x45, 0x31,
+    0x43,
+    0x4c,
+    0x4b,
+    0x52,
+    0x4f,
+    0x56,
+    0x45,
+    0x31,
   ]; // CLKROVE1
 
   /// Encrypts serialized archive bytes. Keep [password] in memory only.
@@ -41,7 +48,9 @@ abstract final class BackupCrypto {
     final salt = _secureBytes(_saltLength);
     final header = _header(archive.length, salt);
     final transferred = TransferableTypedData.fromList([header, archive]);
-    final output = await Isolate.run(() => _encryptWorker(transferred, password));
+    final output = await Isolate.run(
+      () => _encryptWorker(transferred, password),
+    );
     return output.materialize().asUint8List();
   }
 
@@ -102,9 +111,8 @@ abstract final class BackupCrypto {
 
   static void _validateHeader(Uint8List envelope) {
     if (envelope.length < _headerLength + _nonceLength + _macLength ||
-        envelope.length > _headerLength + maxArchiveBytes +
-            _nonceLength +
-            _macLength) {
+        envelope.length >
+            _headerLength + maxArchiveBytes + _nonceLength + _macLength) {
       throw const FormatException('This backup file has an invalid size.');
     }
     for (var i = 0; i < _magic.length; i++) {
@@ -126,8 +134,10 @@ abstract final class BackupCrypto {
       );
     }
     final payloadLength = fields.getUint32(24, Endian.big);
-    if (payloadLength == 0 || payloadLength > maxArchiveBytes ||
-        envelope.length != _headerLength + payloadLength + _nonceLength + _macLength) {
+    if (payloadLength == 0 ||
+        payloadLength > maxArchiveBytes ||
+        envelope.length !=
+            _headerLength + payloadLength + _nonceLength + _macLength) {
       throw const FormatException('This backup file has an invalid size.');
     }
   }
@@ -184,8 +194,10 @@ abstract final class BackupCrypto {
       aad: header,
     );
     if (plaintext.length != payloadLength) {
-      throw const FormatException('The authenticated backup length is invalid.');
+      throw const FormatException(
+        'The authenticated backup length is invalid.',
+      );
     }
-    return TransferableTypedData.fromList([plaintext]);
+    return TransferableTypedData.fromList([Uint8List.fromList(plaintext)]);
   }
 }
