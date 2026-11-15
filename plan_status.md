@@ -3847,3 +3847,16 @@ selected. The device helper no longer trusts selection-range metadata: Ctrl+A
 is sent for every non-empty field, while empty fields remain on ordinary IME
 typing. API 35 was not reached. Validate the exact updated head in GitHub
 Actions; no VM build or test ran.
+
+PR #48 exact head `a49ed46` / Actions run
+[43657992279](https://github.com/centerionware/Clockrove/actions/runs/43657992279)
+passed formatting, analysis, Flutter behavior tests, Android build and all 614
+native tests. API 24 passed its 28-case base suite and progressed through the
+extended invoice/tax journey, then failed while restoring inherited job tax:
+after enabling **Use default tax rate** and tapping Save, the native repository
+still exposed the explicit zero override. The screenshot leaves Job settings
+open; this is a device-test assertion, not an app crash. API 35 and later device
+journeys were not reached. The next test revision reads the switch's real
+checked state before and after each toggle, captures inherited state before
+saving, and separately asserts that Save closes the form and persists a null
+override. Validate on GitHub Actions; no VM build or test ran.
