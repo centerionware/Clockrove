@@ -671,14 +671,6 @@ abstract final class BackupArchiveCodec {
     }
   }
 
-  static void _writeUint16(BytesBuilder builder, int value) {
-    if (value < 0 || value > 0xffff) {
-      throw const FormatException('A backup field count is out of range.');
-    }
-    final bytes = ByteData(2)..setUint16(0, value, Endian.big);
-    builder.add(bytes.buffer.asUint8List());
-  }
-
   static void _writeUint32(BytesBuilder builder, int value) {
     if (value < 0 || value > 0xffffffff) {
       throw const FormatException('A backup field is out of range.');
