@@ -3915,3 +3915,56 @@ artifact exports and locked release-tool validation. The workflow completed
 with no failed steps. No VM build, test or formatter ran. PR #57 remains open;
 Dart export/password orchestration, archive encryption, restore preview and
 merge remain separate M7 work.
+### 2026-11-15 — observed editor clearing and tax-error navigation
+
+PR #51 head `8c6054b`, run `43672803259`, passed native tests but failed
+API-24 billing while replacing tax `101` with `0`. The retained screenshot
+and accessibility tree show focused editor value `1010`: Ctrl+A had not
+selected the original text. PR #52 head `11baf85`, run `43671872207`, passed
+API-24 crypto benchmark but failed API-35 tax-error navigation; its screenshot
+shows the bottom of Job settings. The input fallback now clears via ordinary
+editor delete keys and observes an empty focused field before typing. The
+validation journey locates the tax editor before checking its inline error,
+retaining exact error, draft and committed-state assertions. These corrections
+require exact-head Actions validation. No VM builds or tests ran.
+
+PR #54 head `36e27ba`, run `43673656562`, passed earlier checks then
+failed API-24 tax-error visibility. Its screenshot shows the red `101` editor
+clipped at the navigation bar; the inline error lies below the viewport.
+The test now checks available space under the editor and scrolls once when
+needed before asserting the unchanged exact error. Empty-before-replacement
+behavior remains pending full API-24/35 acceptance. No VM execution ran.
+
+PR #54 head `3ca1267`, run [43674600623](https://github.com/centerionware/Clockrove/actions/runs/43674600623),
+passed API-24 billing but still failed API-35 at the same invalid-tax message
+assertion. The retained API-35 screenshot shows the settings form near its end:
+the page-sized swipe intended to expose the inline message moved past it. The
+test now makes a short 14%-viewport swipe when the editor needs room below it,
+preserving the existing larger fallback gesture elsewhere. Validate this exact
+head through Actions; API-35 and later journeys remain pending. No VM build,
+test, format or analysis ran.
+
+PR #54 exact head `88d88b8` / Actions run
+[43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
+passed formatting, analysis, Flutter behavior tests, Android debug build, all
+native tests, the actual Android PDF/device matrix on API 24 and 35, invoice
+viewer checks, and locked release-tooling validation. This confirms the
+tax-error navigation and the existing API-24/35 billing flows on that exact
+head; it does not validate a merged-main run. PR #55 run
+[43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
+attempt 2 separately failed API-24 billing because the Settings scroll had
+passed the `Default tax (%)` field. Its failure screenshot/accessibility tree
+showed the form near the bottom with that field absent. The shared `reveal()`
+helper now advances using settled 14%-viewport gestures and rechecks the target
+after each move, avoiding the page-scroll-plus-swipe overshoot while preserving
+the billing assertions. PR #54 exact head `00531dc` / run
+[43678490888](https://github.com/centerionware/Clockrove/actions/runs/43678490888)
+passed formatting, analysis, Flutter behavior, Android build and all native
+tests, as well as API-24's 28 base device tests. The extended API-24 billing
+journey failed at line 414 while checking **Previously installed tile**. The
+retained screenshot/accessibility tree show only the other task row in view
+after selection, so the check could not observe the selected row; it does not
+prove that the app deselected it. The test now reveals the target and reads its
+actual checkable node on each poll, keeping the checked-state assertion. API 35
+was not reached. Validate this exact correction in Actions before applying the
+shared scroll helper to PR #55. No VM build, test, format or analysis ran.
