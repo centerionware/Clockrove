@@ -634,9 +634,14 @@ tests, PDF generation/rendering, invoice-viewer checks, and 35 actual Android
 tests each on API 24 and 35 with zero failures/errors/skips. The API-24 billing
 settings scroll journey and the 49-sample map route both passed on API 24/35.
 The report tests and exact-money/cost migration checks passed in CI. Secure
-custom raster-provider settings are now implemented in source with their Dart
-and Android emulator tests, awaiting exact-head Actions. Google Maps SDK runtime
-configuration and owner-device acceptance remain open; see `plan_status.md`.
+custom raster-provider settings are implemented on main `f0dc15f` in
+`MapProviderSettingsStore.kt`, the Android host API, Dart settings/screen, and
+tile backoff; exact main Actions run `43673229775` passed. This supersedes the
+historical red feature-branch runs for the OSM/custom HTTPS path. Keyless OSM
+remains the default. Only optional Google Maps SDK runtime initialization is
+unproven; it requires an owner-provided billing-enabled Google project and a
+key restricted to the app ID and intended signing certificate. Physical
+owner-device acceptance remains separate; see `plan_status.md`.
 The first exact-head run on `040961a` passed format and analysis but failed
 Flutter behavior tests before Android build/native/device stages. The follow-up
 at `309996e` also passed format and analysis and reduced the Flutter failures
@@ -793,7 +798,7 @@ Remaining gates are concrete, not assumed complete:
 1. Toolchain/checkout availability and GitHub identity.
 2. Owner review of drafted source/contribution rights before public publication.
 3. Direct name and permanent app-identity verification before store setup.
-4. Runtime Google-key and background-service feasibility demonstrated on Android.
+4. Optional Google Maps runtime initialization proof, using an owner-provided billing-enabled key restricted to the app ID and intended signing certificate; keyless OpenStreetMap remains the available default. Background-service feasibility has separate Android validation.
 5. Physical-device evidence, not available from this documentation-only handoff.
 6. Store profiles, account eligibility, signing/store credentials supplied by owner.
 
