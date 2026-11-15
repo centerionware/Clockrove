@@ -14,6 +14,10 @@ class TimerRepository internal constructor(context: Context,
         BackupExportStore(context.applicationContext, wallClock)
     }
     private val backupExportStore by backupExportStoreDelegate
+    private val backupImportStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        BackupImportStore(context.applicationContext, catalogProvider = { db -> backupExportStore.importCatalog(db) })
+    }
+    private val backupImportStore by backupImportStoreDelegate
     private val listeners = mutableSetOf<(Long) -> Unit>()
 
     enum class Action { START, STOP, SWITCH }
@@ -74,8 +78,62 @@ class TimerRepository internal constructor(context: Context,
         backupExportStore.close(snapshotId)
 
     @Synchronized
-    internal fun discardBackupSnapshot() {
-        if (backupExportStoreDelegate.isInitialized()) backupExportStore.closeAll()
+    internal fun beginBackupImport(
+        archiveFormatVersion: Int,
+        schemaVersion: Int,
+        archiveDigest: String,
+        recordCount: Long,
+        mediaCount: Long,
+        mediaBytes: Long,
+    ): BackupImportStore.Started = backupImportStore.begin(
+        helper.readableDatabase, archiveFormatVersion, schemaVersion, archiveDigest,
+        recordCount, mediaCount, mediaBytes,
+    )
+
+    @Synchronized
+    internal fun appendBackupImportPage(
+        importId: String,
+        firstOrdinal: Long,
+        records: List<*>,
+        encodedRequestBytes: Int,
+    ): Long = backupImportStore.appendPage(importId, firstOrdinal, records, encodedRequestBytes)
+
+    @Synchronized
+    internal fun writeBackupImportBlob(
+        importId: String,
+        blobId: String,
+        offset: Long,
+        bytes: ByteArray,
+        encodedRequestBytes: Int,
+    ): Long = backupImportStore.writeBlob(importId, blobId, offset, bytes, encodedRequestBytes)
+
+    @Synchronized
+    internal fun finishBackupImport(importId: String): BackupImportStore.Preview =
+        backupImportStore.finish(helper.readableDatabase, importId)
+
+    @Synchronized
+    internal fun readBackupImportConflictPage(
+        importId: String,
+        previewToken: String,
+        cursor: String?,
+        maxBytes: Int?,
+    ): BackupImportStore.ConflictPage = backupImportStore.readConflictPage(
+        helper.readableDatabase, importId, previewToken, cursor, maxBytes,
+    )
+
+    @Synchronized
+    internal fun closeBackupImport(importId: String): Boolean = backupImportStore.close(importId)
+
+    @Synchronized
+    internal fun discardBackupOperations() {
+        var failure: Exception? = null
+        if (backupExportStoreDelegate.isInitialized()) {
+            try { backupExportStore.closeAll() } catch (exception: Exception) { failure = exception }
+        }
+        if (backupImportStoreDelegate.isInitialized()) {
+            try { backupImportStore.closeAll() } catch (exception: Exception) { if (failure == null) failure = exception }
+        }
+        failure?.let { throw it }
     }
 
     /** Fixture convenience; production creation uses the versioned command below. */
@@ -1064,13 +1122,13 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun close() {
         listeners.clear()
-        try {
-            if (backupExportStoreDelegate.isInitialized()) backupExportStore.closeAll()
-        } catch (_: Exception) {
-            // A failed best-effort staging cleanup is retried at the next store initialization.
-        } finally {
-            helper.close()
+        if (backupExportStoreDelegate.isInitialized()) {
+            try { backupExportStore.closeAll() } catch (_: Exception) { }
         }
+        if (backupImportStoreDelegate.isInitialized()) {
+            try { backupImportStore.closeAll() } catch (_: Exception) { }
+        }
+        helper.close()
     }
 
     @Synchronized

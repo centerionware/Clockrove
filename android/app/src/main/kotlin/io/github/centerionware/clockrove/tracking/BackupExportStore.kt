@@ -88,6 +88,12 @@ internal class BackupExportStore(
         val bytes: ByteArray,
     )
 
+    data class ImportTable(
+        val valueColumns: Set<String>,
+        val blobColumns: Set<String>,
+        val primaryKey: List<String>,
+    )
+
     class Failure(val code: String, message: String) : IllegalStateException(message)
 
     private data class BlobField(val column: String, val keyColumn: String)
@@ -227,6 +233,20 @@ internal class BackupExportStore(
             idleExpiryMillis = idleTtlMillis,
             portableTables = datasets.map { it.table },
         )
+    }
+
+    /** Catalog for validating an import; every identifier comes from this compiled allowlist. */
+    @Synchronized
+    internal fun importCatalog(db: SQLiteDatabase): Map<String, ImportTable> {
+        requireSupportedSchema(db)
+        return datasets.associate { spec ->
+            val resolved = resolveDataset(db, spec)
+            spec.table to ImportTable(
+                valueColumns = resolved.columns.toSet(),
+                blobColumns = spec.blobFields.map { it.column }.toSet(),
+                primaryKey = resolved.primaryKey,
+            )
+        }
     }
 
     /** Caller holds TimerRepository's synchronized writer boundary. */
@@ -756,11 +776,20 @@ internal class BackupExportStore(
 
     private fun scheduleExpiry(handle: Handle) {
         expiryTask?.cancel()
+        expiryTask = null
         val idle = (elapsedClock() - handle.lastAccessElapsedMillis).coerceAtLeast(0L)
         val delay = (idleTtlMillis - idle).coerceAtLeast(1L)
-        expiryTask = scheduler.schedule(
-            delay,
-        ) { expireIfIdle(handle.id) }
+        try {
+            expiryTask = scheduler.schedule(delay) { expireIfIdle(handle.id) }
+        } catch (_: Exception) {
+            if (active?.id == handle.id) active = null
+            cancelExpiry()
+            handle.secret.fill(0)
+            // Leave failed deletions pending for the next store interaction. The
+            // scheduler just failed, so don't depend on it for another cleanup task.
+            deleteArtifacts(handle.id)
+            throw Failure("STORAGE_UNAVAILABLE", "The backup snapshot expiry could not be scheduled.")
+        }
     }
 
     @Synchronized

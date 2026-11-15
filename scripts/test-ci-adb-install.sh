@@ -216,11 +216,11 @@ case "$FLUTTER_TEST_MODE:$count" in
     echo 'Error: ADB exited with exit code -15'
     exit 124
     ;;
-  zero-run-progress:*)
+  zero-run-test-progress:*)
     echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
     echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
     echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
-    echo '00:00 +0: running backup crypto benchmark'
+    echo '00:00 +0: backup crypto runs on a minimum-API Android emulator'
     echo 'Error: ADB exited with exit code -15'
     exit 124
     ;;
@@ -499,18 +499,18 @@ fi
 echo 'Verified a Flutter +0 -1 failure summary prevents retry while +0 loading remains eligible.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
-export FLUTTER_TEST_MODE=zero-run-progress
+export FLUTTER_TEST_MODE=zero-run-test-progress
 if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
-  echo 'A Flutter +0 running status must not be retried.' >&2
+  echo 'The actual Flutter +0 benchmark test-progress event must not be retried.' >&2
   exit 1
 else
   status=$?
 fi
 [[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
 ! grep -Fq 'reboot' "$ADB_CALL_LOG"
-echo 'Verified Flutter +0 running status prevents retry.'
+echo 'Verified the actual Flutter +0 benchmark test-progress event prevents retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=zero-skip-progress

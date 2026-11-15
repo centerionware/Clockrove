@@ -19,11 +19,25 @@ class BackupExportStoreTest {
     private class ManualScheduler(private val elapsed: () -> Long) : BackupScheduler {
         private data class Entry(val dueAt: Long, val action: () -> Unit, var cancelled: Boolean = false)
         private val entries = mutableListOf<Entry>()
+        var failNextSchedule = false
+        var scheduleCalls = 0
+            private set
 
         override fun schedule(delayMillis: Long, action: () -> Unit): BackupScheduledTask {
+            scheduleCalls++
+            if (failNextSchedule) {
+                failNextSchedule = false
+                throw IllegalStateException("Synthetic scheduler failure")
+            }
             val entry = Entry(elapsed() + delayMillis, action)
             entries.add(entry)
             return BackupScheduledTask { entry.cancelled = true }
+        }
+
+        fun runNextTaskEarly() {
+            val next = entries.firstOrNull { !it.cancelled } ?: error("No pending scheduled task")
+            next.cancelled = true
+            next.action()
         }
 
         fun runDueTasks() {
@@ -331,6 +345,48 @@ class BackupExportStoreTest {
         assertFailure("SNAPSHOT_UNAVAILABLE") {
             scheduled.readPage(started.snapshotId, null, BackupExportStore.MAX_PAGE_BYTES)
         }
+    }
+
+    @Test
+    fun failedExpiryRescheduleClosesHandleAndDefersFailedFileCleanup() {
+        var failingPath: String? = null
+        var failuresRemaining = 1
+        val scheduler = ManualScheduler { elapsed }
+        val scheduled = BackupExportStore(
+            app,
+            wallClock = { now },
+            elapsedClock = { elapsed },
+            idleTtlMillis = 50L,
+            scheduler = scheduler,
+            deleteFile = { file ->
+                if (file.absolutePath == failingPath && failuresRemaining > 0) {
+                    failuresRemaining--
+                    false
+                } else {
+                    file.delete()
+                }
+            },
+        )
+        val started = scheduled.start(database)
+        val snapshotDirectory = File(app.noBackupFilesDir, "clockrove-backup-snapshots")
+        val rowsFile = File(snapshotDirectory, "clockrove-backup-" + started.snapshotId + "-rows.bin")
+        val mediaFile = File(snapshotDirectory, "clockrove-backup-" + started.snapshotId + "-media.bin")
+        assertTrue(rowsFile.exists())
+        assertTrue(mediaFile.exists())
+        failingPath = mediaFile.absolutePath
+
+        scheduler.failNextSchedule = true
+        assertFailure("STORAGE_UNAVAILABLE") { scheduler.runNextTaskEarly() }
+
+        assertEquals(2, scheduler.scheduleCalls)
+        assertFalse(rowsFile.exists())
+        assertTrue(mediaFile.exists())
+        assertFailure("SNAPSHOT_UNAVAILABLE") {
+            scheduled.readPage(started.snapshotId, null, BackupExportStore.MAX_PAGE_BYTES)
+        }
+        scheduled.info(database)
+        assertFalse(mediaFile.exists())
+        assertEquals(2, scheduler.scheduleCalls)
     }
 
     @Test
