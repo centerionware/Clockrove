@@ -132,6 +132,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           end: today,
         ),
         helpText: 'Select GPS dates',
+        saveText: 'Review',
         confirmText: 'Review',
       );
       if (selected == null || !mounted) return;
