@@ -317,7 +317,7 @@ class InvoiceBillingDeviceTest {
             val selected = find(label, true)
             val selectionStart = selected?.textSelectionStart ?: -1
             val selectionEnd = selected?.textSelectionEnd ?: -1
-            if (selectionStart != 0 || selectionEnd != length) {
+            if (length > 0 && (selectionStart != 0 || selectionEnd != length)) {
                 val downTime = SystemClock.uptimeMillis()
                 instrumentation.sendKeySync(
                     KeyEvent(

@@ -3209,3 +3209,11 @@ near the bottom of Job settings. The lookup previously ignored
 `AccessibilityNodeInfo.error`, which Flutter may use to expose field validation
 messages; that property is now included alongside visible text and descriptions.
 Rerun the exact PR head through Actions; no local build or test ran.
+
+The next PR #48 run `43655152043` again passed all 37 API-24 device cases, but
+API 35 stopped earlier when the fallback sent Ctrl+A to an empty multiline
+review-note field whose selection endpoints were unavailable. Its screenshot
+shows the review form open and the note still blank. Ctrl+A is now limited to
+non-empty values, preserving ordinary typing into empty fields. The API-35
+invalid-tax accessibility check is not yet verified on the updated head. No
+VM build or test ran.

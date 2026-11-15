@@ -3826,3 +3826,14 @@ still open near the bottom of Job settings. The lookup previously ignored
 messages; that property is now included. Validate this correction on the
 updated PR head through GitHub Actions. No VM build or test ran; API-35 billing
 and later journeys did not complete.
+
+Updated PR #48 run
+[43655152043](https://github.com/centerionware/Clockrove/actions/runs/43655152043)
+passed all 37 API-24 device cases, including the long unit-price replacement.
+API 35 passed its 28 base cases, then failed earlier in the extended billing
+journey because the fallback sent Ctrl+A to an empty multiline review-note field
+when Android did not expose selection endpoints. The failure screenshot shows
+Clockrove open on the review form with the note still blank. Ctrl+A is now
+restricted to non-empty values; this leaves empty fields on the ordinary IME
+typing path. The invalid-tax lookup remains unverified on API 35. Exact-head
+Actions rerun is required; no VM build or test ran.
