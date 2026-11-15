@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove.settings
 
 import android.content.Intent
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -134,7 +135,9 @@ class SettingsSaveDeviceTest {
             val y = bounds.exactCenterY()
             val downTime = SystemClock.uptimeMillis()
             fun inject(action: Int, eventTime: Long): Boolean {
-                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                    source = InputDevice.SOURCE_TOUCHSCREEN
+                }
                 return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
             }
             assertTrue("Could not tap $label", inject(MotionEvent.ACTION_DOWN, downTime))
@@ -185,7 +188,9 @@ class SettingsSaveDeviceTest {
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
-            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
             try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
         inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
@@ -207,11 +212,10 @@ class SettingsSaveDeviceTest {
                     for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
                     return node.isScrollable && node.performAction(scrollAction)
                 }
-                automation.rootInActiveWindow?.let(::scroll)
-                SystemClock.sleep(150)
-                if (find(label, editable, checkable) != null) return
-                val after = automation.rootInActiveWindow?.let(::scrollPosition)
-                if (before == null || after == null || before == after) {
+                val requested = automation.rootInActiveWindow?.let(::scroll) == true
+                if (requested && waitForScrollMovement(before, label, editable, checkable)) {
+                    if (find(label, editable, checkable) != null) return
+                } else {
                     swipeContent(up = forward)
                     SystemClock.sleep(150)
                 }
@@ -219,6 +223,48 @@ class SettingsSaveDeviceTest {
             if (find(label, editable, checkable) != null) return
         }
         waitFor(label, editable, checkable)
+    }
+    private fun waitForScrollMovement(
+        before: ScrollPosition?,
+        label: String,
+        editable: Boolean,
+        checkable: Boolean,
+        timeoutMillis: Long = 750,
+    ): Boolean {
+        // ACTION_SCROLL may be acknowledged before Flutter finishes its animation.
+        val startedAt = SystemClock.uptimeMillis()
+        val movementDeadline = startedAt + timeoutMillis
+        val settleDeadline = movementDeadline + 1500
+        var moved = false
+        var lastPosition = before
+        var lastMovementAt = startedAt
+        var targetVisibleAt: Long? = null
+        while (true) {
+            val targetVisible = find(label, editable, checkable) != null
+            val now = SystemClock.uptimeMillis()
+            if (targetVisible) {
+                if (targetVisibleAt == null) targetVisibleAt = now
+            } else {
+                targetVisibleAt = null
+            }
+            val after = automation.rootInActiveWindow?.let(::scrollPosition)
+            if (after != null) {
+                if (lastPosition == null) {
+                    lastMovementAt = now
+                } else if (after != lastPosition) {
+                    moved = true
+                    lastMovementAt = now
+                }
+                lastPosition = after
+            }
+            if (targetVisible && now - maxOf(targetVisibleAt ?: now, lastMovementAt) >= 150) return true
+            if (moved && now - lastMovementAt >= 150) return true
+            if (!moved && targetVisibleAt == null && now >= movementDeadline) return false
+            if (moved && now >= settleDeadline) {
+                throw AssertionError("Settings scroll did not settle after accessibility movement")
+            }
+            SystemClock.sleep(50)
+        }
     }
     private fun scrollPosition(node: AccessibilityNodeInfo): ScrollPosition? {
         for (index in 0 until node.childCount) {
