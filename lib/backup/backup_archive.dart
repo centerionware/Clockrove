@@ -226,7 +226,7 @@ abstract final class BackupArchiveCodec {
     final hashesById = <String, List<int>>{};
     for (final prepared in preparedRows) {
       for (final blob in prepared.blobs) {
-        final digest = await const Sha256().hash(blob.bytes);
+        final digest = await Sha256().hash(blob.bytes);
         hashesById[blob.id] = digest.bytes;
       }
     }
@@ -435,7 +435,7 @@ abstract final class BackupArchiveCodec {
             mediaOffset + descriptor.length,
           ),
         );
-        final digest = await const Sha256().hash(bytes);
+        final digest = await Sha256().hash(bytes);
         if (!_constantTimeBytesEqual(digest.bytes, descriptor.hash)) {
           throw const FormatException(
             'A backup media file failed its checksum.',
@@ -597,6 +597,7 @@ abstract final class BackupArchiveCodec {
       final revisionRow = revision is String ? revisions[revision] : null;
       if (kind is! String ||
           entity is! String ||
+          revision is! String ||
           revisionRow == null ||
           revisionRow['kind'] != kind ||
           revisionRow['entity_id'] != entity) {
@@ -668,15 +669,6 @@ abstract final class BackupArchiveCodec {
         'A backup record contains an unsupported value.',
       );
     }
-  }
-
-  static void _writeShortString(BytesBuilder builder, String value) {
-    final bytes = utf8.encode(value);
-    if (bytes.length > 0xffff) {
-      throw const FormatException('A backup field name is too large.');
-    }
-    _writeUint16(builder, bytes.length);
-    builder.add(bytes);
   }
 
   static void _writeUint16(BytesBuilder builder, int value) {
