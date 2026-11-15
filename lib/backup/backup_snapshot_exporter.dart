@@ -652,10 +652,7 @@ final class BackupSnapshotCleanupException implements Exception {
 }
 
 final class _SnapshotLease {
-  _SnapshotLease(
-    this.snapshotId, {
-    required this._closeSnapshot,
-  });
+  _SnapshotLease(this.snapshotId, {required this._closeSnapshot});
 
   final String snapshotId;
   final Future<void> Function(String) _closeSnapshot;
