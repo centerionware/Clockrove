@@ -365,55 +365,52 @@ void main() {
     },
   );
 
-  test(
-    'token cancels decrypt while waiting for post-manifest EOF',
-    () async {
-      final archive = _pattern(3);
-      final envelope = await _encrypt(archive);
-      final waitingForEof = Completer<void>();
-      var sourceCancelled = false;
-      final envelopeSource = StreamController<List<int>>(
-        onResume: () {
-          if (!waitingForEof.isCompleted) waitingForEof.complete();
-        },
-        onCancel: () {
-          sourceCancelled = true;
-        },
-      );
-      final token = BackupCryptoCancellationToken();
-      var sourceCancelledBeforeDiscard = false;
-      final staged = _MemorySink(
-        onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
-      );
-      final decryption = BackupCryptoV2.decrypt(
-        password: _password,
-        envelope: envelopeSource.stream,
-        privateArchive: staged,
-        cancellationToken: token,
-      );
-      final decryptionExpectation = expectLater(
-        decryption,
-        throwsA(isA<BackupCryptoV2CancelledException>()),
-      );
+  test('token cancels decrypt while waiting for post-manifest EOF', () async {
+    final archive = _pattern(3);
+    final envelope = await _encrypt(archive);
+    final waitingForEof = Completer<void>();
+    var sourceCancelled = false;
+    final envelopeSource = StreamController<List<int>>(
+      onResume: () {
+        if (!waitingForEof.isCompleted) waitingForEof.complete();
+      },
+      onCancel: () {
+        sourceCancelled = true;
+      },
+    );
+    final token = BackupCryptoCancellationToken();
+    var sourceCancelledBeforeDiscard = false;
+    final staged = _MemorySink(
+      onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
+    );
+    final decryption = BackupCryptoV2.decrypt(
+      password: _password,
+      envelope: envelopeSource.stream,
+      privateArchive: staged,
+      cancellationToken: token,
+    );
+    final decryptionExpectation = expectLater(
+      decryption,
+      throwsA(isA<BackupCryptoV2CancelledException>()),
+    );
 
-      try {
-        envelopeSource.add(envelope);
-        await waitingForEof.future.timeout(const Duration(seconds: 30));
-        expect(staged.bytes, orderedEquals(archive));
-        token.cancel();
-        await decryptionExpectation.timeout(const Duration(seconds: 30));
-      } finally {
-        token.cancel();
-        await envelopeSource.close().timeout(const Duration(seconds: 30));
-      }
+    try {
+      envelopeSource.add(envelope);
+      await waitingForEof.future.timeout(const Duration(seconds: 30));
+      expect(staged.bytes, orderedEquals(archive));
+      token.cancel();
+      await decryptionExpectation.timeout(const Duration(seconds: 30));
+    } finally {
+      token.cancel();
+      await envelopeSource.close().timeout(const Duration(seconds: 30));
+    }
 
-      expect(sourceCancelled, isTrue);
-      expect(sourceCancelledBeforeDiscard, isTrue);
-      expect(staged.discarded, isTrue);
-      expect(staged.committed, isFalse);
-      expect(staged.visibleBytes, isNull);
-    },
-  );
+    expect(sourceCancelled, isTrue);
+    expect(sourceCancelledBeforeDiscard, isTrue);
+    expect(staged.discarded, isTrue);
+    expect(staged.committed, isFalse);
+    expect(staged.visibleBytes, isNull);
+  });
 
   test('cancellation and destination errors discard staged output', () async {
     final cancelled = _MemorySink();

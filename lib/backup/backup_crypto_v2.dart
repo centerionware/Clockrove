@@ -268,10 +268,7 @@ abstract final class BackupCryptoV2 {
       while (true) {
         _checkCancelled(isCancelled, cancellationToken);
         final frameHeader = await _readOrCancel(
-          () => reader.readExactly(
-            frameHeaderBytes,
-            allowEofAtStart: true,
-          ),
+          () => reader.readExactly(frameHeaderBytes, allowEofAtStart: true),
           cancellationToken: cancellationToken,
           cancelReader: reader.cancel,
         );
