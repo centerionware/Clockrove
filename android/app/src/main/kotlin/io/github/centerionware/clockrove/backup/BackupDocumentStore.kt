@@ -169,12 +169,10 @@ internal class BackupDocumentStore(
         var expired: Stage? = null
         var failedWrite: Stage? = null
         var writeFailure: Failure? = null
-        val nextOffset: Long?
+        var nextOffset: Long? = null
         synchronized(this) {
             expired = expireIfIdleLocked()
-            if (expired?.id == id) {
-                nextOffset = null
-            } else {
+            if (expired?.id != id) {
                 val stage = activeForLocked(id)
                 if (stage.state != State.RECEIVING) {
                     throw Failure("DOCUMENT_ACTION_PENDING", "The backup document is already being saved.")
@@ -205,7 +203,6 @@ internal class BackupDocumentStore(
                 } catch (_: Exception) {
                     if (terminalizeLocked(stage, saved = false)) failedWrite = stage
                     writeFailure = Failure("STORAGE_UNAVAILABLE", "Encrypted backup staging failed.")
-                    nextOffset = null
                 }
             }
         }
