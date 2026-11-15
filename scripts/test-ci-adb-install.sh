@@ -580,6 +580,7 @@ rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=install-timeout-once
 export FLUTTER_TEST_PATH=integration_test/backup_snapshot_memory_benchmark_test.dart
 export ADB_REBOOT_MODE=normal
+export ADB_FAKE_API=24
 clockrove_run_flutter_integration_test 24 backup-snapshot-memory-seed \
   'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
   -- flutter test integration_test/backup_snapshot_memory_benchmark_test.dart
