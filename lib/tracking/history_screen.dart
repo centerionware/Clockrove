@@ -169,7 +169,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('GPS history could not be prepared. No data was deleted.')),
+          const SnackBar(
+            content: Text(
+              'GPS history could not be prepared. No data was deleted.',
+            ),
+          ),
         );
       }
     }
@@ -330,7 +334,8 @@ class _GpsRangeDeletionDialogState
     } catch (_) {
       if (mounted && scope == _scopeJobId) {
         setState(
-          () => _error = 'The point count could not be loaded. No data was deleted.',
+          () => _error =
+              'The point count could not be loaded. No data was deleted.',
         );
       }
     } finally {
@@ -374,19 +379,23 @@ class _GpsRangeDeletionDialogState
                 '${_calendarDate(widget.endDate)} · ${widget.timezone}',
               ),
               const SizedBox(height: 8),
-              RadioListTile<String?>(
-                contentPadding: EdgeInsets.zero,
-                value: widget.jobId,
+              RadioGroup<String?>(
                 groupValue: _scopeJobId,
                 onChanged: _loading || _pending ? null : _selectScope,
-                title: Text('This job only · ${widget.jobName}'),
-              ),
-              RadioListTile<String?>(
-                contentPadding: EdgeInsets.zero,
-                value: null,
-                groupValue: _scopeJobId,
-                onChanged: _loading || _pending ? null : _selectScope,
-                title: const Text('All jobs'),
+                child: Column(
+                  children: [
+                    RadioListTile<String?>(
+                      contentPadding: EdgeInsets.zero,
+                      value: widget.jobId,
+                      title: Text('This job only · ${widget.jobName}'),
+                    ),
+                    RadioListTile<String?>(
+                      contentPadding: EdgeInsets.zero,
+                      value: null,
+                      title: const Text('All jobs'),
+                    ),
+                  ],
+                ),
               ),
               if (_loading) const LinearProgressIndicator(),
               if (_error != null) ...[

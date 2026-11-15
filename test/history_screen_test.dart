@@ -256,60 +256,62 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('GPS range deletion previews scope and cancel preserves history', (
-    tester,
-  ) async {
-    final api = _History();
-    await _show(
-      tester,
-      api,
-      const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'),
-    );
-    await _reveal(tester, 'Delete GPS by date range');
-    await tester.tap(find.text('Delete GPS by date range'));
-    await tester.pumpAndSettle();
-    expect(find.text('Select GPS dates'), findsOneWidget);
-    await tester.tap(find.text('Review'));
-    await tester.pumpAndSettle();
-    expect(find.text('Delete GPS history?'), findsOneWidget);
-    expect(api.gpsPreviews.last.$1, 'job');
-    expect(api.gpsPreviews.last.$3, greaterThan(api.gpsPreviews.last.$2));
-    await tester.tap(find.text('All jobs'));
-    await tester.pumpAndSettle();
-    expect(api.gpsPreviews.last.$1, isNull);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(api.gpsDeletions, isEmpty);
-    expect(find.textContaining('2026-11-01'), findsOneWidget);
-  });
+  testWidgets(
+    'GPS range deletion previews scope and cancel preserves history',
+    (tester) async {
+      final api = _History();
+      await _show(
+        tester,
+        api,
+        const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'),
+      );
+      await _reveal(tester, 'Delete GPS by date range');
+      await tester.tap(find.text('Delete GPS by date range'));
+      await tester.pumpAndSettle();
+      expect(find.text('Select GPS dates'), findsOneWidget);
+      await tester.tap(find.text('Review'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete GPS history?'), findsOneWidget);
+      expect(api.gpsPreviews.last.$1, 'job');
+      expect(api.gpsPreviews.last.$3, greaterThan(api.gpsPreviews.last.$2));
+      await tester.tap(find.text('All jobs'));
+      await tester.pumpAndSettle();
+      expect(api.gpsPreviews.last.$1, isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.gpsDeletions, isEmpty);
+      expect(find.textContaining('2026-11-01'), findsOneWidget);
+    },
+  );
 
-  testWidgets('GPS deletion retries after stale preview with a refreshed version', (
-    tester,
-  ) async {
-    final api = _History()..staleGpsFirst = true;
-    await _show(
-      tester,
-      api,
-      const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'),
-    );
-    await _reveal(tester, 'Delete GPS by date range');
-    await tester.tap(find.text('Delete GPS by date range'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Review'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete GPS points'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Data changed'), findsOneWidget);
-    expect(api.gpsPreviews.length, greaterThanOrEqualTo(2));
-    await tester.tap(find.text('Delete GPS points'));
-    await tester.pumpAndSettle();
-    expect(api.gpsDeletions.length, 2);
-    expect(api.gpsDeletions[1].$1, isNot(api.gpsDeletions[0].$1));
-    expect(api.gpsDeletions[1].$2, api.version - 1);
-    expect(api.gpsDeletions[1].$4, api.gpsDeletions[0].$4);
-    expect(api.gpsDeletions[1].$5, api.gpsDeletions[0].$5);
-    expect(find.textContaining('2026-11-01'), findsOneWidget);
-  });
+  testWidgets(
+    'GPS deletion retries after stale preview with a refreshed version',
+    (tester) async {
+      final api = _History()..staleGpsFirst = true;
+      await _show(
+        tester,
+        api,
+        const HistoryScreen(jobId: 'job', jobName: 'Synthetic job'),
+      );
+      await _reveal(tester, 'Delete GPS by date range');
+      await tester.tap(find.text('Delete GPS by date range'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Review'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete GPS points'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Data changed'), findsOneWidget);
+      expect(api.gpsPreviews.length, greaterThanOrEqualTo(2));
+      await tester.tap(find.text('Delete GPS points'));
+      await tester.pumpAndSettle();
+      expect(api.gpsDeletions.length, 2);
+      expect(api.gpsDeletions[1].$1, isNot(api.gpsDeletions[0].$1));
+      expect(api.gpsDeletions[1].$2, api.version - 1);
+      expect(api.gpsDeletions[1].$4, api.gpsDeletions[0].$4);
+      expect(api.gpsDeletions[1].$5, api.gpsDeletions[0].$5);
+      expect(find.textContaining('2026-11-01'), findsOneWidget);
+    },
+  );
 
   testWidgets('GPS deletion keeps the same command after an unknown response', (
     tester,
@@ -329,7 +331,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('result is unknown'), findsOneWidget);
     expect(
-      tester.widget<TextButton>(find.widgetWithText(TextButton, 'Cancel')).onPressed,
+      tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Cancel'))
+          .onPressed,
       isNull,
     );
     await tester.tap(find.text('Retry same operation'));
