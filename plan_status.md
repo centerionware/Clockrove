@@ -3937,3 +3937,14 @@ stale-version, empty-range, rollback and bridge tests plus Flutter API/widget
 tests were added for GitHub Actions. No build, test or formatter ran on the VM,
 per owner instruction. Exact-head Actions validation and backup exporter/restore
 integration remain pending; M7 and M7.6 are not accepted.
+
+At exact head `cdbfecc`, Actions run
+[43671703196](https://github.com/centerionware/Clockrove/actions/runs/43671703196)
+passed formatting, analysis, Flutter behavior tests and the Android build, then
+failed native tests: 621 cases ran, with nine failures. Eight SQLite migration
+errors came from downgrade-style fixtures retaining the schema-16 range table;
+those fixtures now drop the table before setting the historical version. One
+session-history assertion counted live observation revisions when it intended
+to check deletion tombstones; it now filters for deleted revisions. Both test
+corrections require a fresh exact-head Actions run. The new actual Android
+deletion journey was not part of this run. No VM tests/build/formatting ran.

@@ -128,6 +128,7 @@ class ActualCostStoreTest {
             db.execSQL("DROP TABLE actual_costs_future")
             db.execSQL("CREATE INDEX actual_costs_date ON actual_costs(occurred_ms,id)")
             db.execSQL("CREATE INDEX actual_costs_job_date ON actual_costs(job_id,occurred_ms,id)")
+            db.execSQL("DROP TABLE location_deletion_ranges") // Added in schema 16.
             db.version = 14
         }
 
@@ -151,6 +152,7 @@ class ActualCostStoreTest {
         repository.close()
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
             db.execSQL("DROP TABLE actual_costs")
+            db.execSQL("DROP TABLE location_deletion_ranges") // Added in schema 16.
             db.version = 13
         }
 
