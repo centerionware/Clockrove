@@ -9,15 +9,17 @@ void main() {
     test('round trips rows and raw media deterministically', () async {
       final rows = [
         _row('jobs', {'name': 'North site', 'id': 'job-b'}),
-        _row('task_attachments', {
-          'id': 'photo-1',
-        }, blobs: [
-          BackupArchiveBlob(
-            id: 'photo-blob-1',
-            column: 'data',
-            bytes: Uint8List.fromList([0, 1, 2, 255]),
-          ),
-        ]),
+        _row(
+          'task_attachments',
+          {'id': 'photo-1'},
+          blobs: [
+            BackupArchiveBlob(
+              id: 'photo-blob-1',
+              column: 'data',
+              bytes: Uint8List.fromList([0, 1, 2, 255]),
+            ),
+          ],
+        ),
         _row('jobs', {'id': 'job-a', 'name': 'South site'}),
       ];
       final first = await BackupArchiveCodec.encode(
@@ -43,11 +45,16 @@ void main() {
         'jobs',
         'task_attachments',
       ]);
-      expect(decoded.rows.last.blobs.single.bytes, orderedEquals([0, 1, 2, 255]));
+      expect(
+        decoded.rows.last.blobs.single.bytes,
+        orderedEquals([0, 1, 2, 255]),
+      );
     });
 
     test('uses the exact final plaintext size as its cap', () async {
-      final rows = [_row('jobs', {'id': 'bounded'})];
+      final rows = [
+        _row('jobs', {'id': 'bounded'}),
+      ];
       final archive = await BackupArchiveCodec.encode(
         schemaVersion: 15,
         stateVersion: 0,
@@ -80,7 +87,9 @@ void main() {
           schemaVersion: 15,
           stateVersion: 0,
           capturedAtUtcMillis: 0,
-          rows: [_row('jobs', {'id': 'large', 'notes': ''.padRight(300000, 'x')})],
+          rows: [
+            _row('jobs', {'id': 'large', 'notes': ''.padRight(300000, 'x')}),
+          ],
         ),
         throwsA(isA<FormatException>()),
       );
@@ -133,9 +142,7 @@ void main() {
         throwsA(isA<FormatException>()),
       );
 
-      final duplicateRows = _record('jobs', [
-        const MapEntry('id', 'same'),
-      ]);
+      final duplicateRows = _record('jobs', [const MapEntry('id', 'same')]);
       await expectLater(
         BackupArchiveCodec.decode(_archive([duplicateRows, duplicateRows])),
         throwsA(isA<FormatException>()),
@@ -154,152 +161,186 @@ void main() {
       );
     });
 
-    test('rejects duplicated, corrupt, truncated, and unreferenced media', () async {
-      final duplicateColumn = _record(
-        'task_attachments',
-        [const MapEntry('id', 'attachment-1')],
-        blobs: [
-          _blobDescriptor('blob-a', 'data'),
-          _blobDescriptor('blob-b', 'data'),
-        ],
-      );
-      await expectLater(
-        BackupArchiveCodec.decode(_archive([duplicateColumn])),
-        throwsA(isA<FormatException>()),
-      );
+    test(
+      'rejects duplicated, corrupt, truncated, and unreferenced media',
+      () async {
+        final duplicateColumn = _record(
+          'task_attachments',
+          [const MapEntry('id', 'attachment-1')],
+          blobs: [
+            _blobDescriptor('blob-a', 'data'),
+            _blobDescriptor('blob-b', 'data'),
+          ],
+        );
+        await expectLater(
+          BackupArchiveCodec.decode(_archive([duplicateColumn])),
+          throwsA(isA<FormatException>()),
+        );
 
-      final valid = await BackupArchiveCodec.encode(
-        schemaVersion: 15,
-        stateVersion: 0,
-        capturedAtUtcMillis: 0,
-        rows: [
-          _row('task_attachments', {'id': 'attachment-1'}, blobs: [
-            BackupArchiveBlob(
-              id: 'blob-a',
-              column: 'data',
-              bytes: Uint8List.fromList([1, 2, 3]),
-            ),
-          ]),
-        ],
-      );
-      final corruptDigest = Uint8List.fromList(valid);
-      // One row record begins after the 48-byte header. The digest follows
-      // type, table, primary key, blob count, blob ID, column and length.
-      final digestOffset = 48 + 1 + 2 + 'task_attachments'.length + 2 +
-          2 + 'id'.length + 1 + 4 + 'attachment-1'.length + 2 + 2 +
-          'blob-a'.length + 2 + 'data'.length + 4;
-      corruptDigest[digestOffset] ^= 1;
-      await expectLater(
-        BackupArchiveCodec.decode(corruptDigest),
-        throwsA(isA<FormatException>()),
-      );
-
-      await expectLater(
-        BackupArchiveCodec.decode(Uint8List.sublistView(valid, 0, valid.length - 1)),
-        throwsA(isA<FormatException>()),
-      );
-      final unreferencedMedia = _archive(
-        [_record('jobs', [const MapEntry('id', 'job-1')])],
-        media: [7],
-      );
-      await expectLater(
-        BackupArchiveCodec.decode(unreferencedMedia),
-        throwsA(isA<FormatException>()),
-      );
-    });
-
-    test('validates revision links and detects cycles without recursion', () async {
-      final validDag = <BackupArchiveRow>[
-        _row('entity_revisions', {
-          'id': 'rev-1',
-          'kind': 'job',
-          'entity_id': 'job-1',
-        }),
-        _row('entity_revisions', {
-          'id': 'rev-2',
-          'kind': 'job',
-          'entity_id': 'job-1',
-        }),
-        _row('revision_parents', {
-          'revision_id': 'rev-2',
-          'parent_id': 'rev-1',
-        }),
-        _row('entity_heads', {
-          'kind': 'job',
-          'entity_id': 'job-1',
-          'revision_id': 'rev-2',
-        }),
-      ];
-      final validBytes = await BackupArchiveCodec.encode(
-        schemaVersion: 15,
-        stateVersion: 0,
-        capturedAtUtcMillis: 0,
-        rows: validDag,
-      );
-      expect(await BackupArchiveCodec.decode(validBytes), isA<BackupArchive>());
-
-      final cycle = <BackupArchiveRow>[
-        _row('entity_revisions', {
-          'id': 'rev-1',
-          'kind': 'job',
-          'entity_id': 'job-1',
-        }),
-        _row('entity_revisions', {
-          'id': 'rev-2',
-          'kind': 'job',
-          'entity_id': 'job-1',
-        }),
-        _row('revision_parents', {
-          'revision_id': 'rev-1',
-          'parent_id': 'rev-2',
-        }),
-        _row('revision_parents', {
-          'revision_id': 'rev-2',
-          'parent_id': 'rev-1',
-        }),
-        _row('entity_heads', {
-          'kind': 'job',
-          'entity_id': 'job-1',
-          'revision_id': 'rev-1',
-        }),
-      ];
-      await expectLater(
-        BackupArchiveCodec.encode(
+        final valid = await BackupArchiveCodec.encode(
           schemaVersion: 15,
           stateVersion: 0,
           capturedAtUtcMillis: 0,
-          rows: cycle,
-        ),
-        throwsA(isA<FormatException>()),
-      );
+          rows: [
+            _row(
+              'task_attachments',
+              {'id': 'attachment-1'},
+              blobs: [
+                BackupArchiveBlob(
+                  id: 'blob-a',
+                  column: 'data',
+                  bytes: Uint8List.fromList([1, 2, 3]),
+                ),
+              ],
+            ),
+          ],
+        );
+        final corruptDigest = Uint8List.fromList(valid);
+        // One row record begins after the 48-byte header. The digest follows
+        // type, table, primary key, blob count, blob ID, column and length.
+        final digestOffset =
+            48 +
+            1 +
+            2 +
+            'task_attachments'.length +
+            2 +
+            2 +
+            'id'.length +
+            1 +
+            4 +
+            'attachment-1'.length +
+            2 +
+            2 +
+            'blob-a'.length +
+            2 +
+            'data'.length +
+            4;
+        corruptDigest[digestOffset] ^= 1;
+        await expectLater(
+          BackupArchiveCodec.decode(corruptDigest),
+          throwsA(isA<FormatException>()),
+        );
 
-      const depth = 1200;
-      final deep = <BackupArchiveRow>[
-        for (var index = 0; index < depth; index++)
+        await expectLater(
+          BackupArchiveCodec.decode(
+            Uint8List.sublistView(valid, 0, valid.length - 1),
+          ),
+          throwsA(isA<FormatException>()),
+        );
+        final unreferencedMedia = _archive(
+          [
+            _record('jobs', [const MapEntry('id', 'job-1')]),
+          ],
+          media: [7],
+        );
+        await expectLater(
+          BackupArchiveCodec.decode(unreferencedMedia),
+          throwsA(isA<FormatException>()),
+        );
+      },
+    );
+
+    test(
+      'validates revision links and detects cycles without recursion',
+      () async {
+        final validDag = <BackupArchiveRow>[
           _row('entity_revisions', {
-            'id': 'rev-$index',
+            'id': 'rev-1',
             'kind': 'job',
             'entity_id': 'job-1',
           }),
-        for (var index = 1; index < depth; index++)
-          _row('revision_parents', {
-            'revision_id': 'rev-$index',
-            'parent_id': 'rev-${index - 1}',
+          _row('entity_revisions', {
+            'id': 'rev-2',
+            'kind': 'job',
+            'entity_id': 'job-1',
           }),
-        _row('entity_heads', {
-          'kind': 'job',
-          'entity_id': 'job-1',
-          'revision_id': 'rev-${depth - 1}',
-        }),
-      ];
-      final deepBytes = await BackupArchiveCodec.encode(
-        schemaVersion: 15,
-        stateVersion: 0,
-        capturedAtUtcMillis: 0,
-        rows: deep,
-      );
-      expect((await BackupArchiveCodec.decode(deepBytes)).rows.length, deep.length);
-    });
+          _row('revision_parents', {
+            'revision_id': 'rev-2',
+            'parent_id': 'rev-1',
+          }),
+          _row('entity_heads', {
+            'kind': 'job',
+            'entity_id': 'job-1',
+            'revision_id': 'rev-2',
+          }),
+        ];
+        final validBytes = await BackupArchiveCodec.encode(
+          schemaVersion: 15,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: validDag,
+        );
+        expect(
+          await BackupArchiveCodec.decode(validBytes),
+          isA<BackupArchive>(),
+        );
+
+        final cycle = <BackupArchiveRow>[
+          _row('entity_revisions', {
+            'id': 'rev-1',
+            'kind': 'job',
+            'entity_id': 'job-1',
+          }),
+          _row('entity_revisions', {
+            'id': 'rev-2',
+            'kind': 'job',
+            'entity_id': 'job-1',
+          }),
+          _row('revision_parents', {
+            'revision_id': 'rev-1',
+            'parent_id': 'rev-2',
+          }),
+          _row('revision_parents', {
+            'revision_id': 'rev-2',
+            'parent_id': 'rev-1',
+          }),
+          _row('entity_heads', {
+            'kind': 'job',
+            'entity_id': 'job-1',
+            'revision_id': 'rev-1',
+          }),
+        ];
+        await expectLater(
+          BackupArchiveCodec.encode(
+            schemaVersion: 15,
+            stateVersion: 0,
+            capturedAtUtcMillis: 0,
+            rows: cycle,
+          ),
+          throwsA(isA<FormatException>()),
+        );
+
+        const depth = 1200;
+        final deep = <BackupArchiveRow>[
+          for (var index = 0; index < depth; index++)
+            _row('entity_revisions', {
+              'id': 'rev-$index',
+              'kind': 'job',
+              'entity_id': 'job-1',
+            }),
+          for (var index = 1; index < depth; index++)
+            _row('revision_parents', {
+              'revision_id': 'rev-$index',
+              'parent_id': 'rev-${index - 1}',
+            }),
+          _row('entity_heads', {
+            'kind': 'job',
+            'entity_id': 'job-1',
+            'revision_id': 'rev-${depth - 1}',
+          }),
+        ];
+        final deepBytes = await BackupArchiveCodec.encode(
+          schemaVersion: 15,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: deep,
+        );
+        expect(
+          (await BackupArchiveCodec.decode(deepBytes)).rows.length,
+          deep.length,
+        );
+      },
+    );
 
     test('gates location range tombstones on their schema version', () async {
       expect(
@@ -315,7 +356,9 @@ void main() {
           schemaVersion: 15,
           stateVersion: 0,
           capturedAtUtcMillis: 0,
-          rows: [_row('location_deletion_ranges', {'id': 'range-1'})],
+          rows: [
+            _row('location_deletion_ranges', {'id': 'range-1'}),
+          ],
         ),
         throwsA(isA<FormatException>()),
       );
@@ -330,11 +373,13 @@ BackupArchiveRow _row(
 }) => BackupArchiveRow(table: table, values: values, blobs: blobs);
 
 Future<Uint8List> _encodeJob() => BackupArchiveCodec.encode(
-      schemaVersion: 15,
-      stateVersion: 1,
-      capturedAtUtcMillis: 2,
-      rows: [_row('jobs', {'id': 'job-1'})],
-    );
+  schemaVersion: 15,
+  stateVersion: 1,
+  capturedAtUtcMillis: 2,
+  rows: [
+    _row('jobs', {'id': 'job-1'}),
+  ],
+);
 
 _TestBlobDescriptor _blobDescriptor(String id, String column) =>
     _TestBlobDescriptor(id, column, 0, List.filled(32, 0));

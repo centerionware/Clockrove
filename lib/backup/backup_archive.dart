@@ -39,11 +39,11 @@ abstract final class BackupArchiveCodec {
   /// The allowlist must stay synchronized with the native snapshot contract.
   static Set<String> get portableTables => _tables.keys.toSet();
 
-  static Set<String> portableTablesForSchema(int schemaVersion) =>
-      _tables.values
-          .where((table) => table.minSchemaVersion <= schemaVersion)
-          .map((table) => table.name)
-          .toSet();
+  static Set<String> portableTablesForSchema(int schemaVersion) => _tables
+      .values
+      .where((table) => table.minSchemaVersion <= schemaVersion)
+      .map((table) => table.name)
+      .toSet();
 
   static const List<BackupTableSchema> _tableDefinitions = [
     BackupTableSchema('actual_costs', ['id']),
@@ -139,7 +139,9 @@ abstract final class BackupArchiveCodec {
       _validateRow(row, schemaVersion);
       blobCount += row.blobs.length;
       if (blobCount > maxBlobs) {
-        throw const FormatException('The backup contains too many media files.');
+        throw const FormatException(
+          'The backup contains too many media files.',
+        );
       }
 
       final valueKeys = row.values.keys.toList()..sort();
@@ -286,7 +288,9 @@ abstract final class BackupArchiveCodec {
     }
     for (var index = 0; index < _magic.length; index++) {
       if (input[index] != _magic[index]) {
-        throw const FormatException('This is not a supported Clockrove archive.');
+        throw const FormatException(
+          'This is not a supported Clockrove archive.',
+        );
       }
     }
 
@@ -301,7 +305,8 @@ abstract final class BackupArchiveCodec {
     final recordsLength = header.getUint32(40, Endian.big);
     final mediaLength = header.getUint32(44, Endian.big);
 
-    if (formatVersion != currentFormatVersion || headerLength != _headerLength) {
+    if (formatVersion != currentFormatVersion ||
+        headerLength != _headerLength) {
       throw const FormatException('This backup format is not supported.');
     }
     _validateMetadata(
@@ -313,14 +318,17 @@ abstract final class BackupArchiveCodec {
       maxBlobs: maxBlobs,
       maxSchemaVersion: maxSchemaVersion,
     );
-    if (rowCount > maxRows || blobCount > maxBlobs ||
+    if (rowCount > maxRows ||
+        blobCount > maxBlobs ||
         _headerLength + recordsLength + mediaLength != input.length) {
       throw const FormatException('This backup has invalid size metadata.');
     }
 
     final recordStart = _headerLength;
     final recordEnd = recordStart + recordsLength;
-    final reader = _ArchiveReader(Uint8List.sublistView(input, recordStart, recordEnd));
+    final reader = _ArchiveReader(
+      Uint8List.sublistView(input, recordStart, recordEnd),
+    );
     final rows = <BackupArchiveRow>[];
     final descriptors = <_BlobDescriptor>[];
     final primaryKeys = <String, Set<String>>{};
@@ -331,12 +339,16 @@ abstract final class BackupArchiveCodec {
       final rowStart = reader.offset;
       reader.beginRecord(rowStart, maxRecordBytes);
       if (reader.readByte() != 1) {
-        throw const FormatException('This backup contains an unknown record type.');
+        throw const FormatException(
+          'This backup contains an unknown record type.',
+        );
       }
       final table = reader.readShortString(maximumBytes: maxRecordBytes);
       final schema = _tables[table];
       if (schema == null || schema.minSchemaVersion > schemaVersion) {
-        throw FormatException('The backup contains unsupported table "$table".');
+        throw FormatException(
+          'The backup contains unsupported table "$table".',
+        );
       }
 
       final valueCount = reader.readUint16();
@@ -383,7 +395,11 @@ abstract final class BackupArchiveCodec {
         reader.ensureWithin(rowStart, maxRecordBytes);
       }
 
-      final row = BackupArchiveRow(table: table, values: values, blobs: const []);
+      final row = BackupArchiveRow(
+        table: table,
+        values: values,
+        blobs: const [],
+      );
       _validateRow(row, schemaVersion);
       final primaryKey = _primaryKey(row);
       if (!primaryKeys.putIfAbsent(table, () => {}).add(primaryKey)) {
@@ -398,7 +414,9 @@ abstract final class BackupArchiveCodec {
       reader.endRecord();
     }
     if (!reader.isAtEnd || descriptors.length != blobCount) {
-      throw const FormatException('This backup has inconsistent record counts.');
+      throw const FormatException(
+        'This backup has inconsistent record counts.',
+      );
     }
 
     final mediaStart = recordEnd;
@@ -411,18 +429,26 @@ abstract final class BackupArchiveCodec {
           throw const FormatException('A backup media file is truncated.');
         }
         final bytes = Uint8List.fromList(
-          Uint8List.sublistView(input, mediaOffset, mediaOffset + descriptor.length),
+          Uint8List.sublistView(
+            input,
+            mediaOffset,
+            mediaOffset + descriptor.length,
+          ),
         );
         final digest = await const Sha256().hash(bytes);
         if (!_constantTimeBytesEqual(digest.bytes, descriptor.hash)) {
-          throw const FormatException('A backup media file failed its checksum.');
+          throw const FormatException(
+            'A backup media file failed its checksum.',
+          );
         }
         mediaOffset += descriptor.length;
-        blobs.add(BackupArchiveBlob(
-          id: descriptor.id,
-          column: descriptor.column,
-          bytes: bytes,
-        ));
+        blobs.add(
+          BackupArchiveBlob(
+            id: descriptor.id,
+            column: descriptor.column,
+            bytes: bytes,
+          ),
+        );
       }
       rows[rowIndex] = BackupArchiveRow(
         table: rows[rowIndex].table,
@@ -431,7 +457,9 @@ abstract final class BackupArchiveCodec {
       );
     }
     if (mediaOffset != mediaEnd) {
-      throw const FormatException('This backup contains unreferenced media data.');
+      throw const FormatException(
+        'This backup contains unreferenced media data.',
+      );
     }
 
     _validateRevisionGraph(rows);
@@ -453,13 +481,19 @@ abstract final class BackupArchiveCodec {
     required int maxBlobs,
     int maxSchemaVersion = latestSchemaVersion,
   }) {
-    if (schemaVersion < 1 || schemaVersion > maxSchemaVersion ||
-        schemaVersion > 0xffffffff || stateVersion < 0 ||
-        stateVersion > _maxInt64 || capturedAtUtcMillis < 0 ||
+    if (schemaVersion < 1 ||
+        schemaVersion > maxSchemaVersion ||
+        schemaVersion > 0xffffffff ||
+        stateVersion < 0 ||
+        stateVersion > _maxInt64 ||
+        capturedAtUtcMillis < 0 ||
         capturedAtUtcMillis > _maxInt64 ||
-        maxBytes < _headerLength || maxBytes > maxArchiveBytes ||
-        maxRows < 0 || maxRows > maxRecords ||
-        maxBlobs < 0 || maxBlobs > maxMediaCount) {
+        maxBytes < _headerLength ||
+        maxBytes > maxArchiveBytes ||
+        maxRows < 0 ||
+        maxRows > maxRecords ||
+        maxBlobs < 0 ||
+        maxBlobs > maxMediaCount) {
       throw const FormatException('This backup uses unsupported metadata.');
     }
   }
@@ -467,26 +501,39 @@ abstract final class BackupArchiveCodec {
   static void _validateRow(BackupArchiveRow row, int schemaVersion) {
     final schema = _tables[row.table];
     if (schema == null || schema.minSchemaVersion > schemaVersion) {
-      throw FormatException('The backup contains unsupported table "${row.table}".');
+      throw FormatException(
+        'The backup contains unsupported table "${row.table}".',
+      );
     }
     for (final key in row.values.keys) {
       if (key.isEmpty || key.length > 128 || key.contains('\u0000')) {
         throw const FormatException('A backup column name is invalid.');
       }
       final value = row.values[key];
-      if (value != null && value is! int && value is! double && value is! String) {
-        throw const FormatException('A backup record contains an unsupported value.');
+      if (value != null &&
+          value is! int &&
+          value is! double &&
+          value is! String) {
+        throw const FormatException(
+          'A backup record contains an unsupported value.',
+        );
       }
       if (value is int && (value < _minInt64 || value > _maxInt64)) {
-        throw const FormatException('A backup integer is outside SQLite range.');
+        throw const FormatException(
+          'A backup integer is outside SQLite range.',
+        );
       }
       if (value is double && !value.isFinite) {
-        throw const FormatException('A backup record contains an invalid number.');
+        throw const FormatException(
+          'A backup record contains an invalid number.',
+        );
       }
     }
     for (final key in schema.primaryKey) {
       if (!row.values.containsKey(key) || row.values[key] == null) {
-        throw FormatException('A ${row.table} record is missing its primary key.');
+        throw FormatException(
+          'A ${row.table} record is missing its primary key.',
+        );
       }
     }
     final seenColumns = <String>{};
@@ -498,7 +545,8 @@ abstract final class BackupArchiveCodec {
       }
     }
     for (final blob in row.blobs) {
-      if (blob.id.isEmpty || !seenColumns.add(blob.column) ||
+      if (blob.id.isEmpty ||
+          !seenColumns.add(blob.column) ||
           !schema.blobColumns.contains(blob.column) ||
           row.values.containsKey(blob.column)) {
         throw FormatException('A ${row.table} media reference is invalid.');
@@ -520,7 +568,9 @@ abstract final class BackupArchiveCodec {
     for (final row in rows.where((row) => row.table == 'entity_revisions')) {
       final id = row.values['id'];
       if (id is! String || id.isEmpty) {
-        throw const FormatException('The backup contains an invalid revision ID.');
+        throw const FormatException(
+          'The backup contains an invalid revision ID.',
+        );
       }
       revisions[id] = row.values;
     }
@@ -528,9 +578,14 @@ abstract final class BackupArchiveCodec {
     for (final row in rows.where((row) => row.table == 'revision_parents')) {
       final revision = row.values['revision_id'];
       final parent = row.values['parent_id'];
-      if (revision is! String || parent is! String || revision == parent ||
-          !revisions.containsKey(revision) || !revisions.containsKey(parent)) {
-        throw const FormatException('The backup contains an invalid revision link.');
+      if (revision is! String ||
+          parent is! String ||
+          revision == parent ||
+          !revisions.containsKey(revision) ||
+          !revisions.containsKey(parent)) {
+        throw const FormatException(
+          'The backup contains an invalid revision link.',
+        );
       }
       parents.putIfAbsent(revision, () => {}).add(parent);
     }
@@ -540,9 +595,14 @@ abstract final class BackupArchiveCodec {
       final entity = row.values['entity_id'];
       final revision = row.values['revision_id'];
       final revisionRow = revision is String ? revisions[revision] : null;
-      if (kind is! String || entity is! String || revisionRow == null ||
-          revisionRow['kind'] != kind || revisionRow['entity_id'] != entity) {
-        throw const FormatException('The backup contains an invalid revision head.');
+      if (kind is! String ||
+          entity is! String ||
+          revisionRow == null ||
+          revisionRow['kind'] != kind ||
+          revisionRow['entity_id'] != entity) {
+        throw const FormatException(
+          'The backup contains an invalid revision head.',
+        );
       }
       heads.add(revision);
     }
@@ -576,7 +636,9 @@ abstract final class BackupArchiveCodec {
       throw const FormatException('The backup contains a revision cycle.');
     }
     if (revisions.isNotEmpty && heads.isEmpty) {
-      throw const FormatException('The backup has revisions without entity heads.');
+      throw const FormatException(
+        'The backup has revisions without entity heads.',
+      );
     }
   }
 
@@ -589,7 +651,9 @@ abstract final class BackupArchiveCodec {
       builder.add(bytes.buffer.asUint8List());
     } else if (value is double) {
       if (!value.isFinite) {
-        throw const FormatException('A backup record contains an invalid number.');
+        throw const FormatException(
+          'A backup record contains an invalid number.',
+        );
       }
       builder.addByte(2);
       final bytes = ByteData(8)..setFloat64(0, value, Endian.big);
@@ -600,7 +664,9 @@ abstract final class BackupArchiveCodec {
       _writeUint32(builder, bytes.length);
       builder.add(bytes);
     } else {
-      throw const FormatException('A backup record contains an unsupported value.');
+      throw const FormatException(
+        'A backup record contains an unsupported value.',
+      );
     }
   }
 
@@ -645,7 +711,9 @@ abstract final class BackupArchiveCodec {
     if (value == null) return 1;
     if (value is int || value is double) return 9;
     if (value is String) return 5 + _utf8Length(value, maxRecordBytes);
-    throw const FormatException('A backup record contains an unsupported value.');
+    throw const FormatException(
+      'A backup record contains an unsupported value.',
+    );
   }
 
   static int _utf8Length(String value, int maximum) {
@@ -656,7 +724,8 @@ abstract final class BackupArchiveCodec {
         bytes++;
       } else if (unit <= 0x7ff) {
         bytes += 2;
-      } else if (unit >= 0xd800 && unit <= 0xdbff &&
+      } else if (unit >= 0xd800 &&
+          unit <= 0xdbff &&
           index + 1 < value.length &&
           value.codeUnitAt(index + 1) >= 0xdc00 &&
           value.codeUnitAt(index + 1) <= 0xdfff) {
@@ -801,7 +870,9 @@ final class _ArchiveReader {
     return result;
   }
 
-  String readShortString({int maximumBytes = BackupArchiveCodec.maxRecordBytes}) {
+  String readShortString({
+    int maximumBytes = BackupArchiveCodec.maxRecordBytes,
+  }) {
     final length = readUint16();
     if (length > maximumBytes) {
       throw const FormatException('A backup record is too large.');
@@ -809,7 +880,9 @@ final class _ArchiveReader {
     return utf8.decode(readBytes(length), allowMalformed: false);
   }
 
-  Object? readValue({int maximumStringBytes = BackupArchiveCodec.maxRecordBytes}) {
+  Object? readValue({
+    int maximumStringBytes = BackupArchiveCodec.maxRecordBytes,
+  }) {
     switch (readByte()) {
       case 0:
         return null;
@@ -823,7 +896,9 @@ final class _ArchiveReader {
         final result = _data.getFloat64(offset, Endian.big);
         offset += 8;
         if (!result.isFinite) {
-          throw const FormatException('A backup record contains an invalid number.');
+          throw const FormatException(
+            'A backup record contains an invalid number.',
+          );
         }
         return result;
       case 3:
@@ -833,7 +908,9 @@ final class _ArchiveReader {
         }
         return utf8.decode(readBytes(length), allowMalformed: false);
       default:
-        throw const FormatException('A backup record has an unknown value type.');
+        throw const FormatException(
+          'A backup record has an unknown value type.',
+        );
     }
   }
 
@@ -905,7 +982,9 @@ final class _ArchiveWriter {
       writeUint32(encoded.length);
       writeBytes(encoded);
     } else {
-      throw const FormatException('A backup record contains an unsupported value.');
+      throw const FormatException(
+        'A backup record contains an unsupported value.',
+      );
     }
   }
 
