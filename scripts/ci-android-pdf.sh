@@ -190,14 +190,16 @@ done
   bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
   # Run last because Flutter integration_test can reinstall the target app;
   # all native product journeys and their result pulls must be complete first.
-  # This records KDF/AES-GCM timings on minimum/current API emulators without
-  # setting a flaky speed threshold.
+  # This records v1 KDF/AES-GCM and v2 maximum-size stream timings/memory on
+  # minimum/current API emulators without a flaky speed threshold.
   clockrove_benchmark_log="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-crypto-benchmark.txt"
   if clockrove_run_flutter_integration_test "$clockrove_api" backup-crypto-benchmark \
     'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
     -- flutter test --no-pub integration_test/backup_crypto_benchmark_test.dart \
     -d emulator-5554 --reporter expanded > "$clockrove_benchmark_log" 2>&1; then
     cat "$clockrove_benchmark_log"
+    grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134601 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
+      "$clockrove_benchmark_log"
   else
     clockrove_benchmark_status=$?
     cat "$clockrove_benchmark_log"

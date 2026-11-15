@@ -90,6 +90,160 @@ copy, so later committed edits neither block on nor alter a running export.
 Export never stops, closes, or starts a timer. Open sessions remain provisional
 rows; restore preview must require an explicit omit or close-time choice.
 
+## Streaming encrypted envelope v2 proposal
+
+This section is a wire-contract proposal, not an implemented or accepted format.
+Envelope version 2 carries one complete archive byte stream. The inner archive
+format remains independently versioned. Version 1 (`CLKROVE1`) files keep their
+current reader unchanged; readers dispatch by the eight-byte magic, and a file
+identified as v2 must never fall back to the v1 reader after a parse or
+authentication failure. Once v2 export is enabled, new exports use v2 while
+both readers remain available.
+
+### Fixed header
+
+All multibyte integers are unsigned big-endian. The header is exactly 64 bytes;
+unknown IDs, nonzero reserved bytes, alternate lengths, or noncanonical
+parameters fail before password derivation.
+
+| Offset | Bytes | Field | Required value |
+| --- | ---: | --- | --- |
+| 0 | 8 | Magic | ASCII `CLKROVE2` |
+| 8 | 2 | Envelope version | 2 |
+| 10 | 2 | Header length | 64 |
+| 12 | 1 | KDF ID | 1 = Argon2id |
+| 13 | 1 | Cipher ID | 1 = AES-256-GCM |
+| 14 | 1 | Nonce scheme ID | 1 = frame type plus sequence |
+| 15 | 1 | Reserved | 0 |
+| 16 | 4 | Argon2id memory, KiB | 19,456 |
+| 20 | 4 | Argon2id iterations | 2 |
+| 24 | 1 | Argon2id parallelism | 1 |
+| 25 | 1 | Salt length | 16 |
+| 26 | 1 | GCM tag length | 16 |
+| 27 | 1 | Reserved | 0 |
+| 28 | 4 | Plaintext bytes per data frame | 65,536 |
+| 32 | 4 | Maximum archive plaintext bytes | 67,108,864 |
+| 36 | 4 | Maximum data-frame count | 1,024 |
+| 40 | 16 | Random Argon2id salt | New cryptographically random value per file |
+| 56 | 8 | Reserved | All zero |
+
+The password is encoded as UTF-8 with the existing 12–1,024-byte bounds.
+Argon2id runs once per backup operation with the fixed profile above and returns
+one 32-byte AES key. The header is validated against fixed limits before this
+memory-hard operation; values from a file never raise those limits. Each file
+gets a fresh 16-byte salt. Key material is never persisted and its local
+references are released when the operation exits.
+
+### Frames and authentication
+
+Each frame is a 9-byte header followed by ciphertext and a 16-byte GCM tag. The
+frame header is: type (1 byte), sequence (4 bytes), and plaintext length
+(4 bytes). Data type is `0x01`; final-manifest type is `0x7f`. The length is the
+plaintext/ciphertext byte count and excludes the tag. The 96-bit GCM nonce is
+the frame type encoded as a big-endian uint32 followed by the sequence encoded
+as a big-endian uint64. The sequence and type combination is unique within the
+file key: data frames use sequences `0` through `count - 1`; the manifest uses
+sequence `count` with its distinct frame type.
+
+For every frame, AES-GCM associated data is the exact 64-byte file header
+concatenated with that frame's exact 9-byte header. This authenticates the KDF
+profile, salt, limits, frame type, order and length. Each data frame is
+independently authenticated. Non-final data frames must contain exactly 65,536
+plaintext bytes; the last contains 1–65,536 bytes. Empty archives are rejected.
+The reader requires contiguous data sequence numbers beginning at zero and no
+more than 1,024 data frames. Unknown frame types, duplicate/reordered frames,
+short non-final frames, over-limit lengths, or trailing bytes are rejected.
+
+Exactly one final-manifest frame must follow the data frames. Its 48-byte
+plaintext is `END2` (four ASCII bytes), data-frame count (uint32), total archive
+plaintext bytes (uint64), and SHA-256 of the complete inner archive byte stream
+(32 bytes). The manifest is encrypted and authenticated using the final-frame
+type, the next sequence number, and the same associated-data rule. The reader
+requires its count, byte total and digest to match the observed stream, then
+requires end-of-file. A missing manifest, truncation, duplicate, reordering,
+extension, altered header, altered frame, or bad tag fails the whole import.
+Wrong-password and authentication failures use the same user-facing unlock
+error; unsupported versions or unsafe fixed-header parameters may be reported
+before deriving a key.
+
+With the 64 MiB archive ceiling, the maximum encoded v2 file is 67,134,601
+bytes: 64 header bytes, 67,108,864 payload bytes, at most 1,024 data-frame
+headers/tags, and the 73-byte final frame. This bound is checked before staging
+or allocating according to file-supplied sizes.
+
+### Bounded serialization, staging and restore
+
+Chunking the encrypted file alone is insufficient: v1's current Dart encoder,
+`BackupSnapshotExporter`, and `BackupCrypto.encrypt` retain whole collections
+or whole-file buffers. A v2 implementation must not build a `List` of all
+rows/media or a whole archive/envelope `Uint8List`. It processes at most one
+bounded record and one 65,536-byte plaintext/ciphertext frame at a time, plus
+the existing bounded method-channel transfer. Total archive and frame counts
+are checked as bytes are emitted.
+
+The proposed writer streams the existing inner archive format where possible.
+Because that format has record/media lengths in its header and puts media after
+all records, its encoder must preflight a repeatable immutable native snapshot
+with bounded per-record state (including streamed blob hashes), then traverse
+the same snapshot again to emit the header, records and media into the v2 frame
+writer. Both passes must use the snapshot ID and captured state version returned
+by the original start call; they must verify those identifiers match on every
+page. App writes after snapshot creation do not invalidate or abort export,
+because the detached snapshot is immutable. Global revision-graph validation
+must use bounded/disk-backed state.
+If those guarantees cannot be made, define a separately versioned streaming
+archive payload rather than collecting every row to reproduce v1 ordering.
+The import side adds a bounded reader for the inner archive; the existing
+whole-buffer v1 APIs remain available for compatibility fixtures and old files.
+
+Export keeps the native snapshot detached and app-private while bytes stream to
+the selected document. It does not report success until the final manifest,
+flush and close succeed. Cancellation, size-limit failure, channel failure,
+snapshot-handle expiry or destination-write failure closes the snapshot and
+removes private staging. Concurrent app writes are allowed and do not cancel
+the detached export. Destination deletion is attempted after a partial SAF
+write; when a document provider refuses deletion, the UI must say the file may
+be incomplete and must not report a successful backup.
+
+Import is two-pass so the complete envelope is authenticated before archive
+parsing, preserving the v1 safety boundary. Pass one reads sequentially,
+authenticates every frame, checks the end manifest and rejects trailing data;
+it does not decode archive records. Pass two reopens the source, rechecks every
+frame and feeds authenticated plaintext chunks to a bounded archive parser. The
+parser streams decoded rows/media into an uncommitted, detached, app-private
+import staging database/files. If the picked document cannot be reopened, keep
+a bounded private copy of the encrypted file and use it for both passes. Never
+stage decrypted whole-archive bytes on disk. Staged rows/media and partial
+conflict results remain invisible to preview and restore APIs until the full
+second pass, archive validation and native staging checks succeed and the stage
+is explicitly sealed by the transactional sink. Any error or cancellation
+discards the whole stage.
+
+Commit rechecks the preview token and captured local state version, applies all
+selected merge choices in one native database transaction, and rolls back the
+entire merge on any error. It never starts a timer or enables imported
+automation. Discard/cancel closes snapshot/import handles and removes every
+private staging file. Expiry and next-start cleanup cover process death; the
+user-selected encrypted source file is never modified or deleted.
+
+### Required v2 evidence before enabling export
+
+- Keep v1 golden files readable, including wrong-password and tamper cases.
+- Add exact v2 framing vectors and round-trips at 1 byte, frame boundaries,
+  multiple frames and the full 64 MiB archive limit.
+- Reject changed header/KDF fields before KDF work, wrong passwords, invalid
+  tags, duplicate/reordered/missing/truncated frames, bad manifest totals/digest,
+  trailing bytes and unsupported inner schemas.
+- Verify cancel/failure cleanup for both passes, no preview/apply before full
+  authentication, local-version changes before commit, and atomic rollback.
+- On GitHub Actions, run maximum-size end-to-end export and restore on API 24 and
+  API 35. Record peak `VmHWM` before/after; incremental peak RSS must stay at or
+  below 64 MiB on each API. Also assert that no Dart buffer grows with total
+  archive size, report elapsed time, and verify no private staging remains after
+  success, cancellation, corruption or process restart.
+- Keep the Settings export/restore route withheld until these exact-head checks
+  pass. No VM build, test, format or analyzer run is permitted.
+
 ## Portable dataset allowlist
 
 Only these table names are emitted:
