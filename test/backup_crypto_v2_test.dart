@@ -302,77 +302,74 @@ void main() {
     },
   );
 
-  test(
-    'token cancels a stalled encrypt read before sink discard',
-    () async {
-      final sourceListening = Completer<void>();
-      final sourceCancellationStarted = Completer<void>();
-      final finishSourceCancellation = Completer<void>();
-      var sourceCancelled = false;
-      final archive = StreamController<List<int>>(
-        onListen: () => sourceListening.complete(),
-        onCancel: () async {
-          sourceCancellationStarted.complete();
-          await finishSourceCancellation.future;
-          sourceCancelled = true;
-        },
-      );
-      final token = BackupCryptoCancellationToken();
-      var sourceCancelledBeforeDiscard = false;
-      final destination = _MemorySink(
-        onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
-      );
-      final encryption = BackupCryptoV2.encrypt(
-        password: _password,
-        archive: archive.stream,
-        destination: destination,
-        cancellationToken: token,
-      );
-      final encryptionExpectation = expectLater(
-        encryption,
-        throwsA(isA<BackupCryptoV2CancelledException>()),
-      );
+  test('token cancels a stalled encrypt read before sink discard', () async {
+    final sourceListening = Completer<void>();
+    final sourceCancellationStarted = Completer<void>();
+    final finishSourceCancellation = Completer<void>();
+    var sourceCancelled = false;
+    final archive = StreamController<List<int>>(
+      onListen: () => sourceListening.complete(),
+      onCancel: () async {
+        sourceCancellationStarted.complete();
+        await finishSourceCancellation.future;
+        sourceCancelled = true;
+      },
+    );
+    final token = BackupCryptoCancellationToken();
+    var sourceCancelledBeforeDiscard = false;
+    final destination = _MemorySink(
+      onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
+    );
+    final encryption = BackupCryptoV2.encrypt(
+      password: _password,
+      archive: archive.stream,
+      destination: destination,
+      cancellationToken: token,
+    );
+    final encryptionExpectation = expectLater(
+      encryption,
+      throwsA(isA<BackupCryptoV2CancelledException>()),
+    );
 
-      try {
-        await _waitForTestSignal(sourceListening.future, 'source subscription');
-        expect(destination.bytes, isNotEmpty);
-        token.cancel();
-        await _waitForTestSignal(
-          sourceCancellationStarted.future,
-          'upstream cancellation start',
-        );
-        expect(destination.discarded, isFalse);
-        expect(destination.committed, isFalse);
-        expect(destination.visibleBytes, isNull);
-        finishSourceCancellation.complete();
-        await _waitForTestSignal(
-          encryptionExpectation,
-          'encryption cancellation completion',
-        );
-      } finally {
-        token.cancel();
-        if (!finishSourceCancellation.isCompleted) {
-          finishSourceCancellation.complete();
-        }
-        try {
-          if (archive.hasListener && !archive.isClosed) {
-            await _waitForTestSignal(archive.close(), 'source close');
-          }
-        } finally {
-          await _waitForTestSignal(
-            encryptionExpectation,
-            'encryption future cleanup',
-          );
-        }
-      }
-
-      expect(sourceCancelled, isTrue);
-      expect(sourceCancelledBeforeDiscard, isTrue);
-      expect(destination.discarded, isTrue);
+    try {
+      await _waitForTestSignal(sourceListening.future, 'source subscription');
+      expect(destination.bytes, isNotEmpty);
+      token.cancel();
+      await _waitForTestSignal(
+        sourceCancellationStarted.future,
+        'upstream cancellation start',
+      );
+      expect(destination.discarded, isFalse);
       expect(destination.committed, isFalse);
       expect(destination.visibleBytes, isNull);
-    },
-  );
+      finishSourceCancellation.complete();
+      await _waitForTestSignal(
+        encryptionExpectation,
+        'encryption cancellation completion',
+      );
+    } finally {
+      token.cancel();
+      if (!finishSourceCancellation.isCompleted) {
+        finishSourceCancellation.complete();
+      }
+      try {
+        if (archive.hasListener && !archive.isClosed) {
+          await _waitForTestSignal(archive.close(), 'source close');
+        }
+      } finally {
+        await _waitForTestSignal(
+          encryptionExpectation,
+          'encryption future cleanup',
+        );
+      }
+    }
+
+    expect(sourceCancelled, isTrue);
+    expect(sourceCancelledBeforeDiscard, isTrue);
+    expect(destination.discarded, isTrue);
+    expect(destination.committed, isFalse);
+    expect(destination.visibleBytes, isNull);
+  });
 
   test('token cancels decrypt while waiting for post-manifest EOF', () async {
     final archive = _pattern(3);

@@ -4401,3 +4401,6 @@ Exact-head Actions run [43722191441](https://github.com/centerionware/Clockrove/
 
 
 Exact-head Actions run [43724540958](https://github.com/centerionware/Clockrove/actions/runs/43724540958) on `55cbd3093f2754c78d95fd8a756159650a0583dc` failed at `Require clean formatting`. Workflow artifact `formatter-source-patch` (`format.patch`) contained the exact correction, which is applied in the successor. Analyze, Flutter behavior, build, native and device stages were skipped, so the phase-labelled stream handshake has no test result yet. The current successor removes the unreliable pause/resume callbacks and cancels after `onListen` confirms the first source read is pending; it asserts the staged header exists and retains bounded cleanup. No local formatting or tests ran.
+
+
+Exact-head Actions run [43725410495](https://github.com/centerionware/Clockrove/actions/runs/43725410495) on `b1384bb5443aab7386d783f57de131b0f12880d4` failed at `Require clean formatting`. The test did not run. Workflow artifact `formatter-source-patch` (`format.patch`) contained the exact formatting correction, applied in the successor; Analyze, behavior, build, native and device stages were skipped. No local formatting or tests ran.
