@@ -4,8 +4,9 @@ import android.content.Context
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.StandardMethodCodec
 
-/** Bounded read-only export boundary for Dart's authenticated archive writer. */
+/** Bounded export and authenticated-import staging boundary for Dart's archive flow. */
 internal class BackupHostApi(
     context: Context,
     messenger: BinaryMessenger,
@@ -25,6 +26,8 @@ internal class BackupHostApi(
                 if (response == null) result.notImplemented() else result.success(response)
             } catch (failure: BackupExportStore.Failure) {
                 result.error(failure.code, failure.message, null)
+            } catch (failure: BackupImportStore.Failure) {
+                result.error(failure.code, failure.message, null)
             } catch (_: IllegalArgumentException) {
                 result.error("INVALID_ARGUMENT", "Invalid backup request", null)
             } catch (_: ClassCastException) {
@@ -38,7 +41,7 @@ internal class BackupHostApi(
     fun detach() {
         channel.setMethodCallHandler(null)
         try {
-            repository.discardBackupSnapshot()
+            repository.discardBackupOperations()
         } catch (_: Exception) {
             // Activity teardown must continue; the next backup request retries cleanup.
         }
@@ -102,9 +105,79 @@ internal class BackupHostApi(
             "closeBackupSnapshot" -> mapOf(
                 "closed" to repository.closeBackupSnapshot(input.string("snapshotId")),
             )
+            "beginBackupImport" -> repository.beginBackupImport(
+                input.int("archiveFormatVersion"),
+                input.int("schemaVersion"),
+                input.string("archiveDigest"),
+                input.long("recordCount"),
+                input.long("mediaCount"),
+                input.long("mediaBytes"),
+            ).let { started ->
+                mapOf(
+                    "importId" to started.importId,
+                    "archiveFormatVersion" to started.archiveFormatVersion,
+                    "schemaVersion" to started.schemaVersion,
+                    "maxPageBytes" to started.maxPageBytes,
+                    "maxBlobChunkBytes" to started.maxBlobChunkBytes,
+                    "idleExpiryMillis" to started.idleExpiryMillis,
+                )
+            }
+            "appendBackupImportPage" -> mapOf(
+                "nextOrdinal" to repository.appendBackupImportPage(
+                    input.string("importId"),
+                    input.long("firstOrdinal"),
+                    input.list("records"),
+                    encodedCallBytes(call),
+                ),
+            )
+            "writeBackupImportBlob" -> mapOf(
+                "nextOffset" to repository.writeBackupImportBlob(
+                    input.string("importId"),
+                    input.string("blobId"),
+                    input.long("offset"),
+                    input.bytes("bytes"),
+                    encodedCallBytes(call),
+                ),
+            )
+            "finishBackupImport" -> repository.finishBackupImport(input.string("importId")).toWireMap()
+            "readBackupImportConflictPage" -> repository.readBackupImportConflictPage(
+                input.string("importId"),
+                input.string("previewToken"),
+                input.nullableString("cursor"),
+                input.nullableInt("maxBytes"),
+            ).let { page ->
+                mapOf(
+                    "importId" to page.importId,
+                    "previewToken" to page.previewToken,
+                    "nextCursor" to page.nextCursor,
+                    "done" to page.done,
+                    "conflicts" to page.conflicts,
+                )
+            }
+            "closeBackupImport" -> mapOf(
+                "closed" to repository.closeBackupImport(input.string("importId")),
+            )
             else -> null
         }
     }
+
+    private fun encodedCallBytes(call: MethodCall): Int = StandardMethodCodec.INSTANCE.encodeMethodCall(call).position()
+
+    private fun BackupImportStore.Preview.toWireMap(): Map<String, Any?> = mapOf(
+        "importId" to importId,
+        "previewToken" to previewToken,
+        "schemaVersion" to schemaVersion,
+        "localStateVersion" to localStateVersion,
+        "recordCount" to recordCount,
+        "mediaCount" to mediaCount,
+        "mediaBytes" to mediaBytes,
+        "addedCount" to addedCount,
+        "unchangedCount" to unchangedCount,
+        "conflictCount" to conflictCount,
+        "openSessionCount" to openSessionCount,
+        "localOpenSessionCount" to localOpenSessionCount,
+        "applyReady" to applyReady,
+    )
 
     private class Input(arguments: Any?) {
         private val values: Map<*, *> = when (arguments) {
@@ -128,6 +201,22 @@ internal class BackupHostApi(
             require(raw is Int || raw is Long)
             return (raw as Number).toLong()
         }
+
+        fun int(key: String): Int {
+            val raw = values[key]
+            require(raw is Int || raw is Long)
+            val value = (raw as Number).toLong()
+            require(value in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong())
+            return value.toInt()
+        }
+
+        fun list(key: String): List<*> = (values[key] as? List<*>)
+            ?.also { require(it.isNotEmpty() && it.size <= BackupImportStore.MAX_ROW_COUNT_PER_PAGE) }
+            ?: throw IllegalArgumentException("Missing list")
+
+        fun bytes(key: String): ByteArray = (values[key] as? ByteArray)
+            ?.also { require(it.size <= BackupImportStore.MAX_BLOB_CHUNK_BYTES) }
+            ?: throw IllegalArgumentException("Missing bytes")
 
         fun nullableInt(key: String): Int? {
             val raw = values[key] ?: return null

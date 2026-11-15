@@ -127,3 +127,35 @@ comments, and comment events remain portable.
 This is the export contract only. It does not claim that restore preview,
 conflict resolution, transactional merge, or cross-version migration has
 passed validation.
+
+## Native import staging increment
+
+The current native import boundary accepts only authenticated, already-parsed
+archive data from Dart. Dart must complete AEAD authentication before it parses
+records or sends them to native code. The staging channel never accepts caller
+SQL or file paths.
+
+- `beginBackupImport` supplies archive/schema versions, a digest, and declared
+  row/media counts and bytes. Native code checks the exact currently supported
+  schema, format, and limits, then returns an opaque import handle.
+- `appendBackupImportPage` accepts contiguous rows validated against the same
+  compiled table/column/blob catalog as export. Each row is at most 128 KiB;
+  each encoded method call is at most 256 KiB and 512 records. Native raw
+  staging input is capped at 60 MiB, with a 96 MiB staging database and 128 MiB
+  combined physical staging cap.
+- `writeBackupImportBlob` accepts sequential chunks for media IDs declared by
+  staged rows. It allows at most 255 KiB per raw chunk and rejects unknown IDs,
+  gaps, overlaps, and excess bytes.
+- `finishBackupImport` checks completeness and builds a read-only summary plus
+  paged conflicts. `readBackupImportConflictPage` uses an authenticated opaque
+  cursor; conflicts expose only bounded safe summary fields and fail with
+  `PREVIEW_STALE` after local state changes.
+- `closeBackupImport`, activity teardown, idle expiry, or startup cleanup
+  removes the private staging database, journal sidecars, and media file.
+
+This increment is **preview only**. Its response includes `applyReady: false`;
+the native transaction/apply method is not exposed. Revision ancestry, complete
+reference validation, GPS deletion-range preservation, and transactional
+resolution still need implementation and Actions validation before an import
+can be applied. The local state version binds a preview to local data only; it
+is never compared with the source archive's state version.
