@@ -194,7 +194,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     );
   }
 
-  final conversation = await businessApi.taskConversation(jobId, taskId);
+  conversation = await businessApi.taskConversation(jobId, taskId);
   final storedMediaBytes = conversation.taskAttachments.fold<int>(
     0,
     (total, attachment) => total + attachment.bytes,
