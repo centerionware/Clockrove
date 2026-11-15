@@ -108,7 +108,7 @@ internal class BackupHostApi(
 
     private class Input(arguments: Any?) {
         private val values: Map<*, *> = when (arguments) {
-            null -> emptyMap()
+            null -> emptyMap<String, Any?>()
             is Map<*, *> -> arguments
             else -> throw IllegalArgumentException("Expected a map")
         }
