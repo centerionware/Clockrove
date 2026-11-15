@@ -3899,3 +3899,19 @@ cleanup, and terminal-result expiry. Read-only source review and
 `git diff --check` passed. No VM build, test or formatter ran; exact-head Actions
 validation is pending. Dart archive encryption/export orchestration and restore
 preview/merge remain separate M7 work.
+
+### 2026-11-15 — SAF backup document bridge passed exact-head Actions
+
+The first PR #57 head `6158d65` / run
+[43680676861](https://github.com/centerionware/Clockrove/actions/runs/43680676861)
+passed formatting, analysis and Flutter behavior tests, then failed Kotlin
+compilation because `nextOffset` was assigned in both the append success and
+catch paths. Commit `5978bfb` initializes the result to null and assigns it only
+after a complete staged write. Exact-head run
+[43681226462](https://github.com/centerionware/Clockrove/actions/runs/43681226462)
+passed formatting, analysis, Flutter behavior tests, Android build, native unit
+tests, real API-24/API-35 Android PDF and device suites, invoice-viewer checks,
+artifact exports and locked release-tool validation. The workflow completed
+with no failed steps. No VM build, test or formatter ran. PR #57 remains open;
+Dart export/password orchestration, archive encryption, restore preview and
+merge remain separate M7 work.
