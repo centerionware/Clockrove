@@ -3912,3 +3912,20 @@ test now makes a short 14%-viewport swipe when the editor needs room below it,
 preserving the existing larger fallback gesture elsewhere. Validate this exact
 head through Actions; API-35 and later journeys remain pending. No VM build,
 test, format or analysis ran.
+
+PR #54 exact head `88d88b8` / Actions run
+[43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
+passed formatting, analysis, Flutter behavior tests, Android debug build, all
+native tests, the actual Android PDF/device matrix on API 24 and 35, invoice
+viewer checks, and locked release-tooling validation. This confirms the
+tax-error navigation and the existing API-24/35 billing flows on that exact
+head; it does not validate a merged-main run. PR #55 run
+[43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
+attempt 2 separately failed API-24 billing because the Settings scroll had
+passed the `Default tax (%)` field. Its failure screenshot/accessibility tree
+showed the form near the bottom with that field absent. The shared `reveal()`
+helper now advances using settled 14%-viewport gestures and rechecks the target
+after each move, avoiding the page-scroll-plus-swipe overshoot while preserving
+the billing assertions. This follow-up is not yet committed or validated; run
+it through Actions before applying the same helper to PR #55. No VM build,
+test, format or analysis ran.

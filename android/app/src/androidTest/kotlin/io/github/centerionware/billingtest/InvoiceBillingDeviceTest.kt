@@ -122,28 +122,12 @@ class InvoiceBillingDeviceTest {
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
             if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                fun scroll(node: AccessibilityNodeInfo): Boolean {
-                    // Prefer the screen's vertical container to editable
-                    // fields' own scroll actions, then use a real swipe if the
-                    // platform does not expose a scroll action.
-                    if (node.isVisibleToUser && node.isScrollable &&
-                        node.className?.toString() == "android.widget.ScrollView" &&
-                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
-                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                    return false
-                }
-                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                if (scrolled) {
-                    // Accessibility scrolls complete asynchronously. Observe their
-                    // settled result before considering another movement; an
-                    // immediate fallback swipe can skip the target entirely.
-                    automation.waitForIdle(250, 3000)
-                }
-                if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                    swipeContent(up = true)
-                    automation.waitForIdle(250, 3000)
-                    find(label, editable)?.let(::safeTapBounds) != null
-                }
+                // A viewport-sized accessibility scroll followed by a swipe
+                // can skip short fields, especially on API 24. Move in small
+                // settled increments and recheck after each one instead.
+                swipeContent(up = true, travelFraction = 0.14f)
+                automation.waitForIdle(250, 3000)
+                find(label, editable)?.let(::safeTapBounds) != null
             }
         }
     }

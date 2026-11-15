@@ -252,8 +252,14 @@ failed in the API-24 billing instrumentation journey when the test could not
 scroll back to the job-tax field; the captured app remained on Job settings and
 did not show an application crash. The automatic Play delivery run
 `43575491279` was skipped, so that merge has no new internal-upload evidence.
-The test helper now uses real scroll gestures and must pass a fresh Actions run
-before the main baseline is considered green. PR #45 adds task Labor/Supplies
+The billing navigation correction is now validated at PR #54 exact head
+`88d88b8` / Actions run `43676781145`: formatting, analysis, Flutter behavior,
+Android build, native tests, actual API-24/API-35 PDF and device journeys,
+invoice-viewer checks, and locked release tooling all passed. The change is not
+merged, so a fresh merged-main validation is still required. PR #55 separately
+exposed that a full-page reveal gesture can skip the `Default tax (%)` field;
+a small settled-scroll adjustment to the shared device-test reveal helper is
+queued for exact-head Actions validation. PR #45 adds task Labor/Supplies
 classification, expanded task-photo handling, report-map repair, leading-
 decimal payments and quote customer management. Its exact-head Actions run
 `43590405687` passed formatting, analysis, Flutter behavior tests and Android
