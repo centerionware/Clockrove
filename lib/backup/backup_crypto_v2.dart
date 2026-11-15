@@ -286,7 +286,7 @@ abstract final class BackupCryptoV2 {
         );
         final archiveSha256 = digest.close();
         _validateManifest(
-          manifest,
+          Uint8List.fromList(manifest),
           frameCount: frameCount,
           archiveLength: archiveLength,
           archiveSha256: archiveSha256,
