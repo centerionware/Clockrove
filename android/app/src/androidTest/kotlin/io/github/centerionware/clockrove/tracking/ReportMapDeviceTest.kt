@@ -56,12 +56,41 @@ class ReportMapDeviceTest {
     }
 
     private fun click(label: String) {
-        var node: AccessibilityNodeInfo? = waitFor(label)
+        val target = waitFor(label)
+        var node: AccessibilityNodeInfo? = target
         while (node != null) {
             if ((node.isClickable || node.isCheckable) && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
             node = node.parent
         }
-        throw AssertionError("Actual Android app could not click '$label'")
+
+        // Flutter can expose a visible control without a clickable accessibility
+        // node. Tap the actual visible label bounds so the test exercises the
+        // same pointer path as a user on API variants with that semantics tree.
+        val tapBounds = android.graphics.Rect().also(target::getBoundsInScreen)
+        val windowBounds = android.graphics.Rect().also { bounds ->
+            automation.rootInActiveWindow?.getBoundsInScreen(bounds)
+        }
+        if (!tapBounds.intersect(windowBounds) || tapBounds.isEmpty) {
+            diagnostic("untappable-${label.replace(Regex("[^a-zA-Z0-9]+"), "-")}")
+            throw AssertionError("Actual Android app exposed no visible tap bounds for '$label'")
+        }
+
+        val x = tapBounds.exactCenterX()
+        val y = tapBounds.exactCenterY()
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long): Boolean {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        if (!inject(MotionEvent.ACTION_DOWN, downTime)) {
+            throw AssertionError("Could not touch '$label' on the actual Android screen")
+        }
+        SystemClock.sleep(60)
+        if (!inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis())) {
+            inject(MotionEvent.ACTION_CANCEL, SystemClock.uptimeMillis())
+            throw AssertionError("Could not release touch on '$label' on the actual Android screen")
+        }
+        automation.waitForIdle(100, 3000)
     }
 
     private fun reveal(label: String) {

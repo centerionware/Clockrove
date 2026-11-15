@@ -3377,3 +3377,17 @@ native unit tests, then failed its API-24/35 PDF/device stage at
 `locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`. This is
 separate from the release-plugin issue; that head did not contain the release
 configuration check. A fresh exact-head run must cover both.
+
+### 2026-11-15 — PR #61 API-35 actual-map test input
+
+Exact-head Actions run
+[43725692836](https://github.com/centerionware/Clockrove/actions/runs/43725692836)
+on `77d9bc4a56c278469a9517343f4b712e37a910c4` passed through native tests. The
+API-24 actual-device suite passed 29/29. API 35 passed 28/29; the remaining
+failure was the report-map instrumentation helper, which found the visible
+`Map · 49 measured samples` control but could not invoke it through
+`ACTION_CLICK` on that node or its ancestors, so the test ended before
+validating the map screen. Add a tap at the
+visible, screen-clipped label bounds and retain the destination assertions. The
+fix still requires a fresh exact-head Actions run; M7.2 acceptance remains
+pending. No local build, test, formatter or analyzer ran.
