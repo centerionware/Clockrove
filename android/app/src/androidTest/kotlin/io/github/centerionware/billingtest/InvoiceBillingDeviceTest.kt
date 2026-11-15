@@ -133,12 +133,17 @@ class InvoiceBillingDeviceTest {
                     return false
                 }
                 val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                // A Flutter ScrollView can acknowledge the accessibility action
-                // without exposing the requested child. Fall back to a real
-                // gesture whenever the target is still outside the viewport.
-                if (!scrolled || find(label, editable)?.let(::safeTapBounds) == null) swipeContent(up = true)
-                SystemClock.sleep(150)
-                find(label, editable)?.let(::safeTapBounds) != null
+                if (scrolled) {
+                    // Accessibility scrolls complete asynchronously. Observe their
+                    // settled result before considering another movement; an
+                    // immediate fallback swipe can skip the target entirely.
+                    automation.waitForIdle(250, 3000)
+                }
+                if (find(label, editable)?.let(::safeTapBounds) != null) true else {
+                    swipeContent(up = true)
+                    automation.waitForIdle(250, 3000)
+                    find(label, editable)?.let(::safeTapBounds) != null
+                }
             }
         }
     }
@@ -161,8 +166,10 @@ class InvoiceBillingDeviceTest {
             }
             // Some API-24 ScrollViews acknowledge the action without moving.
             // Check for the target again; retain the touch gesture as a fallback.
-            if (automation.rootInActiveWindow?.let(::scroll) == true &&
-                find(topLabel)?.let(::safeTapBounds) != null) return
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                automation.waitForIdle(250, 3000)
+                if (find(topLabel)?.let(::safeTapBounds) != null) return
+            }
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
