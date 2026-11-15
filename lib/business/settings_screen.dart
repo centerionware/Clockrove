@@ -11,6 +11,7 @@ import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
 import '../maps/map_provider_settings_screen.dart';
+import '../backup/backup_export_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -324,6 +325,27 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             ),
             icon: const Icon(Icons.map_outlined),
             label: const Text('Map provider settings'),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text('Backup', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        const Text(
+          'Save a password-protected copy of your jobs, work history and documents.',
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const ValueKey('open-backup-export'),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const BackupExportScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Create encrypted backup'),
           ),
         ),
         const SizedBox(height: 20),
