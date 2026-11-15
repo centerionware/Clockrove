@@ -3903,3 +3903,12 @@ clipped at the navigation bar; the inline error lies below the viewport.
 The test now checks available space under the editor and scrolls once when
 needed before asserting the unchanged exact error. Empty-before-replacement
 behavior remains pending full API-24/35 acceptance. No VM execution ran.
+
+PR #54 head `3ca1267`, run [43674600623](https://github.com/centerionware/Clockrove/actions/runs/43674600623),
+passed API-24 billing but still failed API-35 at the same invalid-tax message
+assertion. The retained API-35 screenshot shows the settings form near its end:
+the page-sized swipe intended to expose the inline message moved past it. The
+test now makes a short 14%-viewport swipe when the editor needs room below it,
+preserving the existing larger fallback gesture elsewhere. Validate this exact
+head through Actions; API-35 and later journeys remain pending. No VM build,
+test, format or analysis ran.
