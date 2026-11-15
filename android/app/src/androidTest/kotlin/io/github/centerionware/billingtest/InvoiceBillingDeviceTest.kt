@@ -122,28 +122,12 @@ class InvoiceBillingDeviceTest {
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
             if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                fun scroll(node: AccessibilityNodeInfo): Boolean {
-                    // Prefer the screen's vertical container to editable
-                    // fields' own scroll actions, then use a real swipe if the
-                    // platform does not expose a scroll action.
-                    if (node.isVisibleToUser && node.isScrollable &&
-                        node.className?.toString() == "android.widget.ScrollView" &&
-                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
-                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                    return false
-                }
-                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                if (scrolled) {
-                    // Accessibility scrolls complete asynchronously. Observe their
-                    // settled result before considering another movement; an
-                    // immediate fallback swipe can skip the target entirely.
-                    automation.waitForIdle(250, 3000)
-                }
-                if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                    swipeContent(up = true)
-                    automation.waitForIdle(250, 3000)
-                    find(label, editable)?.let(::safeTapBounds) != null
-                }
+                // A viewport-sized accessibility scroll followed by a swipe
+                // can skip short fields, especially on API 24. Move in small
+                // settled increments and recheck after each one instead.
+                swipeContent(up = true, travelFraction = 0.14f)
+                automation.waitForIdle(250, 3000)
+                find(label, editable)?.let(::safeTapBounds) != null
             }
         }
     }
@@ -427,7 +411,10 @@ class InvoiceBillingDeviceTest {
             waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
             reveal("Review billed work"); click("Review billed work"); waitFor("Review billed work")
             reveal("Previously installed tile"); click("Previously installed tile")
-            until("Covered task checkbox did not become checked") { find("Previously installed tile")?.isChecked == true }
+            until("Covered task checkbox did not become checked") {
+                reveal("Previously installed tile")
+                find("Previously installed tile", checkable = true)?.isChecked == true
+            }
             enter("Why this work belongs to the invoice", "Checked original invoice: only the previously installed tile was billed.")
             reveal("I checked this against the original invoice"); click("I checked this against the original invoice")
             until("Original-document confirmation was not checked") { find("I checked this against the original invoice")?.isChecked == true }
