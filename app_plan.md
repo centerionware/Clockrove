@@ -127,9 +127,13 @@ validation error. The follow-up billing test corrections from `88d88b8`,
 `00531dc` and `32d6154` are now validated at PR #54 head `32d6154`: exact Actions
 run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795)
 passed all gates, including the API-24/35 Android device matrix. This validates
-the shared device-test path, not the M7.1 crypto benchmark on API 35; M7.1 remains
-partial. The prepared PR #52 reconciliation now includes these short-scroll and
-covered-task visibility fixes and needs a new exact-head Actions run. M7.2's
+the shared device-test path. PR #52's later exact head `e87eebf` / Actions run
+[43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885)
+also passed the full workflow and benchmark on both APIs: encrypt/decrypt was
+874/337 ms on API 24 and 1,124/348 ms on API 35, with 37 actual Android tests
+per API and zero failures, errors or skips. That result predates the latest main
+base, so the current PR #52 reconciliation still needs a new exact-head Actions
+run. It carries the short-scroll and covered-task visibility fixes. M7.2's
 deterministic archive codec passed Flutter and native checks
 in the same PR #52 run. The native snapshot service was merged in PR #50 and
 passed its exact-head API-24/35 Actions run
