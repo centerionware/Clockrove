@@ -19,11 +19,16 @@ shows a plain message; Back returns to the independent timer. Map requests revea
 the viewed area to the provider. Public tiles are best-effort, with no availability
 promise. No API key or account is required for this default provider.
 
-CI uses synthetic tile bytes and injected HTTP responses, never public tile loads.
-Synthetic map previews prove layout and overlays, not live OSM availability or
-native GPS. Device/network proof, complete reports/site editing and optional
-provider configuration remain separate release evidence. Google Maps remains
-an open optional provider, not an implemented feature. Google's documented
+Flutter unit/widget tests use synthetic tile bytes and injected HTTP responses.
+The API-24/35 Android device journey is separate: main Actions run
+[43673229775](https://github.com/centerionware/Clockrove/actions/runs/43673229775)
+passed the report-map journey, and its screenshots show loaded OSM tiles and
+attribution. Later runs [43687899077](https://github.com/centerionware/Clockrove/actions/runs/43687899077)
+and [43688694748](https://github.com/centerionware/Clockrove/actions/runs/43688694748)
+also passed. This is emulator/CI network evidence; it does not establish
+physical owner-device GPS/map acceptance. Complete reports/site editing and
+optional provider configuration remain separate release evidence. Google Maps
+remains an open optional provider, not an implemented feature. Google's documented
 [Flutter configuration](https://developers.google.com/maps/flutter-package/config)
 and [Android project setup](https://developers.google.com/maps/documentation/android-sdk/config)
 put the key in Android application manifest metadata; the documented
