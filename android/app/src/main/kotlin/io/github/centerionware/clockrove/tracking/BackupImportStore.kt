@@ -90,6 +90,7 @@ internal class BackupImportStore(
         var rawBytes: Long = 0,
         var lastAccessElapsedMillis: Long,
         var preview: Preview? = null,
+        var revisionGraphValidated: Boolean = false,
     )
 
     private data class NormalizedRow(
@@ -101,6 +102,19 @@ internal class BackupImportStore(
         val blobFields: List<BlobField>,
         val sessionStartMillis: Long?,
         val sessionEndMillis: Long?,
+    )
+
+    private data class ForeignKeySpec(
+        val parentTable: String,
+        val childColumns: List<String>,
+        val parentColumns: List<String>,
+    )
+
+    private data class ValidationColumn(
+        val name: String,
+        val declaredType: String,
+        val notNull: Boolean,
+        val defaultSql: String?,
     )
 
     private data class BlobField(val id: String, val column: String, val sizeBytes: Long)
@@ -115,6 +129,17 @@ internal class BackupImportStore(
         private const val STORAGE_CHUNK_BYTES = 32 * 1024
         private const val MAX_STAGE_DATABASE_BYTES = 96L * 1024L * 1024L
         private const val MAX_STAGE_PHYSICAL_BYTES = 128L * 1024L * 1024L
+        private const val REVISION_VALIDATION_BATCH_SIZE = 256
+        private val revisionValidationTables = listOf(
+            "validation_revision_batch",
+            "validation_revision_ready",
+            "validation_revision_pending",
+            "validation_reference_keys",
+            "validation_ranges",
+            "validation_heads",
+            "validation_parents",
+            "validation_revisions",
+        )
         private const val FILE_PREFIX = "clockrove-import-"
         private val idPattern = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
         private val blobIdPattern = Regex("[A-Za-z0-9_-]{43}")
@@ -133,8 +158,13 @@ internal class BackupImportStore(
         )
         private val uniqueColumns = mapOf(
             "invoices" to listOf(listOf("number")),
+            "invoice_payment_events" to listOf(listOf("command_version", "ordinal")),
+            "invoice_payment_reversals" to listOf(listOf("payment_id")),
+            "invoice_voids" to listOf(listOf("replacement_id")),
+            "job_deletions" to listOf(listOf("revision_id")),
             "quotes" to listOf(listOf("number")),
             "quote_pdfs" to listOf(listOf("quote_id", "revision")),
+            "quote_scope_lines" to listOf(listOf("task_id")),
             "location_deletion_ranges" to listOf(listOf("revision_id")),
         )
     }
@@ -197,6 +227,7 @@ internal class BackupImportStore(
                 null,
                 SQLiteDatabase.OPEN_READWRITE,
             )
+            stagedDb.setForeignKeyConstraintsEnabled(false)
             stagedDb.setMaximumSize(MAX_STAGE_DATABASE_BYTES)
             createStageTables(stagedDb)
             val handle = Handle(
@@ -385,7 +416,15 @@ internal class BackupImportStore(
             "SELECT COUNT(*) FROM import_blobs WHERE received_bytes<>size_bytes")
         if (incompleteBlobs != 0L) throw Failure("INCOMPLETE_ARCHIVE", "The backup media are incomplete.")
         RandomAccessFile(handle.mediaFile, "rw").use { it.fd.sync() }
-        val preview = buildPreview(db, handle)
+        if (!handle.revisionGraphValidated) {
+            validateRevisionGraph(db, handle)
+            handle.revisionGraphValidated = true
+        }
+        val preview = try {
+            buildPreview(db, handle)
+        } finally {
+            if (handle.revisionGraphValidated) clearRevisionValidation(handle)
+        }
         handle.preview = preview
         handle.lastAccessElapsedMillis = elapsedClock()
         scheduleExpiry(handle)
@@ -577,6 +616,12 @@ internal class BackupImportStore(
             handle.database.beginTransaction()
             try {
                 handle.database.delete("import_conflicts", null, null)
+                handle.database.execSQL(
+                    "CREATE TABLE preview_unique_keys(" +
+                        "table_name TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL," +
+                        "first_ordinal INTEGER NOT NULL,first_primary_key TEXT NOT NULL," +
+                        "PRIMARY KEY(table_name,columns_json,values_json))",
+                )
                 handle.database.rawQuery(
                     "SELECT ordinal,table_name,primary_key,row_json,session_start_ms,session_end_ms FROM import_rows ORDER BY ordinal",
                     null,
@@ -590,6 +635,39 @@ internal class BackupImportStore(
                         val values = jsonValue(row.getJSONObject("values")) as Map<String, Any?>
                         val spec = handle.catalog.getValue(table)
                         val blobFields = stagedBlobs(handle, ordinal)
+                        val earlierBackupDuplicate = registerStagedUniqueKeys(
+                            handle, table, ordinal, keyJson, values,
+                        )
+                        if (earlierBackupDuplicate != null) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "UNIQUE_VALUE_IN_USE",
+                                listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD"), "KEEP_LOCAL",
+                                localIdentifier = "BACKUP:${earlierBackupDuplicate.first}",
+                                localSummary = mapOf("identifier" to "Earlier backup record"),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
+                        if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
+                                listOf("PRESERVE_DELETION", "RESTORE_POINT"), "PRESERVE_DELETION",
+                                localSummary = mapOf("identifier" to "Deletion coverage"),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
+                        if (table == "location_deletion_ranges") {
+                            if (hasUnprovenLocalGpsPoints(db, values)) {
+                                conflictOrdinal = addConflict(
+                                    handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
+                                    listOf("PRESERVE_DELETION", "KEEP_LOCAL_POINTS"), "PRESERVE_DELETION",
+                                    localSummary = mapOf("identifier" to "Unproven local GPS points are covered"),
+                                    backupSummary = safeSummary(values),
+                                )
+                                continue
+                            }
+                        }
                         val local = findLocalRow(db, table, spec, values)
                         val sessionStart = if (rows.isNull(4)) null else rows.getLong(4)
                         val sessionEnd = if (rows.isNull(5)) null else rows.getLong(5)
@@ -637,7 +715,7 @@ internal class BackupImportStore(
                             }
                             continue
                         }
-                        val uniqueConflict = findUniqueConflict(db, table, spec, values)
+                        val uniqueConflict = findLocalUniqueConflict(db, table, spec, values)
                         if (uniqueConflict != null) {
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "UNIQUE_VALUE_IN_USE",
@@ -650,6 +728,7 @@ internal class BackupImportStore(
                         added++
                     }
                 }
+                handle.database.execSQL("DROP TABLE preview_unique_keys")
                 handle.database.setTransactionSuccessful()
             } finally {
                 handle.database.endTransaction()
@@ -662,7 +741,8 @@ internal class BackupImportStore(
         return Preview(
             handle.id, token, handle.expected.schemaVersion, localVersion,
             handle.recordCount, handle.mediaCount, handle.expected.mediaBytes,
-            added, unchanged, conflictOrdinal, openSessions, localOpenSessions, false,
+            added, unchanged, conflictOrdinal, openSessions, localOpenSessions,
+            applyReady = conflictOrdinal == 0L && openSessions == 0L,
         )
     }
 
@@ -721,6 +801,628 @@ internal class BackupImportStore(
         return true
     }
 
+    /** Checks revision ownership and ancestry inside the bounded staging database. */
+    private fun validateRevisionGraph(localDb: SQLiteDatabase, handle: Handle) {
+        val db = handle.database
+        db.beginTransaction()
+        try {
+            db.execSQL("CREATE TABLE validation_revisions(id TEXT PRIMARY KEY,kind TEXT NOT NULL,entity_id TEXT NOT NULL,job_id TEXT,deleted INTEGER NOT NULL,origin TEXT NOT NULL)")
+            db.execSQL("CREATE TABLE validation_parents(revision_id TEXT NOT NULL,parent_id TEXT NOT NULL,PRIMARY KEY(revision_id,parent_id))")
+            db.execSQL("CREATE INDEX validation_parent_child ON validation_parents(revision_id)")
+            db.execSQL("CREATE INDEX validation_parent_parent ON validation_parents(parent_id)")
+            db.execSQL("CREATE TABLE validation_heads(kind TEXT NOT NULL,entity_id TEXT NOT NULL,revision_id TEXT NOT NULL,PRIMARY KEY(kind,entity_id))")
+            db.execSQL("CREATE TABLE validation_ranges(id TEXT PRIMARY KEY,job_id TEXT,start_ms INTEGER NOT NULL,end_ms INTEGER NOT NULL,revision_id TEXT NOT NULL UNIQUE)")
+            db.execSQL("CREATE INDEX validation_range_scope_bounds ON validation_ranges(job_id,start_ms,end_ms)")
+            db.execSQL("CREATE TABLE validation_reference_keys(parent_table TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL,PRIMARY KEY(parent_table,columns_json,values_json))")
+
+            forEachImportedValues(handle, "entity_revisions") { values ->
+                val deleted = revisionInteger(values["deleted"])
+                if (deleted !in 0L..1L) invalidRevisionGraph()
+                db.execSQL(
+                    "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?)",
+                    arrayOf(
+                        revisionString(values["id"]), revisionString(values["kind"]),
+                        revisionString(values["entity_id"]), nullableRevisionString(values["job_id"]),
+                        deleted, revisionString(values["origin"]),
+                    ),
+                )
+            }
+            forEachImportedValues(handle, "revision_parents") { values ->
+                db.execSQL(
+                    "INSERT INTO validation_parents VALUES(?,?)",
+                    arrayOf(revisionString(values["revision_id"]), revisionString(values["parent_id"])),
+                )
+            }
+            forEachImportedValues(handle, "entity_heads") { values ->
+                db.execSQL(
+                    "INSERT INTO validation_heads VALUES(?,?,?)",
+                    arrayOf(
+                        revisionString(values["kind"]), revisionString(values["entity_id"]),
+                        revisionString(values["revision_id"]),
+                    ),
+                )
+            }
+            forEachImportedValues(handle, "location_deletion_ranges") { values ->
+                val start = revisionInteger(values["start_ms"])
+                val end = revisionInteger(values["end_ms"])
+                if (start < 0L || end <= start) invalidReference()
+                db.execSQL(
+                    "INSERT INTO validation_ranges VALUES(?,?,?,?,?)",
+                    arrayOf(
+                        revisionString(values["id"]), nullableRevisionString(values["job_id"]),
+                        start, end, revisionString(values["revision_id"]),
+                    ),
+                )
+            }
+
+            val missingLinkCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_parents p " +
+                    "LEFT JOIN validation_revisions child ON child.id=p.revision_id " +
+                    "LEFT JOIN validation_revisions parent ON parent.id=p.parent_id " +
+                    "WHERE child.id IS NULL OR parent.id IS NULL",
+            )
+            if (missingLinkCount != 0L) invalidRevisionGraph()
+
+            val invalidHeadCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_heads h " +
+                    "LEFT JOIN validation_revisions r ON r.id=h.revision_id " +
+                    "WHERE r.id IS NULL OR r.kind<>h.kind OR r.entity_id<>h.entity_id",
+            )
+            val missingEntityHeadCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_revisions r WHERE NOT EXISTS(" +
+                    "SELECT 1 FROM validation_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id)",
+            )
+            if (invalidHeadCount != 0L || missingEntityHeadCount != 0L) invalidRevisionGraph()
+
+            // Normal ancestry remains within one logical entity. GPS point tombstones
+            // may also name the range revision whose deletion coverage caused them.
+            val invalidParentCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_parents p " +
+                    "JOIN validation_revisions child ON child.id=p.revision_id " +
+                    "JOIN validation_revisions parent ON parent.id=p.parent_id " +
+                    "WHERE NOT ((child.kind=parent.kind AND child.entity_id=parent.entity_id) OR " +
+                    "(child.kind='location' AND child.deleted=1 AND child.origin='GPS_RANGE_DELETE' " +
+                    "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " +
+                    "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id)))",
+            )
+            if (invalidParentCount != 0L) invalidRevisionGraph()
+
+            val invalidRangeCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_ranges d LEFT JOIN validation_revisions r " +
+                    "ON r.id=d.revision_id WHERE r.id IS NULL OR r.kind<>'location_deletion_range' " +
+                    "OR r.entity_id<>d.id OR r.deleted<>0 OR r.origin<>'GPS_RANGE_DELETE' " +
+                    "OR r.job_id IS NOT d.job_id",
+            )
+            val missingRangeRowCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_revisions r WHERE r.kind='location_deletion_range' " +
+                    "AND NOT EXISTS(SELECT 1 FROM validation_ranges d WHERE d.revision_id=r.id)",
+            )
+            if (invalidRangeCount != 0L || missingRangeRowCount != 0L) invalidReference()
+
+            forEachImportedValues(handle, "location_points") { values ->
+                val pointId = revisionString(values["id"])
+                val pointRevisionDeleted = db.rawQuery(
+                    "SELECT r.deleted FROM validation_heads h JOIN validation_revisions r ON r.id=h.revision_id " +
+                        "WHERE h.kind='location' AND h.entity_id=?",
+                    arrayOf(pointId),
+                ).use { rows ->
+                    if (!rows.moveToFirst()) invalidReference()
+                    rows.getLong(0)
+                }
+                if (pointRevisionDeleted != 0L) invalidReference()
+            }
+            val invalidRangeHeadCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM validation_ranges d LEFT JOIN validation_heads h " +
+                    "ON h.kind='location_deletion_range' AND h.entity_id=d.id " +
+                    "WHERE h.revision_id IS NULL OR h.revision_id<>d.revision_id",
+            )
+            if (invalidRangeHeadCount != 0L) invalidReference()
+            forEachImportedValues(handle, "location_deletion_ranges") { values ->
+                val jobId = nullableRevisionString(values["job_id"])
+                if (jobId != null &&
+                    !stagedIdentifierExists(handle, "jobs", jobId) &&
+                    !localIdentifierExists(localDb, "jobs", jobId) &&
+                    !stagedIdentifierExists(handle, "job_deletions", jobId) &&
+                    !localIdentifierExists(localDb, "job_deletions", jobId)) {
+                    invalidReference()
+                }
+            }
+
+            validatePortableRows(localDb, handle)
+            validatePortableReferences(localDb, handle)
+
+            validateRevisionAcyclicity(db)
+            if (File(db.path).length() > MAX_STAGE_DATABASE_BYTES ||
+                stagedPhysicalBytes(handle) > MAX_STAGE_PHYSICAL_BYTES) {
+                throw Failure("SNAPSHOT_LIMIT_EXCEEDED", "The backup staging database exceeds its limit.")
+            }
+            db.setTransactionSuccessful()
+        } catch (failure: Failure) {
+            throw failure
+        } catch (_: Exception) {
+            invalidRevisionGraph()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Kahn traversal is backed by SQLite so deep histories do not use JVM recursion. */
+    private fun validateRevisionAcyclicity(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE validation_revision_pending(revision_id TEXT PRIMARY KEY,remaining_parents INTEGER NOT NULL)")
+        db.execSQL("CREATE INDEX validation_revision_pending_count ON validation_revision_pending(remaining_parents)")
+        db.execSQL("CREATE TABLE validation_revision_ready(revision_id TEXT PRIMARY KEY)")
+        db.execSQL("CREATE TABLE validation_revision_batch(revision_id TEXT PRIMARY KEY)")
+        db.execSQL(
+            "INSERT INTO validation_revision_pending " +
+                "SELECT r.id,COUNT(p.parent_id) FROM validation_revisions r " +
+                "LEFT JOIN validation_parents p ON p.revision_id=r.id GROUP BY r.id",
+        )
+        db.execSQL(
+            "INSERT INTO validation_revision_ready " +
+                "SELECT revision_id FROM validation_revision_pending WHERE remaining_parents=0",
+        )
+        while (true) {
+            db.execSQL("DELETE FROM validation_revision_batch")
+            db.execSQL(
+                "INSERT INTO validation_revision_batch " +
+                    "SELECT revision_id FROM validation_revision_ready ORDER BY revision_id LIMIT $REVISION_VALIDATION_BATCH_SIZE",
+            )
+            if (scalarLong(db, "SELECT COUNT(*) FROM validation_revision_batch") == 0L) break
+            db.execSQL(
+                "DELETE FROM validation_revision_ready WHERE revision_id IN " +
+                    "(SELECT revision_id FROM validation_revision_batch)",
+            )
+            db.execSQL(
+                "DELETE FROM validation_revision_pending WHERE revision_id IN " +
+                    "(SELECT revision_id FROM validation_revision_batch)",
+            )
+            db.execSQL(
+                "UPDATE validation_revision_pending SET remaining_parents=remaining_parents-(" +
+                    "SELECT COUNT(*) FROM validation_parents p JOIN validation_revision_batch b " +
+                    "ON b.revision_id=p.parent_id WHERE p.revision_id=validation_revision_pending.revision_id) " +
+                    "WHERE EXISTS(SELECT 1 FROM validation_parents p JOIN validation_revision_batch b " +
+                    "ON b.revision_id=p.parent_id WHERE p.revision_id=validation_revision_pending.revision_id)",
+            )
+            db.execSQL(
+                "INSERT OR IGNORE INTO validation_revision_ready " +
+                    "SELECT revision_id FROM validation_revision_pending WHERE remaining_parents=0",
+            )
+        }
+        if (scalarLong(db, "SELECT COUNT(*) FROM validation_revision_pending") != 0L) {
+            invalidRevisionGraph()
+        }
+    }
+
+    /** Validation projections are needed only while building the preview. */
+    private fun clearRevisionValidation(handle: Handle) {
+        val db = handle.database
+        try {
+            db.beginTransaction()
+            try {
+                revisionValidationTables.forEach { table ->
+                    db.execSQL("DROP TABLE IF EXISTS ${quote(table)}")
+                }
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+            }
+            handle.revisionGraphValidated = false
+        } catch (_: Exception) {
+            active = null
+            destroyHandle(handle)
+            throw Failure("STORAGE_UNAVAILABLE", "The backup preview could not be finalized.")
+        }
+    }
+
+    private fun forEachImportedValues(handle: Handle, table: String, action: (Map<String, Any?>) -> Unit) {
+        handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name=? ORDER BY ordinal",
+            arrayOf(table),
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val values = jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<*, *>
+                    ?: invalidRevisionGraph()
+                @Suppress("UNCHECKED_CAST")
+                action(values as Map<String, Any?>)
+            }
+        }
+    }
+
+    private fun revisionString(value: Any?): String = (value as? String)
+        ?.takeIf { it.isNotEmpty() } ?: invalidRevisionGraph()
+
+    private fun nullableRevisionString(value: Any?): String? = when (value) {
+        null -> null
+        is String -> value
+        else -> invalidRevisionGraph()
+    }
+
+    private fun revisionInteger(value: Any?): Long = when (value) {
+        is Int -> value.toLong()
+        is Long -> value
+        else -> invalidRevisionGraph()
+    }
+
+    private fun invalidRevisionGraph(): Nothing =
+        throw Failure("INVALID_REVISION_GRAPH", "The backup revision history is invalid.")
+
+    private fun invalidReference(): Nothing =
+        throw Failure("INVALID_REFERENCE", "The backup contains an unresolved record reference.")
+
+    /** Exercises the installed CHECK/NOT NULL/type rules against one staged row at a time. */
+    private fun validatePortableRows(localDb: SQLiteDatabase, handle: Handle) {
+        val db = handle.database
+        val tables = handle.catalog.keys.sorted()
+        val columnsByTable = tables.associateWith { table -> validationColumns(localDb, table) }
+        var allTablesCreated = false
+        try {
+            tables.forEach { table ->
+                val createSql = localDb.rawQuery(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name=? AND sql IS NOT NULL",
+                    arrayOf(table),
+                ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
+                    ?: throw Failure("SCHEMA_UNSUPPORTED", "A portable table schema is unavailable.")
+                db.execSQL(createSql)
+            }
+            allTablesCreated = true
+            db.rawQuery("SELECT ordinal,table_name,row_json FROM import_rows ORDER BY ordinal", null).use { rows ->
+                while (rows.moveToNext()) {
+                    val ordinal = rows.getLong(0)
+                    val table = rows.getString(1)
+                    val spec = handle.catalog[table]
+                        ?: throw Failure("TABLE_NOT_ALLOWED", "The backup contains an unsupported table.")
+                    val row = JSONObject(rows.getString(2))
+                    val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
+                        ?: invalidArchiveRow()
+                    val blobs = stagedBlobs(handle, ordinal)
+                    val columns = columnsByTable.getValue(table)
+                    validatePortableValueTypes(table, spec, columns, values)
+                    val content = validationContentValues(table, spec, columns, values, blobs, ordinal)
+                    try {
+                        db.insertOrThrow(table, null, content)
+                    } catch (_: SQLiteConstraintException) {
+                        invalidArchiveRow()
+                    } catch (_: Exception) {
+                        invalidArchiveRow()
+                    }
+
+                    val where = spec.primaryKey.joinToString(" AND ") { quote(it) + "=?" }
+                    val args = spec.primaryKey.map { values.getValue(it).toString() }.toTypedArray()
+                    val stagedValues = db.rawQuery(
+                        "SELECT ${spec.valueColumns.joinToString(",") { quote(it) }} FROM ${quote(table)} WHERE $where",
+                        args,
+                    ).use { stagedRow ->
+                        if (!stagedRow.moveToFirst()) invalidArchiveRow()
+                        spec.valueColumns.associateWith { column ->
+                            cursorValue(stagedRow, stagedRow.getColumnIndexOrThrow(column))
+                        }
+                    }
+                    if (canonicalValues(values, spec.valueColumns) != canonicalValues(stagedValues, spec.valueColumns)) {
+                        invalidArchiveRow()
+                    }
+                    if (db.delete(table, where, args) != 1) invalidArchiveRow()
+                }
+            }
+            if (File(db.path).length() > MAX_STAGE_DATABASE_BYTES ||
+                stagedPhysicalBytes(handle) > MAX_STAGE_PHYSICAL_BYTES) {
+                throw Failure("SNAPSHOT_LIMIT_EXCEEDED", "The backup staging database exceeds its limit.")
+            }
+        } finally {
+            if (allTablesCreated) {
+                tables.asReversed().forEach { table -> db.execSQL("DROP TABLE IF EXISTS ${quote(table)}") }
+            }
+        }
+    }
+
+    private fun validationColumns(db: SQLiteDatabase, table: String): List<ValidationColumn> =
+        db.rawQuery("PRAGMA table_info(${quote(table)})", null).use { rows ->
+            buildList {
+                while (rows.moveToNext()) {
+                    add(ValidationColumn(
+                        name = rows.getString(1),
+                        declaredType = rows.getString(2).orEmpty().uppercase(),
+                        notNull = rows.getInt(3) != 0,
+                        defaultSql = if (rows.isNull(4)) null else rows.getString(4),
+                    ))
+                }
+            }
+        }
+
+    private fun validatePortableValueTypes(
+        table: String,
+        spec: BackupExportStore.ImportTable,
+        columns: List<ValidationColumn>,
+        values: Map<String, Any?>,
+    ) {
+        val byName = columns.associateBy { it.name }
+        for (column in spec.valueColumns) {
+            val value = values[column] ?: continue
+            val declaredType = byName[column]?.declaredType.orEmpty()
+            val valid = when {
+                "INT" in declaredType -> value is Int || value is Long
+                "CHAR" in declaredType || "CLOB" in declaredType || "TEXT" in declaredType -> value is String
+                "REAL" in declaredType || "FLOA" in declaredType || "DOUB" in declaredType -> value is Double
+                "BLOB" in declaredType -> false
+                else -> true
+            }
+            if (!valid) invalidArchiveRow()
+        }
+    }
+
+    private fun validationContentValues(
+        table: String,
+        spec: BackupExportStore.ImportTable,
+        columns: List<ValidationColumn>,
+        values: Map<String, Any?>,
+        blobs: Map<String, LongArray>,
+        ordinal: Long,
+    ): ContentValues {
+        val content = ContentValues()
+        values.forEach { (column, value) -> putValidationValue(content, column, value) }
+        for ((column, location) in blobs) {
+            val size = location[1]
+            if (size < 0L || (table == "task_attachments" && size !in 1L..ImageLimits.NORMALIZED_BYTES.toLong())) {
+                invalidArchiveRow()
+            }
+            content.put(column, ByteArray(if (size == 0L) 0 else 1))
+        }
+        val represented = values.keys + blobs.keys
+        columns.filter { it.name !in represented }.forEach { column ->
+            if (!column.notNull || column.defaultSql?.trim()?.equals("NULL", ignoreCase = true) == false) return@forEach
+            val placeholder: Any = when {
+                table == "automation_policies" && column.name == "facts_since_ms" -> 0L
+                table == "work_sites" && column.name == "registration_key" -> "preview-validation-$ordinal"
+                else -> throw Failure(
+                    "SCHEMA_UNSUPPORTED",
+                    "A required device-local field has no safe backup validation default.",
+                )
+            }
+            putValidationValue(content, column.name, placeholder)
+        }
+        return content
+    }
+
+    private fun putValidationValue(content: ContentValues, column: String, value: Any?) {
+        when (value) {
+            null -> content.putNull(column)
+            is String -> content.put(column, value)
+            is Int -> content.put(column, value)
+            is Long -> content.put(column, value)
+            is Double -> content.put(column, value)
+            is Boolean -> content.put(column, value)
+            else -> invalidArchiveRow()
+        }
+    }
+
+    private fun invalidArchiveRow(): Nothing =
+        throw Failure("INVALID_ARCHIVE", "The backup contains an invalid record.")
+
+    /** Uses the installed SQLite schema as the FK contract for every portable row. */
+    private fun validatePortableReferences(localDb: SQLiteDatabase, handle: Handle) {
+        val populatedSecondaryKeys = mutableSetOf<Pair<String, List<String>>>()
+        for (table in handle.catalog.keys.sorted()) {
+            val foreignKeys = foreignKeySpecs(localDb, table, handle.catalog)
+            for (foreignKey in foreignKeys) {
+                val parentTableSpec = handle.catalog[foreignKey.parentTable]
+                if (parentTableSpec != null && foreignKey.parentColumns.toSet() != parentTableSpec.primaryKey.toSet() &&
+                    populatedSecondaryKeys.add(foreignKey.parentTable to foreignKey.parentColumns)) {
+                    forEachImportedValues(handle, foreignKey.parentTable) { values ->
+                        val keyValues = foreignKey.parentColumns.map { values[it] }
+                        if (keyValues.any { it == null }) return@forEachImportedValues
+                        val columnsJson = JSONArray(foreignKey.parentColumns).toString()
+                        val valuesJson = jsonArray(keyValues)
+                        try {
+                            handle.database.execSQL(
+                                "INSERT INTO validation_reference_keys VALUES(?,?,?)",
+                                arrayOf(foreignKey.parentTable, columnsJson, valuesJson),
+                            )
+                        } catch (_: Exception) {
+                            // Duplicate values cannot satisfy a declared unique FK target.
+                            invalidReference()
+                        }
+                    }
+                }
+                forEachImportedValues(handle, table) { childValues ->
+                    val referenceValues = foreignKey.childColumns.map { childValues[it] }
+                    if (referenceValues.any { it == null }) return@forEachImportedValues
+                    if (!stagedForeignKeyExists(handle, foreignKey, referenceValues) &&
+                        !localForeignKeyExists(localDb, foreignKey, referenceValues)) {
+                        invalidReference()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun foreignKeySpecs(
+        db: SQLiteDatabase,
+        table: String,
+        catalog: Map<String, BackupExportStore.ImportTable>,
+    ): List<ForeignKeySpec> {
+        data class Column(val sequence: Int, val child: String, val parent: String?)
+        data class Group(val parentTable: String, val columns: MutableList<Column>)
+
+        val groups = linkedMapOf<Int, Group>()
+        db.rawQuery("PRAGMA foreign_key_list(${quote(table)})", null).use { rows ->
+            while (rows.moveToNext()) {
+                val id = rows.getInt(0)
+                val parentTable = rows.getString(2)
+                val group = groups.getOrPut(id) { Group(parentTable, mutableListOf()) }
+                group.columns.add(Column(rows.getInt(1), rows.getString(3), if (rows.isNull(4)) null else rows.getString(4)))
+            }
+        }
+        return groups.values.map { group ->
+            val ordered = group.columns.sortedBy { it.sequence }
+            val parentColumns = if (ordered.all { it.parent == null }) {
+                catalog[group.parentTable]?.primaryKey ?: tablePrimaryKey(db, group.parentTable)
+            } else {
+                if (ordered.any { it.parent == null }) invalidReference()
+                ordered.map { requireNotNull(it.parent) }
+            }
+            if (parentColumns.size != ordered.size || parentColumns.isEmpty()) invalidReference()
+            ForeignKeySpec(group.parentTable, ordered.map { it.child }, parentColumns)
+        }
+    }
+
+    private fun tablePrimaryKey(db: SQLiteDatabase, table: String): List<String> {
+        val columns = mutableListOf<Pair<Int, String>>()
+        db.rawQuery("PRAGMA table_info(${quote(table)})", null).use { rows ->
+            while (rows.moveToNext()) {
+                val order = rows.getInt(5)
+                if (order > 0) columns.add(order to rows.getString(1))
+            }
+        }
+        return columns.sortedBy { it.first }.map { it.second }
+    }
+
+    private fun stagedForeignKeyExists(
+        handle: Handle,
+        foreignKey: ForeignKeySpec,
+        values: List<Any?>,
+    ): Boolean {
+        val parentSpec = handle.catalog[foreignKey.parentTable] ?: return false
+        if (foreignKey.parentColumns.toSet() == parentSpec.primaryKey.toSet()) {
+            val orderedValues = parentSpec.primaryKey.map { parentColumn ->
+                values[foreignKey.parentColumns.indexOf(parentColumn)]
+            }
+            val key = jsonArray(orderedValues)
+            return handle.database.rawQuery(
+                "SELECT 1 FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+                arrayOf(foreignKey.parentTable, key),
+            ).use { it.moveToFirst() }
+        }
+        return handle.database.rawQuery(
+            "SELECT 1 FROM validation_reference_keys WHERE parent_table=? AND columns_json=? AND values_json=? LIMIT 1",
+            arrayOf(
+                foreignKey.parentTable,
+                JSONArray(foreignKey.parentColumns).toString(),
+                jsonArray(values),
+            ),
+        ).use { it.moveToFirst() }
+    }
+
+    private fun localForeignKeyExists(
+        db: SQLiteDatabase,
+        foreignKey: ForeignKeySpec,
+        values: List<Any?>,
+    ): Boolean {
+        if (values.any { it is ByteArray }) return false
+        val where = foreignKey.parentColumns.joinToString(" AND ") { quote(it) + "=?" }
+        val args = values.map { it.toString() }.toTypedArray()
+        return try {
+            db.rawQuery(
+                "SELECT 1 FROM ${quote(foreignKey.parentTable)} WHERE $where LIMIT 1",
+                args,
+            ).use { it.moveToFirst() }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun jsonArray(values: List<Any?>): String = JSONArray().apply {
+        values.forEach { put(it ?: JSONObject.NULL) }
+    }.toString()
+
+    private fun stagedIdentifierExists(handle: Handle, table: String, id: String): Boolean =
+        handle.database.rawQuery(
+            "SELECT 1 FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(table, jsonArray(listOf(id))),
+        ).use { it.moveToFirst() }
+
+    private fun localIdentifierExists(db: SQLiteDatabase, table: String, id: String): Boolean =
+        db.rawQuery("SELECT 1 FROM ${quote(table)} WHERE id=? LIMIT 1", arrayOf(id)).use { it.moveToFirst() }
+
+    private fun hasUnprovenIncomingGpsCoverage(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        point: Map<String, Any?>,
+    ): Boolean {
+        val pointId = revisionString(point["id"])
+        val measuredAt = revisionInteger(point["measured_ms"])
+        val sessionId = revisionString(point["session_id"])
+        val jobId = stagedSessionJobId(localDb, handle, sessionId) ?: invalidReference()
+        val pointRevision = handle.database.rawQuery(
+            "SELECT revision_id FROM validation_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { if (it.moveToFirst()) it.getString(0) else invalidReference() }
+        var unproven = false
+        localDb.rawQuery(
+            "SELECT revision_id FROM location_deletion_ranges WHERE start_ms<=? AND end_ms>? " +
+                "AND (job_id IS NULL OR job_id=?)",
+            arrayOf(measuredAt.toString(), measuredAt.toString(), jobId),
+        ).use { rows ->
+            while (rows.moveToNext() && !unproven) {
+                unproven = !hasDirectCausalParent(handle, pointRevision, rows.getString(0))
+            }
+        }
+        handle.database.rawQuery(
+            "SELECT revision_id FROM validation_ranges WHERE start_ms<=? AND end_ms>? " +
+                "AND (job_id IS NULL OR job_id=?)",
+            arrayOf(measuredAt.toString(), measuredAt.toString(), jobId),
+        ).use { rows ->
+            while (rows.moveToNext() && !unproven) {
+                unproven = !hasDirectCausalParent(handle, pointRevision, rows.getString(0))
+            }
+        }
+        return unproven
+    }
+
+    private fun hasDirectCausalParent(handle: Handle, childRevision: String, parentRevision: String): Boolean =
+        handle.database.rawQuery(
+            "SELECT 1 FROM validation_parents WHERE revision_id=? AND parent_id=? LIMIT 1",
+            arrayOf(childRevision, parentRevision),
+        ).use { it.moveToFirst() }
+
+    private fun stagedSessionJobId(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        sessionId: String,
+    ): String? {
+        val primaryKey = jsonArray(listOf(sessionId))
+        val staged = handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name='sessions' AND primary_key=? LIMIT 1",
+            arrayOf(primaryKey),
+        ).use { rows ->
+            if (!rows.moveToFirst()) null else {
+                val values = jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<*, *>
+                    ?: invalidReference()
+                values["job_id"] as? String ?: invalidReference()
+            }
+        }
+        if (staged != null) return staged
+        return localDb.rawQuery("SELECT job_id FROM sessions WHERE id=?", arrayOf(sessionId)).use {
+            if (!it.moveToFirst()) null else it.getString(0)
+        }
+    }
+
+    private fun hasUnprovenLocalGpsPoints(db: SQLiteDatabase, range: Map<String, Any?>): Boolean {
+        val start = revisionInteger(range["start_ms"])
+        val end = revisionInteger(range["end_ms"])
+        val revisionId = revisionString(range["revision_id"])
+        val jobId = nullableRevisionString(range["job_id"])
+        val jobFilter = if (jobId == null) "" else " AND s.job_id=?"
+        val args = buildList {
+            add(start.toString())
+            add(end.toString())
+            jobId?.let(::add)
+            add(revisionId)
+        }.toTypedArray()
+        return db.rawQuery(
+            "SELECT 1 FROM location_points p JOIN sessions s ON s.id=p.session_id " +
+                "WHERE p.measured_ms>=? AND p.measured_ms<?$jobFilter AND NOT EXISTS(" +
+                "SELECT 1 FROM entity_heads h WHERE h.kind='location' AND h.entity_id=p.id " +
+                "AND EXISTS(SELECT 1 FROM revision_parents rp WHERE rp.revision_id=h.revision_id AND rp.parent_id=?)) LIMIT 1",
+            args,
+        ).use { it.moveToFirst() }
+    }
+
     private fun stagedBlobs(handle: Handle, rowOrdinal: Long): Map<String, LongArray> =
         handle.database.rawQuery(
             "SELECT column_name,file_offset,size_bytes FROM import_blobs WHERE row_ordinal=?",
@@ -731,18 +1433,60 @@ internal class BackupImportStore(
             }
         }
 
-    private fun findUniqueConflict(
+    private fun registerStagedUniqueKeys(
+        handle: Handle,
+        table: String,
+        ordinal: Long,
+        primaryKey: String,
+        values: Map<String, Any?>,
+    ): Pair<Long, String>? {
+        for (columns in uniqueColumnsForRow(table, values)) {
+            val keyValues = columns.map { values[it] }
+            if (keyValues.any { it == null }) continue
+            val columnsJson = JSONArray(columns).toString()
+            val valuesJson = jsonArray(keyValues)
+            val earlier = handle.database.rawQuery(
+                "SELECT first_ordinal,first_primary_key FROM preview_unique_keys " +
+                    "WHERE table_name=? AND columns_json=? AND values_json=? LIMIT 1",
+                arrayOf(table, columnsJson, valuesJson),
+            ).use { rows ->
+                if (!rows.moveToFirst()) null else rows.getLong(0) to rows.getString(1)
+            }
+            if (earlier != null) return earlier
+            handle.database.execSQL(
+                "INSERT INTO preview_unique_keys VALUES(?,?,?,?,?)",
+                arrayOf(table, columnsJson, valuesJson, ordinal, primaryKey),
+            )
+        }
+        return null
+    }
+
+    private fun uniqueColumnsForRow(table: String, values: Map<String, Any?>): List<List<String>> =
+        buildList {
+            addAll(uniqueColumns[table].orEmpty())
+            // This index applies only to unreleased claims; released history may repeat a task.
+            if (table == "invoice_task_claims" && values["released_ms"] == null) {
+                add(listOf("task_id"))
+            }
+        }
+
+    private fun findLocalUniqueConflict(
         db: SQLiteDatabase,
         table: String,
         spec: BackupExportStore.ImportTable,
         values: Map<String, Any?>,
     ): String? {
-        uniqueColumns[table].orEmpty().forEach { columns ->
+        uniqueColumnsForRow(table, values).forEach { columns ->
             if (columns.any { values[it] == null }) return@forEach
             val where = columns.joinToString(" AND ") { quote(it) + "=?" }
+            val partialPredicate = if (table == "invoice_task_claims" && columns == listOf("task_id")) {
+                " AND released_ms IS NULL"
+            } else {
+                ""
+            }
             val args = columns.map { values.getValue(it).toString() }.toTypedArray()
             val existing = db.rawQuery("SELECT " + spec.primaryKey.joinToString(",") { quote(it) } +
-                " FROM " + quote(table) + " WHERE " + where + " LIMIT 1", args).use { cursor ->
+                " FROM " + quote(table) + " WHERE " + where + partialPredicate + " LIMIT 1", args).use { cursor ->
                 if (!cursor.moveToFirst()) null else (0 until cursor.columnCount).joinToString("|") { cursor.getString(it) }
             }
             if (existing != null) return existing
@@ -758,6 +1502,11 @@ internal class BackupImportStore(
         end: Long,
         sessionId: String,
     ): String? {
+        val openLocalId = db.rawQuery(
+            "SELECT id FROM sessions WHERE end_ms IS NULL AND start_ms<? AND id<>? LIMIT 1",
+            arrayOf(end.toString(), sessionId),
+        ).use { if (it.moveToFirst()) "LOCAL_OPEN:" + it.getString(0) else null }
+        if (openLocalId != null) return openLocalId
         val localId = db.rawQuery(
             "SELECT id FROM sessions WHERE end_ms IS NOT NULL AND start_ms<? AND end_ms>? AND id<>? LIMIT 1",
             arrayOf(end.toString(), start.toString(), sessionId),
@@ -798,6 +1547,7 @@ internal class BackupImportStore(
             .put("backupSummary", safeSummaryObject(backupSummary))
             .put("allowedChoices", JSONArray(choices))
             .put("defaultChoice", defaultChoice)
+            .put("resolved", false)
         handle.database.insertOrThrow("import_conflicts", null, ContentValues().apply {
             put("ordinal", ordinal)
             put("conflict_id", conflictId)
@@ -1101,7 +1851,7 @@ internal class BackupImportStore(
 
     private fun stateVersion(db: SQLiteDatabase): Long = scalarLong(db, "SELECT version FROM state WHERE id=1")
 
-    private fun scalarLong(db: SQLiteDatabase, sql: String): Long = db.rawQuery(sql, null).use {
+    private fun scalarLong(db: SQLiteDatabase, sql: String, args: Array<String>? = null): Long = db.rawQuery(sql, args).use {
         if (!it.moveToFirst()) throw Failure("STORAGE_UNAVAILABLE", "The local backup state is unavailable.")
         it.getLong(0)
     }

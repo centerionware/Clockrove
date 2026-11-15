@@ -159,13 +159,32 @@ SQL or file paths.
 - `finishBackupImport` checks completeness and builds a read-only summary plus
   paged conflicts. `readBackupImportConflictPage` uses an authenticated opaque
   cursor; conflicts expose only bounded safe summary fields and fail with
-  `PREVIEW_STALE` after local state changes.
+  `PREVIEW_STALE` after local state changes. Before preview, staging validates
+  revision and parent existence, acyclicity, entity-head ownership, schema-derived
+  SQLite foreign keys and `CHECK`/`NOT NULL` constraints, and scalar type
+  round-trips. It also validates GPS range-to-revision ownership and the allowed
+  cross-entity causal edge. Temporary validation tables are dropped after
+  conflicts are materialized; cleanup failure discards the staged import.
+- Preview checks portable unique values against local rows and earlier staged
+  rows. A unique-value collision remains an unresolved conflict even when a
+  default choice is supplied.
+- GPS coverage conflicts default to preserving the deletion when imported
+  points are covered by imported or local ranges without a direct causal edge,
+  or local live points are covered by an imported range without that edge.
+  Conflict summaries contain no coordinates.
+- A completed imported session that extends into an open local session is an
+  unresolved `SESSION_OVERLAP` conflict, since the local session's eventual end
+  time is unknown.
 - `closeBackupImport`, activity teardown, idle expiry, or startup cleanup
   removes the private staging database, journal sidecars, and media file.
 
-This increment is **preview only**. Its response includes `applyReady: false`;
-the native transaction/apply method is not exposed. Revision ancestry, complete
-reference validation, GPS deletion-range preservation, and transactional
-resolution still need implementation and Actions validation before an import
-can be applied. The local state version binds a preview to local data only; it
-is never compared with the source archive's state version.
+This increment is **preview only**. `applyReady` is true only when validation
+succeeds and there are no conflicts or imported open sessions. Every listed
+conflict has `resolved: false`; `defaultChoice` is advisory and does not count
+as an explicit resolution. The native transaction/apply and conflict-choice
+recording methods are not exposed. Complete semantic reference validation,
+user conflict-choice application, ancestry-based merge resolution, and
+transactional commit remain unfinished. The local state version binds a preview
+to local data only; it is never compared with the source archive's state
+version. The new validation source and cases still require exact-head Actions
+evidence.

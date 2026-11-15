@@ -177,8 +177,18 @@ class BackupImportStoreTest {
         assertEquals(16, source.schemaVersion)
         val exportedRecords = readAll(source.snapshotId)
         assertTrue(exportedRecords.any { it["table"] == "location_deletion_ranges" })
-        assertTrue(exportedRecords.any {
+        val rangeRevision = exportedRecords.first {
             it["table"] == "entity_revisions" && values(it)["kind"] == "location_deletion_range"
+        }
+        val rangeRevisionId = values(rangeRevision)["id"]
+        val pointTombstone = exportedRecords.first {
+            it["table"] == "entity_revisions" && values(it)["kind"] == "location" &&
+                (values(it)["deleted"] as Number).toInt() == 1
+        }
+        val pointTombstoneId = values(pointTombstone)["id"]
+        assertTrue(exportedRecords.any {
+            it["table"] == "revision_parents" && values(it)["revision_id"] == pointTombstoneId &&
+                values(it)["parent_id"] == rangeRevisionId
         })
         val localBeforePreview = repository.snapshot()
         val started = importStore.begin(
@@ -198,7 +208,8 @@ class BackupImportStoreTest {
         assertEquals(source.recordCount, preview.recordCount)
         assertEquals(source.recordCount, preview.unchangedCount)
         assertEquals(0L, preview.conflictCount)
-        assertFalse(preview.applyReady)
+        assertTrue(preview.applyReady)
+        assertEquals(0L, validationTableCount())
         assertEquals(localBeforePreview, repository.snapshot())
         val conflicts = importStore.readConflictPage(
             database, started.importId, preview.previewToken, null, null,
@@ -207,6 +218,188 @@ class BackupImportStoreTest {
         assertTrue(conflicts.conflicts.isEmpty())
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun rejectsUnsupportedCrossEntityRevisionParents() {
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("job-revision", "job", "job-one", "job-one"),
+            revisionRecord("customer-revision", "customer", "customer-one", null),
+            parentRecord("job-revision", "customer-revision"),
+            headRecord("job", "job-one", "job-revision"),
+            headRecord("customer", "customer-one", "customer-revision"),
+        ))
+    }
+
+    @Test
+    fun rejectsMissingRevisionParentsAndCycles() {
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("child", "job", "job-one", "job-one"),
+            parentRecord("child", "missing-parent"),
+            headRecord("job", "job-one", "child"),
+        ))
+
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("first", "job", "job-one", "job-one"),
+            revisionRecord("second", "job", "job-one", "job-one"),
+            parentRecord("first", "second"),
+            parentRecord("second", "first"),
+            headRecord("job", "job-one", "first"),
+        ))
+    }
+
+    @Test
+    fun rejectsRevisionsWithoutAnOwnedHead() {
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("unheaded-revision", "job", "job-one", "job-one"),
+        ))
+    }
+
+    @Test
+    fun rejectsRowsWithUnresolvedForeignKeys() {
+        assertInvalidReference(listOf(stagedRow("sessions", mapOf(
+            "id" to "orphan-session",
+            "job_id" to "missing-job",
+            "start_ms" to now,
+            "end_ms" to null,
+            "timezone" to "Etc/UTC",
+            "offset_seconds" to 0,
+            "origin" to "MANUAL",
+        ))))
+    }
+
+    @Test
+    fun rejectsOutOfRangeAndNoncanonicalPortableValues() {
+        assertInvalidArchive(listOf(stagedRow("location_points", mapOf(
+            "id" to "invalid-coordinate-point",
+            "session_id" to "missing-session",
+            "measured_ms" to now,
+            "received_ms" to now,
+            "latitude" to 91.0,
+            "longitude" to -34.0,
+            "accuracy" to 5.0,
+        ))))
+        assertInvalidArchive(listOf(stagedRow("quotes", mapOf(
+            "id" to "noncanonical-quote",
+            "number" to "Q-INVALID",
+            "created_ms" to "not-an-integer",
+        ))))
+        assertInvalidArchive(listOf(stagedRow("customers", mapOf(
+            "id" to "missing-customer-name",
+            "name" to null,
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0L,
+        ))))
+    }
+
+    @Test
+    fun rejectsRevisionHeadsOwnedByAnotherEntity() {
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("job-revision", "job", "job-one", "job-one"),
+            headRecord("job", "job-one", "job-revision"),
+            headRecord("customer", "customer-one", "job-revision"),
+        ))
+    }
+
+    @Test
+    fun oldBackupPointCoveredByLocalRangeGetsPreserveDeletionConflict() {
+        val session = startAndStopSessionWithPoint("old-backup-covered-point")
+        val pointCountBeforeExport = number("SELECT COUNT(*) FROM location_points")
+        val source = exportStore.start(database)
+        assertEquals(1L, pointCountBeforeExport)
+        assertNull(repository.deleteLocationRange(
+            "delete-after-old-backup-export",
+            repository.snapshot().version,
+            GpsDeletionStore.Range(jobId, session.second, session.second + 1L, "Etc/UTC"),
+        ).conflict)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
+
+        val started = importStore.begin(
+            database,
+            source.archiveFormatVersion,
+            source.schemaVersion,
+            "d".repeat(64),
+            source.recordCount,
+            source.mediaCount,
+            source.mediaBytes,
+        )
+        transferRows(source.snapshotId, started.importId)
+        val preview = importStore.finish(database, started.importId)
+        val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
+        assertNotNull(coverageConflict)
+        val conflict = requireNotNull(coverageConflict)
+        assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
+        assertEquals(listOf("PRESERVE_DELETION", "RESTORE_POINT"), conflict["allowedChoices"])
+        assertEquals(false, conflict["resolved"])
+        assertNoCoordinates(conflict)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
+        assertFalse(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun importedRangeCoveringLocalPointGetsPreserveDeletionConflict() {
+        val session = startAndStopSessionWithPoint("local-point-covered-by-import")
+        val rangeId = "synthetic-imported-range"
+        val revisionId = "synthetic-imported-range-revision"
+        val range = mapOf(
+            "id" to rangeId,
+            "job_id" to jobId,
+            "start_ms" to session.second,
+            "end_ms" to session.second + 1L,
+            "timezone_id" to "Etc/UTC",
+            "deleted_ms" to now,
+            "revision_id" to revisionId,
+        )
+        val records = listOf(
+            revisionRecord(
+                revisionId, "location_deletion_range", rangeId, jobId,
+                origin = "GPS_RANGE_DELETE",
+            ),
+            headRecord("location_deletion_range", rangeId, revisionId),
+            stagedRow("location_deletion_ranges", range),
+        )
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
+
+        val before = repository.snapshot()
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "e".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        val preview = importStore.finish(database, started.importId)
+        val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
+        assertNotNull(coverageConflict)
+        val conflict = requireNotNull(coverageConflict)
+        assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
+        assertEquals(false, conflict["resolved"])
+        assertEquals(
+            "Unproven local GPS points are covered",
+            (conflict["localSummary"] as Map<*, *>)["identifier"],
+        )
+        assertNoCoordinates(conflict)
+        assertEquals(before, repository.snapshot())
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
+        assertFalse(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
     }
 
     @Test
@@ -298,7 +491,7 @@ class BackupImportStoreTest {
         assertEquals(source.recordCount, preview.unchangedCount)
         assertEquals(0L, preview.conflictCount)
         assertEquals(0L, preview.openSessionCount)
-        assertFalse(preview.applyReady)
+        assertTrue(preview.applyReady)
         assertEquals(stateBeforePreview, repository.snapshot())
         val conflicts = importStore.readConflictPage(database, started.importId, preview.previewToken, null, null)
         assertTrue(conflicts.done)
@@ -407,6 +600,7 @@ class BackupImportStoreTest {
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
         assertTrue(preview.conflictCount > 0)
+        assertFalse(preview.applyReady)
         val page = importStore.readConflictPage(
             database, started.importId, preview.previewToken, null, 1024,
         )
@@ -423,6 +617,8 @@ class BackupImportStoreTest {
         val conflict = page.conflicts.first()
         assertNotNull(conflict["conflictId"])
         assertNotNull(conflict["allowedChoices"])
+        assertNotNull(conflict["defaultChoice"])
+        assertEquals(false, conflict["resolved"])
         assertNotNull(conflict["localSummary"])
         assertNotNull(conflict["backupSummary"])
         val next = page.nextCursor
@@ -442,6 +638,126 @@ class BackupImportStoreTest {
         }
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun duplicateUniqueValuesInsideBackupRemainUnresolvedAndBlockReadiness() {
+        val before = repository.snapshot()
+        val records = listOf(
+            stagedRow("quotes", mapOf("id" to "quote-one", "number" to "Q-100", "created_ms" to now)),
+            stagedRow("quotes", mapOf("id" to "quote-two", "number" to "Q-100", "created_ms" to now + 1L)),
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "8".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(1L, preview.addedCount)
+        assertEquals(1L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
+        assertEquals("BACKUP:0", conflict["localIdentifier"])
+        assertEquals(false, conflict["resolved"])
+        assertEquals("KEEP_LOCAL", conflict["defaultChoice"])
+        assertEquals(0L, validationTableCount())
+        assertEquals(before, repository.snapshot())
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun importedUniqueValueAlreadyUsedLocallyRemainsUnresolved() {
+        database.execSQL(
+            "INSERT INTO quotes(id,number,created_ms) VALUES(?,?,?)",
+            arrayOf("local-quote", "Q-200", now),
+        )
+        val records = listOf(
+            stagedRow("quotes", mapOf("id" to "backup-quote", "number" to "Q-200", "created_ms" to now)),
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "7".repeat(64),
+            1,
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(1L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
+        assertEquals("local-quote", conflict["localIdentifier"])
+        assertEquals(false, conflict["resolved"])
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun importedSessionOverlappingLocalOpenSessionRemainsUnresolved() {
+        val localStart = now
+        assertNull(repository.execute(TimerRepository.Command(
+            "start-local-open-session-for-import-overlap",
+            repository.snapshot().version,
+            TimerRepository.Action.START,
+            jobId,
+            localStart,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val localSessionId = requireNotNull(repository.snapshot().running).id
+        now += 10_000L
+        val importedStart = localStart + 1_000L
+        val records = listOf(stagedRow("sessions", mapOf(
+            "id" to "overlapping-import-session",
+            "job_id" to jobId,
+            "start_ms" to importedStart,
+            "end_ms" to importedStart + 1_000L,
+            "timezone" to "Etc/UTC",
+            "offset_seconds" to 0,
+            "origin" to "MANUAL",
+        )))
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "6".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(1L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "SESSION_OVERLAP"))
+        assertEquals("LOCAL_OPEN:$localSessionId", conflict["localIdentifier"])
+        assertEquals(false, conflict["resolved"])
+        assertTrue(importStore.close(started.importId))
     }
 
     @Test
@@ -474,6 +790,7 @@ class BackupImportStoreTest {
         assertFalse(preview.applyReady)
         val page = importStore.readConflictPage(database, started.importId, preview.previewToken, null, null)
         val openSession = page.conflicts.single { it["kind"] == "OPEN_SESSION" }
+        assertEquals(false, openSession["resolved"])
         assertEquals("OMIT_OPEN_SESSION", openSession["defaultChoice"])
         assertEquals(listOf("OMIT_OPEN_SESSION", "CLOSE_OPEN_SESSION"), openSession["allowedChoices"])
         assertEquals(runningBefore, repository.snapshot().running)
@@ -569,6 +886,173 @@ class BackupImportStoreTest {
             cursor = page.nextCursor
             done = page.done
         }
+    }
+
+    private fun revisionRecord(
+        id: String,
+        kind: String,
+        entityId: String,
+        jobId: String?,
+        deleted: Long = 0L,
+        origin: String = "MUTATION",
+    ): Map<String, Any?> = stagedRow("entity_revisions", mapOf(
+        "id" to id,
+        "kind" to kind,
+        "entity_id" to entityId,
+        "job_id" to jobId,
+        "payload" to "{}",
+        "deleted" to deleted,
+        "changed_ms" to now,
+        "origin" to origin,
+    ))
+
+    private fun parentRecord(revisionId: String, parentId: String): Map<String, Any?> =
+        stagedRow("revision_parents", mapOf("revision_id" to revisionId, "parent_id" to parentId))
+
+    private fun headRecord(kind: String, entityId: String, revisionId: String): Map<String, Any?> =
+        stagedRow("entity_heads", mapOf("kind" to kind, "entity_id" to entityId, "revision_id" to revisionId))
+
+    private fun stagedRow(table: String, values: Map<String, Any?>): Map<String, Any?> = mapOf(
+        "type" to "row",
+        "table" to table,
+        "values" to values,
+        "blobs" to emptyList<Any>(),
+    )
+
+    private fun startAndStopSessionWithPoint(pointId: String): Pair<String, Long> {
+        assertNull(repository.execute(TimerRepository.Command(
+            "start-$pointId",
+            repository.snapshot().version,
+            TimerRepository.Action.START,
+            jobId,
+            now,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val sessionId = requireNotNull(repository.snapshot().running).id
+        val measuredAt = now + 1_000L
+        assertEquals(
+            TimerRepository.SampleResult.RECORDED,
+            repository.recordLocation(TimerRepository.LocationPoint(
+                pointId, sessionId, measuredAt, measuredAt, 12.0, -34.0, 5.0,
+            )),
+        )
+        assertNull(repository.execute(TimerRepository.Command(
+            "stop-$pointId",
+            repository.snapshot().version,
+            TimerRepository.Action.STOP,
+            null,
+            measuredAt + 1_000L,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        return sessionId to measuredAt
+    }
+
+    private fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? {
+        var cursor: String? = null
+        while (true) {
+            val page = importStore.readConflictPage(database, importId, preview.previewToken, cursor, null)
+            page.conflicts.firstOrNull { it["kind"] == kind }?.let { return it }
+            if (page.done) return null
+            cursor = page.nextCursor
+        }
+    }
+
+    private fun number(sql: String): Long = database.rawQuery(sql, null).use { rows ->
+        assertTrue(rows.moveToFirst())
+        rows.getLong(0)
+    }
+
+    private fun validationTableCount(): Long {
+        val activeField = BackupImportStore::class.java.getDeclaredField("active").apply { isAccessible = true }
+        val handle = requireNotNull(activeField.get(importStore))
+        val databaseField = handle.javaClass.getDeclaredField("database").apply { isAccessible = true }
+        val stagedDatabase = databaseField.get(handle) as SQLiteDatabase
+        return stagedDatabase.rawQuery(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND " +
+                "(name LIKE 'validation_%' OR name='preview_unique_keys')",
+            null,
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            rows.getLong(0)
+        }
+    }
+
+    private fun assertNoCoordinates(conflict: Map<String, Any?>) {
+        listOf("localSummary", "backupSummary").forEach { key ->
+            val summary = conflict[key] as? Map<*, *> ?: return@forEach
+            assertFalse(summary.containsKey("latitude"))
+            assertFalse(summary.containsKey("longitude"))
+        }
+    }
+
+    private fun assertInvalidRevisionGraph(records: List<Map<String, Any?>>) {
+        val before = repository.snapshot()
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "c".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        assertFailure("INVALID_REVISION_GRAPH") { importStore.finish(database, started.importId) }
+        assertEquals(before, repository.snapshot())
+        assertTrue(importStore.close(started.importId))
+    }
+
+    private fun assertInvalidReference(records: List<Map<String, Any?>>) {
+        val before = repository.snapshot()
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "f".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        assertFailure("INVALID_REFERENCE") { importStore.finish(database, started.importId) }
+        assertEquals(before, repository.snapshot())
+        assertTrue(importStore.close(started.importId))
+    }
+
+    private fun assertInvalidArchive(records: List<Map<String, Any?>>) {
+        val before = repository.snapshot()
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "a".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        assertFailure("INVALID_ARCHIVE") { importStore.finish(database, started.importId) }
+        assertEquals(before, repository.snapshot())
+        assertTrue(importStore.close(started.importId))
     }
 
     private fun encodedAppendRequest(importId: String, ordinal: Long, rows: List<*>): Int =
