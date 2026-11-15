@@ -409,7 +409,7 @@ class GpsRangeDeletionDeviceTest {
             click("Delete GPS by date range")
             waitFor("Select GPS dates")
             click("Switch to input")
-            waitFor("Start date")
+            waitFor("Start Date")
             capture("gps-date-range-input")
             click("Review")
             waitFor("Matching saved GPS points: $pointLabel")
