@@ -306,13 +306,22 @@ void main() {
     'token cancels a stalled partial encrypt read before sink discard',
     () async {
       final sourceListening = Completer<void>();
-      final headerWriteStarted = Completer<void>();
+      final partialReadPaused = Completer<void>();
+      final partialReadResumed = Completer<void>();
       final sourceCancellationStarted = Completer<void>();
       final finishSourceCancellation = Completer<void>();
       var sourceCancelled = false;
       final archive = StreamController<List<int>>(
-        sync: true,
         onListen: () => sourceListening.complete(),
+        onPause: () {
+          if (!partialReadPaused.isCompleted) partialReadPaused.complete();
+        },
+        onResume: () {
+          if (partialReadPaused.isCompleted &&
+              !partialReadResumed.isCompleted) {
+            partialReadResumed.complete();
+          }
+        },
         onCancel: () async {
           sourceCancellationStarted.complete();
           await finishSourceCancellation.future;
@@ -322,9 +331,6 @@ void main() {
       final token = BackupCryptoCancellationToken();
       var sourceCancelledBeforeDiscard = false;
       final destination = _MemorySink(
-        beforeWrite: (writeNumber) async {
-          if (writeNumber == 1) headerWriteStarted.complete();
-        },
         onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
       );
       final encryption = BackupCryptoV2.encrypt(
@@ -340,10 +346,9 @@ void main() {
 
       try {
         await sourceListening.future.timeout(const Duration(seconds: 5));
-        await headerWriteStarted.future.timeout(const Duration(seconds: 5));
-        await Future<void>.delayed(Duration.zero);
         archive.add([1, 2, 3]);
-        await Future<void>.delayed(Duration.zero);
+        await partialReadPaused.future.timeout(const Duration(seconds: 5));
+        await partialReadResumed.future.timeout(const Duration(seconds: 5));
         token.cancel();
         await sourceCancellationStarted.future.timeout(
           const Duration(seconds: 5),
@@ -359,9 +364,11 @@ void main() {
           finishSourceCancellation.complete();
         }
         try {
-          await encryptionExpectation.timeout(const Duration(seconds: 5));
+          if (archive.hasListener && !archive.isClosed) {
+            await archive.close().timeout(const Duration(seconds: 5));
+          }
         } finally {
-          await archive.close().timeout(const Duration(seconds: 5));
+          await encryptionExpectation.timeout(const Duration(seconds: 5));
         }
       }
 
