@@ -746,7 +746,10 @@ internal class BackupImportStore(
         val content = ContentValues()
         values.forEach { (column, value) -> putScalar(content, column, value) }
         row.blobs.forEach { (column, source) ->
-            if (source[1] > Int.MAX_VALUE) throw Failure("APPLY_LIMIT_EXCEEDED", "A backup media item is too large to restore.")
+            val maximumSize = maximumBlobBytes(row.table, column)
+            if (maximumSize == null || source[1] !in 1L..maximumSize || source[1] > Int.MAX_VALUE) {
+                throw Failure("APPLY_LIMIT_EXCEEDED", "A backup media item is too large to restore.")
+            }
             val bytes = ByteArray(source[1].toInt())
             RandomAccessFile(handle.mediaFile, "r").use { input ->
                 input.seek(source[0])
@@ -755,6 +758,15 @@ internal class BackupImportStore(
             content.put(column, bytes)
         }
         return content
+    }
+
+    private fun maximumBlobBytes(table: String, column: String): Long? = when {
+        table == "invoices" && column == "pdf" -> InvoiceBlobs.MAX_DOCUMENT_BYTES.toLong()
+        table == "invoice_copies" && column == "pdf" -> InvoiceBlobs.MAX_DOCUMENT_BYTES.toLong()
+        table == "quote_pdfs" && column == "bytes" -> InvoiceBlobs.MAX_DOCUMENT_BYTES.toLong()
+        table == "logo_assets" && column == "bytes" -> ImageLimits.NORMALIZED_BYTES.toLong()
+        table == "task_attachments" && column == "data" -> ImageLimits.NORMALIZED_BYTES.toLong()
+        else -> null
     }
 
     private fun putScalar(content: ContentValues, column: String, value: Any?) {
@@ -919,7 +931,9 @@ internal class BackupImportStore(
             val id = descriptor["id"] as? String ?: throw Failure("INVALID_ARCHIVE", "A backup media ID is invalid.")
             val column = descriptor["column"] as? String ?: throw Failure("INVALID_ARCHIVE", "A backup media column is invalid.")
             val size = integer(descriptor["sizeBytes"], "media size")
-            if (!blobIdPattern.matches(id) || column !in spec.blobColumns || size < 0) {
+            val maximumSize = maximumBlobBytes(table, column)
+            if (!blobIdPattern.matches(id) || column !in spec.blobColumns || maximumSize == null ||
+                size !in 1L..maximumSize) {
                 throw Failure("INVALID_ARCHIVE", "A backup media reference is invalid.")
             }
             BlobField(id, column, size)

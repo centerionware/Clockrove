@@ -185,6 +185,96 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun mediaSizesAtConsumerLimitsStageAndTheNextByteIsRejected() {
+        data class BlobCase(
+            val table: String,
+            val values: Map<String, Any?>,
+            val column: String,
+            val maximumBytes: Int,
+        )
+
+        val cases = listOf(
+            BlobCase("logo_assets", mapOf(
+                "id" to "bounded-logo",
+                "mime" to "image/png",
+                "width" to 1,
+                "height" to 1,
+                "content_hash" to "synthetic-hash",
+            ), "bytes", ImageLimits.NORMALIZED_BYTES),
+            BlobCase("task_attachments", mapOf(
+                "id" to "bounded-task-image",
+                "task_id" to "synthetic-task",
+                "comment_id" to null,
+                "created_ms" to now,
+                "mime" to "image/png",
+            ), "data", ImageLimits.NORMALIZED_BYTES),
+            BlobCase("invoices", mapOf(
+                "id" to "bounded-invoice-pdf",
+                "job_id" to jobId,
+                "customer_id" to null,
+                "number" to "INV-BOUNDED",
+                "created_ms" to now,
+                "payload" to "{}",
+                "logo_id" to null,
+            ), "pdf", InvoiceBlobs.MAX_DOCUMENT_BYTES),
+            BlobCase("invoice_copies", mapOf(
+                "id" to "bounded-invoice-copy",
+                "invoice_id" to "synthetic-invoice",
+                "kind" to "BALANCE",
+                "created_ms" to now,
+                "command_version" to 1,
+                "metadata" to "{}",
+            ), "pdf", InvoiceBlobs.MAX_DOCUMENT_BYTES),
+            BlobCase("quote_pdfs", mapOf(
+                "id" to "bounded-quote-pdf",
+                "quote_id" to "synthetic-quote",
+                "revision" to 1,
+            ), "bytes", InvoiceBlobs.MAX_DOCUMENT_BYTES),
+        )
+
+        cases.forEach { case ->
+            val atLimit = blobRecord(case.table, case.values, case.column, case.maximumBytes)
+            val accepted = importStore.begin(
+                database,
+                BackupExportStore.ARCHIVE_FORMAT_VERSION,
+                BackupExportStore.CURRENT_SCHEMA_VERSION,
+                "c".repeat(64),
+                1,
+                1,
+                case.maximumBytes.toLong(),
+            )
+            assertEquals(1L, importStore.appendPage(
+                accepted.importId,
+                0,
+                listOf(atLimit),
+                encodedAppendRequest(accepted.importId, 0, listOf(atLimit)),
+            ))
+            assertTrue(importStore.close(accepted.importId))
+
+            val overLimitBytes = case.maximumBytes + 1
+            val overLimit = blobRecord(case.table, case.values, case.column, overLimitBytes)
+            val rejected = importStore.begin(
+                database,
+                BackupExportStore.ARCHIVE_FORMAT_VERSION,
+                BackupExportStore.CURRENT_SCHEMA_VERSION,
+                "d".repeat(64),
+                1,
+                1,
+                overLimitBytes.toLong(),
+            )
+            assertFailure("INVALID_ARCHIVE") {
+                importStore.appendPage(
+                    rejected.importId,
+                    0,
+                    listOf(overLimit),
+                    encodedAppendRequest(rejected.importId, 0, listOf(overLimit)),
+                )
+            }
+            assertTrue(importStore.close(rejected.importId))
+        }
+    }
+
+    @Test
     fun schema16PreviewAcceptsGpsDeletionRangeAndCausalRevisionRecords() {
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(
@@ -1718,6 +1808,22 @@ class BackupImportStoreTest {
         "table" to table,
         "values" to values,
         "blobs" to emptyList<Any>(),
+    )
+
+    private fun blobRecord(
+        table: String,
+        values: Map<String, Any?>,
+        column: String,
+        sizeBytes: Int,
+    ): Map<String, Any?> = mapOf(
+        "type" to "row",
+        "table" to table,
+        "values" to values,
+        "blobs" to listOf(mapOf(
+            "id" to "a".repeat(43),
+            "column" to column,
+            "sizeBytes" to sizeBytes,
+        )),
     )
 
     private fun invoiceRecord(id: String, invoiceJobId: String, number: String): Map<String, Any?> =
