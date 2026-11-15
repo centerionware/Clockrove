@@ -251,6 +251,10 @@ FAKE_FLUTTER
 chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter"
 source "$script_dir/ci-adb-install.sh"
 
+clockrove_test_flutter_retry_hook() {
+  printf '%s\n' "$1" >> "$FLUTTER_RETRY_HOOK_LOG"
+}
+
 export ADB_INSTALL_MODE=normal
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ ! -e "$AAPT_CALL_LOG" ]]
@@ -421,6 +425,7 @@ grep -F 'result=package-state-unknown' "$GITHUB_WORKSPACE/build/device-test-resu
 echo 'Verified failed PackageManager probes cannot confirm an installed version from their text.'
 
 export FLUTTER_TEST_COUNT="$test_root/flutter-test-count.txt"
+export FLUTTER_RETRY_HOOK_LOG="$test_root/flutter-retry-hook.log"
 export FLUTTER_TEST_MODE=success
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
@@ -435,9 +440,11 @@ export FLUTTER_TEST_MODE=install-timeout-once
 export ADB_FAKE_API_CRLF=true
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart
 [[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+[[ "$(cat "$FLUTTER_RETRY_HOOK_LOG")" == 24 ]]
 unset ADB_FAKE_API_CRLF
 grep -F 'No tests ran.' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-1.log" >/dev/null
 grep -F 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3' \
@@ -463,8 +470,10 @@ echo 'Verified the Flutter retry refuses a rebooted emulator on the wrong API le
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=unrelated-timeout
+rm -f "$FLUTTER_RETRY_HOOK_LOG"
 if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
   echo 'An unrelated Flutter timeout must remain a failure.' >&2
   exit 1
@@ -473,6 +482,7 @@ else
 fi
 [[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
 ! grep -Fq 'reboot' "$ADB_CALL_LOG"
+[[ ! -s "$FLUTTER_RETRY_HOOK_LOG" ]]
 echo 'Verified unrelated Flutter failures do not trigger a retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"

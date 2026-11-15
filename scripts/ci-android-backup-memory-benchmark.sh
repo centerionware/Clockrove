@@ -24,6 +24,51 @@ instrumentation_identity="$(clockrove_apk_identity "$instrumentation_apk" instru
 clockrove_install_apk "$api" app "$app_apk"
 clockrove_install_apk "$api" instrumentation "$instrumentation_apk"
 
+clockrove_force_stop_backup_benchmark_app() {
+  timeout --kill-after=5s 20s adb -s emulator-5554 shell am force-stop "$package" || return 2
+  clockrove_process_deadline=$((SECONDS + 30))
+  clockrove_live_pids='pending'
+  while (( SECONDS < clockrove_process_deadline )); do
+    [[ "$(timeout --kill-after=3s 10s adb -s emulator-5554 get-state)" == device ]] || return 2
+    clockrove_live_pids="$(timeout --kill-after=3s 10s adb -s emulator-5554 shell pidof "$package" 2>/dev/null || true)"
+    clockrove_live_pids="${clockrove_live_pids//$'\r'/}"
+    [[ -n "$clockrove_live_pids" ]] || break
+    sleep 1
+  done
+  if [[ -n "$clockrove_live_pids" ]]; then
+    echo "The app process remained after force-stop: $clockrove_live_pids" >&2
+    return 2
+  fi
+  return 0
+}
+
+clockrove_reseed_backup_memory_fixture() {
+  local retry_api="$1"
+  local reseed_log="$result_dir/backup-snapshot-memory-reseed-after-install-timeout.txt"
+  if ! clockrove_run_flutter_integration_test "$retry_api" backup-snapshot-memory-reseed \
+    'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
+    -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
+    -d emulator-5554 --reporter expanded \
+    --plain-name 'seed synthetic task media for full-path memory benchmark' \
+    > "$reseed_log" 2>&1; then
+    cat "$reseed_log"
+    echo 'Could not restore synthetic media after the confirmed APK-install timeout.' >&2
+    return 2
+  fi
+  cat "$reseed_log"
+  local reseed_identity
+  reseed_identity="$(grep -Eo 'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+' "$reseed_log" | tail -n 1)"
+  if [[ "$reseed_identity" =~ ^BACKUP_SNAPSHOT_MEMORY_SEED[[:space:]]pid=([0-9]+)[[:space:]]process_start_ticks=([0-9]+)$ ]]; then
+    seed_pid="${BASH_REMATCH[1]}"
+    seed_start_ticks="${BASH_REMATCH[2]}"
+  else
+    echo 'Could not capture the synthetic-media reseed process identity.' >&2
+    return 2
+  fi
+  seed_recreated_after_install_timeout=true
+  clockrove_force_stop_backup_benchmark_app
+}
+
 clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-seed \
   'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
   -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
@@ -41,24 +86,15 @@ else
   echo 'Could not capture the synthetic-media process identity.' >&2
   exit 2
 fi
+initial_seed_pid="$seed_pid"
+initial_seed_start_ticks="$seed_start_ticks"
+seed_recreated_after_install_timeout=false
 
-timeout --kill-after=5s 20s adb -s emulator-5554 shell am force-stop "$package"
-clockrove_process_deadline=$((SECONDS + 30))
-clockrove_live_pids='pending'
-while (( SECONDS < clockrove_process_deadline )); do
-  [[ "$(timeout --kill-after=3s 10s adb -s emulator-5554 get-state)" == device ]]
-  clockrove_live_pids="$(timeout --kill-after=3s 10s adb -s emulator-5554 shell pidof "$package" 2>/dev/null || true)"
-  clockrove_live_pids="${clockrove_live_pids//$'\r'/}"
-  [[ -n "$clockrove_live_pids" ]] || break
-  sleep 1
-done
-if [[ -n "$clockrove_live_pids" ]]; then
-  echo "The app process remained after force-stop: $clockrove_live_pids" >&2
-  exit 2
-fi
+clockrove_force_stop_backup_benchmark_app
 
 clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-benchmark \
   'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ envelope_bytes=[0-9]+ baseline_rss_kib=[0-9]+ after_export_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+' \
+  --before-retry-hook clockrove_reseed_backup_memory_fixture \
   -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \
   --plain-name 'measure full-path backup exporter and encryption memory' \
@@ -85,8 +121,11 @@ cat > "$process_log" <<EOF
 api=$api
 app_apk_identity=$app_identity
 instrumentation_apk_identity=$instrumentation_identity
+initial_seed_pid=$initial_seed_pid
+initial_seed_process_start_ticks=$initial_seed_start_ticks
 seed_pid=$seed_pid
 seed_process_start_ticks=$seed_start_ticks
+seed_recreated_after_confirmed_install_timeout=$seed_recreated_after_install_timeout
 app_process_absent_after_force_stop=true
 benchmark_pid=$benchmark_pid
 benchmark_process_start_ticks=$benchmark_start_ticks

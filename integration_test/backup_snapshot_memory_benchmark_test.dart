@@ -67,14 +67,16 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   final timerApi = TimerApi();
   final timer = await timerApi.snapshot();
   const jobId = _fixtureJobId;
-  final jobOutcome = await timerApi.createJob(
-    id: newBusinessId(),
-    version: timer.version,
-    jobId: jobId,
-    name: 'CI synthetic backup memory fixture',
-  );
-  if (!jobOutcome.committed) {
-    throw StateError('Could not create the synthetic benchmark job.');
+  if (!timer.jobs.any((job) => job.id == jobId)) {
+    final jobOutcome = await timerApi.createJob(
+      id: newBusinessId(),
+      version: timer.version,
+      jobId: jobId,
+      name: 'CI synthetic backup memory fixture',
+    );
+    if (!jobOutcome.committed) {
+      throw StateError('Could not create the synthetic benchmark job.');
+    }
   }
 
   final businessApi = BusinessApi();
@@ -84,22 +86,24 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     orElse: () => throw StateError('The synthetic job has no open column.'),
   );
   const taskId = _fixtureTaskId;
-  final cardOutcome = await businessApi.saveCard(
-    newBusinessId(),
-    initialBoard,
-    TaskCard(
-      id: taskId,
-      columnId: column.id,
-      title: 'Synthetic media for backup memory measurement',
-      description: 'Generated CI-only PNG fixtures.',
-      position: 0,
-      billable: false,
-      currency: initialBoard.currency,
-      chargeType: 'UNCLASSIFIED',
-    ),
-  );
-  if (!cardOutcome.committed) {
-    throw StateError('Could not create the synthetic benchmark task.');
+  if (!initialBoard.cards.any((card) => card.id == taskId)) {
+    final cardOutcome = await businessApi.saveCard(
+      newBusinessId(),
+      initialBoard,
+      TaskCard(
+        id: taskId,
+        columnId: column.id,
+        title: 'Synthetic media for backup memory measurement',
+        description: 'Generated CI-only PNG fixtures.',
+        position: 0,
+        billable: false,
+        currency: initialBoard.currency,
+        chargeType: 'UNCLASSIFIED',
+      ),
+    );
+    if (!cardOutcome.committed) {
+      throw StateError('Could not create the synthetic benchmark task.');
+    }
   }
 
   final fullImage = await _noisePng(1024, 1024, 0x43524f56);
@@ -107,13 +111,41 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     throw StateError('A generated PNG exceeded the native image size limit.');
   }
 
-  var mediaBytes = 0;
-  var attachmentCount = 0;
+  var conversation = await businessApi.taskConversation(jobId, taskId);
+  var attachmentCount = conversation.taskAttachments.length;
+  var mediaBytes = conversation.taskAttachments.fold<int>(
+    0,
+    (total, attachment) => total + attachment.bytes,
+  );
+  if (attachmentCount > 0 &&
+      attachmentCount <= 20 &&
+      (mediaBytes - _targetMediaBytes).abs() <= _mediaToleranceBytes) {
+    return _SeedMetrics(
+      pid: pid,
+      processStartTicks: await _processStartTicks(),
+      attachmentCount: attachmentCount,
+      mediaBytes: mediaBytes,
+    );
+  }
+  for (final attachment in List.of(conversation.taskAttachments)) {
+    final outcome = await businessApi.removeTaskImage(
+      newBusinessId(),
+      conversation,
+      attachment.id,
+    );
+    if (!outcome.committed) {
+      throw StateError('Could not reset a stale benchmark attachment.');
+    }
+    conversation = await businessApi.taskConversation(jobId, taskId);
+  }
+  attachmentCount = 0;
+  mediaBytes = 0;
+
   Future<void> attach(Uint8List bytes) async {
     if (attachmentCount >= 20) {
       throw StateError('The synthetic task reached its attachment limit.');
     }
-    final conversation = await businessApi.taskConversation(jobId, taskId);
+    conversation = await businessApi.taskConversation(jobId, taskId);
     final attachmentId = '$_fixtureImageIdPrefix$attachmentCount';
     final outcome = await businessApi.attachTaskImage(
       newBusinessId(),
@@ -184,10 +216,14 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
   const jobId = _fixtureJobId;
   const taskId = _fixtureTaskId;
 
-  final conversation = await const BusinessApi().taskConversation(
-    jobId,
-    taskId,
-  );
+  late final TaskConversation conversation;
+  try {
+    conversation = await const BusinessApi().taskConversation(jobId, taskId);
+  } catch (error) {
+    throw StateError(
+      'Fresh-process benchmark could not query persisted fixture: $error',
+    );
+  }
   final storedMediaBytes = conversation.taskAttachments.fold<int>(
     0,
     (total, attachment) => total + attachment.bytes,
