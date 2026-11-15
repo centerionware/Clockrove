@@ -171,6 +171,7 @@ class BackupDocumentStoreTest {
 
     @Test
     fun archiveAndChunkSizesAreBounded() {
+        assertEquals(67_134_601L, BackupDocumentStore.MAX_ENCRYPTED_BYTES)
         val uri = Uri.parse("content://synthetic.provider/backup/too-large")
         try {
             store.begin(uri, BackupDocumentStore.MAX_ENCRYPTED_BYTES + 1L)

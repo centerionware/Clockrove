@@ -81,6 +81,20 @@ abstract final class BackupCryptoV2 {
   static const int maxTransportChunkBytes = 256 * 1024;
   static const int maxEnvelopeBytes = 67134601;
 
+  /// Exact CLKROVE2 envelope size for a plaintext archive of [archiveBytes].
+  static int envelopeLengthForArchiveBytes(int archiveBytes) {
+    if (archiveBytes < 1 || archiveBytes > maxArchiveBytes) {
+      throw const FormatException('The backup is outside the supported size.');
+    }
+    final frames = (archiveBytes + chunkBytes - 1) ~/ chunkBytes;
+    return headerBytes +
+        archiveBytes +
+        frames * (frameHeaderBytes + tagBytes) +
+        frameHeaderBytes +
+        manifestBytes +
+        tagBytes;
+  }
+
   static const int _memoryKiB = 19 * 1024;
   static const int _iterations = 2;
   static const int _parallelism = 1;

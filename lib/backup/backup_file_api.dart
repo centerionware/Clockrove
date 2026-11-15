@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 
-import 'backup_crypto.dart';
+import 'backup_crypto_v2.dart';
 
-const int maxEncryptedBackupBytes = BackupCrypto.maxArchiveBytes + 72;
+const int maxEncryptedBackupBytes = BackupCryptoV2.maxEnvelopeBytes;
 const int maxBackupDocumentChunkBytes = 192 * 1024;
 
 /// Writes only encrypted backup bytes through an opaque native staging handle.

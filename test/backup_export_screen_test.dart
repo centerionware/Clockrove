@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_export_screen.dart';
 import 'package:clockrove/backup/backup_file_api.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
@@ -38,8 +40,9 @@ void main() {
             exportCalls++;
             return _snapshot();
           },
-          encryptArchive: ({required password, required archive}) async =>
-              Uint8List.fromList([1, 2, 3]),
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+          ),
         ),
       ),
     );
@@ -109,13 +112,15 @@ void main() {
                   totalMediaBytes: 0,
                 ),
               );
-              return _snapshot(openSessionCount: 1);
+              return _snapshot(openSessionCount: 1, archiveByteLength: 196399);
             },
-            encryptArchive: ({required password, required archive}) async {
-              expect(password, 'a-long-backup-password');
-              expect(archive, orderedEquals([7, 8, 9]));
-              return Uint8List(maxBackupDocumentChunkBytes + 3);
-            },
+            encryptArchive: _fakeEncryptor(
+              encrypted: Uint8List(maxBackupDocumentChunkBytes + 3),
+              onArchive: (password, archive) {
+                expect(password, 'a-long-backup-password');
+                expect(archive.length, 196399);
+              },
+            ),
             fileApi: BackupFileApi(channel: channel),
           ),
         ),
@@ -176,8 +181,9 @@ void main() {
       MaterialApp(
         home: BackupExportScreen(
           exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-          encryptArchive: ({required password, required archive}) async =>
-              Uint8List.fromList([1, 2, 3]),
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+          ),
           fileApi: BackupFileApi(channel: channel),
         ),
       ),
@@ -234,8 +240,9 @@ void main() {
       MaterialApp(
         home: BackupExportScreen(
           exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-          encryptArchive: ({required password, required archive}) async =>
-              Uint8List.fromList([1, 2, 3]),
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+          ),
           fileApi: BackupFileApi(channel: channel),
         ),
       ),
@@ -252,6 +259,50 @@ void main() {
       'finishBackupDocument',
     ]);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('disables cancellation before the final staged write', (
+    tester,
+  ) async {
+    final pendingWrite = Completer<Object?>();
+    late int writeLength;
+    respond = (call) async {
+      switch (call.method) {
+        case 'createBackupDocument':
+          return 'opaque-document-id';
+        case 'writeBackupDocumentChunk':
+          writeLength = ((call.arguments as Map)['bytes'] as Uint8List).length;
+          return pendingWrite.future;
+        case 'finishBackupDocument':
+          return true;
+        default:
+          throw StateError('Unexpected method ${call.method}.');
+      }
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupExportScreen(
+          exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+          ),
+          fileApi: BackupFileApi(channel: channel),
+        ),
+      ),
+    );
+    await _enterPassword(tester);
+    await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
+    await _pumpUntil(tester, find.text('Finishing save…'));
+
+    expect(find.byKey(const ValueKey('cancel-backup-export')), findsNothing);
+    pendingWrite.complete(writeLength);
+    await _pumpUntil(tester, find.text('Encrypted backup saved.'));
+    expect(calls.map((call) => call.method), [
+      'createBackupDocument',
+      'writeBackupDocumentChunk',
+      'finishBackupDocument',
+    ]);
   });
 
   testWidgets(
@@ -276,8 +327,9 @@ void main() {
         MaterialApp(
           home: BackupExportScreen(
             exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-            encryptArchive: ({required password, required archive}) async =>
-                Uint8List.fromList([1, 2, 3]),
+            encryptArchive: _fakeEncryptor(
+              encrypted: _encryptedForArchiveSize(3),
+            ),
             fileApi: BackupFileApi(channel: channel),
           ),
         ),
@@ -305,7 +357,7 @@ void main() {
   testWidgets('cancel during snapshot reading does not start encryption', (
     tester,
   ) async {
-    final pending = Completer<BackupSnapshotExport>();
+    final pending = Completer<BackupSnapshotStreamExport>();
     BackupCancellationCheck? cancellationCheck;
     var encryptCalls = 0;
     await tester.pumpWidget(
@@ -315,10 +367,10 @@ void main() {
             cancellationCheck = isCancelled;
             return pending.future;
           },
-          encryptArchive: ({required password, required archive}) async {
-            encryptCalls++;
-            return Uint8List.fromList([1]);
-          },
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+            onArchive: (_, _) => encryptCalls++,
+          ),
         ),
       ),
     );
@@ -343,35 +395,51 @@ void main() {
     expect(calls, isEmpty);
   });
 
-  testWidgets('cancel during encryption prevents opening the file picker', (
+  testWidgets('cancel during encryption discards the staged document', (
     tester,
   ) async {
-    final pendingEncryption = Completer<Uint8List>();
+    final pendingEncryption = Completer<void>();
+    respond = (call) async {
+      switch (call.method) {
+        case 'createBackupDocument':
+          return 'opaque-document-id';
+        case 'cancelBackupDocument':
+          return true;
+        default:
+          throw StateError('Unexpected method ${call.method}.');
+      }
+    };
     await tester.pumpWidget(
       MaterialApp(
         home: BackupExportScreen(
           exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-          encryptArchive: ({required password, required archive}) =>
-              pendingEncryption.future,
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+            beforeWrite: pendingEncryption.future,
+          ),
+          fileApi: BackupFileApi(channel: channel),
         ),
       ),
     );
     await _enterPassword(tester);
     await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
-    await _pumpUntil(tester, find.text('Encrypting backup on this device…'));
+    await _pumpUntil(tester, find.text('Encrypting and saving backup…'));
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('cancel-backup-export')),
       250,
       scrollable: _backupScreenScrollable(),
     );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
-    pendingEncryption.complete(Uint8List.fromList([1, 2, 3]));
+    pendingEncryption.complete();
     await _pumpUntil(
       tester,
       find.text('Backup cancelled. No complete backup file was saved.'),
     );
 
-    expect(calls, isEmpty);
+    expect(calls.map((call) => call.method), [
+      'createBackupDocument',
+      'cancelBackupDocument',
+    ]);
   });
 
   testWidgets('cancel during chunk transfer discards the staged document', (
@@ -395,9 +463,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: BackupExportScreen(
-          exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-          encryptArchive: ({required password, required archive}) async =>
-              Uint8List(maxBackupDocumentChunkBytes + 3),
+          exportBackup: ({isCancelled, onProgress}) async =>
+              _snapshot(archiveByteLength: 196399),
+          encryptArchive: _fakeEncryptor(
+            encrypted: Uint8List(maxBackupDocumentChunkBytes + 3),
+          ),
           fileApi: BackupFileApi(channel: channel),
         ),
       ),
@@ -453,14 +523,87 @@ Finder _backupScreenScrollable() => find
     )
     .first;
 
-BackupSnapshotExport _snapshot({int openSessionCount = 0}) =>
-    BackupSnapshotExport(
-      archiveBytes: Uint8List.fromList([7, 8, 9]),
-      schemaVersion: 15,
-      stateVersion: 20,
-      capturedAtUtcMillis: 1700000000000,
-      openSessionCount: openSessionCount,
-      recordCount: 1,
-      mediaCount: 0,
-      mediaBytes: 0,
-    );
+BackupSnapshotStreamExport _snapshot({
+  int openSessionCount = 0,
+  int archiveByteLength = 3,
+}) => BackupSnapshotStreamExport(
+  archiveByteLength: archiveByteLength,
+  schemaVersion: 15,
+  stateVersion: 20,
+  capturedAtUtcMillis: 1700000000000,
+  openSessionCount: openSessionCount,
+  recordCount: 1,
+  mediaCount: 0,
+  mediaBytes: 0,
+  archiveStream: _testArchiveStream(archiveByteLength),
+  closeSnapshot: () async {},
+);
+
+Stream<Uint8List> _testArchiveStream(int length) async* {
+  if (length == 3) {
+    yield Uint8List.fromList([7, 8, 9]);
+    return;
+  }
+  var offset = 0;
+  while (offset < length) {
+    final end = (offset + BackupCryptoV2.chunkBytes) < length
+        ? offset + BackupCryptoV2.chunkBytes
+        : length;
+    yield Uint8List(end - offset);
+    offset = end;
+  }
+}
+
+BackupArchiveEncryptor _fakeEncryptor({
+  required Uint8List encrypted,
+  void Function(String password, Uint8List archive)? onArchive,
+  Future<void>? beforeWrite,
+}) =>
+    ({
+      required password,
+      required archive,
+      required destination,
+      isCancelled,
+      cancellationToken,
+    }) async {
+      final archiveBuilder = BytesBuilder(copy: false);
+      await for (final chunk in archive) {
+        archiveBuilder.add(chunk);
+      }
+      final archiveBytes = archiveBuilder.takeBytes();
+      onArchive?.call(password, archiveBytes);
+      await beforeWrite;
+      _checkFakeCancellation(isCancelled, cancellationToken);
+      var offset = 0;
+      while (offset < encrypted.length) {
+        _checkFakeCancellation(isCancelled, cancellationToken);
+        final end = (offset + BackupCryptoV2.chunkBytes) < encrypted.length
+            ? offset + BackupCryptoV2.chunkBytes
+            : encrypted.length;
+        await destination.write(Uint8List.sublistView(encrypted, offset, end));
+        offset = end;
+      }
+      _checkFakeCancellation(isCancelled, cancellationToken);
+      await destination.commit();
+      return BackupCryptoV2Result(
+        archiveBytes: archiveBytes.length,
+        dataFrameCount:
+            (archiveBytes.length + BackupCryptoV2.chunkBytes - 1) ~/
+            BackupCryptoV2.chunkBytes,
+        envelopeBytes: encrypted.length,
+        archiveSha256: const [],
+      );
+    };
+
+Uint8List _encryptedForArchiveSize(int archiveBytes) =>
+    Uint8List(BackupCryptoV2.envelopeLengthForArchiveBytes(archiveBytes));
+
+void _checkFakeCancellation(
+  bool Function()? isCancelled,
+  BackupCryptoCancellationToken? cancellationToken,
+) {
+  if (cancellationToken?.isCancelled == true ||
+      (isCancelled?.call() ?? false)) {
+    throw const BackupCryptoV2CancelledException();
+  }
+}

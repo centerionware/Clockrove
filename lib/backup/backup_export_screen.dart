@@ -1,20 +1,25 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'backup_crypto.dart';
+import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_snapshot_exporter.dart';
 
-typedef BackupSnapshotExportRunner = Future<BackupSnapshotExport> Function({
-  BackupCancellationCheck? isCancelled,
-  BackupExportProgressCallback? onProgress,
-});
+typedef BackupSnapshotExportRunner =
+    Future<BackupSnapshotStreamExport> Function({
+      BackupCancellationCheck? isCancelled,
+      BackupExportProgressCallback? onProgress,
+    });
 
-typedef BackupArchiveEncryptor = Future<Uint8List> Function({
+typedef BackupArchiveEncryptor = Future<BackupCryptoV2Result> Function({
   required String password,
-  required Uint8List archive,
+  required Stream<List<int>> archive,
+  required BackupTransactionalByteSink destination,
+  bool Function()? isCancelled,
+  BackupCryptoCancellationToken? cancellationToken,
 });
 
 /// Password-protected, user-directed backup export.
@@ -59,9 +64,9 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
   late final BackupSnapshotExportRunner _exportBackup =
-      widget.exportBackup ?? BackupSnapshotExporter().export;
+      widget.exportBackup ?? BackupSnapshotExporter().exportStream;
   late final BackupArchiveEncryptor _encryptArchive =
-      widget.encryptArchive ?? BackupCrypto.encrypt;
+      widget.encryptArchive ?? BackupCryptoV2.encrypt;
   late final BackupFileApi _fileApi = widget.fileApi ?? BackupFileApi();
 
   _BackupExportPhase _phase = _BackupExportPhase.idle;
@@ -76,10 +81,12 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   bool _cancelRequested = false;
   bool _busy = false;
   bool _canCancel = true;
+  BackupCryptoCancellationToken? _activeCancellationToken;
 
   @override
   void dispose() {
     _cancelRequested = true;
+    _activeCancellationToken?.cancel();
     _password.dispose();
     _confirmation.dispose();
     super.dispose();
@@ -135,6 +142,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   void _requestCancel() {
     if (!_busy || !_canCancel || _cancelRequested) return;
     _cancelRequested = true;
+    _activeCancellationToken?.cancel();
     _setPhase(
       _BackupExportPhase.cancelling,
       message: 'Cancelling backup…',
@@ -157,15 +165,16 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     _openSessionCount = 0;
     _setPhase(_BackupExportPhase.reading, message: 'Reading your saved work…');
 
-    BackupSnapshotExport? snapshot;
-    Uint8List? encrypted;
+    BackupSnapshotStreamExport? snapshot;
+    BackupCryptoCancellationToken? cancellationToken;
+    _BackupFileSink? destination;
     String? documentId;
     var documentSaved = false;
     try {
       snapshot = await _exportBackup(
         isCancelled: () => _cancelRequested,
         onProgress: (progress) {
-          if (_cancelRequested) return;
+          if (_cancelRequested || _phase != _BackupExportPhase.reading) return;
           _setPhase(
             _BackupExportPhase.reading,
             message: 'Reading your saved work…',
@@ -175,30 +184,17 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
       );
       _throwIfCancelled();
       _setPhase(
-        _BackupExportPhase.encrypting,
-        message: 'Encrypting backup on this device…',
-        openSessionCount: snapshot.openSessionCount,
-      );
-      encrypted = await _encryptArchive(
-        password: _password.text,
-        archive: snapshot.archiveBytes,
-      );
-      snapshot.archiveBytes.fillRange(0, snapshot.archiveBytes.length, 0);
-      snapshot = null;
-      if (mounted) {
-        _password.clear();
-        _confirmation.clear();
-      }
-      _throwIfCancelled();
-
-      _setPhase(
         _BackupExportPhase.choosing,
         message: 'Choose where to save the encrypted backup.',
-        expectedBytes: encrypted.length,
+        openSessionCount: snapshot.openSessionCount,
+        expectedBytes: BackupCryptoV2.envelopeLengthForArchiveBytes(
+          snapshot.archiveByteLength,
+        ),
+        transferredBytes: 0,
         canCancel: false,
       );
       documentId = await _fileApi.createBackupDocument(
-        totalBytes: encrypted.length,
+        totalBytes: _expectedBytes,
         suggestedName: _suggestedName(),
       );
       if (documentId == null) {
@@ -210,39 +206,46 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
       }
       _throwIfCancelled();
 
+      cancellationToken = BackupCryptoCancellationToken();
+      _activeCancellationToken = cancellationToken;
+      destination = _BackupFileSink(
+        api: _fileApi,
+        documentId: documentId,
+        expectedBytes: _expectedBytes,
+        onWrite: (transferred) {
+          final commitStarted = destination?.commitStarted ?? false;
+          _setPhase(
+            commitStarted
+                ? _BackupExportPhase.writing
+                : _BackupExportPhase.encrypting,
+            message: commitStarted
+                ? 'Finishing save…'
+                : 'Encrypting and saving backup…',
+            transferredBytes: transferred,
+            expectedBytes: _expectedBytes,
+            canCancel: !commitStarted && !_cancelRequested,
+          );
+        },
+        onCommitStarted: () => _setPhase(
+          _BackupExportPhase.writing,
+          message: 'Finishing save…',
+          canCancel: false,
+        ),
+        finish: () => _finishWithRetry(documentId!),
+      );
       _setPhase(
-        _BackupExportPhase.transferring,
-        message: 'Saving encrypted backup…',
+        _BackupExportPhase.encrypting,
+        message: 'Encrypting and saving backup…',
         canCancel: true,
-        transferredBytes: 0,
       );
-      var offset = 0;
-      while (offset < encrypted.length) {
-        _throwIfCancelled();
-        final end = (offset + maxBackupDocumentChunkBytes) < encrypted.length
-            ? offset + maxBackupDocumentChunkBytes
-            : encrypted.length;
-        final bytes = Uint8List.sublistView(encrypted, offset, end);
-        offset = await _fileApi.writeBackupDocumentChunk(
-          documentId: documentId,
-          offset: offset,
-          bytes: bytes,
-        );
-        _throwIfCancelled();
-        _setPhase(
-          _BackupExportPhase.transferring,
-          message: 'Saving encrypted backup…',
-          transferredBytes: offset,
-        );
-      }
-      _throwIfCancelled();
-
-      _setPhase(
-        _BackupExportPhase.writing,
-        message: 'Finishing save…',
-        canCancel: false,
+      await _encryptArchive(
+        password: _password.text,
+        archive: snapshot.archiveStream,
+        destination: destination,
+        isCancelled: () => _cancelRequested,
+        cancellationToken: cancellationToken,
       );
-      documentSaved = await _finishWithRetry(documentId);
+      documentSaved = destination.committed;
       if (!documentSaved) throw const _BackupSaveIncomplete();
       _setPhase(
         _BackupExportPhase.saved,
@@ -250,6 +253,12 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         canCancel: false,
       );
     } on BackupExportCancelledException {
+      _setPhase(
+        _BackupExportPhase.cancelled,
+        message: 'Backup cancelled. No complete backup file was saved.',
+        canCancel: false,
+      );
+    } on BackupCryptoV2CancelledException {
       _setPhase(
         _BackupExportPhase.cancelled,
         message: 'Backup cancelled. No complete backup file was saved.',
@@ -281,6 +290,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         canCancel: false,
       );
     } finally {
+      _activeCancellationToken = null;
       if (documentId != null && !documentSaved) {
         try {
           await _fileApi.cancelBackupDocument(documentId);
@@ -288,8 +298,19 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
           // The native bridge also expires abandoned encrypted staging files.
         }
       }
-      snapshot?.archiveBytes.fillRange(0, snapshot.archiveBytes.length, 0);
-      encrypted?.fillRange(0, encrypted.length, 0);
+      Object? snapshotCleanupFailure;
+      try {
+        await snapshot?.close();
+      } on Object catch (error) {
+        snapshotCleanupFailure = error;
+      }
+      if (snapshotCleanupFailure != null) {
+        _setPhase(
+          _BackupExportPhase.failed,
+          message: 'Could not clean up the backup snapshot. Check the save location before trying again.',
+          canCancel: false,
+        );
+      }
       if (mounted) {
         setState(() {
           _busy = false;
@@ -340,6 +361,8 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
 
   double? get _progressValue => switch (_phase) {
     _BackupExportPhase.reading => _snapshotProgress?.fraction,
+    _BackupExportPhase.encrypting when _expectedBytes > 0 =>
+      (_transferredBytes / _expectedBytes).clamp(0, 1).toDouble(),
     _BackupExportPhase.transferring when _expectedBytes > 0 =>
       (_transferredBytes / _expectedBytes).clamp(0, 1).toDouble(),
     _BackupExportPhase.reading ||
@@ -462,6 +485,9 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
               ),
             if (_phase == _BackupExportPhase.transferring)
               Text('$_transferredBytes of $_expectedBytes encrypted bytes'),
+            if (_phase == _BackupExportPhase.encrypting &&
+                _transferredBytes > 0)
+              Text('$_transferredBytes of $_expectedBytes encrypted bytes'),
           ],
           if (_phase == _BackupExportPhase.choosing) ...[
             const SizedBox(height: 20),
@@ -506,10 +532,100 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
 
   String get _phaseMessage => switch (_phase) {
     _BackupExportPhase.reading => 'Reading your saved work…',
-    _BackupExportPhase.encrypting => 'Encrypting backup on this device…',
+    _BackupExportPhase.encrypting => 'Encrypting and saving backup…',
     _BackupExportPhase.transferring => 'Saving encrypted backup…',
     _BackupExportPhase.writing => 'Finishing save…',
     _BackupExportPhase.cancelling => 'Cancelling backup…',
     _ => _message ?? '',
   };
+}
+
+final class _BackupFileSink implements BackupTransactionalByteSink {
+  _BackupFileSink({
+    required this._api,
+    required this.documentId,
+    required this.expectedBytes,
+    required this.onWrite,
+    required this.onCommitStarted,
+    required this.finish,
+  });
+
+  final BackupFileApi _api;
+  final String documentId;
+  final int expectedBytes;
+  final void Function(int transferredBytes) onWrite;
+  final void Function() onCommitStarted;
+  final Future<bool> Function() finish;
+  BytesBuilder _pending = BytesBuilder(copy: false);
+  int _pendingBytes = 0;
+  int _writtenBytes = 0;
+  bool _commitStarted = false;
+  bool _committed = false;
+  bool _discarded = false;
+
+  bool get committed => _committed;
+
+  bool get commitStarted => _commitStarted;
+
+  @override
+  Future<void> write(List<int> bytes) async {
+    if (_commitStarted || _committed || _discarded) {
+      throw StateError('The backup file destination is already terminal.');
+    }
+    if (bytes.isEmpty ||
+        bytes.length > expectedBytes - _writtenBytes - _pendingBytes) {
+      throw const FormatException(
+        'The encrypted backup exceeded its preflight size.',
+      );
+    }
+    _pending.add(bytes);
+    _pendingBytes += bytes.length;
+    if (_pendingBytes >= maxBackupDocumentChunkBytes) await _flush();
+  }
+
+  @override
+  Future<void> commit() async {
+    if (_commitStarted || _committed || _discarded) {
+      throw StateError('The backup file destination is already terminal.');
+    }
+    _commitStarted = true;
+    onCommitStarted();
+    await _flush();
+    if (_writtenBytes != expectedBytes) {
+      throw const FormatException(
+        'The encrypted backup did not match its preflight size.',
+      );
+    }
+    if (!await finish()) throw const _BackupSaveIncomplete();
+    _committed = true;
+  }
+
+  @override
+  Future<void> discard() async {
+    if (_committed || _discarded) return;
+    _discarded = true;
+    _pending = BytesBuilder(copy: false);
+    _pendingBytes = 0;
+    await _api.cancelBackupDocument(documentId);
+  }
+
+  Future<void> _flush() async {
+    if (_pendingBytes == 0) return;
+    final bytes = _pending.takeBytes();
+    _pending = BytesBuilder(copy: false);
+    _pendingBytes = 0;
+    var offset = 0;
+    while (offset < bytes.length) {
+      final end = (offset + maxBackupDocumentChunkBytes) < bytes.length
+          ? offset + maxBackupDocumentChunkBytes
+          : bytes.length;
+      _writtenBytes = await _api.writeBackupDocumentChunk(
+        documentId: documentId,
+        offset: _writtenBytes,
+        bytes: Uint8List.sublistView(bytes, offset, end),
+      );
+      offset = end;
+      onWrite(_writtenBytes);
+    }
+  }
 }
