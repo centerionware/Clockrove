@@ -12,7 +12,7 @@ import 'package:cryptography/cryptography.dart';
 /// value available only after the codec calls it. [discard] removes all staged
 /// bytes. The codec calls discard on every failure before commit.
 abstract interface class BackupTransactionalByteSink {
-  Future<void> write(Uint8List bytes);
+  Future<void> write(List<int> bytes);
 
   Future<void> commit();
 
@@ -133,8 +133,11 @@ abstract final class BackupCryptoV2 {
           nonce: _nonce(_dataType, sequence),
           aad: _associatedData(header, frameHeader),
         );
-        await destination.write(
-          _joinFrame(frameHeader, box.cipherText, box.mac.bytes),
+        await _writeFrame(
+          destination,
+          frameHeader,
+          box.cipherText,
+          box.mac.bytes,
         );
         archiveLength += plaintext.length;
         frameCount++;
@@ -162,8 +165,11 @@ abstract final class BackupCryptoV2 {
         nonce: _nonce(_manifestType, frameCount),
         aad: _associatedData(header, manifestHeader),
       );
-      await destination.write(
-        _joinFrame(manifestHeader, finalBox.cipherText, finalBox.mac.bytes),
+      await _writeFrame(
+        destination,
+        manifestHeader,
+        finalBox.cipherText,
+        finalBox.mac.bytes,
       );
       envelopeLength +=
           manifestHeader.length + finalBox.cipherText.length + tagBytes;
@@ -400,24 +406,18 @@ abstract final class BackupCryptoV2 {
     return result;
   }
 
-  static Uint8List _joinFrame(
+  static Future<void> _writeFrame(
+    BackupTransactionalByteSink destination,
     Uint8List frameHeader,
     List<int> ciphertext,
     List<int> tag,
-  ) {
+  ) async {
     if (tag.length != tagBytes) {
       throw StateError('AES-GCM returned an unexpected tag length.');
     }
-    final result = Uint8List(
-      frameHeader.length + ciphertext.length + tag.length,
-    );
-    var offset = 0;
-    result.setRange(offset, offset + frameHeader.length, frameHeader);
-    offset += frameHeader.length;
-    result.setRange(offset, offset + ciphertext.length, ciphertext);
-    offset += ciphertext.length;
-    result.setRange(offset, result.length, tag);
-    return result;
+    await destination.write(frameHeader);
+    await destination.write(ciphertext);
+    await destination.write(tag);
   }
 
   static Uint8List _createManifest(
@@ -454,7 +454,7 @@ abstract final class BackupCryptoV2 {
     }
   }
 
-  static Future<Uint8List> _decryptFrame({
+  static Future<List<int>> _decryptFrame({
     required AesGcm cipher,
     required SecretKey key,
     required int type,
@@ -481,7 +481,7 @@ abstract final class BackupCryptoV2 {
         aad: _associatedData(header, frameHeader),
       );
       if (plaintext.length != plaintextLength) throw _invalidEnvelope();
-      return Uint8List.fromList(plaintext);
+      return plaintext;
     } on _BackupEnvelopeInvalid {
       rethrow;
     } on Object {

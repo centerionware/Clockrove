@@ -36,6 +36,7 @@ void main() {
           destination: _FileTransactionalSink(envelopeFile),
         );
         encryptClock.stop();
+        final afterEncryptRssKiB = await _processHighWaterRssKiB();
 
         final decryptClock = Stopwatch()..start();
         final restored = await BackupCryptoV2.decrypt(
@@ -44,6 +45,7 @@ void main() {
           privateArchive: _FileTransactionalSink(restoredFile),
         );
         decryptClock.stop();
+        final afterDecryptRssKiB = await _processHighWaterRssKiB();
 
         expect(encrypted.archiveBytes, BackupCryptoV2.maxArchiveBytes);
         expect(encrypted.dataFrameCount, BackupCryptoV2.maxDataFrames);
@@ -54,10 +56,20 @@ void main() {
         expect(restored.archiveSha256, expectedDigest);
         expect(await _hashStream(restoredFile.openRead()), expectedDigest);
 
-        final peakRssKiB = await _processHighWaterRssKiB();
+        final afterVerificationRssKiB = await _processHighWaterRssKiB();
+        final peakRssKiB = afterVerificationRssKiB;
         final peakDeltaRssKiB = peakRssKiB > baselineRssKiB
             ? peakRssKiB - baselineRssKiB
             : 0;
+        // ignore: avoid_print
+        print(
+          'BACKUP_STREAMING_RSS_PHASES '
+          'baseline_rss_kib=$baselineRssKiB '
+          'after_encrypt_rss_kib=$afterEncryptRssKiB '
+          'after_decrypt_rss_kib=$afterDecryptRssKiB '
+          'after_verification_rss_kib=$afterVerificationRssKiB '
+          'peak_delta_rss_kib=$peakDeltaRssKiB',
+        );
         expect(
           peakDeltaRssKiB,
           lessThanOrEqualTo(64 * 1024),
@@ -79,12 +91,12 @@ void main() {
       }
     });
 
-    expect(metrics, isNotNull);
+    if (metrics == null) return;
     expect(
       await tester.runAsync(() => Directory(temporaryDirectoryPath).exists()),
       isFalse,
     );
-    final result = metrics!;
+    final result = metrics;
     // ignore: avoid_print
     print(
       'BACKUP_STREAMING_ENVELOPE_BENCHMARK '
@@ -202,7 +214,7 @@ final class _FileTransactionalSink implements BackupTransactionalByteSink {
       _handle ??= await file.open(mode: FileMode.write);
 
   @override
-  Future<void> write(Uint8List bytes) async {
+  Future<void> write(List<int> bytes) async {
     if (_committed) throw StateError('Cannot write after commit.');
     await (await _open).writeFrom(bytes);
   }

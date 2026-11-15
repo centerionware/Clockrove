@@ -481,7 +481,7 @@ final class _MemorySink implements BackupTransactionalByteSink {
   Uint8List? get visibleBytes => committed ? bytes : null;
 
   @override
-  Future<void> write(Uint8List bytes) async {
+  Future<void> write(List<int> bytes) async {
     _writeCount++;
     if (_writeCount == failOnWrite) {
       throw StateError('Synthetic write failure.');
