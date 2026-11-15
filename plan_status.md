@@ -3948,3 +3948,16 @@ session-history assertion counted live observation revisions when it intended
 to check deletion tombstones; it now filters for deleted revisions. Both test
 corrections require a fresh exact-head Actions run. The new actual Android
 deletion journey was not part of this run. No VM tests/build/formatting ran.
+
+### 2026-11-15 — observed editor clearing and tax-error navigation
+
+PR #51 head `8c6054b`, run `43672803259`, passed native tests but failed
+API-24 billing while replacing tax `101` with `0`. The retained screenshot
+and accessibility tree show focused editor value `1010`: Ctrl+A had not
+selected the original text. PR #52 head `11baf85`, run `43671872207`, passed
+API-24 crypto benchmark but failed API-35 tax-error navigation; its screenshot
+shows the bottom of Job settings. The input fallback now clears via ordinary
+editor delete keys and observes an empty focused field before typing. The
+validation journey locates the tax editor before checking its inline error,
+retaining exact error, draft and committed-state assertions. These corrections
+require exact-head Actions validation. No VM builds or tests ran.
