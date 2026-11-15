@@ -167,7 +167,8 @@ class BackupExportStoreTest {
 
         val pointTombstone = records.single {
             it["table"] == "entity_revisions" && values(it)["kind"] == "location" &&
-                values(it)["entity_id"] == pointId && values(it)["deleted"] == 1L
+                values(it)["entity_id"] == pointId &&
+                (values(it)["deleted"] as Number).toInt() == 1
         }
         val tombstoneValues = values(pointTombstone)
         val tombstonePayload = JSONObject(tombstoneValues["payload"] as String)
@@ -182,7 +183,8 @@ class BackupExportStoreTest {
         assertTrue(rangeRevisionId in parentIds)
         assertTrue(records.any {
             it["table"] == "entity_revisions" && (values(it)["id"] as String) in parentIds &&
-                values(it)["entity_id"] == pointId && values(it)["deleted"] == 0L
+                values(it)["entity_id"] == pointId &&
+                (values(it)["deleted"] as Number).toInt() == 0
         })
         assertTrue(exportStore.close(started.snapshotId))
     }
