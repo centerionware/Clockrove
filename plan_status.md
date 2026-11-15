@@ -16,18 +16,7 @@ and M7 backup remain before M7.6 (whole-app UI overhaul and exhaustive
 E2E/screenshots), which must pass before closed testing. iOS and future service
 remain deferred.
 
-Current M7 priority: the refreshed PR #52 Actions run `43695960415` failed
-after installing the app APK because AAPT reports the instrumentation APK's
-empty `versionCode`; Android PackageManager assigns that test variant code `0`.
-The obsolete in-progress run `43696665362` was canceled. The current source
-defers identity parsing until an ambiguous install, parses named AAPT fields,
-and maps the empty version to `0` only for the instrumentation APK. Exact head
-`a139bb0` / Actions run `43697421995` stopped in the synthetic helper cases:
-the success fixture's PackageManager state leaked into the following timeout
-case, so that case correctly recognized the stale test state as installed.
-Reset that fixture state before its own scenario; a fresh full exact-head run
-is pending. The 64 MiB archive memory peak also needs API-24 measurement or
-streaming before export and restore become user-facing.
+Current M7 priority: PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Its exact PR head `defb4e6` / Actions run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557) passed formatting, analysis, Flutter behavior tests, Android/instrumentation builds, 635 native tests, invoice-viewer and release-tooling checks, and 38 actual Android tests on each of API 24 and 35 with zero failures/errors/skips. The 1 MiB benchmark reported encrypt/decrypt 755/301 ms on API 24 and 869/273 ms on API 35; envelope size was 1,048,648 bytes on both. Both APK installation logs reported Success. The instrumentation APK's empty AAPT version code is handled as PackageManager code 0; the bounded recovery synthetic cases passed after the fixture-state reset. The combined M7.2 successor has been rebased locally onto the merge, but has no Actions result yet. Its Settings export entry stays withheld pending maximum-size memory evidence or streaming; restore apply remains outstanding. The PR-head run does not establish post-merge main validation or Play delivery. No VM builds or tests ran.
 
 Current Play-release regression: main Play run
 `43701872698` on source `cc687093` failed at
@@ -4281,3 +4270,28 @@ correctly treated that existing package as already installed. The test now
 clears install, PackageManager, query and reboot state before starting the next
 scenario. No Android build/device journey ran in `43697421995`; a full exact
 head Actions run is required.
+
+
+### 2026-11-15 — PR #52 merged; M7.2 successor rebased
+
+PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Exact PR head
+`defb4e6` / Actions run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557)
+passed formatting, analysis, Flutter behavior tests, Android and instrumentation builds, 635 native tests,
+invoice-viewer and release-tooling checks, and the API 24/35 device pipeline. Each API reported 38 actual
+Android tests with zero failures, errors or skips. The 1 MiB benchmark measured encrypt/decrypt 755/301 ms
+on API 24 and 869/273 ms on API 35; both envelopes were 1,048,648 bytes. Both APK install logs reported
+Success. The run covers the instrumentation APK's default PackageManager version code 0 and the bounded
+install-recovery synthetic cases. It is PR-head evidence; no post-merge main validation or Play delivery is
+claimed here.
+
+The local M7.2 successor was rebased from old PR #52 base `05d087b` onto the merge. Seven M7.2 commits
+remain after the PR #52 merge; the obsolete docs-only status correction was dropped because the merged run
+supersedes its pending status. The successor retains the PR #53 native import-preview source and PR #57 SAF
+save bridge/exporter source; their reviewed source files are byte-identical to candidates `22239f1` and
+`5978bfb`, respectively. PR #54's billing device-test file is also byte-identical to merged main (SHA-256
+`283b6eb7ae7dc929736cb14d665522050c41fbf56332141c1fc1c5a05f8a4dad`), so its commits were not cherry-picked.
+The PR #56 direct-install retry is superseded by PR #52's merged helper. The Settings export route remains
+withheld pending maximum-size memory evidence or streaming. The combined exact-head Actions run is pending.
+M7.3 restore apply and M7.6 remain incomplete. No local builds or tests ran; only `git diff --check` was
+run locally. Do not merge before the successor's exact-head Actions and the current-main/Play-delivery gates
+pass.

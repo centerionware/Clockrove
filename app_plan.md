@@ -24,7 +24,7 @@ The user explicitly requested this handoff after creating agent instructions and
 - Foundation debug build and signed setup AAB are proven in Actions. Physical-device tracking evidence remains unproven. Automatic Play internal
   uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
-- Current M7 work: refreshed PR #52 validation is still pending. Run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415) on `b374915` failed after the app APK installed because the instrumentation APK has an empty AAPT `versionCode`; Android PackageManager assigns that variant code `0`. The installer now defers identity parsing until an ambiguous timeout, parses named AAPT fields, maps an empty code to `0` only for instrumentation APKs, and records sanitized package metadata on parse failure. The first corrected CI run [43697421995](https://github.com/centerionware/Clockrove/actions/runs/43697421995) stopped in a synthetic case because the prior success fixture left stale simulated PackageManager state; the fixture was reset, and no Android build or device tests ran on that head. The bounded Flutter benchmark retry still requires a confirmed reboot/API and its real result marker. Full evidence is in `plan_status.md`.
+- Current M7 work: PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Its exact PR head `defb4e6` / Actions run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557) passed formatting, analysis, Flutter behavior tests, Android and instrumentation builds, 635 native tests, API 24/35 device validation, invoice-viewer checks and release-tooling checks. Each API reported 38 actual Android tests with zero failures/errors/skips. The 1 MiB crypto benchmark measured encrypt/decrypt 755/301 ms on API 24 and 869/273 ms on API 35; each envelope was 1,048,648 bytes. The local M7.2 successor is rebased on the merge and awaits its own exact-head Actions run. Maximum-size archive memory remains unmeasured, so the Settings export entry remains withheld; restore apply and full M7.3/M7.6 acceptance remain pending. Do not infer post-merge main validation or Play delivery from the PR-head run. Full evidence is in `plan_status.md`.
 
 ### Exact money contract (owner priority, 2026-11-12)
 
@@ -133,18 +133,9 @@ the shared device-test path. PR #52's later exact head `e87eebf` / Actions run
 also passed the full workflow and benchmark on both APIs: encrypt/decrypt was
 874/337 ms on API 24 and 1,124/348 ms on API 35, with 37 actual Android tests
 per API and zero failures, errors or skips. That result predates the latest main
-base. PR #52 has now been rebased onto main commit
-`8a0e34052dc7e7fdc9bd1d6f6b0627e3eba175ea`; the refreshed head still needs a
-new exact-head Actions run before merge. It carries the short-scroll and
-covered-task visibility fixes. M7.2's
-deterministic archive codec passed Flutter and native checks
-in the same PR #52 run. The native snapshot service was merged in PR #50 and
-passed its exact-head API-24/35 Actions run
-[43671380322](https://github.com/centerionware/Clockrove/actions/runs/43671380322).
-The separate Dart snapshot exporter source and mocked client tests remain
-pending Actions; no authenticated preview, backup UI or restore is complete.
-M6.6's main gate is green. Continue validating M7 only on GitHub Actions; do
-not run builds, tests or formatters on the owner VM.
+base. PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Its exact PR head `defb4e6` / Actions run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557) passed formatting, analysis, Flutter behavior tests, Android/instrumentation builds, 635 native tests, the full API-24/35 device matrix, invoice-viewer checks and release tooling. JUnit reports 38 actual Android tests per API with zero failures, errors or skips. The 1 MiB crypto benchmark measured 755/301 ms encrypt/decrypt on API 24 and 869/273 ms on API 35; both envelopes were 1,048,648 bytes. The empty instrumentation AAPT version code, normal-install AAPT avoidance and bounded install recovery passed. This is PR-head evidence, not a post-merge main run.
+
+The local M7.2 successor is rebased on `cc6870931920016e7ee9bc4f5fc4be6e96b26523` and retains the native import preview, SAF document-save bridge and bounded Dart export source. Its combined exact-head Actions validation is pending. The Settings route remains withheld until maximum-size memory is measured on the minimum device or the codec streams; transactional restore, M7.3 and M7.6 acceptance are still open. No local build or test ran. Current-main validation and Play-delivery gates must pass before merge.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
