@@ -87,6 +87,51 @@ from photo 4 to 3 and left swipe back to 4. PR #55 also includes the shared
 billing-device-test corrections for text replacement, short settled scrolls,
 tax-error visibility and covered-task checkbox visibility. No VM
 build/test/formatter has run.
+The M7.1 backup-crypto source uses pinned `cryptography` 2.9.0, a bounded
+authenticated header, fixed Argon2id parameters, AES-256-GCM, and an API 24/35
+Flutter integration benchmark.
+Actions run [43664789329](https://github.com/centerionware/Clockrove/actions/runs/43664789329)
+generated the proposed lockfile and formatter patch, then Analyze reported a
+missing widget import in the benchmark and an invalid `List<int>` to
+`TypedData` handoff in decryption. Those static issues are corrected from the
+CI evidence. Locked rerun [43665136368](https://github.com/centerionware/Clockrove/actions/runs/43665136368)
+passed dependency resolution and formatting but Analyze found a redundant
+`dart:typed_data` import in the benchmark; it has now been removed. The run
+again did not reach behavioral or device checks. The third locked run
+[43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324)
+passed lock resolution, formatting, analysis, Flutter behavior tests, Android
+debug build and native unit tests, then failed while assembling the Android
+instrumentation APK. `integration_test` contributed runner 1.3.0 to the debug
+runtime graph while `androidTestImplementation` requested 1.7.0; Gradle's
+consistent-resolution constraint made those versions incompatible. The API
+24/35 emulator journeys and crypto benchmark did not run. The build now aligns
+`debugImplementation` with runner 1.7.0 and assembles
+`:app:assembleDebugAndroidTest` before emulator setup. Run
+[43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760)
+passed all fast gates, API-24 native/device cases and the crypto benchmark
+(1 MiB payload: encrypt 878 ms, decrypt 284 ms). On API 35, the actual-app suite
+recorded five failures and one error after MainActivity opened to a blank
+screen. The root cause is confirmed from the workflow and artifact: the API-24
+Flutter integration benchmark rebuilt the shared `app-debug.apk` with its test
+entrypoint, then the API-35 loop installed that overwritten APK. The CI script
+now preserves immutable copies of the real app and native test APKs before the
+emulator loop and installs those on both APIs. Exact PR #52 run
+[43671872207](https://github.com/centerionware/Clockrove/actions/runs/43671872207)
+passed formatting, analysis, Flutter behavior, Android build, instrumentation
+assembly and native tests. API 24 again passed crypto benchmarking. API 35 now
+reached the real app but stopped at the shared billing invalid-tax lookup before
+its crypto benchmark. The shared device-test correction from `36e27ba` is
+included in the prepared main-based reconciliation: it verifies text was
+cleared before replacement and focuses the tax field before checking the
+validation error. That correction still needs a full Actions run; M7.1 remains
+partial. M7.2's deterministic archive codec passed Flutter and native checks
+in the same PR #52 run. The native snapshot service was merged in PR #50 and
+passed its exact-head API-24/35 Actions run
+[43671380322](https://github.com/centerionware/Clockrove/actions/runs/43671380322).
+The separate Dart snapshot exporter source and mocked client tests remain
+pending Actions; no authenticated preview, backup UI or restore is complete.
+M6.6's main gate is green. Continue validating M7 only on GitHub Actions; do
+not run builds, tests or formatters on the owner VM.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
