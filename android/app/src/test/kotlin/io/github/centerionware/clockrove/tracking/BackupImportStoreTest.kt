@@ -799,13 +799,27 @@ class BackupImportStoreTest {
                 findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"),
             )
             assertEquals(case.relationship, conflict["revisionRelationship"])
-            assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
             assertFalse(conflict["resolved"] as Boolean)
-            importStore.resolveConflict(
-                database, started.importId, preview.previewToken, preview.localStateVersion,
-                conflict["conflictId"] as String, "KEEP_LOCAL",
-            )
-            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+            if (case.relationship == "DIVERGENT") {
+                assertEquals(emptyList<String>(), conflict["allowedChoices"])
+                assertNull(conflict["defaultChoice"])
+                assertFailure("UNSUPPORTED_CHOICE") {
+                    importStore.resolveConflict(
+                        database, started.importId, preview.previewToken, preview.localStateVersion,
+                        conflict["conflictId"] as String, "KEEP_LOCAL",
+                    )
+                }
+                assertFailure("UNRESOLVED_CONFLICTS") {
+                    importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+                }
+            } else {
+                assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+                importStore.resolveConflict(
+                    database, started.importId, preview.previewToken, preview.localStateVersion,
+                    conflict["conflictId"] as String, "KEEP_LOCAL",
+                )
+                importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+            }
             val committedHead = database.rawQuery(
                 "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
                 arrayOf(kind, case.entityId),
@@ -1006,6 +1020,56 @@ class BackupImportStoreTest {
         assertEquals(applied.stateVersion, repository.snapshot().version)
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun nonIdenticalDivergentHeadsFailClosedWithoutAnImplicitResolution() {
+        val kind = "synthetic_nonidentical_divergence"
+        val entityId = "nonidentical-divergent-entity"
+        val baseRevision = "nonidentical-divergent-base"
+        val localRevision = "nonidentical-divergent-local"
+        val backupRevision = "nonidentical-divergent-backup"
+        insertSyntheticRevision(baseRevision, kind, entityId, null)
+        insertSyntheticRevision(localRevision, kind, entityId, baseRevision, "{\"side\":\"local\"}")
+        database.execSQL(
+            "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES(?,?,?)",
+            arrayOf(kind, entityId, localRevision),
+        )
+        val started = stageImport(listOf(
+            revisionRecord(baseRevision, kind, entityId, null),
+            revisionRecord(backupRevision, kind, entityId, null, payload = "{\"side\":\"backup\"}"),
+            parentRecord(backupRevision, baseRevision),
+            headRecord(kind, entityId, backupRevision),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        assertEquals("DIVERGENT", conflict["revisionRelationship"])
+        assertEquals(emptyList<String>(), conflict["allowedChoices"])
+        assertNull(conflict["defaultChoice"])
+        assertFalse(conflict["resolved"] as Boolean)
+
+        val before = repository.snapshot()
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database,
+                started.importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                "KEEP_LOCAL",
+            )
+        }
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(before, repository.snapshot())
+        assertEquals(localRevision, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupRevision'"))
+        assertTrue(importStore.close(started.importId))
     }
 
     @Test
@@ -1680,6 +1744,95 @@ class BackupImportStoreTest {
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$incomingId'"))
         assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$localSessionId'"))
         assertEquals(beforeApply, applied.stateVersion)
+    }
+
+    @Test
+    fun sessionsOverlappingWithinOneBackupRequireExplicitOmission() {
+        val firstSessionId = "backup-overlap-first-session"
+        val secondSessionId = "backup-overlap-second-session"
+        val records = listOf(
+            stagedRow("sessions", mapOf(
+                "id" to firstSessionId,
+                "job_id" to jobId,
+                "start_ms" to now,
+                "end_ms" to now + 10_000L,
+                "timezone" to "Etc/UTC",
+                "offset_seconds" to 0,
+                "origin" to "MANUAL",
+            )),
+            stagedRow("sessions", mapOf(
+                "id" to secondSessionId,
+                "job_id" to jobId,
+                "start_ms" to now + 5_000L,
+                "end_ms" to now + 15_000L,
+                "timezone" to "Etc/UTC",
+                "offset_seconds" to 0,
+                "origin" to "MANUAL",
+            )),
+        )
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(1L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "SESSION_OVERLAP"))
+        assertEquals("BACKUP:$firstSessionId", conflict["localIdentifier"])
+        assertEquals(listOf("KEEP_LOCAL", "OMIT_BACKUP_SESSION"), conflict["allowedChoices"])
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "OMIT_BACKUP_SESSION",
+        )
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(1L, applied.insertedCount)
+        assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$firstSessionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$secondSessionId'"))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun repeatingAnIdenticalBackupImportDoesNotChangeCommittedState() {
+        val records = listOf(stagedRow("customers", mapOf(
+            "id" to "repeat-import-customer",
+            "name" to "Repeat Import Customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        )))
+        val first = stageImport(records)
+        val firstPreview = importStore.finish(database, first.importId)
+        assertEquals(0L, firstPreview.conflictCount)
+        val firstApplied = importStore.apply(
+            database, first.importId, firstPreview.previewToken, firstPreview.localStateVersion,
+        )
+        assertEquals(1L, firstApplied.insertedCount)
+        val committedAfterFirstImport = repository.snapshot()
+        assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
+        assertTrue(importStore.close(first.importId))
+
+        val second = stageImport(records)
+        val secondPreview = importStore.finish(database, second.importId)
+        assertEquals(0L, secondPreview.conflictCount)
+        assertEquals(1L, secondPreview.unchangedCount)
+        val secondApplied = importStore.apply(
+            database, second.importId, secondPreview.previewToken, secondPreview.localStateVersion,
+        )
+
+        assertEquals(0L, secondApplied.insertedCount)
+        assertEquals(1L, secondApplied.skippedCount)
+        assertEquals(committedAfterFirstImport, repository.snapshot())
+        assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
+        assertTrue(importStore.close(second.importId))
     }
 
     @Test

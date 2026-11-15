@@ -1279,16 +1279,26 @@ internal class BackupImportStore(
                                 val mergeableDivergentHead = table == "entity_heads" &&
                                     revisionRelationship == "DIVERGENT" &&
                                     canMergeDivergentHead(db, handle, values, local)
+                                val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
+                                    values["kind"] == "location" &&
+                                    hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
+                                // M7.3 remains blocked for non-identical divergent content until a
+                                // two-sided take-backup/keep-local decision can preserve both histories.
+                                val unsupportedDivergentHead = table == "entity_heads" &&
+                                    revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
+                                    !localGpsTombstoneCanBePreserved
+                                val choices = when {
+                                    immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
+                                    mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
+                                    unsupportedDivergentHead -> emptyList()
+                                    table in mergeOnlyTables -> listOf("KEEP_LOCAL")
+                                    else -> listOf("KEEP_LOCAL")
+                                }
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson,
                                     if (immutable) "IMMUTABLE_RECORD_DIFFERS" else "EXISTING_RECORD_DIFFERS",
-                                    when {
-                                        immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
-                                        mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
-                                        table in mergeOnlyTables -> listOf("KEEP_LOCAL")
-                                        else -> listOf("KEEP_LOCAL")
-                                    },
-                                    "KEEP_LOCAL",
+                                    choices,
+                                    if (unsupportedDivergentHead) null else "KEEP_LOCAL",
                                     localSummary = safeSummary(local.values),
                                     backupSummary = safeSummary(values),
                                     revisionRelationship = revisionRelationship,
@@ -2049,8 +2059,10 @@ internal class BackupImportStore(
         return unproven
     }
 
-    private fun hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean {
-        val pointId = revisionString(point["id"])
+    private fun hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean =
+        hasLocalLocationTombstone(db, revisionString(point["id"]))
+
+    private fun hasLocalLocationTombstone(db: SQLiteDatabase, pointId: String): Boolean {
         return db.rawQuery(
             "SELECT 1 FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
                 "WHERE h.kind='location' AND h.entity_id=? AND r.deleted=1 LIMIT 1",
