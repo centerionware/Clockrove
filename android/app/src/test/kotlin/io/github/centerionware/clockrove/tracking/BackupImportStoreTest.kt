@@ -136,6 +136,80 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun schema16PreviewAcceptsGpsDeletionRangeAndCausalRevisionRecords() {
+        val beforeStart = repository.snapshot().version
+        assertNull(repository.execute(TimerRepository.Command(
+            "start-synthetic-gps-import-session",
+            beforeStart,
+            TimerRepository.Action.START,
+            jobId,
+            now,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val sessionId = requireNotNull(repository.snapshot().running).id
+        val pointId = "synthetic-gps-import-point"
+        val measuredAt = now + 1_000L
+        assertEquals(
+            TimerRepository.SampleResult.RECORDED,
+            repository.recordLocation(TimerRepository.LocationPoint(
+                pointId, sessionId, measuredAt, measuredAt, 12.0, -34.0, 5.0,
+            )),
+        )
+        assertNull(repository.execute(TimerRepository.Command(
+            "stop-synthetic-gps-import-session",
+            repository.snapshot().version,
+            TimerRepository.Action.STOP,
+            null,
+            measuredAt + 1_000L,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        assertNull(repository.deleteLocationRange(
+            "delete-synthetic-gps-import-range",
+            repository.snapshot().version,
+            GpsDeletionStore.Range(jobId, measuredAt, measuredAt + 1L, "Etc/UTC"),
+        ).conflict)
+
+        val source = exportStore.start(database)
+        assertEquals(16, source.schemaVersion)
+        val exportedRecords = readAll(source.snapshotId)
+        assertTrue(exportedRecords.any { it["table"] == "location_deletion_ranges" })
+        assertTrue(exportedRecords.any {
+            it["table"] == "entity_revisions" && values(it)["kind"] == "location_deletion_range"
+        })
+        val localBeforePreview = repository.snapshot()
+        val started = importStore.begin(
+            database,
+            source.archiveFormatVersion,
+            source.schemaVersion,
+            "b".repeat(64),
+            source.recordCount,
+            source.mediaCount,
+            source.mediaBytes,
+        )
+        assertEquals(16, started.schemaVersion)
+        transferRows(source.snapshotId, started.importId)
+        val preview = importStore.finish(database, started.importId)
+
+        assertEquals(16, preview.schemaVersion)
+        assertEquals(source.recordCount, preview.recordCount)
+        assertEquals(source.recordCount, preview.unchangedCount)
+        assertEquals(0L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        assertEquals(localBeforePreview, repository.snapshot())
+        val conflicts = importStore.readConflictPage(
+            database, started.importId, preview.previewToken, null, null,
+        )
+        assertTrue(conflicts.done)
+        assertTrue(conflicts.conflicts.isEmpty())
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
     fun stagingFullRowsAndMediaProducesBoundedReadOnlyPreview() {
         val logo = ByteArray(420_123) { (it * 17 % 251).toByte() }
         database.execSQL(

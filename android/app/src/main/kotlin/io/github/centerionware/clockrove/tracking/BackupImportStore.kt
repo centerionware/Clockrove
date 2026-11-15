@@ -121,7 +121,8 @@ internal class BackupImportStore(
         private val digestPattern = Regex("(?:[0-9a-f]{64}|[A-Za-z0-9_-]{43})")
         private val immutableTables = setOf(
             "entity_revisions", "revision_parents", "job_deletions", "location_points",
-            "task_comment_events", "invoices", "invoice_copies", "invoice_payments", "invoice_payment_events",
+            "location_deletion_ranges", "task_comment_events", "invoices", "invoice_copies",
+            "invoice_payments", "invoice_payment_events",
             "invoice_payment_reversals", "invoice_voids", "quote_revisions", "quote_decisions",
             "quote_pdfs", "quote_invoice_links", "quotes", "quote_scope_lines", "quote_scope_revisions",
         )
@@ -134,6 +135,7 @@ internal class BackupImportStore(
             "invoices" to listOf(listOf("number")),
             "quotes" to listOf(listOf("number")),
             "quote_pdfs" to listOf(listOf("quote_id", "revision")),
+            "location_deletion_ranges" to listOf(listOf("revision_id")),
         )
     }
 
