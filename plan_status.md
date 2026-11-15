@@ -4006,8 +4006,9 @@ inline validation message. Its earlier run `43674600623` passed API-24 billing
 but the page-sized swipe moved past the error on API 35. Follow-up commit
 `88d88b8` uses a 14%-viewport swipe; exact-head run
 [43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
-completed successfully. Both commits are being integrated into PR #51 so its
-final gate exercises the billing repair and GPS deletion journey together.
+completed successfully. Commits `44eea3d` and `b9c1147` integrate these changes
+into PR #51 so its final gate exercises the billing repair and GPS deletion
+journey together.
 The preceding `36e27ba` run `43673656562` had failed API-24 error visibility:
 the screenshot showed the focused tax editor clipped at the navigation bar.
 No local build or test ran.
