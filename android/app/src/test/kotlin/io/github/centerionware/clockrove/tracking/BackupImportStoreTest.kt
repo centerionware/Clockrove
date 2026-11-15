@@ -888,6 +888,8 @@ class BackupImportStoreTest {
         }
     }
 
+    private fun values(record: Map<String, Any?>): Map<*, *> = record["values"] as Map<*, *>
+
     private fun readAllRows(snapshotId: String): List<Map<String, Any?>> {
         val records = mutableListOf<Map<String, Any?>>()
         var cursor: String? = null
