@@ -445,7 +445,11 @@ Android emulator setup bounds each app/instrumentation APK installation to 120
 seconds and retries once only when that command times out or is forcibly killed.
 Keep installation logs per attempt; on final failure capture bounded emulator
 state, recent logcat and installed-package diagnostics. Do not retry or suppress
-the actual test suite as part of this recovery.
+the actual test suite as part of this recovery. `scripts/test-ci-adb-install.sh`
+uses synthetic `adb`/`timeout` commands in PR validation to exercise timeout and
+forced-kill retries, non-timeout failure without retry, the two-attempt cap, and
+final diagnostic retention; natural emulator flakes are not the only evidence
+for the recovery branch.
 
 Pin external actions to reviewed commit SHAs and toolchains to exact versions. Commit lockfiles. Use Fastlane with a locked Ruby bundle for publishing. Temporary secret files must be cleaned up and never uploaded/cached. In GitHub summaries distinguish validation, signing, upload, submission, approval, and live release.
 

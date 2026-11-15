@@ -3,6 +3,7 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]] || { echo 'This check runs only in GitHub Actions.' >&2; exit 2; }
 : "${ANDROID_HOME:?}" "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
+source "$GITHUB_WORKSPACE/scripts/ci-adb-install.sh"
 # Ubuntu runner prerequisite linked by the pinned emulator, even with no audio.
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends libpulse0
@@ -85,49 +86,11 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
-  clockrove_install_apk() {
-    local label="$1"
-    local apk="$2"
-    local attempt=1
-    local status=0
-    local diagnostics_dir="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/install-diagnostics"
-    mkdir -p "$diagnostics_dir"
-    while (( attempt <= 2 )); do
-      local attempt_log="$diagnostics_dir/$label-attempt-$attempt.log"
-      echo "Installing $label APK on API $clockrove_api (attempt $attempt of 2)"
-      if timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$apk" 2>&1 | tee "$attempt_log"; then
-        return 0
-      else
-        status=$?
-        echo "APK install attempt $attempt failed with exit $status" >&2
-      fi
-      if (( attempt < 2 && (status == 124 || status == 137) )); then
-        echo "Install timed out; checking the emulator before one retry"
-        timeout --kill-after=3s 10s adb devices -l || true
-        timeout --kill-after=3s 10s adb -s emulator-5554 get-state || true
-        timeout --kill-after=3s 10s adb -s emulator-5554 shell getprop sys.boot_completed || true
-        sleep 5
-        attempt=$((attempt + 1))
-        continue
-      fi
-      break
-    done
-
-    echo "APK install failed; collecting emulator diagnostics" >&2
-    timeout --kill-after=3s 10s adb devices -l >&2 || true
-    timeout --kill-after=5s 15s adb -s emulator-5554 logcat -d -v threadtime -t 250 > "$diagnostics_dir/logcat.txt" || true
-    timeout --kill-after=5s 15s adb -s emulator-5554 shell pm list packages -3 > "$diagnostics_dir/third-party-packages.txt" || true
-    echo "Recent emulator logcat:" >&2
-    tail -n 80 "$diagnostics_dir/logcat.txt" >&2 || true
-    echo "Installed third-party packages:" >&2
-    cat "$diagnostics_dir/third-party-packages.txt" >&2 || true
-    return "$status"
-  }
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
-  clockrove_install_apk app "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
-  clockrove_install_apk instrumentation "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+  clockrove_install_apk "$clockrove_api" app "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
+  clockrove_install_apk "$clockrove_api" instrumentation "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
   timeout --kill-after=10s 60s adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
