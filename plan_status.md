@@ -3971,3 +3971,16 @@ commit `7f19d54` adds the schema-16 allowlist and synthetic range/tombstone/
 causal-parent export test. The combined exact-head Actions run must validate
 this adapter, the billing repair, and the Android GPS journey. No VM builds or
 tests ran; M7 and M7.6 remain unaccepted.
+
+### 2026-11-15 — GPS date-picker title matcher correction
+
+On exact PR #51 head `c499310`, Actions run
+[43674623832](https://github.com/centerionware/Clockrove/actions/runs/43674623832)
+passed the preceding checks and reached the API-24 GPS deletion journey. It
+stopped at `Select GPS dates`: the actual screenshot shows the title, while the
+accessibility tree exposes `Select GPS dates Nov 9 to Nov 15` as one content
+description. The matcher now supports an explicit prefix option for content
+descriptions, enabled only for this date-picker title. Product labels and the
+existing exact-match checks are unchanged. The corrected exact-head Actions run
+is pending; do not claim the Android GPS journey passed yet. No local build or
+test ran.

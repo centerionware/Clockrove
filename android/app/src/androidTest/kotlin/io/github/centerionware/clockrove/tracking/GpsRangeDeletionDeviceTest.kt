@@ -40,24 +40,35 @@ class GpsRangeDeletionDeviceTest {
     private var timezoneId = "UTC"
     private var pointCount = 49
 
-    private fun find(label: String): AccessibilityNodeInfo? {
+    private fun find(label: String, allowContentDescriptionPrefix: Boolean = false): AccessibilityNodeInfo? {
         fun matches(value: CharSequence?) = value?.toString()?.lineSequence()
             ?.any { it.trim() == label } == true
+
+        fun descriptionMatches(value: CharSequence?): Boolean {
+            if (matches(value)) return true
+            if (!allowContentDescriptionPrefix) return false
+            return value?.toString()?.lineSequence()
+                ?.any { it.trim().startsWith("$label ") } == true
+        }
 
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
             if (!node.refresh()) return null
             for (index in 0 until node.childCount) {
                 node.getChild(index)?.let { visit(it)?.let { found -> return found } }
             }
-            return if (node.isVisibleToUser && (matches(node.text) || matches(node.contentDescription))) node else null
+            return if (node.isVisibleToUser && (matches(node.text) || descriptionMatches(node.contentDescription))) node else null
         }
         return automation.rootInActiveWindow?.let(::visit)
     }
 
-    private fun waitFor(label: String, timeoutMillis: Long = 30000): AccessibilityNodeInfo {
+    private fun waitFor(
+        label: String,
+        timeoutMillis: Long = 30000,
+        allowContentDescriptionPrefix: Boolean = false,
+    ): AccessibilityNodeInfo {
         val deadline = SystemClock.uptimeMillis() + timeoutMillis
         while (SystemClock.uptimeMillis() < deadline) {
-            find(label)?.let { return it }
+            find(label, allowContentDescriptionPrefix)?.let { return it }
             SystemClock.sleep(100)
         }
         diagnostic("missing-${label.replace(Regex("[^a-zA-Z0-9]+"), "-")}")
@@ -383,7 +394,7 @@ class GpsRangeDeletionDeviceTest {
             click("Work history")
             waitFor("Delete GPS by date range")
             click("Delete GPS by date range")
-            waitFor("Select GPS dates")
+            waitFor("Select GPS dates", allowContentDescriptionPrefix = true)
             capture("gps-date-range-calendar")
             click("Review")
             waitFor("Matching saved GPS points: $pointLabel")
@@ -407,7 +418,7 @@ class GpsRangeDeletionDeviceTest {
             )
 
             click("Delete GPS by date range")
-            waitFor("Select GPS dates")
+            waitFor("Select GPS dates", allowContentDescriptionPrefix = true)
             click("Switch to input")
             waitFor("Start Date")
             capture("gps-date-range-input")
