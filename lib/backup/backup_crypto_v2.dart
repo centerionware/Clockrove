@@ -176,6 +176,7 @@ abstract final class BackupCryptoV2 {
       if (envelopeLength > maxEnvelopeBytes) {
         throw const FormatException('The backup envelope is too large.');
       }
+      _checkCancelled(isCancelled);
       await destination.commit();
       committed = true;
       return BackupCryptoV2Result(

@@ -258,6 +258,41 @@ void main() {
     },
   );
 
+  test(
+    'cancellation during final manifest write discards instead of committing',
+    () async {
+      final manifestWriteStarted = Completer<void>();
+      final releaseManifestWrite = Completer<void>();
+      var cancelled = false;
+      final destination = _MemorySink(
+        beforeWrite: (writeNumber) async {
+          // Header is write 1, data frame writes are 2-4, and manifest writes are 5-7.
+          if (writeNumber == 7) {
+            manifestWriteStarted.complete();
+            await releaseManifestWrite.future;
+          }
+        },
+      );
+      final encryption = BackupCryptoV2.encrypt(
+        password: _password,
+        archive: Stream.value([1]),
+        destination: destination,
+        isCancelled: () => cancelled,
+      );
+
+      await manifestWriteStarted.future;
+      cancelled = true;
+      releaseManifestWrite.complete();
+      await expectLater(
+        encryption,
+        throwsA(isA<BackupCryptoV2CancelledException>()),
+      );
+      expect(destination.committed, isFalse);
+      expect(destination.discarded, isTrue);
+      expect(destination.visibleBytes, isNull);
+    },
+  );
+
   test('cancellation and destination errors discard staged output', () async {
     final cancelled = _MemorySink();
     await expectLater(
@@ -459,9 +494,10 @@ List<(int, int)> _splitFrames(Uint8List envelope) {
 }
 
 final class _MemorySink implements BackupTransactionalByteSink {
-  _MemorySink({this.failOnWrite});
+  _MemorySink({this.failOnWrite, this.beforeWrite});
 
   final int? failOnWrite;
+  final Future<void> Function(int writeNumber)? beforeWrite;
   final List<Uint8List> _parts = [];
   int _writeCount = 0;
   bool committed = false;
@@ -483,6 +519,7 @@ final class _MemorySink implements BackupTransactionalByteSink {
   @override
   Future<void> write(List<int> bytes) async {
     _writeCount++;
+    await beforeWrite?.call(_writeCount);
     if (_writeCount == failOnWrite) {
       throw StateError('Synthetic write failure.');
     }
