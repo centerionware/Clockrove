@@ -180,6 +180,14 @@ done
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
+  # Run last because Flutter integration_test can reinstall the target app;
+  # all native product journeys and their result pulls must be complete first.
+  # This records KDF/AES-GCM timings on minimum/current API emulators without
+  # setting a flaky speed threshold.
+  timeout --kill-after=10s 240s flutter test --no-pub \
+    integration_test/backup_crypto_benchmark_test.dart \
+    -d emulator-5554 --reporter expanded \
+    2>&1 | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-crypto-benchmark.txt"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT

@@ -81,9 +81,9 @@ jobs:
         # Collect behavior evidence in the same run; the final gate still fails.
         continue-on-error: true
         run: |
-          dart format lib test
-          git diff --binary -- lib test > "$RUNNER_TEMP/format.patch"
-          git diff --exit-code -- lib test
+          dart format lib test integration_test
+          git diff --binary -- lib test integration_test > "$RUNNER_TEMP/format.patch"
+          git diff --exit-code -- lib test integration_test
       - name: Export formatter correction for source review
         if: always() && steps.format.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
