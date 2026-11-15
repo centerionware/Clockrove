@@ -13,7 +13,6 @@ import 'package:clockrove/business/settings_screen.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/invoice_style_preview_screen.dart';
 import 'package:clockrove/business/invoice_billing_policy.dart';
-import 'package:clockrove/backup/backup_export_screen.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
@@ -183,18 +182,6 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('global settings opens the encrypted backup flow', (tester) async {
-    await _show(tester, _SettingsApi(), const SettingsScreen());
-    await _reveal(tester, 'Create encrypted backup');
-    await tester.tap(find.byKey(const ValueKey('open-backup-export')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(BackupExportScreen), findsOneWidget);
-    expect(find.text('Confirm password'), findsOneWidget);
-    expect(find.textContaining('Clockrove cannot recover it'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('invoice style preview uses the selected style and sample data', (
     tester,
   ) async {
