@@ -3886,22 +3886,24 @@ Exact-head rerun pending; no VM tests/builds ran.
 
 ### 2026-11-15 — full-screen task-photo swipe direction
 
-The full-screen photo viewer set `PageView.reverse: true`, so a leftward drag
-decremented the attachment index and a rightward drag incremented it. Removed
-that reversal and updated the existing viewer journey to assert left swipe
-advances and right swipe returns across the chronological photo list. Source
-change is in PR #55, head `32ac062`. Exact-head Actions run
-[43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
-passed formatting, analysis, Flutter behavior tests, Android debug build and
-native unit tests. Its real Android PDF/device stage failed in the API-24 invoice
-journey because **View original PDF** was not exposed; the photo viewer device
-journey was not reached, so Android swipe direction remains unverified.
+The requirement in section 3.4 is left swipe to the previous photo (-1) and
+right swipe to the next (+1). PR #55 head `32ac062` removed `PageView.reverse`
+and inverted the Flutter expectations; that change contradicted the product
+contract. The first run [43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
+passed formatting, analysis, Flutter behavior, Android build and native tests,
+then failed the API-24 device journey earlier while exposing **View original
+PDF**. After adding the shared billing-test corrections, PR #55 head `04cd124`
+/ run [43680373221](https://github.com/centerionware/Clockrove/actions/runs/43680373221)
+passed fast gates and reached task-media on API 24. The device journey started
+at **Photo 4 of 4**, swiped left, but still showed **Photo 4 of 4** and failed
+while waiting for **Photo 3 of 4**. The failure screenshot
+`android-device-test-results/api-24/task-media-captures/accessibility-failure-photo-3-of-4.png`
+confirms the direction regression; API 35 was not reached.
 
-PR #55 now also contains the shared Android billing-test harness corrections
-from PR #54 commits `36e27ba`, `3ca1267`, `88d88b8`, `00531dc` and `32d6154`:
-observe old editor text cleared before replacement, use short settled scroll
-increments to avoid skipping fields, leave room to expose tax validation, and
-reveal the covered-task row before reading its checkable state. These changes
-affect test automation, not production billing behavior. Exact-head PR #55
-Actions validation on API 24 and 35 is pending. No VM build, test, formatter or
-analyzer ran.
+Restored `PageView.reverse: true`, restored the widget assertions to left =
+previous and right = next, and retained the real Android 4→3 left / 3→4 right
+journey. PR #55 also carries test-only helper corrections from PR #54 commits
+`36e27ba`, `3ca1267`, `88d88b8`, `00531dc` and `32d6154`: observed editor
+clearing, short settled scroll increments, tax-error visibility and checkable
+covered-task lookup. Exact-head API-24/35 Actions validation is pending. No VM
+build, test, formatter or analyzer ran.
