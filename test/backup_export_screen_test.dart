@@ -192,8 +192,9 @@ void main() {
       if (find
           .text('Save cancelled. No complete backup was saved.')
           .evaluate()
-          .isNotEmpty)
+          .isNotEmpty) {
         break;
+      }
     }
     expect(
       find.text('Save cancelled. No complete backup was saved.'),
@@ -300,13 +301,13 @@ void main() {
     tester,
   ) async {
     final pending = Completer<BackupSnapshotExport>();
-    BackupCancellationCheck? isCancelled;
+    BackupCancellationCheck? cancellationCheck;
     var encryptCalls = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: BackupExportScreen(
-          exportBackup: ({isCancelled: check, onProgress}) {
-            isCancelled = check;
+          exportBackup: ({isCancelled, onProgress}) {
+            cancellationCheck = isCancelled;
             return pending.future;
           },
           encryptArchive: ({required password, required archive}) async {
@@ -321,7 +322,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
 
-    expect(isCancelled?.call(), isTrue);
+    expect(cancellationCheck?.call(), isTrue);
     pending.completeError(const BackupExportCancelledException());
     await _pumpUntil(
       tester,
