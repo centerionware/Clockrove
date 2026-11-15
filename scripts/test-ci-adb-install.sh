@@ -2,6 +2,13 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+benchmark_script="$script_dir/ci-android-backup-memory-benchmark.sh"
+no_uninstall_invocations="$(grep -Fc -- 'flutter test --no-uninstall' "$benchmark_script")"
+if [[ "$no_uninstall_invocations" != 3 ]]; then
+  echo 'Backup memory benchmark seed, reseed, and measurement must all use --no-uninstall.' >&2
+  exit 1
+fi
+
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
 mkdir -p "$test_root/bin" "$test_root/workspace"
@@ -13,6 +20,7 @@ export ADB_PACKAGE_QUERY_COUNT="$test_root/package-query-count.txt"
 export ADB_PACKAGE_STATE_FILE="$test_root/package-state.txt"
 export ADB_REBOOT_COUNT="$test_root/reboot-count.txt"
 export FLUTTER_EVENT_LOG="$test_root/flutter-events.txt"
+export FLUTTER_NO_UNINSTALL_LOG="$test_root/flutter-no-uninstall.txt"
 export AAPT_CALL_LOG="$test_root/aapt-calls.txt"
 export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
 export ADB_FAKE_VERSION=42
@@ -200,6 +208,11 @@ count=0
 count=$((count + 1))
 printf '%s\n' "$count" > "$FLUTTER_TEST_COUNT"
 printf 'flutter-attempt-%s\n' "$count" >> "$FLUTTER_EVENT_LOG"
+has_no_uninstall=false
+for argument in "$@"; do
+  if [[ "$argument" == --no-uninstall ]]; then has_no_uninstall=true; fi
+done
+printf '%s\n' "$has_no_uninstall" >> "$FLUTTER_NO_UNINSTALL_LOG"
 case "$FLUTTER_TEST_MODE:$count" in
   install-timeout-once:1|install-timeout-always:*)
     if [[ "$FLUTTER_TEST_MODE" == install-timeout-once ]]; then
@@ -496,6 +509,7 @@ grep -Fx 'failed-hook' "$FLUTTER_EVENT_LOG" >/dev/null
 echo 'Verified a failed post-recovery fixture hook prevents the Flutter retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+rm -f "$FLUTTER_NO_UNINSTALL_LOG"
 export FLUTTER_TEST_MODE=install-timeout-once
 export ADB_FAKE_API=35
 if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
@@ -631,14 +645,16 @@ grep -F 'boot-restart=not-confirmed' \
 echo 'Verified Flutter test recovery refuses retry unless emulator reboot is confirmed.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+rm -f "$FLUTTER_NO_UNINSTALL_LOG"
 export FLUTTER_TEST_MODE=install-timeout-once
 export FLUTTER_TEST_PATH=integration_test/backup_snapshot_memory_benchmark_test.dart
 export ADB_REBOOT_MODE=normal
 export ADB_FAKE_API=24
 clockrove_run_flutter_integration_test 24 backup-snapshot-memory-seed \
   'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
-  -- flutter test integration_test/backup_snapshot_memory_benchmark_test.dart
+  -- flutter test --no-uninstall integration_test/backup_snapshot_memory_benchmark_test.dart
 [[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+[[ "$(cat "$FLUTTER_NO_UNINSTALL_LOG")" == $'true\ntrue' ]]
 unset FLUTTER_TEST_PATH
 echo 'Verified the synthetic-media integration test loading line permits only the bounded pre-test install retry.'

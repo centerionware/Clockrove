@@ -47,7 +47,7 @@ clockrove_reseed_backup_memory_fixture() {
   local reseed_log="$result_dir/backup-snapshot-memory-reseed-after-install-timeout.txt"
   if ! clockrove_run_flutter_integration_test "$retry_api" backup-snapshot-memory-reseed \
     'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
-    -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
+    -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
     -d emulator-5554 --reporter expanded \
     --plain-name 'seed synthetic task media for full-path memory benchmark' \
     > "$reseed_log" 2>&1; then
@@ -71,7 +71,7 @@ clockrove_reseed_backup_memory_fixture() {
 
 clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-seed \
   'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
-  -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
+  -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \
   --plain-name 'seed synthetic task media for full-path memory benchmark' \
   > "$seed_log" 2>&1
@@ -95,7 +95,7 @@ clockrove_force_stop_backup_benchmark_app
 clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-benchmark \
   'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ envelope_bytes=[0-9]+ baseline_rss_kib=[0-9]+ after_export_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+' \
   --before-retry-hook clockrove_reseed_backup_memory_fixture \
-  -- flutter test --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
+  -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \
   --plain-name 'measure full-path backup exporter and encryption memory' \
   > "$benchmark_log" 2>&1
