@@ -22,8 +22,18 @@ promise. No API key or account is required for this default provider.
 CI uses synthetic tile bytes and injected HTTP responses, never public tile loads.
 Synthetic map previews prove layout and overlays, not live OSM availability or
 native GPS. Device/network proof, complete reports/site editing and optional
-provider configuration remain pending. The Google runtime-key experiment is
-still blocked on credentials/device evidence; no Google plugin is selected yet.
+provider configuration remain separate release evidence. Google Maps remains
+an open optional provider, not an implemented feature. Google's documented
+[Flutter configuration](https://developers.google.com/maps/flutter-package/config)
+and [Android project setup](https://developers.google.com/maps/documentation/android-sdk/config)
+put the key in Android application manifest metadata; the documented
+[`MapsInitializer` API](https://developers.google.com/android/reference/com/google/android/gms/maps/MapsInitializer)
+has no runtime key parameter. No supported runtime-key path has been identified
+for the standard Flutter/Android SDK integration, and a native platform view
+would still use that SDK. Do not add a Google key field or claim availability
+until a supported path is established and proven with an owner-provided,
+restricted key. This does not affect keyless OSM or the existing custom HTTPS
+raster provider.
 
 Sources reviewed for the selected implementation:
 

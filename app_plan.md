@@ -628,15 +628,23 @@ stores the complete configuration as AES-GCM ciphertext under an Android
 Keystore key in app-private storage; reset removes both. If protected settings
 cannot be read, maps fall back to OSM.
 
-The separately requested Google Maps SDK option remains open. Google's current
-[Flutter configuration guide](https://developers.google.com/maps/flutter-package/config)
-places the Android key in `AndroidManifest.xml`; its
-[Android key guidance](https://developers.google.com/maps/documentation/android-sdk/get-api-key)
-requires package-name and signing-certificate restrictions. A user-entered
-Keystore value is not a supported runtime initialization path for the standard
-Flutter SDK, so do not claim Google Maps is available or store an unrestricted
-key in the app. Decide and prove a restricted build-time key or native adapter
-path with an owner-provided Google project/key before closing this requirement.
+The separately requested Google Maps option remains open and is not implemented.
+The official [Flutter configuration guide](https://developers.google.com/maps/flutter-package/config)
+and [Android project setup](https://developers.google.com/maps/documentation/android-sdk/config)
+configure the Android key as `com.google.android.geo.API_KEY` application
+manifest metadata. `MapsInitializer` exposes initialization methods that take
+an Android `Context`, not a runtime key
+([Google Play services reference](https://developers.google.com/android/reference/com/google/android/gms/maps/MapsInitializer)).
+No officially supported runtime-key initialization path for the standard
+Flutter/Android Maps SDK integration was found. A native platform-view adapter
+would still use that SDK and would not resolve this constraint.
+
+Do not accept a Google SDK key in the current settings screen or claim that
+Google Maps is available. This does not change the runtime user-key requirement
+to a build-time key: any build-time-key proposal needs an explicit owner decision
+to revise the contract. Until a supported runtime path is established and tested
+with an owner-provided restricted key, keep Google Maps open and retain the
+working keyless OSM and protected custom HTTPS raster providers.
 
 ### Milestone 7 — encrypted backup and safe merge
 

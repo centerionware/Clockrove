@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-15. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
 slice passed API-24/35 CI and its internal Play upload was accepted; the newly
 requested 49-sample report-map regression passed on API 24, with API 35 and
@@ -78,7 +78,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M7.2 Encrypted archive/schema/preview | Pending | Authentication before parse; explicit open-session choices |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
-| M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; not started | After all remaining launch features are complete, overhaul first-use UX across the entire app and create a complete inventory of features, screens, routes, settings, options, permissions, empty/error states and destructive confirmations. Actual-app journeys must assert native persistence/side effects and retain a reviewed screenshot for every item on API 24 and current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This is the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
+| M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
@@ -3883,3 +3883,29 @@ accessibility dump shows the tax EditText unfocused. The input fallback accepted
 keyboard visibility without proving target focus. Require the target editable
 node's focused state, with bounded wait and safe pointer fallback, before typing.
 Exact-head rerun pending; no VM tests/builds ran.
+### 2026-11-15 — Google Maps runtime-key feasibility remains open
+
+On the isolated provider branch based on `00b11b6`, reviewed the active map
+contract, current OSM/custom-raster settings, and the stopped provider draft in
+`.local/luna-providers`. The stopped draft's map privacy inventory was adapted
+into `docs/MAP_PRIVACY_DATA_INVENTORY.md`; its claims were kept as release
+checks rather than treated as validation evidence.
+
+The official Flutter and Android setup guides configure the Android Maps SDK
+key through `com.google.android.geo.API_KEY` application manifest metadata.
+The documented `MapsInitializer` methods accept an Android `Context` and no
+runtime key. No officially supported runtime user-key path for the standard
+Flutter/Android Maps SDK integration was found. A native platform view still
+uses the same SDK, so it does not solve key initialization. No Google Maps key
+setting, SDK dependency, platform view, or map provider was added. Do not change
+the product contract to a build-time key without an explicit owner decision.
+
+The existing keyless OSM and protected custom HTTPS raster providers remain the
+working options. Google Maps remains an open requirement; resolving it requires
+a supported runtime-key path and owner-provided restricted-key proof, or an
+explicit contract decision. The relevant official sources are linked in
+`app_plan.md` and `docs/MAP_PRIVACY_DATA_INVENTORY.md`.
+
+No build, test, formatter, or device check ran on the VM. No owner key or device
+was available, so Google rendering, missing/invalid-key fallback and billing
+restriction behavior remain unproven.
