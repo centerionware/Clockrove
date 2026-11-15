@@ -175,7 +175,7 @@ class BackupImportStoreTest {
 
         val source = exportStore.start(database)
         assertEquals(16, source.schemaVersion)
-        val exportedRecords = readAll(source.snapshotId)
+        val exportedRecords = readAllRows(source.snapshotId)
         assertTrue(exportedRecords.any { it["table"] == "location_deletion_ranges" })
         val rangeRevision = exportedRecords.first {
             it["table"] == "entity_revisions" && values(it)["kind"] == "location_deletion_range"
@@ -680,7 +680,7 @@ class BackupImportStoreTest {
     fun importedUniqueValueAlreadyUsedLocallyRemainsUnresolved() {
         database.execSQL(
             "INSERT INTO quotes(id,number,created_ms) VALUES(?,?,?)",
-            arrayOf("local-quote", "Q-200", now),
+            arrayOf<Any?>("local-quote", "Q-200", now),
         )
         val records = listOf(
             stagedRow("quotes", mapOf("id" to "backup-quote", "number" to "Q-200", "created_ms" to now)),
@@ -886,6 +886,19 @@ class BackupImportStoreTest {
             cursor = page.nextCursor
             done = page.done
         }
+    }
+
+    private fun readAllRows(snapshotId: String): List<Map<String, Any?>> {
+        val records = mutableListOf<Map<String, Any?>>()
+        var cursor: String? = null
+        var done = false
+        while (!done) {
+            val page = exportStore.readPage(snapshotId, cursor, BackupImportStore.MAX_PAGE_BYTES)
+            records.addAll(page.records)
+            cursor = page.nextCursor
+            done = page.done
+        }
+        return records
     }
 
     private fun revisionRecord(

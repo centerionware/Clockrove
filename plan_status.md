@@ -75,7 +75,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | Follow-on: task comments, supplies and costs | Comments/images merged #43; classification and cost ledger pass Actions source checks; actual Android journey pending | M6.5 implements private task/comment conversations and image attachments. M6.6 adds Labor/Supplies classification with legacy values retained as Unclassified, plus a native actual-cost ledger and UI for exact-money entries. Run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed all 602 native tests plus Flutter behavior and Android build checks. Supplies task labels never auto-book costs. Actual cost CRUD, migration, exact-money and paging cases passed; device coverage did not run because the earlier billing journey failed. Templates do not copy comments, attachments or costs. |
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
-| M7.2 Encrypted archive/schema/preview | Schema-16 export and import-preview validation source integrated in PR #53; Actions rerun pending | PR #53 includes PR #51's green schema-16 GPS deletion/export head `3e96327` as branch ancestry while remaining targeted at `main`; migration/export code is not reimplemented. Import preview accepts schema 16 and stages deletion ranges. New native source validates revision graph and references, portable table constraints/types, unique values, GPS deletion ancestry/coverage and overlap with open local sessions. Preview remains read-only; choices and transactional apply are not exposed. PR #51 exact head `3e963276` passed Actions run `43680130675`. PR #53 combined head `1677118` / run `43686358230` passed format, analysis and Flutter tests, then Android compilation failed on inferred intersection types in three mixed SQLite bind arrays; native/device stages were skipped. The bind arrays now specify `Any?`; a new exact-head Actions run must validate the fix. No VM build, test or formatter ran. Authenticated archive/encryption/UI and complete restore remain outstanding. See `docs/BACKUP_FORMAT.md`. |
+| M7.2 Encrypted archive/schema/preview | PR #53 stacked on PR #51; exact-head Actions rerun pending | PR #53 is based on `worker2/gps-range-deletion`, so its review diff contains only import-preview changes; its branch includes PR #51 head `3e96327` as merge ancestry. PR #51 remains open and unmerged. Import preview accepts schema 16 and stages deletion ranges. New native source validates revision graph and references, portable table constraints/types, unique values, GPS deletion ancestry/coverage and overlap with open local sessions. Preview remains read-only; choices and transactional apply are not exposed. PR #51 exact head `3e963276` passed Actions run `43680130675`. PR #53 head `1677118` / run `43686358230` passed format, analysis, Flutter behavior tests and Android build, then native test compilation failed on a missing paged-row helper and an inferred mixed bind-array type; native cases and device stages did not run. The fixture now uses the export page API and the mixed bind array specifies `Any?`; a new exact-head Actions run is pending. No VM build, test or formatter ran. Authenticated archive/encryption/UI and complete restore remain outstanding. See `docs/BACKUP_FORMAT.md`. |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Native preview validation source added; Actions pending; merge incomplete | SQL-backed revision graph and schema-derived foreign-key checks reject malformed staging records. GPS coverage and session-overlap findings remain unresolved conflicts; defaults do not resolve them. Conflict-choice application, ancestry-based merge resolution and transactional commit remain unimplemented. |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
 | M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
@@ -4032,9 +4032,10 @@ build, test, or formatter ran.
 
 PR #51 remains open and unmerged. Its exact head `3e963276` passed GitHub
 Actions run [43680130675](https://github.com/centerionware/Clockrove/actions/runs/43680130675).
-PR #53 now includes that head as merge ancestry (`dc989f6`) while remaining
-targeted at `main`; the migration, GPS deletion, and export implementation are
-carried once from PR #51. Schema-16 import acceptance and its synthetic GPS
+PR #53 now includes that head as merge ancestry (`dc989f6`) and is based on
+`worker2/gps-range-deletion`, so its review diff contains only import-preview
+changes; the migration, GPS deletion, and export implementation are carried
+once from PR #51. PR #51 remains open and unmerged. Schema-16 import acceptance and its synthetic GPS
 range/revision preview case are in `9fa2291`. Validation source in `f145442`
 checks revision graph ownership/acyclicity, staged portable constraints and
 references, unique-value collisions, GPS deletion ancestry/coverage, and
@@ -4046,10 +4047,11 @@ PR #53's prior exact head `b6cafdba` failed its API-24 billing journey in run
 [43674203423](https://github.com/centerionware/Clockrove/actions/runs/43674203423).
 At combined head `16771184418128e22696dde4f81f69dda5aae35e`, Actions run
 [43686358230](https://github.com/centerionware/Clockrove/actions/runs/43686358230)
-passed formatting, analysis, and Flutter behavior tests. Android compilation
-then failed at three mixed SQLite bind arrays in `BackupImportStore.kt` because
-Kotlin inferred intersection types; native and device stages were skipped. The
-arrays now specify `Any?`. A new exact-head run is required. No VM build, test,
-or formatter ran; `git diff --check` passed. Authenticated Dart
-archive/encryption, explicit conflict choices, complete semantic validation,
-and transactional restore remain outstanding.
+passed formatting, analysis, Flutter behavior tests, and Android build, then
+native test compilation failed because the schema-16 fixture called a missing
+`readAll` helper and one mixed bind array inferred an intersection type. Native
+cases and device stages did not run. The fixture now reads all pages with the
+export API and the bind array specifies `Any?`; a new exact-head Actions run is
+required. No VM build, test, or formatter ran; `git diff --check` passed.
+Authenticated Dart archive/encryption, explicit conflict choices, complete
+semantic validation, and transactional restore remain outstanding.
