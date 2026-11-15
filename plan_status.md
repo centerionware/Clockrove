@@ -3998,3 +3998,14 @@ proves the input mode opened without relying on a missing label. The Review,
 point-count, cancellation/confirmation, persisted tombstone, and report/map
 assertions remain. A new exact-head Actions run is required; API 35 and later
 journeys were not reached on `43677160634`. No VM build or test ran.
+
+### 2026-11-15 — API 24/35 tax-error visibility repair
+
+PR #54 commit `3ca1267` adds a short scroll when the tax editor clips its
+inline validation message. Its earlier run `43674600623` passed API-24 billing
+but the page-sized swipe moved past the error on API 35. Follow-up commit
+`88d88b8` uses a 14%-viewport swipe; exact-head run
+[43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
+completed successfully. Both commits are being integrated into PR #51 so its
+final gate exercises the billing repair and GPS deletion journey together.
+No local build or test ran.
