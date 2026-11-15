@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.StandardMethodCodec
 import java.io.File
+import java.util.UUID
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
@@ -520,6 +521,45 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun omittingConflictedInvoiceRequiresExplicitOmissionOfDependentClaim() {
+        database.execSQL(
+            "INSERT INTO invoices(id,job_id,number,created_ms,payload) VALUES(?,?,?,?,?)",
+            arrayOf<Any?>("local-number-owner", jobId, "INV-DEPENDENCY-OWNER", now, "{}"),
+        )
+        val backupInvoiceId = "backup-number-collision"
+        val started = stageImport(listOf(
+            invoiceRecord(backupInvoiceId, jobId, "INV-DEPENDENCY-OWNER"),
+            invoiceTimeClaimRecord(
+                "backup-claim-referencing-omitted-invoice", backupInvoiceId, jobId, 100, 200,
+            ),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(2L, preview.conflictCount)
+        val invoiceConflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
+        val dependentConflict = requireNotNull(findConflict(started.importId, preview, "DEPENDENT_ON_CONFLICT"))
+        assertEquals(listOf("OMIT_BACKUP_RECORD"), dependentConflict["allowedChoices"])
+        assertNull(dependentConflict["defaultChoice"])
+        assertFalse(dependentConflict["resolved"] as Boolean)
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            invoiceConflict["conflictId"] as String, "OMIT_BACKUP_RECORD",
+        )
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            dependentConflict["conflictId"] as String, "OMIT_BACKUP_RECORD",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(0L, number("SELECT COUNT(*) FROM invoices WHERE id='backup-number-collision'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM invoice_time_claims WHERE id='backup-claim-referencing-omitted-invoice'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM invoices WHERE id='local-number-owner'"))
+    }
+
+    @Test
     fun rejectsImportedInvoiceTimeClaimOverlappingAnExistingLocalClaim() {
         database.execSQL(
             "INSERT INTO invoices(id,job_id,number,created_ms,payload) VALUES(?,?,?,?,?)",
@@ -701,7 +741,275 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun oldBackupPointCoveredByLocalRangeBlocksUntilCausalResolutionExists() {
+    fun conflictingHeadsClassifyAncestorDescendantAndDivergentHistoryExplicitly() {
+        data class Node(val id: String, val parent: String? = null)
+        data class Case(
+            val entityId: String,
+            val localNodes: List<Node>,
+            val localHead: String,
+            val backupNodes: List<Node>,
+            val backupHead: String,
+            val relationship: String,
+        )
+        val kind = "synthetic_revision_entity"
+        val cases = listOf(
+            Case(
+                "backup-descendant-case",
+                listOf(Node("descendant-base")),
+                "descendant-base",
+                listOf(Node("descendant-base"), Node("descendant-backup", "descendant-base")),
+                "descendant-backup",
+                "BACKUP_DESCENDANT",
+            ),
+            Case(
+                "backup-ancestor-case",
+                listOf(Node("ancestor-base"), Node("ancestor-local", "ancestor-base")),
+                "ancestor-local",
+                listOf(Node("ancestor-base")),
+                "ancestor-base",
+                "BACKUP_ANCESTOR",
+            ),
+            Case(
+                "divergent-history-case",
+                listOf(Node("divergent-base"), Node("divergent-local", "divergent-base")),
+                "divergent-local",
+                listOf(Node("divergent-base"), Node("divergent-backup", "divergent-base")),
+                "divergent-backup",
+                "DIVERGENT",
+            ),
+        )
+
+        cases.forEach { case ->
+            case.localNodes.forEach { node ->
+                insertSyntheticRevision(node.id, kind, case.entityId, node.parent)
+            }
+            database.execSQL(
+                "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES(?,?,?)",
+                arrayOf(kind, case.entityId, case.localHead),
+            )
+            val backupRecords = case.backupNodes.flatMap { node ->
+                buildList {
+                    add(revisionRecord(node.id, kind, case.entityId, null))
+                    node.parent?.let { add(parentRecord(node.id, it)) }
+                }
+            } + headRecord(kind, case.entityId, case.backupHead)
+            val started = stageImport(backupRecords)
+            val preview = importStore.finish(database, started.importId)
+            val conflict = requireNotNull(
+                findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"),
+            )
+            assertEquals(case.relationship, conflict["revisionRelationship"])
+            assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+            assertFalse(conflict["resolved"] as Boolean)
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                conflict["conflictId"] as String, "KEEP_LOCAL",
+            )
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+            val committedHead = database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                arrayOf(kind, case.entityId),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+            assertEquals(case.localHead, committedHead)
+            assertTrue(importStore.close(started.importId))
+        }
+    }
+
+    @Test
+    fun rejectsARevisionIdReusedForDifferentImmutableContent() {
+        val kind = "synthetic_revision_collision"
+        val entityId = "revision-id-collision-entity"
+        insertSyntheticRevision("shared-revision-id", kind, entityId, null, payload = "{}")
+        database.execSQL(
+            "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES(?,?,?)",
+            arrayOf(kind, entityId, "shared-revision-id"),
+        )
+        val started = stageImport(listOf(
+            revisionRecord(
+                "shared-revision-id", kind, entityId, null,
+                payload = "{\"different\":true}",
+            ),
+            headRecord(kind, entityId, "shared-revision-id"),
+        ))
+
+        assertFailure("INVALID_REVISION_GRAPH") {
+            importStore.finish(database, started.importId)
+        }
+        assertTrue(importStore.close(started.importId))
+        assertEquals("shared-revision-id", database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+    }
+
+    @Test
+    fun postChoiceRevisionCycleFailsAtomicallyWithoutChangingTheDatabase() {
+        val kind = "synthetic_post_choice_cycle"
+        val entityId = "post-choice-cycle-entity"
+        val parentFirstRevision = "post-choice-cycle-a"
+        val parentSecondRevision = "post-choice-cycle-b"
+        insertSyntheticRevision(parentSecondRevision, kind, entityId, null)
+        insertSyntheticRevision(parentFirstRevision, kind, entityId, parentSecondRevision)
+        database.execSQL(
+            "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES(?,?,?)",
+            arrayOf(kind, entityId, parentFirstRevision),
+        )
+        val started = stageImport(listOf(
+            revisionRecord(parentFirstRevision, kind, entityId, null),
+            revisionRecord(parentSecondRevision, kind, entityId, null),
+            parentRecord(parentSecondRevision, parentFirstRevision),
+            headRecord(kind, entityId, parentSecondRevision),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        assertEquals("BACKUP_DESCENDANT", conflict["revisionRelationship"])
+        assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "KEEP_LOCAL",
+        )
+
+        val beforeApply = repository.snapshot()
+        val parentCountBeforeApply = number("SELECT COUNT(*) FROM revision_parents")
+        assertTrue(database.rawQuery(
+            "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+            arrayOf(parentFirstRevision, parentSecondRevision),
+        ).use { it.moveToFirst() })
+        assertFalse(database.rawQuery(
+            "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+            arrayOf(parentSecondRevision, parentFirstRevision),
+        ).use { it.moveToFirst() })
+
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(beforeApply, repository.snapshot())
+        assertEquals(parentCountBeforeApply, number("SELECT COUNT(*) FROM revision_parents"))
+        assertFalse(database.rawQuery(
+            "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+            arrayOf(parentSecondRevision, parentFirstRevision),
+        ).use { it.moveToFirst() })
+        assertEquals(parentFirstRevision, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun unchangedBackupDescendantFastForwardsItsHeadWithoutAConflict() {
+        val source = exportStore.start(database)
+        val records = readAllRows(source.snapshotId).toMutableList()
+        val localHead = database.rawQuery(
+            "SELECT h.revision_id,r.payload FROM entity_heads h " +
+                "JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='job' AND h.entity_id=?",
+            arrayOf(jobId),
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            rows.getString(0) to if (rows.isNull(1)) null else rows.getString(1)
+        }
+        val backupHead = UUID.fromString("d0000000-0000-4000-8000-000000000001").toString()
+        records.removeAll { record ->
+            record["table"] == "entity_heads" &&
+                values(record)["kind"] == "job" && values(record)["entity_id"] == jobId
+        }
+        records.add(revisionRecord(
+            backupHead,
+            "job",
+            jobId,
+            jobId,
+            payload = localHead.second,
+        ))
+        records.add(parentRecord(backupHead, localHead.first))
+        records.add(headRecord("job", jobId, backupHead))
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(0L, preview.conflictCount)
+        assertTrue(preview.applyReady)
+        val versionBeforeApply = repository.snapshot().version
+
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        val committedHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='job' AND entity_id=?",
+            arrayOf(jobId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        assertEquals(backupHead, committedHead)
+        assertEquals(versionBeforeApply + 1L, repository.snapshot().version)
+        assertTrue(database.rawQuery(
+            "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+            arrayOf(backupHead, localHead.first),
+        ).use { it.moveToFirst() })
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun divergentIdenticalHeadsRequireAndCommitAMergeWithBothParents() {
+        val base = database.rawQuery(
+            "SELECT h.revision_id,r.payload FROM entity_heads h " +
+                "JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='job' AND h.entity_id=?",
+            arrayOf(jobId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) to rows.getString(1) }
+        val localHead = UUID.fromString("d0000000-0000-4000-8000-000000000002").toString()
+        val backupHead = UUID.fromString("d0000000-0000-4000-8000-000000000003").toString()
+        insertSyntheticRevision(localHead, "job", jobId, base.first, base.second)
+        database.execSQL(
+            "UPDATE entity_heads SET revision_id=? WHERE kind='job' AND entity_id=?",
+            arrayOf(localHead, jobId),
+        )
+        val source = exportStore.start(database)
+        val records = readAllRows(source.snapshotId).toMutableList()
+        records.removeAll { record ->
+            record["table"] == "entity_heads" &&
+                values(record)["kind"] == "job" && values(record)["entity_id"] == jobId
+        }
+        records.add(revisionRecord(backupHead, "job", jobId, jobId, payload = base.second))
+        records.add(parentRecord(backupHead, base.first))
+        records.add(headRecord("job", jobId, backupHead))
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        assertEquals("DIVERGENT", conflict["revisionRelationship"])
+        assertEquals(listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT"), conflict["allowedChoices"])
+        assertFalse(conflict["resolved"] as Boolean)
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "MERGE_IDENTICAL_CONTENT",
+        )
+
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        val mergedHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='job' AND entity_id=?",
+            arrayOf(jobId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val parents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
+            arrayOf(mergedHead),
+        ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertNotEquals(localHead, mergedHead)
+        assertNotEquals(backupHead, mergedHead)
+        assertEquals(setOf(localHead, backupHead), parents.toSet())
+        assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+        assertEquals(applied.stateVersion, repository.snapshot().version)
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun oldBackupPointCoveredByLocalRangeRequiresExplicitPreserveChoice() {
         val session = startAndStopSessionWithPoint("old-backup-covered-point")
         val pointCountBeforeExport = number("SELECT COUNT(*) FROM location_points")
         val source = exportStore.start(database)
@@ -728,9 +1036,87 @@ class BackupImportStoreTest {
         val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
         assertNotNull(coverageConflict)
         val conflict = requireNotNull(coverageConflict)
+        assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
+        assertEquals(listOf("PRESERVE_DELETION"), conflict["allowedChoices"])
+        assertEquals(false, conflict["resolved"])
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "PRESERVE_DELETION",
+        )
+        val headConflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            headConflict["conflictId"] as String,
+            "KEEP_LOCAL",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertNoCoordinates(conflict)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
+        assertFalse(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun backupOnlyPointCoveredByLocalRangeCannotChoosePreserveDeletion() {
+        val rangeStart = now + 1_000L
+        val rangeEnd = now + 2_000L
+        assertNull(repository.deleteLocationRange(
+            "create-empty-local-deletion-range",
+            repository.snapshot().version,
+            GpsDeletionStore.Range(jobId, rangeStart, rangeEnd, "Etc/UTC"),
+        ).conflict)
+        val localStateBeforePreview = repository.snapshot()
+        val incomingSessionId = "backup-only-covered-point-session"
+        val incomingPointId = "backup-only-covered-point"
+        val incomingPointRevision = "backup-only-covered-point-revision"
+        val measuredAt = rangeStart + 100L
+        val started = stageImport(listOf(
+            stagedRow("sessions", mapOf(
+                "id" to incomingSessionId,
+                "job_id" to jobId,
+                "start_ms" to now + 500L,
+                "end_ms" to now + 3_000L,
+                "timezone" to "Etc/UTC",
+                "offset_seconds" to 0,
+                "origin" to "MANUAL",
+            )),
+            revisionRecord(
+                incomingPointRevision,
+                "location",
+                incomingPointId,
+                jobId,
+                payload = JSONObject().put("id", incomingPointId)
+                    .put("session_id", incomingSessionId).toString(),
+            ),
+            headRecord("location", incomingPointId, incomingPointRevision),
+            stagedRow("location_points", mapOf(
+                "id" to incomingPointId,
+                "session_id" to incomingSessionId,
+                "measured_ms" to measuredAt,
+                "received_ms" to measuredAt,
+                "latitude" to 12.0,
+                "longitude" to -34.0,
+                "accuracy" to 5.0,
+            )),
+        ))
+
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "GPS_DELETION_COVERAGE"))
         assertNull(conflict["defaultChoice"])
         assertEquals(emptyList<String>(), conflict["allowedChoices"])
-        assertEquals(false, conflict["resolved"])
+        assertFalse(conflict["resolved"] as Boolean)
         assertFailure("UNSUPPORTED_CHOICE") {
             importStore.resolveConflict(
                 database,
@@ -744,11 +1130,82 @@ class BackupImportStoreTest {
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
-        assertNoCoordinates(conflict)
-        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+
+        assertEquals(localStateBeforePreview, repository.snapshot())
         assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
-        assertFalse(preview.applyReady)
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$incomingSessionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$incomingPointId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location' AND entity_id='$incomingPointId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$incomingPointRevision'"))
         assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun manualGpsTombstoneRequiresExplicitPreservationAndKeepsThePointDeleted() {
+        val (sessionId, measuredAt) = startAndStopSessionWithPoint("manual-tombstone-import-point")
+        val source = exportStore.start(database)
+        val sessionEnd = database.rawQuery(
+            "SELECT end_ms FROM sessions WHERE id=?",
+            arrayOf(sessionId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getLong(0) }
+        val correctedStart = measuredAt + 1L
+        assertNull(repository.correctSession(
+            "correct-session-before-backup-restore",
+            repository.snapshot().version,
+            SessionHistoryStore.Draft(
+                sessionId, jobId, correctedStart, sessionEnd, "Etc/UTC", 0,
+            ),
+        ).conflict)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+
+        val started = importStore.begin(
+            database,
+            source.archiveFormatVersion,
+            source.schemaVersion,
+            "c".repeat(64),
+            source.recordCount,
+            source.mediaCount,
+            source.mediaBytes,
+        )
+        transferRows(source.snapshotId, started.importId)
+        val preview = importStore.finish(database, started.importId)
+        val tombstone = requireNotNull(findConflict(started.importId, preview, "GPS_TOMBSTONE"))
+        assertEquals("PRESERVE_LOCAL_DELETION", tombstone["defaultChoice"])
+        assertEquals(listOf("PRESERVE_LOCAL_DELETION"), tombstone["allowedChoices"])
+        assertFalse(tombstone["resolved"] as Boolean)
+
+        val conflicts = importStore.readConflictPage(
+            database, started.importId, preview.previewToken, null, null,
+        )
+        assertTrue(conflicts.done)
+        conflicts.conflicts.forEach { conflict ->
+            val choice = when (conflict["kind"]) {
+                "GPS_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
+                else -> "KEEP_LOCAL"
+            }
+            assertTrue((conflict["allowedChoices"] as List<*>).contains(choice))
+            importStore.resolveConflict(
+                database,
+                started.importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                choice,
+            )
+        }
+
+        val versionBeforeApply = repository.snapshot().version
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(0L, applied.insertedCount)
+        assertEquals(versionBeforeApply, applied.stateVersion)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
+        assertEquals(correctedStart, database.rawQuery(
+            "SELECT start_ms FROM sessions WHERE id=?",
+            arrayOf(sessionId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getLong(0) })
+        assertNull(repository.snapshot().running)
         assertTrue(exportStore.close(source.snapshotId))
     }
 
@@ -1181,6 +1638,48 @@ class BackupImportStoreTest {
         assertEquals("LOCAL_OPEN:$localSessionId", conflict["localIdentifier"])
         assertEquals(false, conflict["resolved"])
         assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun sessionOverlapChoiceOmitsTheIncomingIntervalAtomically() {
+        val localStart = now
+        val localSessionId = "closed-local-overlap-session"
+        assertNull(repository.createManualSession(
+            "create-closed-local-overlap-session",
+            repository.snapshot().version,
+            SessionHistoryStore.Draft(
+                localSessionId, jobId, localStart, localStart + 5_000L, "Etc/UTC", 0,
+            ),
+        ).conflict)
+        val incomingId = "explicitly-omitted-overlap-session"
+        val started = stageImport(listOf(stagedRow("sessions", mapOf(
+            "id" to incomingId,
+            "job_id" to jobId,
+            "start_ms" to localStart + 1_000L,
+            "end_ms" to localStart + 2_000L,
+            "timezone" to "Etc/UTC",
+            "offset_seconds" to 0,
+            "origin" to "MANUAL",
+        ))))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "SESSION_OVERLAP"))
+        assertEquals(listOf("KEEP_LOCAL", "OMIT_BACKUP_SESSION"), conflict["allowedChoices"])
+        assertNull(conflict["selectedChoice"])
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "OMIT_BACKUP_SESSION",
+        )
+        val beforeApply = repository.snapshot().version
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$incomingId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$localSessionId'"))
+        assertEquals(beforeApply, applied.stateVersion)
     }
 
     @Test
@@ -1648,6 +2147,43 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun applyRejectsAndRollsBackWhenLocalRevisionHeadOwnershipIsInvalid() {
+        val unrelatedRevision = RevisionStore.record(
+            database,
+            "customer",
+            "synthetic-unrelated-head-owner",
+            null,
+            mapOf("id" to "synthetic-unrelated-head-owner"),
+            now,
+        )
+        database.execSQL(
+            "UPDATE entity_heads SET revision_id=? WHERE kind='job' AND entity_id=?",
+            arrayOf(unrelatedRevision, jobId),
+        )
+        val started = stageImport(listOf(stagedRow("customers", mapOf(
+            "id" to "must-rollback-on-invalid-resulting-graph",
+            "name" to "Must not commit",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))))
+        val preview = importStore.finish(database, started.importId)
+        val versionBeforeApply = repository.snapshot().version
+
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM customers WHERE id='must-rollback-on-invalid-resulting-graph'",
+        ))
+        assertEquals(versionBeforeApply, repository.snapshot().version)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
     fun scheduledExpiryClosesAndDeletesPrivateImportFiles() {
         var elapsed = 100L
         val scheduler = ManualScheduler { elapsed }
@@ -1796,6 +2332,26 @@ class BackupImportStoreTest {
         "changed_ms" to now,
         "origin" to origin,
     ))
+
+    private fun insertSyntheticRevision(
+        id: String,
+        kind: String,
+        entityId: String,
+        parentId: String?,
+        payload: String = "{}",
+    ) {
+        database.execSQL(
+            "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
+                "VALUES(?,?,?,NULL,?,0,?,'MUTATION')",
+            arrayOf(id, kind, entityId, payload, now),
+        )
+        if (parentId != null) {
+            database.execSQL(
+                "INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)",
+                arrayOf(id, parentId),
+            )
+        }
+    }
 
     private fun parentRecord(revisionId: String, parentId: String): Map<String, Any?> =
         stagedRow("revision_parents", mapOf("revision_id" to revisionId, "parent_id" to parentId))

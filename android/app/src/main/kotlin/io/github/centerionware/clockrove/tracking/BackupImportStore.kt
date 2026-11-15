@@ -30,6 +30,7 @@ internal class BackupImportStore(
     private val deleteFile: (File) -> Boolean = { it.delete() },
     private val idleTtlMillis: Long = BackupExportStore.IDLE_EXPIRY_MILLIS,
     private val scheduler: BackupScheduler = ExecutorBackupScheduler,
+    private val wallClock: () -> Long = { System.currentTimeMillis() },
 ) {
     data class Started(
         val importId: String,
@@ -122,6 +123,13 @@ internal class BackupImportStore(
         val parentTable: String,
         val childColumns: List<String>,
         val parentColumns: List<String>,
+    )
+
+    private data class HeadAdvance(
+        val kind: String,
+        val entityId: String,
+        val expectedLocalRevision: String,
+        val backupRevision: String,
     )
 
     private data class ValidationColumn(
@@ -485,10 +493,7 @@ internal class BackupImportStore(
         scheduleExpiry(handle)
     }
 
-    /**
-     * Applies only rows that do not conflict with local data. Each conflict must be explicitly
-     * resolved to a supported keep/omit choice before the write transaction begins.
-     */
+    /** Applies the previewed rows and verified no-content descendant head advances atomically. */
     @Synchronized
     fun apply(
         db: SQLiteDatabase,
@@ -500,6 +505,7 @@ internal class BackupImportStore(
         val preview = handle.preview ?: throw Failure("PREVIEW_NOT_READY", "The import preview is not ready.")
         verifyPreviewIdentity(handle, preview, previewToken, expectedLocalStateVersion)
         var inserted = 0L
+        var changed = 0L
         var skipped = 0L
         var committedVersion = expectedLocalStateVersion
         try {
@@ -518,25 +524,51 @@ internal class BackupImportStore(
                 validateRevisionGraph(db, handle)
 
                 validateApplyChoices(handle, preview.conflictCount)
-                skipped = scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts")
+                skipped = scalarLong(
+                    handle.database,
+                    "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice<>'MERGE_IDENTICAL_CONTENT'",
+                )
 
                 // Preflight every row before making the first local mutation. The transaction
                 // remains open, so the decisions cannot race a repository writer.
                 handle.database.rawQuery(
-                    "SELECT r.ordinal,r.table_name,r.primary_key,r.row_json,r.session_start_ms,r.session_end_ms,c.ordinal " +
+                    "SELECT r.ordinal,r.table_name,r.primary_key,r.row_json,r.session_start_ms,r.session_end_ms," +
+                        "c.ordinal,c.selected_choice " +
                         "FROM import_rows r LEFT JOIN import_conflicts c ON c.row_ordinal=r.ordinal ORDER BY r.ordinal",
                     null,
                 ).use { rows ->
                     while (rows.moveToNext()) {
                         val ordinal = rows.getLong(0)
                         val table = rows.getString(1)
-                        if (!rows.isNull(6)) continue
+                        val selectedChoice = if (rows.isNull(6)) null else rows.getString(7)
+                        if (selectedChoice != null && selectedChoice != "MERGE_IDENTICAL_CONTENT") continue
                         val row = JSONObject(rows.getString(3))
                         @Suppress("UNCHECKED_CAST")
                         val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
                             ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
                         val spec = handle.catalog[table]
                             ?: throw Failure("TABLE_NOT_ALLOWED", "The backup contains an unsupported table.")
+                        if (selectedChoice == "MERGE_IDENTICAL_CONTENT") {
+                            val localHead = findLocalRow(db, table, spec, values)
+                            if (table != "entity_heads" || localHead == null ||
+                                !canMergeDivergentHead(db, handle, values, localHead)) {
+                                throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+                            }
+                            continue
+                        }
+                        val headAdvance = headAdvanceForRow(handle, ordinal)
+                        if (headAdvance != null) {
+                            val localHead = findLocalRow(db, table, spec, values)
+                            if (table != "entity_heads" || values["kind"] != headAdvance.kind ||
+                                values["entity_id"] != headAdvance.entityId ||
+                                values["revision_id"] != headAdvance.backupRevision ||
+                                localHead == null ||
+                                localHead.values["revision_id"] != headAdvance.expectedLocalRevision ||
+                                !canAutoAdvanceHead(db, handle, values, localHead)) {
+                                throw Failure("PREVIEW_STALE", "A backup revision head changed after preview.")
+                            }
+                            continue
+                        }
                         val blobs = stagedBlobs(handle, ordinal)
                         val local = findLocalRow(db, table, spec, values)
                         if (local != null) {
@@ -567,25 +599,51 @@ internal class BackupImportStore(
                     }
                 }
 
-                // Choices are deliberately limited to explicit keep/omit semantics. A future
-                // merge or destructive GPS choice must add its transaction semantics here first.
+                // A divergent head can merge only when its live payload and application row are
+                // identical; all other semantic choices remain explicit keep/omit operations.
                 db.execSQL("PRAGMA defer_foreign_keys=ON")
                 val tableOrder = dependencyOrder(db, handle.catalog.keys.toList())
                 tableOrder.forEach { table ->
                     handle.database.rawQuery(
-                        "SELECT r.ordinal,r.row_json,c.ordinal FROM import_rows r " +
+                        "SELECT r.ordinal,r.row_json,c.ordinal,c.selected_choice FROM import_rows r " +
                             "LEFT JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
                             "WHERE r.table_name=? ORDER BY r.ordinal",
                         arrayOf(table),
                     ).use { rows ->
                         while (rows.moveToNext()) {
-                            if (!rows.isNull(2)) continue
                             val ordinal = rows.getLong(0)
                             val rowJson = JSONObject(rows.getString(1))
                             @Suppress("UNCHECKED_CAST")
                             val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
                                 ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                            if (!rows.isNull(2)) {
+                                if (rows.getString(3) != "MERGE_IDENTICAL_CONTENT") continue
+                                if (table != "entity_heads") {
+                                    throw Failure("UNSUPPORTED_CHOICE", "A backup merge choice is invalid.")
+                                }
+                                applyIdenticalContentHeadMerge(db, handle, values)
+                                changed++
+                                continue
+                            }
                             val spec = handle.catalog.getValue(table)
+                            val headAdvance = headAdvanceForRow(handle, ordinal)
+                            if (headAdvance != null) {
+                                val updated = db.update(
+                                    "entity_heads",
+                                    ContentValues().apply { put("revision_id", headAdvance.backupRevision) },
+                                    "kind=? AND entity_id=? AND revision_id=?",
+                                    arrayOf(
+                                        headAdvance.kind,
+                                        headAdvance.entityId,
+                                        headAdvance.expectedLocalRevision,
+                                    ),
+                                )
+                                if (table != "entity_heads" || updated != 1) {
+                                    throw Failure("PREVIEW_STALE", "A backup revision head changed after preview.")
+                                }
+                                changed++
+                                continue
+                            }
                             val blobs = stagedBlobs(handle, ordinal)
                             val local = findLocalRow(db, table, spec, values)
                             if (local != null) {
@@ -601,11 +659,12 @@ internal class BackupImportStore(
                                 throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
                             }
                             inserted++
+                            changed++
                         }
                     }
                 }
                 validateAppliedState(db)
-                if (inserted > 0) {
+                if (changed > 0) {
                     db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
                     if (stateVersion(db) != expectedLocalStateVersion + 1L) {
                         throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
@@ -698,11 +757,16 @@ internal class BackupImportStore(
     private fun isSupportedChoice(kind: String, table: String, choice: String): Boolean = when (kind) {
         "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
         "SESSION_OVERLAP" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_SESSION"
-        // These choices need coordinated point/revision/head edits. Until causal graph rewriting
-        // is implemented, leave both coverage conflicts explicitly blocked in preview.
-        "GPS_DELETION_COVERAGE" -> false
+        // A covered backup point may only be omitted while preserving local deletion history.
+        // Importing a range over local points still needs coordinated causal graph rewriting.
+        "GPS_DELETION_COVERAGE" -> table == "location_points" && choice == "PRESERVE_DELETION"
+        "GPS_TOMBSTONE" -> table == "location_points" && choice == "PRESERVE_LOCAL_DELETION"
+        "DEPENDENT_ON_CONFLICT" -> choice == "OMIT_BACKUP_RECORD"
         "UNIQUE_VALUE_IN_USE" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_RECORD"
-        "IMMUTABLE_RECORD_DIFFERS", "EXISTING_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
+        "IMMUTABLE_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
+            (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)
+        "EXISTING_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
+            (table == "entity_heads" && choice == "MERGE_IDENTICAL_CONTENT") ||
             (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)
         else -> false
     }
@@ -805,9 +869,85 @@ internal class BackupImportStore(
                 "WHERE h.kind='location' AND r.deleted=0 AND NOT EXISTS(" +
                 "SELECT 1 FROM location_points p WHERE p.id=h.entity_id)",
         )
-        if (invalidRangeHeads != 0L || orphanedRangeRevisions != 0L || livePointHeadsWithoutPoints != 0L) {
+        val pointsWithoutLiveHeads = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM location_points p LEFT JOIN entity_heads h " +
+                "ON h.kind='location' AND h.entity_id=p.id " +
+                "LEFT JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.revision_id IS NULL OR r.deleted<>0",
+        )
+        val coveredPointsWithoutCausalParent = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM location_points p JOIN sessions s ON s.id=p.session_id " +
+                "JOIN entity_heads h ON h.kind='location' AND h.entity_id=p.id " +
+                "JOIN location_deletion_ranges d ON p.measured_ms>=d.start_ms AND p.measured_ms<d.end_ms " +
+                "AND (d.job_id IS NULL OR d.job_id=s.job_id) " +
+                "WHERE NOT EXISTS(SELECT 1 FROM revision_parents rp " +
+                "WHERE rp.revision_id=h.revision_id AND rp.parent_id=d.revision_id)",
+        )
+        if (invalidRangeHeads != 0L || orphanedRangeRevisions != 0L ||
+            livePointHeadsWithoutPoints != 0L || pointsWithoutLiveHeads != 0L ||
+            coveredPointsWithoutCausalParent != 0L) {
             throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
         }
+        validateAppliedRevisionGraph(db)
+    }
+
+    /** Revalidate the graph after conflict choices have removed staged rows. */
+    private fun validateAppliedRevisionGraph(db: SQLiteDatabase) {
+        revisionValidationTables.forEach { table -> db.execSQL("DROP TABLE IF EXISTS ${quote(table)}") }
+        try {
+            db.execSQL(
+                "CREATE TABLE validation_revisions(" +
+                    "id TEXT PRIMARY KEY,kind TEXT NOT NULL,entity_id TEXT NOT NULL,job_id TEXT," +
+                    "deleted INTEGER NOT NULL,origin TEXT NOT NULL)",
+            )
+            db.execSQL(
+                "CREATE TABLE validation_parents(" +
+                    "revision_id TEXT NOT NULL,parent_id TEXT NOT NULL,PRIMARY KEY(revision_id,parent_id))",
+            )
+            db.execSQL(
+                "INSERT INTO validation_revisions SELECT id,kind,entity_id,job_id,deleted,origin FROM entity_revisions",
+            )
+            db.execSQL("INSERT INTO validation_parents SELECT revision_id,parent_id FROM revision_parents")
+            val invalidHeadCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM entity_heads h LEFT JOIN entity_revisions r ON r.id=h.revision_id " +
+                    "WHERE r.id IS NULL OR r.kind<>h.kind OR r.entity_id<>h.entity_id",
+            )
+            val missingEntityHeadCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM entity_revisions r WHERE NOT EXISTS(" +
+                    "SELECT 1 FROM entity_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id)",
+            )
+            val invalidParentCount = scalarLong(
+                db,
+                "SELECT COUNT(*) FROM revision_parents p " +
+                    "LEFT JOIN entity_revisions child ON child.id=p.revision_id " +
+                    "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id " +
+                    "WHERE child.id IS NULL OR parent.id IS NULL OR NOT ((child.kind=parent.kind AND child.entity_id=parent.entity_id) OR " +
+                    "(child.kind='location' AND child.deleted=1 AND child.origin='GPS_RANGE_DELETE' " +
+                    "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " +
+                    "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id)))",
+            )
+            if (invalidHeadCount != 0L || missingEntityHeadCount != 0L || invalidParentCount != 0L) {
+                appliedGraphInvalid()
+            }
+            validateRevisionAcyclicity(db)
+        } catch (failure: Failure) {
+            if (failure.code == "APPLY_FAILED") throw failure
+            appliedGraphInvalid()
+        } catch (_: Exception) {
+            appliedGraphInvalid()
+        } finally {
+            revisionValidationTables.forEach { table ->
+                try { db.execSQL("DROP TABLE IF EXISTS ${quote(table)}") } catch (_: Exception) { }
+            }
+        }
+    }
+
+    private fun appliedGraphInvalid(): Nothing =
+        throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
     }
 
     @Synchronized
@@ -997,6 +1137,12 @@ internal class BackupImportStore(
             handle.database.beginTransaction()
             try {
                 handle.database.delete("import_conflicts", null, null)
+                handle.database.execSQL("DROP TABLE IF EXISTS preview_head_advances")
+                handle.database.execSQL(
+                    "CREATE TABLE preview_head_advances(" +
+                        "row_ordinal INTEGER PRIMARY KEY,kind TEXT NOT NULL,entity_id TEXT NOT NULL," +
+                        "expected_local_revision TEXT NOT NULL,backup_revision TEXT NOT NULL)",
+                )
                 handle.database.execSQL(
                     "CREATE TABLE preview_unique_keys(" +
                         "table_name TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL," +
@@ -1030,10 +1176,28 @@ internal class BackupImportStore(
                             continue
                         }
                         if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
+                            val canPreserveDeletion = canSafelyPreserveLocalGpsDeletion(db, values)
+                            val choices = if (canPreserveDeletion) listOf("PRESERVE_DELETION") else emptyList()
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
-                                emptyList(), null,
-                                localSummary = mapOf("identifier" to "Deletion coverage"),
+                                choices,
+                                if (canPreserveDeletion) "PRESERVE_DELETION" else null,
+                                localSummary = mapOf(
+                                    "identifier" to if (canPreserveDeletion) {
+                                        "Deletion coverage"
+                                    } else {
+                                        "No local point or tombstone can preserve this deletion"
+                                    },
+                                ),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
+                        if (table == "location_points" && hasLocalLocationTombstone(db, values)) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "GPS_TOMBSTONE",
+                                listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
+                                localSummary = mapOf("identifier" to "Point deletion"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -1077,21 +1241,57 @@ internal class BackupImportStore(
                             }
                         }
                         if (local != null) {
-                            if (sameRecord(db, handle, table, spec, ordinal, values, blobFields, local)) {
+                            val same = sameRecord(db, handle, table, spec, ordinal, values, blobFields, local)
+                            if (!same && table == "entity_revisions") {
+                                // Revision IDs are immutable graph identities. Reusing an ID for
+                                // different content cannot be repaired by a row-level choice.
+                                invalidRevisionGraph()
+                            }
+                            if (same) {
                                 unchanged++
+                            } else if (table == "entity_heads" && canAutoAdvanceHead(
+                                    db, handle, values, local,
+                                )) {
+                                handle.database.insertOrThrow(
+                                    "preview_head_advances",
+                                    null,
+                                    ContentValues().apply {
+                                        put("row_ordinal", ordinal)
+                                        put("kind", values.getValue("kind").toString())
+                                        put("entity_id", values.getValue("entity_id").toString())
+                                        put("expected_local_revision", local.values.getValue("revision_id").toString())
+                                        put("backup_revision", values.getValue("revision_id").toString())
+                                    },
+                                )
+                                added++
                             } else {
                                 val immutable = table in immutableTables
+                                val revisionRelationship = if (table == "entity_heads") {
+                                    revisionHeadRelationship(
+                                        db,
+                                        handle,
+                                        local.values.getValue("revision_id").toString(),
+                                        values.getValue("revision_id").toString(),
+                                    )
+                                } else {
+                                    null
+                                }
+                                val mergeableDivergentHead = table == "entity_heads" &&
+                                    revisionRelationship == "DIVERGENT" &&
+                                    canMergeDivergentHead(db, handle, values, local)
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson,
                                     if (immutable) "IMMUTABLE_RECORD_DIFFERS" else "EXISTING_RECORD_DIFFERS",
                                     when {
                                         immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
+                                        mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
                                         table in mergeOnlyTables -> listOf("KEEP_LOCAL")
                                         else -> listOf("KEEP_LOCAL")
                                     },
                                     "KEEP_LOCAL",
                                     localSummary = safeSummary(local.values),
                                     backupSummary = safeSummary(values),
+                                    revisionRelationship = revisionRelationship,
                                 )
                             }
                             continue
@@ -1109,6 +1309,9 @@ internal class BackupImportStore(
                         added++
                     }
                 }
+                val dependentConflicts = addDependentReferenceConflicts(db, handle, conflictOrdinal)
+                conflictOrdinal = dependentConflicts.first
+                added -= dependentConflicts.second
                 handle.database.execSQL("DROP TABLE preview_unique_keys")
                 handle.database.setTransactionSuccessful()
             } finally {
@@ -1846,6 +2049,56 @@ internal class BackupImportStore(
         return unproven
     }
 
+    private fun hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean {
+        val pointId = revisionString(point["id"])
+        return db.rawQuery(
+            "SELECT 1 FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='location' AND h.entity_id=? AND r.deleted=1 LIMIT 1",
+            arrayOf(pointId),
+        ).use { it.moveToFirst() }
+    }
+
+    /**
+     * Omitting a covered backup point is safe only when local state already represents that
+     * point as either a deleted tombstone or a live point whose head proves every local range.
+     * A backup-only point cannot be omitted alone because its live revision and head would then
+     * remain orphaned in the restored graph.
+     */
+    private fun canSafelyPreserveLocalGpsDeletion(
+        db: SQLiteDatabase,
+        point: Map<String, Any?>,
+    ): Boolean {
+        val pointId = revisionString(point["id"])
+        if (!localIdentifierExists(db, "location_points", pointId)) {
+            return hasLocalLocationTombstone(db, point)
+        }
+        val localPoint = db.rawQuery(
+            "SELECT p.measured_ms,s.job_id,h.revision_id,r.deleted " +
+                "FROM location_points p JOIN sessions s ON s.id=p.session_id " +
+                "JOIN entity_heads h ON h.kind='location' AND h.entity_id=p.id " +
+                "JOIN entity_revisions r ON r.id=h.revision_id WHERE p.id=?",
+            arrayOf(pointId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            if (rows.getLong(3) != 0L) return false
+            Triple(rows.getLong(0), rows.getString(1), rows.getString(2))
+        }
+        return db.rawQuery(
+            "SELECT revision_id FROM location_deletion_ranges WHERE start_ms<=? AND end_ms>? " +
+                "AND (job_id IS NULL OR job_id=?)",
+            arrayOf(localPoint.first.toString(), localPoint.first.toString(), localPoint.second),
+        ).use { ranges ->
+            while (ranges.moveToNext()) {
+                val hasCausalParent = db.rawQuery(
+                    "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=? LIMIT 1",
+                    arrayOf(localPoint.third, ranges.getString(0)),
+                ).use { it.moveToFirst() }
+                if (!hasCausalParent) return@use false
+            }
+            true
+        }
+    }
+
     private fun hasDirectCausalParent(handle: Handle, childRevision: String, parentRevision: String): Boolean =
         handle.database.rawQuery(
             "SELECT 1 FROM validation_parents WHERE revision_id=? AND parent_id=? LIMIT 1",
@@ -2007,6 +2260,7 @@ internal class BackupImportStore(
         localIdentifier: String? = null,
         localSummary: Map<String, Any?> = emptyMap(),
         backupSummary: Map<String, Any?> = emptyMap(),
+        revisionRelationship: String? = null,
     ): Long {
         val conflictId = conflictId(handle, rowOrdinal, table, keyJson, reason)
         val conflict = JSONObject()
@@ -2020,6 +2274,7 @@ internal class BackupImportStore(
             .put("allowedChoices", JSONArray(choices))
             .put("defaultChoice", defaultChoice ?: JSONObject.NULL)
             .put("resolved", false)
+        if (revisionRelationship != null) conflict.put("revisionRelationship", revisionRelationship)
         handle.database.insertOrThrow("import_conflicts", null, ContentValues().apply {
             put("ordinal", ordinal)
             put("conflict_id", conflictId)
@@ -2027,6 +2282,308 @@ internal class BackupImportStore(
             put("conflict_json", conflict.toString())
         })
         return ordinal + 1
+    }
+
+    /** Labels the imported head's graph position without guessing from clocks or state versions. */
+    private fun revisionHeadRelationship(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        localHead: String,
+        backupHead: String,
+    ): String = when {
+        localHead == backupHead -> "SAME"
+        isRevisionAncestor(handle.database, "validation_parents", localHead, backupHead) -> "BACKUP_DESCENDANT"
+        isRevisionAncestor(localDb, "revision_parents", backupHead, localHead) -> "BACKUP_ANCESTOR"
+        else -> "DIVERGENT"
+    }
+
+    /** Fast-forwards only a proven descendant whose live business row and payload are unchanged. */
+    private fun canAutoAdvanceHead(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        backupHead: Map<String, Any?>,
+        localHead: LocalRow,
+    ): Boolean {
+        val kind = backupHead["kind"]?.toString() ?: return false
+        val entityId = backupHead["entity_id"]?.toString() ?: return false
+        val localRevisionId = localHead.values["revision_id"]?.toString() ?: return false
+        val backupRevisionId = backupHead["revision_id"]?.toString() ?: return false
+        if (revisionHeadRelationship(localDb, handle, localRevisionId, backupRevisionId) != "BACKUP_DESCENDANT") {
+            return false
+        }
+        return sameLiveHeadContentAndData(localDb, handle, kind, entityId, localRevisionId, backupRevisionId)
+    }
+
+    private fun canMergeDivergentHead(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        backupHead: Map<String, Any?>,
+        localHead: LocalRow,
+    ): Boolean {
+        val kind = backupHead["kind"]?.toString() ?: return false
+        val entityId = backupHead["entity_id"]?.toString() ?: return false
+        val localRevisionId = localHead.values["revision_id"]?.toString() ?: return false
+        val backupRevisionId = backupHead["revision_id"]?.toString() ?: return false
+        if (revisionHeadRelationship(localDb, handle, localRevisionId, backupRevisionId) != "DIVERGENT") {
+            return false
+        }
+        return sameLiveHeadContentAndData(localDb, handle, kind, entityId, localRevisionId, backupRevisionId)
+    }
+
+    private fun sameLiveHeadContentAndData(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        kind: String,
+        entityId: String,
+        localRevisionId: String,
+        backupRevisionId: String,
+    ): Boolean {
+        val localRevision = localDb.rawQuery(
+            "SELECT kind,entity_id,job_id,payload,deleted FROM entity_revisions WHERE id=?",
+            arrayOf(localRevisionId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            listOf(
+                rows.getString(0), rows.getString(1),
+                if (rows.isNull(2)) null else rows.getString(2),
+                if (rows.isNull(3)) null else rows.getString(3),
+                rows.getLong(4),
+            )
+        }
+        val backupRevision = handle.database.rawQuery(
+            "SELECT kind,entity_id,job_id,payload,deleted FROM validation_revisions WHERE id=?",
+            arrayOf(backupRevisionId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            listOf(
+                rows.getString(0), rows.getString(1),
+                if (rows.isNull(2)) null else rows.getString(2),
+                if (rows.isNull(3)) null else rows.getString(3),
+                rows.getLong(4),
+            )
+        }
+        if (localRevision != backupRevision || localRevision[4] != 0L) return false
+
+        val table = when (kind) {
+            "job" -> "jobs"
+            "customer" -> "customers"
+            "session" -> "sessions"
+            "site" -> "work_sites"
+            "column" -> "kanban_columns"
+            "card" -> "kanban_cards"
+            else -> return false
+        }
+        val spec = handle.catalog[table] ?: return false
+        if (spec.primaryKey != listOf("id")) return false
+        val dataRow = handle.database.rawQuery(
+            "SELECT ordinal,row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(table, jsonArray(listOf(entityId))),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            val values = jsonValue(JSONObject(rows.getString(1)).getJSONObject("values")) as? Map<String, Any?>
+                ?: return false
+            Triple(rows.getLong(0), values, stagedBlobs(handle, rows.getLong(0)))
+        }
+        val localData = findLocalRow(localDb, table, spec, dataRow.second) ?: return false
+        return sameRecord(localDb, handle, table, spec, dataRow.first, dataRow.second, dataRow.third, localData)
+    }
+
+    private fun headAdvanceForRow(handle: Handle, rowOrdinal: Long): HeadAdvance? =
+        handle.database.rawQuery(
+            "SELECT kind,entity_id,expected_local_revision,backup_revision " +
+                "FROM preview_head_advances WHERE row_ordinal=?",
+            arrayOf(rowOrdinal.toString()),
+        ).use { rows ->
+            if (!rows.moveToFirst()) null else HeadAdvance(
+                rows.getString(0), rows.getString(1), rows.getString(2), rows.getString(3),
+            )
+        }
+
+    private fun applyIdenticalContentHeadMerge(
+        db: SQLiteDatabase,
+        handle: Handle,
+        backupHead: Map<String, Any?>,
+    ) {
+        val spec = handle.catalog.getValue("entity_heads")
+        val localHead = findLocalRow(db, "entity_heads", spec, backupHead)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+        if (!canMergeDivergentHead(db, handle, backupHead, localHead)) {
+            throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+        }
+        val kind = backupHead.getValue("kind").toString()
+        val entityId = backupHead.getValue("entity_id").toString()
+        val localRevision = localHead.values.getValue("revision_id").toString()
+        val backupRevision = backupHead.getValue("revision_id").toString()
+        val revision = db.rawQuery(
+            "SELECT job_id,payload,deleted FROM entity_revisions WHERE id=? AND kind=? AND entity_id=?",
+            arrayOf(backupRevision, kind, entityId),
+        ).use { rows ->
+            if (!rows.moveToFirst() || rows.getInt(2) != 0 || rows.isNull(1)) {
+                throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+            }
+            (if (rows.isNull(0)) null else rows.getString(0)) to rows.getString(1)
+        }
+        val mergedRevision = UUID.randomUUID().toString()
+        db.execSQL(
+            "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
+                "VALUES(?,?,?,?,?,0,?,'BACKUP_MERGE')",
+            arrayOf<Any?>(mergedRevision, kind, entityId, revision.first, revision.second, wallClock()),
+        )
+        listOf(localRevision, backupRevision).distinct().sorted().forEach { parent ->
+            db.execSQL(
+                "INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)",
+                arrayOf(mergedRevision, parent),
+            )
+        }
+        val updated = db.update(
+            "entity_heads",
+            ContentValues().apply { put("revision_id", mergedRevision) },
+            "kind=? AND entity_id=? AND revision_id=?",
+            arrayOf(kind, entityId, localRevision),
+        )
+        if (updated != 1) throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+    }
+
+    private fun isRevisionAncestor(
+        db: SQLiteDatabase,
+        parentsTable: String,
+        ancestor: String,
+        descendant: String,
+    ): Boolean {
+        val table = quote(parentsTable)
+        return db.rawQuery(
+            "WITH RECURSIVE reachable(revision_id) AS (" +
+                "SELECT parent_id FROM $table WHERE revision_id=? UNION " +
+                "SELECT p.parent_id FROM $table p JOIN reachable r ON p.revision_id=r.revision_id) " +
+                "SELECT 1 FROM reachable WHERE revision_id=? LIMIT 1",
+            arrayOf(descendant, ancestor),
+        ).use { it.moveToFirst() }
+    }
+
+    /**
+     * If a backup row depends on another staged row that already needs a choice, require an
+     * explicit omission for the child whenever no local row can satisfy that reference. This
+     * keeps a KEEP_LOCAL/OMIT choice on a parent from turning into a late foreign-key failure.
+     */
+    private fun addDependentReferenceConflicts(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        firstConflictOrdinal: Long,
+    ): Pair<Long, Long> {
+        data class Target(val table: String, val columns: List<String>)
+
+        val targets = handle.catalog.keys.flatMap { childTable ->
+            foreignKeySpecs(localDb, childTable, handle.catalog).map {
+                Target(it.parentTable, it.parentColumns)
+            }
+        }.distinct().sortedWith(compareBy<Target> { it.table }.thenBy { it.columns.joinToString("\u0000") })
+        if (targets.isEmpty()) return firstConflictOrdinal to 0L
+        val foreignKeysByChild = handle.catalog.keys.associateWith { childTable ->
+            foreignKeySpecs(localDb, childTable, handle.catalog)
+        }
+
+        val staged = handle.database
+        staged.execSQL(
+            "CREATE TABLE preview_reference_rows(" +
+                "parent_table TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL," +
+                "row_ordinal INTEGER NOT NULL,PRIMARY KEY(parent_table,columns_json,values_json,row_ordinal))",
+        )
+        staged.execSQL(
+            "CREATE INDEX preview_reference_lookup ON preview_reference_rows(" +
+                "parent_table,columns_json,values_json,row_ordinal)",
+        )
+        val targetsByTable = targets.groupBy(Target::table)
+        targetsByTable.forEach { (table, tableTargets) ->
+            staged.rawQuery(
+                "SELECT ordinal,row_json FROM import_rows WHERE table_name=? ORDER BY ordinal",
+                arrayOf(table),
+            ).use { rows ->
+                while (rows.moveToNext()) {
+                    val ordinal = rows.getLong(0)
+                    val values = JSONObject(rows.getString(1)).getJSONObject("values")
+                    tableTargets.forEach targetLoop@{ target ->
+                        val referenceValues = target.columns.map { column ->
+                            if (values.isNull(column)) null else values.get(column)
+                        }
+                        if (referenceValues.any { it == null }) return@targetLoop
+                        staged.insertOrThrow("preview_reference_rows", null, ContentValues().apply {
+                            put("parent_table", target.table)
+                            put("columns_json", JSONArray(target.columns).toString())
+                            put("values_json", jsonArray(referenceValues))
+                            put("row_ordinal", ordinal)
+                        })
+                    }
+                }
+            }
+        }
+
+        var nextConflictOrdinal = firstConflictOrdinal
+        var totalAdded = 0L
+        while (true) {
+            var passAdded = 0L
+            staged.rawQuery(
+                "SELECT ordinal,table_name,primary_key,row_json FROM import_rows ORDER BY ordinal",
+                null,
+            ).use { rows ->
+                while (rows.moveToNext()) {
+                    val rowOrdinal = rows.getLong(0)
+                    val alreadyConflicted = staged.rawQuery(
+                        "SELECT 1 FROM import_conflicts WHERE row_ordinal=? LIMIT 1",
+                        arrayOf(rowOrdinal.toString()),
+                    ).use { it.moveToFirst() }
+                    if (alreadyConflicted) continue
+                    val table = rows.getString(1)
+                    val keyJson = rows.getString(2)
+                    val rowJson = JSONObject(rows.getString(3))
+                    @Suppress("UNCHECKED_CAST")
+                    val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
+                        ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                    val dependencyConflict = foreignKeysByChild.getValue(table).any { foreignKey ->
+                        val referenceValues = foreignKey.childColumns.map { values[it] }
+                        if (referenceValues.any { it == null } || localForeignKeyExists(localDb, foreignKey, referenceValues)) {
+                            return@any false
+                        }
+                        val keyArgs = arrayOf(
+                            foreignKey.parentTable,
+                            JSONArray(foreignKey.parentColumns).toString(),
+                            jsonArray(referenceValues),
+                        )
+                        val hasNonConflictedStagedParent = staged.rawQuery(
+                            "SELECT 1 FROM preview_reference_rows p LEFT JOIN import_conflicts c " +
+                                "ON c.row_ordinal=p.row_ordinal WHERE p.parent_table=? AND p.columns_json=? " +
+                                "AND p.values_json=? AND c.row_ordinal IS NULL LIMIT 1",
+                            keyArgs,
+                        ).use { it.moveToFirst() }
+                        if (hasNonConflictedStagedParent) return@any false
+                        staged.rawQuery(
+                            "SELECT 1 FROM preview_reference_rows p JOIN import_conflicts c " +
+                                "ON c.row_ordinal=p.row_ordinal WHERE p.parent_table=? AND p.columns_json=? " +
+                                "AND p.values_json=? LIMIT 1",
+                            keyArgs,
+                        ).use { it.moveToFirst() }
+                    }
+                    if (dependencyConflict) {
+                        nextConflictOrdinal = addConflict(
+                            handle,
+                            nextConflictOrdinal,
+                            rowOrdinal,
+                            table,
+                            keyJson,
+                            "DEPENDENT_ON_CONFLICT",
+                            listOf("OMIT_BACKUP_RECORD"),
+                            null,
+                            localSummary = mapOf("identifier" to "A referenced backup record requires a choice"),
+                            backupSummary = safeSummary(values),
+                        )
+                        passAdded++
+                    }
+                }
+            }
+            if (passAdded == 0L) break
+            totalAdded += passAdded
+        }
+        staged.execSQL("DROP TABLE preview_reference_rows")
+        return nextConflictOrdinal to totalAdded
     }
 
     private fun safeSummary(values: Map<String, Any?>): Map<String, Any?> =
