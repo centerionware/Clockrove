@@ -345,10 +345,7 @@ void main() {
       );
 
       try {
-        await _waitForTestSignal(
-          sourceListening.future,
-          'source subscription',
-        );
+        await _waitForTestSignal(sourceListening.future, 'source subscription');
         archive.add([1, 2, 3]);
         await _waitForTestSignal(
           partialReadPaused.future,
@@ -471,10 +468,7 @@ void main() {
   });
 }
 
-Future<T> _waitForTestSignal<T>(
-  Future<T> signal,
-  String description,
-) async {
+Future<T> _waitForTestSignal<T>(Future<T> signal, String description) async {
   try {
     return await signal.timeout(const Duration(seconds: 5));
   } on TimeoutException {
