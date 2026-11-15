@@ -133,12 +133,17 @@ class InvoiceBillingDeviceTest {
                     return false
                 }
                 val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                // A Flutter ScrollView can acknowledge the accessibility action
-                // without exposing the requested child. Fall back to a real
-                // gesture whenever the target is still outside the viewport.
-                if (!scrolled || find(label, editable)?.let(::safeTapBounds) == null) swipeContent(up = true)
-                SystemClock.sleep(150)
-                find(label, editable)?.let(::safeTapBounds) != null
+                if (scrolled) {
+                    // Accessibility scrolls complete asynchronously. Observe their
+                    // settled result before considering another movement; an
+                    // immediate fallback swipe can skip the target entirely.
+                    automation.waitForIdle(250, 3000)
+                }
+                if (find(label, editable)?.let(::safeTapBounds) != null) true else {
+                    swipeContent(up = true)
+                    automation.waitForIdle(250, 3000)
+                    find(label, editable)?.let(::safeTapBounds) != null
+                }
             }
         }
     }
@@ -161,8 +166,10 @@ class InvoiceBillingDeviceTest {
             }
             // Some API-24 ScrollViews acknowledge the action without moving.
             // Check for the target again; retain the touch gesture as a fallback.
-            if (automation.rootInActiveWindow?.let(::scroll) == true &&
-                find(topLabel)?.let(::safeTapBounds) != null) return
+            if (automation.rootInActiveWindow?.let(::scroll) == true) {
+                automation.waitForIdle(250, 3000)
+                if (find(topLabel)?.let(::safeTapBounds) != null) return
+            }
             swipeContent(up = false)
             SystemClock.sleep(120)
         }
@@ -288,13 +295,19 @@ class InvoiceBillingDeviceTest {
         // Some Flutter EditableText nodes accept ACTION_CLICK without focusing
         // the underlying field on older Android releases. Use a screen touch
         // when that semantic action does not open the IME.
-        if (!keyboardVisible()) {
-            SystemClock.sleep(150)
-            if (!keyboardVisible()) tapNode(find(label, true) ?: field)
+        val focusDeadline = SystemClock.uptimeMillis() + 2000
+        while (SystemClock.uptimeMillis() < focusDeadline &&
+            find(label, true)?.isFocused != true) {
+            SystemClock.sleep(100)
+        }
+        if (find(label, true)?.isFocused != true) {
+            assertTrue("Could not touch-focus $label", tapNode(waitFor(label, true)))
         }
         // Wait for the actual IME/inset transition before writing. A fast SET_TEXT
         // acknowledgement can otherwise precede the keyboard opening and hiding.
-        until("Keyboard did not open for $label") { keyboardVisible() }
+        until("Editable field did not focus with keyboard for $label") {
+            find(label, true)?.isFocused == true && keyboardVisible()
+        }
         val node = waitFor(label, true)
         if (node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
             node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
