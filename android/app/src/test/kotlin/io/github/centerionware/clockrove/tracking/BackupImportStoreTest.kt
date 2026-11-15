@@ -329,6 +329,26 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun previewWithoutInvoiceTimeClaimsIsValid() {
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "e".repeat(64),
+            0,
+            0,
+            0,
+        )
+
+        val preview = importStore.finish(database, started.importId)
+
+        assertEquals(0L, preview.recordCount)
+        assertEquals(0L, preview.conflictCount)
+        assertTrue(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
     fun rejectsInvoiceTaskClaimWhoseJobDiffersFromItsInvoice() {
         assertInvalidReference(listOf(
             invoiceRecord("mismatch-task-invoice", jobId, "INV-SYNTHETIC-TASK"),

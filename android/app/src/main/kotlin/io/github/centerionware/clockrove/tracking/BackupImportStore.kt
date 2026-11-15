@@ -1313,14 +1313,24 @@ internal class BackupImportStore(
                 "ON a.job_id=b.job_id AND a.id<b.id AND a.start_ms<b.end_ms AND a.end_ms>b.start_ms " +
                 "WHERE a.released_ms IS NULL AND b.released_ms IS NULL",
         )
-        val localOverlap = scalarLong(
-            db,
-            "SELECT COUNT(*) FROM validation_time_claims b JOIN invoice_time_claims a " +
-                "ON a.job_id=b.job_id AND a.id<>b.id AND a.released_ms IS NULL " +
-                "AND a.start_ms<b.end_ms AND a.end_ms>b.start_ms " +
-                "WHERE b.released_ms IS NULL",
-        )
-        if (stagedOverlap != 0L || localOverlap != 0L) invalidReference()
+        if (stagedOverlap != 0L) invalidReference()
+        db.rawQuery(
+            "SELECT id,job_id,start_ms,end_ms FROM validation_time_claims WHERE released_ms IS NULL",
+            null,
+        ).use { incomingClaims ->
+            while (incomingClaims.moveToNext()) {
+                val id = incomingClaims.getString(0)
+                val jobId = incomingClaims.getString(1)
+                val start = incomingClaims.getLong(2)
+                val end = incomingClaims.getLong(3)
+                val overlapsLocal = localDb.rawQuery(
+                    "SELECT 1 FROM invoice_time_claims WHERE job_id=? AND id<>? AND released_ms IS NULL " +
+                        "AND start_ms<? AND end_ms>? LIMIT 1",
+                    arrayOf(jobId, id, end.toString(), start.toString()),
+                ).use { it.moveToFirst() }
+                if (overlapsLocal) invalidReference()
+            }
+        }
     }
 
     private fun foreignKeySpecs(
