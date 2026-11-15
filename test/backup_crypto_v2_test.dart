@@ -345,19 +345,32 @@ void main() {
       );
 
       try {
-        await sourceListening.future.timeout(const Duration(seconds: 5));
+        await _waitForTestSignal(
+          sourceListening.future,
+          'source subscription',
+        );
         archive.add([1, 2, 3]);
-        await partialReadPaused.future.timeout(const Duration(seconds: 5));
-        await partialReadResumed.future.timeout(const Duration(seconds: 5));
+        await _waitForTestSignal(
+          partialReadPaused.future,
+          'reader pause after the partial chunk',
+        );
+        await _waitForTestSignal(
+          partialReadResumed.future,
+          'reader resume for the next chunk',
+        );
         token.cancel();
-        await sourceCancellationStarted.future.timeout(
-          const Duration(seconds: 5),
+        await _waitForTestSignal(
+          sourceCancellationStarted.future,
+          'upstream cancellation start',
         );
         expect(destination.discarded, isFalse);
         expect(destination.committed, isFalse);
         expect(destination.visibleBytes, isNull);
         finishSourceCancellation.complete();
-        await encryptionExpectation.timeout(const Duration(seconds: 5));
+        await _waitForTestSignal(
+          encryptionExpectation,
+          'encryption cancellation completion',
+        );
       } finally {
         token.cancel();
         if (!finishSourceCancellation.isCompleted) {
@@ -365,10 +378,13 @@ void main() {
         }
         try {
           if (archive.hasListener && !archive.isClosed) {
-            await archive.close().timeout(const Duration(seconds: 5));
+            await _waitForTestSignal(archive.close(), 'source close');
           }
         } finally {
-          await encryptionExpectation.timeout(const Duration(seconds: 5));
+          await _waitForTestSignal(
+            encryptionExpectation,
+            'encryption future cleanup',
+          );
         }
       }
 
@@ -453,6 +469,17 @@ void main() {
     expect(failed.committed, isFalse);
     expect(failed.discarded, isTrue);
   });
+}
+
+Future<T> _waitForTestSignal<T>(
+  Future<T> signal,
+  String description,
+) async {
+  try {
+    return await signal.timeout(const Duration(seconds: 5));
+  } on TimeoutException {
+    throw TimeoutException('Timed out waiting for $description.');
+  }
 }
 
 Future<void> _expectRejectedEnvelope(Uint8List envelope) async {
