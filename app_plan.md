@@ -3320,3 +3320,65 @@ journeys were not reached. The next test revision reads the switch's real
 checked state before and after each toggle, captures inherited state before
 saving, and separately asserts that Save closes the form and persists a null
 override. Validate on GitHub Actions; no VM build or test ran.
+
+### 2026-11-15 — main validation and Play delivery freshness
+
+PR #55 exact head `3d29145` / Actions run
+[43683416096](https://github.com/centerionware/Clockrove/actions/runs/43683416096)
+passed and merged to `main` as `a22fe28`. Its first merged-main validation
+attempt reported 28 successful API-35 instrumentation cases, but the required
+API-35 XML/artifact collection was incomplete and the workflow failed. The
+available artifact does not prove a host emulator segfault. Unchanged-head
+attempt 2 of [run 43687899077](https://github.com/centerionware/Clockrove/actions/runs/43687899077)
+passed. PR #51 exact head `e898035` / run
+[43688694748](https://github.com/centerionware/Clockrove/actions/runs/43688694748)
+passed 29 base instrumentation cases on each API with zero failures, errors or
+skips; it merged as `8a0e340`. Full merged-main validation
+[43690672187](https://github.com/centerionware/Clockrove/actions/runs/43690672187)
+passed at 08:01:45 UTC. Its API 24/35 artifacts show 29 base cases plus nine
+other device cases per API, all with zero failures, errors or skips. Play run
+[43692578396](https://github.com/centerionware/Clockrove/actions/runs/43692578396)
+then checked out that exact `8a0e340` source and accepted internal.41.1 /
+versionCode `216893018` at 08:07:56 UTC. This does not prove tester availability.
+
+The successful retry for the older `a22fe28` commit triggered Play run
+[43691044331](https://github.com/centerionware/Clockrove/actions/runs/43691044331),
+which built and submitted internal.40.1 / versionCode `216891797` from
+`a22fe28` after `main` had advanced to `8a0e340`. This is a verified stale
+internal-delivery gap: the prior workflow accepted any successful main ancestor.
+The current branch adds an exact freshly fetched `main` check before build and
+again before internal submission; this workflow change has not yet been
+validated in Actions. No local build or test ran.
+
+### 2026-11-15 — release Play bundle blocked by dev-plugin registrant
+
+Main Play delivery run
+[43701872698](https://github.com/centerionware/Clockrove/actions/runs/43701872698)
+on source `cc687093` failed at `:app:compileReleaseJavaWithJavac`: the generated
+`GeneratedPluginRegistrant.java` referenced
+`dev.flutter.plugins.integration_test`, which is correctly declared only under
+`dev_dependencies` and is absent from the release compile classpath. The bundle
+did not build, and the later Play upload/submission step was skipped; this run
+did not upload internally.
+
+PR #58 prepares a Flutter release-aware configuration refresh
+(`flutter build apk --release --config-only`) after the enforced locked
+dependency resolution, then retains the AAB build's `--no-pub` behavior. Its
+non-secret Validate addition runs that release configuration step and
+`:app:compileReleaseJavaWithJavac`; Flutter 3.47.9 documents `--config-only` as
+generating build files without artifacts, and the compile task avoids the
+repository's signing gate. This check is pending Actions evidence and will not
+prove AAB packaging or signing. Keep M8.2 release validation and M8.3 delivery
+pending until the exact PR head passes and a guarded post-merge main Play run
+successfully builds/signs the AAB; inspect its log and Play result to confirm
+whether internal submission was accepted. The prior successful Play runs
+43692578396 and 43691044331 establish earlier deliveries only; they do not
+validate this changed release path. No local build or test ran.
+
+Before these changes were committed, PR #58 exact head `004c6de` / Actions run
+[43700127667](https://github.com/centerionware/Clockrove/actions/runs/43700127667)
+passed formatting, analysis, Flutter behavior tests, the Android build and
+native unit tests, then failed its API-24/35 PDF/device stage at
+`locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`. This is
+separate from the release-plugin issue; that head did not contain the release
+configuration check. A fresh exact-head run must cover both.

@@ -19,12 +19,16 @@ env:
   FASTLANE_HIDE_ENV_VALUES: 'true'
   BUNDLE_FROZEN: 'true'
 jobs:
-  publish:
+  verify:
     if: >-
       github.repository == 'centerionware/Clockrove' &&
-      ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository) || github.event_name == 'push')
+      ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) || github.event_name == 'push')
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    outputs:
+      eligible: ${{ steps.release.outputs.eligible }}
+      source_sha: ${{ steps.release.outputs.source_sha }}
+      track: ${{ steps.release.outputs.track }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -40,7 +44,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse FETCH_HEAD)"
+          git merge-base --is-ancestor "$SOURCE_SHA" "$current_main"
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
             test "$PRODUCTION_READY" = true || { echo 'Production readiness/testing eligibility is not enabled.'; exit 1; }
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/validate.yml/runs?head_sha=$SOURCE_SHA&status=success" --jq '.workflow_runs[] | select(.head_branch == "main" and .event == "push") | .id' > "$RUNNER_TEMP/eligible-runs"
@@ -48,8 +54,28 @@ jobs:
             echo 'track=production' >> "$GITHUB_OUTPUT"
             echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
           else
+            if [[ "$SOURCE_SHA" != "$current_main" ]]; then
+              echo 'eligible=false' >> "$GITHUB_OUTPUT"
+              echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping internal delivery for stale main commit $SOURCE_SHA; current main is $current_main."
+              echo "Internal delivery skipped: main advanced from $SOURCE_SHA to $current_main before publishing." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             echo 'track=internal' >> "$GITHUB_OUTPUT"
           fi
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+  publish:
+    needs: verify
+    if: needs.verify.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
         with:
           ruby-version: '3.3.6'
@@ -109,8 +135,8 @@ jobs:
       - name: Select automatic versionName
         id: name
         env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          PLAY_TRACK: ${{ steps.release.outputs.track }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+          PLAY_TRACK: ${{ needs.verify.outputs.track }}
         run: |
           bundle exec ruby -r ./fastlane/versioning -e 'base=File.read("pubspec.yaml").match(/^version: (.+)$/)[1].split("+")[0]; name=ENV["PLAY_TRACK"] == "production" ? ClockroveVersioning.production_name(ENV.fetch("RELEASE_TAG")) : ClockroveVersioning.internal_name(base,ENV.fetch("GITHUB_RUN_NUMBER"),ENV.fetch("GITHUB_RUN_ATTEMPT")); File.open(ENV.fetch("GITHUB_OUTPUT"),"a") { |f| f.puts("name=#{name}") }'
       - name: Build with permanent upload key
@@ -122,11 +148,30 @@ jobs:
           BUILD_CODE: ${{ steps.code.outputs.code }}
         run: |
           flutter pub get --enforce-lockfile
+          flutter build apk --release --config-only
           flutter build appbundle --release --no-pub --build-name="$BUILD_NAME" --build-number="$BUILD_CODE"
           jarsigner -verify -strict -keystore "$CLOCKROVE_UPLOAD_KEYSTORE" -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD build/app/outputs/bundle/release/app-release.aab
-      - name: Upload and submit selected Play track
+      - name: Recheck main before internal submission
+        id: freshness
+        if: needs.verify.outputs.track == 'internal'
         env:
-          PLAY_TRACK: ${{ steps.release.outputs.track }}
+          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse FETCH_HEAD)"
+          if [[ "$SOURCE_SHA" == "$current_main" ]]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping internal submission for stale main commit $SOURCE_SHA; current main is $current_main."
+            echo "Internal submission skipped: main advanced from $SOURCE_SHA to $current_main during the build." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload and submit selected Play track
+        if: ${{ needs.verify.outputs.track == 'production' || steps.freshness.outputs.eligible == 'true' }}
+        env:
+          PLAY_TRACK: ${{ needs.verify.outputs.track }}
         run: |
           bundle exec fastlane deliver_play
           echo "Play upload/submission accepted. Approval and live/tester availability require separate Play evidence." >> "$GITHUB_STEP_SUMMARY"
