@@ -257,11 +257,11 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     // This is the snapshot setup peak, before lazy BLOB reads and archive
     // serialization happen while encryption consumes archiveStream below.
     final afterSnapshotSetupRssKiB = await _processHighWaterRssKiB();
-    if (exported.mediaBytes < seedMediaBytes ||
-        exported.mediaCount < seedAttachmentCount ||
+    if (exported.mediaBytes != seedMediaBytes ||
+        exported.mediaCount != seedAttachmentCount ||
         exported.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
-        'Snapshot export omitted seeded media or exceeded limits.',
+        'Snapshot export did not match the isolated fixture or exceeded limits.',
       );
     }
 

@@ -24,6 +24,8 @@ export FLUTTER_NO_UNINSTALL_LOG="$test_root/flutter-no-uninstall.txt"
 export AAPT_CALL_LOG="$test_root/aapt-calls.txt"
 export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
 export ADB_FAKE_VERSION=42
+export ADB_PIDOF_STATUS=1
+export ADB_PIDOF_OUTPUT=''
 export ADB_FAKE_API=24
 export ADB_INSTALL_MODE=timeout-once
 export ADB_PACKAGE_QUERY_MODE=normal
@@ -128,7 +130,10 @@ if [[ "${3:-}" == shell && "${4:-}" == am && "${5:-}" == force-stop ]]; then
 fi
 if [[ "${3:-}" == shell && "${4:-}" == pidof ]]; then
   printf '%s\n' 'pidof' >> "$FLUTTER_EVENT_LOG"
-  exit 0
+  if [[ "$ADB_PIDOF_STATUS" == 0 ]]; then
+    printf '%s\n' "$ADB_PIDOF_OUTPUT"
+  fi
+  exit "$ADB_PIDOF_STATUS"
 fi
 if [[ "${3:-}" == reboot ]]; then
   if [[ "$ADB_REBOOT_MODE" == normal ]]; then
@@ -277,13 +282,38 @@ FAKE_FLUTTER
 chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter"
 source "$script_dir/ci-adb-install.sh"
 
+export ADB_PIDOF_STATUS=0 ADB_PIDOF_OUTPUT='123 456'
+[[ "$(clockrove_app_process_pids "$ADB_FAKE_PACKAGE")" == '123 456' ]]
+export ADB_PIDOF_STATUS=1 ADB_PIDOF_OUTPUT=''
+if clockrove_app_process_pids "$ADB_FAKE_PACKAGE"; then
+  echo 'pidof status 1 with no output must mean the process is absent.' >&2
+  exit 1
+else
+  pidof_status=$?
+fi
+[[ "$pidof_status" == 1 ]]
+export ADB_PIDOF_STATUS=7
+if clockrove_app_process_pids "$ADB_FAKE_PACKAGE" 2>/dev/null; then
+  echo 'Unexpected pidof failure must not be treated as process absence.' >&2
+  exit 1
+else
+  pidof_status=$?
+fi
+[[ "$pidof_status" == 2 ]]
+export ADB_PIDOF_STATUS=1 ADB_PIDOF_OUTPUT=''
+echo 'Verified pidof distinguishes running, absent, and failed process queries.'
+
 clockrove_test_flutter_retry_hook() {
   [[ "$1" == 24 && "$(cat "$ADB_REBOOT_COUNT")" == 1 ]] || return 1
   printf '%s\n' 'seed-restored' >> "$FLUTTER_EVENT_LOG"
   timeout --kill-after=1s 5s adb -s emulator-5554 shell am force-stop "$ADB_FAKE_PACKAGE" || return 1
-  local app_pid
-  app_pid="$(timeout --kill-after=1s 5s adb -s emulator-5554 shell pidof "$ADB_FAKE_PACKAGE")"
-  [[ -z "$app_pid" ]] || return 1
+  local app_pid process_status
+  if app_pid="$(clockrove_app_process_pids "$ADB_FAKE_PACKAGE")"; then
+    return 1
+  else
+    process_status=$?
+  fi
+  [[ "$process_status" == 1 ]] || return 1
   printf '%s\n' 'process-absent' >> "$FLUTTER_EVENT_LOG"
   printf '%s\n' "$1" >> "$FLUTTER_RETRY_HOOK_LOG"
 }

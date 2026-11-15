@@ -263,6 +263,33 @@ clockrove_flutter_test_has_started() {
   return 1
 }
 
+# Return the app's process IDs on success, status 1 only when `pidof` reports
+# no process, and status 2 for ADB, timeout, or malformed-output failures.
+clockrove_app_process_pids() {
+  local package="$1"
+  local output status
+  if [[ ! "$package" =~ ^[A-Za-z0-9_.]+$ ]]; then
+    echo 'Invalid Android application package for pidof.' >&2
+    return 2
+  fi
+  if output="$(timeout --kill-after=3s 10s adb -s emulator-5554 shell pidof "$package" 2>&1)"; then
+    status=0
+  else
+    status=$?
+  fi
+  output="${output//$'\r'/}"
+  if (( status == 0 )) &&
+    [[ "$output" =~ ^[0-9]+([[:space:]]+[0-9]+)*$ ]]; then
+    printf '%s' "$output"
+    return 0
+  fi
+  if (( status == 1 )) && [[ -z "$output" ]]; then
+    return 1
+  fi
+  echo "Could not verify process IDs for $package (pidof exit $status): $output" >&2
+  return 2
+}
+
 # Flutter's integration_test driver performs its own APK installation, outside
 # clockrove_install_apk. Retry only the reproduced failure where the bounded
 # command timeout interrupts that install before any tests start. A successful

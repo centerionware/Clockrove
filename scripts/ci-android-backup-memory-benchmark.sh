@@ -24,14 +24,32 @@ instrumentation_identity="$(clockrove_apk_identity "$instrumentation_apk" instru
 clockrove_install_apk "$api" app "$app_apk"
 clockrove_install_apk "$api" instrumentation "$instrumentation_apk"
 
+clockrove_clear_backup_benchmark_app_data() {
+  local output
+  if ! output="$(timeout --kill-after=5s 20s adb -s emulator-5554 shell pm clear "$package" 2>&1)"; then
+    echo "Could not clear app data before seeding the benchmark fixture: $output" >&2
+    return 2
+  fi
+  if [[ "$output" != *Success* ]]; then
+    echo "App data clear did not succeed before benchmark seeding: $output" >&2
+    return 2
+  fi
+}
+
 clockrove_force_stop_backup_benchmark_app() {
+  local process_status clockrove_process_deadline clockrove_live_pids
   timeout --kill-after=5s 20s adb -s emulator-5554 shell am force-stop "$package" || return 2
   clockrove_process_deadline=$((SECONDS + 30))
   clockrove_live_pids='pending'
   while (( SECONDS < clockrove_process_deadline )); do
     [[ "$(timeout --kill-after=3s 10s adb -s emulator-5554 get-state)" == device ]] || return 2
-    clockrove_live_pids="$(timeout --kill-after=3s 10s adb -s emulator-5554 shell pidof "$package" 2>/dev/null || true)"
-    clockrove_live_pids="${clockrove_live_pids//$'\r'/}"
+    if clockrove_live_pids="$(clockrove_app_process_pids "$package")"; then
+      :
+    else
+      process_status=$?
+      [[ "$process_status" == 1 ]] || return 2
+      clockrove_live_pids=''
+    fi
     [[ -n "$clockrove_live_pids" ]] || break
     sleep 1
   done
@@ -41,6 +59,9 @@ clockrove_force_stop_backup_benchmark_app() {
   fi
   return 0
 }
+
+clockrove_clear_backup_benchmark_app_data
+clockrove_force_stop_backup_benchmark_app
 
 clockrove_reseed_backup_memory_fixture() {
   local retry_api="$1"
@@ -146,6 +167,7 @@ seed_attachment_count=$seed_attachment_count
 seed_media_bytes=$seed_media_bytes
 seed_recreated_after_confirmed_install_timeout=$seed_recreated_after_install_timeout
 app_process_absent_after_force_stop=true
+app_data_cleared_before_seed=true
 benchmark_pid=$benchmark_pid
 benchmark_process_start_ticks=$benchmark_start_ticks
 benchmark_attachment_count=$benchmark_attachment_count
