@@ -680,6 +680,29 @@ final class _PlaintextFrameReader {
 
   Future<Uint8List?> nextFrame() async {
     if (_ended) return null;
+    if (_current == null || _currentOffset >= _current!.length) {
+      while (true) {
+        if (!await _iterator.moveNext()) {
+          _ended = true;
+          return null;
+        }
+        final current = _iterator.current;
+        if (current.length > BackupCryptoV2.chunkBytes) {
+          throw const FormatException(
+            'The backup source yielded an oversized chunk.',
+          );
+        }
+        if (current.isEmpty) continue;
+        if (current is Uint8List &&
+            current.length == BackupCryptoV2.chunkBytes) {
+          return current;
+        }
+        _current = current;
+        _currentOffset = 0;
+        break;
+      }
+    }
+
     final frame = Uint8List(BackupCryptoV2.chunkBytes);
     var frameLength = 0;
     while (frameLength < frame.length) {

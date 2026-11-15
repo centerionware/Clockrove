@@ -142,6 +142,64 @@ void main() {
       },
     );
 
+    test('stream encoding preserves multi-chunk generic media bytes', () async {
+      final media = List<int>.generate(
+        128 * 1024 + 17,
+        (index) => index & 0xff,
+        growable: false,
+      );
+      final rows = [
+        BackupArchiveStreamRow(
+          table: 'task_attachments',
+          values: const {'id': 'attachment-stream'},
+          blobs: [
+            BackupArchiveBlobSource(
+              id: 'media-stream',
+              column: 'data',
+              sizeBytes: media.length,
+            ),
+          ],
+        ),
+      ];
+      final plan = BackupArchiveCodec.prepareStream(
+        schemaVersion: 15,
+        stateVersion: 4,
+        capturedAtUtcMillis: 5,
+        rows: rows,
+      );
+      final actual = BytesBuilder(copy: false);
+      var chunkCount = 0;
+      await for (final chunk in plan.encode(
+        readBlob: (_) => Stream<List<int>>.value(media),
+      )) {
+        expect(chunk.length, lessThanOrEqualTo(64 * 1024));
+        actual.add(chunk);
+        chunkCount++;
+      }
+      plan.dispose();
+
+      final expected = await BackupArchiveCodec.encode(
+        schemaVersion: 15,
+        stateVersion: 4,
+        capturedAtUtcMillis: 5,
+        rows: [
+          _row(
+            'task_attachments',
+            const {'id': 'attachment-stream'},
+            blobs: [
+              BackupArchiveBlob(
+                id: 'media-stream',
+                column: 'data',
+                bytes: Uint8List.fromList(media),
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(chunkCount, greaterThan(2));
+      expect(actual.takeBytes(), orderedEquals(expected));
+    });
+
     test('stream preflight rejects invalid media field references', () {
       BackupArchiveStreamRow row({
         Map<String, Object?> values = const {'id': 'attachment'},

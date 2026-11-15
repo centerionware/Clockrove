@@ -1358,9 +1358,9 @@ final class _ArchiveChunkBuffer {
       final available = _chunkBytes - _pendingLength;
       final remaining = bytes.length - offset;
       final count = available < remaining ? available : remaining;
-      _pending.add(
-        Uint8List.fromList(bytes.getRange(offset, offset + count).toList()),
-      );
+      final chunk = Uint8List(count);
+      chunk.setRange(0, count, bytes, offset);
+      _pending.add(chunk);
       _pendingLength += count;
       offset += count;
       if (_pendingLength == _chunkBytes) {
