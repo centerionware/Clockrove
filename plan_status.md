@@ -3917,3 +3917,15 @@ reversed behavior. Updated the device journey to verify right swipe 4→3 and
 left swipe 3→4, matching the requested left-advances/right-returns behavior.
 Validate the corrected exact head in GitHub Actions; API 35 was not reached. No
 VM build or test ran.
+
+The corrected exact head `1f3662e` passed the full validation workflow in
+[Actions run 43681914649](https://github.com/centerionware/Clockrove/actions/runs/43681914649),
+including the Flutter behavior tests and API-24/35 Android device suites. The
+photo journey verified right swipe 4→3 and left swipe 3→4. This establishes the
+requested direction on emulators. No VM build, test, formatter or analyzer ran.
+
+To prevent passing PR checks from becoming stale after main advances, active
+ruleset `Protect Main` (ID `27171072`) now requires strict status checks for its
+existing `android` check. PR #55's base matched current main at
+`f0dc15f7a7e3f86d5c9fc387a847f425f8f1a7e4` when verified. The workflow does not
+use a merge queue, so no `merge_group` trigger was added.

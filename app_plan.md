@@ -79,10 +79,14 @@ swipe advances to the next chronological task/comment photo, and right swipe
 returns to the prior photo. Its first exact-head run passed formatting, analysis,
 Flutter behavior, Android build and native unit tests, then stopped in the API-24
 device journey while revealing **View original PDF**. The viewer direction is
-therefore not yet proven on Android devices. PR #55 now includes the shared
+proven on Android devices by corrected exact head `1f3662e` / Actions run
+[43681914649](https://github.com/centerionware/Clockrove/actions/runs/43681914649),
+which passed formatting, analysis, Flutter behavior, Android build, native unit
+tests and the API-24/35 device suite. The device journey verifies right swipe
+from photo 4 to 3 and left swipe back to 4. PR #55 also includes the shared
 billing-device-test corrections for text replacement, short settled scrolls,
-tax-error visibility and covered-task checkbox visibility; exact-head API-24/35
-Actions validation is pending. No VM build/test/formatter has run.
+tax-error visibility and covered-task checkbox visibility. No VM
+build/test/formatter has run.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
