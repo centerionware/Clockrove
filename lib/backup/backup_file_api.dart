@@ -58,18 +58,16 @@ final class BackupFileApi {
     if (documentId.isEmpty) {
       throw const FormatException('The backup document handle is invalid.');
     }
-    return await _channel.invokeMethod<bool>(
-          'finishBackupDocument',
-          {'documentId': documentId},
-        ) ??
+    return await _channel.invokeMethod<bool>('finishBackupDocument', {
+          'documentId': documentId,
+        }) ??
         false;
   }
 
   Future<void> cancelBackupDocument(String documentId) async {
     if (documentId.isEmpty) return;
-    await _channel.invokeMethod<bool>(
-      'cancelBackupDocument',
-      {'documentId': documentId},
-    );
+    await _channel.invokeMethod<bool>('cancelBackupDocument', {
+      'documentId': documentId,
+    });
   }
 }

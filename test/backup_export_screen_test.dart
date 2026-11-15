@@ -46,7 +46,10 @@ void main() {
     );
 
     expect(find.textContaining('Clockrove cannot recover it'), findsOneWidget);
-    await tester.enterText(find.byKey(const ValueKey('backup-password')), 'short');
+    await tester.enterText(
+      find.byKey(const ValueKey('backup-password')),
+      'short',
+    );
     await tester.enterText(
       find.byKey(const ValueKey('backup-password-confirmation')),
       'short',
@@ -59,90 +62,103 @@ void main() {
     expect(calls, isEmpty);
   });
 
-  testWidgets('exports, encrypts, saves in bounded chunks and clears passwords', (
-    tester,
-  ) async {
-    var written = 0;
-    final chunkLengths = <int>[];
-    respond = (call) async {
-      switch (call.method) {
-        case 'createBackupDocument':
-          final args = call.arguments as Map;
-          expect(args['totalBytes'], maxBackupDocumentChunkBytes + 3);
-          expect((args['suggestedName'] as String).endsWith('.clockrove'), isTrue);
-          return 'opaque-document-id';
-        case 'writeBackupDocumentChunk':
-          final args = call.arguments as Map;
-          expect(args['documentId'], 'opaque-document-id');
-          expect(args['offset'], written);
-          final bytes = args['bytes'] as Uint8List;
-          expect(bytes.length, lessThanOrEqualTo(maxBackupDocumentChunkBytes));
-          chunkLengths.add(bytes.length);
-          written += bytes.length;
-          return written;
-        case 'finishBackupDocument':
-          expect((call.arguments as Map)['documentId'], 'opaque-document-id');
-          expect(written, maxBackupDocumentChunkBytes + 3);
-          return true;
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BackupExportScreen(
-          exportBackup: ({isCancelled, onProgress}) async {
-            onProgress?.call(
-              const BackupSnapshotProgress(
-                recordsRead: 1,
-                totalRecords: 1,
-                mediaBytesRead: 0,
-                totalMediaBytes: 0,
-              ),
+  testWidgets(
+    'exports, encrypts, saves in bounded chunks and clears passwords',
+    (tester) async {
+      var written = 0;
+      final chunkLengths = <int>[];
+      respond = (call) async {
+        switch (call.method) {
+          case 'createBackupDocument':
+            final args = call.arguments as Map;
+            expect(args['totalBytes'], maxBackupDocumentChunkBytes + 3);
+            expect(
+              (args['suggestedName'] as String).endsWith('.clockrove'),
+              isTrue,
             );
-            return _snapshot(openSessionCount: 1);
-          },
-          encryptArchive: ({required password, required archive}) async {
-            expect(password, 'a-long-backup-password');
-            expect(archive, orderedEquals([7, 8, 9]));
-            return Uint8List(maxBackupDocumentChunkBytes + 3);
-          },
-          fileApi: BackupFileApi(channel: channel),
+            return 'opaque-document-id';
+          case 'writeBackupDocumentChunk':
+            final args = call.arguments as Map;
+            expect(args['documentId'], 'opaque-document-id');
+            expect(args['offset'], written);
+            final bytes = args['bytes'] as Uint8List;
+            expect(
+              bytes.length,
+              lessThanOrEqualTo(maxBackupDocumentChunkBytes),
+            );
+            chunkLengths.add(bytes.length);
+            written += bytes.length;
+            return written;
+          case 'finishBackupDocument':
+            expect((call.arguments as Map)['documentId'], 'opaque-document-id');
+            expect(written, maxBackupDocumentChunkBytes + 3);
+            return true;
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BackupExportScreen(
+            exportBackup: ({isCancelled, onProgress}) async {
+              onProgress?.call(
+                const BackupSnapshotProgress(
+                  recordsRead: 1,
+                  totalRecords: 1,
+                  mediaBytesRead: 0,
+                  totalMediaBytes: 0,
+                ),
+              );
+              return _snapshot(openSessionCount: 1);
+            },
+            encryptArchive: ({required password, required archive}) async {
+              expect(password, 'a-long-backup-password');
+              expect(archive, orderedEquals([7, 8, 9]));
+              return Uint8List(maxBackupDocumentChunkBytes + 3);
+            },
+            fileApi: BackupFileApi(channel: channel),
+          ),
         ),
-      ),
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('backup-password')),
-      'a-long-backup-password',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('backup-password-confirmation')),
-      'a-long-backup-password',
-    );
-    await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('backup-password')),
+        'a-long-backup-password',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('backup-password-confirmation')),
+        'a-long-backup-password',
+      );
+      await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
 
-    for (var i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
-      if (find.text('Encrypted backup saved.').evaluate().isNotEmpty) break;
-    }
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.text('Encrypted backup saved.').evaluate().isNotEmpty) break;
+      }
 
-    expect(find.text('Encrypted backup saved.'), findsOneWidget);
-    expect(find.text('This backup includes 1 open timer. Your timer will keep running.'), findsOneWidget);
-    expect(chunkLengths, [maxBackupDocumentChunkBytes, 3]);
-    expect(calls.map((call) => call.method), [
-      'createBackupDocument',
-      'writeBackupDocumentChunk',
-      'writeBackupDocumentChunk',
-      'finishBackupDocument',
-    ]);
-    expect(
-      tester.widget<TextField>(find.byKey(const ValueKey('backup-password')))
-          .controller!
-          .text,
-      isEmpty,
-    );
-  });
+      expect(find.text('Encrypted backup saved.'), findsOneWidget);
+      expect(
+        find.text(
+          'This backup includes 1 open timer. Your timer will keep running.',
+        ),
+        findsOneWidget,
+      );
+      expect(chunkLengths, [maxBackupDocumentChunkBytes, 3]);
+      expect(calls.map((call) => call.method), [
+        'createBackupDocument',
+        'writeBackupDocumentChunk',
+        'writeBackupDocumentChunk',
+        'finishBackupDocument',
+      ]);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('backup-password')))
+            .controller!
+            .text,
+        isEmpty,
+      );
+    },
+  );
 
   testWidgets('picker cancellation reports that no complete backup was saved', (
     tester,
@@ -173,13 +189,22 @@ void main() {
 
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));
-      if (find.text('Save cancelled. No complete backup was saved.').evaluate().isNotEmpty) break;
+      if (find
+          .text('Save cancelled. No complete backup was saved.')
+          .evaluate()
+          .isNotEmpty)
+        break;
     }
-    expect(find.text('Save cancelled. No complete backup was saved.'), findsOneWidget);
+    expect(
+      find.text('Save cancelled. No complete backup was saved.'),
+      findsOneWidget,
+    );
     expect(calls.map((call) => call.method), ['createBackupDocument']);
   });
 
-  testWidgets('retries an ambiguous finish response idempotently', (tester) async {
+  testWidgets('retries an ambiguous finish response idempotently', (
+    tester,
+  ) async {
     var finishCalls = 0;
     respond = (call) async {
       switch (call.method) {
@@ -223,55 +248,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('reports an unknown save outcome after both finish replies fail', (
-    tester,
-  ) async {
-    respond = (call) async {
-      switch (call.method) {
-        case 'createBackupDocument':
-          return 'opaque-document-id';
-        case 'writeBackupDocumentChunk':
-          return (call.arguments as Map)['bytes'].length as int;
-        case 'finishBackupDocument':
-          throw PlatformException(code: 'RESPONSE_LOST');
-        case 'cancelBackupDocument':
-          return true;
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
+  testWidgets(
+    'reports an unknown save outcome after both finish replies fail',
+    (tester) async {
+      respond = (call) async {
+        switch (call.method) {
+          case 'createBackupDocument':
+            return 'opaque-document-id';
+          case 'writeBackupDocumentChunk':
+            return (call.arguments as Map)['bytes'].length as int;
+          case 'finishBackupDocument':
+            throw PlatformException(code: 'RESPONSE_LOST');
+          case 'cancelBackupDocument':
+            return true;
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BackupExportScreen(
-          exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
-          encryptArchive: ({required password, required archive}) async =>
-              Uint8List.fromList([1, 2, 3]),
-          fileApi: BackupFileApi(channel: channel),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BackupExportScreen(
+            exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
+            encryptArchive: ({required password, required archive}) async =>
+                Uint8List.fromList([1, 2, 3]),
+            fileApi: BackupFileApi(channel: channel),
+          ),
         ),
-      ),
-    );
-    await _enterPassword(tester);
-    await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
-    await _pumpUntil(
-      tester,
-      find.text(
-        'The save may have completed. Check the chosen folder before trying again.',
-      ),
-    );
+      );
+      await _enterPassword(tester);
+      await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
+      await _pumpUntil(
+        tester,
+        find.text(
+          'The save may have completed. Check the chosen folder before trying again.',
+        ),
+      );
 
-    expect(
-      calls.map((call) => call.method),
-      [
+      expect(calls.map((call) => call.method), [
         'createBackupDocument',
         'writeBackupDocumentChunk',
         'finishBackupDocument',
         'finishBackupDocument',
         'cancelBackupDocument',
-      ],
-    );
-    expect(tester.takeException(), isNull);
-  });
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('cancel during snapshot reading does not start encryption', (
     tester,
@@ -300,7 +323,10 @@ void main() {
 
     expect(isCancelled?.call(), isTrue);
     pending.completeError(const BackupExportCancelledException());
-    await _pumpUntil(tester, find.text('Backup cancelled. No complete backup file was saved.'));
+    await _pumpUntil(
+      tester,
+      find.text('Backup cancelled. No complete backup file was saved.'),
+    );
 
     expect(encryptCalls, 0);
     expect(calls, isEmpty);
@@ -324,7 +350,10 @@ void main() {
     await _pumpUntil(tester, find.text('Encrypting backup on this device…'));
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
     pendingEncryption.complete(Uint8List.fromList([1, 2, 3]));
-    await _pumpUntil(tester, find.text('Backup cancelled. No complete backup file was saved.'));
+    await _pumpUntil(
+      tester,
+      find.text('Backup cancelled. No complete backup file was saved.'),
+    );
 
     expect(calls, isEmpty);
   });
@@ -359,10 +388,16 @@ void main() {
     );
     await _enterPassword(tester);
     await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
-    await _pumpUntil(tester, find.byKey(const ValueKey('cancel-backup-export')));
+    await _pumpUntil(
+      tester,
+      find.byKey(const ValueKey('cancel-backup-export')),
+    );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
     firstWrite.complete(maxBackupDocumentChunkBytes);
-    await _pumpUntil(tester, find.text('Backup cancelled. No complete backup file was saved.'));
+    await _pumpUntil(
+      tester,
+      find.text('Backup cancelled. No complete backup file was saved.'),
+    );
 
     expect(calls.map((call) => call.method), [
       'createBackupDocument',

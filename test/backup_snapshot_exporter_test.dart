@@ -91,9 +91,8 @@ void main() {
     };
 
     final progress = <BackupSnapshotProgress>[];
-    final result = await BackupSnapshotExporter(channel: channel).export(
-      onProgress: progress.add,
-    );
+    final result = await BackupSnapshotExporter(channel: channel)
+        .export(onProgress: progress.add);
     final archive = await BackupArchiveCodec.decode(result.archiveBytes);
 
     expect(result.schemaVersion, 15);
@@ -115,19 +114,19 @@ void main() {
       'sessions',
       'task_attachments',
     ]);
-    expect(archive.rows.last.blobs.single.bytes, orderedEquals([11, 22, 33, 44]));
     expect(
-      calls.map((call) => call.method),
-      [
-        'getBackupSnapshotInfo',
-        'startBackupSnapshot',
-        'readBackupSnapshotPage',
-        'readBackupSnapshotPage',
-        'readBackupBlob',
-        'readBackupBlob',
-        'closeBackupSnapshot',
-      ],
+      archive.rows.last.blobs.single.bytes,
+      orderedEquals([11, 22, 33, 44]),
     );
+    expect(calls.map((call) => call.method), [
+      'getBackupSnapshotInfo',
+      'startBackupSnapshot',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupBlob',
+      'readBackupBlob',
+      'closeBackupSnapshot',
+    ]);
   });
 
   test('closes a started snapshot when page reading fails', () async {
@@ -156,68 +155,75 @@ void main() {
     expect(calls.last.method, 'closeBackupSnapshot');
   });
 
-  test('rejects a terminal page that silently omits captured records', () async {
-    var closed = false;
-    respond = (call) async {
-      switch (call.method) {
-        case 'getBackupSnapshotInfo':
-          return _snapshotInfo();
-        case 'startBackupSnapshot':
-          return _started(recordCount: 1);
-        case 'readBackupSnapshotPage':
-          return _page(records: const [], done: true);
-        case 'closeBackupSnapshot':
-          closed = true;
-          return {'closed': true};
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
+  test(
+    'rejects a terminal page that silently omits captured records',
+    () async {
+      var closed = false;
+      respond = (call) async {
+        switch (call.method) {
+          case 'getBackupSnapshotInfo':
+            return _snapshotInfo();
+          case 'startBackupSnapshot':
+            return _started(recordCount: 1);
+          case 'readBackupSnapshotPage':
+            return _page(records: const [], done: true);
+          case 'closeBackupSnapshot':
+            closed = true;
+            return {'closed': true};
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
 
-    await expectLater(
-      BackupSnapshotExporter(channel: channel).export(),
-      throwsA(isA<FormatException>()),
-    );
-    expect(closed, isTrue);
-    expect(calls.last.method, 'closeBackupSnapshot');
-  });
+      await expectLater(
+        BackupSnapshotExporter(channel: channel).export(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(closed, isTrue);
+      expect(calls.last.method, 'closeBackupSnapshot');
+    },
+  );
 
-  test('closes a started snapshot when export is cancelled between pages', () async {
-    var cancellationChecks = 0;
-    var closed = false;
-    respond = (call) async {
-      switch (call.method) {
-        case 'getBackupSnapshotInfo':
-          return _snapshotInfo();
-        case 'startBackupSnapshot':
-          return _started(recordCount: 2);
-        case 'readBackupSnapshotPage':
-          return _page(
-            cursor: 'page-2',
-            records: [_row('jobs', {'id': 'job-1'})],
-          );
-        case 'closeBackupSnapshot':
-          closed = true;
-          return {'closed': true};
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
+  test(
+    'closes a started snapshot when export is cancelled between pages',
+    () async {
+      var cancellationChecks = 0;
+      var closed = false;
+      respond = (call) async {
+        switch (call.method) {
+          case 'getBackupSnapshotInfo':
+            return _snapshotInfo();
+          case 'startBackupSnapshot':
+            return _started(recordCount: 2);
+          case 'readBackupSnapshotPage':
+            return _page(
+              cursor: 'page-2',
+              records: [
+                _row('jobs', {'id': 'job-1'}),
+              ],
+            );
+          case 'closeBackupSnapshot':
+            closed = true;
+            return {'closed': true};
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
 
-    await expectLater(
-      BackupSnapshotExporter(channel: channel).export(
-        isCancelled: () => ++cancellationChecks == 4,
-      ),
-      throwsA(isA<BackupExportCancelledException>()),
-    );
-    expect(closed, isTrue);
-    expect(calls.map((call) => call.method), [
-      'getBackupSnapshotInfo',
-      'startBackupSnapshot',
-      'readBackupSnapshotPage',
-      'closeBackupSnapshot',
-    ]);
-  });
+      await expectLater(
+        BackupSnapshotExporter(channel: channel)
+            .export(isCancelled: () => ++cancellationChecks == 4),
+        throwsA(isA<BackupExportCancelledException>()),
+      );
+      expect(closed, isTrue);
+      expect(calls.map((call) => call.method), [
+        'getBackupSnapshotInfo',
+        'startBackupSnapshot',
+        'readBackupSnapshotPage',
+        'closeBackupSnapshot',
+      ]);
+    },
+  );
 
   test('closes a started snapshot when blob transfer fails', () async {
     var closed = false;
@@ -292,35 +298,41 @@ void main() {
     );
   });
 
-  test('rejects an incompatible snapshot contract before starting it', () async {
-    respond = (call) async {
-      if (call.method == 'getBackupSnapshotInfo') {
-        return _snapshotInfo(portableTables: ['jobs']);
-      }
-      throw StateError('An incompatible contract must not start a snapshot.');
-    };
+  test(
+    'rejects an incompatible snapshot contract before starting it',
+    () async {
+      respond = (call) async {
+        if (call.method == 'getBackupSnapshotInfo') {
+          return _snapshotInfo(portableTables: ['jobs']);
+        }
+        throw StateError('An incompatible contract must not start a snapshot.');
+      };
 
-    await expectLater(
-      BackupSnapshotExporter(channel: channel).export(),
-      throwsA(isA<FormatException>()),
-    );
-    expect(calls.map((call) => call.method), ['getBackupSnapshotInfo']);
-  });
+      await expectLater(
+        BackupSnapshotExporter(channel: channel).export(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(calls.map((call) => call.method), ['getBackupSnapshotInfo']);
+    },
+  );
 
-  test('rejects a page budget below the native minimum before starting', () async {
-    respond = (call) async {
-      if (call.method == 'getBackupSnapshotInfo') {
-        return _snapshotInfo(maxPageBytes: 1);
-      }
-      throw StateError('An invalid page budget must not start a snapshot.');
-    };
+  test(
+    'rejects a page budget below the native minimum before starting',
+    () async {
+      respond = (call) async {
+        if (call.method == 'getBackupSnapshotInfo') {
+          return _snapshotInfo(maxPageBytes: 1);
+        }
+        throw StateError('An invalid page budget must not start a snapshot.');
+      };
 
-    await expectLater(
-      BackupSnapshotExporter(channel: channel).export(),
-      throwsA(isA<FormatException>()),
-    );
-    expect(calls.map((call) => call.method), ['getBackupSnapshotInfo']);
-  });
+      await expectLater(
+        BackupSnapshotExporter(channel: channel).export(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(calls.map((call) => call.method), ['getBackupSnapshotInfo']);
+    },
+  );
 
   test('accepts an empty snapshot with a terminal page', () async {
     respond = (call) async {
@@ -406,7 +418,11 @@ Map<String, Object?> _page({
   'records': records,
 };
 
-Map<String, Object?> _blobChunk(int offset, List<int> bytes, {required bool done}) {
+Map<String, Object?> _blobChunk(
+  int offset,
+  List<int> bytes, {
+  required bool done,
+}) {
   final value = Uint8List.fromList(bytes);
   return {
     'offset': offset,

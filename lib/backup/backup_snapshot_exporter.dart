@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'backup_archive.dart';
 
 typedef BackupCancellationCheck = bool Function();
-typedef BackupExportProgressCallback =
-    void Function(BackupSnapshotProgress progress);
+typedef BackupExportProgressCallback = void Function(
+  BackupSnapshotProgress progress,
+);
 
 /// Reads a stable native snapshot and serializes it before its handle expires.
 /// Native SQLite remains the sole source of persisted values and BLOB bytes.
@@ -61,7 +62,9 @@ final class BackupSnapshotExporter {
         _checkCancelled(isCancelled);
         pageCount++;
         if (pageCount > info.maxRecords + 1) {
-          throw const FormatException('The backup snapshot page sequence is invalid.');
+          throw const FormatException(
+            'The backup snapshot page sequence is invalid.',
+          );
         }
         final page = await _readPage(
           snapshotId: snapshotId,
@@ -69,17 +72,23 @@ final class BackupSnapshotExporter {
           maxBytes: info.maxPageBytes,
         );
         if (page.snapshotId != snapshotId) {
-          throw const FormatException('The backup snapshot changed unexpectedly.');
+          throw const FormatException(
+            'The backup snapshot changed unexpectedly.',
+          );
         }
         if (page.records.isEmpty && !page.done) {
-          throw const FormatException('The backup snapshot stopped making progress.');
+          throw const FormatException(
+            'The backup snapshot stopped making progress.',
+          );
         }
 
         for (final record in page.records) {
           _checkCancelled(isCancelled);
           if (rows.length >= started.recordCount ||
               rows.length >= info.maxRecords) {
-            throw const FormatException('The backup snapshot contains too many records.');
+            throw const FormatException(
+              'The backup snapshot contains too many records.',
+            );
           }
           if (!info.portableTables.contains(record.table)) {
             throw FormatException(
@@ -91,7 +100,9 @@ final class BackupSnapshotExporter {
             mediaCount++;
             if (mediaCount > started.mediaCount ||
                 mediaCount > info.maxMediaCount) {
-              throw const FormatException('The backup snapshot contains too many media files.');
+              throw const FormatException(
+                'The backup snapshot contains too many media files.',
+              );
             }
             if (descriptor.sizeBytes < 0 ||
                 descriptor.sizeBytes > started.mediaBytes - mediaBytes ||
@@ -107,34 +118,41 @@ final class BackupSnapshotExporter {
                     descriptor: descriptor,
                     chunkBytes: info.maxBlobChunkBytes,
                     isCancelled: isCancelled,
-                    onBytesRead: (bytesRead) => reportProgress(
-                      mediaBytesRead: mediaBytes + bytesRead,
-                    ),
+                    onBytesRead: (bytesRead) =>
+                        reportProgress(mediaBytesRead: mediaBytes + bytesRead),
                   );
             mediaBytes += descriptor.sizeBytes;
-            blobs.add(BackupArchiveBlob(
-              id: descriptor.id,
-              column: descriptor.column,
-              bytes: bytes,
-            ));
+            blobs.add(
+              BackupArchiveBlob(
+                id: descriptor.id,
+                column: descriptor.column,
+                bytes: bytes,
+              ),
+            );
           }
-          rows.add(BackupArchiveRow(
-            table: record.table,
-            values: record.values,
-            blobs: blobs,
-          ));
+          rows.add(
+            BackupArchiveRow(
+              table: record.table,
+              values: record.values,
+              blobs: blobs,
+            ),
+          );
           reportProgress();
         }
 
         if (page.done) {
           if (page.nextCursor != null) {
-            throw const FormatException('The final backup page has an invalid cursor.');
+            throw const FormatException(
+              'The final backup page has an invalid cursor.',
+            );
           }
           done = true;
         } else {
           final next = page.nextCursor;
           if (next == null || next.isEmpty || next == cursor) {
-            throw const FormatException('The backup snapshot cursor is invalid.');
+            throw const FormatException(
+              'The backup snapshot cursor is invalid.',
+            );
           }
           cursor = next;
         }
@@ -201,7 +219,9 @@ final class BackupSnapshotExporter {
   }
 
   Future<_SnapshotInfo> _readInfo() async {
-    final result = await _channel.invokeMethod<Object?>('getBackupSnapshotInfo');
+    final result = await _channel.invokeMethod<Object?>(
+      'getBackupSnapshotInfo',
+    );
     final map = _stringMap(result, 'snapshot info');
     return _SnapshotInfo(
       archiveFormatVersion: _integer(map, 'archiveFormatVersion'),
@@ -251,13 +271,17 @@ final class BackupSnapshotExporter {
     for (final raw in rawRecords) {
       final row = _stringMap(raw, 'snapshot row');
       if (_requiredString(row, 'type') != 'row') {
-        throw const FormatException('The backup snapshot has an unknown record type.');
+        throw const FormatException(
+          'The backup snapshot has an unknown record type.',
+        );
       }
       final table = _requiredString(row, 'table');
       final values = _scalarMap(row['values']);
       final rawBlobs = row['blobs'];
       if (rawBlobs is! List) {
-        throw const FormatException('The backup snapshot media list is invalid.');
+        throw const FormatException(
+          'The backup snapshot media list is invalid.',
+        );
       }
       final blobs = <_SnapshotBlob>[];
       for (final rawBlob in rawBlobs) {
@@ -266,7 +290,9 @@ final class BackupSnapshotExporter {
         final column = _requiredString(blob, 'column');
         final sizeBytes = _integer(blob, 'sizeBytes');
         if (id.isEmpty || column.isEmpty || sizeBytes < 0) {
-          throw const FormatException('The backup snapshot media descriptor is invalid.');
+          throw const FormatException(
+            'The backup snapshot media descriptor is invalid.',
+          );
         }
         blobs.add(_SnapshotBlob(id, column, sizeBytes));
       }
@@ -299,27 +325,28 @@ final class BackupSnapshotExporter {
       final requested = (descriptor.sizeBytes - offset) < chunkBytes
           ? descriptor.sizeBytes - offset
           : chunkBytes;
-      final result = await _channel.invokeMethod<Object?>(
-        'readBackupBlob',
-        {
-          'snapshotId': snapshotId,
-          'blobId': descriptor.id,
-          'offset': offset,
-          'maxBytes': requested,
-        },
-      );
+      final result = await _channel.invokeMethod<Object?>('readBackupBlob', {
+        'snapshotId': snapshotId,
+        'blobId': descriptor.id,
+        'offset': offset,
+        'maxBytes': requested,
+      });
       final map = _stringMap(result, 'snapshot media chunk');
       final returnedOffset = _integer(map, 'offset');
       final nextOffset = _integer(map, 'nextOffset');
       final done = map['done'];
       final rawBytes = map['bytes'];
-      if (rawBytes is! Uint8List || done is! bool ||
-          returnedOffset != offset || rawBytes.isEmpty ||
+      if (rawBytes is! Uint8List ||
+          done is! bool ||
+          returnedOffset != offset ||
+          rawBytes.isEmpty ||
           rawBytes.length > requested ||
           nextOffset != offset + rawBytes.length ||
           nextOffset > descriptor.sizeBytes ||
           done != (nextOffset == descriptor.sizeBytes)) {
-        throw const FormatException('The backup snapshot media chunk is invalid.');
+        throw const FormatException(
+          'The backup snapshot media chunk is invalid.',
+        );
       }
       output.setRange(offset, nextOffset, rawBytes);
       offset = nextOffset;
@@ -329,10 +356,9 @@ final class BackupSnapshotExporter {
   }
 
   Future<void> _closeSnapshot(String snapshotId) async {
-    final result = await _channel.invokeMethod<Object?>(
-      'closeBackupSnapshot',
-      {'snapshotId': snapshotId},
-    );
+    final result = await _channel.invokeMethod<Object?>('closeBackupSnapshot', {
+      'snapshotId': snapshotId,
+    });
     final map = _stringMap(result, 'snapshot close');
     if (map['closed'] != true) {
       throw const FormatException('The backup snapshot could not be closed.');
@@ -359,7 +385,9 @@ final class BackupSnapshotExporter {
           info.portableTables,
           BackupArchiveCodec.portableTablesForSchema(info.schemaVersion),
         )) {
-      throw const FormatException('The backup snapshot contract is unsupported.');
+      throw const FormatException(
+        'The backup snapshot contract is unsupported.',
+      );
     }
   }
 
@@ -399,11 +427,18 @@ final class BackupSnapshotExporter {
     final map = _stringMap(value, 'snapshot scalar row');
     for (final entry in map.entries) {
       final field = entry.value;
-      if (field != null && field is! int && field is! double && field is! String) {
-        throw const FormatException('The backup snapshot contains a non-scalar value.');
+      if (field != null &&
+          field is! int &&
+          field is! double &&
+          field is! String) {
+        throw const FormatException(
+          'The backup snapshot contains a non-scalar value.',
+        );
       }
       if (field is double && !field.isFinite) {
-        throw const FormatException('The backup snapshot contains an invalid number.');
+        throw const FormatException(
+          'The backup snapshot contains an invalid number.',
+        );
       }
     }
     return Map.unmodifiable(map);
@@ -416,7 +451,9 @@ final class BackupSnapshotExporter {
     }
     final result = value.cast<String>().toSet();
     if (result.length != value.length) {
-      throw FormatException('The backup snapshot field "$key" repeats a value.');
+      throw FormatException(
+        'The backup snapshot field "$key" repeats a value.',
+      );
     }
     return Set.unmodifiable(result);
   }
@@ -470,8 +507,9 @@ final class BackupSnapshotProgress {
 
   double get fraction {
     final recordFraction = totalRecords == 0 ? 1.0 : recordsRead / totalRecords;
-    final mediaFraction =
-        totalMediaBytes == 0 ? 1.0 : mediaBytesRead / totalMediaBytes;
+    final mediaFraction = totalMediaBytes == 0
+        ? 1.0
+        : mediaBytesRead / totalMediaBytes;
     return ((recordFraction + mediaFraction) / 2).clamp(0, 1).toDouble();
   }
 }

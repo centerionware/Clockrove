@@ -277,7 +277,8 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     } on Object {
       _setPhase(
         _BackupExportPhase.failed,
-        message: 'Could not create the backup. Your saved work was not changed.',
+        message:
+            'Could not create the backup. Your saved work was not changed.',
         canCancel: false,
       );
     } finally {
@@ -319,17 +320,23 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
 
   String _suggestedName() {
     final now = DateTime.now().toUtc();
-    final date = '${now.year.toString().padLeft(4, '0')}'
+    final date =
+        '${now.year.toString().padLeft(4, '0')}'
         '${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}';
     return 'Clockrove-backup-$date.clockrove';
   }
 
-  String _platformFailureMessage(PlatformException error) => switch (error.code) {
+  String _platformFailureMessage(
+    PlatformException error,
+  ) => switch (error.code) {
     'NO_DOCUMENT_PICKER' => 'No file picker is available. Install or enable a file manager and try again.',
-    'DOCUMENT_PICKER_OPEN' => 'Finish the other open file action, then try again.',
-    'BACKUP_SAVE_TOO_LARGE' => 'This backup is too large to save on this device.',
-    _ => 'Could not save the encrypted backup. Your saved work was not changed.',
+    'DOCUMENT_PICKER_OPEN' =>
+      'Finish the other open file action, then try again.',
+    'BACKUP_SAVE_TOO_LARGE' =>
+      'This backup is too large to save on this device.',
+    _ =>
+      'Could not save the encrypted backup. Your saved work was not changed.',
   };
 
   double? get _progressValue => switch (_phase) {
@@ -405,7 +412,8 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
                 tooltip: _passwordVisible ? 'Hide password' : 'Show password',
                 onPressed: _busy
                     ? null
-                    : () => setState(() => _passwordVisible = !_passwordVisible),
+                    : () =>
+                          setState(() => _passwordVisible = !_passwordVisible),
                 icon: Icon(
                   _passwordVisible ? Icons.visibility_off : Icons.visibility,
                 ),

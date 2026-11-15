@@ -24,64 +24,70 @@ void main() {
 
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
-  test('creates a destination, appends sequential encrypted chunks, and saves', () async {
-    var written = 0;
-    respond = (call) async {
-      switch (call.method) {
-        case 'createBackupDocument':
-          final args = call.arguments as Map;
-          expect(args['totalBytes'], 4);
-          expect(args['suggestedName'], 'Clockrove-backup-test.clockrove');
-          return 'opaque-document-id';
-        case 'writeBackupDocumentChunk':
-          final args = call.arguments as Map;
-          expect(args['documentId'], 'opaque-document-id');
-          expect(args['offset'], written);
-          final bytes = args['bytes'] as Uint8List;
-          expect(bytes, orderedEquals([10, 20, 30, 40]));
-          written += bytes.length;
-          return written;
-        case 'finishBackupDocument':
-          expect((call.arguments as Map)['documentId'], 'opaque-document-id');
-          expect(written, 4);
-          return true;
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
+  test(
+    'creates a destination, appends sequential encrypted chunks, and saves',
+    () async {
+      var written = 0;
+      respond = (call) async {
+        switch (call.method) {
+          case 'createBackupDocument':
+            final args = call.arguments as Map;
+            expect(args['totalBytes'], 4);
+            expect(args['suggestedName'], 'Clockrove-backup-test.clockrove');
+            return 'opaque-document-id';
+          case 'writeBackupDocumentChunk':
+            final args = call.arguments as Map;
+            expect(args['documentId'], 'opaque-document-id');
+            expect(args['offset'], written);
+            final bytes = args['bytes'] as Uint8List;
+            expect(bytes, orderedEquals([10, 20, 30, 40]));
+            written += bytes.length;
+            return written;
+          case 'finishBackupDocument':
+            expect((call.arguments as Map)['documentId'], 'opaque-document-id');
+            expect(written, 4);
+            return true;
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
 
-    final api = BackupFileApi(channel: channel);
-    final id = await api.createBackupDocument(
-      totalBytes: 4,
-      suggestedName: 'Clockrove-backup-test.clockrove',
-    );
-    expect(id, 'opaque-document-id');
-    expect(
-      await api.writeBackupDocumentChunk(
-        documentId: id!,
-        offset: 0,
-        bytes: Uint8List.fromList([10, 20, 30, 40]),
-      ),
-      4,
-    );
-    expect(await api.finishBackupDocument(id), isTrue);
-    expect(calls.map((call) => call.method), [
-      'createBackupDocument',
-      'writeBackupDocumentChunk',
-      'finishBackupDocument',
-    ]);
-  });
+      final api = BackupFileApi(channel: channel);
+      final id = await api.createBackupDocument(
+        totalBytes: 4,
+        suggestedName: 'Clockrove-backup-test.clockrove',
+      );
+      expect(id, 'opaque-document-id');
+      expect(
+        await api.writeBackupDocumentChunk(
+          documentId: id!,
+          offset: 0,
+          bytes: Uint8List.fromList([10, 20, 30, 40]),
+        ),
+        4,
+      );
+      expect(await api.finishBackupDocument(id), isTrue);
+      expect(calls.map((call) => call.method), [
+        'createBackupDocument',
+        'writeBackupDocumentChunk',
+        'finishBackupDocument',
+      ]);
+    },
+  );
 
-  test('rejects files above the authenticated envelope bound before native calls', () async {
-    await expectLater(
-      BackupFileApi(channel: channel).createBackupDocument(
-        totalBytes: maxEncryptedBackupBytes + 1,
-        suggestedName: 'too-large.clockrove',
-      ),
-      throwsA(isA<FormatException>()),
-    );
-    expect(calls, isEmpty);
-  });
+  test(
+    'rejects files above the authenticated envelope bound before native calls',
+    () async {
+      await expectLater(
+        BackupFileApi(channel: channel).createBackupDocument(
+          totalBytes: maxEncryptedBackupBytes + 1,
+          suggestedName: 'too-large.clockrove',
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(calls, isEmpty);
+    },
+  );
 
   test('rejects an oversized chunk before calling native code', () async {
     await expectLater(
