@@ -24,7 +24,9 @@ read-only info response is only a capability/current-state estimate; a later
 write can change it before the snapshot begins.
 
 archiveFormatVersion is independent of the Android SQLite schemaVersion.
-Format version 1 currently supports SQLite schema version 15. A future schema
+Format version 1 currently supports SQLite schema version 16. Schema 16 adds
+portable GPS deletion-range coverage; the range bounds and coordinate-free
+revisions allow restored histories to retain GPS deletions. A future schema
 must update the explicit native allowlist and the archive adapter before export
 is enabled for that schema. Unknown schemas fail closed.
 
@@ -100,7 +102,7 @@ invoice_payments, invoice_task_claims, invoice_time_claims, invoice_voids,
 invoices (including retained issued documents after migration staging is
 renamed), job_deletions, job_invoice_billing_policy, job_location_recording,
 job_money, job_tax_rates, jobs, kanban_cards, kanban_columns,
-location_points, location_recording_settings, logo_assets,
+location_deletion_ranges, location_points, location_recording_settings, logo_assets,
 payment_destinations, quote_counter, quote_decisions, quote_drafts,
 quote_invoice_links, quote_pdfs, quote_revisions, quote_scope_lines,
 quote_scope_revisions, quotes, revision_parents, sessions, settings_money,
@@ -113,6 +115,14 @@ the user's enabled/start/departure/grace choices and configuration timestamp
 but omits armed state, suppression state, last observed presence, facts-since
 state, and manual barriers. Restore must still keep imported automation
 disabled until explicit user action.
+
+`location_deletion_ranges` preserves half-open measured-UTC deletion bounds,
+optional job scope (`NULL` means all jobs), timezone context, deletion time,
+and the range revision reference. Its revision payload contains only range
+identity, scope, bounds, and timezone. Point-deletion revisions and their
+revision-parent rows are also portable, so the causal link from a later point
+to every covering deletion range survives export. No coordinates are stored in
+these range or tombstone revisions.
 
 Binary fields are limited to logo_assets.bytes, invoices.pdf,
 invoice_copies.pdf, quote_pdfs.bytes, and task_attachments.data.
