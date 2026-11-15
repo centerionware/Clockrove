@@ -259,7 +259,15 @@ invoice-viewer checks, and locked release tooling all passed. The change is not
 merged, so a fresh merged-main validation is still required. PR #55 separately
 exposed that a full-page reveal gesture can skip the `Default tax (%)` field;
 a small settled-scroll adjustment to the shared device-test reveal helper is
-queued for exact-head Actions validation. PR #45 adds task Labor/Supplies
+under exact-head Actions validation. PR #54 run
+[43678490888](https://github.com/centerionware/Clockrove/actions/runs/43678490888)
+passed fast checks/build/native and API-24's 28 base device tests, then failed
+the extended billing journey while checking **Previously installed tile**.
+The screenshot/accessibility tree show that task row outside the viewport after
+selection, so the checked-state poll could not observe it. The test now reveals
+the target before each poll and checks its actual checkbox node; API 35 was not
+reached. A fresh exact-head Actions run is required. PR #45 adds task
+Labor/Supplies
 classification, expanded task-photo handling, report-map repair, leading-
 decimal payments and quote customer management. Its exact-head Actions run
 `43590405687` passed formatting, analysis, Flutter behavior tests and Android

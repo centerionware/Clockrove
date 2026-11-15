@@ -3926,6 +3926,14 @@ passed the `Default tax (%)` field. Its failure screenshot/accessibility tree
 showed the form near the bottom with that field absent. The shared `reveal()`
 helper now advances using settled 14%-viewport gestures and rechecks the target
 after each move, avoiding the page-scroll-plus-swipe overshoot while preserving
-the billing assertions. This follow-up is not yet committed or validated; run
-it through Actions before applying the same helper to PR #55. No VM build,
-test, format or analysis ran.
+the billing assertions. PR #54 exact head `00531dc` / run
+[43678490888](https://github.com/centerionware/Clockrove/actions/runs/43678490888)
+passed formatting, analysis, Flutter behavior, Android build and all native
+tests, as well as API-24's 28 base device tests. The extended API-24 billing
+journey failed at line 414 while checking **Previously installed tile**. The
+retained screenshot/accessibility tree show only the other task row in view
+after selection, so the check could not observe the selected row; it does not
+prove that the app deselected it. The test now reveals the target and reads its
+actual checkable node on each poll, keeping the checked-state assertion. API 35
+was not reached. Validate this exact correction in Actions before applying the
+shared scroll helper to PR #55. No VM build, test, format or analysis ran.

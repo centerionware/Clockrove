@@ -411,7 +411,10 @@ class InvoiceBillingDeviceTest {
             waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
             reveal("Review billed work"); click("Review billed work"); waitFor("Review billed work")
             reveal("Previously installed tile"); click("Previously installed tile")
-            until("Covered task checkbox did not become checked") { find("Previously installed tile")?.isChecked == true }
+            until("Covered task checkbox did not become checked") {
+                reveal("Previously installed tile")
+                find("Previously installed tile", checkable = true)?.isChecked == true
+            }
             enter("Why this work belongs to the invoice", "Checked original invoice: only the previously installed tile was billed.")
             reveal("I checked this against the original invoice"); click("I checked this against the original invoice")
             until("Original-document confirmation was not checked") { find("I checked this against the original invoice")?.isChecked == true }
