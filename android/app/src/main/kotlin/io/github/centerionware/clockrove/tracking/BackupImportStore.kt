@@ -820,7 +820,7 @@ internal class BackupImportStore(
                 if (deleted !in 0L..1L) invalidRevisionGraph()
                 db.execSQL(
                     "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?)",
-                    arrayOf(
+                    arrayOf<Any?>(
                         revisionString(values["id"]), revisionString(values["kind"]),
                         revisionString(values["entity_id"]), nullableRevisionString(values["job_id"]),
                         deleted, revisionString(values["origin"]),
@@ -848,7 +848,7 @@ internal class BackupImportStore(
                 if (start < 0L || end <= start) invalidReference()
                 db.execSQL(
                     "INSERT INTO validation_ranges VALUES(?,?,?,?,?)",
-                    arrayOf(
+                    arrayOf<Any?>(
                         revisionString(values["id"]), nullableRevisionString(values["job_id"]),
                         start, end, revisionString(values["revision_id"]),
                     ),
@@ -1455,7 +1455,7 @@ internal class BackupImportStore(
             if (earlier != null) return earlier
             handle.database.execSQL(
                 "INSERT INTO preview_unique_keys VALUES(?,?,?,?,?)",
-                arrayOf(table, columnsJson, valuesJson, ordinal, primaryKey),
+                arrayOf<Any?>(table, columnsJson, valuesJson, ordinal, primaryKey),
             )
         }
         return null
