@@ -233,9 +233,10 @@ class SettingsSaveDeviceTest {
     ): Boolean {
         // ACTION_SCROLL may be acknowledged before Flutter finishes its animation.
         val startedAt = SystemClock.uptimeMillis()
-        val movementDeadline = startedAt + timeoutMillis
-        val settleDeadline = movementDeadline + 1500
+        var movementDeadline = startedAt + timeoutMillis
+        var settleDeadline = movementDeadline + 1500
         var moved = false
+        var positionAvailable = before != null
         var lastPosition = before
         var lastMovementAt = startedAt
         var targetVisibleAt: Long? = null
@@ -248,17 +249,30 @@ class SettingsSaveDeviceTest {
                 targetVisibleAt = null
             }
             val after = automation.rootInActiveWindow?.let(::scrollPosition)
-            if (after != null) {
-                if (lastPosition == null) {
-                    lastMovementAt = now
-                } else if (after != lastPosition) {
+            if (after == null) {
+                if (positionAvailable) {
+                    positionAvailable = false
+                    movementDeadline = now + timeoutMillis
+                    settleDeadline = movementDeadline + 1500
+                }
+            } else if (!positionAvailable) {
+                positionAvailable = true
+                lastPosition = after
+                lastMovementAt = now
+                movementDeadline = now + timeoutMillis
+                settleDeadline = movementDeadline + 1500
+            } else {
+                if (after != lastPosition) {
                     moved = true
                     lastMovementAt = now
                 }
                 lastPosition = after
             }
-            if (targetVisible && now - maxOf(targetVisibleAt ?: now, lastMovementAt) >= 150) return true
-            if (moved && now - lastMovementAt >= 150) return true
+            if (after != null && targetVisible && now - maxOf(targetVisibleAt ?: now, lastMovementAt) >= 150) return true
+            if (after != null && moved && now - lastMovementAt >= 150) return true
+            if (targetVisibleAt != null && now >= settleDeadline && after == null) {
+                throw AssertionError("Settings target stayed visible without stable scroll bounds")
+            }
             if (!moved && targetVisibleAt == null && now >= movementDeadline) return false
             if (moved && now >= settleDeadline) {
                 throw AssertionError("Settings scroll did not settle after accessibility movement")
