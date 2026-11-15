@@ -182,6 +182,7 @@ FAKE_SLEEP
 cat > "$test_root/bin/flutter" <<'FAKE_FLUTTER'
 #!/usr/bin/env bash
 set -euo pipefail
+flutter_test_path="${FLUTTER_TEST_PATH:-integration_test/backup_crypto_benchmark_test.dart}"
 count=0
 [[ ! -f "$FLUTTER_TEST_COUNT" ]] || read -r count < "$FLUTTER_TEST_COUNT"
 count=$((count + 1))
@@ -189,9 +190,9 @@ printf '%s\n' "$count" > "$FLUTTER_TEST_COUNT"
 case "$FLUTTER_TEST_MODE:$count" in
   install-timeout-once:1|install-timeout-always:*)
     if [[ "$FLUTTER_TEST_MODE" == install-timeout-once ]]; then
-      echo '00:00 +0: loading integration_test/backup_crypto_benchmark_test.dart'
+      echo "00:00 +0: loading $flutter_test_path"
     else
-      echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
+      echo "00:00 +0: loading /home/runner/work/Clockrove/Clockrove/$flutter_test_path"
     fi
     echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
     echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
@@ -237,7 +238,11 @@ case "$FLUTTER_TEST_MODE:$count" in
     exit 0
     ;;
   *)
-    echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
+    if [[ "$flutter_test_path" == *backup_snapshot_memory_benchmark_test.dart ]]; then
+      echo 'BACKUP_SNAPSHOT_MEMORY_SEED pid=42 process_start_ticks=7 attachment_count=19 media_bytes=57671680 target_bytes=57671680'
+    else
+      echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
+    fi
     exit 0
     ;;
 esac
@@ -570,3 +575,15 @@ fi
 grep -F 'boot-restart=not-confirmed' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-35/install-diagnostics/backup-crypto-benchmark-recovery-attempt-1.log" >/dev/null
 echo 'Verified Flutter test recovery refuses retry unless emulator reboot is confirmed.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+export FLUTTER_TEST_MODE=install-timeout-once
+export FLUTTER_TEST_PATH=integration_test/backup_snapshot_memory_benchmark_test.dart
+export ADB_REBOOT_MODE=normal
+clockrove_run_flutter_integration_test 24 backup-snapshot-memory-seed \
+  'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
+  -- flutter test integration_test/backup_snapshot_memory_benchmark_test.dart
+[[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
+[[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+unset FLUTTER_TEST_PATH
+echo 'Verified the synthetic-media integration test loading line permits only the bounded pre-test install retry.'

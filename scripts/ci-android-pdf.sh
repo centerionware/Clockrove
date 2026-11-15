@@ -205,6 +205,10 @@ done
     cat "$clockrove_benchmark_log"
     exit "$clockrove_benchmark_status"
   fi
+  # Seed through the app APIs, force-stop, then measure the real snapshot and
+  # encryption path in a fresh app process on both minimum/current API levels.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
+    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
