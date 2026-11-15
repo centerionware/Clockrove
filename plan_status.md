@@ -3883,3 +3883,11 @@ accessibility dump shows the tax EditText unfocused. The input fallback accepted
 keyboard visibility without proving target focus. Require the target editable
 node's focused state, with bounded wait and safe pointer fallback, before typing.
 Exact-head rerun pending; no VM tests/builds ran.
+
+### 2026-11-15 — full-screen task-photo swipe direction
+
+The full-screen photo viewer set `PageView.reverse: true`, so a leftward drag
+decremented the attachment index and a rightward drag incremented it. Removed
+that reversal and updated the existing viewer journey to assert left swipe
+advances and right swipe returns across the chronological photo list. Source
+change is pending exact-head GitHub Actions validation; no local tests ran.
