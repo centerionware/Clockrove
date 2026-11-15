@@ -279,17 +279,139 @@ void main() {
         destination: destination,
         isCancelled: () => cancelled,
       );
-
-      await manifestWriteStarted.future;
-      cancelled = true;
-      releaseManifestWrite.complete();
-      await expectLater(
+      final encryptionExpectation = expectLater(
         encryption,
         throwsA(isA<BackupCryptoV2CancelledException>()),
       );
+
+      try {
+        await manifestWriteStarted.future.timeout(const Duration(seconds: 30));
+        cancelled = true;
+        releaseManifestWrite.complete();
+      } finally {
+        cancelled = true;
+        if (!releaseManifestWrite.isCompleted) {
+          releaseManifestWrite.complete();
+        }
+      }
+      await encryptionExpectation.timeout(const Duration(seconds: 30));
       expect(destination.committed, isFalse);
       expect(destination.discarded, isTrue);
       expect(destination.visibleBytes, isNull);
+    },
+  );
+
+  test(
+    'token cancels a stalled partial encrypt read before sink discard',
+    () async {
+      final sourceListening = Completer<void>();
+      final partialReadPending = Completer<void>();
+      final sourceCancellationStarted = Completer<void>();
+      final finishSourceCancellation = Completer<void>();
+      var sourceCancelled = false;
+      final archive = StreamController<List<int>>(
+        onListen: () => sourceListening.complete(),
+        onResume: () {
+          if (!partialReadPending.isCompleted) partialReadPending.complete();
+        },
+        onCancel: () async {
+          sourceCancellationStarted.complete();
+          await finishSourceCancellation.future;
+          sourceCancelled = true;
+        },
+      );
+      final token = BackupCryptoCancellationToken();
+      var sourceCancelledBeforeDiscard = false;
+      final destination = _MemorySink(
+        onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
+      );
+      final encryption = BackupCryptoV2.encrypt(
+        password: _password,
+        archive: archive.stream,
+        destination: destination,
+        cancellationToken: token,
+      );
+      final encryptionExpectation = expectLater(
+        encryption,
+        throwsA(isA<BackupCryptoV2CancelledException>()),
+      );
+
+      try {
+        await sourceListening.future.timeout(const Duration(seconds: 30));
+        archive.add([1, 2, 3]);
+        await partialReadPending.future.timeout(const Duration(seconds: 30));
+        token.cancel();
+        await sourceCancellationStarted.future.timeout(
+          const Duration(seconds: 30),
+        );
+        expect(destination.discarded, isFalse);
+        expect(destination.committed, isFalse);
+        expect(destination.visibleBytes, isNull);
+        finishSourceCancellation.complete();
+        await encryptionExpectation.timeout(const Duration(seconds: 30));
+      } finally {
+        token.cancel();
+        if (!finishSourceCancellation.isCompleted) {
+          finishSourceCancellation.complete();
+        }
+        await archive.close().timeout(const Duration(seconds: 30));
+      }
+
+      expect(sourceCancelled, isTrue);
+      expect(sourceCancelledBeforeDiscard, isTrue);
+      expect(destination.discarded, isTrue);
+      expect(destination.committed, isFalse);
+      expect(destination.visibleBytes, isNull);
+    },
+  );
+
+  test(
+    'token cancels decrypt while waiting for post-manifest EOF',
+    () async {
+      final archive = _pattern(3);
+      final envelope = await _encrypt(archive);
+      final waitingForEof = Completer<void>();
+      var sourceCancelled = false;
+      final envelopeSource = StreamController<List<int>>(
+        onResume: () {
+          if (!waitingForEof.isCompleted) waitingForEof.complete();
+        },
+        onCancel: () {
+          sourceCancelled = true;
+        },
+      );
+      final token = BackupCryptoCancellationToken();
+      var sourceCancelledBeforeDiscard = false;
+      final staged = _MemorySink(
+        onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
+      );
+      final decryption = BackupCryptoV2.decrypt(
+        password: _password,
+        envelope: envelopeSource.stream,
+        privateArchive: staged,
+        cancellationToken: token,
+      );
+      final decryptionExpectation = expectLater(
+        decryption,
+        throwsA(isA<BackupCryptoV2CancelledException>()),
+      );
+
+      try {
+        envelopeSource.add(envelope);
+        await waitingForEof.future.timeout(const Duration(seconds: 30));
+        expect(staged.bytes, orderedEquals(archive));
+        token.cancel();
+        await decryptionExpectation.timeout(const Duration(seconds: 30));
+      } finally {
+        token.cancel();
+        await envelopeSource.close().timeout(const Duration(seconds: 30));
+      }
+
+      expect(sourceCancelled, isTrue);
+      expect(sourceCancelledBeforeDiscard, isTrue);
+      expect(staged.discarded, isTrue);
+      expect(staged.committed, isFalse);
+      expect(staged.visibleBytes, isNull);
     },
   );
 
@@ -494,10 +616,11 @@ List<(int, int)> _splitFrames(Uint8List envelope) {
 }
 
 final class _MemorySink implements BackupTransactionalByteSink {
-  _MemorySink({this.failOnWrite, this.beforeWrite});
+  _MemorySink({this.failOnWrite, this.beforeWrite, this.onDiscard});
 
   final int? failOnWrite;
   final Future<void> Function(int writeNumber)? beforeWrite;
+  final void Function()? onDiscard;
   final List<Uint8List> _parts = [];
   int _writeCount = 0;
   bool committed = false;
@@ -533,6 +656,7 @@ final class _MemorySink implements BackupTransactionalByteSink {
 
   @override
   Future<void> discard() async {
+    onDiscard?.call();
     discarded = true;
     _parts.clear();
   }

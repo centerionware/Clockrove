@@ -47,6 +47,28 @@ final class BackupCryptoV2CleanupException implements Exception {
   final Object cleanupFailure;
 }
 
+/// Interrupts a pending v2 source-stream read and discards staged output.
+///
+/// Create one token per operation and call [cancel] when that operation should
+/// stop. Unlike a polled `isCancelled` callback, this token can wake a read
+/// waiting for the source stream to produce its next event. An in-progress key
+/// derivation or destination write must finish before the next cancellation
+/// checkpoint. Source cancellation is best-effort: the codec awaits iterator
+/// cancellation before discarding staged output, but preserves the original
+/// operation failure if source cleanup errors. Cancellation is checked before
+/// commit starts; it cannot roll back an already-started sink commit.
+final class BackupCryptoCancellationToken {
+  final Completer<void> _cancelled = Completer<void>();
+
+  bool get isCancelled => _cancelled.isCompleted;
+
+  Future<void> get whenCancelled => _cancelled.future;
+
+  void cancel() {
+    if (!_cancelled.isCompleted) _cancelled.complete();
+  }
+}
+
 /// Streaming CLKROVE2 envelope codec. CLKROVE1 remains in BackupCrypto.
 abstract final class BackupCryptoV2 {
   static const int maxArchiveBytes = 64 * 1024 * 1024;
@@ -86,20 +108,25 @@ abstract final class BackupCryptoV2 {
 
   /// Encrypts a bounded stream into a transactional encrypted destination.
   /// Source events must each be no larger than [chunkBytes].
+  ///
+  /// Pass [cancellationToken] to interrupt a pending source read. The legacy
+  /// [isCancelled] callback is polled between operations but cannot wake reads.
   static Future<BackupCryptoV2Result> encrypt({
     required String password,
     required Stream<List<int>> archive,
     required BackupTransactionalByteSink destination,
     bool Function()? isCancelled,
+    BackupCryptoCancellationToken? cancellationToken,
   }) async {
     _validatePassword(password);
     final reader = _PlaintextFrameReader(archive);
     var committed = false;
     try {
-      _checkCancelled(isCancelled);
+      _checkCancelled(isCancelled, cancellationToken);
       final salt = _secureBytes(_saltBytes);
       final header = _createHeader(salt);
       final key = await _deriveKey(password, salt);
+      _checkCancelled(isCancelled, cancellationToken);
       final cipher = AesGcm.with256bits();
       final digest = _Sha256Stream();
       var archiveLength = 0;
@@ -108,8 +135,12 @@ abstract final class BackupCryptoV2 {
       await destination.write(header);
 
       while (true) {
-        _checkCancelled(isCancelled);
-        final plaintext = await reader.nextFrame();
+        _checkCancelled(isCancelled, cancellationToken);
+        final plaintext = await _readOrCancel(
+          reader.nextFrame,
+          cancellationToken: cancellationToken,
+          cancelReader: reader.cancel,
+        );
         if (plaintext == null) break;
         if (frameCount >= maxDataFrames ||
             plaintext.isEmpty ||
@@ -147,7 +178,7 @@ abstract final class BackupCryptoV2 {
       if (archiveLength == 0 || frameCount == 0) {
         throw const FormatException('A backup archive cannot be empty.');
       }
-      _checkCancelled(isCancelled);
+      _checkCancelled(isCancelled, cancellationToken);
       final archiveSha256 = digest.close();
       final manifest = _createManifest(
         frameCount,
@@ -176,7 +207,7 @@ abstract final class BackupCryptoV2 {
       if (envelopeLength > maxEnvelopeBytes) {
         throw const FormatException('The backup envelope is too large.');
       }
-      _checkCancelled(isCancelled);
+      _checkCancelled(isCancelled, cancellationToken);
       await destination.commit();
       committed = true;
       return BackupCryptoV2Result(
@@ -186,6 +217,7 @@ abstract final class BackupCryptoV2 {
         archiveSha256: archiveSha256,
       );
     } on Object catch (error, stackTrace) {
+      await reader.cancel();
       if (!committed) {
         await _discardOrThrow(destination, error);
       }
@@ -200,11 +232,15 @@ abstract final class BackupCryptoV2 {
   /// The destination must not expose staged bytes until [commit]. This method
   /// calls commit only after every frame, the final manifest and EOF validate.
   /// Any failure or cancellation calls [BackupTransactionalByteSink.discard].
+  ///
+  /// Pass [cancellationToken] to interrupt a pending envelope read. The legacy
+  /// [isCancelled] callback is polled between operations but cannot wake reads.
   static Future<BackupCryptoV2Result> decrypt({
     required String password,
     required Stream<List<int>> envelope,
     required BackupTransactionalByteSink privateArchive,
     bool Function()? isCancelled,
+    BackupCryptoCancellationToken? cancellationToken,
   }) async {
     _validatePassword(password);
     final reader = _BoundedByteStreamReader(
@@ -213,11 +249,16 @@ abstract final class BackupCryptoV2 {
     );
     var committed = false;
     try {
-      _checkCancelled(isCancelled);
-      final header = (await reader.readExactly(headerBytes))!;
+      _checkCancelled(isCancelled, cancellationToken);
+      final header = (await _readOrCancel(
+        () => reader.readExactly(headerBytes),
+        cancellationToken: cancellationToken,
+        cancelReader: reader.cancel,
+      ))!;
       _validateHeader(header);
       final salt = Uint8List.sublistView(header, 40, 56);
       final key = await _deriveKey(password, salt);
+      _checkCancelled(isCancelled, cancellationToken);
       final cipher = AesGcm.with256bits();
       final digest = _Sha256Stream();
       var archiveLength = 0;
@@ -225,10 +266,14 @@ abstract final class BackupCryptoV2 {
       var previousDataWasShort = false;
 
       while (true) {
-        _checkCancelled(isCancelled);
-        final frameHeader = await reader.readExactly(
-          frameHeaderBytes,
-          allowEofAtStart: true,
+        _checkCancelled(isCancelled, cancellationToken);
+        final frameHeader = await _readOrCancel(
+          () => reader.readExactly(
+            frameHeaderBytes,
+            allowEofAtStart: true,
+          ),
+          cancellationToken: cancellationToken,
+          cancelReader: reader.cancel,
         );
         if (frameHeader == null) throw _invalidEnvelope();
         final frame = ByteData.sublistView(frameHeader);
@@ -245,8 +290,10 @@ abstract final class BackupCryptoV2 {
               length > maxArchiveBytes - archiveLength) {
             throw _invalidEnvelope();
           }
-          final ciphertextAndTag = (await reader.readExactly(
-            length + tagBytes,
+          final ciphertextAndTag = (await _readOrCancel(
+            () => reader.readExactly(length + tagBytes),
+            cancellationToken: cancellationToken,
+            cancelReader: reader.cancel,
           ))!;
           final plaintext = await _decryptFrame(
             cipher: cipher,
@@ -272,8 +319,10 @@ abstract final class BackupCryptoV2 {
             frameCount == 0) {
           throw _invalidEnvelope();
         }
-        final ciphertextAndTag = (await reader.readExactly(
-          manifestBytes + tagBytes,
+        final ciphertextAndTag = (await _readOrCancel(
+          () => reader.readExactly(manifestBytes + tagBytes),
+          cancellationToken: cancellationToken,
+          cancelReader: reader.cancel,
         ))!;
         final manifest = await _decryptFrame(
           cipher: cipher,
@@ -292,8 +341,14 @@ abstract final class BackupCryptoV2 {
           archiveLength: archiveLength,
           archiveSha256: archiveSha256,
         );
-        if (await reader.hasTrailingBytes()) throw _invalidEnvelope();
-        _checkCancelled(isCancelled);
+        if (await _readOrCancel(
+          reader.hasTrailingBytes,
+          cancellationToken: cancellationToken,
+          cancelReader: reader.cancel,
+        )) {
+          throw _invalidEnvelope();
+        }
+        _checkCancelled(isCancelled, cancellationToken);
         await privateArchive.commit();
         committed = true;
         return BackupCryptoV2Result(
@@ -304,6 +359,7 @@ abstract final class BackupCryptoV2 {
         );
       }
     } on Object catch (error, stackTrace) {
+      await reader.cancel();
       if (!committed) {
         await _discardOrThrow(privateArchive, error);
       }
@@ -506,10 +562,50 @@ abstract final class BackupCryptoV2 {
     }
   }
 
-  static void _checkCancelled(bool Function()? isCancelled) {
-    if (isCancelled?.call() ?? false) {
+  static void _checkCancelled(
+    bool Function()? isCancelled,
+    BackupCryptoCancellationToken? cancellationToken,
+  ) {
+    if (cancellationToken?.isCancelled == true ||
+        (isCancelled?.call() ?? false)) {
       throw const BackupCryptoV2CancelledException();
     }
+  }
+
+  static Future<T> _readOrCancel<T>(
+    Future<T> Function() startRead, {
+    required BackupCryptoCancellationToken? cancellationToken,
+    required Future<void> Function() cancelReader,
+  }) async {
+    final token = cancellationToken;
+    if (token == null) return startRead();
+    if (token.isCancelled) {
+      await cancelReader();
+      throw const BackupCryptoV2CancelledException();
+    }
+
+    final outcome = await Future.any<_CancellableReadOutcome>([
+      startRead().then<_CancellableReadOutcome>(
+        (value) => _CancellableReadValue<T>(value),
+        onError: (Object error, StackTrace stackTrace) =>
+            _CancellableReadFailure(error, stackTrace),
+      ),
+      token.whenCancelled.then<_CancellableReadOutcome>(
+        (_) => const _CancellableReadCancelled(),
+      ),
+    ]);
+    if (outcome is _CancellableReadValue<T>) {
+      if (token.isCancelled) {
+        await cancelReader();
+        throw const BackupCryptoV2CancelledException();
+      }
+      return outcome.value;
+    }
+    if (outcome is _CancellableReadFailure) {
+      Error.throwWithStackTrace(outcome.error, outcome.stackTrace);
+    }
+    await cancelReader();
+    throw const BackupCryptoV2CancelledException();
   }
 
   static _BackupEnvelopeInvalid _invalidEnvelope() =>
@@ -537,6 +633,25 @@ abstract final class BackupCryptoV2 {
       );
     }
   }
+}
+
+sealed class _CancellableReadOutcome {}
+
+final class _CancellableReadValue<T> implements _CancellableReadOutcome {
+  const _CancellableReadValue(this.value);
+
+  final T value;
+}
+
+final class _CancellableReadFailure implements _CancellableReadOutcome {
+  const _CancellableReadFailure(this.error, this.stackTrace);
+
+  final Object error;
+  final StackTrace stackTrace;
+}
+
+final class _CancellableReadCancelled implements _CancellableReadOutcome {
+  const _CancellableReadCancelled();
 }
 
 final class _BackupEnvelopeInvalid implements Exception {
@@ -586,11 +701,15 @@ final class _PlaintextFrameReader {
     return Uint8List.sublistView(frame, 0, frameLength);
   }
 
-  Future<void> cancel() async {
+  Future<void>? _cancelFuture;
+
+  Future<void> cancel() => _cancelFuture ??= _cancelIterator();
+
+  Future<void> _cancelIterator() async {
     try {
       await _iterator.cancel();
     } on Object {
-      // Preserve the export failure; the destination is already discarded.
+      // Preserve the export failure; the operation still discards its sink.
     }
   }
 }
@@ -658,11 +777,15 @@ final class _BoundedByteStreamReader {
     return true;
   }
 
-  Future<void> cancel() async {
+  Future<void>? _cancelFuture;
+
+  Future<void> cancel() => _cancelFuture ??= _cancelIterator();
+
+  Future<void> _cancelIterator() async {
     try {
       await _iterator.cancel();
     } on Object {
-      // Preserve the import failure; its private destination is discarded.
+      // Preserve the import failure; the operation still discards its sink.
     }
   }
 }
