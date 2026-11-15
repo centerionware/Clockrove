@@ -101,7 +101,7 @@ class BackupExportStoreTest {
         assertEquals("Synthetic backup job", values(job)["name"])
         val session = records.single { it["table"] == "sessions" && values(it)["id"] == runningBefore.id }
         assertNull(values(session)["end_ms"])
-        assertEquals(runningBefore, repository.snapshot().running)
+        assertEquals(runningBefore.copy(jobName = "Changed after snapshot"), repository.snapshot().running)
         assertTrue(exportStore.close(started.snapshotId))
     }
 
