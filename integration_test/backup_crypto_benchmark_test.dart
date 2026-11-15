@@ -47,6 +47,29 @@ void main() {
         decryptClock.stop();
         final afterDecryptRssKiB = await _processHighWaterRssKiB();
 
+        final peakRssKiB = afterEncryptRssKiB > afterDecryptRssKiB
+            ? afterEncryptRssKiB
+            : afterDecryptRssKiB;
+        final peakDeltaRssKiB = peakRssKiB > baselineRssKiB
+            ? peakRssKiB - baselineRssKiB
+            : 0;
+        // ignore: avoid_print
+        print(
+          'BACKUP_STREAMING_RSS_PHASES '
+          'encrypt_ms=${encryptClock.elapsedMilliseconds} '
+          'decrypt_ms=${decryptClock.elapsedMilliseconds} '
+          'baseline_rss_kib=$baselineRssKiB '
+          'after_encrypt_rss_kib=$afterEncryptRssKiB '
+          'after_decrypt_rss_kib=$afterDecryptRssKiB '
+          'codec_peak_rss_kib=$peakRssKiB '
+          'codec_peak_delta_rss_kib=$peakDeltaRssKiB',
+        );
+        expect(
+          peakDeltaRssKiB,
+          lessThanOrEqualTo(64 * 1024),
+          reason: 'v2 maximum-size codec must stay within 64 MiB RSS.',
+        );
+
         expect(encrypted.archiveBytes, BackupCryptoV2.maxArchiveBytes);
         expect(encrypted.dataFrameCount, BackupCryptoV2.maxDataFrames);
         expect(encrypted.envelopeBytes, BackupCryptoV2.maxEnvelopeBytes);
@@ -57,23 +80,16 @@ void main() {
         expect(await _hashStream(restoredFile.openRead()), expectedDigest);
 
         final afterVerificationRssKiB = await _processHighWaterRssKiB();
-        final peakRssKiB = afterVerificationRssKiB;
-        final peakDeltaRssKiB = peakRssKiB > baselineRssKiB
-            ? peakRssKiB - baselineRssKiB
+        final verificationPeakDeltaRssKiB =
+            afterVerificationRssKiB > baselineRssKiB
+            ? afterVerificationRssKiB - baselineRssKiB
             : 0;
         // ignore: avoid_print
         print(
-          'BACKUP_STREAMING_RSS_PHASES '
+          'BACKUP_STREAMING_VERIFICATION_RSS '
           'baseline_rss_kib=$baselineRssKiB '
-          'after_encrypt_rss_kib=$afterEncryptRssKiB '
-          'after_decrypt_rss_kib=$afterDecryptRssKiB '
           'after_verification_rss_kib=$afterVerificationRssKiB '
-          'peak_delta_rss_kib=$peakDeltaRssKiB',
-        );
-        expect(
-          peakDeltaRssKiB,
-          lessThanOrEqualTo(64 * 1024),
-          reason: 'v2 maximum-size streaming must stay within 64 MiB RSS.',
+          'verification_peak_delta_rss_kib=$verificationPeakDeltaRssKiB',
         );
         return (
           encryptMs: encryptClock.elapsedMilliseconds,
