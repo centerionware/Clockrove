@@ -118,6 +118,8 @@ for clockrove_api in 24 35; do
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/settings-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/" || true
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/map-captures"
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/map-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/map-captures/" || true
+  mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures"
+  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/gps-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures/" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-combined.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-combined.png" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-accessibility.txt "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-accessibility.txt" || true
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-setup.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-setup.png" || true
@@ -144,6 +146,7 @@ expected = {
     'io.github.centerionware.clockrove.invoice.LogoImagesTest': 5,
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.ReportMapDeviceTest': 1,
+    'io.github.centerionware.clockrove.tracking.GpsRangeDeletionDeviceTest': 1,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
     'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 4,
     'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,
@@ -155,6 +158,9 @@ print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
 for clockrove_settings_capture in location-recording-global-off location-recording-global-on; do
   test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/$clockrove_settings_capture.png"
+done
+for clockrove_gps_capture in gps-cancel-review gps-after-cancel gps-confirm-review gps-after-confirm; do
+  test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures/$clockrove_gps_capture.png"
 done
   for clockrove_style in minimal classic modern; do
     test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
