@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove.settings
 
 import android.content.Intent
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -23,6 +24,11 @@ import java.io.File
 /** Actual Flutter + native channel + SQLite journey, not a settings API fixture. */
 @RunWith(AndroidJUnit4::class)
 class SettingsSaveDeviceTest {
+    private data class ScrollPosition(
+        val viewport: android.graphics.Rect,
+        val firstChild: android.graphics.Rect?,
+    )
+
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val automation get() = instrumentation.uiAutomation
     private fun matchesLabel(value: CharSequence?, label: String): Boolean {
@@ -129,7 +135,9 @@ class SettingsSaveDeviceTest {
             val y = bounds.exactCenterY()
             val downTime = SystemClock.uptimeMillis()
             fun inject(action: Int, eventTime: Long): Boolean {
-                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                    source = InputDevice.SOURCE_TOUCHSCREEN
+                }
                 return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
             }
             assertTrue("Could not tap $label", inject(MotionEvent.ACTION_DOWN, downTime))
@@ -180,7 +188,9 @@ class SettingsSaveDeviceTest {
         val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
-            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
             try { automation.injectInputEvent(event, true) } finally { event.recycle() }
         }
         inject(MotionEvent.ACTION_DOWN, downTime, startY.toFloat())
@@ -197,14 +207,15 @@ class SettingsSaveDeviceTest {
             var attempts = 0
             while (attempts++ < 60 && find(label, editable, checkable) == null) {
                 val scrollAction = if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                val before = automation.rootInActiveWindow?.let(::scrollPosition)
                 fun scroll(node: AccessibilityNodeInfo): Boolean {
                     for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
                     return node.isScrollable && node.performAction(scrollAction)
                 }
-                val moved = automation.rootInActiveWindow?.let(::scroll) == true
-                SystemClock.sleep(150)
-                if (find(label, editable, checkable) != null) return
-                if (!moved) {
+                val requested = automation.rootInActiveWindow?.let(::scroll) == true
+                if (requested && waitForScrollMovement(before, label, editable, checkable)) {
+                    if (find(label, editable, checkable) != null) return
+                } else {
                     swipeContent(up = forward)
                     SystemClock.sleep(150)
                 }
@@ -212,6 +223,71 @@ class SettingsSaveDeviceTest {
             if (find(label, editable, checkable) != null) return
         }
         waitFor(label, editable, checkable)
+    }
+    private fun waitForScrollMovement(
+        before: ScrollPosition?,
+        label: String,
+        editable: Boolean,
+        checkable: Boolean,
+        timeoutMillis: Long = 750,
+    ): Boolean {
+        // ACTION_SCROLL may be acknowledged before Flutter finishes its animation.
+        val startedAt = SystemClock.uptimeMillis()
+        var movementDeadline = startedAt + timeoutMillis
+        var settleDeadline = movementDeadline + 1500
+        var moved = false
+        var positionAvailable = before != null
+        var lastPosition = before
+        var lastMovementAt = startedAt
+        var targetVisibleAt: Long? = null
+        while (true) {
+            val targetVisible = find(label, editable, checkable) != null
+            val now = SystemClock.uptimeMillis()
+            if (targetVisible) {
+                if (targetVisibleAt == null) targetVisibleAt = now
+            } else {
+                targetVisibleAt = null
+            }
+            val after = automation.rootInActiveWindow?.let(::scrollPosition)
+            if (after == null) {
+                if (positionAvailable) {
+                    positionAvailable = false
+                    movementDeadline = now + timeoutMillis
+                    settleDeadline = movementDeadline + 1500
+                }
+            } else if (!positionAvailable) {
+                positionAvailable = true
+                lastPosition = after
+                lastMovementAt = now
+                movementDeadline = now + timeoutMillis
+                settleDeadline = movementDeadline + 1500
+            } else {
+                if (after != lastPosition) {
+                    moved = true
+                    lastMovementAt = now
+                }
+                lastPosition = after
+            }
+            if (after != null && targetVisible && now - maxOf(targetVisibleAt ?: now, lastMovementAt) >= 150) return true
+            if (after != null && moved && now - lastMovementAt >= 150) return true
+            if (targetVisibleAt != null && now >= settleDeadline && after == null) {
+                throw AssertionError("Settings target stayed visible without stable scroll bounds")
+            }
+            if (!moved && targetVisibleAt == null && now >= movementDeadline) return false
+            if (moved && now >= settleDeadline) {
+                throw AssertionError("Settings scroll did not settle after accessibility movement")
+            }
+            SystemClock.sleep(50)
+        }
+    }
+    private fun scrollPosition(node: AccessibilityNodeInfo): ScrollPosition? {
+        for (index in 0 until node.childCount) {
+            node.getChild(index)?.let { child -> scrollPosition(child)?.let { return it } }
+        }
+        if (!node.isScrollable) return null
+        val viewport = android.graphics.Rect().also(node::getBoundsInScreen)
+        val firstChild = node.getChild(0)?.let { android.graphics.Rect().also(it::getBoundsInScreen) }
+        return ScrollPosition(viewport, firstChild)
     }
     private fun dumpAccessibility(name: String) {
         val dump = StringBuilder()
