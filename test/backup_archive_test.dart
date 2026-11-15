@@ -249,11 +249,7 @@ void main() {
             'task_attachments',
             const {'id': 'attachment-view'},
             blobs: [
-              BackupArchiveBlob(
-                id: 'media-view',
-                column: 'data',
-                bytes: media,
-              ),
+              BackupArchiveBlob(id: 'media-view', column: 'data', bytes: media),
             ],
           ),
         ],
