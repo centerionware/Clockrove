@@ -16,12 +16,15 @@ and M7 backup remain before M7.6 (whole-app UI overhaul and exhaustive
 E2E/screenshots), which must pass before closed testing. iOS and future service
 remain deferred.
 
-Current M7 priority: refreshed PR #52 Actions run `43691431696` failed on both
-attempts at Flutter's benchmark APK install after API-24 product journeys; no
-benchmark executed and API 35 was not reached. Its install recovery now targets
-that exact pre-test signature and awaits a fresh full Actions run. The 64 MiB
-archive memory peak also needs API-24 measurement or streaming before export and
-restore become user-facing.
+Current M7 priority: the refreshed PR #52 Actions run `43695960415` failed
+after installing the app APK because AAPT reports the instrumentation APK's
+empty `versionCode`; Android PackageManager assigns that test variant code `0`.
+The obsolete in-progress run `43696665362` was canceled. The current source
+defers identity parsing until an ambiguous install, parses named AAPT fields,
+and maps the empty version to `0` only for the instrumentation APK; synthetic
+Actions coverage and a new full exact-head run are pending. The 64 MiB archive
+memory peak also needs API-24 measurement or streaming before export and restore
+become user-facing.
 
 PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting,
 analysis, all Flutter behavior tests, Android debug build, 614 native tests,
@@ -81,7 +84,7 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
 | Follow-on: task comments, supplies and costs | Comments/images merged #43; classification and cost ledger pass Actions source checks; actual Android journey pending | M6.5 implements private task/comment conversations and image attachments. M6.6 adds Labor/Supplies classification with legacy values retained as Unclassified, plus a native actual-cost ledger and UI for exact-money entries. Run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed all 602 native tests plus Flutter behavior and Android build checks. Supplies task labels never auto-book costs. Actual cost CRUD, migration, exact-money and paging cases passed; device coverage did not run because the earlier billing journey failed. Templates do not copy comments, attachments or costs. |
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
-| M7.1 Crypto/KDF selection and device benchmark | Partial; earlier API-24/35 benchmark passed; refreshed PR #52 Actions failed twice during Flutter APK installation; bounded recovery validation pending | Pinned `cryptography` 2.9.0, Argon2id (19 MiB, 2 iterations, parallelism 1), AES-256-GCM and a fixed-size authenticated bounded header. The earlier exact PR #52 run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed the 1 MiB benchmark and 37 actual Android tests per API with zero failures/errors/skips: API 24 encrypt/decrypt 874/337 ms; API 35 1124/348 ms; envelope 1,048,648 bytes on both. Those results predate the latest main base and do not replace the required refreshed run. Earlier failures and fixes: run [43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324) found an instrumentation-runner graph conflict; `f3596aa` aligned the runner and added an instrumentation assemble gate. Run [43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760) found an API-35 APK overwrite; immutable APK copies fixed it. Run [43671872207](https://github.com/centerionware/Clockrove/actions/runs/43671872207) passed fast gates, API-24 benchmark and native tests, but API 35 stopped at the billing invalid-tax lookup. PR #54 exact head `32d6154` / run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795) passed the full API-24/35 workflow with shared billing-test corrections; the PR #52 reconciliation carries those corrections. A new exact-head run must still verify both benchmarks on the current base. No VM build, test, format or analyze. |
+| M7.1 Crypto/KDF selection and device benchmark | Partial; earlier API-24/35 benchmark passed; refreshed exact-head validation pending after instrumentation APK identity fix | Pinned `cryptography` 2.9.0, Argon2id (19 MiB, 2 iterations, parallelism 1), AES-256-GCM and a fixed-size authenticated bounded header. The earlier exact PR #52 run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed the 1 MiB benchmark and 37 actual Android tests per API with zero failures/errors/skips: API 24 encrypt/decrypt 874/337 ms; API 35 1124/348 ms; envelope 1,048,648 bytes on both. Those results predate the latest main base and do not replace the required refreshed run. Run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415) on `b374915` installed the app APK, then failed before installing instrumentation because the Android test APK's AAPT `versionCode=''`; PackageManager reports its default code as `0`. The helper now defers AAPT parsing until an ambiguous install, parses named fields, maps empty version to `0` only for instrumentation, and reports sanitized package metadata if parsing fails. Synthetic Actions cases cover reordered fields, app version requirement, instrumentation code `0`, lost install reply and normal install without AAPT; these and the full refreshed API-24/35 run are pending. Earlier failures and fixes: run [43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324) found an instrumentation-runner graph conflict; `f3596aa` aligned the runner and added an instrumentation assemble gate. Run [43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760) found an API-35 APK overwrite; immutable APK copies fixed it. Run [43671872207](https://github.com/centerionware/Clockrove/actions/runs/43671872207) passed fast gates, API-24 benchmark and native tests, but API 35 stopped at the billing invalid-tax lookup. PR #54 exact head `32d6154` / run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795) passed the full API-24/35 workflow with shared billing-test corrections; the PR #52 reconciliation carries those corrections. No VM build, test, format or analyze. |
 | M7.2 Encrypted archive/schema/preview | Schema-16 native snapshot service passed PR #51; PR #52 codec source is present; refreshed Actions failed before the benchmark, bounded recovery validation pending | Snapshot/export now includes `location_deletion_ranges` alongside range revisions, coordinate-free point tombstones and revision-parent links. PR #51 run [43678616256](https://github.com/centerionware/Clockrove/actions/runs/43678616256) passed the schema-16 native snapshot/export checks. PR #52 adds deterministic bounded archive/crypto source: typed SQLite scalars, raw media descriptors, canonical ordering, exact 64 MiB plaintext accounting, duplicate-key checks and iterative revision-DAG validation. Earlier PR #52 Actions [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed Flutter behavior tests, native tests and crypto benchmarks on API 24/35, but it ran before the current main base; refreshed exact-head validation remains pending. Dart client snapshot/export UI, authenticated preview, restore choices, open-session decisions, transactional apply, and complete GPS-range import validation remain outstanding. The separate import-preview correction still needs exact-head Actions. See `docs/BACKUP_FORMAT.md`. No VM build, test, formatter or analyzer ran. |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
@@ -4225,3 +4228,24 @@ large in-memory copies; measure its peak on API 24 or stream it before exposing
 user-facing export/restore. No VM build, test or formatter ran. Static review is
 complete; no merge was performed. Next: push this reconciliation to PR #52 with
 lease protection, then inspect one fresh full Actions run on the new exact head.
+
+### 2026-11-15 — instrumentation APK version identity correction
+
+PR #52 run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415)
+on `b374915` installed the app APK, then failed while preparing the Android
+test APK. The exact AAPT output was not retained by that run. The failure was
+identified as the test variant's empty `versionCode`; Android PackageManager
+reports its default version as `0`. The main app version remains `0.1.0+1` in
+`pubspec.yaml`, and `android/app/build.gradle.kts` wires
+`versionCode = flutter.versionCode`.
+
+The installer now skips AAPT on successful installs and queries APK identity
+only after an ambiguous install timeout/kill. It parses named AAPT fields,
+maps an empty code to `0` only for the instrumentation APK, and prints
+sanitized package metadata if identity is still invalid; app APK code must
+remain numeric. Synthetic Actions cases cover reordered named fields, normal
+install without AAPT, instrumentation code `0` on a lost-reply verification,
+and rejection/diagnostics for an app with an empty code. These cases have not
+run yet. Obsolete run `43696665362` was canceled; the corrected exact-head full
+Actions run is pending. Only `git diff --check` ran locally; no VM build or
+tests ran. No merge was performed.

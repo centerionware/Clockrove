@@ -24,7 +24,7 @@ The user explicitly requested this handoff after creating agent instructions and
 - Foundation debug build and signed setup AAB are proven in Actions. Physical-device tracking evidence remains unproven. Automatic Play internal
   uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
-- Current M7 work: refreshed PR #52 head `05d087b` failed twice in Actions while Flutter installed its crypto-benchmark APK; both attempts reached “No tests ran” and API 35 was not reached. The current unvalidated correction retries only that exact pre-test timeout, after confirming a changed emulator boot ID, completed boot and matching API level, then requires the benchmark's result marker. Full evidence is in `plan_status.md`.
+- Current M7 work: refreshed PR #52 validation is still pending. Run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415) on `b374915` failed after the app APK installed because the instrumentation APK has an empty AAPT `versionCode`; Android PackageManager assigns that variant code `0`. The installer now defers identity parsing until an ambiguous timeout, parses named AAPT fields, maps an empty code to `0` only for instrumentation APKs, and records sanitized package metadata on parse failure. The bounded Flutter benchmark retry still requires a confirmed reboot/API and its real result marker. Full evidence is in `plan_status.md`.
 
 ### Exact money contract (owner priority, 2026-11-12)
 

@@ -3,27 +3,78 @@
 
 clockrove_apk_identity() {
   local apk="$1"
+  local label="${2:-app}"
   local sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
   local build_tools_version="${ANDROID_BUILD_TOOLS_VERSION:-36.0.0}"
   local aapt_bin="${CLOCKROVE_AAPT_BIN:-$sdk_root/build-tools/$build_tools_version/aapt}"
-  local badging identity package version
+  local badging package_line package_lines package version
+  local name_pattern="name='([^']+)'"
+  local version_pattern="versionCode='([^']*)'"
+
+  clockrove_aapt_parse_diagnostic() {
+    local reason="$1"
+    local output="$2"
+    local diagnostic_lines line
+    echo "$reason" >&2
+    diagnostic_lines="$(grep -E '^package:[[:space:]]' <<< "$output" || true)"
+    if [[ -z "$diagnostic_lines" ]]; then
+      diagnostic_lines="$(head -n 8 <<< "$output")"
+      echo 'Sanitized aapt dump badging output (first eight lines):' >&2
+    else
+      echo 'Sanitized aapt dump badging package line(s):' >&2
+    fi
+    if [[ -z "$diagnostic_lines" ]]; then
+      echo '  (no output)' >&2
+      return
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line//$'\r'/}"
+      printf '  ' >&2
+      printf '%s' "$line" | LC_ALL=C tr -cd '\11\12\15\40-\176' >&2
+      printf '\n' >&2
+    done <<< "$diagnostic_lines"
+  }
 
   if [[ ! -x "$aapt_bin" ]]; then
     echo "Pinned Android aapt tool is unavailable: $aapt_bin" >&2
     return 2
   fi
-  if ! badging="$(timeout --kill-after=1s 10s "$aapt_bin" dump badging "$apk" 2>&1)"; then
-    echo 'Could not read package identity from the APK.' >&2
+  if [[ "$label" != app && "$label" != instrumentation ]]; then
+    echo 'Unsupported APK identity label.' >&2
     return 2
   fi
-  identity="$(awk -F"'" '/^package:/ { print $2 " " $4; exit }' <<< "$badging")"
-  read -r package version <<< "$identity"
-  if [[ -z "${package:-}" || ! "${version:-}" =~ ^[0-9]+$ ]]; then
-    echo 'APK package name or version code could not be parsed.' >&2
+  if ! badging="$(timeout --kill-after=1s 10s "$aapt_bin" dump badging "$apk" 2>&1)"; then
+    clockrove_aapt_parse_diagnostic 'Could not read package identity from the APK; refusing ambiguous-install recovery.' "$badging"
+    return 2
+  fi
+  package_lines="$(grep -E '^package:[[:space:]]' <<< "$badging" || true)"
+  if [[ -z "$package_lines" || "$package_lines" == *$'\n'* ]]; then
+    clockrove_aapt_parse_diagnostic 'Expected exactly one package record in aapt output; refusing ambiguous-install recovery.' "$badging"
+    return 2
+  fi
+  package_line="$package_lines"
+  if [[ "$package_line" =~ $name_pattern ]]; then
+    package="${BASH_REMATCH[1]}"
+  else
+    clockrove_aapt_parse_diagnostic 'APK package name could not be parsed; refusing ambiguous-install recovery.' "$package_line"
+    return 2
+  fi
+  if [[ "$package_line" =~ $version_pattern ]]; then
+    version="${BASH_REMATCH[1]}"
+  else
+    clockrove_aapt_parse_diagnostic 'APK versionCode field could not be parsed; refusing ambiguous-install recovery.' "$package_line"
+    return 2
+  fi
+  if [[ -z "$version" && "$label" == instrumentation ]]; then
+    # Android test APKs omit android:versionCode; PackageManager assigns 0.
+    version=0
+  fi
+  if [[ ! "$version" =~ ^[0-9]+$ ]]; then
+    clockrove_aapt_parse_diagnostic "APK versionCode is empty or invalid for $label; refusing ambiguous-install recovery." "$package_line"
     return 2
   fi
   if [[ ! "$package" =~ ^[A-Za-z0-9._]+$ ]]; then
-    echo 'APK package name contains unsupported characters.' >&2
+    clockrove_aapt_parse_diagnostic 'APK package name contains unsupported characters; refusing ambiguous-install recovery.' "$package_line"
     return 2
   fi
   printf '%s %s\n' "$package" "$version"
@@ -284,20 +335,13 @@ clockrove_install_apk() {
   local status=0
   local verification_status=0
   local diagnostics_dir="${GITHUB_WORKSPACE:?}/build/device-test-results/api-$api/install-diagnostics"
-  local identity package expected_version
+  local identity package expected_version identity_parsed=0
 
   if [[ "$label" != app && "$label" != instrumentation ]]; then
     echo 'Unsupported APK label.' >&2
     return 2
   fi
   mkdir -p "$diagnostics_dir"
-  if identity="$(clockrove_apk_identity "$apk")"; then
-    read -r package expected_version <<< "$identity"
-  else
-    status=$?
-    return "$status"
-  fi
-
   while (( attempt <= 2 )); do
     local attempt_log="$diagnostics_dir/$label-attempt-$attempt.log"
     echo "Installing $label APK on API $api (attempt $attempt of 2)"
@@ -314,6 +358,15 @@ clockrove_install_apk() {
 
     if (( status == 124 || status == 137 )); then
       echo 'Install response is ambiguous; recovering PackageManager before deciding whether to retry.'
+      if (( identity_parsed == 0 )); then
+        if identity="$(clockrove_apk_identity "$apk" "$label")"; then
+          read -r package expected_version <<< "$identity"
+          identity_parsed=1
+        else
+          echo 'Could not establish the exact APK identity after an ambiguous install; refusing recovery or retry.' >&2
+          return 2
+        fi
+      fi
       if clockrove_recover_and_verify_install "$package" "$expected_version" "$diagnostics_dir" "$label" "$attempt" "$api"; then
         echo 'The exact APK package and version are already installed; treating the timed-out install as successful.'
         return 0

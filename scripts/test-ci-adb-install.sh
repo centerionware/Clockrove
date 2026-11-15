@@ -12,6 +12,7 @@ export ADB_INSTALL_COUNT="$test_root/install-count.txt"
 export ADB_PACKAGE_QUERY_COUNT="$test_root/package-query-count.txt"
 export ADB_PACKAGE_STATE_FILE="$test_root/package-state.txt"
 export ADB_REBOOT_COUNT="$test_root/reboot-count.txt"
+export AAPT_CALL_LOG="$test_root/aapt-calls.txt"
 export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
 export ADB_FAKE_VERSION=42
 export ADB_FAKE_API=24
@@ -19,6 +20,7 @@ export ADB_INSTALL_MODE=timeout-once
 export ADB_PACKAGE_QUERY_MODE=normal
 export ADB_REBOOT_MODE=normal
 export CLOCKROVE_AAPT_BIN="$test_root/bin/aapt"
+export CLOCKROVE_AAPT_FIXTURE=standard
 export CLOCKROVE_PACKAGE_SETTLE_SECONDS=5
 export CLOCKROVE_BOOT_SETTLE_SECONDS=3
 export CLOCKROVE_FLUTTER_TEST_TIMEOUT_SECONDS=3
@@ -42,7 +44,25 @@ FAKE_TIMEOUT
 cat > "$test_root/bin/aapt" <<'FAKE_AAPT'
 #!/usr/bin/env bash
 set -euo pipefail
-echo "package: name='$ADB_FAKE_PACKAGE' versionCode='$ADB_FAKE_VERSION' versionName='0.1.0'"
+printf '%s\n' "$*" >> "$AAPT_CALL_LOG"
+case "$CLOCKROVE_AAPT_FIXTURE" in
+  standard)
+    echo "package: name='$ADB_FAKE_PACKAGE' versionCode='$ADB_FAKE_VERSION' versionName='0.1.0' platformBuildVersionName='16'"
+    ;;
+  reordered)
+    echo "package: versionName='0.1.0' versionCode='$ADB_FAKE_VERSION' name='$ADB_FAKE_PACKAGE' platformBuildVersionName='16'"
+    ;;
+  instrumentation-empty-version)
+    echo "package: name='io.github.centerionware.clockrove.test' versionCode='' versionName='' platformBuildVersionName='16'"
+    ;;
+  app-empty-version)
+    echo "package: name='io.github.centerionware.clockrove' versionCode='' versionName='0.1.0' platformBuildVersionName='16'"
+    ;;
+  *)
+    echo "Synthetic aapt failure: unknown fixture $CLOCKROVE_AAPT_FIXTURE" >&2
+    exit 1
+    ;;
+esac
 FAKE_AAPT
 
 cat > "$test_root/bin/adb" <<'FAKE_ADB'
@@ -226,8 +246,25 @@ FAKE_FLUTTER
 chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter"
 source "$script_dir/ci-adb-install.sh"
 
+export ADB_INSTALL_MODE=normal
+clockrove_install_apk 24 app "$test_root/app.apk"
+[[ ! -e "$AAPT_CALL_LOG" ]]
+echo 'Verified a successful install does not depend on aapt identity parsing.'
+
+export CLOCKROVE_AAPT_FIXTURE=reordered
+[[ "$(clockrove_apk_identity "$test_root/app.apk" app)" == 'io.github.centerionware.clockrove 42' ]]
+echo 'Verified named aapt fields are parsed independently of their order.'
+
+export CLOCKROVE_AAPT_FIXTURE=instrumentation-empty-version
+[[ "$(clockrove_apk_identity "$test_root/instrumentation.apk" instrumentation)" == 'io.github.centerionware.clockrove.test 0' ]]
+echo 'Verified an empty instrumentation versionCode maps to PackageManager versionCode 0.'
+
+export CLOCKROVE_AAPT_FIXTURE=standard
+rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$AAPT_CALL_LOG"
+export ADB_INSTALL_MODE=timeout-once
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ "$(cat "$ADB_INSTALL_COUNT")" == 2 ]]
+[[ "$(wc -l < "$AAPT_CALL_LOG")" == 1 ]]
 grep -F 'Synthetic install timeout' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-1.log" >/dev/null
 grep -F 'Synthetic install succeeded' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-2.log" >/dev/null
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
@@ -283,6 +320,38 @@ clockrove_install_apk 24 app "$test_root/app.apk"
 [[ "$(cat "$ADB_INSTALL_COUNT")" == 1 ]]
 grep -F 'result=exact-package-version-installed' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-package-state-attempt-1.txt" >/dev/null
 echo 'Verified a lost install reply after server-side commit is resolved without duplicate installation.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
+export ADB_INSTALL_MODE=committed-response-lost
+export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove.test
+export ADB_FAKE_VERSION=0
+export CLOCKROVE_AAPT_FIXTURE=instrumentation-empty-version
+clockrove_install_apk 24 instrumentation "$test_root/instrumentation.apk"
+[[ "$(cat "$ADB_INSTALL_COUNT")" == 1 ]]
+grep -F 'versionCode=0' \
+  "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/instrumentation-package-state-attempt-1.txt" >/dev/null
+grep -F 'result=exact-package-version-installed' \
+  "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/instrumentation-package-state-attempt-1.txt" >/dev/null
+echo 'Verified the instrumentation APK lost-reply path accepts its exact PackageManager versionCode 0.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
+export ADB_INSTALL_MODE=timeout-once
+export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
+export ADB_FAKE_VERSION=42
+export CLOCKROVE_AAPT_FIXTURE=app-empty-version
+if clockrove_install_apk 24 app "$test_root/app.apk" > "$test_root/missing-app-version.log" 2>&1; then
+  echo 'An app APK with an empty versionCode must fail closed after an ambiguous install.' >&2
+  exit 1
+else
+  status=$?
+fi
+[[ "$status" == 2 && "$(cat "$ADB_INSTALL_COUNT")" == 1 ]]
+! grep -Fq 'reboot' "$ADB_CALL_LOG"
+grep -F "package: name='io.github.centerionware.clockrove' versionCode=''" \
+  "$test_root/missing-app-version.log" >/dev/null
+echo 'Verified app versionCode remains required and parse failures report sanitized aapt package metadata.'
+
+export CLOCKROVE_AAPT_FIXTURE=standard
 
 rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
 export ADB_INSTALL_MODE=wrong-version-response-lost
