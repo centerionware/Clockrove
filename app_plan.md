@@ -3401,5 +3401,12 @@ Before merging, review found that the convenience `MotionEvent.obtain` event
 source was unspecified and the generic idle wait could be an unnecessary timeout
 before the destination checks. The successor sets `SOURCE_TOUCHSCREEN` and
 relies on the existing destination-screen polling. This refinement needs its
-own exact-head Actions validation; M7.2 acceptance remains pending. No local
-build, test, formatter or analyzer ran.
+own exact-head Actions validation. Final exact head `2017a33d15f1ba289037b8b913e75be370f200eb`
+passed Validate run
+[43730927411](https://github.com/centerionware/Clockrove/actions/runs/43730927411).
+Inspected API 24 and API 35 XML confirms 29/29 actual Android tests each, zero
+failures/errors/skips, and the 49-sample map journey passed on both. Each API
+artifact contains `map-captures/report-map-49-samples.png`. This validates the
+test-helper correction at PR head. M7.2 remains open: merge and exact-main
+validation are still required, and Settings export remains withheld pending
+full-path memory evidence. No local build, test, formatter or analyzer ran.
