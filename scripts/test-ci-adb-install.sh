@@ -12,6 +12,7 @@ export ADB_INSTALL_COUNT="$test_root/install-count.txt"
 export ADB_PACKAGE_QUERY_COUNT="$test_root/package-query-count.txt"
 export ADB_PACKAGE_STATE_FILE="$test_root/package-state.txt"
 export ADB_REBOOT_COUNT="$test_root/reboot-count.txt"
+export FLUTTER_EVENT_LOG="$test_root/flutter-events.txt"
 export AAPT_CALL_LOG="$test_root/aapt-calls.txt"
 export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
 export ADB_FAKE_VERSION=42
@@ -111,6 +112,17 @@ if [[ "${1:-}" == -s && "${3:-}" == install ]]; then
 fi
 
 if [[ "${3:-}" == reboot ]]; then
+  printf '%s\n' 'reboot' >> "$FLUTTER_EVENT_LOG"
+fi
+if [[ "${3:-}" == shell && "${4:-}" == am && "${5:-}" == force-stop ]]; then
+  printf '%s\n' 'force-stop' >> "$FLUTTER_EVENT_LOG"
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == pidof ]]; then
+  printf '%s\n' 'pidof' >> "$FLUTTER_EVENT_LOG"
+  exit 0
+fi
+if [[ "${3:-}" == reboot ]]; then
   if [[ "$ADB_REBOOT_MODE" == normal ]]; then
     count=0
     [[ ! -f "$ADB_REBOOT_COUNT" ]] || read -r count < "$ADB_REBOOT_COUNT"
@@ -187,6 +199,7 @@ count=0
 [[ ! -f "$FLUTTER_TEST_COUNT" ]] || read -r count < "$FLUTTER_TEST_COUNT"
 count=$((count + 1))
 printf '%s\n' "$count" > "$FLUTTER_TEST_COUNT"
+printf 'flutter-attempt-%s\n' "$count" >> "$FLUTTER_EVENT_LOG"
 case "$FLUTTER_TEST_MODE:$count" in
   install-timeout-once:1|install-timeout-always:*)
     if [[ "$FLUTTER_TEST_MODE" == install-timeout-once ]]; then
@@ -252,7 +265,19 @@ chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$t
 source "$script_dir/ci-adb-install.sh"
 
 clockrove_test_flutter_retry_hook() {
+  [[ "$1" == 24 && "$(cat "$ADB_REBOOT_COUNT")" == 1 ]] || return 1
+  printf '%s\n' 'seed-restored' >> "$FLUTTER_EVENT_LOG"
+  timeout --kill-after=1s 5s adb -s emulator-5554 shell am force-stop "$ADB_FAKE_PACKAGE" || return 1
+  local app_pid
+  app_pid="$(timeout --kill-after=1s 5s adb -s emulator-5554 shell pidof "$ADB_FAKE_PACKAGE")"
+  [[ -z "$app_pid" ]] || return 1
+  printf '%s\n' 'process-absent' >> "$FLUTTER_EVENT_LOG"
   printf '%s\n' "$1" >> "$FLUTTER_RETRY_HOOK_LOG"
+}
+
+clockrove_test_flutter_retry_hook_failure() {
+  printf '%s\n' 'failed-hook' >> "$FLUTTER_EVENT_LOG"
+  return 7
 }
 
 export ADB_INSTALL_MODE=normal
@@ -438,6 +463,7 @@ echo 'Verified a successful Flutter device test requires its crypto result marke
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=install-timeout-once
 export ADB_FAKE_API_CRLF=true
+rm -f "$FLUTTER_EVENT_LOG"
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
   --before-retry-hook clockrove_test_flutter_retry_hook \
@@ -445,11 +471,29 @@ clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
 [[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
 [[ "$(cat "$FLUTTER_RETRY_HOOK_LOG")" == 24 ]]
+[[ "$(cat "$FLUTTER_EVENT_LOG")" == $'flutter-attempt-1\nreboot\nseed-restored\nforce-stop\npidof\nprocess-absent\nflutter-attempt-2' ]]
 unset ADB_FAKE_API_CRLF
 grep -F 'No tests ran.' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-1.log" >/dev/null
 grep -F 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-2.log" >/dev/null
 echo 'Verified the exact Flutter app-install timeout gets one reboot and one real test retry.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT" "$FLUTTER_EVENT_LOG"
+export FLUTTER_TEST_MODE=install-timeout-once
+if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook_failure \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
+  echo 'A failed fixture-reseed hook must prevent the benchmark retry.' >&2
+  exit 1
+else
+  status=$?
+fi
+[[ "$status" == 2 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
+[[ "$(cat "$ADB_REBOOT_COUNT")" == 1 ]]
+grep -Fx 'failed-hook' "$FLUTTER_EVENT_LOG" >/dev/null
+! grep -Fq 'flutter-attempt-2' "$FLUTTER_EVENT_LOG"
+echo 'Verified a failed post-recovery fixture hook prevents the Flutter retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=install-timeout-once
