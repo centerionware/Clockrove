@@ -123,6 +123,9 @@ jobs:
           if-no-files-found: ignore
       - name: Validate Android build
         run: flutter build apk --debug --no-pub
+      - name: Assemble Android instrumentation tests before emulator setup
+        working-directory: android
+        run: ./gradlew :app:assembleDebugAndroidTest
       - name: Native unit tests
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest
