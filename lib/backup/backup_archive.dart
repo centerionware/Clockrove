@@ -958,15 +958,14 @@ final class BackupArchiveStreamPlan {
     required this.schemaVersion,
     required this.stateVersion,
     required this.capturedAtUtcMillis,
-    required List<_PreparedStreamRow> rows,
-    required Uint8List headerBytes,
+    required this._rows,
+    required this._headerBytes,
     required this.recordCount,
     required this.blobCount,
     required this.recordsLength,
     required this.mediaLength,
     required this.totalLength,
-  }) : _rows = rows,
-       _headerBytes = headerBytes;
+  });
 
   final int schemaVersion;
   final int stateVersion;

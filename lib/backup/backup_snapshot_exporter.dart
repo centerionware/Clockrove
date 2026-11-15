@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 
 import 'backup_archive.dart';
@@ -614,8 +612,8 @@ final class BackupSnapshotStreamExport {
     required this.mediaCount,
     required this.mediaBytes,
     required this.archiveStream,
-    required Future<void> Function() closeSnapshot,
-  }) : _closeSnapshot = closeSnapshot;
+    required this._closeSnapshot,
+  });
 
   final int archiveByteLength;
   final int schemaVersion;
@@ -656,8 +654,8 @@ final class BackupSnapshotCleanupException implements Exception {
 final class _SnapshotLease {
   _SnapshotLease(
     this.snapshotId, {
-    required Future<void> Function(String) closeSnapshot,
-  }) : _closeSnapshot = closeSnapshot;
+    required this._closeSnapshot,
+  });
 
   final String snapshotId;
   final Future<void> Function(String) _closeSnapshot;

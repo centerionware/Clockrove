@@ -542,13 +542,13 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
 
 final class _BackupFileSink implements BackupTransactionalByteSink {
   _BackupFileSink({
-    required BackupFileApi api,
+    required this._api,
     required this.documentId,
     required this.expectedBytes,
     required this.onWrite,
     required this.onCommitStarted,
     required this.finish,
-  }) : _api = api;
+  });
 
   final BackupFileApi _api;
   final String documentId;
