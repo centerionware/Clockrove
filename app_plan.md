@@ -74,6 +74,16 @@ instrumentation preference; release builds still use the phone's camera. M6.5
 emulator journeys pass. Physical map display, GPS sampling and hardware-camera
 acceptance remain owner-device checks. No VM build/test/formatter has run.
 
+The owner-requested photo navigation direction correction is in PR #55: left
+swipe advances to the next chronological task/comment photo, and right swipe
+returns to the prior photo. Its first exact-head run passed formatting, analysis,
+Flutter behavior, Android build and native unit tests, then stopped in the API-24
+device journey while revealing **View original PDF**. The viewer direction is
+therefore not yet proven on Android devices. PR #55 now includes the shared
+billing-device-test corrections for text replacement, short settled scrolls,
+tax-error visibility and covered-task checkbox visibility; exact-head API-24/35
+Actions validation is pending. No VM build/test/formatter has run.
+
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
 After M6.5, complete M7 backup and the remaining requested business features.

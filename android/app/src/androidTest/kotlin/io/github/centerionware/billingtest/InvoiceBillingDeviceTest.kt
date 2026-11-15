@@ -122,28 +122,12 @@ class InvoiceBillingDeviceTest {
     private fun reveal(label: String, editable: Boolean = false) {
         until("Actual app never exposed $label") {
             if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                fun scroll(node: AccessibilityNodeInfo): Boolean {
-                    // Prefer the screen's vertical container to editable
-                    // fields' own scroll actions, then use a real swipe if the
-                    // platform does not expose a scroll action.
-                    if (node.isVisibleToUser && node.isScrollable &&
-                        node.className?.toString() == "android.widget.ScrollView" &&
-                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
-                    for (i in 0 until node.childCount) node.getChild(i)?.let { if (scroll(it)) return true }
-                    return false
-                }
-                val scrolled = automation.rootInActiveWindow?.let(::scroll) == true
-                if (scrolled) {
-                    // Accessibility scrolls complete asynchronously. Observe their
-                    // settled result before considering another movement; an
-                    // immediate fallback swipe can skip the target entirely.
-                    automation.waitForIdle(250, 3000)
-                }
-                if (find(label, editable)?.let(::safeTapBounds) != null) true else {
-                    swipeContent(up = true)
-                    automation.waitForIdle(250, 3000)
-                    find(label, editable)?.let(::safeTapBounds) != null
-                }
+                // A viewport-sized accessibility scroll followed by a swipe
+                // can skip short fields, especially on API 24. Move in small
+                // settled increments and recheck after each one instead.
+                swipeContent(up = true, travelFraction = 0.14f)
+                automation.waitForIdle(250, 3000)
+                find(label, editable)?.let(::safeTapBounds) != null
             }
         }
     }
@@ -177,7 +161,7 @@ class InvoiceBillingDeviceTest {
             find(topLabel)?.let(::safeTapBounds) != null
         }
     }
-    private fun swipeContent(up: Boolean) {
+    private fun swipeContent(up: Boolean, travelFraction: Float? = null) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
         data class Target(val bounds: android.graphics.Rect, val firstChild: android.graphics.Rect?)
@@ -220,7 +204,11 @@ class InvoiceBillingDeviceTest {
         val child = target?.firstChild?.takeUnless { it.isEmpty }
         val x = (child?.let { (it.left + 1).coerceAtMost(it.right - 1) } ?: content.centerX()).toFloat()
         val startY = if (up) bottom - 80 else top + 80
-        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val endY = travelFraction?.let { fraction ->
+            val travel = ((bottom - top) * fraction).toInt()
+            if (up) maxOf(top + 20, startY - travel)
+            else minOf(bottom - 20, startY + travel)
+        } ?: if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
             val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
@@ -321,41 +309,24 @@ class InvoiceBillingDeviceTest {
         // replacing the current value. Select the old text and type through
         // the active IME before treating the field as failed.
         if (find(label, true)?.text?.toString() != value) {
-            val current = waitFor(label, true)
-            val length = current.text?.length ?: 0
-            current.performAction(
-                AccessibilityNodeInfo.ACTION_SET_SELECTION,
-                Bundle().apply {
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
-                },
-            )
-            // API 24 and 35 can report a successful selected range while only
-            // moving the caret. For populated fields, use the editor's normal
-            // Ctrl+A shortcut before replacing text. Keep empty fields on the
-            // plain IME typing path; Ctrl+A can interfere with a blank field.
-            if (length > 0) {
-                val downTime = SystemClock.uptimeMillis()
-                instrumentation.sendKeySync(
-                    KeyEvent(
-                        downTime,
-                        downTime,
-                        KeyEvent.ACTION_DOWN,
-                        KeyEvent.KEYCODE_A,
-                        0,
-                        KeyEvent.META_CTRL_ON,
-                    ),
-                )
-                instrumentation.sendKeySync(
-                    KeyEvent(
-                        downTime,
-                        downTime + 1,
-                        KeyEvent.ACTION_UP,
-                        KeyEvent.KEYCODE_A,
-                        0,
-                        KeyEvent.META_CTRL_ON,
-                    ),
-                )
+            // Selection metadata and Ctrl+A can both acknowledge without
+            // selecting Flutter text. Clear through the focused editor, then
+            // observe emptiness before sending replacement characters.
+            var clearAttempts = 0
+            until("Existing text was not cleared for $label") {
+                val current = find(label, true)
+                if (current == null || !current.isFocused || !keyboardVisible()) {
+                    false
+                } else if (current.text.isNullOrEmpty()) {
+                    true
+                } else {
+                    check(clearAttempts++ < 16) { "Text clearing stopped making progress for $label" }
+                    val length = requireNotNull(current.text).length
+                    check(length <= 4096) { "Unexpected editor length for $label" }
+                    instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_MOVE_END)
+                    repeat(length) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DEL) }
+                    false
+                }
             }
             instrumentation.sendStringSync(value)
         }
@@ -440,7 +411,10 @@ class InvoiceBillingDeviceTest {
             waitFor("App settings and customers"); click("App settings and customers"); click("Invoices"); click("INV-1000")
             reveal("Review billed work"); click("Review billed work"); waitFor("Review billed work")
             reveal("Previously installed tile"); click("Previously installed tile")
-            until("Covered task checkbox did not become checked") { find("Previously installed tile")?.isChecked == true }
+            until("Covered task checkbox did not become checked") {
+                reveal("Previously installed tile")
+                find("Previously installed tile", checkable = true)?.isChecked == true
+            }
             enter("Why this work belongs to the invoice", "Checked original invoice: only the previously installed tile was billed.")
             reveal("I checked this against the original invoice"); click("I checked this against the original invoice")
             until("Original-document confirmation was not checked") { find("I checked this against the original invoice")?.isChecked == true }
@@ -501,7 +475,18 @@ class InvoiceBillingDeviceTest {
             enter("Job tax (%)", "101")
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")
-            scrollToStart(); reveal("Tax percentage must be between 0 and 100.")
+            scrollToStart(); reveal("Job tax (%)", true)
+            // A clipped editor can be tappable while its inline error remains
+            // below the viewport. Leave room beneath it before checking errors.
+            val taxBounds = android.graphics.Rect().also(waitFor("Job tax (%)", true)::getBoundsInScreen)
+            val viewport = requireNotNull(automation.rootInActiveWindow?.let(::safeTapBounds))
+            if (taxBounds.bottom > viewport.bottom - viewport.height() / 4) {
+                // Move only enough to expose the multi-line validation text.
+                // A page-sized fling can overshoot it and land near the form end.
+                swipeContent(up = true, travelFraction = 0.14f)
+                automation.waitForIdle(250, 3000)
+            }
+            waitFor("Tax percentage must be between 0 and 100.")
             assertEquals(beforeInvalidTax, repository.jobDetail(job))
             scrollToStart(); reveal("Job tax (%)", true)
             assertTrue("Invalid tax draft was lost", waitFor("Job tax (%)", true).text?.toString()?.contains("101") == true)

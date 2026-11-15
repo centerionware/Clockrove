@@ -3890,4 +3890,18 @@ The full-screen photo viewer set `PageView.reverse: true`, so a leftward drag
 decremented the attachment index and a rightward drag incremented it. Removed
 that reversal and updated the existing viewer journey to assert left swipe
 advances and right swipe returns across the chronological photo list. Source
-change is pending exact-head GitHub Actions validation; no local tests ran.
+change is in PR #55, head `32ac062`. Exact-head Actions run
+[43675682397](https://github.com/centerionware/Clockrove/actions/runs/43675682397)
+passed formatting, analysis, Flutter behavior tests, Android debug build and
+native unit tests. Its real Android PDF/device stage failed in the API-24 invoice
+journey because **View original PDF** was not exposed; the photo viewer device
+journey was not reached, so Android swipe direction remains unverified.
+
+PR #55 now also contains the shared Android billing-test harness corrections
+from PR #54 commits `36e27ba`, `3ca1267`, `88d88b8`, `00531dc` and `32d6154`:
+observe old editor text cleared before replacement, use short settled scroll
+increments to avoid skipping fields, leave room to expose tax validation, and
+reveal the covered-task row before reading its checkable state. These changes
+affect test automation, not production billing behavior. Exact-head PR #55
+Actions validation on API 24 and 35 is pending. No VM build, test, formatter or
+analyzer ran.
