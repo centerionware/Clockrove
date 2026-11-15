@@ -381,17 +381,23 @@ class _GpsRangeDeletionDialogState
               const SizedBox(height: 8),
               RadioGroup<String?>(
                 groupValue: _scopeJobId,
-                onChanged: _loading || _pending ? null : _selectScope,
+                onChanged: (value) {
+                  if (!_loading && !_pending) {
+                    _selectScope(value);
+                  }
+                },
                 child: Column(
                   children: [
                     RadioListTile<String?>(
                       contentPadding: EdgeInsets.zero,
                       value: widget.jobId,
+                      enabled: !_loading && !_pending,
                       title: Text('This job only · ${widget.jobName}'),
                     ),
                     RadioListTile<String?>(
                       contentPadding: EdgeInsets.zero,
                       value: null,
+                      enabled: !_loading && !_pending,
                       title: const Text('All jobs'),
                     ),
                   ],
