@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.StandardMethodCodec
 import java.io.File
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -256,6 +257,65 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun rejectsGpsRevisionPayloadsContainingCoordinatesOrOtherFields() {
+        val pointId = "privacy-sensitive-point"
+        val validPrefix = "\"id\":\"$pointId\",\"session_id\":\"synthetic-session\""
+        val invalidPayloads = listOf(
+            "{malformed",
+            "[]",
+            "{\"id\":\"different-point\",\"session_id\":\"synthetic-session\"}",
+            "{$validPrefix,\"private\":\"gps-payload-canary\"}",
+            "{$validPrefix,\"latitude\":12.0}",
+            "{$validPrefix,\"longitude\":-34.0}",
+            "{$validPrefix,\"accuracy\":5.0}",
+            "{$validPrefix,\"measured_ms\":123}",
+            "{$validPrefix,\"received_ms\":123}",
+        )
+        invalidPayloads.forEachIndexed { index, payload ->
+            val revisionId = "invalid-location-payload-$index"
+            assertInvalidRevisionGraph(
+                listOf(
+                    revisionRecord(
+                        revisionId, "location", pointId, jobId, payload = payload,
+                    ),
+                    headRecord("location", pointId, revisionId),
+                ),
+                forbiddenDiagnostic = "gps-payload-canary",
+            )
+        }
+    }
+
+    @Test
+    fun acceptsRedactedNullRevisionPayload() {
+        val revisionId = "redacted-job-revision"
+        val records = listOf(
+            revisionRecord(revisionId, "job", "redacted-job", "redacted-job", payload = null),
+            headRecord("job", "redacted-job", revisionId),
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "c".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+
+        val preview = importStore.finish(database, started.importId)
+
+        assertEquals(0L, preview.conflictCount)
+        assertTrue(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
     fun rejectsRowsWithUnresolvedForeignKeys() {
         assertInvalidReference(listOf(stagedRow("sessions", mapOf(
             "id" to "orphan-session",
@@ -266,6 +326,152 @@ class BackupImportStoreTest {
             "offset_seconds" to 0,
             "origin" to "MANUAL",
         ))))
+    }
+
+    @Test
+    fun rejectsInvoiceTaskClaimWhoseJobDiffersFromItsInvoice() {
+        assertInvalidReference(listOf(
+            invoiceRecord("mismatch-task-invoice", jobId, "INV-SYNTHETIC-TASK"),
+            stagedRow("invoice_task_claims", mapOf(
+                "id" to "mismatch-task-claim",
+                "invoice_id" to "mismatch-task-invoice",
+                "job_id" to "synthetic-other-job",
+                "task_id" to "synthetic-task",
+                "released_ms" to null,
+            )),
+        ))
+    }
+
+    @Test
+    fun rejectsInvoiceTimeClaimWhoseJobDiffersFromItsInvoice() {
+        assertInvalidReference(listOf(
+            invoiceRecord("mismatch-time-invoice", jobId, "INV-SYNTHETIC-TIME"),
+            invoiceTimeClaimRecord(
+                "mismatch-time-claim", "mismatch-time-invoice", "synthetic-other-job", 100, 200,
+            ),
+        ))
+    }
+
+    @Test
+    fun rejectsOverlappingActiveImportedInvoiceTimeClaims() {
+        assertInvalidReference(listOf(
+            invoiceRecord("overlap-import-invoice", jobId, "INV-SYNTHETIC-OVERLAP"),
+            invoiceTimeClaimRecord("overlap-import-claim-a", "overlap-import-invoice", jobId, 100, 200),
+            invoiceTimeClaimRecord("overlap-import-claim-b", "overlap-import-invoice", jobId, 199, 300),
+        ))
+    }
+
+    @Test
+    fun rejectsImportedInvoiceTimeClaimOverlappingAnExistingLocalClaim() {
+        database.execSQL(
+            "INSERT INTO invoices(id,job_id,number,created_ms,payload) VALUES(?,?,?,?,?)",
+            arrayOf<Any?>("local-overlap-invoice", jobId, "INV-LOCAL-OVERLAP", now, "{}"),
+        )
+        database.execSQL(
+            "INSERT INTO invoice_time_claims(id,invoice_id,job_id,session_id,start_ms,end_ms,timezone) " +
+                "VALUES(?,?,?,?,?,?,?)",
+            arrayOf<Any?>(
+                "local-overlap-claim", "local-overlap-invoice", jobId, "local-overlap-session", 100, 200, "Etc/UTC",
+            ),
+        )
+        assertInvalidReference(listOf(
+            invoiceRecord("incoming-overlap-invoice", jobId, "INV-INCOMING-OVERLAP"),
+            invoiceTimeClaimRecord("incoming-overlap-claim", "incoming-overlap-invoice", jobId, 150, 250),
+        ))
+    }
+
+    @Test
+    fun acceptsDisjointAndReleasedInvoiceTimeClaims() {
+        val records = listOf(
+            invoiceRecord("valid-time-claims-invoice", jobId, "INV-SYNTHETIC-VALID-TIME"),
+            invoiceTimeClaimRecord("valid-time-claim-a", "valid-time-claims-invoice", jobId, 100, 200),
+            invoiceTimeClaimRecord("valid-time-claim-b", "valid-time-claims-invoice", jobId, 200, 300),
+            invoiceTimeClaimRecord(
+                "released-time-claim", "valid-time-claims-invoice", jobId, 150, 250, releasedMs = now,
+            ),
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "b".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+
+        val preview = importStore.finish(database, started.importId)
+
+        assertEquals(0L, preview.conflictCount)
+        assertTrue(preview.applyReady)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun localOpenTimerBlocksApplyReadinessUntilClockedOutAndPreviewedAgain() {
+        assertNull(repository.execute(TimerRepository.Command(
+            "start-local-timer-before-backup-preview",
+            repository.snapshot().version,
+            TimerRepository.Action.START,
+            jobId,
+            now,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val runningState = repository.snapshot()
+        assertNotNull(runningState.running)
+
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "d".repeat(64),
+            0,
+            0,
+            0,
+        )
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(0L, preview.openSessionCount)
+        assertEquals(1L, preview.localOpenSessionCount)
+        assertFalse(preview.applyReady)
+        assertEquals(runningState, repository.snapshot())
+        assertTrue(importStore.close(started.importId))
+
+        now += 1_000L
+        assertNull(repository.execute(TimerRepository.Command(
+            "explicit-clock-out-before-backup-preview",
+            repository.snapshot().version,
+            TimerRepository.Action.STOP,
+            null,
+            now,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val stoppedState = repository.snapshot()
+        assertNull(stoppedState.running)
+
+        val fresh = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "e".repeat(64),
+            0,
+            0,
+            0,
+        )
+        val freshPreview = importStore.finish(database, fresh.importId)
+        assertEquals(0L, freshPreview.localOpenSessionCount)
+        assertTrue(freshPreview.applyReady)
+        assertEquals(stoppedState, repository.snapshot())
+        assertTrue(importStore.close(fresh.importId))
     }
 
     @Test
@@ -942,12 +1148,15 @@ class BackupImportStoreTest {
         jobId: String?,
         deleted: Long = 0L,
         origin: String = "MUTATION",
+        payload: String? = if (kind == "location") {
+            JSONObject().put("id", entityId).put("session_id", "synthetic-session").toString()
+        } else "{}",
     ): Map<String, Any?> = stagedRow("entity_revisions", mapOf(
         "id" to id,
         "kind" to kind,
         "entity_id" to entityId,
         "job_id" to jobId,
-        "payload" to "{}",
+        "payload" to payload,
         "deleted" to deleted,
         "changed_ms" to now,
         "origin" to origin,
@@ -965,6 +1174,36 @@ class BackupImportStoreTest {
         "values" to values,
         "blobs" to emptyList<Any>(),
     )
+
+    private fun invoiceRecord(id: String, invoiceJobId: String, number: String): Map<String, Any?> =
+        stagedRow("invoices", mapOf(
+            "id" to id,
+            "job_id" to invoiceJobId,
+            "customer_id" to null,
+            "number" to number,
+            "created_ms" to now,
+            "payload" to "{}",
+            "pdf" to null,
+            "logo_id" to null,
+        ))
+
+    private fun invoiceTimeClaimRecord(
+        id: String,
+        invoiceId: String,
+        claimJobId: String,
+        start: Long,
+        end: Long,
+        releasedMs: Long? = null,
+    ): Map<String, Any?> = stagedRow("invoice_time_claims", mapOf(
+        "id" to id,
+        "invoice_id" to invoiceId,
+        "job_id" to claimJobId,
+        "session_id" to "synthetic-session-$id",
+        "start_ms" to start,
+        "end_ms" to end,
+        "timezone" to "Etc/UTC",
+        "released_ms" to releasedMs,
+    ))
 
     private fun startAndStopSessionWithPoint(pointId: String): Pair<String, Long> {
         assertNull(repository.execute(TimerRepository.Command(
@@ -1013,6 +1252,11 @@ class BackupImportStoreTest {
         rows.getLong(0)
     }
 
+    private fun importRelevantCounts(): Map<String, Long> = listOf(
+        "sessions", "location_points", "entity_revisions", "invoices",
+        "invoice_task_claims", "invoice_time_claims",
+    ).associateWith { table -> number("SELECT COUNT(*) FROM $table") }
+
     private fun validationTableCount(): Long {
         val activeField = BackupImportStore::class.java.getDeclaredField("active").apply { isAccessible = true }
         val handle = requireNotNull(activeField.get(importStore))
@@ -1036,8 +1280,12 @@ class BackupImportStoreTest {
         }
     }
 
-    private fun assertInvalidRevisionGraph(records: List<Map<String, Any?>>) {
+    private fun assertInvalidRevisionGraph(
+        records: List<Map<String, Any?>>,
+        forbiddenDiagnostic: String? = null,
+    ) {
         val before = repository.snapshot()
+        val countsBefore = importRelevantCounts()
         val started = importStore.begin(
             database,
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
@@ -1053,13 +1301,25 @@ class BackupImportStoreTest {
             records,
             encodedAppendRequest(started.importId, 0, records),
         )
-        assertFailure("INVALID_REVISION_GRAPH") { importStore.finish(database, started.importId) }
+        val failure = try {
+            importStore.finish(database, started.importId)
+            fail("Expected import failure INVALID_REVISION_GRAPH")
+            null
+        } catch (failure: BackupImportStore.Failure) {
+            failure
+        }
+        assertEquals("INVALID_REVISION_GRAPH", failure?.code)
+        if (forbiddenDiagnostic != null) {
+            assertFalse(failure?.message.orEmpty().contains(forbiddenDiagnostic))
+        }
         assertEquals(before, repository.snapshot())
+        assertEquals(countsBefore, importRelevantCounts())
         assertTrue(importStore.close(started.importId))
     }
 
     private fun assertInvalidReference(records: List<Map<String, Any?>>) {
         val before = repository.snapshot()
+        val countsBefore = importRelevantCounts()
         val started = importStore.begin(
             database,
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
@@ -1077,6 +1337,7 @@ class BackupImportStoreTest {
         )
         assertFailure("INVALID_REFERENCE") { importStore.finish(database, started.importId) }
         assertEquals(before, repository.snapshot())
+        assertEquals(countsBefore, importRelevantCounts())
         assertTrue(importStore.close(started.importId))
     }
 

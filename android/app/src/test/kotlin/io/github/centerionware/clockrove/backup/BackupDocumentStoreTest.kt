@@ -28,8 +28,13 @@ class BackupDocumentStoreTest {
         )
 
         private val entries = mutableListOf<Entry>()
+        var failNextSchedule = false
 
         override fun schedule(delayMillis: Long, action: () -> Unit): BackupFileScheduledTask {
+            if (failNextSchedule) {
+                failNextSchedule = false
+                throw IllegalStateException("synthetic scheduler failure")
+            }
             val entry = Entry(elapsed() + delayMillis, action)
             entries.add(entry)
             return BackupFileScheduledTask { entry.cancelled = true }
@@ -42,6 +47,12 @@ class BackupDocumentStoreTest {
                 next.cancelled = true
                 next.action()
             }
+        }
+
+        fun runNextTaskEarly() {
+            val next = entries.filter { !it.cancelled }.minByOrNull { it.dueAt } ?: return
+            next.cancelled = true
+            next.action()
         }
     }
 
@@ -126,6 +137,25 @@ class BackupDocumentStoreTest {
 
         assertEquals(listOf(cancelledUri, expiredUri), deletedUris)
         assertFalse(store.hasPendingAction())
+    }
+
+    @Test
+    fun failedEarlyExpiryRescheduleDeletesThePrivateStageAndDestination() {
+        val uri = Uri.parse("content://synthetic.provider/backup/reschedule-failure")
+        val id = store.begin(uri, 4L)
+        val stagingDirectory = File(app.noBackupFilesDir, "clockrove-backup-document-staging")
+        assertEquals(1, stagingDirectory.listFiles().orEmpty().count { it.name.startsWith("encrypted-") })
+
+        elapsed += 10_000L
+        scheduler.failNextSchedule = true
+        scheduler.runNextTaskEarly()
+
+        assertFalse(store.hasPendingAction())
+        assertTrue(stagingDirectory.listFiles().orEmpty().none { it.name.startsWith("encrypted-") })
+        assertEquals(listOf(uri), deletedUris)
+        assertFalse("finish retry must report the terminal cancelled stage", store.finish(id))
+        assertTrue("cancel retry must remain idempotent", store.cancel(id))
+        assertEquals(listOf(uri), deletedUris)
     }
 
     @Test

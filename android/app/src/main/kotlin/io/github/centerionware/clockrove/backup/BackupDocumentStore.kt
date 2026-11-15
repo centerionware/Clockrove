@@ -420,8 +420,14 @@ internal class BackupDocumentStore(
             if (current.state != State.RECEIVING) return
             val idle = elapsedClock() - current.lastAccessElapsedMillis
             if (idle < idleTtlMillis) {
-                scheduleExpiryLocked(current)
-                null
+                try {
+                    scheduleExpiryLocked(current)
+                    null
+                } catch (_: Exception) {
+                    // If the scheduler cannot retain the expiry, fail closed and
+                    // remove the private stage instead of stranding it indefinitely.
+                    if (terminalizeLocked(current, saved = false)) current else null
+                }
             } else if (terminalizeLocked(current, saved = false)) {
                 current
             } else {

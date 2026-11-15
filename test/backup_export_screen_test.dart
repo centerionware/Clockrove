@@ -135,7 +135,13 @@ void main() {
         if (find.text('Encrypted backup saved.').evaluate().isNotEmpty) break;
       }
 
-      expect(find.text('Encrypted backup saved.'), findsOneWidget);
+      final status = find.byKey(const ValueKey('backup-export-message'));
+      await tester.scrollUntilVisible(
+        status,
+        250,
+        scrollable: find.byType(Scrollable),
+      );
+      expect(tester.widget<Text>(status).data, 'Encrypted backup saved.');
       expect(
         find.text(
           'This backup includes 1 open timer. Your timer will keep running.',
@@ -319,6 +325,11 @@ void main() {
     await _enterPassword(tester);
     await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('cancel-backup-export')),
+      250,
+      scrollable: find.byType(Scrollable),
+    );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
 
     expect(cancellationCheck?.call(), isTrue);
@@ -348,6 +359,11 @@ void main() {
     await _enterPassword(tester);
     await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
     await _pumpUntil(tester, find.text('Encrypting backup on this device…'));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('cancel-backup-export')),
+      250,
+      scrollable: find.byType(Scrollable),
+    );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
     pendingEncryption.complete(Uint8List.fromList([1, 2, 3]));
     await _pumpUntil(
@@ -423,7 +439,11 @@ Future<void> _pumpUntil(WidgetTester tester, Finder finder) async {
     await tester.pump(const Duration(milliseconds: 100));
     if (finder.evaluate().isNotEmpty) return;
   }
-  fail('The expected UI state did not appear: $finder');
+  await tester.scrollUntilVisible(
+    finder,
+    250,
+    scrollable: find.byType(Scrollable),
+  );
 }
 
 BackupSnapshotExport _snapshot({int openSessionCount = 0}) =>

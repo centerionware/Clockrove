@@ -135,6 +135,8 @@ internal class BackupImportStore(
             "validation_revision_ready",
             "validation_revision_pending",
             "validation_reference_keys",
+            "validation_time_claims",
+            "validation_invoice_jobs",
             "validation_ranges",
             "validation_heads",
             "validation_parents",
@@ -742,7 +744,7 @@ internal class BackupImportStore(
             handle.id, token, handle.expected.schemaVersion, localVersion,
             handle.recordCount, handle.mediaCount, handle.expected.mediaBytes,
             added, unchanged, conflictOrdinal, openSessions, localOpenSessions,
-            applyReady = conflictOrdinal == 0L && openSessions == 0L,
+            applyReady = conflictOrdinal == 0L && openSessions == 0L && localOpenSessions == 0L,
         )
     }
 
@@ -818,11 +820,16 @@ internal class BackupImportStore(
             forEachImportedValues(handle, "entity_revisions") { values ->
                 val deleted = revisionInteger(values["deleted"])
                 if (deleted !in 0L..1L) invalidRevisionGraph()
+                val kind = revisionString(values["kind"])
+                val entityId = revisionString(values["entity_id"])
+                if (kind == "location" && values["payload"] != null) {
+                    validateLocationRevisionPayload(values["payload"], entityId)
+                }
                 db.execSQL(
                     "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?)",
                     arrayOf<Any?>(
-                        revisionString(values["id"]), revisionString(values["kind"]),
-                        revisionString(values["entity_id"]), nullableRevisionString(values["job_id"]),
+                        revisionString(values["id"]), kind,
+                        entityId, nullableRevisionString(values["job_id"]),
                         deleted, revisionString(values["origin"]),
                     ),
                 )
@@ -937,6 +944,7 @@ internal class BackupImportStore(
 
             validatePortableRows(localDb, handle)
             validatePortableReferences(localDb, handle)
+            validateInvoiceClaimRules(localDb, handle)
 
             validateRevisionAcyclicity(db)
             if (File(db.path).length() > MAX_STAGE_DATABASE_BYTES ||
@@ -1052,6 +1060,23 @@ internal class BackupImportStore(
 
     private fun invalidRevisionGraph(): Nothing =
         throw Failure("INVALID_REVISION_GRAPH", "The backup revision history is invalid.")
+
+    private fun validateLocationRevisionPayload(payload: Any?, entityId: String) {
+        val jsonText = payload as? String ?: invalidRevisionGraph()
+        val json = try {
+            JSONObject(jsonText)
+        } catch (_: Exception) {
+            invalidRevisionGraph()
+        }
+        val keys = mutableSetOf<String>()
+        val iterator = json.keys()
+        while (iterator.hasNext()) keys.add(iterator.next())
+        if (keys != setOf("id", "session_id") ||
+            json.opt("id") !is String || json.optString("id") != entityId ||
+            json.opt("session_id") !is String || json.optString("session_id").isBlank()) {
+            invalidRevisionGraph()
+        }
+    }
 
     private fun invalidReference(): Nothing =
         throw Failure("INVALID_REFERENCE", "The backup contains an unresolved record reference.")
@@ -1243,6 +1268,59 @@ internal class BackupImportStore(
                 }
             }
         }
+    }
+
+    /** Mirrors invoice-claim triggers which are not present in the validation schema. */
+    private fun validateInvoiceClaimRules(localDb: SQLiteDatabase, handle: Handle) {
+        val db = handle.database
+        db.execSQL("CREATE TABLE validation_invoice_jobs(id TEXT PRIMARY KEY,job_id TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE validation_time_claims(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,start_ms INTEGER NOT NULL,end_ms INTEGER NOT NULL,released_ms INTEGER)")
+        db.execSQL("CREATE INDEX validation_time_claim_scope ON validation_time_claims(job_id,start_ms,end_ms)")
+        forEachImportedValues(handle, "invoices") { values ->
+            db.execSQL(
+                "INSERT INTO validation_invoice_jobs VALUES(?,?)",
+                arrayOf(revisionString(values["id"]), revisionString(values["job_id"])),
+            )
+        }
+        listOf("invoice_task_claims", "invoice_time_claims").forEach { table ->
+            forEachImportedValues(handle, table) { values ->
+                val claimJob = revisionString(values["job_id"])
+                val invoiceId = revisionString(values["invoice_id"])
+                val importedInvoiceJob = db.rawQuery(
+                    "SELECT job_id FROM validation_invoice_jobs WHERE id=?",
+                    arrayOf(invoiceId),
+                ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
+                val invoiceJob = importedInvoiceJob ?: localDb.rawQuery(
+                    "SELECT job_id FROM invoices WHERE id=?",
+                    arrayOf(invoiceId),
+                ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
+                if (invoiceJob != claimJob) invalidReference()
+                if (table == "invoice_time_claims") {
+                    val released = values["released_ms"]?.let(::revisionInteger)
+                    db.execSQL(
+                        "INSERT INTO validation_time_claims VALUES(?,?,?,?,?)",
+                        arrayOf<Any?>(
+                            revisionString(values["id"]), claimJob,
+                            revisionInteger(values["start_ms"]), revisionInteger(values["end_ms"]), released,
+                        ),
+                    )
+                }
+            }
+        }
+        val stagedOverlap = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM validation_time_claims a JOIN validation_time_claims b " +
+                "ON a.job_id=b.job_id AND a.id<b.id AND a.start_ms<b.end_ms AND a.end_ms>b.start_ms " +
+                "WHERE a.released_ms IS NULL AND b.released_ms IS NULL",
+        )
+        val localOverlap = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM validation_time_claims b JOIN invoice_time_claims a " +
+                "ON a.job_id=b.job_id AND a.id<>b.id AND a.released_ms IS NULL " +
+                "AND a.start_ms<b.end_ms AND a.end_ms>b.start_ms " +
+                "WHERE b.released_ms IS NULL",
+        )
+        if (stagedOverlap != 0L || localOverlap != 0L) invalidReference()
     }
 
     private fun foreignKeySpecs(

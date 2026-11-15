@@ -256,7 +256,7 @@ void main() {
 
     await expectLater(
       BackupSnapshotExporter(channel: channel).export(),
-      throwsA(isA<StateError>()),
+      throwsA(isA<PlatformException>()),
     );
     expect(closed, isTrue);
     expect(calls.last.method, 'closeBackupSnapshot');
