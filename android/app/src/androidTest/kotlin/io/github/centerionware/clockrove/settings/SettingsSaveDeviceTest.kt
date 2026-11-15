@@ -23,6 +23,11 @@ import java.io.File
 /** Actual Flutter + native channel + SQLite journey, not a settings API fixture. */
 @RunWith(AndroidJUnit4::class)
 class SettingsSaveDeviceTest {
+    private data class ScrollPosition(
+        val viewport: android.graphics.Rect,
+        val firstChild: android.graphics.Rect?,
+    )
+
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val automation get() = instrumentation.uiAutomation
     private fun matchesLabel(value: CharSequence?, label: String): Boolean {
@@ -197,14 +202,16 @@ class SettingsSaveDeviceTest {
             var attempts = 0
             while (attempts++ < 60 && find(label, editable, checkable) == null) {
                 val scrollAction = if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                val before = automation.rootInActiveWindow?.let(::scrollPosition)
                 fun scroll(node: AccessibilityNodeInfo): Boolean {
                     for (index in 0 until node.childCount) node.getChild(index)?.let { if (scroll(it)) return true }
                     return node.isScrollable && node.performAction(scrollAction)
                 }
-                val moved = automation.rootInActiveWindow?.let(::scroll) == true
+                automation.rootInActiveWindow?.let(::scroll)
                 SystemClock.sleep(150)
                 if (find(label, editable, checkable) != null) return
-                if (!moved) {
+                val after = automation.rootInActiveWindow?.let(::scrollPosition)
+                if (before == null || after == null || before == after) {
                     swipeContent(up = forward)
                     SystemClock.sleep(150)
                 }
@@ -212,6 +219,15 @@ class SettingsSaveDeviceTest {
             if (find(label, editable, checkable) != null) return
         }
         waitFor(label, editable, checkable)
+    }
+    private fun scrollPosition(node: AccessibilityNodeInfo): ScrollPosition? {
+        for (index in 0 until node.childCount) {
+            node.getChild(index)?.let { child -> scrollPosition(child)?.let { return it } }
+        }
+        if (!node.isScrollable) return null
+        val viewport = android.graphics.Rect().also(node::getBoundsInScreen)
+        val firstChild = node.getChild(0)?.let { android.graphics.Rect().also(it::getBoundsInScreen) }
+        return ScrollPosition(viewport, firstChild)
     }
     private fun dumpAccessibility(name: String) {
         val dump = StringBuilder()
