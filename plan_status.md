@@ -4008,4 +4008,6 @@ but the page-sized swipe moved past the error on API 35. Follow-up commit
 [43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
 completed successfully. Both commits are being integrated into PR #51 so its
 final gate exercises the billing repair and GPS deletion journey together.
+The preceding `36e27ba` run `43673656562` had failed API-24 error visibility:
+the screenshot showed the focused tax editor clipped at the navigation bar.
 No local build or test ran.
