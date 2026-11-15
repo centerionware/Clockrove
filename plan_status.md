@@ -1,6 +1,6 @@
 # Clockrove task status
 
-Updated 2026-11-14. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-15. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
 slice passed API-24/35 CI and its internal Play upload was accepted; the newly
 requested 49-sample report-map regression passed on API 24, with API 35 and
@@ -75,10 +75,10 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | Follow-on: task comments, supplies and costs | Comments/images merged #43; classification and cost ledger pass Actions source checks; actual Android journey pending | M6.5 implements private task/comment conversations and image attachments. M6.6 adds Labor/Supplies classification with legacy values retained as Unclassified, plus a native actual-cost ledger and UI for exact-money entries. Run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed all 602 native tests plus Flutter behavior and Android build checks. Supplies task labels never auto-book costs. Actual cost CRUD, migration, exact-money and paging cases passed; device coverage did not run because the earlier billing journey failed. Templates do not copy comments, attachments or costs. |
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
 | M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
-| M7.2 Encrypted archive/schema/preview | Pending; native snapshot source merged as #50; clean import-preview branch `m7-native-import-preview-main` prepared; exact-head rerun pending | Schema-15 detached snapshot staging and a separate bounded import-staging/read-only-preview API are in source. The import response is explicitly `applyReady: false`; no transactional apply method is exposed. PR #53 run `43673106129` passed formatting, analysis, Flutter tests and Android build, then failed native test compilation because `BackupImportStoreTest` used `getValue` with a star-projected `Map<*, *>`; the test was corrected in the clean replay branch, which needs a new exact-head Actions run. No VM build/test/formatter ran. Dart archive/encryption/UI, revision ancestry, full reference/GPS deletion validation, restore choices and transactional apply remain outstanding. GPS deletion-range portability awaits schema16 integration. See `docs/BACKUP_FORMAT.md`. |
+| M7.2 Encrypted archive/schema/preview | Pending; schema-16 export adapter integrated as `7f19d54`; combined exact-head Actions pending | Snapshot/export source now includes `location_deletion_ranges` alongside range revisions, coordinate-free point tombstones and revision-parent links; a synthetic export test checks these records and schema-16 metadata. The combined GPS branch contains merged-main snapshot/export and the schema-16 migration/adapter. PR #53 run `43673106129` passed format, analysis, Flutter tests and Android build but failed native test compilation on a star-projected map lookup; the correction is on the separate import-preview replay branch and awaits exact-head Actions. No VM build/test/formatter ran. Dart authenticated archive/encryption/UI, revision-graph and reference validation, restore choices, transactional apply, and full GPS-range import validation remain outstanding. See `docs/BACKUP_FORMAT.md`. |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
-| M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; not started | After all remaining launch features are complete, overhaul first-use UX across the entire app and create a complete inventory of features, screens, routes, settings, options, permissions, empty/error states and destructive confirmations. Actual-app journeys must assert native persistence/side effects and retain a reviewed screenshot for every item on API 24 and current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This is the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
+| M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
@@ -3883,16 +3883,147 @@ accessibility dump shows the tax EditText unfocused. The input fallback accepted
 keyboard visibility without proving target focus. Require the target editable
 node's focused state, with bounded wait and safe pointer fallback, before typing.
 Exact-head rerun pending; no VM tests/builds ran.
+### 2026-11-15 — Google Maps runtime-key feasibility remains open
+
+On the isolated provider branch based on `00b11b6`, reviewed the active map
+contract, current OSM/custom-raster settings, and the stopped provider draft in
+`.local/luna-providers`. The stopped draft's map privacy inventory was adapted
+into `docs/MAP_PRIVACY_DATA_INVENTORY.md`; its claims were kept as release
+checks rather than treated as validation evidence.
+
+The official Flutter and Android setup guides configure the Android Maps SDK
+key through `com.google.android.geo.API_KEY` application manifest metadata.
+The documented `MapsInitializer` methods accept an Android `Context` and no
+runtime key. No officially supported runtime user-key path for the standard
+Flutter/Android Maps SDK integration was found. A native platform view still
+uses the same SDK, so it does not solve key initialization. No Google Maps key
+setting, SDK dependency, platform view, or map provider was added. Do not change
+the product contract to a build-time key without an explicit owner decision.
+
+The existing keyless OSM and protected custom HTTPS raster providers remain the
+working options. Google Maps remains an open requirement; resolving it requires
+a supported runtime-key path and owner-provided restricted-key proof, or an
+explicit contract decision. The relevant official sources are linked in
+`app_plan.md` and `docs/MAP_PRIVACY_DATA_INVENTORY.md`.
+
+No build, test, formatter, or device check ran on the VM. No owner key or device
+was available, so Google rendering, missing/invalid-key fallback and billing
+restriction behavior remain unproven.
+
+### 2026-11-15 — merged-main API-35 billing repair passed
+
+PR #49 was merged as `aca488f`. Merged-main Actions run
+[43667760290](https://github.com/centerionware/Clockrove/actions/runs/43667760290)
+passed the 614 native cases and 37 actual Android device cases on each of API 24
+and API 35, with zero failures, errors or skips. The earlier exact-head and
+merged-main discrepancy is resolved for this billing journey. This validation
+does not accept the remaining launch milestones or M7.6.
+
+### 2026-11-15 — GPS-only range deletion implementation added
+
+On an isolated branch based on `aca488f`, database schema 16 adds immutable
+`location_deletion_ranges` coverage and migrates existing GPS identities into
+coordinate-free revisions. Native preview and deletion use the serialized
+versioned command boundary; deletion uses half-open measured-UTC bounds, bounded
+keyset batches, per-known-point tombstones and one transaction while leaving
+sessions/timesheets intact. New point revisions link to matching range revisions
+without retaining coordinates. The history screen now offers an inclusive
+local-date range, current-job/all-jobs scope, point-count preview, explicit
+confirmation and preserved-export/backup disclosure. Committed state versions
+refresh the history and report/map providers.
+
+Native migration, boundary, scope, revision-payload, ancestry, duplicate-command,
+stale-version, empty-range, rollback and bridge tests plus Flutter API/widget
+tests were added for GitHub Actions. No build, test or formatter ran on the VM,
+per owner instruction. Exact-head Actions validation and backup exporter/restore
+integration remain pending; M7 and M7.6 are not accepted.
+
+At exact head `cdbfecc`, Actions run
+[43671703196](https://github.com/centerionware/Clockrove/actions/runs/43671703196)
+passed formatting, analysis, Flutter behavior tests and the Android build, then
+failed native tests: 621 cases ran, with nine failures. Eight SQLite migration
+errors came from downgrade-style fixtures retaining the schema-16 range table;
+those fixtures now drop the table before setting the historical version. One
+session-history assertion counted live observation revisions when it intended
+to check deletion tombstones; it now filters for deleted revisions. Both test
+corrections require a fresh exact-head Actions run. The new actual Android
+deletion journey was not part of this run. No VM tests/build/formatting ran.
 
 ### 2026-11-15 — observed editor clearing and tax-error navigation
 
-PR #51 head `8c6054b`, run `43672803259`, passed native tests but failed
-API-24 billing while replacing tax `101` with `0`. The retained screenshot
-and accessibility tree show focused editor value `1010`: Ctrl+A had not
-selected the original text. PR #52 head `11baf85`, run `43671872207`, passed
-API-24 crypto benchmark but failed API-35 tax-error navigation; its screenshot
-shows the bottom of Job settings. The input fallback now clears via ordinary
-editor delete keys and observes an empty focused field before typing. The
-validation journey locates the tax editor before checking its inline error,
-retaining exact error, draft and committed-state assertions. These corrections
-require exact-head Actions validation. No VM builds or tests ran.
+PR #51 head `8c6054b`, run `43672803259`, passed formatting, analysis, Flutter
+behavior tests, the Android build, and all 621 native tests. The API-24 base
+device group passed all 28 cases, then the existing billing journey failed
+while replacing tax `101` with `0`; the retained screenshot and accessibility
+tree showed focused editor value `1010`, so Ctrl+A had not selected the original
+text. API 35 and later journeys were not reached. PR #52 head `11baf85`, run
+`43671872207`, passed its API-24 crypto benchmark but failed API-35 tax-error
+navigation; its screenshot showed the bottom of Job settings.
+
+Shared repair commit `36e27ba` clears the focused editor using ordinary delete
+keys and observes an empty field before typing. The validation journey locates
+the tax editor before checking its inline error, retaining exact error, draft
+and committed-state assertions. The GPS Android journey source is now added: it
+uses both picker modes, checks current-job/all-job scope, cancellation and
+confirmation, reopens report/map views, and requires nine screenshots. It has
+not run yet. Main's schema-15 snapshot code is reconciled into this branch;
+commit `7f19d54` adds the schema-16 allowlist and synthetic range/tombstone/
+causal-parent export test. The combined exact-head Actions run must validate
+this adapter, the billing repair, and the Android GPS journey. No VM builds or
+tests ran; M7 and M7.6 remain unaccepted.
+
+### 2026-11-15 — GPS date-picker title matcher correction
+
+On exact PR #51 head `c499310`, Actions run
+[43674623832](https://github.com/centerionware/Clockrove/actions/runs/43674623832)
+passed the preceding checks and reached the API-24 GPS deletion journey. It
+stopped at `Select GPS dates`: the actual screenshot shows the title, while the
+accessibility tree exposes `Select GPS dates Nov 9 to Nov 15` as one content
+description. The matcher now supports an explicit prefix option for content
+descriptions, enabled only for this date-picker title. Product labels and the
+existing exact-match checks are unchanged. Exact-head run
+[43677160634](https://github.com/centerionware/Clockrove/actions/runs/43677160634)
+passed that title check but then stopped in input mode while waiting for exact
+`Start Date`. The accessibility dump shows the actual start-date EditText value
+and focus, without a `Start Date` text/contentDescription. No local build or
+test ran.
+
+### 2026-11-15 — GPS input-mode field matcher correction
+
+The `43677160634` API-24 screenshot shows the input-mode picker open. Its
+accessibility tree exposes the start date as a focused EditText containing
+`11/09/2026`, without the expected `Start Date` label. The test now waits for
+two visible editable date values and verifies that one field is focused, which
+proves the input mode opened without relying on a missing label. The Review,
+point-count, cancellation/confirmation, persisted tombstone, and report/map
+assertions remain. A new exact-head Actions run is required; API 35 and later
+journeys were not reached on `43677160634`. No VM build or test ran.
+
+### 2026-11-15 — API 24/35 tax-error visibility repair
+
+PR #54 commit `3ca1267` adds a short scroll when the tax editor clips its
+inline validation message. Its earlier run `43674600623` passed API-24 billing
+but the page-sized swipe moved past the error on API 35. Follow-up commit
+`88d88b8` uses a 14%-viewport swipe; exact-head run
+[43676781145](https://github.com/centerionware/Clockrove/actions/runs/43676781145)
+completed successfully. Commits `44eea3d` and `b9c1147` integrate these changes
+into PR #51 so its final gate exercises the billing repair and GPS deletion
+journey together.
+The preceding `36e27ba` run `43673656562` had failed API-24 error visibility:
+the screenshot showed the focused tax editor clipped at the navigation bar.
+No local build or test ran.
+
+### 2026-11-15 — GPS deletion and billing exact-head validation passed
+
+On PR #51 exact head `c247e01`, GitHub Actions run
+[43678616256](https://github.com/centerionware/Clockrove/actions/runs/43678616256)
+completed successfully. Formatting, analysis, Flutter behavior tests, Android
+build, native unit tests, API-24/API-35 Android PDF generation and rendering,
+actual-document invoice-viewer checks, artifact exports, and locked release-tool
+validation all passed. The Android journey script validated the expected JUnit
+counts on both APIs, including one `GpsRangeDeletionDeviceTest` case per API,
+and required all nine GPS screenshots on each API. The run also includes the
+14%-viewport tax-error visibility repair integrated from PR #54. This is PR-head
+emulator evidence; physical GPS sampling/map acceptance, backup archive and
+restore work, and M7.6 full-app UI/E2E acceptance remain outstanding. No VM
+build, test, or formatter ran.

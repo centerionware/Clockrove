@@ -108,6 +108,11 @@ class HistoryDetail {
   final HistoryEntry? entry;
 }
 
+class LocationRangeDeletionPreview {
+  const LocationRangeDeletionPreview(this.version, this.pointCount);
+  final int version, pointCount;
+}
+
 HistoryRevision _revision(Map<Object?, Object?> value) => HistoryRevision(
   id: value['id'] as String,
   changed: value['changed'] as int,
@@ -164,6 +169,22 @@ class HistoryApi {
       value['entry'] == null
           ? null
           : HistoryEntry.decode(value['entry'] as Map<Object?, Object?>),
+    );
+  }
+
+  Future<LocationRangeDeletionPreview> previewLocationRangeDeletion({
+    required String? jobId,
+    required int start,
+    required int end,
+    required String timezone,
+  }) async {
+    final value = (await _channel.invokeMapMethod<Object?, Object?>(
+      'previewLocationRangeDeletion',
+      {'jobId': jobId, 'start': start, 'end': end, 'timezone': timezone},
+    ))!;
+    return LocationRangeDeletionPreview(
+      value['version'] as int,
+      value['pointCount'] as int,
     );
   }
 
@@ -267,6 +288,20 @@ class HistoryApi {
       _change('correctSession', id, version, draft.encode());
   Future<TimerOutcome> delete(String id, int version, String sessionId) =>
       _change('deleteSession', id, version, {'sessionId': sessionId});
+
+  Future<TimerOutcome> deleteLocationRange(
+    String id,
+    int version, {
+    required String? jobId,
+    required int start,
+    required int end,
+    required String timezone,
+  }) => _change('deleteLocationRange', id, version, {
+    'jobId': jobId,
+    'start': start,
+    'end': end,
+    'timezone': timezone,
+  });
 }
 
 final historyApiProvider = Provider<HistoryApi>((ref) => const HistoryApi());

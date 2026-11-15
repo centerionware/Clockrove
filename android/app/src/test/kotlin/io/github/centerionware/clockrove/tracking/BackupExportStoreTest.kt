@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.tracking
 import android.database.sqlite.SQLiteDatabase
 import android.util.Base64
 import java.io.File
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -102,6 +103,89 @@ class BackupExportStoreTest {
         val session = records.single { it["table"] == "sessions" && values(it)["id"] == runningBefore.id }
         assertNull(values(session)["end_ms"])
         assertEquals(runningBefore.copy(jobName = "Changed after snapshot"), repository.snapshot().running)
+        assertTrue(exportStore.close(started.snapshotId))
+    }
+
+    @Test
+    fun schema16ExportPreservesGpsDeletionCoverageAndCoordinateFreeCausalHistory() {
+        val beforeStart = repository.snapshot().version
+        assertNull(repository.execute(TimerRepository.Command(
+            "start-synthetic-gps-export-session",
+            beforeStart,
+            TimerRepository.Action.START,
+            jobId,
+            now,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val sessionId = requireNotNull(repository.snapshot().running).id
+        val pointId = "synthetic-gps-export-point"
+        val measuredAt = now + 1_000L
+        assertEquals(
+            TimerRepository.SampleResult.RECORDED,
+            repository.recordLocation(TimerRepository.LocationPoint(
+                pointId, sessionId, measuredAt, measuredAt, 12.0, -34.0, 5.0,
+            )),
+        )
+        assertNull(repository.execute(TimerRepository.Command(
+            "stop-synthetic-gps-export-session",
+            repository.snapshot().version,
+            TimerRepository.Action.STOP,
+            null,
+            measuredAt + 1_000L,
+            "Etc/UTC",
+            0,
+            TimerRepository.Origin.MANUAL,
+        )).conflict)
+        val range = GpsDeletionStore.Range(jobId, measuredAt, measuredAt + 1L, "Etc/UTC")
+        assertNull(repository.deleteLocationRange(
+            "delete-synthetic-gps-export-range", repository.snapshot().version, range,
+        ).conflict)
+
+        val info = exportStore.info(database)
+        assertEquals(16, info.schemaVersion)
+        assertTrue(info.portableTables.contains("location_deletion_ranges"))
+        val started = exportStore.start(database)
+        assertEquals(16, started.schemaVersion)
+        val records = readAll(started.snapshotId)
+        val rangeRecord = records.single {
+            it["table"] == "location_deletion_ranges" && values(it)["job_id"] == jobId
+        }
+        val rangeValues = values(rangeRecord)
+        assertEquals(measuredAt, rangeValues["start_ms"])
+        assertEquals(measuredAt + 1L, rangeValues["end_ms"])
+        val rangeRevisionId = rangeValues["revision_id"] as String
+        val rangeRevision = records.single {
+            it["table"] == "entity_revisions" && values(it)["id"] == rangeRevisionId
+        }
+        val rangePayload = JSONObject(values(rangeRevision)["payload"] as String)
+        assertEquals(setOf("id", "job_id", "start_ms", "end_ms", "timezone_id"),
+            rangePayload.keys().asSequence().toSet())
+        assertFalse(rangePayload.has("latitude"))
+        assertFalse(rangePayload.has("longitude"))
+
+        val pointTombstone = records.single {
+            it["table"] == "entity_revisions" && values(it)["kind"] == "location" &&
+                values(it)["entity_id"] == pointId &&
+                (values(it)["deleted"] as Number).toInt() == 1
+        }
+        val tombstoneValues = values(pointTombstone)
+        val tombstonePayload = JSONObject(tombstoneValues["payload"] as String)
+        assertEquals(setOf("id", "session_id"), tombstonePayload.keys().asSequence().toSet())
+        assertFalse(tombstonePayload.has("latitude"))
+        assertFalse(tombstonePayload.has("longitude"))
+        val parentRows = records.filter {
+            it["table"] == "revision_parents" && values(it)["revision_id"] == tombstoneValues["id"]
+        }
+        val parentIds = parentRows.map { values(it)["parent_id"] as String }.toSet()
+        assertEquals(2, parentIds.size)
+        assertTrue(rangeRevisionId in parentIds)
+        assertTrue(records.any {
+            it["table"] == "entity_revisions" && (values(it)["id"] as String) in parentIds &&
+                values(it)["entity_id"] == pointId &&
+                (values(it)["deleted"] as Number).toInt() == 0
+        })
         assertTrue(exportStore.close(started.snapshotId))
     }
 

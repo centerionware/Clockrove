@@ -177,7 +177,7 @@ class InvoiceBillingDeviceTest {
             find(topLabel)?.let(::safeTapBounds) != null
         }
     }
-    private fun swipeContent(up: Boolean) {
+    private fun swipeContent(up: Boolean, travelFraction: Float? = null) {
         val root = automation.rootInActiveWindow ?: return
         val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
         data class Target(val bounds: android.graphics.Rect, val firstChild: android.graphics.Rect?)
@@ -220,7 +220,11 @@ class InvoiceBillingDeviceTest {
         val child = target?.firstChild?.takeUnless { it.isEmpty }
         val x = (child?.let { (it.left + 1).coerceAtMost(it.right - 1) } ?: content.centerX()).toFloat()
         val startY = if (up) bottom - 80 else top + 80
-        val endY = if (up) top + (bottom - top) * 2 / 5 else bottom - 160
+        val endY = travelFraction?.let { fraction ->
+            val travel = ((bottom - top) * fraction).toInt()
+            if (up) maxOf(top + 20, startY - travel)
+            else minOf(bottom - 20, startY + travel)
+        } ?: if (up) top + (bottom - top) * 2 / 5 else bottom - 160
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long, y: Float) {
             val event = android.view.MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
@@ -485,6 +489,16 @@ class InvoiceBillingDeviceTest {
             val beforeInvalidTax = repository.jobDetail(job)
             reveal("Save job settings"); click("Save job settings")
             scrollToStart(); reveal("Job tax (%)", true)
+            // A clipped editor can be tappable while its inline error remains
+            // below the viewport. Leave room beneath it before checking errors.
+            val taxBounds = android.graphics.Rect().also(waitFor("Job tax (%)", true)::getBoundsInScreen)
+            val viewport = requireNotNull(automation.rootInActiveWindow?.let(::safeTapBounds))
+            if (taxBounds.bottom > viewport.bottom - viewport.height() / 4) {
+                // Move only enough to expose the multi-line validation text.
+                // A page-sized fling can overshoot it and land near the form end.
+                swipeContent(up = true, travelFraction = 0.14f)
+                automation.waitForIdle(250, 3000)
+            }
             waitFor("Tax percentage must be between 0 and 100.")
             assertEquals(beforeInvalidTax, repository.jobDetail(job))
             scrollToStart(); reveal("Job tax (%)", true)
