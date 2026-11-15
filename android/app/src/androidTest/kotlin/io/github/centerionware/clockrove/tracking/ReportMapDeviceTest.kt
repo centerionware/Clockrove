@@ -4,6 +4,7 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,7 +81,12 @@ class ReportMapDeviceTest {
         val downTime = SystemClock.uptimeMillis()
         fun inject(action: Int, eventTime: Long): Boolean {
             val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
-            return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+            return try {
+                event.source = InputDevice.SOURCE_TOUCHSCREEN
+                automation.injectInputEvent(event, true)
+            } finally {
+                event.recycle()
+            }
         }
         if (!inject(MotionEvent.ACTION_DOWN, downTime)) {
             throw AssertionError("Could not touch '$label' on the actual Android screen")
@@ -90,7 +96,6 @@ class ReportMapDeviceTest {
             inject(MotionEvent.ACTION_CANCEL, SystemClock.uptimeMillis())
             throw AssertionError("Could not release touch on '$label' on the actual Android screen")
         }
-        automation.waitForIdle(100, 3000)
     }
 
     private fun reveal(label: String) {

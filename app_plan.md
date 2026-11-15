@@ -3391,3 +3391,15 @@ validating the map screen. Add a tap at the
 visible, screen-clipped label bounds and retain the destination assertions. The
 fix still requires a fresh exact-head Actions run; M7.2 acceptance remains
 pending. No local build, test, formatter or analyzer ran.
+
+The touchscreen fallback successor `6e2673d7066fc7a4a88f4e3f78f35783cf3e5439`
+passed exact-head Validate run
+[43728554581](https://github.com/centerionware/Clockrove/actions/runs/43728554581).
+API 24 and API 35 each passed 29/29 actual Android tests with zero failures,
+errors or skips; both result artifacts include the real 49-sample map capture.
+Before merging, review found that the convenience `MotionEvent.obtain` event
+source was unspecified and the generic idle wait could be an unnecessary timeout
+before the destination checks. The successor sets `SOURCE_TOUCHSCREEN` and
+relies on the existing destination-screen polling. This refinement needs its
+own exact-head Actions validation; M7.2 acceptance remains pending. No local
+build, test, formatter or analyzer ran.
