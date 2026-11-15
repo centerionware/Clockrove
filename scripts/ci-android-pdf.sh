@@ -37,6 +37,13 @@ grep -F 'Android emulator version 37.2.13' "$RUNNER_TEMP/clockrove-emulator-vers
 test -c /dev/kvm
 sudo chmod a+rw /dev/kvm
 (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:assembleDebugAndroidTest)
+# integration_test rebuilds the shared output APK with its test entrypoint.
+# Keep immutable copies so the next API always installs the real app and the
+# matching native instrumentation, regardless of the preceding benchmark.
+clockrove_validation_apk="$RUNNER_TEMP/clockrove-validation-app.apk"
+clockrove_validation_test_apk="$RUNNER_TEMP/clockrove-validation-tests.apk"
+cp "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk" "$clockrove_validation_apk"
+cp "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$clockrove_validation_test_apk"
 for clockrove_api in 24 35; do
   if [[ "$clockrove_api" == 24 ]]; then
     clockrove_revision=8
@@ -88,8 +95,8 @@ for clockrove_api in 24 35; do
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$clockrove_validation_apk"
+  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$clockrove_validation_test_apk"
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
   timeout --kill-after=10s 60s adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"

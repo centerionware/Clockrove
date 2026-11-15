@@ -103,6 +103,11 @@ jobs:
           escaped = patch.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print(f'::error title=Dart formatter correction::{escaped or "Formatter patch was empty"}')
           PY_FORMAT
+      - name: Require clean formatting
+        if: always() && steps.format.outcome == 'failure'
+        run: |
+          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
+          exit 1
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Test implemented behavior
@@ -180,8 +185,3 @@ jobs:
           bundle exec ruby -c fastlane/Fastfile
       - name: Publishing status
         run: echo 'Validation only. Successful main pushes trigger separate Play internal delivery; production tags remain readiness-gated.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Require clean formatting
-        if: always() && steps.format.outcome == 'failure'
-        run: |
-          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
-          exit 1
