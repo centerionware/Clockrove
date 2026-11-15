@@ -306,10 +306,10 @@ class TaskConversationDeviceTest {
             click("Comment photo attachment")
             waitFor("Photo 4 of 4")
             capture("task-photo-viewer")
-            swipePhotoViewer(left = true)
+            swipePhotoViewer(left = false)
             waitFor("Photo 3 of 4")
             capture("task-photo-viewer-previous")
-            swipePhotoViewer(left = false)
+            swipePhotoViewer(left = true)
             waitFor("Photo 4 of 4")
         } finally {
             instrumentation.runOnMainSync {
