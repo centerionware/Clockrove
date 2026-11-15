@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 
 import 'backup_archive.dart';
@@ -7,7 +9,7 @@ typedef BackupExportProgressCallback = void Function(
   BackupSnapshotProgress progress,
 );
 
-/// Reads a stable native snapshot and serializes it before its handle expires.
+/// Reads row metadata from a stable native snapshot and streams its archive.
 /// Native SQLite remains the sole source of persisted values and BLOB bytes.
 final class BackupSnapshotExporter {
   BackupSnapshotExporter({MethodChannel? channel})
@@ -18,7 +20,11 @@ final class BackupSnapshotExporter {
 
   final MethodChannel _channel;
 
-  Future<BackupSnapshotExport> export({
+  /// Reads and validates snapshot row metadata, then returns a single-use
+  /// archive stream. The detached native snapshot remains open until the
+  /// stream completes, is cancelled, or [BackupSnapshotStreamExport.close] is
+  /// called.
+  Future<BackupSnapshotStreamExport> exportStream({
     BackupCancellationCheck? isCancelled,
     BackupExportProgressCallback? onProgress,
   }) async {
@@ -31,25 +37,29 @@ final class BackupSnapshotExporter {
     StackTrace? operationStack;
     Object? cleanupFailure;
     StackTrace? cleanupStack;
-    BackupSnapshotExport? exported;
+    BackupSnapshotStreamExport? exported;
 
     try {
       final started = await _startSnapshot();
       snapshotId = started.snapshotId;
       _validateSnapshotStart(info, started);
 
-      final rows = <BackupArchiveRow>[];
+      final rows = <BackupArchiveStreamRow>[];
+      final descriptorsById = <String, _SnapshotBlob>{};
       var mediaCount = 0;
       var mediaBytes = 0;
+      var mediaBytesHashed = 0;
+      var recordsRead = 0;
+      final hashedBlobIds = <String>{};
       String? cursor;
       var done = false;
       var pageCount = 0;
       void reportProgress({int? mediaBytesRead}) {
         onProgress?.call(
           BackupSnapshotProgress(
-            recordsRead: rows.length,
+            recordsRead: recordsRead,
             totalRecords: started.recordCount,
-            mediaBytesRead: mediaBytesRead ?? mediaBytes,
+            mediaBytesRead: mediaBytesRead ?? 0,
             totalMediaBytes: started.mediaBytes,
           ),
         );
@@ -93,7 +103,7 @@ final class BackupSnapshotExporter {
               'The backup snapshot contains unsupported table "${record.table}".',
             );
           }
-          final blobs = <BackupArchiveBlob>[];
+          final blobs = <BackupArchiveBlobSource>[];
           for (final descriptor in record.blobs) {
             mediaCount++;
             if (mediaCount > started.mediaCount ||
@@ -109,32 +119,29 @@ final class BackupSnapshotExporter {
                 'The backup snapshot media size is invalid or too large.',
               );
             }
-            final bytes = descriptor.sizeBytes == 0
-                ? Uint8List(0)
-                : await _readBlob(
-                    snapshotId: snapshotId,
-                    descriptor: descriptor,
-                    chunkBytes: info.maxBlobChunkBytes,
-                    isCancelled: isCancelled,
-                    onBytesRead: (bytesRead) =>
-                        reportProgress(mediaBytesRead: mediaBytes + bytesRead),
-                  );
+            if (descriptorsById.containsKey(descriptor.id)) {
+              throw const FormatException(
+                'The backup snapshot repeats a media identifier.',
+              );
+            }
+            descriptorsById[descriptor.id] = descriptor;
             mediaBytes += descriptor.sizeBytes;
             blobs.add(
-              BackupArchiveBlob(
+              BackupArchiveBlobSource(
                 id: descriptor.id,
                 column: descriptor.column,
-                bytes: bytes,
+                sizeBytes: descriptor.sizeBytes,
               ),
             );
           }
           rows.add(
-            BackupArchiveRow(
+            BackupArchiveStreamRow(
               table: record.table,
               values: record.values,
               blobs: blobs,
             ),
           );
+          recordsRead++;
           reportProgress();
         }
 
@@ -161,14 +168,9 @@ final class BackupSnapshotExporter {
           mediaBytes != started.mediaBytes) {
         throw const FormatException('The backup snapshot counts do not match.');
       }
-
-      // The snapshot is no longer needed after every row and media byte has
-      // been received. Close native staging before hashing/serialization.
-      await _closeSnapshot(snapshotId);
-      snapshotId = null;
       _checkCancelled(isCancelled);
 
-      final archiveBytes = await BackupArchiveCodec.encode(
+      final plan = BackupArchiveCodec.prepareStream(
         schemaVersion: started.schemaVersion,
         stateVersion: started.stateVersion,
         capturedAtUtcMillis: started.capturedAtUtcMillis,
@@ -177,15 +179,40 @@ final class BackupSnapshotExporter {
         maxRows: info.maxRecords,
         maxBlobs: info.maxMediaCount,
       );
-      exported = BackupSnapshotExport(
-        archiveBytes: archiveBytes,
+      final lease = _SnapshotLease(
+        snapshotId,
+        closeSnapshot: _closeSnapshot,
+      );
+      Future<void> closeExport() async {
+        plan.dispose();
+        descriptorsById.clear();
+        hashedBlobIds.clear();
+        await lease.close();
+      }
+      snapshotId = null;
+      exported = BackupSnapshotStreamExport(
+        archiveByteLength: plan.totalLength,
         schemaVersion: started.schemaVersion,
         stateVersion: started.stateVersion,
         capturedAtUtcMillis: started.capturedAtUtcMillis,
         openSessionCount: started.openSessionCount,
-        recordCount: rows.length,
+        recordCount: started.recordCount,
         mediaCount: mediaCount,
         mediaBytes: mediaBytes,
+        archiveStream: _streamArchive(
+          plan: plan,
+          lease: lease,
+          closeSnapshot: closeExport,
+          descriptorsById: descriptorsById,
+          chunkBytes: info.maxBlobChunkBytes,
+          isCancelled: isCancelled,
+          onProgress: (bytesRead) {
+            mediaBytesHashed = bytesRead;
+            reportProgress(mediaBytesRead: mediaBytesHashed);
+          },
+          shouldReportBlob: (id) => hashedBlobIds.add(id),
+        ),
+        closeSnapshot: closeExport,
       );
     } on Object catch (error, stackTrace) {
       operationFailure = error;
@@ -214,6 +241,74 @@ final class BackupSnapshotExporter {
       Error.throwWithStackTrace(cleanupFailure, cleanupStack!);
     }
     return exported!;
+  }
+
+  Stream<Uint8List> _streamArchive({
+    required BackupArchiveStreamPlan plan,
+    required _SnapshotLease lease,
+    required Future<void> Function() closeSnapshot,
+    required Map<String, _SnapshotBlob> descriptorsById,
+    required int chunkBytes,
+    required BackupCancellationCheck? isCancelled,
+    required void Function(int bytesRead) onProgress,
+    required bool Function(String blobId) shouldReportBlob,
+  }) async* {
+    Object? operationFailure;
+    StackTrace? operationStack;
+    Object? cleanupFailure;
+    StackTrace? cleanupStack;
+    var reportedMediaBytes = 0;
+    try {
+      yield* plan.encode(
+        isCancelled: isCancelled,
+        readBlob: (blobId) async* {
+          final descriptor = descriptorsById[blobId];
+          if (descriptor == null) {
+            throw const FormatException(
+              'The backup archive refers to unknown media.',
+            );
+          }
+          final reportThisPass = shouldReportBlob(blobId);
+          await for (final chunk in _readBlobChunks(
+            snapshotId: lease.snapshotId,
+            descriptor: descriptor,
+            chunkBytes: chunkBytes,
+            isCancelled: isCancelled,
+          )) {
+            if (reportThisPass) {
+              reportedMediaBytes += chunk.length;
+              onProgress(reportedMediaBytes);
+            }
+            yield chunk;
+          }
+        },
+      );
+    } on BackupArchiveStreamCancelledException catch (_, stackTrace) {
+      operationFailure = const BackupExportCancelledException();
+      operationStack = stackTrace;
+    } on Object catch (error, stackTrace) {
+      operationFailure = error;
+      operationStack = stackTrace;
+    } finally {
+      try {
+        await closeSnapshot();
+      } on Object catch (error, stackTrace) {
+        cleanupFailure = error;
+        cleanupStack = stackTrace;
+      }
+    }
+    if (operationFailure != null) {
+      if (cleanupFailure != null) {
+        throw BackupSnapshotCleanupException(
+          operationFailure: operationFailure,
+          cleanupFailure: cleanupFailure,
+        );
+      }
+      Error.throwWithStackTrace(operationFailure, operationStack!);
+    }
+    if (cleanupFailure != null) {
+      Error.throwWithStackTrace(cleanupFailure, cleanupStack!);
+    }
   }
 
   Future<_SnapshotInfo> _readInfo() async {
@@ -309,14 +404,12 @@ final class BackupSnapshotExporter {
     );
   }
 
-  Future<Uint8List> _readBlob({
+  Stream<Uint8List> _readBlobChunks({
     required String snapshotId,
     required _SnapshotBlob descriptor,
     required int chunkBytes,
     required BackupCancellationCheck? isCancelled,
-    required void Function(int bytesRead) onBytesRead,
-  }) async {
-    final output = Uint8List(descriptor.sizeBytes);
+  }) async* {
     var offset = 0;
     while (offset < descriptor.sizeBytes) {
       _checkCancelled(isCancelled);
@@ -346,11 +439,9 @@ final class BackupSnapshotExporter {
           'The backup snapshot media chunk is invalid.',
         );
       }
-      output.setRange(offset, nextOffset, rawBytes);
       offset = nextOffset;
-      onBytesRead(offset);
+      yield rawBytes;
     }
-    return output;
   }
 
   Future<void> _closeSnapshot(String snapshotId) async {
@@ -439,7 +530,7 @@ final class BackupSnapshotExporter {
         );
       }
     }
-    return Map.unmodifiable(map);
+    return map;
   }
 
   static Set<String> _stringSet(Map<String, Object?> map, String key) {
@@ -512,9 +603,11 @@ final class BackupSnapshotProgress {
   }
 }
 
-final class BackupSnapshotExport {
-  const BackupSnapshotExport({
-    required this.archiveBytes,
+/// Metadata and a one-shot archive source backed by a detached native snapshot.
+/// Call [close] if the stream is never consumed.
+final class BackupSnapshotStreamExport {
+  BackupSnapshotStreamExport({
+    required this.archiveByteLength,
     required this.schemaVersion,
     required this.stateVersion,
     required this.capturedAtUtcMillis,
@@ -522,9 +615,12 @@ final class BackupSnapshotExport {
     required this.recordCount,
     required this.mediaCount,
     required this.mediaBytes,
-  });
+    required this.archiveStream,
+    required Future<void> Function() closeSnapshot,
+  }) :
+       _closeSnapshot = closeSnapshot;
 
-  final Uint8List archiveBytes;
+  final int archiveByteLength;
   final int schemaVersion;
   final int stateVersion;
   final int capturedAtUtcMillis;
@@ -532,6 +628,10 @@ final class BackupSnapshotExport {
   final int recordCount;
   final int mediaCount;
   final int mediaBytes;
+  final Stream<Uint8List> archiveStream;
+  final Future<void> Function() _closeSnapshot;
+
+  Future<void> close() => _closeSnapshot();
 }
 
 final class BackupExportCancelledException implements Exception {
@@ -554,6 +654,20 @@ final class BackupSnapshotCleanupException implements Exception {
   String toString() =>
       'Backup export failed ($operationFailure), and native snapshot cleanup '
       'also failed ($cleanupFailure).';
+}
+
+final class _SnapshotLease {
+  _SnapshotLease(
+    this.snapshotId, {
+    required Future<void> Function(String) closeSnapshot,
+  })
+    : _closeSnapshot = closeSnapshot;
+
+  final String snapshotId;
+  final Future<void> Function(String) _closeSnapshot;
+  Future<void>? _closeFuture;
+
+  Future<void> close() => _closeFuture ??= _closeSnapshot(snapshotId);
 }
 
 final class _SnapshotInfo {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
 
 /// Authenticated plaintext archive v1.
@@ -167,13 +168,15 @@ abstract final class BackupArchiveCodec {
         );
       }
       rowLength = _boundedAdd(rowLength, 2, maxRecordBytes);
+      final rowBlobColumns = <String>{};
       for (final blob in rowBlobs) {
-        if (blob.id.isEmpty || !blobIds.add(blob.id)) {
-          throw const FormatException('The backup repeats a media identifier.');
-        }
-        if (!(_tables[row.table]?.blobColumns.contains(blob.column) ?? false)) {
+        if (blob.id.isEmpty ||
+            !blobIds.add(blob.id) ||
+            !rowBlobColumns.add(blob.column) ||
+            !(_tables[row.table]?.blobColumns.contains(blob.column) ?? false) ||
+            row.values.containsKey(blob.column)) {
           throw FormatException(
-            'The backup contains an unsupported ${row.table} media field.',
+            'The ${row.table} media reference is invalid.',
           );
         }
         if (blob.bytes.length > 0xffffffff) {
@@ -273,6 +276,167 @@ abstract final class BackupArchiveCodec {
       throw StateError('Backup archive media length did not match output.');
     }
     return output;
+  }
+
+  /// Preflights archive metadata and returns a bounded streaming encoder.
+  ///
+  /// Blob content is read twice: once to calculate the descriptor hashes, and
+  /// once in archive order to write the media section. The second pass is
+  /// checked against the first, so a changing source cannot produce an
+  /// internally inconsistent archive. Only row metadata and 32-byte hashes
+  /// are retained; media bytes stay in bounded chunks.
+  static BackupArchiveStreamPlan prepareStream({
+    required int schemaVersion,
+    required int stateVersion,
+    required int capturedAtUtcMillis,
+    required List<BackupArchiveStreamRow> rows,
+    int maxBytes = maxArchiveBytes,
+    int maxRows = maxRecords,
+    int maxBlobs = maxMediaCount,
+  }) {
+    _validateMetadata(
+      schemaVersion: schemaVersion,
+      stateVersion: stateVersion,
+      capturedAtUtcMillis: capturedAtUtcMillis,
+      maxBytes: maxBytes,
+      maxRows: maxRows,
+      maxBlobs: maxBlobs,
+    );
+    if (rows.length > maxRows) {
+      throw const FormatException('The backup contains too many records.');
+    }
+    final preparedRows = <_PreparedStreamRow>[];
+    final primaryKeys = <String, Set<String>>{};
+    final blobIds = <String>{};
+    var blobCount = 0;
+    var recordsLength = 0;
+    var mediaLength = 0;
+
+    for (final row in rows) {
+      final rowWithoutBlobs = BackupArchiveRow(
+        table: row.table,
+        values: row.values,
+        blobs: const [],
+      );
+      _validateRow(rowWithoutBlobs, schemaVersion);
+      blobCount += row.blobs.length;
+      if (blobCount > maxBlobs) {
+        throw const FormatException(
+          'The backup contains too many media files.',
+        );
+      }
+
+      final valueKeys = row.values.keys.toList()..sort();
+      final rowBlobs = [...row.blobs]..sort((a, b) => a.id.compareTo(b.id));
+      if (valueKeys.length > 0xffff || rowBlobs.length > 0xffff) {
+        throw const FormatException('A backup record has too many fields.');
+      }
+
+      var rowLength = 1 + _shortStringEncodedLength(row.table);
+      rowLength = _boundedAdd(rowLength, 2, maxRecordBytes);
+      for (final key in valueKeys) {
+        rowLength = _boundedAdd(
+          rowLength,
+          _shortStringEncodedLength(key),
+          maxRecordBytes,
+        );
+        rowLength = _boundedAdd(
+          rowLength,
+          _valueEncodedLength(row.values[key]),
+          maxRecordBytes,
+        );
+      }
+      rowLength = _boundedAdd(rowLength, 2, maxRecordBytes);
+      for (final blob in rowBlobs) {
+        if (blob.id.isEmpty || !blobIds.add(blob.id)) {
+          throw const FormatException('The backup repeats a media identifier.');
+        }
+        if (!(_tables[row.table]?.blobColumns.contains(blob.column) ?? false)) {
+          throw FormatException(
+            'The backup contains an unsupported ${row.table} media field.',
+          );
+        }
+        if (blob.sizeBytes < 0 || blob.sizeBytes > 0xffffffff) {
+          throw const FormatException('A backup media file is too large.');
+        }
+        rowLength = _boundedAdd(
+          rowLength,
+          _shortStringEncodedLength(blob.id),
+          maxRecordBytes,
+        );
+        rowLength = _boundedAdd(
+          rowLength,
+          _shortStringEncodedLength(blob.column),
+          maxRecordBytes,
+        );
+        rowLength = _boundedAdd(rowLength, 4 + 32, maxRecordBytes);
+        mediaLength = _boundedAdd(mediaLength, blob.sizeBytes, maxBytes);
+      }
+      if (rowLength > maxRecordBytes) {
+        throw const FormatException('A backup record is too large.');
+      }
+      final primaryKey = _primaryKey(rowWithoutBlobs);
+      if (!primaryKeys.putIfAbsent(row.table, () => {}).add(primaryKey)) {
+        throw FormatException('The backup repeats a ${row.table} record.');
+      }
+      recordsLength = _boundedAdd(recordsLength, rowLength, maxBytes);
+      if (_headerLength + recordsLength + mediaLength > maxBytes) {
+        throw const FormatException(
+          'The full backup exceeds the supported size. No media was omitted.',
+        );
+      }
+      preparedRows.add(
+        _PreparedStreamRow(row, valueKeys, rowBlobs, primaryKey, rowLength),
+      );
+    }
+
+    _validateRevisionGraph([
+      for (final prepared in preparedRows)
+        BackupArchiveRow(
+          table: prepared.row.table,
+          values: prepared.row.values,
+          blobs: const [],
+        ),
+    ]);
+
+    preparedRows.sort((left, right) {
+      final tableOrder = left.row.table.compareTo(right.row.table);
+      if (tableOrder != 0) return tableOrder;
+      return left.primaryKey.compareTo(right.primaryKey);
+    });
+
+    final totalLength = _headerLength + recordsLength + mediaLength;
+    if (totalLength > maxBytes ||
+        recordsLength > 0xffffffff ||
+        mediaLength > 0xffffffff) {
+      throw const FormatException(
+        'The full backup exceeds the supported size. No media was omitted.',
+      );
+    }
+    final headerBytes = Uint8List(_headerLength);
+    final header = ByteData.sublistView(headerBytes);
+    headerBytes.setRange(0, _magic.length, _magic);
+    header.setUint16(8, currentFormatVersion, Endian.big);
+    header.setUint16(10, _headerLength, Endian.big);
+    header.setUint32(12, schemaVersion, Endian.big);
+    header.setInt64(16, stateVersion, Endian.big);
+    header.setInt64(24, capturedAtUtcMillis, Endian.big);
+    header.setUint32(32, rows.length, Endian.big);
+    header.setUint32(36, blobCount, Endian.big);
+    header.setUint32(40, recordsLength, Endian.big);
+    header.setUint32(44, mediaLength, Endian.big);
+    return BackupArchiveStreamPlan._(
+      schemaVersion: schemaVersion,
+      stateVersion: stateVersion,
+      capturedAtUtcMillis: capturedAtUtcMillis,
+      rows: preparedRows,
+      headerBytes: headerBytes,
+      recordCount: rows.length,
+      blobCount: blobCount,
+      recordsLength: recordsLength,
+      mediaLength: mediaLength,
+      totalLength: totalLength,
+    );
   }
 
   /// Parses authenticated archive plaintext. Call only after AES-GCM succeeds.
@@ -745,6 +909,213 @@ final class _PreparedRow {
   final String primaryKey;
 }
 
+final class _PreparedStreamRow {
+  const _PreparedStreamRow(
+    this.row,
+    this.valueKeys,
+    this.blobs,
+    this.primaryKey,
+    this.encodedLength,
+  );
+
+  final BackupArchiveStreamRow row;
+  final List<String> valueKeys;
+  final List<BackupArchiveBlobSource> blobs;
+  final String primaryKey;
+  final int encodedLength;
+}
+
+typedef BackupArchiveBlobReader = Stream<List<int>> Function(String blobId);
+typedef BackupArchiveCancellationCheck = bool Function();
+
+/// A row whose media is described by length and loaded on demand.
+final class BackupArchiveStreamRow {
+  BackupArchiveStreamRow({
+    required this.table,
+    required Map<String, Object?> values,
+    required List<BackupArchiveBlobSource> blobs,
+  }) : values = Map.unmodifiable(Map<String, Object?>.of(values)),
+       blobs = List.unmodifiable(blobs);
+
+  final String table;
+  final Map<String, Object?> values;
+  final List<BackupArchiveBlobSource> blobs;
+}
+
+final class BackupArchiveBlobSource {
+  const BackupArchiveBlobSource({
+    required this.id,
+    required this.column,
+    required this.sizeBytes,
+  });
+
+  final String id;
+  final String column;
+  final int sizeBytes;
+}
+
+/// A preflighted CLKARCH1 stream. Its output stays within 64 KiB per event.
+final class BackupArchiveStreamPlan {
+  BackupArchiveStreamPlan._({
+    required this.schemaVersion,
+    required this.stateVersion,
+    required this.capturedAtUtcMillis,
+    required List<_PreparedStreamRow> rows,
+    required Uint8List headerBytes,
+    required this.recordCount,
+    required this.blobCount,
+    required this.recordsLength,
+    required this.mediaLength,
+    required this.totalLength,
+  }) : _rows = rows,
+       _headerBytes = headerBytes;
+
+  final int schemaVersion;
+  final int stateVersion;
+  final int capturedAtUtcMillis;
+  final List<_PreparedStreamRow> _rows;
+  final Uint8List _headerBytes;
+  final int recordCount;
+  final int blobCount;
+  final int recordsLength;
+  final int mediaLength;
+  final int totalLength;
+
+  /// Drops preflighted row metadata and the plaintext archive header.
+  void dispose() {
+    _rows.clear();
+    _headerBytes.fillRange(0, _headerBytes.length, 0);
+  }
+
+  Stream<Uint8List> encode({
+    required BackupArchiveBlobReader readBlob,
+    BackupArchiveCancellationCheck? isCancelled,
+  }) async* {
+    final hashesById = <String, List<int>>{};
+    for (final prepared in _rows) {
+      for (final blob in prepared.blobs) {
+        _checkCancelled(isCancelled);
+        final digest = _ArchiveSha256Stream();
+        var bytesRead = 0;
+        if (blob.sizeBytes > 0) {
+          await for (final chunk in readBlob(blob.id)) {
+            _checkCancelled(isCancelled);
+            if (chunk.isEmpty || chunk.length > blob.sizeBytes - bytesRead) {
+              throw const FormatException(
+                'The backup snapshot media length changed.',
+              );
+            }
+            bytesRead += chunk.length;
+            digest.add(chunk);
+          }
+        }
+        if (bytesRead != blob.sizeBytes) {
+          throw const FormatException(
+            'The backup snapshot media length changed.',
+          );
+        }
+        hashesById[blob.id] = digest.close();
+      }
+    }
+
+    var emittedBytes = 0;
+    final output = _ArchiveChunkBuffer();
+    for (final chunk in output.add(_headerBytes)) {
+      emittedBytes += chunk.length;
+      yield chunk;
+    }
+    for (final prepared in _rows) {
+      _checkCancelled(isCancelled);
+      final rowBytes = Uint8List(prepared.encodedLength);
+      final writer = _ArchiveWriter(rowBytes, 0);
+      writer.writeByte(1);
+      writer.writeShortString(prepared.row.table);
+      writer.writeUint16(prepared.valueKeys.length);
+      for (final key in prepared.valueKeys) {
+        writer.writeShortString(key);
+        writer.writeValue(prepared.row.values[key]);
+      }
+      writer.writeUint16(prepared.blobs.length);
+      for (final blob in prepared.blobs) {
+        writer.writeShortString(blob.id);
+        writer.writeShortString(blob.column);
+        writer.writeUint32(blob.sizeBytes);
+        writer.writeBytes(hashesById[blob.id]!);
+      }
+      if (writer.offset != rowBytes.length) {
+        throw StateError('Backup archive row length changed after preflight.');
+      }
+      for (final chunk in output.add(rowBytes)) {
+        emittedBytes += chunk.length;
+        yield chunk;
+      }
+    }
+    for (final chunk in output.flush()) {
+      emittedBytes += chunk.length;
+      yield chunk;
+    }
+    if (emittedBytes != 48 + recordsLength) {
+      throw StateError('Backup archive record length did not match preflight.');
+    }
+
+    for (final prepared in _rows) {
+      for (final blob in prepared.blobs) {
+        _checkCancelled(isCancelled);
+        final digest = _ArchiveSha256Stream();
+        var bytesRead = 0;
+        if (blob.sizeBytes > 0) {
+          await for (final chunk in readBlob(blob.id)) {
+            _checkCancelled(isCancelled);
+            if (chunk.isEmpty || chunk.length > blob.sizeBytes - bytesRead) {
+              throw const FormatException(
+                'The backup snapshot media changed while exporting.',
+              );
+            }
+            bytesRead += chunk.length;
+            digest.add(chunk);
+            for (final outputChunk in output.add(chunk)) {
+              emittedBytes += outputChunk.length;
+              yield outputChunk;
+            }
+          }
+        }
+        if (bytesRead != blob.sizeBytes ||
+            !_constantTimeBytesEqual(digest.close(), hashesById[blob.id]!)) {
+          throw const FormatException(
+            'The backup snapshot media changed while exporting.',
+          );
+        }
+      }
+    }
+    for (final chunk in output.flush()) {
+      emittedBytes += chunk.length;
+      yield chunk;
+    }
+    if (emittedBytes != totalLength) {
+      throw StateError('Backup archive length did not match preflight.');
+    }
+  }
+
+  static void _checkCancelled(BackupArchiveCancellationCheck? check) {
+    if (check?.call() ?? false) {
+      throw const BackupArchiveStreamCancelledException();
+    }
+  }
+
+  static bool _constantTimeBytesEqual(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    var difference = 0;
+    for (var index = 0; index < left.length; index++) {
+      difference |= left[index] ^ right[index];
+    }
+    return difference == 0;
+  }
+}
+
+final class BackupArchiveStreamCancelledException implements Exception {
+  const BackupArchiveStreamCancelledException();
+}
+
 final class BackupTableSchema {
   const BackupTableSchema(
     this.name,
@@ -976,4 +1347,73 @@ final class _ArchiveWriter {
     bytes.setRange(offset, offset + value.length, value);
     offset += value.length;
   }
+}
+
+final class _ArchiveChunkBuffer {
+  static const int _chunkBytes = 64 * 1024;
+
+  BytesBuilder _pending = BytesBuilder(copy: false);
+  int _pendingLength = 0;
+
+  Iterable<Uint8List> add(List<int> bytes) sync* {
+    var offset = 0;
+    while (offset < bytes.length) {
+      final available = _chunkBytes - _pendingLength;
+      final remaining = bytes.length - offset;
+      final count = available < remaining ? available : remaining;
+      _pending.add(
+        Uint8List.fromList(bytes.getRange(offset, offset + count).toList()),
+      );
+      _pendingLength += count;
+      offset += count;
+      if (_pendingLength == _chunkBytes) {
+        yield _pending.takeBytes();
+        _pending = BytesBuilder(copy: false);
+        _pendingLength = 0;
+      }
+    }
+  }
+
+  Iterable<Uint8List> flush() sync* {
+    if (_pendingLength == 0) return;
+    yield _pending.takeBytes();
+    _pending = BytesBuilder(copy: false);
+    _pendingLength = 0;
+  }
+}
+
+final class _ArchiveSha256Stream {
+  final _ArchiveDigestSink _output = _ArchiveDigestSink();
+  late final ByteConversionSink _input = crypto.sha256.startChunkedConversion(
+    _output,
+  );
+  bool _closed = false;
+
+  void add(List<int> bytes) {
+    if (_closed) throw StateError('SHA-256 stream is already closed.');
+    _input.add(bytes);
+  }
+
+  List<int> close() {
+    if (_closed) throw StateError('SHA-256 stream is already closed.');
+    _closed = true;
+    _input.close();
+    return List<int>.unmodifiable(_output.value.bytes);
+  }
+}
+
+final class _ArchiveDigestSink implements Sink<crypto.Digest> {
+  crypto.Digest? _digest;
+
+  crypto.Digest get value =>
+      _digest ?? (throw StateError('SHA-256 is incomplete.'));
+
+  @override
+  void add(crypto.Digest value) {
+    if (_digest != null) throw StateError('SHA-256 completed more than once.');
+    _digest = value;
+  }
+
+  @override
+  void close() {}
 }

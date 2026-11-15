@@ -87,6 +87,23 @@ void main() {
     },
   );
 
+  test('accepts the largest v2 envelope at the native staging limit', () async {
+    respond = (call) async {
+      expect(call.method, 'createBackupDocument');
+      expect((call.arguments as Map)['totalBytes'], maxEncryptedBackupBytes);
+      return 'opaque-document-id';
+    };
+
+    expect(maxEncryptedBackupBytes, 67134601);
+    expect(
+      await BackupFileApi(channel: channel).createBackupDocument(
+        totalBytes: maxEncryptedBackupBytes,
+        suggestedName: 'maximum.clockrove',
+      ),
+      'opaque-document-id',
+    );
+  });
+
   test('rejects an oversized chunk before calling native code', () async {
     await expectLater(
       BackupFileApi(channel: channel).writeBackupDocumentChunk(

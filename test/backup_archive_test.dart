@@ -95,6 +95,48 @@ void main() {
       );
     });
 
+    test('stream preflight preserves the exact archive size boundary', () async {
+      final rows = [
+        BackupArchiveStreamRow(
+          table: 'jobs',
+          values: {'id': 'bounded'},
+          blobs: const [],
+        ),
+      ];
+      final expected = await BackupArchiveCodec.encode(
+        schemaVersion: 15,
+        stateVersion: 0,
+        capturedAtUtcMillis: 0,
+        rows: [_row('jobs', {'id': 'bounded'})],
+      );
+      final plan = BackupArchiveCodec.prepareStream(
+        schemaVersion: 15,
+        stateVersion: 0,
+        capturedAtUtcMillis: 0,
+        rows: rows,
+        maxBytes: expected.length,
+      );
+      final actual = BytesBuilder(copy: false);
+      await for (final chunk in plan.encode(
+        readBlob: (_) => const Stream<List<int>>.empty(),
+      )) {
+        actual.add(chunk);
+      }
+      expect(plan.totalLength, expected.length);
+      expect(actual.takeBytes(), orderedEquals(expected));
+
+      expect(
+        () => BackupArchiveCodec.prepareStream(
+          schemaVersion: 15,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: rows,
+          maxBytes: expected.length - 1,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('rejects unsupported archive versions and tables', () async {
       final encoded = await _encodeJob();
       final badFormat = Uint8List.fromList(encoded);

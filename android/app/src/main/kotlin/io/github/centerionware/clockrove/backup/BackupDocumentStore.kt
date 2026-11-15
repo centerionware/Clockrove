@@ -94,7 +94,8 @@ internal class BackupDocumentStore(
     )
 
     companion object {
-        const val MAX_ENCRYPTED_BYTES = 64L * 1024L * 1024L + 72L
+        // CLKROVE2 framing overhead at the 64 MiB plaintext limit.
+        const val MAX_ENCRYPTED_BYTES = 64L * 1024L * 1024L + 25_737L
         const val MAX_CHUNK_BYTES = 192 * 1024
         const val IDLE_EXPIRY_MILLIS = 15L * 60L * 1000L
         private const val DIRECTORY_NAME = "clockrove-backup-document-staging"
