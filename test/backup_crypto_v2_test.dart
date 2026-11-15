@@ -306,15 +306,13 @@ void main() {
     'token cancels a stalled partial encrypt read before sink discard',
     () async {
       final sourceListening = Completer<void>();
-      final partialReadPending = Completer<void>();
+      final headerWriteStarted = Completer<void>();
       final sourceCancellationStarted = Completer<void>();
       final finishSourceCancellation = Completer<void>();
       var sourceCancelled = false;
       final archive = StreamController<List<int>>(
+        sync: true,
         onListen: () => sourceListening.complete(),
-        onResume: () {
-          if (!partialReadPending.isCompleted) partialReadPending.complete();
-        },
         onCancel: () async {
           sourceCancellationStarted.complete();
           await finishSourceCancellation.future;
@@ -324,6 +322,9 @@ void main() {
       final token = BackupCryptoCancellationToken();
       var sourceCancelledBeforeDiscard = false;
       final destination = _MemorySink(
+        beforeWrite: (writeNumber) async {
+          if (writeNumber == 1) headerWriteStarted.complete();
+        },
         onDiscard: () => sourceCancelledBeforeDiscard = sourceCancelled,
       );
       final encryption = BackupCryptoV2.encrypt(
@@ -338,24 +339,30 @@ void main() {
       );
 
       try {
-        await sourceListening.future.timeout(const Duration(seconds: 30));
+        await sourceListening.future.timeout(const Duration(seconds: 5));
+        await headerWriteStarted.future.timeout(const Duration(seconds: 5));
+        await Future<void>.delayed(Duration.zero);
         archive.add([1, 2, 3]);
-        await partialReadPending.future.timeout(const Duration(seconds: 30));
+        await Future<void>.delayed(Duration.zero);
         token.cancel();
         await sourceCancellationStarted.future.timeout(
-          const Duration(seconds: 30),
+          const Duration(seconds: 5),
         );
         expect(destination.discarded, isFalse);
         expect(destination.committed, isFalse);
         expect(destination.visibleBytes, isNull);
         finishSourceCancellation.complete();
-        await encryptionExpectation.timeout(const Duration(seconds: 30));
+        await encryptionExpectation.timeout(const Duration(seconds: 5));
       } finally {
         token.cancel();
         if (!finishSourceCancellation.isCompleted) {
           finishSourceCancellation.complete();
         }
-        await archive.close().timeout(const Duration(seconds: 30));
+        try {
+          await encryptionExpectation.timeout(const Duration(seconds: 5));
+        } finally {
+          await archive.close().timeout(const Duration(seconds: 5));
+        }
       }
 
       expect(sourceCancelled, isTrue);
