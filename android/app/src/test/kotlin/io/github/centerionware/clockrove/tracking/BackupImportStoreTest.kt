@@ -167,7 +167,9 @@ class BackupImportStoreTest {
                 val descriptors = record["blobs"] as List<*>
                 descriptors.forEach { raw ->
                     val descriptor = raw as Map<*, *>
-                    blobs.add((descriptor.getValue("id") as String) to (descriptor.getValue("sizeBytes") as Number).toLong())
+                    val blobId = descriptor["id"] as String
+                    val sizeBytes = descriptor["sizeBytes"] as Number
+                    blobs.add(blobId to sizeBytes.toLong())
                 }
             }
             firstOrdinal = importStore.appendPage(
