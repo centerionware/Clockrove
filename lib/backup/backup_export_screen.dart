@@ -358,6 +358,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Create encrypted backup')),
       body: ListView(
+        key: const ValueKey('backup-export-list'),
         padding: const EdgeInsets.all(20),
         children: [
           Card(

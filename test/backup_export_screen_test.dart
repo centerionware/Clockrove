@@ -139,7 +139,7 @@ void main() {
       await tester.scrollUntilVisible(
         status,
         250,
-        scrollable: find.byType(Scrollable),
+        scrollable: _backupScreenScrollable(),
       );
       expect(tester.widget<Text>(status).data, 'Encrypted backup saved.');
       expect(
@@ -328,7 +328,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('cancel-backup-export')),
       250,
-      scrollable: find.byType(Scrollable),
+      scrollable: _backupScreenScrollable(),
     );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
 
@@ -362,7 +362,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('cancel-backup-export')),
       250,
-      scrollable: find.byType(Scrollable),
+      scrollable: _backupScreenScrollable(),
     );
     await tester.tap(find.byKey(const ValueKey('cancel-backup-export')));
     pendingEncryption.complete(Uint8List.fromList([1, 2, 3]));
@@ -442,9 +442,16 @@ Future<void> _pumpUntil(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(
     finder,
     250,
-    scrollable: find.byType(Scrollable),
+    scrollable: _backupScreenScrollable(),
   );
 }
+
+Finder _backupScreenScrollable() => find
+    .descendant(
+      of: find.byKey(const ValueKey('backup-export-list')),
+      matching: find.byType(Scrollable),
+    )
+    .first;
 
 BackupSnapshotExport _snapshot({int openSessionCount = 0}) =>
     BackupSnapshotExport(
