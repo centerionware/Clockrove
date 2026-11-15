@@ -132,8 +132,10 @@ the shared device-test path. PR #52's later exact head `e87eebf` / Actions run
 also passed the full workflow and benchmark on both APIs: encrypt/decrypt was
 874/337 ms on API 24 and 1,124/348 ms on API 35, with 37 actual Android tests
 per API and zero failures, errors or skips. That result predates the latest main
-base, so the current PR #52 reconciliation still needs a new exact-head Actions
-run. It carries the short-scroll and covered-task visibility fixes. M7.2's
+base. PR #52 has now been rebased onto main commit
+`8a0e34052dc7e7fdc9bd1d6f6b0627e3eba175ea`; the refreshed head still needs a
+new exact-head Actions run before merge. It carries the short-scroll and
+covered-task visibility fixes. M7.2's
 deterministic archive codec passed Flutter and native checks
 in the same PR #52 run. The native snapshot service was merged in PR #50 and
 passed its exact-head API-24/35 Actions run
