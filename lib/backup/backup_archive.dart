@@ -175,9 +175,7 @@ abstract final class BackupArchiveCodec {
             !rowBlobColumns.add(blob.column) ||
             !(_tables[row.table]?.blobColumns.contains(blob.column) ?? false) ||
             row.values.containsKey(blob.column)) {
-          throw FormatException(
-            'The ${row.table} media reference is invalid.',
-          );
+          throw FormatException('The ${row.table} media reference is invalid.');
         }
         if (blob.bytes.length > 0xffffffff) {
           throw const FormatException('A backup media file is too large.');
@@ -354,9 +352,7 @@ abstract final class BackupArchiveCodec {
             !rowBlobColumns.add(blob.column) ||
             !(_tables[row.table]?.blobColumns.contains(blob.column) ?? false) ||
             row.values.containsKey(blob.column)) {
-          throw FormatException(
-            'The ${row.table} media reference is invalid.',
-          );
+          throw FormatException('The ${row.table} media reference is invalid.');
         }
         if (blob.sizeBytes < 0 || blob.sizeBytes > 0xffffffff) {
           throw const FormatException('A backup media file is too large.');

@@ -307,8 +307,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
       if (snapshotCleanupFailure != null) {
         _setPhase(
           _BackupExportPhase.failed,
-          message:
-              'Could not clean up the backup snapshot. Check the save location before trying again.',
+          message: 'Could not clean up the backup snapshot. Check the save location before trying again.',
           canCancel: false,
         );
       }

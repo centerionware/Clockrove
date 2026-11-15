@@ -179,16 +179,14 @@ final class BackupSnapshotExporter {
         maxRows: info.maxRecords,
         maxBlobs: info.maxMediaCount,
       );
-      final lease = _SnapshotLease(
-        snapshotId,
-        closeSnapshot: _closeSnapshot,
-      );
+      final lease = _SnapshotLease(snapshotId, closeSnapshot: _closeSnapshot);
       Future<void> closeExport() async {
         plan.dispose();
         descriptorsById.clear();
         hashedBlobIds.clear();
         await lease.close();
       }
+
       snapshotId = null;
       exported = BackupSnapshotStreamExport(
         archiveByteLength: plan.totalLength,
@@ -617,8 +615,7 @@ final class BackupSnapshotStreamExport {
     required this.mediaBytes,
     required this.archiveStream,
     required Future<void> Function() closeSnapshot,
-  }) :
-       _closeSnapshot = closeSnapshot;
+  }) : _closeSnapshot = closeSnapshot;
 
   final int archiveByteLength;
   final int schemaVersion;
@@ -660,8 +657,7 @@ final class _SnapshotLease {
   _SnapshotLease(
     this.snapshotId, {
     required Future<void> Function(String) closeSnapshot,
-  })
-    : _closeSnapshot = closeSnapshot;
+  }) : _closeSnapshot = closeSnapshot;
 
   final String snapshotId;
   final Future<void> Function(String) _closeSnapshot;

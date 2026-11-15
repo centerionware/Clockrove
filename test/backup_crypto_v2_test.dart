@@ -10,31 +10,34 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('computes exact bounded envelope lengths before destination creation', () {
-    expect(BackupCryptoV2.envelopeLengthForArchiveBytes(1), 163);
-    expect(
-      BackupCryptoV2.envelopeLengthForArchiveBytes(BackupCryptoV2.chunkBytes),
-      65698,
-    );
-    expect(
-      BackupCryptoV2.envelopeLengthForArchiveBytes(
-        BackupCryptoV2.chunkBytes + 1,
-      ),
-      65724,
-    );
-    expect(
-      BackupCryptoV2.envelopeLengthForArchiveBytes(
-        BackupCryptoV2.maxArchiveBytes,
-      ),
-      BackupCryptoV2.maxEnvelopeBytes,
-    );
-    expect(
-      () => BackupCryptoV2.envelopeLengthForArchiveBytes(
-        BackupCryptoV2.maxArchiveBytes + 1,
-      ),
-      throwsFormatException,
-    );
-  });
+  test(
+    'computes exact bounded envelope lengths before destination creation',
+    () {
+      expect(BackupCryptoV2.envelopeLengthForArchiveBytes(1), 163);
+      expect(
+        BackupCryptoV2.envelopeLengthForArchiveBytes(BackupCryptoV2.chunkBytes),
+        65698,
+      );
+      expect(
+        BackupCryptoV2.envelopeLengthForArchiveBytes(
+          BackupCryptoV2.chunkBytes + 1,
+        ),
+        65724,
+      );
+      expect(
+        BackupCryptoV2.envelopeLengthForArchiveBytes(
+          BackupCryptoV2.maxArchiveBytes,
+        ),
+        BackupCryptoV2.maxEnvelopeBytes,
+      );
+      expect(
+        () => BackupCryptoV2.envelopeLengthForArchiveBytes(
+          BackupCryptoV2.maxArchiveBytes + 1,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
 
   test('v2 streams split input into authenticated ordered frames', () async {
     final archive = _pattern(BackupCryptoV2.chunkBytes + 1);

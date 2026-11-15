@@ -112,10 +112,7 @@ void main() {
                   totalMediaBytes: 0,
                 ),
               );
-              return _snapshot(
-                openSessionCount: 1,
-                archiveByteLength: 196399,
-              );
+              return _snapshot(openSessionCount: 1, archiveByteLength: 196399);
             },
             encryptArchive: _fakeEncryptor(
               encrypted: Uint8List(maxBackupDocumentChunkBytes + 3),
@@ -274,8 +271,7 @@ void main() {
         case 'createBackupDocument':
           return 'opaque-document-id';
         case 'writeBackupDocumentChunk':
-          writeLength =
-              ((call.arguments as Map)['bytes'] as Uint8List).length;
+          writeLength = ((call.arguments as Map)['bytes'] as Uint8List).length;
           return pendingWrite.future;
         case 'finishBackupDocument':
           return true;
@@ -530,19 +526,18 @@ Finder _backupScreenScrollable() => find
 BackupSnapshotStreamExport _snapshot({
   int openSessionCount = 0,
   int archiveByteLength = 3,
-}) =>
-    BackupSnapshotStreamExport(
-      archiveByteLength: archiveByteLength,
-      schemaVersion: 15,
-      stateVersion: 20,
-      capturedAtUtcMillis: 1700000000000,
-      openSessionCount: openSessionCount,
-      recordCount: 1,
-      mediaCount: 0,
-      mediaBytes: 0,
-      archiveStream: _testArchiveStream(archiveByteLength),
-      closeSnapshot: () async {},
-    );
+}) => BackupSnapshotStreamExport(
+  archiveByteLength: archiveByteLength,
+  schemaVersion: 15,
+  stateVersion: 20,
+  capturedAtUtcMillis: 1700000000000,
+  openSessionCount: openSessionCount,
+  recordCount: 1,
+  mediaCount: 0,
+  mediaBytes: 0,
+  archiveStream: _testArchiveStream(archiveByteLength),
+  closeSnapshot: () async {},
+);
 
 Stream<Uint8List> _testArchiveStream(int length) async* {
   if (length == 3) {
@@ -600,9 +595,8 @@ BackupArchiveEncryptor _fakeEncryptor({
       );
     };
 
-Uint8List _encryptedForArchiveSize(int archiveBytes) => Uint8List(
-  BackupCryptoV2.envelopeLengthForArchiveBytes(archiveBytes),
-);
+Uint8List _encryptedForArchiveSize(int archiveBytes) =>
+    Uint8List(BackupCryptoV2.envelopeLengthForArchiveBytes(archiveBytes));
 
 void _checkFakeCancellation(
   bool Function()? isCancelled,
