@@ -153,8 +153,14 @@ clockrove_reboot_emulator_and_wait() {
     echo 'boot-restart=not-confirmed' >> "$recovery_log"
     return 2
   fi
-  if ! observed_api="$(timeout --kill-after=1s 5s adb -s emulator-5554 shell getprop ro.build.version.sdk 2>> "$recovery_log")" ||
-    [[ "$observed_api" != "$expected_api" ]]; then
+  if ! observed_api="$(timeout --kill-after=1s 5s adb -s emulator-5554 shell getprop ro.build.version.sdk 2>> "$recovery_log")"; then
+    echo "Recovered emulator API was not confirmed as $expected_api." >&2
+    echo 'emulator-api=unknown' >> "$recovery_log"
+    echo 'boot-restart=not-confirmed' >> "$recovery_log"
+    return 2
+  fi
+  observed_api="${observed_api//$'\r'/}"
+  if [[ "$observed_api" != "$expected_api" ]]; then
     echo "Recovered emulator API was not confirmed as $expected_api (observed ${observed_api:-unknown})." >&2
     echo "emulator-api=${observed_api:-unknown}" >> "$recovery_log"
     echo 'boot-restart=not-confirmed' >> "$recovery_log"
@@ -184,6 +190,26 @@ clockrove_recover_and_verify_install() {
     return "$recovery_status"
   fi
   clockrove_verify_installed_apk "$package" "$expected_version" "$diagnostics_dir/$label-package-state-attempt-$attempt.txt"
+}
+
+# Treat every Flutter expanded-reporter status as evidence that the test phase
+# advanced, except for its one known pre-test loading line for this benchmark.
+clockrove_flutter_test_has_started() {
+  local log_file="$1"
+  local line
+  local allowed_loading='^[0-9]{2}:[0-9]{2}[[:space:]][+]0:[[:space:]]loading[[:space:]]+([^[:space:]]*/)?integration_test/backup_crypto_benchmark_test\.dart$'
+  local reporter_progress='^[0-9]{2}:[0-9]{2}[[:space:]][+][0-9]+([[:space:]]+[~][0-9]+)?([[:space:]]+-[0-9]+)?:'
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    if [[ "$line" =~ $allowed_loading ]]; then
+      continue
+    fi
+    if [[ "$line" =~ $reporter_progress ]]; then
+      return 0
+    fi
+  done < "$log_file"
+  return 1
 }
 
 # Flutter's integration_test driver performs its own APK installation, outside
@@ -234,7 +260,7 @@ clockrove_run_flutter_integration_test() {
       ! grep -Fq 'Installing build/app/outputs/flutter-apk/app-debug.apk...' "$attempt_log" ||
       ! grep -Fq 'No tests ran.' "$attempt_log" ||
       ! grep -Fq 'Error: ADB exited with exit code -15' "$attempt_log" ||
-      grep -Eq '[[:space:]][+]([1-9][0-9]*([[:space:]]+-[0-9]+)?|0[[:space:]]+-[1-9][0-9]*):' "$attempt_log" ||
+      clockrove_flutter_test_has_started "$attempt_log" ||
       grep -Fq 'BACKUP_CRYPTO_BENCHMARK ' "$attempt_log"; then
       return "$status"
     fi

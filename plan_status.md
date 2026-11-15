@@ -4204,15 +4204,18 @@ and API 35 was not reached. No manual Actions rerun was started.
 
 The current PR #52 source adds a wrapper around that exact Flutter command. It
 retries only exit `124` with the observed APK path, `No tests ran`, ADB `-15`,
-no reporter evidence that a test started, and no benchmark result. Before its
+no benchmark result, and no reporter progress except a `+0` loading line naming
+`integration_test/backup_crypto_benchmark_test.dart` (relative or absolute
+path). Before its
 single retry it requires a changed kernel boot ID, completed Android boot, and
-the expected API level. The second command must exit successfully and emit the
-crypto result marker, which the benchmark prints only after encryption,
-decryption and byte-for-byte equality pass. A new synthetic Actions policy test
-covers successful first run, the targeted timeout, unrelated timeout, repeated
-timeout, `+0 -1`/test-start failures, missing marker, wrong-API reboot and
-unconfirmed reboot (while permitting `+0` loading progress), plus PackageManager
-errors that contain misleading package/version text; it has not run yet.
+the expected API level after removing carriage returns from `getprop`. The
+second command must exit successfully and emit the crypto result marker, which
+the benchmark prints only after encryption, decryption and byte-for-byte
+equality pass. A new synthetic Actions policy test covers successful first
+run, the targeted timeout, unrelated timeout, repeated timeout, `+0` running,
+`+0` skipped, `+0 -1` and other test-start failures, missing marker, wrong-API
+reboot, CRLF API output and unconfirmed reboot, plus PackageManager errors that
+contain misleading package/version text; it has not run yet.
 
 Static review also tightened direct ADB recovery: expected package/version
 text is accepted only when `dumpsys` exits zero, and installer output is

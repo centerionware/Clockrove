@@ -112,7 +112,11 @@ if [[ "${3:-}" == shell && "${4:-}" == getprop && "${5:-}" == sys.boot_completed
   exit 0
 fi
 if [[ "${3:-}" == shell && "${4:-}" == getprop && "${5:-}" == ro.build.version.sdk ]]; then
-  echo "$ADB_FAKE_API"
+  if [[ "${ADB_FAKE_API_CRLF:-}" == true ]]; then
+    printf '%s\r\n' "$ADB_FAKE_API"
+  else
+    echo "$ADB_FAKE_API"
+  fi
   exit 0
 fi
 if [[ "${3:-}" == shell && "${4:-}" == cat && "${5:-}" == /proc/sys/kernel/random/boot_id ]]; then
@@ -164,7 +168,11 @@ count=$((count + 1))
 printf '%s\n' "$count" > "$FLUTTER_TEST_COUNT"
 case "$FLUTTER_TEST_MODE:$count" in
   install-timeout-once:1|install-timeout-always:*)
-    echo '00:00 +0: loading integration_test/backup_crypto_benchmark_test.dart'
+    if [[ "$FLUTTER_TEST_MODE" == install-timeout-once ]]; then
+      echo '00:00 +0: loading integration_test/backup_crypto_benchmark_test.dart'
+    else
+      echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
+    fi
     echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
     echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
     echo 'Error: ADB exited with exit code -15'
@@ -185,6 +193,22 @@ case "$FLUTTER_TEST_MODE:$count" in
     echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
     echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
     echo '00:00 +0 -1: Flutter startup failed before the test ran'
+    echo 'Error: ADB exited with exit code -15'
+    exit 124
+    ;;
+  zero-run-progress:*)
+    echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
+    echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
+    echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
+    echo '00:00 +0: running backup crypto benchmark'
+    echo 'Error: ADB exited with exit code -15'
+    exit 124
+    ;;
+  zero-skip-progress:*)
+    echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
+    echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
+    echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
+    echo '00:00 +0 ~1: backup crypto benchmark skipped'
     echo 'Error: ADB exited with exit code -15'
     exit 124
     ;;
@@ -333,11 +357,13 @@ echo 'Verified a successful Flutter device test requires its crypto result marke
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=install-timeout-once
+export ADB_FAKE_API_CRLF=true
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart
 [[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+unset ADB_FAKE_API_CRLF
 grep -F 'No tests ran.' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-1.log" >/dev/null
 grep -F 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-2.log" >/dev/null
@@ -401,6 +427,34 @@ fi
 [[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
 ! grep -Fq 'reboot' "$ADB_CALL_LOG"
 echo 'Verified a Flutter +0 -1 failure summary prevents retry while +0 loading remains eligible.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+export FLUTTER_TEST_MODE=zero-run-progress
+if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
+  echo 'A Flutter +0 running status must not be retried.' >&2
+  exit 1
+else
+  status=$?
+fi
+[[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
+! grep -Fq 'reboot' "$ADB_CALL_LOG"
+echo 'Verified Flutter +0 running status prevents retry.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+export FLUTTER_TEST_MODE=zero-skip-progress
+if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
+  echo 'A Flutter +0 skipped status must not be retried.' >&2
+  exit 1
+else
+  status=$?
+fi
+[[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
+! grep -Fq 'reboot' "$ADB_CALL_LOG"
+echo 'Verified Flutter +0 skipped status prevents retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=success-without-marker
