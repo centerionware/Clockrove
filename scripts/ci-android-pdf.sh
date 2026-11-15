@@ -3,6 +3,7 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]] || { echo 'This check runs only in GitHub Actions.' >&2; exit 2; }
 : "${ANDROID_HOME:?}" "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
+source "$GITHUB_WORKSPACE/scripts/ci-adb-install.sh"
 # Ubuntu runner prerequisite linked by the pinned emulator, even with no audio.
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends libpulse0
@@ -37,6 +38,13 @@ grep -F 'Android emulator version 37.2.13' "$RUNNER_TEMP/clockrove-emulator-vers
 test -c /dev/kvm
 sudo chmod a+rw /dev/kvm
 (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:assembleDebugAndroidTest)
+# integration_test rebuilds the shared output APK with its test entrypoint.
+# Keep immutable copies so the next API always installs the real app and the
+# matching native instrumentation, regardless of the preceding benchmark.
+clockrove_validation_apk="$RUNNER_TEMP/clockrove-validation-app.apk"
+clockrove_validation_test_apk="$RUNNER_TEMP/clockrove-validation-tests.apk"
+cp "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk" "$clockrove_validation_apk"
+cp "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$clockrove_validation_test_apk"
 for clockrove_api in 24 35; do
   if [[ "$clockrove_api" == 24 ]]; then
     clockrove_revision=8
@@ -88,8 +96,8 @@ for clockrove_api in 24 35; do
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+  clockrove_install_apk "$clockrove_api" app "$clockrove_validation_apk"
+  clockrove_install_apk "$clockrove_api" instrumentation "$clockrove_validation_test_apk"
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
   timeout --kill-after=10s 60s adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
@@ -180,6 +188,21 @@ done
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
+  # Run last because Flutter integration_test can reinstall the target app;
+  # all native product journeys and their result pulls must be complete first.
+  # This records KDF/AES-GCM timings on minimum/current API emulators without
+  # setting a flaky speed threshold.
+  clockrove_benchmark_log="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-crypto-benchmark.txt"
+  if clockrove_run_flutter_integration_test "$clockrove_api" backup-crypto-benchmark \
+    'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+    -- flutter test --no-pub integration_test/backup_crypto_benchmark_test.dart \
+    -d emulator-5554 --reporter expanded > "$clockrove_benchmark_log" 2>&1; then
+    cat "$clockrove_benchmark_log"
+  else
+    clockrove_benchmark_status=$?
+    cat "$clockrove_benchmark_log"
+    exit "$clockrove_benchmark_status"
+  fi
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT

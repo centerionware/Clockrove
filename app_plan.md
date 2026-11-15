@@ -1,6 +1,6 @@
 # Clockrove — implementation plan and handoff to Luna
 
-Prepared: 2026-11-11. Status: native tracking device acceptance pending; job/board/customer/billing increments passed Actions; combined business iteration validated and merged; public terms review pending; see `plan_status.md` for task-level status.
+Prepared: 2026-11-11. Status: M7 encrypted-backup implementation is in progress; native tracking device acceptance, full M7.6 UI/E2E acceptance and public terms review remain pending; see `plan_status.md` for task-level evidence.
 
 ## 1. Start here
 
@@ -24,6 +24,7 @@ The user explicitly requested this handoff after creating agent instructions and
 - Foundation debug build and signed setup AAB are proven in Actions. Physical-device tracking evidence remains unproven. Automatic Play internal
   uploads are confirmed; production and tester installation are not confirmed.
 - Optional ignored local skills remain supplements, never contributor dependencies.
+- Current M7 work: refreshed PR #52 validation is still pending. Run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415) on `b374915` failed after the app APK installed because the instrumentation APK has an empty AAPT `versionCode`; Android PackageManager assigns that variant code `0`. The installer now defers identity parsing until an ambiguous timeout, parses named AAPT fields, maps an empty code to `0` only for instrumentation APKs, and records sanitized package metadata on parse failure. The first corrected CI run [43697421995](https://github.com/centerionware/Clockrove/actions/runs/43697421995) stopped in a synthetic case because the prior success fixture left stale simulated PackageManager state; the fixture was reset, and no Android build or device tests ran on that head. The bounded Flutter benchmark retry still requires a confirmed reboot/API and its real result marker. Full evidence is in `plan_status.md`.
 
 ### Exact money contract (owner priority, 2026-11-12)
 
@@ -87,6 +88,63 @@ from photo 4 to 3 and left swipe back to 4. PR #55 also includes the shared
 billing-device-test corrections for text replacement, short settled scrolls,
 tax-error visibility and covered-task checkbox visibility. No VM
 build/test/formatter has run.
+The M7.1 backup-crypto source uses pinned `cryptography` 2.9.0, a bounded
+authenticated header, fixed Argon2id parameters, AES-256-GCM, and an API 24/35
+Flutter integration benchmark.
+Actions run [43664789329](https://github.com/centerionware/Clockrove/actions/runs/43664789329)
+generated the proposed lockfile and formatter patch, then Analyze reported a
+missing widget import in the benchmark and an invalid `List<int>` to
+`TypedData` handoff in decryption. Those static issues are corrected from the
+CI evidence. Locked rerun [43665136368](https://github.com/centerionware/Clockrove/actions/runs/43665136368)
+passed dependency resolution and formatting but Analyze found a redundant
+`dart:typed_data` import in the benchmark; it has now been removed. The run
+again did not reach behavioral or device checks. The third locked run
+[43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324)
+passed lock resolution, formatting, analysis, Flutter behavior tests, Android
+debug build and native unit tests, then failed while assembling the Android
+instrumentation APK. `integration_test` contributed runner 1.3.0 to the debug
+runtime graph while `androidTestImplementation` requested 1.7.0; Gradle's
+consistent-resolution constraint made those versions incompatible. The API
+24/35 emulator journeys and crypto benchmark did not run. The build now aligns
+`debugImplementation` with runner 1.7.0 and assembles
+`:app:assembleDebugAndroidTest` before emulator setup. Run
+[43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760)
+passed all fast gates, API-24 native/device cases and the crypto benchmark
+(1 MiB payload: encrypt 878 ms, decrypt 284 ms). On API 35, the actual-app suite
+recorded five failures and one error after MainActivity opened to a blank
+screen. The root cause is confirmed from the workflow and artifact: the API-24
+Flutter integration benchmark rebuilt the shared `app-debug.apk` with its test
+entrypoint, then the API-35 loop installed that overwritten APK. The CI script
+now preserves immutable copies of the real app and native test APKs before the
+emulator loop and installs those on both APIs. Exact PR #52 run
+[43671872207](https://github.com/centerionware/Clockrove/actions/runs/43671872207)
+passed formatting, analysis, Flutter behavior, Android build, instrumentation
+assembly and native tests. API 24 again passed crypto benchmarking. API 35 now
+reached the real app but stopped at the shared billing invalid-tax lookup before
+its crypto benchmark. The shared device-test correction from `36e27ba` is
+included in the prepared main-based reconciliation: it verifies text was
+cleared before replacement and focuses the tax field before checking the
+validation error. The follow-up billing test corrections from `88d88b8`,
+`00531dc` and `32d6154` are now validated at PR #54 head `32d6154`: exact Actions
+run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795)
+passed all gates, including the API-24/35 Android device matrix. This validates
+the shared device-test path. PR #52's later exact head `e87eebf` / Actions run
+[43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885)
+also passed the full workflow and benchmark on both APIs: encrypt/decrypt was
+874/337 ms on API 24 and 1,124/348 ms on API 35, with 37 actual Android tests
+per API and zero failures, errors or skips. That result predates the latest main
+base. PR #52 has now been rebased onto main commit
+`8a0e34052dc7e7fdc9bd1d6f6b0627e3eba175ea`; the refreshed head still needs a
+new exact-head Actions run before merge. It carries the short-scroll and
+covered-task visibility fixes. M7.2's
+deterministic archive codec passed Flutter and native checks
+in the same PR #52 run. The native snapshot service was merged in PR #50 and
+passed its exact-head API-24/35 Actions run
+[43671380322](https://github.com/centerionware/Clockrove/actions/runs/43671380322).
+The separate Dart snapshot exporter source and mocked client tests remain
+pending Actions; no authenticated preview, backup UI or restore is complete.
+M6.6's main gate is green. Continue validating M7 only on GitHub Actions; do
+not run builds, tests or formatters on the owner VM.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 
@@ -803,7 +861,8 @@ Remaining gates are concrete, not assumed complete:
 | Source/contribution license | Drafted; review pending | docs/SOURCE_TERMS_DRAFT.md and CONTRIBUTING.md; owner review requested before publication |
 | Toolchain/app scaffold | In progress | Flutter/Dart run; lockfile and analysis pass; JDK configured; Android build running |
 | Milestones 2–8 | In progress; see `plan_status.md` | PR #45 exact head `942659a` / Actions run `43626467570` passed formatting, analysis, Flutter behavior tests, Android debug build, native tests, PDF generation/viewer checks, locked release tooling and the complete API 24/35 emulator suite. XML confirms 37 actual Android tests per API with zero failures/errors/skips, including the deterministic billing settings flow, invoice copies, payments, quotes and task media. The quote Manage customers add/save/return/select test passed; the 49-sample route and map settings ran in the same device matrix. PR #45 was squash-merged to `main` as `69e1dab`. Post-merge validation `43628166015` exposed a test-harness scroll issue on API 35 while revealing **View original PDF**; screenshot/accessibility evidence shows the swipe began under the Android navigation bar. The test helper now clamps swipes above system bars, falls back to a gesture if accessibility scrolling does not reveal the requested control, taps a field if a semantic click does not focus it, and retries through select-all/IME typing if API 24 reports `ACTION_SET_TEXT` success without changing text. On exact PR #46 head `ae4bc08`, run `43634037678` passed the API-24 billing journey, but API 35 timed out revealing the invalid job-tax message after save. Its screenshot still showed Job settings at the bottom with the Save button, without the inline error; the device test is being changed to tap visible controls by screen bounds because accessibility `ACTION_CLICK` can acknowledge without dispatching a Flutter pointer event. The next exact head `c9f8b6e` / run `43636374365` passed Flutter tests, build and native tests but exposed API-24 accessibility nodes that report an actionable Flutter button as `clickable=false`; the test now taps visible matched-node bounds regardless of that flag. At exact PR #46 head `274ce49` / Actions run `43640563667`, formatting, analysis, Flutter behavior tests, Android build, locked release checks and all 614 native tests passed. Downloaded XML confirms 37 actual Android tests on each API 24 and 35 with zero failures, errors or skips; both extended billing journeys, invoices, payments, quotes, task media and map/widget journeys passed. The device test first applies `ACTION_SET_TEXT` and only accepts an exact readback, retaining the IME fallback. PR #46 was squash-merged as `66e063a`; merged-main validation and Play delivery details are recorded in `plan_status.md`. Prior accessibility and API-24 emulator-install failures are detailed in `plan_status.md`. The internal Play delivery workflow for `66e063a` was skipped after merged-main validation failed; no upload is claimed. M6.6 source and PR-head CI evidence are complete; a CI-only follow-up guards device taps from system navigation, restores global Settings to a known top position, and waits through IME transitions before typing. Its exact-head Actions run must pass before fresh main validation. Physical owner-device acceptance remains. Keyless OpenStreetMap is default, authenticated custom HTTPS tiles use Android Keystore, and optional Google Maps Flutter SDK adoption is a separate product decision. M7 backup and the M7.6 full-app UI/E2E gate remain before closed testing. |
-| M7.2 native snapshot/export boundary | Schema-16 adapter integrated as `7f19d54`; exact PR #51 head `c247e01` passed Actions run `43678616256`; archive/encryption/full restore pending | Adds schema-16 detached Android staging, deterministic row paging, authenticated opaque cursors/media handles, bounded complete-blob reads, size/count preflight, monotonic expiry and cleanup. The export allowlist includes GPS deletion-range coverage, and a synthetic test checks the range record, coordinate-free revisions, point tombstones and causal parents. The adapter and migration are integrated with merged-main snapshot/export on the GPS branch. PR #51 run `43678616256` passed formatting, analysis, Flutter behavior tests, Android build, native tests, real Android PDF generation/rendering and invoice-viewer checks. The API 24/35 journey step passed its scripted JUnit class-count checks, including the GPS deletion test, and verified all nine required GPS captures on each API. No VM build/test/formatter has run. See `docs/BACKUP_FORMAT.md` and `plan_status.md`; authenticated archive/encryption/UI and full restore remain unimplemented. |
+| M7.1 crypto/KDF benchmark | Partial; earlier API-24/35 benchmark passed, refreshed head failed twice before tests; bounded retry fix awaits Actions | Pinned `cryptography` 2.9.0, Argon2id (19 MiB, 2 iterations, parallelism 1), AES-256-GCM and a fixed-size authenticated bounded header. Earlier exact PR #52 run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) benchmarked 1 MiB on API 24/35 and passed 37 actual Android tests per API with zero failures/errors/skips: API 24 encrypt/decrypt 874/337 ms, API 35 1124/348 ms; both envelopes were 1,048,648 bytes. Refreshed head `05d087b` / run [43691431696](https://github.com/centerionware/Clockrove/actions/runs/43691431696), attempts 1 and 2, passed the API-24 product journeys but timed out installing the Flutter benchmark APK before any benchmark test ran; API 35 was not reached. The CI wrapper now retries only that exact pre-test install timeout after a verified emulator reboot and requires the real crypto result marker. A new full exact-head Actions run is pending. Maximum-bound memory peak still needs API-24 measurement or a streaming implementation before user-facing export/restore. See `plan_status.md`. |
+| M7.2 native snapshot/export boundary and encrypted codec | Schema-16 native adapter integrated as `7f19d54`; refreshed PR #52 source pending Actions; client exporter and restore pending | Adds schema-16 detached Android staging, deterministic row paging, authenticated opaque cursors/media handles, bounded complete-blob reads, size/count preflight, monotonic expiry and cleanup. Export includes GPS deletion-range coverage; synthetic tests check the range record, coordinate-free revisions, point tombstones and causal parents. PR #51 run [43678616256](https://github.com/centerionware/Clockrove/actions/runs/43678616256) passed format, analysis, Flutter behavior tests, Android build, native tests, PDF rendering and invoice-viewer checks; API 24/35 verified all nine GPS captures. PR #52 adds a deterministic bounded archive codec with typed SQLite scalars, raw media descriptors, canonical ordering, exact 64 MiB plaintext accounting, duplicate-key checks and iterative revision-DAG validation. Earlier run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed codec/native tests and both crypto benchmarks before the current main base. Refreshed run [43691431696](https://github.com/centerionware/Clockrove/actions/runs/43691431696) failed twice before the crypto benchmark completed; the bounded install recovery added to this reconciliation is awaiting Actions. Static review identified a possible multi-copy peak at the 64 MiB bound; measure on API 24 or stream the archive before exposing export/restore UI. Dart snapshot/export UI, authenticated preview, restore choices, open-session decisions, transactional apply, and complete GPS-range import validation remain outstanding. See `docs/BACKUP_FORMAT.md` and `plan_status.md`. No VM build/test/formatter has run. |
 | iOS/server | Deferred | Preserve contracts; do not implement during Android launch work |
 
 For each implemented milestone append: date, commit/build reference, changed behavior, commands/checks run, results, device details where applicable, remaining blocker and next action. Never use this ledger to imply implementation or testing that has not happened.

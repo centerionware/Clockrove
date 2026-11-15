@@ -26,6 +26,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - name: Test bounded APK install recovery policies
+        shell: bash
+        run: bash scripts/test-ci-adb-install.sh
       - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
@@ -81,9 +84,9 @@ jobs:
         # Collect behavior evidence in the same run; the final gate still fails.
         continue-on-error: true
         run: |
-          dart format lib test
-          git diff --binary -- lib test > "$RUNNER_TEMP/format.patch"
-          git diff --exit-code -- lib test
+          dart format lib test integration_test
+          git diff --binary -- lib test integration_test > "$RUNNER_TEMP/format.patch"
+          git diff --exit-code -- lib test integration_test
       - name: Export formatter correction for source review
         if: always() && steps.format.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -103,6 +106,11 @@ jobs:
           escaped = patch.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print(f'::error title=Dart formatter correction::{escaped or "Formatter patch was empty"}')
           PY_FORMAT
+      - name: Require clean formatting
+        if: always() && steps.format.outcome == 'failure'
+        run: |
+          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
+          exit 1
       - name: Analyze
         run: flutter analyze --no-pub
       - name: Test implemented behavior
@@ -123,6 +131,9 @@ jobs:
           if-no-files-found: ignore
       - name: Validate Android build
         run: flutter build apk --debug --no-pub
+      - name: Assemble Android instrumentation tests before emulator setup
+        working-directory: android
+        run: ./gradlew :app:assembleDebugAndroidTest
       - name: Native unit tests
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest
@@ -177,8 +188,3 @@ jobs:
           bundle exec ruby -c fastlane/Fastfile
       - name: Publishing status
         run: echo 'Validation only. Successful main pushes trigger separate Play internal delivery; production tags remain readiness-gated.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Require clean formatting
-        if: always() && steps.format.outcome == 'failure'
-        run: |
-          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
-          exit 1

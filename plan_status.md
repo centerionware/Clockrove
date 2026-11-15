@@ -16,6 +16,19 @@ and M7 backup remain before M7.6 (whole-app UI overhaul and exhaustive
 E2E/screenshots), which must pass before closed testing. iOS and future service
 remain deferred.
 
+Current M7 priority: the refreshed PR #52 Actions run `43695960415` failed
+after installing the app APK because AAPT reports the instrumentation APK's
+empty `versionCode`; Android PackageManager assigns that test variant code `0`.
+The obsolete in-progress run `43696665362` was canceled. The current source
+defers identity parsing until an ambiguous install, parses named AAPT fields,
+and maps the empty version to `0` only for the instrumentation APK. Exact head
+`a139bb0` / Actions run `43697421995` stopped in the synthetic helper cases:
+the success fixture's PackageManager state leaked into the following timeout
+case, so that case correctly recognized the stale test state as installed.
+Reset that fixture state before its own scenario; a fresh full exact-head run
+is pending. The 64 MiB archive memory peak also needs API-24 measurement or
+streaming before export and restore become user-facing.
+
 PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting,
 analysis, all Flutter behavior tests, Android debug build, 614 native tests,
 and full API-24/API-35 PDF, device and invoice-viewer stages. Downloaded XML
@@ -69,13 +82,13 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | Owner additions: invoice/quote PDF hierarchy and Settings preview | Merged #39; exact-head and main validation passed; generated visuals reviewed | Customer details left and company details/date right, each wrapped/paginated within 47% width; subtotal/tax rows right aligned and only amount digits bold. Preview invoice sits directly below invoice style in Settings, uses selected style/currency and logo with synthetic data in the native viewer, and creates/sends/reserves nothing. PR run 43379382717 passed and its Modern/Minimal/Classic invoices, party columns, and preview pages/screens on API 24/35 were reviewed. The evidence-doc head run 43381832106 and main run 43384059350 also passed; all five PDF-copy checks passed on each API. |
 | PR #42 merged-main follow-up | Merged, main validated and internal upload accepted | Main Validate run 43389226159 passed 563 native and 30 API-24/35 actual Android cases, zero failures/errors/skips; downloaded XML inspected. Play run 43391432210 accepted `0.1.0-internal.30.1` / version code `216720875` at 08:19:21 UTC. Review approval, tester availability and physical installation remain separate. |
 | M6.5 quote usability, task comments/images, map and GPS controls | Quote customer add/save/select passed Flutter CI; full API-24/35 device suite and 49-sample map journey passed; owner-device checks pending | Core exact head `81d227f` / Actions run [43489413018](https://github.com/centerionware/Clockrove/actions/runs/43489413018) passed 32 Android tests per API and reviewed camera/task/comment image captures. Internal run [43500590080](https://github.com/centerionware/Clockrove/actions/runs/43500590080) accepted `0.1.0-internal.31.1` / `216764535`. PR #45 adds 50 MB/250 MP source imports, 5 MB normalized photos, multi-select review/atomic attach, ordered swipe viewing, quote customer management and the report-map repair. The refreshed customer-selector test passed at head `3ce3e29` / run [43590405687](https://github.com/centerionware/Clockrove/actions/runs/43590405687). At head `372c15a` and rerun `0a06901`, the full shared Customers screen add/save/return/select test passed and confirmed the quote draft captures the customer ID. Run [43595000940](https://github.com/centerionware/Clockrove/actions/runs/43595000940) passed formatting, analysis, Flutter behavior, Android build, all 594 native tests and the first 25 real Android PDF tests; then the API-24 billing journey could not return to **Billing basis** after invalid tax input. Later device journeys and API 35 did not run. The 49-point map journey passed API 24 in run [43581546961](https://github.com/centerionware/Clockrove/actions/runs/43581546961). API-35 map and physical map/GPS/camera behavior remain unproven. No VM build, test or formatter ran. Exact code head `c9d20cc` / Actions run [43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595) passed 35 real Android tests each on API 24 and 35 with zero failures/errors/skips, including task media, GPS settings and the 49-sample map route; captures from both APIs were reviewed. The quote Manage customers button is directly below the selector and uses the shared Customers screen; the Flutter behavior test verifies add/save/return/select and the quote draft customer ID. Physical owner-device acceptance remains pending. |
-| M6.6 remaining requested business features | Billing policies merged #44; classification/cost ledger and report source in #45; exact-head validation ongoing | Hourly minimum/rounding and task minimum fee are implemented in PR #44. Exact head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed formatting, analysis, Flutter behavior, Android build, 587 native tests and 32 actual Android tests on each API, zero failures/errors/skips. PR #44 squash-merged as `48fe0f8`. Main run [43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359) failed the API-24 actual billing journey because the test could not return to the job-tax field; Play delivery [43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279) was skipped. At PR #45 head `9724065`, run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed formatting, analysis, Flutter behavior tests, Android build and all 602 native tests. Its API-24 billing journey could not return to **Billing basis** after invalid-tax validation, blocking API 35 and later journeys. Rerun [43601098250](https://github.com/centerionware/Clockrove/actions/runs/43601098250) failed the same assertion. PR #45 implements Labor/Supplies classification and a schema-v14 exact-money cost ledger with soft-delete/revision history, keyset paging and editor UI. New source adds schema-v15 customer snapshots on costs and filtered business reports with exact currency groups, event-date drilldowns and PDF/CSV exports. Exact head `1abdcfd` / run [43605155898](https://github.com/centerionware/Clockrove/actions/runs/43605155898) passed analysis; the Actions formatter patch was applied, then Flutter behavior found one lazy-list visibility failure (180 passed, 1 failed, 14 skipped). Exact head `0905c50` / run [43605752509](https://github.com/centerionware/Clockrove/actions/runs/43605752509) passed formatting and analysis but again had 180 passed, 1 failed and 14 skipped: the customer-selection test observed an empty selection after its tap sequence. The test now taps the checkbox tile, checks its selected state and applies it. Android build/native/device tests did not run on either report head; a fresh exact-head run is required. The billing-scroll test still has not passed on this helper revision. Secure map-provider settings remain unimplemented; M6.6 is incomplete. No VM build, test or formatter ran. Exact head `ccae99f` / Actions run [43606286116](https://github.com/centerionware/Clockrove/actions/runs/43606286116) passed formatting, analysis, all Flutter behavior tests and Android debug build, then native tests reported 614 cases with four failures across SDK variants. Two underlying test assumptions failed: formula-safety was checked on a combined detail cell whose first text was safe, and the test tried to mutate a job currency, which is intentionally immutable. The fixture now makes the formula the whole detail cell and creates a JPY job only after changing the default currency. PDF/device stages were skipped. Secure map-provider settings remain unimplemented; M6.6 is incomplete. No VM build, test or formatter ran. Exact head `d6405b5` / Actions run [43607466254](https://github.com/centerionware/Clockrove/actions/runs/43607466254) passed format, analysis, Flutter behavior, Android debug build and all 614 native tests. API-24 real-device PDF stage failed the oversized-logo test because its fixture still used the former 2 MB limit; the fixture now uses `ImageLimits.NORMALIZED_BYTES + 1`. API 35 and subsequent device journeys were not reached; rerun is required. M6.6 remains incomplete and no VM build/test/formatter ran. Exact head `afdf6d8` / Actions run [43608664165](https://github.com/centerionware/Clockrove/actions/runs/43608664165) passed format, analysis, Flutter behavior, Android debug build and all 614 native tests. API-24 passed the corrected 5 MB logo-boundary test, then the quote device journey found that its new task was Unclassified and the test omitted the required Labor/Supplies selection; a screenshot confirmed the expected guard. The device test now asserts this validation, selects Labor and retries. API 35 and later device journeys were not reached; rerun required. M6.6 remains incomplete; no VM build/test/formatter ran. Final exact code head `c9d20cc` / Actions run [43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595) passed formatting, analysis, all Flutter behavior tests, Android debug build, 614 native tests and 35 actual Android tests each on API 24/35 with zero failures/errors/skips. PDF generation/viewer and the quote acceptance → scope planning → task classification/quantity edit → actual-work invoice journey passed on both APIs. Secure map-provider settings and owner-device acceptance remain; M6.6 is incomplete. No VM build/test/formatter ran. |
+| M6.6 remaining requested business features | Complete on exact head and merged main; physical owner-device acceptance pending | Hourly minimum/rounding, task minimum fee, Labor/Supplies classification, exact-money cost ledger, tax-preparation reports and secure map-provider settings are implemented. The history below records earlier exact-head failures and fixes. PR #49 merged as `aca488f`; exact-head run [43665273986](https://github.com/centerionware/Clockrove/actions/runs/43665273986) and merged-main run [43667760290](https://github.com/centerionware/Clockrove/actions/runs/43667760290) passed the full matrix. Main reports 614 native tests and 37 actual Android tests per API 24/35, zero failures/errors/skips. No VM build, test, formatter or analyzer ran. |
 | Follow-on: invoice-only hourly billing modes/minimum hours and task-rate minimum fee | Merged #44; PR exact-head passed; main validation unresolved | Global defaults with independent per-job inherit/override: minimum hours then exact time, or round total time up to a full hour; task-rate minimum fee. Exact source times and reports remain unchanged. PR head `1a1a183` / Actions run [43571526697](https://github.com/centerionware/Clockrove/actions/runs/43571526697) passed all 32 actual Android tests on each API 24 and 35 and all 587 native tests. This run passes the location toggle off/on/save/reopen journey; API-24/35 switch-state captures were reviewed. Main run [43574603359](https://github.com/centerionware/Clockrove/actions/runs/43574603359) later failed at the invalid-tax-field scroll assertion, and Play delivery [43575491279](https://github.com/centerionware/Clockrove/actions/runs/43575491279) was skipped. The updated return-to-top gesture requires a new Actions result. No VM build/test/formatter. See app_plan.md §3.5a and docs/INVOICE_LIFECYCLE_PLAN.md. |
 | Owner direction: first-use usability and widget appearance | Added to product contract; implementation/review pending | app_plan.md §3.0 and §3.2 plus docs/UI_DESIGN.md set the bar that common tasks need no training or guesswork, and every widget uses a transparent outer background with a visible border. Full-release review covers first-use journeys and Actions-rendered captures of all widget types/sizes against contrasting wallpapers. |
 | Follow-on: task comments, supplies and costs | Comments/images merged #43; classification and cost ledger pass Actions source checks; actual Android journey pending | M6.5 implements private task/comment conversations and image attachments. M6.6 adds Labor/Supplies classification with legacy values retained as Unclassified, plus a native actual-cost ledger and UI for exact-money entries. Run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed all 602 native tests plus Flutter behavior and Android build checks. Supplies task labels never auto-book costs. Actual cost CRUD, migration, exact-money and paging cases passed; device coverage did not run because the earlier billing journey failed. Templates do not copy comments, attachments or costs. |
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
-| M7.1 Crypto/KDF selection and device benchmark | Pending | Pinned maintained implementation and bounded envelope required |
-| M7.2 Encrypted archive/schema/preview | Pending; schema-16 export adapter integrated as `7f19d54`; combined exact-head Actions pending | Snapshot/export source now includes `location_deletion_ranges` alongside range revisions, coordinate-free point tombstones and revision-parent links; a synthetic export test checks these records and schema-16 metadata. The combined GPS branch contains merged-main snapshot/export and the schema-16 migration/adapter. PR #53 run `43673106129` passed format, analysis, Flutter tests and Android build but failed native test compilation on a star-projected map lookup; the correction is on the separate import-preview replay branch and awaits exact-head Actions. No VM build/test/formatter ran. Dart authenticated archive/encryption/UI, revision-graph and reference validation, restore choices, transactional apply, and full GPS-range import validation remain outstanding. See `docs/BACKUP_FORMAT.md`. |
+| M7.1 Crypto/KDF selection and device benchmark | Partial; earlier API-24/35 benchmark passed; refreshed exact-head validation pending after instrumentation APK identity fix | Pinned `cryptography` 2.9.0, Argon2id (19 MiB, 2 iterations, parallelism 1), AES-256-GCM and a fixed-size authenticated bounded header. The earlier exact PR #52 run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed the 1 MiB benchmark and 37 actual Android tests per API with zero failures/errors/skips: API 24 encrypt/decrypt 874/337 ms; API 35 1124/348 ms; envelope 1,048,648 bytes on both. Those results predate the latest main base and do not replace the required refreshed run. Run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415) on `b374915` installed the app APK, then failed before installing instrumentation because the Android test APK's AAPT `versionCode=''`; PackageManager reports its default code as `0`. The helper now defers AAPT parsing until an ambiguous install, parses named fields, maps empty version to `0` only for instrumentation, and reports sanitized package metadata if parsing fails. The first synthetic run [43697421995](https://github.com/centerionware/Clockrove/actions/runs/43697421995) found a stale fake PackageManager state between test cases, not an installer failure; the fixture now resets that state. Reordered fields, app version requirement, instrumentation code `0`, lost install reply and normal install without AAPT remain subject to the new exact-head Actions run. Earlier failures and fixes: run [43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324) found an instrumentation-runner graph conflict; `f3596aa` aligned the runner and added an instrumentation assemble gate. Run [43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760) found an API-35 APK overwrite; immutable APK copies fixed it. Run [43671872207](https://github.com/centerionware/Clockrove/actions/runs/43671872207) passed fast gates, API-24 benchmark and native tests, but API 35 stopped at the billing invalid-tax lookup. PR #54 exact head `32d6154` / run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795) passed the full API-24/35 workflow with shared billing-test corrections; the PR #52 reconciliation carries those corrections. No VM build, test, format or analyze. |
+| M7.2 Encrypted archive/schema/preview | Schema-16 native snapshot service passed PR #51; PR #52 codec source is present; refreshed Actions failed before the benchmark, bounded recovery validation pending | Snapshot/export now includes `location_deletion_ranges` alongside range revisions, coordinate-free point tombstones and revision-parent links. PR #51 run [43678616256](https://github.com/centerionware/Clockrove/actions/runs/43678616256) passed the schema-16 native snapshot/export checks. PR #52 adds deterministic bounded archive/crypto source: typed SQLite scalars, raw media descriptors, canonical ordering, exact 64 MiB plaintext accounting, duplicate-key checks and iterative revision-DAG validation. Earlier PR #52 Actions [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) passed Flutter behavior tests, native tests and crypto benchmarks on API 24/35, but it ran before the current main base; refreshed exact-head validation remains pending. Dart client snapshot/export UI, authenticated preview, restore choices, open-session decisions, transactional apply, and complete GPS-range import validation remain outstanding. The separate import-preview correction still needs exact-head Actions. See `docs/BACKUP_FORMAT.md`. No VM build, test, formatter or analyzer ran. |
 | M7.3 Conflict/ancestry/tombstone/transactional merge | Pending | Full integrity and adversarial test matrix required |
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
 | M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
@@ -86,6 +99,88 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup and M7.6 gate | Do not move from internal to closed testing until all launch features and M7.6 pass. Upload/submission/approval/live evidence remains separate. |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
+
+### 2026-11-15 — M7.1 first Actions static-check feedback
+
+Branch `m7-encrypted-backup` / head `3af11b6` was pushed only to run the
+repository's validation workflow; no publishing workflow or store secrets were
+invoked. Actions run [43664789329](https://github.com/centerionware/Clockrove/actions/runs/43664789329)
+resolved the pinned dependencies and exported the proposed `pubspec.lock` and
+formatter patch. Formatting identified line wrapping in the crypto source and
+tests; that exact CI patch is applied. Analyze then found two compile-time
+issues: the Android benchmark used `SizedBox` without importing Flutter widgets,
+and the decrypt worker passed a `List<int>` where `TransferableTypedData` needs
+`TypedData`. Both are corrected. Since Analyze and the required clean-format
+gate failed, no behavior tests, Android build, native tests, device journeys or
+API 24/35 crypto benchmarks ran. Commit the generated lock and corrections,
+then rerun the full workflow with enforced lockfile resolution. No build, test,
+formatter or analyzer ran on the VM.
+
+The locked rerun at head `8587722`, Actions run
+[43665136368](https://github.com/centerionware/Clockrove/actions/runs/43665136368),
+passed locked dependency resolution and formatting. Analyze stopped the run on
+one informational lint treated as an error: the benchmark's `dart:typed_data`
+import was unnecessary because `flutter/foundation.dart` already exported
+`Uint8List`. The import is removed. No Flutter tests, Android build, native
+tests, actual-device journeys or crypto timing benchmark ran. The shared local
+branch also contains the separate API-35 device-input helper commit
+`6fc1efe`; it is not part of remote PR #49 validation and must not be mistaken
+for M7.1 validation. The next action is a locked Actions rerun from the updated
+M7 branch. No build, test, formatter or analyzer ran on the VM.
+
+### 2026-11-15 — M7.1 instrumentation dependency conflict
+
+Locked Actions run [43665431324](https://github.com/centerionware/Clockrove/actions/runs/43665431324)
+on `4886b48` passed locked dependencies, formatting, analysis, Flutter behavior
+tests, Android debug build and native unit tests. It failed in
+`:app:mergeDebugAndroidTestAssets`: the Android test graph requested
+`androidx.test:runner:1.7.0` while Gradle consistent resolution constrained it
+to 1.3.0 from the `integration_test` debug runtime graph. The API-24/35 device
+journeys and crypto integration benchmark did not run. The source now aligns
+the debug graph to runner 1.7.0 and adds `:app:assembleDebugAndroidTest` before
+emulator setup so this boundary is checked earlier. Commit `f3596aa` is pushed
+to `m7-encrypted-backup`; locked Actions run
+[43667170760](https://github.com/centerionware/Clockrove/actions/runs/43667170760)
+completed. It passed the dependency, clean-format, analyze, Flutter behavior,
+Android build, native unit-test and `assembleDebugAndroidTest` gates. API 24
+passed 28 actual Android tests and the 1 MiB crypto benchmark (878 ms encrypt,
+284 ms decrypt). API 35's 28-case actual-app suite recorded five failures and
+one error: MainActivity captured as a blank white screen during Settings, map
+and widget journeys. Its logcat shows Flutter engine startup and viewport
+metrics but no Dart exception or fatal crash; the API-35 crypto benchmark did
+not run. Downloaded device artifacts and XML were inspected. M7.1 is partially
+verified, not complete. No build, test, formatter or analyzer ran on the VM.
+
+### 2026-11-15 — M7.1 API-35 device failure and M7.2 codec source
+
+The API-24 suite and benchmark passed, but integration_test rebuilt the shared
+`app-debug.apk` with its benchmark entrypoint. The API-35 loop then installed
+that APK, explaining its blank Flutter screen and missing app assertions. The
+CI script now copies the real debug and native instrumentation APKs to immutable
+`RUNNER_TEMP` paths before either emulator starts, and installs those copies on
+each API. This cause is diagnosed; the fix still needs a full Actions rerun.
+The API-24 benchmark passed, while API 35 must rerun before M7.1 acceptance.
+
+Started the deterministic binary M7.2 codec in
+`lib/backup/backup_archive.dart` with typed SQLite scalars, raw media bytes,
+SHA-256 media descriptors, exact 64 MiB final-plaintext accounting, preflight
+size limits, canonical row/field/blob ordering, duplicate-key checks,
+schema-versioned table allowlist and iterative revision-DAG validation. The
+native snapshot currently reports schema 15; range tombstones are allowed only
+for schema 16. Native blob IDs are HMAC-derived from snapshot ID and global row
+ordinal, so they are unique across rows/tables. Non-null BLOB columns are
+separate descriptors; null BLOB columns remain scalar nulls. Added adversarial
+codec tests for round-trip/determinism, exact bounds, malformed versions,
+duplicate fields/rows/media, corruption/truncation, revision cycles and deep
+ancestry. Tests have not run yet.
+
+Moved the existing clean-formatting failure gate in
+`.github/workflows/validate.yml` to immediately after formatter correction
+export/annotation and before Analyze/build/emulator work. Failing formatting
+still exports the patch; clean heads still run the full required suite. This
+workflow change has not run in Actions yet. The owner VM remains limited to
+source editing and read-only review; no build, test, format or analysis ran
+there.
 
 ## Active quote milestone task breakdown
 
@@ -3863,17 +3958,20 @@ override. Validate on GitHub Actions; no VM build or test ran.
 
 ### 2026-11-15 — branch/main validation race audit
 
-Main 00b11b6 / 43661944356 failed API-35 billing at the invalid-tax lookup,
-although PR head a637b72 / 43659408202 passed. Downloaded main's run-specific
-Android diagnostics: screenshot and accessibility tree show the bottom of Job
-settings, with no exposed tax error. No product-crash evidence in this failure.
-Source review found reveal and scrollToStart inspecting accessibility scroll
-results immediately, then injecting a fallback gesture before asynchronous
-scroll completion. Added waitForIdle before target recheck/fallback in both
-paths. Invalid-tax, draft-retention and committed-state assertions remain.
-This fixes an observed synchronization gap; it does not yet prove the missing
-message's full cause or a green merged-main result. Review and exact-head
-Actions validation remain required. No VM tests/builds ran.
+Main `00b11b6` / run [43661944356](https://github.com/centerionware/Clockrove/actions/runs/43661944356)
+failed API-35 billing at the invalid-tax lookup, while PR head `a637b72` / run
+[43659408202](https://github.com/centerionware/Clockrove/actions/runs/43659408202)
+passed. The PR and merged-main commits have the same source tree
+`1ddd58e325054ec607fb10d697dd25ee0eb061e9`, confirming run-to-run behavior
+rather than merge drift. Main's retained screenshot and accessibility tree show
+the bottom of Job settings with no exposed tax error; API 24 passed the same
+journey. No product-crash evidence appears in this failure. Source review found
+`reveal` and `scrollToStart` checking accessibility scrolls immediately, then
+injecting a fallback gesture before asynchronous scroll completion. PR #49 adds
+`waitForIdle` before rechecking targets or sending fallback gestures; all
+invalid-tax, draft-retention and committed-state assertions remain. This is a
+test-synchronization hypothesis, not yet proof of the full cause or a green
+merged-main result. Exact-head and merged-main Actions validation remain
 required. No VM tests/builds ran.
 
 PR #49 run 43663670008 passed all 614 native cases and API-24 device checks.
@@ -4073,3 +4171,92 @@ ruleset `Protect Main` (ID `27171072`) now requires strict status checks for its
 existing `android` check. PR #55's base matched current main at
 `f0dc15f7a7e3f86d5c9fc387a847f425f8f1a7e4` when verified. The workflow does not
 use a merge queue, so no `merge_group` trigger was added.
+### 2026-11-15 — observed editor clearing and tax-error navigation
+
+PR #51 head `8c6054b`, run `43672803259`, passed native tests but failed
+API-24 billing while replacing tax `101` with `0`. The retained screenshot
+and accessibility tree show focused editor value `1010`: Ctrl+A had not
+selected the original text. PR #52 head `11baf85`, run `43671872207`, passed
+API-24 crypto benchmark but failed API-35 tax-error navigation; its screenshot
+shows the bottom of Job settings. The input fallback now clears via ordinary
+editor delete keys and observes an empty focused field before typing. The
+validation journey locates the tax editor before checking its inline error,
+retaining exact error, draft and committed-state assertions. These corrections
+require exact-head Actions validation. No VM builds or tests ran.
+
+PR #54 head `36e27ba`, run `43673656562`, passed earlier checks then
+failed API-24 tax-error visibility. Its screenshot shows the red `101` editor
+clipped at the navigation bar; the inline error lies below the viewport.
+The test now checks available space under the editor and scrolls once when
+needed before asserting the unchanged exact error. Empty-before-replacement
+behavior remains pending full API-24/35 acceptance. No VM execution ran.
+
+
+### 2026-11-15 — shared M7.1 billing journey helper validated
+
+PR #54 head `32d6154` / Actions run [43679591795](https://github.com/centerionware/Clockrove/actions/runs/43679591795) passed formatting, analysis, Flutter behavior, Android build, native tests, the full API-24/35 PDF and device matrix, and release tooling. This run validates the shared billing-test helper path but does not run the backup crypto benchmark. Applied the validated helper changes to the PR #52 reconciliation: short settled 14%-viewport scrolls, checked checkbox-node lookup, and the tax-error reveal step. The earlier exact PR #52 head `e87eebf48f4b0a513bd4c7eb874b14b129c6b1c6` / Actions run [43683558885](https://github.com/centerionware/Clockrove/actions/runs/43683558885) subsequently passed the full workflow and both benchmarks: API 24 encrypt/decrypt 874/337 ms, API 35 1,124/348 ms; each emitted a 1,048,648-byte envelope, and JUnit reported 37 actual Android tests per API with zero failures, errors or skips. That evidence predates the latest main base. PR #52 has now been rebased onto main commit `8a0e34052dc7e7fdc9bd1d6f6b0627e3eba175ea`; push the reconciled head and run full Actions, confirming both benchmarks against this base. No merge was performed. No VM build, test, formatter or analyzer ran.
+
+
+### 2026-11-15 — refreshed PR #52 install failure and bounded recovery prepared
+
+The refreshed PR #52 head `05d087b` / Actions run
+[43691431696](https://github.com/centerionware/Clockrove/actions/runs/43691431696)
+failed identically on attempts 1 and 2. API-24 product journeys completed, then
+`flutter test integration_test/backup_crypto_benchmark_test.dart` built the
+integration APK but hung during Flutter's own APK install for about 225 seconds.
+The output said `No tests ran`, reported ADB exit `-15`, and the outer timeout
+exited `124`. This was an emulator install failure; the crypto test did not run,
+and API 35 was not reached. No manual Actions rerun was started.
+
+The current PR #52 source adds a wrapper around that exact Flutter command. It
+retries only exit `124` with the observed APK path, `No tests ran`, ADB `-15`,
+no benchmark result, and no reporter progress except a `+0` loading line naming
+`integration_test/backup_crypto_benchmark_test.dart` (relative or absolute
+path). Before its
+single retry it requires a changed kernel boot ID, completed Android boot, and
+the expected API level after removing carriage returns from `getprop`. The
+second command must exit successfully and emit the crypto result marker, which
+the benchmark prints only after encryption, decryption and byte-for-byte
+equality pass. A new synthetic Actions policy test covers successful first
+run, the targeted timeout, unrelated timeout, repeated timeout, `+0` running,
+`+0` skipped, `+0 -1` and other test-start failures, missing marker, wrong-API
+reboot, CRLF API output and unconfirmed reboot, plus PackageManager errors that
+contain misleading package/version text; it has not run yet.
+
+Static review also tightened direct ADB recovery: expected package/version
+text is accepted only when `dumpsys` exits zero, and installer output is
+captured without a pipeline so log capture cannot be misclassified as an
+install timeout. The maximum 64 MiB archive may still incur multiple
+large in-memory copies; measure its peak on API 24 or stream it before exposing
+user-facing export/restore. No VM build, test or formatter ran. Static review is
+complete; no merge was performed. Next: push this reconciliation to PR #52 with
+lease protection, then inspect one fresh full Actions run on the new exact head.
+
+### 2026-11-15 — instrumentation APK version identity correction
+
+PR #52 run [43695960415](https://github.com/centerionware/Clockrove/actions/runs/43695960415)
+on `b374915` installed the app APK, then failed while preparing the Android
+test APK. The exact AAPT output was not retained by that run. The failure was
+identified as the test variant's empty `versionCode`; Android PackageManager
+reports its default version as `0`. The main app version remains `0.1.0+1` in
+`pubspec.yaml`, and `android/app/build.gradle.kts` wires
+`versionCode = flutter.versionCode`.
+
+The installer now skips AAPT on successful installs and queries APK identity
+only after an ambiguous install timeout/kill. It parses named AAPT fields,
+maps an empty code to `0` only for the instrumentation APK, and prints
+sanitized package metadata if identity is still invalid; app APK code must
+remain numeric. Synthetic Actions cases cover reordered named fields, normal
+install without AAPT, instrumentation code `0` on a lost-reply verification,
+and rejection/diagnostics for an app with an empty code. These cases have not
+completed as a set yet. Obsolete run `43696665362` was canceled; the corrected
+exact-head full Actions run is pending. Only `git diff --check` ran locally; no
+VM build or tests ran. No merge was performed.
+
+The first new exact-head run `43697421995` failed at the bounded-recovery
+synthetic step because its normal-install setup left PackageManager state for
+the next scenario. This is a test fixture isolation correction; the installer
+correctly treated that existing package as already installed. The test now
+clears install, PackageManager, query and reboot state before starting the next
+scenario. No Android build/device journey ran in `43697421995`; a full exact
+head Actions run is required.
