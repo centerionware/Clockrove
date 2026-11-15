@@ -260,7 +260,8 @@ export CLOCKROVE_AAPT_FIXTURE=instrumentation-empty-version
 echo 'Verified an empty instrumentation versionCode maps to PackageManager versionCode 0.'
 
 export CLOCKROVE_AAPT_FIXTURE=standard
-rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$AAPT_CALL_LOG"
+rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$AAPT_CALL_LOG" \
+  "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
 export ADB_INSTALL_MODE=timeout-once
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ "$(cat "$ADB_INSTALL_COUNT")" == 2 ]]
