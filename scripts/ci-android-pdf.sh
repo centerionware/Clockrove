@@ -3,6 +3,7 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]] || { echo 'This check runs only in GitHub Actions.' >&2; exit 2; }
 : "${ANDROID_HOME:?}" "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
+source "$GITHUB_WORKSPACE/scripts/ci-adb-install.sh"
 # Ubuntu runner prerequisite linked by the pinned emulator, even with no audio.
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends libpulse0
@@ -95,8 +96,8 @@ for clockrove_api in 24 35; do
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$clockrove_validation_apk"
-  timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$clockrove_validation_test_apk"
+  clockrove_install_apk "$clockrove_api" app "$clockrove_validation_apk"
+  clockrove_install_apk "$clockrove_api" instrumentation "$clockrove_validation_test_apk"
   # Test-only real AppWidgetHost binding permission on the ephemeral emulator.
   timeout --kill-after=10s 60s adb -s emulator-5554 shell appwidget grantbind --package io.github.centerionware.clockrove --user 0
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
@@ -191,10 +192,17 @@ done
   # all native product journeys and their result pulls must be complete first.
   # This records KDF/AES-GCM timings on minimum/current API emulators without
   # setting a flaky speed threshold.
-  timeout --kill-after=10s 240s flutter test --no-pub \
-    integration_test/backup_crypto_benchmark_test.dart \
-    -d emulator-5554 --reporter expanded \
-    2>&1 | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-crypto-benchmark.txt"
+  clockrove_benchmark_log="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-crypto-benchmark.txt"
+  if clockrove_run_flutter_integration_test "$clockrove_api" backup-crypto-benchmark \
+    'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+    -- flutter test --no-pub integration_test/backup_crypto_benchmark_test.dart \
+    -d emulator-5554 --reporter expanded > "$clockrove_benchmark_log" 2>&1; then
+    cat "$clockrove_benchmark_log"
+  else
+    clockrove_benchmark_status=$?
+    cat "$clockrove_benchmark_log"
+    exit "$clockrove_benchmark_status"
+  fi
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
