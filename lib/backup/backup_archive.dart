@@ -1355,6 +1355,17 @@ final class _ArchiveChunkBuffer {
   Iterable<Uint8List> add(List<int> bytes) sync* {
     var offset = 0;
     while (offset < bytes.length) {
+      if (_pendingLength == 0 &&
+          bytes is Uint8List &&
+          bytes.length - offset >= _chunkBytes) {
+        final frameCount = (bytes.length - offset) ~/ _chunkBytes;
+        for (var frame = 0; frame < frameCount; frame++) {
+          final start = offset;
+          offset += _chunkBytes;
+          yield Uint8List.sublistView(bytes, start, offset);
+        }
+        continue;
+      }
       final available = _chunkBytes - _pendingLength;
       final remaining = bytes.length - offset;
       final count = available < remaining ? available : remaining;
