@@ -141,11 +141,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
         .toInt();
     Uint8List partialImage = Uint8List(0);
     for (var attempt = 0; attempt < 8; attempt++) {
-      partialImage = await _noisePng(
-        width,
-        1024,
-        0x43524f56 + attempt + 1,
-      );
+      partialImage = await _noisePng(width, 1024, 0x43524f56 + attempt + 1);
       if (partialImage.length <= remainingBytes) break;
       if (width <= 1) {
         throw StateError('Could not fit the final synthetic PNG in target.');
@@ -196,8 +192,8 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
 
 Future<_BenchmarkMetrics> _measureFullBackupPath() async {
   final metadataFile = _seedMetadataFile();
-  final metadata = jsonDecode(await metadataFile.readAsString())
-      as Map<String, dynamic>;
+  final metadata =
+      jsonDecode(await metadataFile.readAsString()) as Map<String, dynamic>;
   final jobId = metadata['jobId'] as String;
   final taskId = metadata['taskId'] as String;
   final seedAttachmentCount = metadata['attachmentCount'] as int;
