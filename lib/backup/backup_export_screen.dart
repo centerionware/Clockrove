@@ -212,13 +212,20 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         api: _fileApi,
         documentId: documentId,
         expectedBytes: _expectedBytes,
-        onWrite: (transferred) => _setPhase(
-          _BackupExportPhase.encrypting,
-          message: 'Encrypting and saving backup…',
-          transferredBytes: transferred,
-          expectedBytes: _expectedBytes,
-          canCancel: !_cancelRequested,
-        ),
+        onWrite: (transferred) {
+          final commitStarted = destination?.commitStarted ?? false;
+          _setPhase(
+            commitStarted
+                ? _BackupExportPhase.writing
+                : _BackupExportPhase.encrypting,
+            message: commitStarted
+                ? 'Finishing save…'
+                : 'Encrypting and saving backup…',
+            transferredBytes: transferred,
+            expectedBytes: _expectedBytes,
+            canCancel: !commitStarted && !_cancelRequested,
+          );
+        },
         onCommitStarted: () => _setPhase(
           _BackupExportPhase.writing,
           message: 'Finishing save…',
@@ -559,6 +566,8 @@ final class _BackupFileSink implements BackupTransactionalByteSink {
 
   bool get committed => _committed;
 
+  bool get commitStarted => _commitStarted;
+
   @override
   Future<void> write(List<int> bytes) async {
     if (_commitStarted || _committed || _discarded) {
@@ -580,14 +589,14 @@ final class _BackupFileSink implements BackupTransactionalByteSink {
     if (_commitStarted || _committed || _discarded) {
       throw StateError('The backup file destination is already terminal.');
     }
+    _commitStarted = true;
+    onCommitStarted();
     await _flush();
     if (_writtenBytes != expectedBytes) {
       throw const FormatException(
         'The encrypted backup did not match its preflight size.',
       );
     }
-    _commitStarted = true;
-    onCommitStarted();
     if (!await finish()) throw const _BackupSaveIncomplete();
     _committed = true;
   }

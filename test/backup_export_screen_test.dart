@@ -264,6 +264,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('disables cancellation before the final staged write', (
+    tester,
+  ) async {
+    final pendingWrite = Completer<Object?>();
+    late int writeLength;
+    respond = (call) async {
+      switch (call.method) {
+        case 'createBackupDocument':
+          return 'opaque-document-id';
+        case 'writeBackupDocumentChunk':
+          writeLength =
+              ((call.arguments as Map)['bytes'] as Uint8List).length;
+          return pendingWrite.future;
+        case 'finishBackupDocument':
+          return true;
+        default:
+          throw StateError('Unexpected method ${call.method}.');
+      }
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupExportScreen(
+          exportBackup: ({isCancelled, onProgress}) async => _snapshot(),
+          encryptArchive: _fakeEncryptor(
+            encrypted: _encryptedForArchiveSize(3),
+          ),
+          fileApi: BackupFileApi(channel: channel),
+        ),
+      ),
+    );
+    await _enterPassword(tester);
+    await tester.tap(find.byKey(const ValueKey('create-encrypted-backup')));
+    await _pumpUntil(tester, find.text('Finishing save…'));
+
+    expect(find.byKey(const ValueKey('cancel-backup-export')), findsNothing);
+    pendingWrite.complete(writeLength);
+    await _pumpUntil(tester, find.text('Encrypted backup saved.'));
+    expect(calls.map((call) => call.method), [
+      'createBackupDocument',
+      'writeBackupDocumentChunk',
+      'finishBackupDocument',
+    ]);
+  });
+
   testWidgets(
     'reports an unknown save outcome after both finish replies fail',
     (tester) async {
