@@ -204,6 +204,11 @@ done
   bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
+  # Run after the native journeys and their result pulls, since the benchmark
+  # reseeds synthetic media and runs Flutter integration_test in a fresh app
+  # process. The earlier generated-byte crypto benchmark remains before them.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
+    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
