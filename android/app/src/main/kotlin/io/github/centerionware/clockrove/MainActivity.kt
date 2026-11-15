@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.github.centerionware.clockrove.tracking.TimerHostApi
+import io.github.centerionware.clockrove.tracking.BackupHostApi
 import io.github.centerionware.clockrove.location.TrackingHostApi
 
 open class MainActivity : FlutterActivity() {
@@ -10,6 +11,7 @@ open class MainActivity : FlutterActivity() {
     private var trackingApi: TrackingHostApi? = null
     private var automationApi: io.github.centerionware.clockrove.location.geofence.AutomationHostApi? = null
     private var businessApi: io.github.centerionware.clockrove.tracking.BusinessHostApi? = null
+    private var backupApi: BackupHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
     private var mapProviderApi: io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi? = null
     private var debugApi: io.flutter.plugin.common.MethodChannel? = null
@@ -49,6 +51,7 @@ open class MainActivity : FlutterActivity() {
         documentApi = io.github.centerionware.clockrove.invoice.DocumentHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         mapProviderApi = io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         businessApi = io.github.centerionware.clockrove.tracking.BusinessHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
+        backupApi = BackupHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         timerApi = TimerHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         trackingApi = TrackingHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
         automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
@@ -62,6 +65,8 @@ open class MainActivity : FlutterActivity() {
         mapProviderApi = null
         businessApi?.detach()
         businessApi = null
+        backupApi?.detach()
+        backupApi = null
         automationApi?.detach()
         automationApi = null
         trackingApi?.detach()
