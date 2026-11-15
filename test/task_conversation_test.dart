@@ -410,7 +410,7 @@ void main() {
   });
 
   testWidgets(
-    'left swipe shows the previous photo and right swipe shows the next photo',
+    'left swipe advances and right swipe returns through task and comment photos',
     (tester) async {
       final api = _Business()
         ..seedTaskPhoto('task-photo-oldest', 10)
@@ -430,13 +430,13 @@ void main() {
       expect(find.text('Photo 2 of 3'), findsOneWidget);
       await tester.drag(find.byType(PageView).last, const Offset(-300, 0));
       await tester.pumpAndSettle();
-      expect(find.text('Photo 1 of 3'), findsOneWidget);
+      expect(find.text('Photo 3 of 3'), findsOneWidget);
       await tester.drag(find.byType(PageView).last, const Offset(300, 0));
       await tester.pumpAndSettle();
       expect(find.text('Photo 2 of 3'), findsOneWidget);
       await tester.drag(find.byType(PageView).last, const Offset(300, 0));
       await tester.pumpAndSettle();
-      expect(find.text('Photo 3 of 3'), findsOneWidget);
+      expect(find.text('Photo 1 of 3'), findsOneWidget);
     },
   );
 }

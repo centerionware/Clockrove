@@ -74,16 +74,15 @@ instrumentation preference; release builds still use the phone's camera. M6.5
 emulator journeys pass. Physical map display, GPS sampling and hardware-camera
 acceptance remain owner-device checks. No VM build/test/formatter has run.
 
-The owner-requested photo navigation order is left swipe to the prior
-chronological task/comment photo (-1) and right swipe to the next (+1). PR #55
-initially removed `PageView.reverse`, which inverted that requested behavior.
-Its exact-head run [43680373221](https://github.com/centerionware/Clockrove/actions/runs/43680373221)
-reached the Android photo journey on API 24; after swiping left from **Photo 4
-of 4**, the captured screen still showed **Photo 4 of 4**. The source and tests
-now retain `PageView.reverse` and assert left = previous, right = next. The
-shared billing-device-test corrections also passed the journey that had
-previously blocked device testing. A fresh exact-head API-24/35 Actions run is
-pending. No VM build/test/formatter has run.
+The owner-requested photo navigation direction correction is in PR #55: left
+swipe advances to the next chronological task/comment photo, and right swipe
+returns to the prior photo. Its first exact-head run passed formatting, analysis,
+Flutter behavior, Android build and native unit tests, then stopped in the API-24
+device journey while revealing **View original PDF**. The viewer direction is
+therefore not yet proven on Android devices. PR #55 now includes the shared
+billing-device-test corrections for text replacement, short settled scrolls,
+tax-error visibility and covered-task checkbox visibility; exact-head API-24/35
+Actions validation is pending. No VM build/test/formatter has run.
 
 The whole-app UI/E2E milestone remains M7.6 after M6.5, M6.6 and backup M7.
 

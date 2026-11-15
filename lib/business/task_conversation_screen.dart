@@ -568,7 +568,6 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
       ),
       body: PageView.builder(
         controller: _controller,
-        reverse: true,
         itemCount: count,
         onPageChanged: (index) => setState(() => _index = index),
         itemBuilder: (context, index) {
