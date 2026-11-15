@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:clockrove/backup/backup_crypto.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:crypto/crypto.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -66,25 +68,28 @@ void main() {
     }
   });
 
-  test('v2 rejects v1 envelopes without falling back to the v1 reader', () async {
-    final v1 = await BackupCrypto.encrypt(
-      password: _password,
-      archive: Uint8List.fromList([1, 2, 3]),
-    );
-    final staged = _MemorySink();
-
-    await expectLater(
-      BackupCryptoV2.decrypt(
+  test(
+    'v2 rejects v1 envelopes without falling back to the v1 reader',
+    () async {
+      final v1 = await BackupCrypto.encrypt(
         password: _password,
-        envelope: Stream.value(v1),
-        privateArchive: staged,
-      ),
-      throwsA(isA<FormatException>()),
-    );
-    expect(staged.committed, isFalse);
-    expect(staged.discarded, isTrue);
-    expect(staged.visibleBytes, isNull);
-  });
+        archive: Uint8List.fromList([1, 2, 3]),
+      );
+      final staged = _MemorySink();
+
+      await expectLater(
+        BackupCryptoV2.decrypt(
+          password: _password,
+          envelope: Stream.value(v1),
+          privateArchive: staged,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(staged.committed, isFalse);
+      expect(staged.discarded, isTrue);
+      expect(staged.visibleBytes, isNull);
+    },
+  );
 
   test('unsupported KDF parameters fail before password derivation', () async {
     final encrypted = await _encrypt(_pattern(1));
@@ -110,35 +115,40 @@ void main() {
     expect(staged.discarded, isTrue);
   });
 
-  test('wrong password and frame tampering never commit staged plaintext', () async {
-    final encrypted = await _encrypt(_pattern(777));
-    final badTag = Uint8List.fromList(encrypted);
-    badTag[BackupCryptoV2.headerBytes + BackupCryptoV2.frameHeaderBytes] ^= 1;
-    final badFinalTag = Uint8List.fromList(encrypted);
-    badFinalTag[badFinalTag.length - 1] ^= 1;
+  test(
+    'wrong password and frame tampering never commit staged plaintext',
+    () async {
+      final encrypted = await _encrypt(_pattern(777));
+      final badTag = Uint8List.fromList(encrypted);
+      badTag[BackupCryptoV2.headerBytes + BackupCryptoV2.frameHeaderBytes] ^= 1;
+      final badFinalTag = Uint8List.fromList(encrypted);
+      badFinalTag[badFinalTag.length - 1] ^= 1;
 
-    for (final damaged in [encrypted, badTag, badFinalTag]) {
-      final staged = _MemorySink();
-      final password = identical(damaged, encrypted) ? 'wrong-password-123' : _password;
-      await expectLater(
-        BackupCryptoV2.decrypt(
-          password: password,
-          envelope: _chunks(damaged, 401),
-          privateArchive: staged,
-        ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            'The backup could not be unlocked. Check the password and file.',
+      for (final damaged in [encrypted, badTag, badFinalTag]) {
+        final staged = _MemorySink();
+        final password = identical(damaged, encrypted)
+            ? 'wrong-password-123'
+            : _password;
+        await expectLater(
+          BackupCryptoV2.decrypt(
+            password: password,
+            envelope: _chunks(damaged, 401),
+            privateArchive: staged,
           ),
-        ),
-      );
-      expect(staged.committed, isFalse);
-      expect(staged.discarded, isTrue);
-      expect(staged.visibleBytes, isNull);
-    }
-  });
+          throwsA(
+            isA<FormatException>().having(
+              (error) => error.message,
+              'message',
+              'The backup could not be unlocked. Check the password and file.',
+            ),
+          ),
+        );
+        expect(staged.committed, isFalse);
+        expect(staged.discarded, isTrue);
+        expect(staged.visibleBytes, isNull);
+      }
+    },
+  );
 
   test(
     'missing manifest, duplicate/reordered data frames and trailing bytes fail',
@@ -234,26 +244,19 @@ void main() {
     },
   );
 
-  test('altered manifest count, length and digest are rejected', () async {
-    final encrypted = await _encrypt(_pattern(1));
-    final manifestStart =
-        encrypted.length -
-        BackupCryptoV2.frameHeaderBytes -
-        BackupCryptoV2.manifestBytes -
-        BackupCryptoV2.tagBytes;
-    final manifestCiphertextStart =
-        manifestStart + BackupCryptoV2.frameHeaderBytes;
-    final alteredCount = Uint8List.fromList(encrypted);
-    alteredCount[manifestCiphertextStart + 7] ^= 1;
-    final alteredLength = Uint8List.fromList(encrypted);
-    alteredLength[manifestCiphertextStart + 15] ^= 1;
-    final alteredDigest = Uint8List.fromList(encrypted);
-    alteredDigest[manifestCiphertextStart + 16] ^= 1;
-
-    for (final damaged in [alteredCount, alteredLength, alteredDigest]) {
-      await _expectRejectedEnvelope(damaged);
-    }
-  });
+  test(
+    'authenticated manifests with mismatched count, length or digest fail',
+    () async {
+      final archive = _pattern(1);
+      for (final fieldOffset in [7, 15, 16]) {
+        final damaged = await _encryptWithInvalidManifest(
+          archive,
+          fieldOffset: fieldOffset,
+        );
+        await _expectRejectedEnvelope(damaged);
+      }
+    },
+  );
 
   test('cancellation and destination errors discard staged output', () async {
     final cancelled = _MemorySink();
@@ -310,6 +313,114 @@ Future<Uint8List> _encrypt(Uint8List archive) async {
   return sink.bytes;
 }
 
+Future<Uint8List> _encryptWithInvalidManifest(
+  Uint8List archive, {
+  required int fieldOffset,
+}) async {
+  final random = Random.secure();
+  final salt = Uint8List.fromList(
+    List<int>.generate(16, (_) => random.nextInt(256)),
+  );
+  final header = Uint8List(BackupCryptoV2.headerBytes);
+  header.setRange(0, 8, ascii.encode('CLKROVE2'));
+  final headerFields = ByteData.sublistView(header);
+  headerFields.setUint16(8, 2, Endian.big);
+  headerFields.setUint16(10, BackupCryptoV2.headerBytes, Endian.big);
+  header[12] = 1;
+  header[13] = 1;
+  header[14] = 1;
+  headerFields.setUint32(16, 19 * 1024, Endian.big);
+  headerFields.setUint32(20, 2, Endian.big);
+  header[24] = 1;
+  header[25] = 16;
+  header[26] = BackupCryptoV2.tagBytes;
+  headerFields.setUint32(28, BackupCryptoV2.chunkBytes, Endian.big);
+  headerFields.setUint32(32, BackupCryptoV2.maxArchiveBytes, Endian.big);
+  headerFields.setUint32(36, BackupCryptoV2.maxDataFrames, Endian.big);
+  header.setRange(40, 56, salt);
+
+  final key = await Argon2id(
+    memory: 19 * 1024,
+    parallelism: 1,
+    iterations: 2,
+    hashLength: 32,
+  ).deriveKeyFromPassword(password: _password, nonce: salt);
+  final cipher = AesGcm.with256bits();
+  final output = BytesBuilder(copy: false)..add(header);
+  var frameCount = 0;
+  for (
+    var offset = 0;
+    offset < archive.length;
+    offset += BackupCryptoV2.chunkBytes
+  ) {
+    final end = min(offset + BackupCryptoV2.chunkBytes, archive.length);
+    final frameHeader = _testFrameHeader(
+      type: 0x01,
+      sequence: frameCount,
+      length: end - offset,
+    );
+    final box = await cipher.encrypt(
+      Uint8List.sublistView(archive, offset, end),
+      secretKey: key,
+      nonce: _testNonce(0x01, frameCount),
+      aad: _testAssociatedData(header, frameHeader),
+    );
+    output
+      ..add(frameHeader)
+      ..add(box.cipherText)
+      ..add(box.mac.bytes);
+    frameCount++;
+  }
+
+  final manifest = Uint8List(BackupCryptoV2.manifestBytes);
+  manifest.setRange(0, 4, ascii.encode('END2'));
+  final manifestFields = ByteData.sublistView(manifest);
+  manifestFields.setUint32(4, frameCount, Endian.big);
+  manifestFields.setUint64(8, archive.length, Endian.big);
+  manifest.setRange(16, manifest.length, sha256.convert(archive).bytes);
+  manifest[fieldOffset] ^= 1;
+  final manifestHeader = _testFrameHeader(
+    type: 0x7f,
+    sequence: frameCount,
+    length: manifest.length,
+  );
+  final manifestBox = await cipher.encrypt(
+    manifest,
+    secretKey: key,
+    nonce: _testNonce(0x7f, frameCount),
+    aad: _testAssociatedData(header, manifestHeader),
+  );
+  output
+    ..add(manifestHeader)
+    ..add(manifestBox.cipherText)
+    ..add(manifestBox.mac.bytes);
+  return output.takeBytes();
+}
+
+Uint8List _testFrameHeader({
+  required int type,
+  required int sequence,
+  required int length,
+}) {
+  final header = Uint8List(BackupCryptoV2.frameHeaderBytes);
+  header[0] = type;
+  final fields = ByteData.sublistView(header);
+  fields.setUint32(1, sequence, Endian.big);
+  fields.setUint32(5, length, Endian.big);
+  return header;
+}
+
+Uint8List _testNonce(int type, int sequence) {
+  final nonce = Uint8List(12);
+  final fields = ByteData.sublistView(nonce);
+  fields.setUint32(0, type, Endian.big);
+  fields.setUint64(4, sequence, Endian.big);
+  return nonce;
+}
+
+Uint8List _testAssociatedData(Uint8List header, Uint8List frameHeader) =>
+    Uint8List.fromList([...header, ...frameHeader]);
+
 Uint8List _pattern(int length) {
   final result = Uint8List(length);
   for (var index = 0; index < result.length; index++) {
@@ -335,7 +446,8 @@ List<(int, int)> _splitFrames(Uint8List envelope) {
       offset + BackupCryptoV2.frameHeaderBytes,
     );
     final plaintextLength = frame.getUint32(5, Endian.big);
-    final end = offset +
+    final end =
+        offset +
         BackupCryptoV2.frameHeaderBytes +
         plaintextLength +
         BackupCryptoV2.tagBytes;
@@ -371,7 +483,8 @@ final class _MemorySink implements BackupTransactionalByteSink {
   @override
   Future<void> write(Uint8List bytes) async {
     _writeCount++;
-    if (_writeCount == failOnWrite) throw StateError('Synthetic write failure.');
+    if (_writeCount == failOnWrite)
+      throw StateError('Synthetic write failure.');
     _parts.add(Uint8List.fromList(bytes));
   }
 

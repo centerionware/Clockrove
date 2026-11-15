@@ -53,10 +53,7 @@ void main() {
         expect(restored.archiveBytes, BackupCryptoV2.maxArchiveBytes);
         expect(restored.dataFrameCount, BackupCryptoV2.maxDataFrames);
         expect(restored.archiveSha256, expectedDigest);
-        expect(
-          await _hashStream(restoredFile.openRead()),
-          expectedDigest,
-        );
+        expect(await _hashStream(restoredFile.openRead()), expectedDigest);
 
         final peakRssKiB = await _processHighWaterRssKiB();
         final peakDeltaRssKiB = peakRssKiB > baselineRssKiB

@@ -146,7 +146,11 @@ abstract final class BackupCryptoV2 {
       }
       _checkCancelled(isCancelled);
       final archiveSha256 = digest.close();
-      final manifest = _createManifest(frameCount, archiveLength, archiveSha256);
+      final manifest = _createManifest(
+        frameCount,
+        archiveLength,
+        archiveSha256,
+      );
       final manifestHeader = _frameHeader(
         type: _manifestType,
         sequence: frameCount,
@@ -234,8 +238,9 @@ abstract final class BackupCryptoV2 {
               length > maxArchiveBytes - archiveLength) {
             throw _invalidEnvelope();
           }
-          final ciphertextAndTag =
-              (await reader.readExactly(length + tagBytes))!;
+          final ciphertextAndTag = (await reader.readExactly(
+            length + tagBytes,
+          ))!;
           final plaintext = await _decryptFrame(
             cipher: cipher,
             key: key,
@@ -260,8 +265,9 @@ abstract final class BackupCryptoV2 {
             frameCount == 0) {
           throw _invalidEnvelope();
         }
-        final ciphertextAndTag =
-            (await reader.readExactly(manifestBytes + tagBytes))!;
+        final ciphertextAndTag = (await reader.readExactly(
+          manifestBytes + tagBytes,
+        ))!;
         final manifest = await _decryptFrame(
           cipher: cipher,
           key: key,
@@ -307,11 +313,11 @@ abstract final class BackupCryptoV2 {
 
   static Future<SecretKey> _deriveKey(String password, List<int> salt) async =>
       Argon2id(
-      memory: _memoryKiB,
-      parallelism: _parallelism,
-      iterations: _iterations,
-      hashLength: _keyBytes,
-    ).deriveKeyFromPassword(password: password, nonce: salt);
+        memory: _memoryKiB,
+        parallelism: _parallelism,
+        iterations: _iterations,
+        hashLength: _keyBytes,
+      ).deriveKeyFromPassword(password: password, nonce: salt);
 
   static Uint8List _createHeader(Uint8List salt) {
     final result = Uint8List(headerBytes);
@@ -387,10 +393,7 @@ abstract final class BackupCryptoV2 {
     return result;
   }
 
-  static Uint8List _associatedData(
-    Uint8List header,
-    Uint8List frameHeader,
-  ) {
+  static Uint8List _associatedData(Uint8List header, Uint8List frameHeader) {
     final result = Uint8List(header.length + frameHeader.length);
     result.setRange(0, header.length, header);
     result.setRange(header.length, result.length, frameHeader);
@@ -405,7 +408,9 @@ abstract final class BackupCryptoV2 {
     if (tag.length != tagBytes) {
       throw StateError('AES-GCM returned an unexpected tag length.');
     }
-    final result = Uint8List(frameHeader.length + ciphertext.length + tag.length);
+    final result = Uint8List(
+      frameHeader.length + ciphertext.length + tag.length,
+    );
     var offset = 0;
     result.setRange(offset, offset + frameHeader.length, frameHeader);
     offset += frameHeader.length;
@@ -459,7 +464,11 @@ abstract final class BackupCryptoV2 {
     required Uint8List ciphertextAndTag,
     required int plaintextLength,
   }) async {
-    final ciphertext = Uint8List.sublistView(ciphertextAndTag, 0, plaintextLength);
+    final ciphertext = Uint8List.sublistView(
+      ciphertextAndTag,
+      0,
+      plaintextLength,
+    );
     final tag = Uint8List.sublistView(
       ciphertextAndTag,
       plaintextLength,
@@ -467,11 +476,7 @@ abstract final class BackupCryptoV2 {
     );
     try {
       final plaintext = await cipher.decrypt(
-        SecretBox(
-          ciphertext,
-          nonce: _nonce(type, sequence),
-          mac: Mac(tag),
-        ),
+        SecretBox(ciphertext, nonce: _nonce(type, sequence), mac: Mac(tag)),
         secretKey: key,
         aad: _associatedData(header, frameHeader),
       );
