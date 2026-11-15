@@ -4027,3 +4027,24 @@ and required all nine GPS screenshots on each API. The run also includes the
 emulator evidence; physical GPS sampling/map acceptance, backup archive and
 restore work, and M7.6 full-app UI/E2E acceptance remain outstanding. No VM
 build, test, or formatter ran.
+
+### 2026-11-15 — PR #53 schema-16 import-preview reconciliation
+
+PR #51 remains open and unmerged. Its exact head `3e963276` passed GitHub
+Actions run [43680130675](https://github.com/centerionware/Clockrove/actions/runs/43680130675).
+PR #53 now includes that head as merge ancestry (`dc989f6`) while remaining
+targeted at `main`; the migration, GPS deletion, and export implementation are
+carried once from PR #51. Schema-16 import acceptance and its synthetic GPS
+range/revision preview case are in `9fa2291`. Validation source in `f145442`
+checks revision graph ownership/acyclicity, staged portable constraints and
+references, unique-value collisions, GPS deletion ancestry/coverage, and
+overlap with open local sessions. Conflicts remain unresolved; defaults are
+advisory. The API remains preview-only with no choice-submission or apply
+method.
+
+PR #53's prior exact head `b6cafdba` failed its API-24 billing journey in run
+[43674203423](https://github.com/centerionware/Clockrove/actions/runs/43674203423).
+The merged head requires a fresh exact-head Actions run. No VM build, test, or
+formatter ran; `git diff --check` passed. Authenticated Dart archive/encryption,
+explicit conflict choices, complete semantic validation, and transactional
+restore remain outstanding.
