@@ -279,9 +279,10 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
       );
       streamExportEncryptClock.stop();
       final afterEncryptRssKiB = await _processHighWaterRssKiB();
-      final expectedEnvelopeBytes = BackupCryptoV2.envelopeLengthForArchiveBytes(
-        exported.archiveByteLength,
-      );
+      final expectedEnvelopeBytes =
+          BackupCryptoV2.envelopeLengthForArchiveBytes(
+            exported.archiveByteLength,
+          );
       if (encrypted.archiveBytes != exported.archiveByteLength ||
           encrypted.envelopeBytes != expectedEnvelopeBytes ||
           await envelopeFile.length() != expectedEnvelopeBytes) {
