@@ -3951,13 +3951,22 @@ deletion journey was not part of this run. No VM tests/build/formatting ran.
 
 ### 2026-11-15 — observed editor clearing and tax-error navigation
 
-PR #51 head `8c6054b`, run `43672803259`, passed native tests but failed
-API-24 billing while replacing tax `101` with `0`. The retained screenshot
-and accessibility tree show focused editor value `1010`: Ctrl+A had not
-selected the original text. PR #52 head `11baf85`, run `43671872207`, passed
-API-24 crypto benchmark but failed API-35 tax-error navigation; its screenshot
-shows the bottom of Job settings. The input fallback now clears via ordinary
-editor delete keys and observes an empty focused field before typing. The
-validation journey locates the tax editor before checking its inline error,
-retaining exact error, draft and committed-state assertions. These corrections
-require exact-head Actions validation. No VM builds or tests ran.
+PR #51 head `8c6054b`, run `43672803259`, passed formatting, analysis, Flutter
+behavior tests, the Android build, and all 621 native tests. The API-24 base
+device group passed all 28 cases, then the existing billing journey failed
+while replacing tax `101` with `0`; the retained screenshot and accessibility
+tree showed focused editor value `1010`, so Ctrl+A had not selected the original
+text. API 35 and later journeys were not reached. PR #52 head `11baf85`, run
+`43671872207`, passed its API-24 crypto benchmark but failed API-35 tax-error
+navigation; its screenshot showed the bottom of Job settings.
+
+Shared repair commit `36e27ba` clears the focused editor using ordinary delete
+keys and observes an empty field before typing. The validation journey locates
+the tax editor before checking its inline error, retaining exact error, draft
+and committed-state assertions. The GPS Android journey source is now added: it
+uses both picker modes, checks current-job/all-job scope, cancellation and
+confirmation, reopens report/map views, and requires nine screenshots. It has
+not run yet. Main's schema-15 backup snapshot code is reconciled into this
+branch; worker 3 is preparing the schema-16 export adapter and synthetic
+revision/tombstone coverage. The next exact-head Actions run must validate all
+of these changes. No VM builds or tests ran; M7 and M7.6 remain unaccepted.
