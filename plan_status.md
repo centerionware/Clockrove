@@ -3874,3 +3874,12 @@ paths. Invalid-tax, draft-retention and committed-state assertions remain.
 This fixes an observed synchronization gap; it does not yet prove the missing
 message's full cause or a green merged-main result. Review and exact-head
 Actions validation remain required. No VM tests/builds ran.
+required. No VM tests/builds ran.
+
+PR #49 run 43663670008 passed all 614 native cases and API-24 device checks.
+API 35 advanced beyond invalid-tax validation, then failed replacing 101 with 0
+at billing line 502. Retained screenshot shows 101 and validation error; the
+accessibility dump shows the tax EditText unfocused. The input fallback accepted
+keyboard visibility without proving target focus. Require the target editable
+node's focused state, with bounded wait and safe pointer fallback, before typing.
+Exact-head rerun pending; no VM tests/builds ran.
