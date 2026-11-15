@@ -3981,6 +3981,20 @@ stopped at `Select GPS dates`: the actual screenshot shows the title, while the
 accessibility tree exposes `Select GPS dates Nov 9 to Nov 15` as one content
 description. The matcher now supports an explicit prefix option for content
 descriptions, enabled only for this date-picker title. Product labels and the
-existing exact-match checks are unchanged. The corrected exact-head Actions run
-is pending; do not claim the Android GPS journey passed yet. No local build or
+existing exact-match checks are unchanged. Exact-head run
+[43677160634](https://github.com/centerionware/Clockrove/actions/runs/43677160634)
+passed that title check but then stopped in input mode while waiting for exact
+`Start Date`. The accessibility dump shows the actual start-date EditText value
+and focus, without a `Start Date` text/contentDescription. No local build or
 test ran.
+
+### 2026-11-15 — GPS input-mode field matcher correction
+
+The `43677160634` API-24 screenshot shows the input-mode picker open. Its
+accessibility tree exposes the start date as a focused EditText containing
+`11/09/2026`, without the expected `Start Date` label. The test now waits for
+two visible editable date values and verifies that one field is focused, which
+proves the input mode opened without relying on a missing label. The Review,
+point-count, cancellation/confirmation, persisted tombstone, and report/map
+assertions remain. A new exact-head Actions run is required; API 35 and later
+journeys were not reached on `43677160634`. No VM build or test ran.

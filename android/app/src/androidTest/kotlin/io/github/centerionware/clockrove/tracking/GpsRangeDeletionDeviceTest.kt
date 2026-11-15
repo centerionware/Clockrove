@@ -75,6 +75,27 @@ class GpsRangeDeletionDeviceTest {
         throw AssertionError("Actual Android app never exposed '$label'")
     }
 
+    private fun waitForDateInputMode(timeoutMillis: Long = 30000): List<AccessibilityNodeInfo> {
+        val dateValue = Regex("\\d{1,2}/\\d{1,2}/\\d{4}")
+        fun visit(node: AccessibilityNodeInfo, found: MutableList<AccessibilityNodeInfo>) {
+            if (!node.refresh()) return
+            val value = node.text?.toString()?.trim().orEmpty()
+            if (node.isVisibleToUser && node.isEditable && dateValue.matches(value)) found.add(node)
+            for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it, found) }
+        }
+
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
+        while (SystemClock.uptimeMillis() < deadline) {
+            val found = mutableListOf<AccessibilityNodeInfo>()
+            automation.rootInActiveWindow?.let { visit(it, found) }
+            val dateFields = found.distinctBy { it.text?.toString()?.trim() }
+            if (dateFields.size >= 2 && dateFields.any { it.isFocused }) return dateFields
+            SystemClock.sleep(100)
+        }
+        diagnostic("missing-gps-date-inputs")
+        throw AssertionError("Input-mode GPS picker did not expose both focused date fields")
+    }
+
     private fun click(label: String) {
         var node: AccessibilityNodeInfo? = waitFor(label)
         while (node != null) {
@@ -420,7 +441,11 @@ class GpsRangeDeletionDeviceTest {
             click("Delete GPS by date range")
             waitFor("Select GPS dates", allowContentDescriptionPrefix = true)
             click("Switch to input")
-            waitFor("Start Date")
+            val dateFields = waitForDateInputMode()
+            assertEquals("Input mode must expose both selected GPS dates", 2, dateFields.mapNotNull {
+                it.text?.toString()?.trim()
+            }.distinct().size)
+            assertTrue("Input mode should focus one of its date fields", dateFields.any { it.isFocused })
             capture("gps-date-range-input")
             click("Review")
             waitFor("Matching saved GPS points: $pointLabel")
