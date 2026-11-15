@@ -131,6 +131,11 @@ jobs:
           if-no-files-found: ignore
       - name: Validate Android build
         run: flutter build apk --debug --no-pub
+      - name: Configure release plugin registration without artifacts
+        run: flutter build apk --release --config-only
+      - name: Compile release Java without signing
+        run: ./gradlew :app:compileReleaseJavaWithJavac
+        working-directory: android
       - name: Assemble Android instrumentation tests before emulator setup
         working-directory: android
         run: ./gradlew :app:assembleDebugAndroidTest

@@ -148,6 +148,7 @@ jobs:
           BUILD_CODE: ${{ steps.code.outputs.code }}
         run: |
           flutter pub get --enforce-lockfile
+          flutter build apk --release --config-only
           flutter build appbundle --release --no-pub --build-name="$BUILD_NAME" --build-number="$BUILD_CODE"
           jarsigner -verify -strict -keystore "$CLOCKROVE_UPLOAD_KEYSTORE" -storepass:env CLOCKROVE_UPLOAD_STORE_PASSWORD build/app/outputs/bundle/release/app-release.aab
       - name: Recheck main before internal submission

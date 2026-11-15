@@ -3349,3 +3349,36 @@ internal-delivery gap: the prior workflow accepted any successful main ancestor.
 The current branch adds an exact freshly fetched `main` check before build and
 again before internal submission; this workflow change has not yet been
 validated in Actions. No local build or test ran.
+
+### 2026-11-15 — release Play bundle blocked by dev-plugin registrant
+
+Main Play delivery run
+[43701872698](https://github.com/centerionware/Clockrove/actions/runs/43701872698)
+on source `cc687093` failed at `:app:compileReleaseJavaWithJavac`: the generated
+`GeneratedPluginRegistrant.java` referenced
+`dev.flutter.plugins.integration_test`, which is correctly declared only under
+`dev_dependencies` and is absent from the release compile classpath. The bundle
+did not build, and the later Play upload/submission step was skipped; this run
+did not upload internally.
+
+PR #58 prepares a Flutter release-aware configuration refresh
+(`flutter build apk --release --config-only`) after the enforced locked
+dependency resolution, then retains the AAB build's `--no-pub` behavior. Its
+non-secret Validate addition runs that release configuration step and
+`:app:compileReleaseJavaWithJavac`; Flutter 3.47.9 documents `--config-only` as
+generating build files without artifacts, and the compile task avoids the
+repository's signing gate. This check is pending Actions evidence and will not
+prove AAB packaging or signing. Keep M8.2 release validation and M8.3 delivery
+pending until the exact PR head passes and a guarded post-merge main Play run
+successfully builds/signs the AAB; inspect its log and Play result to confirm
+whether internal submission was accepted. The prior successful Play runs
+43692578396 and 43691044331 establish earlier deliveries only; they do not
+validate this changed release path. No local build or test ran.
+
+Before these changes were committed, PR #58 exact head `004c6de` / Actions run
+[43700127667](https://github.com/centerionware/Clockrove/actions/runs/43700127667)
+passed formatting, analysis, Flutter behavior tests, the Android build and
+native unit tests, then failed its API-24/35 PDF/device stage at
+`locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`. This is
+separate from the release-plugin issue; that head did not contain the release
+configuration check. A fresh exact-head run must cover both.

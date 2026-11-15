@@ -29,6 +29,27 @@ Reset that fixture state before its own scenario; a fresh full exact-head run
 is pending. The 64 MiB archive memory peak also needs API-24 measurement or
 streaming before export and restore become user-facing.
 
+Current Play-release regression: main Play run
+`43701872698` on source `cc687093` failed at
+`:app:compileReleaseJavaWithJavac` because the release-generated
+`GeneratedPluginRegistrant.java` referenced dev-only `integration_test`, which
+is not on the release classpath. The AAB build failed before upload; the Play
+submission step was skipped, so this run did not upload internally. PR #58
+prepares a release-aware `flutter build apk --release --config-only` step after
+locked dependency resolution and a non-secret Actions check that compiles the
+release Java source without invoking the signing-gated bundle task. That check
+has not run yet. Keep release validation and M8.3 pending until the exact PR
+head passes and a fresh merged-main Play run builds/signs the AAB and reports
+the internal upload/submission result. Config-only and Java compilation do not
+prove a complete release bundle or Play delivery.
+
+PR #58's prior exact head `004c6de` / Actions run `43700127667` is terminal
+failure at the API-24/35 real Android PDF/device stage. Formatting, analysis,
+Flutter behavior tests, Android build and native unit tests passed; the device
+journey failed at `locationRecordingDefaultCanBeTurnedOffAndBackOnInActualSettings`.
+That head predates the release-config changes above, so a fresh exact-head run
+must validate both the new release Java check and the existing device suite.
+
 PR #45 exact code head `c9d20cc` / Actions run `43610282595` passed formatting,
 analysis, all Flutter behavior tests, Android debug build, 614 native tests,
 and full API-24/API-35 PDF, device and invoice-viewer stages. Downloaded XML
@@ -93,9 +114,9 @@ remain outstanding; M6.6 is not complete. No VM build, test or formatter ran.
 | M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
 | M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
-| M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; launch validation pending | Debug/release bundles pass Actions; physical installation, upgrade and full launch-feature matrix remain unproven |
+| M8.2 Device/dependency/release/upgrade validation | Partial CI evidence; current release-plugin regression pending | Prior release bundles passed, but main Play run [43701872698](https://github.com/centerionware/Clockrove/actions/runs/43701872698) failed release Java compilation because the generated registrant included dev-only `integration_test`; it did not produce or upload an AAB. PR #58 adds release-aware configuration and a no-signing release Java compile check; exact-head Actions and subsequent guarded main AAB packaging remain required. Physical installation, upgrade and full launch-feature matrix remain unproven |
 | Initial Play setup AAB (owner request) | Delivered | Signed artifact 13839295891 / successful run 42984008259; expires 2026-11-12 08:08 UTC; permanent signing secrets saved |
-| M8.3 Protected workflows/Fastlane/internal delivery | Automatic signed internal delivery verified; stale-main guard under review | Main 93673fb / 43254952365 passed; Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC. On 2026-11-15, unchanged-head main run 43687899077 attempt 2 passed on a22fe28. Play run 43691044331 accepted internal.40.1 / versionCode 216891797 from a22fe28 after main had advanced to 8a0e340. Full current-main validation 43690672187 passed at 08:01:45 UTC; API 24 and 35 artifacts each report 29 base instrumentation plus 9 other device cases, zero failures/errors/skips. Play run 43692578396 then submitted exact main SHA 8a0e340 as internal.41.1 / versionCode 216893018, accepted at 08:07:56 UTC. A new workflow guard checks the source against freshly fetched main before build and again before internal submission; its Actions validation is pending. Owner installation/availability and production remain separate |
+| M8.3 Protected workflows/Fastlane/internal delivery | Prior internal deliveries verified; current release fix and stale-main guard pending | Main 93673fb / 43254952365 passed; Play 43257957626 accepted internal.28.1 / 216663874 at 16:29:35 UTC. On 2026-11-15, unchanged-head main run 43687899077 attempt 2 passed on a22fe28. Play run 43691044331 accepted internal.40.1 / versionCode 216891797 from a22fe28 after main had advanced to 8a0e340. Full current-main validation 43690672187 passed at 08:01:45 UTC; API 24 and 35 artifacts each report 29 base instrumentation plus 9 other device cases, zero failures/errors/skips. Play run 43692578396 then submitted exact main SHA 8a0e340 as internal.41.1 / versionCode 216893018, accepted at 08:07:56 UTC. Main Play run [43701872698](https://github.com/centerionware/Clockrove/actions/runs/43701872698) later failed before AAB upload at release Java compilation due to dev-only `integration_test` registration; no internal upload occurred. PR #58 adds a release-aware configuration refresh plus a non-secret Java compile check; exact-head and guarded post-merge main release packaging/submission evidence are still required. Owner installation/availability and production remain separate |
 | M8.4 Closed testing/production eligibility/paid release | Pending owner setup and M7.6 gate | Do not move from internal to closed testing until all launch features and M7.6 pass. Upload/submission/approval/live evidence remains separate. |
 | M9 iOS | Deferred | After Android launch |
 | Future service | Deferred | Not a launch task |
