@@ -104,6 +104,54 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun failedExpiryRescheduleDiscardsTheStagedImport() {
+        var scheduleCalls = 0
+        var firstTaskCancelled = false
+        val rescheduleFailingScheduler = BackupScheduler { _, _ ->
+            scheduleCalls++
+            if (scheduleCalls > 1) throw IllegalStateException("synthetic reschedule failure")
+            BackupScheduledTask { firstTaskCancelled = true }
+        }
+        val failingStore = BackupImportStore(
+            app,
+            catalogProvider = exportStore::importCatalog,
+            scheduler = rescheduleFailingScheduler,
+        )
+        val records = listOf(stagedRow("customers", mapOf(
+            "id" to "reschedule-cleanup-customer",
+            "name" to "Reschedule cleanup customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        )))
+        val started = failingStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "a".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+
+        assertFailure("STORAGE_UNAVAILABLE") {
+            failingStore.appendPage(
+                started.importId,
+                0,
+                records,
+                encodedAppendRequest(started.importId, 0, records),
+            )
+        }
+
+        assertTrue(firstTaskCancelled)
+        assertFailure("IMPORT_UNAVAILABLE") { failingStore.finish(database, started.importId) }
+        val directory = File(app.noBackupFilesDir, "clockrove-backup-imports")
+        assertTrue(directory.listFiles().orEmpty().none { it.name.startsWith("clockrove-import-") })
+    }
+
+    @Test
     fun fractionalMediaSizeIsRejectedBeforeItCanBeStaged() {
         val started = importStore.begin(
             database,
@@ -563,7 +611,7 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun oldBackupPointCoveredByLocalRangeGetsPreserveDeletionConflict() {
+    fun oldBackupPointCoveredByLocalRangeBlocksUntilCausalResolutionExists() {
         val session = startAndStopSessionWithPoint("old-backup-covered-point")
         val pointCountBeforeExport = number("SELECT COUNT(*) FROM location_points")
         val source = exportStore.start(database)
@@ -590,9 +638,22 @@ class BackupImportStoreTest {
         val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
         assertNotNull(coverageConflict)
         val conflict = requireNotNull(coverageConflict)
-        assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
-        assertEquals(listOf("PRESERVE_DELETION", "RESTORE_POINT"), conflict["allowedChoices"])
+        assertNull(conflict["defaultChoice"])
+        assertEquals(emptyList<String>(), conflict["allowedChoices"])
         assertEquals(false, conflict["resolved"])
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database,
+                started.importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                "PRESERVE_DELETION",
+            )
+        }
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
         assertNoCoordinates(conflict)
         assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
         assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
@@ -602,7 +663,7 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun importedRangeCoveringLocalPointGetsPreserveDeletionConflict() {
+    fun importedRangeChoiceThatNeedsCausalRewriteFailsClosed() {
         val session = startAndStopSessionWithPoint("local-point-covered-by-import")
         val rangeId = "synthetic-imported-range"
         val revisionId = "synthetic-imported-range-revision"
@@ -646,8 +707,22 @@ class BackupImportStoreTest {
         val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
         assertNotNull(coverageConflict)
         val conflict = requireNotNull(coverageConflict)
-        assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
+        assertNull(conflict["defaultChoice"])
+        assertEquals(emptyList<String>(), conflict["allowedChoices"])
         assertEquals(false, conflict["resolved"])
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database,
+                started.importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                "KEEP_LOCAL_POINTS",
+            )
+        }
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
         assertEquals(
             "Unproven local GPS points are covered",
             (conflict["localSummary"] as Map<*, *>)["identifier"],
@@ -1050,10 +1125,436 @@ class BackupImportStoreTest {
         val openSession = page.conflicts.single { it["kind"] == "OPEN_SESSION" }
         assertEquals(false, openSession["resolved"])
         assertEquals("OMIT_OPEN_SESSION", openSession["defaultChoice"])
-        assertEquals(listOf("OMIT_OPEN_SESSION", "CLOSE_OPEN_SESSION"), openSession["allowedChoices"])
+        assertEquals(listOf("OMIT_OPEN_SESSION"), openSession["allowedChoices"])
         assertEquals(runningBefore, repository.snapshot().running)
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun applyCanOmitAnOpenBackupSessionAndRestoreOtherRowsWithoutStartingATimer() {
+        val importedCustomerId = "open-session-omitted-customer"
+        val importedSessionId = "open-session-omitted-session"
+        val records = listOf(
+            stagedRow("customers", mapOf(
+                "id" to importedCustomerId,
+                "name" to "Restored beside omitted timer",
+                "email" to "",
+                "phone" to "",
+                "address" to "",
+                "notes" to "",
+                "archived" to 0,
+            )),
+            stagedRow("sessions", mapOf(
+                "id" to importedSessionId,
+                "job_id" to jobId,
+                "start_ms" to now,
+                "end_ms" to null,
+                "timezone" to "Etc/UTC",
+                "offset_seconds" to 0,
+                "origin" to "MANUAL",
+            )),
+        )
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        assertEquals(1L, preview.openSessionCount)
+        assertEquals(1L, preview.conflictCount)
+        assertFalse(preview.applyReady)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "OPEN_SESSION"))
+        assertEquals(listOf("OMIT_OPEN_SESSION"), conflict["allowedChoices"])
+
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "OMIT_OPEN_SESSION",
+        )
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+
+        assertEquals(1L, applied.insertedCount)
+        assertEquals(1L, applied.skippedCount)
+        assertEquals("Restored beside omitted timer", customerName(importedCustomerId))
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$importedSessionId'"))
+        assertNull(repository.snapshot().running)
+    }
+
+    @Test
+    fun applyRestoresRowsAtomicallyAndKeepsImportedAutomationDisabled() {
+        val before = repository.snapshot()
+        val importedJobId = "backup-job"
+        val importedCustomerId = "backup-customer"
+        val revisionId = "backup-customer-revision"
+        val records = listOf(
+            headRecord("customer", importedCustomerId, revisionId),
+            revisionRecord(revisionId, "customer", importedCustomerId, null),
+            stagedRow("customers", mapOf(
+                "id" to importedCustomerId,
+                "name" to "Backup customer",
+                "email" to "backup@example.invalid",
+                "phone" to "",
+                "address" to "",
+                "notes" to "synthetic fixture",
+                "archived" to 0,
+            )),
+            stagedRow("jobs", mapOf(
+                "id" to importedJobId,
+                "name" to "Backup job",
+                "archived" to 0,
+                "archived_ms" to null,
+                "color_argb" to 4279724885L,
+                "billing_mode" to "HOURLY",
+                "currency" to "USD",
+                "hourly_rate_minor" to null,
+                "customer_id" to null,
+                "customer_email_override" to null,
+            )),
+            stagedRow("automation_policies", mapOf(
+                "job_id" to importedJobId,
+                "enabled" to 1,
+                "auto_start" to 1,
+                "automatic_departure" to 1,
+                "grace_minutes" to 30,
+                "configured_ms" to now,
+            )),
+            stagedRow("work_sites", mapOf(
+                "id" to "backup-disabled-site",
+                "job_id" to importedJobId,
+                "name" to "Imported site",
+                "latitude" to 12.5,
+                "longitude" to -34.5,
+                "radius" to 100.0,
+                "enabled" to 1,
+            )),
+        )
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        assertTrue(preview.applyReady)
+
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+
+        assertEquals(records.size.toLong(), applied.insertedCount)
+        assertEquals(before.version + 1L, applied.stateVersion)
+        assertEquals(applied.stateVersion, repository.snapshot().version)
+        assertNull(repository.snapshot().running)
+        assertEquals("Backup customer", database.rawQuery(
+            "SELECT name FROM customers WHERE id=?", arrayOf(importedCustomerId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertEquals(listOf(0, 0, 0), database.rawQuery(
+            "SELECT enabled,auto_start,armed FROM automation_policies WHERE job_id=?",
+            arrayOf(importedJobId),
+        ).use { assertTrue(it.moveToFirst()); listOf(it.getInt(0), it.getInt(1), it.getInt(2)) })
+        assertEquals(0L, database.rawQuery(
+            "SELECT facts_since_ms FROM automation_policies WHERE job_id=?", arrayOf(importedJobId),
+        ).use { assertTrue(it.moveToFirst()); it.getLong(0) })
+        val siteRuntime = database.rawQuery(
+            "SELECT enabled,registration_key,presence,observed_ms FROM work_sites WHERE id=?",
+            arrayOf("backup-disabled-site"),
+        ).use {
+            assertTrue(it.moveToFirst())
+            listOf(it.getInt(0), it.getString(1), it.getString(2), if (it.isNull(3)) null else it.getLong(3))
+        }
+        assertEquals(0, siteRuntime[0])
+        assertTrue((siteRuntime[1] as String).matches(
+            Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"),
+        ))
+        assertEquals("UNKNOWN", siteRuntime[2])
+        assertNull(siteRuntime[3])
+        assertTrue(database.rawQuery(
+            "SELECT 1 FROM entity_heads WHERE kind='customer' AND entity_id=? AND revision_id=?",
+            arrayOf(importedCustomerId, revisionId),
+        ).use { it.moveToFirst() })
+        assertFailure("IMPORT_UNAVAILABLE") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+    }
+
+    @Test
+    fun repositoryPublishesTheCommittedImportVersion() {
+        val record = stagedRow("customers", mapOf(
+            "id" to "published-customer",
+            "name" to "Published customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))
+        val records = listOf(record)
+        val started = repository.beginBackupImport(
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "e".repeat(64),
+            1,
+            0,
+            0,
+        )
+        repository.appendBackupImportPage(
+            started.importId, 0, records, encodedAppendRequest(started.importId, 0, records),
+        )
+        val preview = repository.finishBackupImport(started.importId)
+        val published = mutableListOf<Long>()
+        val subscription = repository.subscribe(published::add)
+        try {
+            val applied = repository.applyBackupImport(
+                started.importId, preview.previewToken, preview.localStateVersion,
+            )
+            assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+            assertEquals(applied.stateVersion, published.last())
+            assertEquals("Published customer", customerName("published-customer"))
+        } finally {
+            subscription.close()
+        }
+    }
+
+    @Test
+    fun applyRestoresTaskCommentMediaAndRollsBackIfALaterAttachmentFails() {
+        val firstBytes = byteArrayOf(10, 20, 30)
+        val secondBytes = byteArrayOf(40, 50, 60, 70)
+        val firstBlobId = "a".repeat(43)
+        val secondBlobId = "b".repeat(43)
+        val columnId = "backup-media-column"
+        val cardId = "backup-media-card"
+        val commentId = "backup-media-comment"
+        val firstAttachmentId = "backup-media-first-attachment"
+        val secondAttachmentId = "backup-media-second-attachment"
+        fun attachmentRecord(id: String, blobId: String, bytes: ByteArray) = mapOf(
+            "type" to "row",
+            "table" to "task_attachments",
+            "values" to mapOf(
+                "id" to id,
+                "task_id" to cardId,
+                "comment_id" to commentId,
+                "created_ms" to now,
+                "mime" to "image/png",
+            ),
+            "blobs" to listOf(mapOf(
+                "id" to blobId,
+                "column" to "data",
+                "sizeBytes" to bytes.size,
+            )),
+        )
+        val records = listOf(
+            stagedRow("kanban_columns", mapOf(
+                "id" to columnId,
+                "job_id" to jobId,
+                "name" to "To do",
+                "position" to 0,
+                "completed" to 0,
+            )),
+            stagedRow("kanban_cards", mapOf(
+                "id" to cardId,
+                "job_id" to jobId,
+                "column_id" to columnId,
+                "title" to "Backup photo task",
+                "description" to "",
+                "due_date" to null,
+                "position" to 0,
+                "completed_ms" to null,
+                "billable" to 1,
+                "price_minor" to null,
+                "currency" to "USD",
+                "template_id" to null,
+                "charge_type" to "UNCLASSIFIED",
+            )),
+            stagedRow("task_comments", mapOf(
+                "id" to commentId,
+                "task_id" to cardId,
+                "body" to "Photo attached to this comment",
+                "created_ms" to now,
+                "updated_ms" to now,
+            )),
+            attachmentRecord(firstAttachmentId, firstBlobId, firstBytes),
+            attachmentRecord(secondAttachmentId, secondBlobId, secondBytes),
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "f".repeat(64),
+            records.size.toLong(),
+            2,
+            (firstBytes.size + secondBytes.size).toLong(),
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        listOf(firstBlobId to firstBytes, secondBlobId to secondBytes).forEach { (blobId, bytes) ->
+            val writeCall = MethodCall("writeBackupImportBlob", mapOf(
+                "importId" to started.importId,
+                "blobId" to blobId,
+                "offset" to 0,
+                "bytes" to bytes,
+            ))
+            assertEquals(
+                bytes.size.toLong(),
+                importStore.writeBlob(
+                    started.importId,
+                    blobId,
+                    0,
+                    bytes,
+                    StandardMethodCodec.INSTANCE.encodeMethodCall(writeCall).position(),
+                ),
+            )
+        }
+        val preview = importStore.finish(database, started.importId)
+        assertTrue(preview.applyReady)
+        val versionBefore = repository.snapshot().version
+        database.execSQL(
+            "CREATE TRIGGER reject_second_imported_attachment BEFORE INSERT ON task_attachments " +
+                "WHEN NEW.id='$secondAttachmentId' BEGIN SELECT RAISE(ABORT,'synthetic failure'); END",
+        )
+
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(versionBefore, repository.snapshot().version)
+        assertEquals(0L, number("SELECT COUNT(*) FROM kanban_columns WHERE id='$columnId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM task_attachments WHERE id IN ('$firstAttachmentId','$secondAttachmentId')",
+        ))
+
+        database.execSQL("DROP TRIGGER reject_second_imported_attachment")
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(records.size.toLong(), applied.insertedCount)
+        assertEquals(2L, number(
+            "SELECT COUNT(*) FROM task_attachments WHERE id IN ('$firstAttachmentId','$secondAttachmentId')",
+        ))
+        mapOf(firstAttachmentId to firstBytes, secondAttachmentId to secondBytes).forEach { (id, bytes) ->
+            val restored = database.rawQuery(
+                "SELECT task_id,comment_id,data FROM task_attachments WHERE id=?", arrayOf(id),
+            ).use {
+                assertTrue(it.moveToFirst())
+                Triple(it.getString(0), it.getString(1), it.getBlob(2))
+            }
+            assertEquals(cardId, restored.first)
+            assertEquals(commentId, restored.second)
+            assertArrayEquals(bytes, restored.third)
+        }
+    }
+
+    @Test
+    fun applyRequiresFreshTokenVersionAndNoLocalOpenTimer() {
+        val records = listOf(stagedRow("customers", mapOf(
+            "id" to "freshness-customer",
+            "name" to "Freshness customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        )))
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        assertFailure("INVALID_PREVIEW_TOKEN") {
+            importStore.apply(database, started.importId, "bad-token", preview.localStateVersion)
+        }
+        assertFailure("PREVIEW_STALE") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion + 1L)
+        }
+
+        // Simulate a writer that failed to advance the state counter. The dedicated live-timer
+        // guard must still prevent restore from racing or replacing the open session.
+        database.execSQL(
+            "INSERT INTO sessions(id,job_id,start_ms,end_ms,timezone,offset_seconds,origin) VALUES(?,?,?,?,?,?,?)",
+            arrayOf<Any?>("local-open-for-apply", jobId, now, null, "Etc/UTC", 0, "MANUAL"),
+        )
+        val versionBefore = repository.snapshot().version
+        assertEquals(preview.localStateVersion, versionBefore)
+        assertFailure("LOCAL_TIMER_RUNNING") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+        assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='freshness-customer'"))
+        assertEquals("local-open-for-apply", repository.snapshot().running?.id)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun applyRejectsUnresolvedOrUnsupportedConflictChoices() {
+        database.execSQL(
+            "INSERT INTO customers(id,name,email,phone,address,notes,archived) VALUES(?,?,?,?,?,?,?)",
+            arrayOf<Any?>("conflicted-customer", "Local value", "", "", "", "", 0),
+        )
+        val started = stageImport(listOf(stagedRow("customers", mapOf(
+            "id" to "conflicted-customer",
+            "name" to "Backup value",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        val conflictId = conflict["conflictId"] as String
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                conflictId, "TAKE_BACKUP",
+            )
+        }
+        assertEquals("Local value", customerName("conflicted-customer"))
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflictId, "KEEP_LOCAL",
+        )
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(0L, applied.insertedCount)
+        assertEquals(1L, applied.skippedCount)
+        assertEquals(preview.localStateVersion, applied.stateVersion)
+        assertEquals("Local value", customerName("conflicted-customer"))
+    }
+
+    @Test
+    fun applyFailureRollsBackEarlierRowsAndLeavesPreviewRetryable() {
+        val records = listOf(
+            stagedRow("customers", mapOf(
+                "id" to "rollback-first", "name" to "First", "email" to "", "phone" to "",
+                "address" to "", "notes" to "", "archived" to 0,
+            )),
+            stagedRow("customers", mapOf(
+                "id" to "rollback-second", "name" to "Second", "email" to "", "phone" to "",
+                "address" to "", "notes" to "", "archived" to 0,
+            )),
+        )
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val versionBefore = repository.snapshot().version
+        database.execSQL(
+            "CREATE TRIGGER reject_second_imported_customer BEFORE INSERT ON customers " +
+                "WHEN NEW.id='rollback-second' BEGIN SELECT RAISE(ABORT,'synthetic failure'); END",
+        )
+
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id IN ('rollback-first','rollback-second')"))
+        assertEquals(versionBefore, repository.snapshot().version)
+        database.execSQL("DROP TRIGGER reject_second_imported_customer")
+        val retried = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(2L, retried.insertedCount)
+        assertEquals(2L, number("SELECT COUNT(*) FROM customers WHERE id IN ('rollback-first','rollback-second')"))
     }
 
     @Test
@@ -1145,6 +1646,30 @@ class BackupImportStoreTest {
             done = page.done
         }
     }
+
+    private fun stageImport(records: List<Map<String, Any?>>): BackupImportStore.Started {
+        require(records.isNotEmpty())
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "d".repeat(64),
+            records.size.toLong(),
+            0,
+            0,
+        )
+        importStore.appendPage(
+            started.importId,
+            0,
+            records,
+            encodedAppendRequest(started.importId, 0, records),
+        )
+        return started
+    }
+
+    private fun customerName(id: String): String = database.rawQuery(
+        "SELECT name FROM customers WHERE id=?", arrayOf(id),
+    ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
 
     private fun values(record: Map<String, Any?>): Map<*, *> = record["values"] as Map<*, *>
 

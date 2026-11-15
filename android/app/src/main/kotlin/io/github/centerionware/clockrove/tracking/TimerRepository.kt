@@ -122,6 +122,30 @@ class TimerRepository internal constructor(context: Context,
     )
 
     @Synchronized
+    internal fun resolveBackupImportConflict(
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+        conflictId: String,
+        choice: String,
+    ) = backupImportStore.resolveConflict(
+        helper.readableDatabase, importId, previewToken, expectedLocalStateVersion, conflictId, choice,
+    )
+
+    @Synchronized
+    internal fun applyBackupImport(
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+    ): BackupImportStore.Applied {
+        val applied = backupImportStore.apply(
+            helper.writableDatabase, importId, previewToken, expectedLocalStateVersion,
+        )
+        if (applied.stateVersion != expectedLocalStateVersion) publishVersion(applied.stateVersion)
+        return applied
+    }
+
+    @Synchronized
     internal fun closeBackupImport(importId: String): Boolean = backupImportStore.close(importId)
 
     @Synchronized

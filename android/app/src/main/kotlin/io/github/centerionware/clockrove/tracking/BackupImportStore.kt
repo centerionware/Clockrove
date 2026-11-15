@@ -64,6 +64,13 @@ internal class BackupImportStore(
         val conflicts: List<Map<String, Any?>>,
     )
 
+    data class Applied(
+        val importId: String,
+        val stateVersion: Long,
+        val insertedCount: Long,
+        val skippedCount: Long,
+    )
+
     class Failure(val code: String, message: String) : IllegalStateException(message)
 
     private data class Expected(
@@ -102,6 +109,13 @@ internal class BackupImportStore(
         val blobFields: List<BlobField>,
         val sessionStartMillis: Long?,
         val sessionEndMillis: Long?,
+    )
+
+    private data class ApplyRow(
+        val ordinal: Long,
+        val table: String,
+        val values: Map<String, Any?>,
+        val blobs: Map<String, LongArray>,
     )
 
     private data class ForeignKeySpec(
@@ -433,6 +447,357 @@ internal class BackupImportStore(
         return preview
     }
 
+    /** Stores one explicit conflict choice in the private staging database. */
+    @Synchronized
+    fun resolveConflict(
+        db: SQLiteDatabase,
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+        conflictId: String,
+        choice: String,
+    ) {
+        val handle = requireHandle(importId)
+        requireCurrentPreview(db, handle, previewToken, expectedLocalStateVersion)
+        val conflictJson = handle.database.rawQuery(
+            "SELECT conflict_json FROM import_conflicts WHERE conflict_id=?",
+            arrayOf(conflictId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) throw Failure("CONFLICT_UNAVAILABLE", "The backup conflict is unavailable.")
+            JSONObject(rows.getString(0))
+        }
+        val choices = conflictJson.optJSONArray("allowedChoices")
+            ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup conflict is invalid.")
+        if ((0 until choices.length()).none { choices.optString(it) == choice } ||
+            !isSupportedChoice(conflictJson.optString("kind"), conflictJson.optString("table"), choice)) {
+            throw Failure("UNSUPPORTED_CHOICE", "That backup conflict choice is not supported.")
+        }
+        conflictJson.put("resolved", true)
+        conflictJson.put("selectedChoice", choice)
+        val updated = ContentValues().apply {
+            put("selected_choice", choice)
+            put("conflict_json", conflictJson.toString())
+        }
+        if (handle.database.update("import_conflicts", updated, "conflict_id=?", arrayOf(conflictId)) != 1) {
+            throw Failure("CONFLICT_UNAVAILABLE", "The backup conflict is unavailable.")
+        }
+        handle.lastAccessElapsedMillis = elapsedClock()
+        scheduleExpiry(handle)
+    }
+
+    /**
+     * Applies only rows that do not conflict with local data. Each conflict must be explicitly
+     * resolved to a supported keep/omit choice before the write transaction begins.
+     */
+    @Synchronized
+    fun apply(
+        db: SQLiteDatabase,
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+    ): Applied {
+        val handle = requireHandle(importId)
+        val preview = handle.preview ?: throw Failure("PREVIEW_NOT_READY", "The import preview is not ready.")
+        verifyPreviewIdentity(handle, preview, previewToken, expectedLocalStateVersion)
+        var inserted = 0L
+        var skipped = 0L
+        var committedVersion = expectedLocalStateVersion
+        try {
+            db.beginTransaction()
+            try {
+                // The repository serializes native commands; the SQL transaction also protects
+                // against another connection writing between the freshness check and commit.
+                if (stateVersion(db) != expectedLocalStateVersion ||
+                    expectedLocalStateVersion != preview.localStateVersion) {
+                    throw Failure("PREVIEW_STALE", "Local data changed after this preview; create a new preview.")
+                }
+                if (scalarLong(db, "SELECT COUNT(*) FROM sessions WHERE end_ms IS NULL") != 0L) {
+                    throw Failure("LOCAL_TIMER_RUNNING", "Stop the local timer before restoring a backup.")
+                }
+                handle.revisionGraphValidated = true
+                validateRevisionGraph(db, handle)
+
+                validateApplyChoices(handle, preview.conflictCount)
+                skipped = scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts")
+
+                // Preflight every row before making the first local mutation. The transaction
+                // remains open, so the decisions cannot race a repository writer.
+                handle.database.rawQuery(
+                    "SELECT r.ordinal,r.table_name,r.primary_key,r.row_json,r.session_start_ms,r.session_end_ms,c.ordinal " +
+                        "FROM import_rows r LEFT JOIN import_conflicts c ON c.row_ordinal=r.ordinal ORDER BY r.ordinal",
+                    null,
+                ).use { rows ->
+                    while (rows.moveToNext()) {
+                        val ordinal = rows.getLong(0)
+                        val table = rows.getString(1)
+                        if (!rows.isNull(6)) continue
+                        val row = JSONObject(rows.getString(3))
+                        @Suppress("UNCHECKED_CAST")
+                        val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
+                            ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                        val spec = handle.catalog[table]
+                            ?: throw Failure("TABLE_NOT_ALLOWED", "The backup contains an unsupported table.")
+                        val blobs = stagedBlobs(handle, ordinal)
+                        val local = findLocalRow(db, table, spec, values)
+                        if (local != null) {
+                            if (!sameRecord(db, handle, table, spec, ordinal, values, blobs, local)) {
+                                throw Failure("PREVIEW_STALE", "A backup row changed after preview; create a new preview.")
+                            }
+                            skipped++
+                            continue
+                        }
+                        if (findLocalUniqueConflict(db, table, spec, values) != null) {
+                            throw Failure("PREVIEW_STALE", "A backup row now conflicts with local data; create a new preview.")
+                        }
+                        val sessionStart = if (rows.isNull(4)) null else rows.getLong(4)
+                        val sessionEnd = if (rows.isNull(5)) null else rows.getLong(5)
+                        if (table == "sessions" && sessionEnd == null) {
+                            throw Failure("PREVIEW_STALE", "An open backup session needs a fresh preview and explicit omission.")
+                        }
+                        if (table == "sessions" && sessionStart != null && sessionEnd != null &&
+                            findOverlappingSessionId(db, handle, ordinal, sessionStart, sessionEnd, values["id"].toString()) != null) {
+                            throw Failure("PREVIEW_STALE", "A backup session now overlaps local time; create a new preview.")
+                        }
+                        if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
+                            throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
+                        }
+                        if (table == "location_deletion_ranges" && hasUnprovenLocalGpsPoints(db, values)) {
+                            throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
+                        }
+                    }
+                }
+
+                // Choices are deliberately limited to explicit keep/omit semantics. A future
+                // merge or destructive GPS choice must add its transaction semantics here first.
+                db.execSQL("PRAGMA defer_foreign_keys=ON")
+                val tableOrder = dependencyOrder(db, handle.catalog.keys.toList())
+                tableOrder.forEach { table ->
+                    handle.database.rawQuery(
+                        "SELECT r.ordinal,r.row_json,c.ordinal FROM import_rows r " +
+                            "LEFT JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
+                            "WHERE r.table_name=? ORDER BY r.ordinal",
+                        arrayOf(table),
+                    ).use { rows ->
+                        while (rows.moveToNext()) {
+                            if (!rows.isNull(2)) continue
+                            val ordinal = rows.getLong(0)
+                            val rowJson = JSONObject(rows.getString(1))
+                            @Suppress("UNCHECKED_CAST")
+                            val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
+                                ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                            val spec = handle.catalog.getValue(table)
+                            val blobs = stagedBlobs(handle, ordinal)
+                            val local = findLocalRow(db, table, spec, values)
+                            if (local != null) {
+                                if (!sameRecord(db, handle, table, spec, ordinal, values, blobs, local)) {
+                                    throw Failure("PREVIEW_STALE", "A backup row changed after preview; create a new preview.")
+                                }
+                                continue
+                            }
+                            val content = applyContentValues(handle, ApplyRow(ordinal, table, values, blobs))
+                            try {
+                                db.insertOrThrow(table, null, content)
+                            } catch (_: Exception) {
+                                throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+                            }
+                            inserted++
+                        }
+                    }
+                }
+                validateAppliedState(db)
+                if (inserted > 0) {
+                    db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
+                    if (stateVersion(db) != expectedLocalStateVersion + 1L) {
+                        throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+                    }
+                }
+                clearRevisionValidation(handle)
+                db.setTransactionSuccessful()
+            } finally {
+                try {
+                    db.endTransaction()
+                } finally {
+                    if (handle.revisionGraphValidated) clearRevisionValidation(handle)
+                }
+            }
+            committedVersion = stateVersion(db)
+        } catch (failure: Failure) {
+            throw failure
+        } catch (_: Exception) {
+            throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+        }
+
+        // The durable transaction has succeeded. Retire the one-shot preview even if staged-file
+        // cleanup must be retried later; callers must never reapply a committed import.
+        active = null
+        cancelExpiry()
+        handle.secret.fill(0)
+        try { handle.database.close() } catch (_: Exception) { }
+        if (!deleteArtifacts(handle.id)) {
+            try { scheduleCleanupRetry() } catch (_: Exception) { }
+        }
+        handle.lastAccessElapsedMillis = elapsedClock()
+        return Applied(importId, committedVersion, inserted, skipped)
+    }
+
+    private fun requireCurrentPreview(
+        db: SQLiteDatabase,
+        handle: Handle,
+        token: String,
+        expectedVersion: Long,
+    ): Preview {
+        val preview = handle.preview ?: throw Failure("PREVIEW_NOT_READY", "The import preview is not ready.")
+        verifyPreviewIdentity(handle, preview, token, expectedVersion)
+        if (stateVersion(db) != expectedVersion) {
+            throw Failure("PREVIEW_STALE", "Local data changed after this preview; create a new preview.")
+        }
+        return preview
+    }
+
+    private fun verifyPreviewIdentity(
+        handle: Handle,
+        preview: Preview,
+        token: String,
+        expectedVersion: Long,
+    ) {
+        if (expectedVersion != preview.localStateVersion) {
+            throw Failure("PREVIEW_STALE", "The expected local version does not match this preview.")
+        }
+        if (!MessageDigest.isEqual(preview.previewToken.toByteArray(), token.toByteArray())) {
+            throw Failure("INVALID_PREVIEW_TOKEN", "The import preview token is invalid.")
+        }
+    }
+
+    private fun validateApplyChoices(handle: Handle, expectedConflictCount: Long) {
+        if (scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts") != expectedConflictCount ||
+            scalarLong(handle.database,
+                "SELECT COUNT(*) FROM import_conflicts c LEFT JOIN import_rows r " +
+                    "ON r.ordinal=c.row_ordinal WHERE r.ordinal IS NULL") != 0L) {
+            throw Failure("STORAGE_UNAVAILABLE", "The staged backup conflicts are invalid.")
+        }
+        if (scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice IS NULL") != 0L) {
+            throw Failure("UNRESOLVED_CONFLICTS", "Choose an option for every backup conflict before applying.")
+        }
+        handle.database.rawQuery(
+            "SELECT selected_choice,conflict_json FROM import_conflicts ORDER BY ordinal",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val choice = rows.getString(0)
+                val conflict = JSONObject(rows.getString(1))
+                val allowed = conflict.optJSONArray("allowedChoices")
+                if (!isSupportedChoice(conflict.optString("kind"), conflict.optString("table"), choice) ||
+                    allowed == null || (0 until allowed.length()).none { allowed.optString(it) == choice } ||
+                    !conflict.optBoolean("resolved") || conflict.optString("selectedChoice") != choice) {
+                    throw Failure("UNSUPPORTED_CHOICE", "A backup conflict contains an unsupported choice.")
+                }
+            }
+        }
+    }
+
+    private fun isSupportedChoice(kind: String, table: String, choice: String): Boolean = when (kind) {
+        "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
+        "SESSION_OVERLAP" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_SESSION"
+        // These choices need coordinated point/revision/head edits. Until causal graph rewriting
+        // is implemented, leave both coverage conflicts explicitly blocked in preview.
+        "GPS_DELETION_COVERAGE" -> false
+        "UNIQUE_VALUE_IN_USE" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_RECORD"
+        "IMMUTABLE_RECORD_DIFFERS", "EXISTING_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
+            (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)
+        else -> false
+    }
+
+    private fun dependencyOrder(db: SQLiteDatabase, tables: List<String>): List<String> {
+        val included = tables.toSet()
+        val dependencies = tables.associateWith { table ->
+            foreignKeySpecs(db, table, emptyMap()).map { it.parentTable }.filter(included::contains).toSet() +
+                when (table) {
+                    "invoice_task_claims", "invoice_time_claims", "invoice_copies", "invoice_payments",
+                    "invoice_payment_events", "invoice_payment_reversals", "invoice_voids" -> setOf("invoices").filter(included::contains)
+                    else -> emptySet()
+                }
+        }
+        val result = mutableListOf<String>()
+        val remaining = tables.toMutableSet()
+        while (remaining.isNotEmpty()) {
+            val ready = tables.filter { it in remaining && dependencies.getValue(it).none(remaining::contains) }
+            if (ready.isEmpty()) {
+                // Cyclic foreign keys remain deferred until commit; keep their archive order stable.
+                result.addAll(tables.filter(remaining::contains))
+                break
+            }
+            result.addAll(ready)
+            remaining.removeAll(ready.toSet())
+        }
+        return result
+    }
+
+    private fun applyContentValues(handle: Handle, row: ApplyRow): ContentValues {
+        val values = row.values.toMutableMap()
+        if (row.table == "automation_policies") {
+            values["enabled"] = 0
+            values["auto_start"] = 0
+            values["facts_since_ms"] = 0L
+        }
+        if (row.table == "work_sites") {
+            values["enabled"] = 0
+            values["registration_key"] = UUID.randomUUID().toString()
+        }
+        val content = ContentValues()
+        values.forEach { (column, value) -> putScalar(content, column, value) }
+        row.blobs.forEach { (column, source) ->
+            if (source[1] > Int.MAX_VALUE) throw Failure("APPLY_LIMIT_EXCEEDED", "A backup media item is too large to restore.")
+            val bytes = ByteArray(source[1].toInt())
+            RandomAccessFile(handle.mediaFile, "r").use { input ->
+                input.seek(source[0])
+                input.readFully(bytes)
+            }
+            content.put(column, bytes)
+        }
+        return content
+    }
+
+    private fun putScalar(content: ContentValues, column: String, value: Any?) {
+        when (value) {
+            null -> content.putNull(column)
+            is String -> content.put(column, value)
+            is Boolean -> content.put(column, if (value) 1 else 0)
+            is Byte -> content.put(column, value.toInt())
+            is Short -> content.put(column, value.toInt())
+            is Int -> content.put(column, value)
+            is Long -> content.put(column, value)
+            is Float -> content.put(column, value.toDouble())
+            is Double -> content.put(column, value)
+            else -> throw Failure("INVALID_ARCHIVE", "A backup cell has an unsupported value.")
+        }
+    }
+
+    private fun validateAppliedState(db: SQLiteDatabase) {
+        db.rawQuery("PRAGMA foreign_key_check", null).use { rows ->
+            if (rows.moveToFirst()) throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+        }
+        val invalidRangeHeads = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM location_deletion_ranges d LEFT JOIN entity_heads h " +
+                "ON h.kind='location_deletion_range' AND h.entity_id=d.id AND h.revision_id=d.revision_id " +
+                "WHERE h.entity_id IS NULL",
+        )
+        val orphanedRangeRevisions = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM entity_revisions r WHERE r.kind='location_deletion_range' AND NOT EXISTS(" +
+                "SELECT 1 FROM location_deletion_ranges d WHERE d.id=r.entity_id AND d.revision_id=r.id)",
+        )
+        val livePointHeadsWithoutPoints = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='location' AND r.deleted=0 AND NOT EXISTS(" +
+                "SELECT 1 FROM location_points p WHERE p.id=h.entity_id)",
+        )
+        if (invalidRangeHeads != 0L || orphanedRangeRevisions != 0L || livePointHeadsWithoutPoints != 0L) {
+            throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+        }
+    }
+
     @Synchronized
     fun readConflictPage(
         db: SQLiteDatabase,
@@ -530,7 +895,7 @@ internal class BackupImportStore(
         db.execSQL("CREATE INDEX import_session_bounds ON import_rows(table_name,session_start_ms,session_end_ms)")
         db.execSQL("CREATE TABLE import_blobs(blob_id TEXT PRIMARY KEY,table_name TEXT NOT NULL,row_ordinal INTEGER NOT NULL,column_name TEXT NOT NULL,size_bytes INTEGER NOT NULL,received_bytes INTEGER NOT NULL,file_offset INTEGER NOT NULL)")
         db.execSQL("CREATE INDEX import_blob_row ON import_blobs(row_ordinal,column_name)")
-        db.execSQL("CREATE TABLE import_conflicts(ordinal INTEGER PRIMARY KEY,conflict_id TEXT NOT NULL UNIQUE,conflict_json TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE import_conflicts(ordinal INTEGER PRIMARY KEY,conflict_id TEXT NOT NULL UNIQUE,row_ordinal INTEGER NOT NULL UNIQUE,selected_choice TEXT,conflict_json TEXT NOT NULL)")
     }
 
     private fun normalizeRecord(handle: Handle, input: Any?): NormalizedRow {
@@ -643,7 +1008,7 @@ internal class BackupImportStore(
                         if (earlierBackupDuplicate != null) {
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "UNIQUE_VALUE_IN_USE",
-                                listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD"), "KEEP_LOCAL",
+                            listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD"), "KEEP_LOCAL",
                                 localIdentifier = "BACKUP:${earlierBackupDuplicate.first}",
                                 localSummary = mapOf("identifier" to "Earlier backup record"),
                                 backupSummary = safeSummary(values),
@@ -653,7 +1018,7 @@ internal class BackupImportStore(
                         if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
-                                listOf("PRESERVE_DELETION", "RESTORE_POINT"), "PRESERVE_DELETION",
+                                emptyList(), null,
                                 localSummary = mapOf("identifier" to "Deletion coverage"),
                                 backupSummary = safeSummary(values),
                             )
@@ -663,7 +1028,7 @@ internal class BackupImportStore(
                             if (hasUnprovenLocalGpsPoints(db, values)) {
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
-                                    listOf("PRESERVE_DELETION", "KEEP_LOCAL_POINTS"), "PRESERVE_DELETION",
+                                    emptyList(), null,
                                     localSummary = mapOf("identifier" to "Unproven local GPS points are covered"),
                                     backupSummary = safeSummary(values),
                                 )
@@ -677,7 +1042,7 @@ internal class BackupImportStore(
                             openSessions++
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "OPEN_SESSION",
-                                listOf("OMIT_OPEN_SESSION", "CLOSE_OPEN_SESSION"), "OMIT_OPEN_SESSION",
+                                listOf("OMIT_OPEN_SESSION"), "OMIT_OPEN_SESSION",
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -689,7 +1054,7 @@ internal class BackupImportStore(
                             if (overlappingId != null) {
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson, "SESSION_OVERLAP",
-                                    listOf("KEEP_LOCAL", "OMIT_BACKUP_SESSION", "ADJUST_BACKUP_INTERVAL"),
+                                    listOf("KEEP_LOCAL", "OMIT_BACKUP_SESSION"),
                                     "KEEP_LOCAL", localIdentifier = overlappingId,
                                     localSummary = mapOf("identifier" to overlappingId),
                                     backupSummary = safeSummary(values),
@@ -707,8 +1072,8 @@ internal class BackupImportStore(
                                     if (immutable) "IMMUTABLE_RECORD_DIFFERS" else "EXISTING_RECORD_DIFFERS",
                                     when {
                                         immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
-                                        table in mergeOnlyTables -> listOf("KEEP_LOCAL", "MERGE")
-                                        else -> listOf("KEEP_LOCAL", "TAKE_BACKUP")
+                                        table in mergeOnlyTables -> listOf("KEEP_LOCAL")
+                                        else -> listOf("KEEP_LOCAL")
                                     },
                                     "KEEP_LOCAL",
                                     localSummary = safeSummary(local.values),
@@ -1023,6 +1388,7 @@ internal class BackupImportStore(
             }
             handle.revisionGraphValidated = false
         } catch (_: Exception) {
+            handle.revisionGraphValidated = false
             active = null
             destroyHandle(handle)
             throw Failure("STORAGE_UNAVAILABLE", "The backup preview could not be finalized.")
@@ -1623,7 +1989,7 @@ internal class BackupImportStore(
         keyJson: String,
         reason: String,
         choices: List<String>,
-        defaultChoice: String,
+        defaultChoice: String?,
         localIdentifier: String? = null,
         localSummary: Map<String, Any?> = emptyMap(),
         backupSummary: Map<String, Any?> = emptyMap(),
@@ -1638,11 +2004,12 @@ internal class BackupImportStore(
             .put("localSummary", safeSummaryObject(localSummary))
             .put("backupSummary", safeSummaryObject(backupSummary))
             .put("allowedChoices", JSONArray(choices))
-            .put("defaultChoice", defaultChoice)
+            .put("defaultChoice", defaultChoice ?: JSONObject.NULL)
             .put("resolved", false)
         handle.database.insertOrThrow("import_conflicts", null, ContentValues().apply {
             put("ordinal", ordinal)
             put("conflict_id", conflictId)
+            put("row_ordinal", rowOrdinal)
             put("conflict_json", conflict.toString())
         })
         return ordinal + 1
@@ -1888,9 +2255,22 @@ internal class BackupImportStore(
     }
 
     private fun scheduleExpiry(handle: Handle) {
-        expiryTask?.cancel()
+        cancelExpiry()
         val idle = (elapsedClock() - handle.lastAccessElapsedMillis).coerceAtLeast(0L)
-        expiryTask = scheduler.schedule((idleTtlMillis - idle).coerceAtLeast(1L)) { expireIfIdle(handle.id) }
+        try {
+            expiryTask = scheduler.schedule((idleTtlMillis - idle).coerceAtLeast(1L)) {
+                expireIfIdle(handle.id)
+            }
+        } catch (_: Exception) {
+            if (active?.id == handle.id) active = null
+            cancelExpiry()
+            handle.secret.fill(0)
+            try { handle.database.close() } catch (_: Exception) { }
+            if (!deleteArtifacts(handle.id)) {
+                try { scheduleCleanupRetry() } catch (_: Exception) { }
+            }
+            throw Failure("STORAGE_UNAVAILABLE", "The staged backup could not be kept secure.")
+        }
     }
 
     @Synchronized
@@ -1903,7 +2283,7 @@ internal class BackupImportStore(
             active = null
             destroyHandle(handle)
         } else {
-            scheduleExpiry(handle)
+            try { scheduleExpiry(handle) } catch (_: Failure) { }
         }
     }
 
