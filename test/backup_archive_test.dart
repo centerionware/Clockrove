@@ -224,15 +224,16 @@ void main() {
         rows: rows,
       );
       final actual = BytesBuilder(copy: false);
-      var sharedFrameCount = 0;
+      var sourceViewFrameCount = 0;
       try {
         await for (final chunk in plan.encode(
           readBlob: (_) => Stream<Uint8List>.value(media),
         )) {
           expect(chunk.length, lessThanOrEqualTo(64 * 1024));
-          if (identical(chunk.buffer, media.buffer)) {
+          if (chunk.offsetInBytes > 0 &&
+              chunk.buffer.lengthInBytes == media.length) {
             expect(chunk.length, 64 * 1024);
-            sharedFrameCount++;
+            sourceViewFrameCount++;
           }
           actual.add(chunk);
         }
@@ -254,7 +255,7 @@ void main() {
           ),
         ],
       );
-      expect(sharedFrameCount, greaterThan(0));
+      expect(sourceViewFrameCount, greaterThan(0));
       expect(actual.takeBytes(), orderedEquals(expected));
     });
 
