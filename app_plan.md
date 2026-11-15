@@ -3217,3 +3217,11 @@ shows the review form open and the note still blank. Ctrl+A is now limited to
 non-empty values, preserving ordinary typing into empty fields. The API-35
 invalid-tax accessibility check is not yet verified on the updated head. No
 VM build or test ran.
+
+The next PR #48 run `43656883319` passed formatting, analysis, Flutter tests,
+Android build and native tests, then API 24 failed while replacing the task
+quantity: the screenshot showed `126`, with the seeded `1` followed by typed
+`26`, even though accessibility reported the range selected. This confirms the
+reported range is not reliable on API 24. The helper now sends Ctrl+A for every
+non-empty field and keeps the empty-field IME path unchanged. API 35 did not run
+on this head; validate the correction through Actions. No VM build or test ran.

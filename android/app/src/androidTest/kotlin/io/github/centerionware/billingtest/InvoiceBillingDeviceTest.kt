@@ -310,14 +310,11 @@ class InvoiceBillingDeviceTest {
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length)
                 },
             )
-            // API 24 can report ACTION_SET_SELECTION success while merely
-            // moving the caret to the start of a long Flutter text value.
-            // Verify the range; if the platform did not actually select it,
-            // use the editor's standard Ctrl+A shortcut before replacing text.
-            val selected = find(label, true)
-            val selectionStart = selected?.textSelectionStart ?: -1
-            val selectionEnd = selected?.textSelectionEnd ?: -1
-            if (length > 0 && (selectionStart != 0 || selectionEnd != length)) {
+            // API 24 and 35 can report a successful selected range while only
+            // moving the caret. For populated fields, use the editor's normal
+            // Ctrl+A shortcut before replacing text. Keep empty fields on the
+            // plain IME typing path; Ctrl+A can interfere with a blank field.
+            if (length > 0) {
                 val downTime = SystemClock.uptimeMillis()
                 instrumentation.sendKeySync(
                     KeyEvent(

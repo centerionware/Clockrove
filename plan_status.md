@@ -3837,3 +3837,13 @@ Clockrove open on the review form with the note still blank. Ctrl+A is now
 restricted to non-empty values; this leaves empty fields on the ordinary IME
 typing path. The invalid-tax lookup remains unverified on API 35. Exact-head
 Actions rerun is required; no VM build or test ran.
+
+PR #48 run
+[43656883319](https://github.com/centerionware/Clockrove/actions/runs/43656883319)
+passed the fast checks, Android build and native tests, then API 24's extended
+billing journey failed while replacing quantity. The screenshot shows `126`
+(seeded `1` plus typed `26`) although accessibility reported the old range as
+selected. The device helper no longer trusts selection-range metadata: Ctrl+A
+is sent for every non-empty field, while empty fields remain on ordinary IME
+typing. API 35 was not reached. Validate the exact updated head in GitHub
+Actions; no VM build or test ran.
