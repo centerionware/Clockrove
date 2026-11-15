@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -14,7 +13,9 @@ import 'package:integration_test/integration_test.dart';
 const _targetMediaBytes = 55 * 1024 * 1024;
 const _mediaToleranceBytes = 1024 * 1024;
 const _maximumTaskImageBytes = 5_000_000;
-const _seedMetadataPath = 'clockrove-backup-snapshot-memory-seed.json';
+const _fixtureJobId = 'ci-backup-memory-job';
+const _fixtureTaskId = 'ci-backup-memory-task';
+const _fixtureImageIdPrefix = 'ci-backup-memory-image-';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -63,12 +64,9 @@ void main() {
 }
 
 Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
-  final metadataFile = _seedMetadataFile();
-  if (await metadataFile.exists()) await metadataFile.delete();
-
   final timerApi = TimerApi();
   final timer = await timerApi.snapshot();
-  final jobId = newBusinessId();
+  const jobId = _fixtureJobId;
   final jobOutcome = await timerApi.createJob(
     id: newBusinessId(),
     version: timer.version,
@@ -85,7 +83,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     (candidate) => !candidate.completed,
     orElse: () => throw StateError('The synthetic job has no open column.'),
   );
-  final taskId = newBusinessId();
+  const taskId = _fixtureTaskId;
   final cardOutcome = await businessApi.saveCard(
     newBusinessId(),
     initialBoard,
@@ -116,10 +114,11 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
       throw StateError('The synthetic task reached its attachment limit.');
     }
     final conversation = await businessApi.taskConversation(jobId, taskId);
+    final attachmentId = '$_fixtureImageIdPrefix$attachmentCount';
     final outcome = await businessApi.attachTaskImage(
       newBusinessId(),
       conversation,
-      newBusinessId(),
+      attachmentId,
       null,
       bytes,
     );
@@ -173,15 +172,6 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     throw StateError('Native task image metadata did not match the seed.');
   }
 
-  await metadataFile.writeAsString(
-    jsonEncode({
-      'jobId': jobId,
-      'taskId': taskId,
-      'attachmentCount': attachmentCount,
-      'mediaBytes': mediaBytes,
-    }),
-    flush: true,
-  );
   return _SeedMetrics(
     pid: pid,
     processStartTicks: await _processStartTicks(),
@@ -191,13 +181,8 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
 }
 
 Future<_BenchmarkMetrics> _measureFullBackupPath() async {
-  final metadataFile = _seedMetadataFile();
-  final metadata =
-      jsonDecode(await metadataFile.readAsString()) as Map<String, dynamic>;
-  final jobId = metadata['jobId'] as String;
-  final taskId = metadata['taskId'] as String;
-  final seedAttachmentCount = metadata['attachmentCount'] as int;
-  final seedMediaBytes = metadata['mediaBytes'] as int;
+  const jobId = _fixtureJobId;
+  const taskId = _fixtureTaskId;
 
   final conversation = await const BusinessApi().taskConversation(
     jobId,
@@ -207,8 +192,10 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     0,
     (total, attachment) => total + attachment.bytes,
   );
-  if (conversation.taskAttachments.length != seedAttachmentCount ||
-      storedMediaBytes != seedMediaBytes) {
+  final seedAttachmentCount = conversation.taskAttachments.length;
+  final seedMediaBytes = storedMediaBytes;
+  if (seedAttachmentCount == 0 ||
+      (seedMediaBytes - _targetMediaBytes).abs() > _mediaToleranceBytes) {
     throw StateError('Fresh-process benchmark could not verify seeded media.');
   }
 
@@ -270,7 +257,6 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     if (await outputDirectory.exists()) {
       await outputDirectory.delete(recursive: true);
     }
-    if (await metadataFile.exists()) await metadataFile.delete();
   }
 }
 
@@ -334,9 +320,6 @@ Stream<List<int>> _archiveChunks(Uint8List archive) async* {
     offset = end;
   }
 }
-
-File _seedMetadataFile() =>
-    File('${Directory.systemTemp.path}/$_seedMetadataPath');
 
 Future<int> _processHighWaterRssKiB() async {
   final status = await File('/proc/self/status').readAsLines();
