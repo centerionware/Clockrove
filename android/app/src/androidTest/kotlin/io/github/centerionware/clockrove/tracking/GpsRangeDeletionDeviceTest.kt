@@ -4,6 +4,7 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -17,6 +18,7 @@ import java.util.TimeZone
 import java.util.UUID
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -111,12 +113,15 @@ class GpsRangeDeletionDeviceTest {
         val zone = TimeZone.getDefault()
         timezoneId = zone.id
         val now = System.currentTimeMillis()
-        val endOfToday = Calendar.getInstance(zone).apply {
+        val startOfToday = Calendar.getInstance(zone).apply {
             timeInMillis = now
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val endOfToday = Calendar.getInstance(zone).apply {
+            timeInMillis = startOfToday
             add(Calendar.DAY_OF_MONTH, 1)
         }.timeInMillis
         val latestSessionEnd = SQLiteDatabase.openDatabase(
@@ -129,7 +134,7 @@ class GpsRangeDeletionDeviceTest {
                 rows.getLong(0)
             }
         }
-        sessionStart = maxOf(now - 49L * 300000L, latestSessionEnd)
+        sessionStart = maxOf(startOfToday, now - 49L * 300000L, latestSessionEnd)
         assertTrue("Fixture samples must begin within today's selectable GPS range", sessionStart < endOfToday)
         pointCount = (((endOfToday - sessionStart - 1L) / 300000L) + 1L).toInt().coerceIn(1, 49)
         val offset = zone.getOffset(sessionStart) / 1000
@@ -286,6 +291,47 @@ class GpsRangeDeletionDeviceTest {
         }
     }
 
+    private fun back() {
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        automation.waitForIdle(200, 3000)
+    }
+
+    private fun openReportAndReturnToHistory(
+        expectedMapLabel: String,
+        reportCapture: String,
+        mapCapture: String? = null,
+    ) {
+        back()
+        waitFor("Synthetic GPS deletion journey")
+        click("Job report")
+        waitFor("Work report")
+        waitFor("CSV export")
+        waitFor(expectedMapLabel)
+        capture(reportCapture)
+        if (mapCapture != null) {
+            click(expectedMapLabel)
+            waitFor("Report location history")
+            waitFor("Synthetic GPS deletion journey")
+            waitFor("37.421998, -122.084000")
+            val tileStates = listOf(
+                "Map tiles loaded",
+                "Map tiles are unavailable. Your recorded location is still available.",
+            )
+            val deadline = SystemClock.uptimeMillis() + 30000
+            while (SystemClock.uptimeMillis() < deadline && tileStates.none { find(it) != null }) {
+                SystemClock.sleep(150)
+            }
+            assertNotNull("Report map did not expose a tile state", tileStates.firstNotNullOfOrNull(::find))
+            capture(mapCapture)
+            back()
+            waitFor("Work report")
+        }
+        back()
+        waitFor("Synthetic GPS deletion journey")
+        click("Work history")
+        waitFor("Delete GPS by date range")
+    }
+
     private fun removeFixture() {
         val job = jobId ?: return
         val repository = TimerRepository.get(app)
@@ -338,9 +384,15 @@ class GpsRangeDeletionDeviceTest {
             waitFor("Delete GPS by date range")
             click("Delete GPS by date range")
             waitFor("Select GPS dates")
+            capture("gps-date-range-calendar")
             click("Review")
             waitFor("Matching saved GPS points: $pointLabel")
             waitFor("Delete GPS history?")
+            waitFor("This job only · Synthetic GPS deletion journey")
+            click("All jobs")
+            waitFor("Matching saved GPS points: $pointLabel")
+            click("This job only · Synthetic GPS deletion journey")
+            waitFor("Matching saved GPS points: $pointLabel")
             capture("gps-cancel-review")
             click("Cancel")
             waitFor("Work history")
@@ -348,12 +400,22 @@ class GpsRangeDeletionDeviceTest {
             assertReportPreserved(repository, pointCount)
             assertNoDeletionMarker()
             capture("gps-after-cancel")
+            openReportAndReturnToHistory(
+                "Map · $pointCount measured samples",
+                "gps-after-cancel-report",
+                "gps-map-after-cancel",
+            )
 
             click("Delete GPS by date range")
             waitFor("Select GPS dates")
+            click("Switch to input")
+            waitFor("Start date")
+            capture("gps-date-range-input")
             click("Review")
             waitFor("Matching saved GPS points: $pointLabel")
             waitFor("Delete GPS history?")
+            waitFor("This job only · Synthetic GPS deletion journey")
+            waitFor("All jobs")
             capture("gps-confirm-review")
             click("Delete GPS points")
             waitFor("Work history")
@@ -362,6 +424,10 @@ class GpsRangeDeletionDeviceTest {
             assertReportPreserved(repository, 0)
             assertPersistedDeletion()
             capture("gps-after-confirm")
+            openReportAndReturnToHistory(
+                "Map · 0 measured samples",
+                "gps-after-confirm-report",
+            )
         } catch (failure: Throwable) {
             diagnostic("gps-deletion-device-failure")
             throw failure

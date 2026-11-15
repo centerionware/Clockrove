@@ -159,7 +159,7 @@ PY_DEVICE
 for clockrove_settings_capture in location-recording-global-off location-recording-global-on; do
   test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/$clockrove_settings_capture.png"
 done
-for clockrove_gps_capture in gps-cancel-review gps-after-cancel gps-confirm-review gps-after-confirm; do
+for clockrove_gps_capture in gps-date-range-calendar gps-date-range-input gps-cancel-review gps-after-cancel gps-after-cancel-report gps-map-after-cancel gps-confirm-review gps-after-confirm gps-after-confirm-report; do
   test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures/$clockrove_gps_capture.png"
 done
   for clockrove_style in minimal classic modern; do
