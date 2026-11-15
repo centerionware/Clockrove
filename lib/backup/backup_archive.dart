@@ -347,13 +347,15 @@ abstract final class BackupArchiveCodec {
         );
       }
       rowLength = _boundedAdd(rowLength, 2, maxRecordBytes);
+      final rowBlobColumns = <String>{};
       for (final blob in rowBlobs) {
-        if (blob.id.isEmpty || !blobIds.add(blob.id)) {
-          throw const FormatException('The backup repeats a media identifier.');
-        }
-        if (!(_tables[row.table]?.blobColumns.contains(blob.column) ?? false)) {
+        if (blob.id.isEmpty ||
+            !blobIds.add(blob.id) ||
+            !rowBlobColumns.add(blob.column) ||
+            !(_tables[row.table]?.blobColumns.contains(blob.column) ?? false) ||
+            row.values.containsKey(blob.column)) {
           throw FormatException(
-            'The backup contains an unsupported ${row.table} media field.',
+            'The ${row.table} media reference is invalid.',
           );
         }
         if (blob.sizeBytes < 0 || blob.sizeBytes > 0xffffffff) {

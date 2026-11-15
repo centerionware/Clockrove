@@ -137,6 +137,58 @@ void main() {
       );
     });
 
+    test('stream preflight rejects invalid media field references', () {
+      BackupArchiveStreamRow row({
+        Map<String, Object?> values = const {'id': 'attachment'},
+        required List<BackupArchiveBlobSource> blobs,
+      }) => BackupArchiveStreamRow(
+        table: 'task_attachments',
+        values: values,
+        blobs: blobs,
+      );
+
+      void expectRejected(BackupArchiveStreamRow row) {
+        expect(
+          () => BackupArchiveCodec.prepareStream(
+            schemaVersion: 15,
+            stateVersion: 0,
+            capturedAtUtcMillis: 0,
+            rows: [row],
+          ),
+          throwsFormatException,
+        );
+      }
+
+      expectRejected(
+        row(
+          blobs: const [
+            BackupArchiveBlobSource(
+              id: 'blob-a',
+              column: 'data',
+              sizeBytes: 0,
+            ),
+            BackupArchiveBlobSource(
+              id: 'blob-b',
+              column: 'data',
+              sizeBytes: 0,
+            ),
+          ],
+        ),
+      );
+      expectRejected(
+        row(
+          values: const {'id': 'attachment', 'data': null},
+          blobs: const [
+            BackupArchiveBlobSource(
+              id: 'blob-a',
+              column: 'data',
+              sizeBytes: 0,
+            ),
+          ],
+        ),
+      );
+    });
+
     test('rejects unsupported archive versions and tables', () async {
       final encoded = await _encodeJob();
       final badFormat = Uint8List.fromList(encoded);
