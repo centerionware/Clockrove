@@ -114,9 +114,9 @@ void main() {
           authenticatedArchiveBytes: changed.length,
           authenticatedArchiveSha256: crypto.sha256.convert(archive).bytes,
           onHeader: (_) async => 128 * 1024,
-          onRecord: (_, __) async {},
+          onRecord: (_, _) async {},
           onRecordsComplete: () async {},
-          onMediaChunk: (_, __, ___) async {},
+          onMediaChunk: (_, _, _) async {},
         ),
         throwsA(isA<FormatException>()),
       );
