@@ -11,8 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
-const _targetMediaBytes = 63 * 1024 * 1024;
-const _mediaToleranceBytes = 1024 * 1024;
+const _archiveByteSlackBytes = 16 * 1024;
+const _archiveByteToleranceBytes = 64 * 1024;
+const _targetMediaBytes =
+    BackupCryptoV2.maxArchiveBytes - _archiveByteSlackBytes;
+const _mediaToleranceBytes = 32 * 1024;
 const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
 const _fixtureJobId = 'ci-backup-memory-job';
@@ -205,7 +208,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   if ((mediaBytes - _targetMediaBytes).abs() > _mediaToleranceBytes ||
       attachmentCount > 20) {
     throw StateError(
-      'Synthetic media was outside the 63 MiB target: '
+      'Synthetic media was outside the near-maximum archive target: '
       '$mediaBytes bytes in $attachmentCount attachments.',
     );
   }
@@ -268,7 +271,7 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     if (export.mediaBytes != seedMediaBytes ||
         export.mediaCount != seedAttachmentCount ||
         export.archiveByteLength <
-            BackupCryptoV2.maxArchiveBytes - 2 * 1024 * 1024 ||
+            BackupCryptoV2.maxArchiveBytes - _archiveByteToleranceBytes ||
         export.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
         'Snapshot export did not match the near-maximum isolated fixture.',
