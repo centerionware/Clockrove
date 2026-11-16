@@ -9,12 +9,12 @@ final class BackupRestoreImportResult {
     required this.preview,
     required this.metrics,
     required this.stagedRecordBytes,
-    required BackupImportApi api,
-  }) : _api = api;
+    required this.api,
+  });
 
   final BackupImportPreview preview;
   final BackupArchiveReadMetrics metrics;
-  final BackupImportApi _api;
+  final BackupImportApi api;
   bool _closed = false;
 
   /// Native JSON row bytes, including the per-row framing charge.
@@ -24,12 +24,10 @@ final class BackupRestoreImportResult {
 
   /// The same transport used to create this stage. Keep it with the preview so
   /// callers can page conflicts, resolve choices, apply, and then close it.
-  BackupImportApi get api => _api;
-
   /// Discards this one-shot preview stage and its private files.
   Future<bool> close() async {
     if (_closed) return false;
-    final closed = await _api.close(preview.importId);
+    final closed = await api.close(preview.importId);
     _closed = true;
     return closed;
   }
@@ -131,7 +129,13 @@ final class BackupRestoreImporter {
       }
       final handle = started;
       if (handle == null) throw StateError('Backup import was not started.');
+      if (cancellationToken?.isCancelled ?? false) {
+        throw const BackupCryptoV2CancelledException();
+      }
       preview = await _api.finish(handle.importId);
+      if (cancellationToken?.isCancelled ?? false) {
+        throw const BackupCryptoV2CancelledException();
+      }
       if (preview.recordCount != metrics.recordCount ||
           preview.mediaCount != metrics.mediaCount ||
           preview.mediaBytes != metrics.mediaBytes ||
