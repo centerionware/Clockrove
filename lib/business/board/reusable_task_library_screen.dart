@@ -6,6 +6,7 @@ import '../business_command.dart';
 
 class ReusableTaskLibraryScreen extends ConsumerStatefulWidget {
   const ReusableTaskLibraryScreen({
+    super.key,
     required this.jobId,
     required this.columnId,
   });
