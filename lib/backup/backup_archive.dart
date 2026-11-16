@@ -278,11 +278,9 @@ abstract final class BackupArchiveCodec {
 
   /// Preflights archive metadata and returns a bounded streaming encoder.
   ///
-  /// Blob content is read twice: once to calculate the descriptor hashes, and
-  /// once in archive order to write the media section. The second pass is
-  /// checked against the first, so a changing source cannot produce an
-  /// internally inconsistent archive. Only row metadata and 32-byte hashes
-  /// are retained; media bytes stay in bounded chunks.
+  /// Each source includes the digest captured by the native immutable
+  /// snapshot. Media is read once in archive order, hashed as it is emitted,
+  /// and compared with that captured digest before the stream completes.
   static BackupArchiveStreamPlan prepareStream({
     required int schemaVersion,
     required int stateVersion,
@@ -356,6 +354,10 @@ abstract final class BackupArchiveCodec {
         }
         if (blob.sizeBytes < 0 || blob.sizeBytes > 0xffffffff) {
           throw const FormatException('A backup media file is too large.');
+        }
+        if (blob.sha256.length != 32 ||
+            blob.sha256.any((byte) => byte < 0 || byte > 255)) {
+          throw const FormatException('A backup media checksum is invalid.');
         }
         rowLength = _boundedAdd(
           rowLength,
@@ -941,15 +943,17 @@ final class BackupArchiveStreamRow {
 }
 
 final class BackupArchiveBlobSource {
-  const BackupArchiveBlobSource({
+  BackupArchiveBlobSource({
     required this.id,
     required this.column,
     required this.sizeBytes,
-  });
+    required List<int> sha256,
+  }) : sha256 = List<int>.unmodifiable(sha256);
 
   final String id;
   final String column;
   final int sizeBytes;
+  final List<int> sha256;
 }
 
 /// A preflighted CLKARCH1 stream. Its output stays within 64 KiB per event.
@@ -988,33 +992,6 @@ final class BackupArchiveStreamPlan {
     required BackupArchiveBlobReader readBlob,
     BackupArchiveCancellationCheck? isCancelled,
   }) async* {
-    final hashesById = <String, List<int>>{};
-    for (final prepared in _rows) {
-      for (final blob in prepared.blobs) {
-        _checkCancelled(isCancelled);
-        final digest = _ArchiveSha256Stream();
-        var bytesRead = 0;
-        if (blob.sizeBytes > 0) {
-          await for (final chunk in readBlob(blob.id)) {
-            _checkCancelled(isCancelled);
-            if (chunk.isEmpty || chunk.length > blob.sizeBytes - bytesRead) {
-              throw const FormatException(
-                'The backup snapshot media length changed.',
-              );
-            }
-            bytesRead += chunk.length;
-            digest.add(chunk);
-          }
-        }
-        if (bytesRead != blob.sizeBytes) {
-          throw const FormatException(
-            'The backup snapshot media length changed.',
-          );
-        }
-        hashesById[blob.id] = digest.close();
-      }
-    }
-
     var emittedBytes = 0;
     final output = _ArchiveChunkBuffer();
     for (final chunk in output.add(_headerBytes)) {
@@ -1037,7 +1014,7 @@ final class BackupArchiveStreamPlan {
         writer.writeShortString(blob.id);
         writer.writeShortString(blob.column);
         writer.writeUint32(blob.sizeBytes);
-        writer.writeBytes(hashesById[blob.id]!);
+        writer.writeBytes(blob.sha256);
       }
       if (writer.offset != rowBytes.length) {
         throw StateError('Backup archive row length changed after preflight.');
@@ -1077,7 +1054,7 @@ final class BackupArchiveStreamPlan {
           }
         }
         if (bytesRead != blob.sizeBytes ||
-            !_constantTimeBytesEqual(digest.close(), hashesById[blob.id]!)) {
+            !_constantTimeBytesEqual(digest.close(), blob.sha256)) {
           throw const FormatException(
             'The backup snapshot media changed while exporting.',
           );

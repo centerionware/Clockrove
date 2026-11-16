@@ -1,8 +1,44 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:clockrove/backup/backup_archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+const _emptySha256 = <int>[
+  0xe3,
+  0xb0,
+  0xc4,
+  0x42,
+  0x98,
+  0xfc,
+  0x1c,
+  0x14,
+  0x9a,
+  0xfb,
+  0xf4,
+  0xc8,
+  0x99,
+  0x6f,
+  0xb9,
+  0x24,
+  0x27,
+  0xae,
+  0x41,
+  0xe4,
+  0x64,
+  0x9b,
+  0x93,
+  0x4c,
+  0xa4,
+  0x95,
+  0x99,
+  0x1b,
+  0x78,
+  0x52,
+  0xb8,
+  0x55,
+];
 
 void main() {
   group('BackupArchiveCodec', () {
@@ -157,6 +193,7 @@ void main() {
               id: 'media-stream',
               column: 'data',
               sizeBytes: media.length,
+              sha256: crypto.sha256.convert(media).bytes,
             ),
           ],
         ),
@@ -213,6 +250,7 @@ void main() {
               id: 'media-view',
               column: 'data',
               sizeBytes: media.length,
+              sha256: crypto.sha256.convert(media).bytes,
             ),
           ],
         ),
@@ -283,21 +321,97 @@ void main() {
 
       expectRejected(
         row(
-          blobs: const [
-            BackupArchiveBlobSource(id: 'blob-a', column: 'data', sizeBytes: 0),
-            BackupArchiveBlobSource(id: 'blob-b', column: 'data', sizeBytes: 0),
+          blobs: [
+            BackupArchiveBlobSource(
+              id: 'blob-a',
+              column: 'data',
+              sizeBytes: 0,
+              sha256: _emptySha256,
+            ),
+            BackupArchiveBlobSource(
+              id: 'blob-b',
+              column: 'data',
+              sizeBytes: 0,
+              sha256: _emptySha256,
+            ),
           ],
         ),
       );
       expectRejected(
         row(
           values: const {'id': 'attachment', 'data': null},
-          blobs: const [
-            BackupArchiveBlobSource(id: 'blob-a', column: 'data', sizeBytes: 0),
+          blobs: [
+            BackupArchiveBlobSource(
+              id: 'blob-a',
+              column: 'data',
+              sizeBytes: 0,
+              sha256: _emptySha256,
+            ),
           ],
         ),
       );
     });
+
+    test('stream preflight rejects malformed native media checksums', () {
+      final row = BackupArchiveStreamRow(
+        table: 'task_attachments',
+        values: const {'id': 'attachment'},
+        blobs: [
+          BackupArchiveBlobSource(
+            id: 'blob-bad-checksum',
+            column: 'data',
+            sizeBytes: 0,
+            sha256: List<int>.filled(31, 0),
+          ),
+        ],
+      );
+
+      expect(
+        () => BackupArchiveCodec.prepareStream(
+          schemaVersion: 15,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: [row],
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test(
+      'stream encoding rejects a changed media length in its single pass',
+      () async {
+        final media = <int>[11, 22];
+        final plan = BackupArchiveCodec.prepareStream(
+          schemaVersion: 15,
+          stateVersion: 4,
+          capturedAtUtcMillis: 5,
+          rows: [
+            BackupArchiveStreamRow(
+              table: 'task_attachments',
+              values: const {'id': 'attachment-length'},
+              blobs: [
+                BackupArchiveBlobSource(
+                  id: 'media-length',
+                  column: 'data',
+                  sizeBytes: media.length,
+                  sha256: crypto.sha256.convert(media).bytes,
+                ),
+              ],
+            ),
+          ],
+        );
+        try {
+          await expectLater(
+            plan.encode(
+              readBlob: (_) => Stream<List<int>>.value([11]),
+            ).toList(),
+            throwsFormatException,
+          );
+        } finally {
+          plan.dispose();
+        }
+      },
+    );
 
     test('rejects unsupported archive versions and tables', () async {
       final encoded = await _encodeJob();

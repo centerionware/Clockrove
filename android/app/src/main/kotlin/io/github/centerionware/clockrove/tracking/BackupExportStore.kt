@@ -107,7 +107,7 @@ internal class BackupExportStore(
         val columns: List<String>,
         val primaryKey: List<String>,
     )
-    private data class BlobLocation(val offset: Long, val sizeBytes: Long)
+    private data class BlobLocation(val offset: Long, val sizeBytes: Long, val sha256: ByteArray)
     private data class Preflight(
         val datasets: List<ResolvedDataset>,
         val recordCount: Long,
@@ -334,7 +334,9 @@ internal class BackupExportStore(
         val total = handle.rowOffsets.size
         RandomAccessFile(handle.rowsFile, "r").use { input ->
             while (nextIndex < total && records.size < MAX_RECORDS_PER_PAGE) {
-                val candidate = readRecord(input, handle.rowOffsets[nextIndex])
+                // Attach the native snapshot digest before measuring the wire
+                // page, so its descriptor bytes count against maxBytes.
+                val candidate = readRecord(input, handle.rowOffsets[nextIndex], handle.blobs)
                 records.add(candidate)
                 val candidateNext = nextIndex + 1
                 val candidatePage = Page(
@@ -498,11 +500,11 @@ internal class BackupExportStore(
                             val rowValues = record.getJSONObject("values")
                             val rawKey = rowValues.get(field.keyColumn)
                             if (rawKey === JSONObject.NULL) throw Failure("STORAGE_UNAVAILABLE", "A media key is unavailable.")
-                            val location = BlobLocation(mediaOffset, size)
+                            val sha256 = copyBlob(db, dataset.spec.table, field, rawKey.toString(), size, media)
+                            val location = BlobLocation(mediaOffset, size, sha256)
                             if (blobs.put(blobId, location) != null) {
                                 throw Failure("STORAGE_UNAVAILABLE", "The backup contains duplicate media.")
                             }
-                            copyBlob(db, dataset.spec.table, field, rawKey.toString(), size, media)
                             mediaOffset = Math.addExact(mediaOffset, size)
                             if (rows.length() + media.length() > MAX_SNAPSHOT_BYTES) {
                                 throw Failure("SNAPSHOT_LIMIT_EXCEEDED", "The backup exceeds the supported size.")
@@ -634,8 +636,8 @@ internal class BackupExportStore(
         key: String,
         size: Long,
         target: RandomAccessFile,
-    ) {
-        if (size == 0L) return
+    ): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
         var offset = 0L
         while (offset < size) {
             val chunkSize = minOf(STORAGE_BLOB_CHUNK_BYTES.toLong(), size - offset).toInt()
@@ -654,21 +656,49 @@ internal class BackupExportStore(
                 throw Failure("STORAGE_UNAVAILABLE", "A media item could not be read.")
             }
             target.write(chunk)
+            digest.update(chunk)
             offset += chunk.size
         }
         if (offset != size) throw Failure("STORAGE_UNAVAILABLE", "A media item could not be read.")
+        return digest.digest()
     }
 
-    private fun readRecord(file: RandomAccessFile, offset: Long): Map<String, Any?> {
+    private fun readRecord(
+        file: RandomAccessFile,
+        offset: Long,
+        blobs: Map<String, BlobLocation>,
+    ): Map<String, Any?> {
         file.seek(offset)
         val length = file.readInt()
         if (length !in 1..MAX_ROW_BYTES) throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
         val bytes = ByteArray(length)
         file.readFully(bytes)
         val json = JSONObject(String(bytes, StandardCharsets.UTF_8))
-        @Suppress("UNCHECKED_CAST")
-        return jsonValue(json) as? Map<String, Any?>
+        val decoded = jsonValue(json) as? Map<*, *>
             ?: throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+        val record = LinkedHashMap<String, Any?>()
+        decoded.forEach { (key, value) ->
+            if (key !is String) throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+            record[key] = value
+        }
+        val descriptors = record["blobs"] as? List<*>
+            ?: throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+        record["blobs"] = descriptors.map { rawDescriptor ->
+            val decodedDescriptor = rawDescriptor as? Map<*, *>
+                ?: throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+            val descriptor = LinkedHashMap<String, Any?>()
+            decodedDescriptor.forEach { (key, value) ->
+                if (key !is String) throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+                descriptor[key] = value
+            }
+            val blobId = descriptor["id"] as? String
+                ?: throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+            val location = blobs[blobId]
+                ?: throw Failure("STORAGE_UNAVAILABLE", "The staged backup record is invalid.")
+            descriptor["sha256"] = Base64.encodeToString(location.sha256, Base64.NO_WRAP)
+            descriptor
+        }
+        return record
     }
 
     private fun jsonValue(value: Any?): Any? = when {

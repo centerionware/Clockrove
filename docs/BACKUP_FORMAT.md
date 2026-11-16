@@ -40,7 +40,7 @@ and a blobs list:
       "type": "row",
       "table": "invoices",
       "values": {"id": "invoice-id", "pdf": null},
-      "blobs": [{"id": "opaque blob id", "column": "pdf", "sizeBytes": 1234}]
+      "blobs": [{"id": "opaque blob id", "column": "pdf", "sizeBytes": 1234, "sha256": "<base64 digest>"}]
     }
 
 The row value map contains SQLite null, integer, floating-point, boolean-like
@@ -50,6 +50,12 @@ entry in blobs, with the corresponding field set to null in values.
 readBackupBlob returns offset, nextOffset, done, and a Uint8List bytes chunk.
 Offsets may be resumed at any byte boundary. Blob IDs are generated for one
 snapshot and cannot be used with another handle.
+
+Each media descriptor includes `sha256`, the canonical standard Base64 encoding
+of the 32-byte SHA-256 digest computed while native copies that media into the
+immutable snapshot. The digest is included in the encoded page-size limit. Dart
+checks the streamed media against it while writing the archive; a mismatch
+aborts export before the encrypted destination is committed.
 
 Rows are ordered by allowlisted table name, then by that table's declared
 primary key. Blob data is emitted in full, including cached invoice and quote

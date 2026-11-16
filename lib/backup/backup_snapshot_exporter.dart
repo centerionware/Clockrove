@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 
 import 'backup_archive.dart';
@@ -129,6 +131,7 @@ final class BackupSnapshotExporter {
                 id: descriptor.id,
                 column: descriptor.column,
                 sizeBytes: descriptor.sizeBytes,
+                sha256: descriptor.sha256,
               ),
             );
           }
@@ -378,12 +381,25 @@ final class BackupSnapshotExporter {
         final id = _requiredString(blob, 'id');
         final column = _requiredString(blob, 'column');
         final sizeBytes = _integer(blob, 'sizeBytes');
-        if (id.isEmpty || column.isEmpty || sizeBytes < 0) {
+        final encodedSha256 = _requiredString(blob, 'sha256');
+        late final List<int> sha256;
+        try {
+          sha256 = base64.decode(encodedSha256);
+        } on FormatException {
+          throw const FormatException(
+            'The backup snapshot media checksum is invalid.',
+          );
+        }
+        if (id.isEmpty ||
+            column.isEmpty ||
+            sizeBytes < 0 ||
+            sha256.length != 32 ||
+            base64.encode(sha256) != encodedSha256) {
           throw const FormatException(
             'The backup snapshot media descriptor is invalid.',
           );
         }
-        blobs.add(_SnapshotBlob(id, column, sizeBytes));
+        blobs.add(_SnapshotBlob(id, column, sizeBytes, sha256));
       }
       records.add(_SnapshotRow(table, values, blobs));
     }
@@ -734,9 +750,10 @@ final class _SnapshotRow {
 }
 
 final class _SnapshotBlob {
-  const _SnapshotBlob(this.id, this.column, this.sizeBytes);
+  const _SnapshotBlob(this.id, this.column, this.sizeBytes, this.sha256);
 
   final String id;
   final String column;
   final int sizeBytes;
+  final List<int> sha256;
 }
