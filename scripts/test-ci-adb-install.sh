@@ -8,6 +8,14 @@ if [[ "$no_uninstall_invocations" != 3 ]]; then
   echo 'Backup memory benchmark seed, reseed, and measurement must all use --no-uninstall.' >&2
   exit 1
 fi
+device_script="$script_dir/ci-android-pdf.sh"
+memory_benchmark_line="$(grep -nF 'ci-android-backup-memory-benchmark.sh' "$device_script" | cut -d: -f1)"
+crypto_benchmark_line="$(grep -nF 'backup_crypto_benchmark_test.dart' "$device_script" | cut -d: -f1)"
+if [[ -z "$memory_benchmark_line" || -z "$crypto_benchmark_line" ||
+  "$memory_benchmark_line" -ge "$crypto_benchmark_line" ]]; then
+  echo 'The generated-byte crypto benchmark must run after native journeys and the full-path memory gate.' >&2
+  exit 1
+fi
 
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
@@ -354,6 +362,19 @@ export ADB_INSTALL_MODE=normal
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ ! -e "$AAPT_CALL_LOG" ]]
 echo 'Verified a successful install does not depend on aapt identity parsing.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_PACKAGE_QUERY_COUNT"
+clockrove_ensure_apk_version 24 app "$test_root/app.apk"
+[[ ! -e "$ADB_INSTALL_COUNT" ]]
+[[ "$(cat "$ADB_PACKAGE_QUERY_COUNT")" == 1 ]]
+echo 'Verified an already-installed exact APK version is reused without another install.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_PACKAGE_STATE_FILE"
+clockrove_ensure_apk_version 24 app "$test_root/app.apk"
+[[ "$(cat "$ADB_INSTALL_COUNT")" == 1 ]]
+grep -F 'Synthetic install succeeded' \
+  "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-1.log" >/dev/null
+echo 'Verified a confirmed absent APK version still uses the bounded installer.'
 
 export CLOCKROVE_AAPT_FIXTURE=reordered
 [[ "$(clockrove_apk_identity "$test_root/app.apk" app)" == 'io.github.centerionware.clockrove 42' ]]

@@ -540,3 +540,37 @@ clockrove_install_apk() {
   cat "$diagnostics_dir/third-party-packages.txt" >&2 || true
   return "$status"
 }
+
+# Reuse an already installed package when its APK package/version identity is
+# the expected build. If PackageManager confirms another version or absence,
+# install through the normal bounded recovery path. Unknown PackageManager
+# state must never authorize an install.
+clockrove_ensure_apk_version() {
+  local api="$1"
+  local label="$2"
+  local apk="$3"
+  local identity package expected_version verify_status
+  local diagnostics_dir="${GITHUB_WORKSPACE:?}/build/device-test-results/api-$api/install-diagnostics"
+
+  if [[ ! "$api" =~ ^[0-9]+$ ]]; then
+    echo 'Expected a numeric API level before checking an installed APK.' >&2
+    return 2
+  fi
+  if ! identity="$(clockrove_apk_identity "$apk" "$label")"; then
+    return 2
+  fi
+  read -r package expected_version <<< "$identity"
+  mkdir -p "$diagnostics_dir"
+  if clockrove_verify_installed_apk \
+    "$package" "$expected_version" "$diagnostics_dir/$label-preinstall-state.txt"; then
+    echo "Reusing installed $label package $package at versionCode $expected_version."
+    return 0
+  else
+    verify_status=$?
+  fi
+  if (( verify_status != 1 )); then
+    echo "Could not confirm installed $label package state; refusing an install." >&2
+    return 2
+  fi
+  clockrove_install_apk "$api" "$label" "$apk"
+}
