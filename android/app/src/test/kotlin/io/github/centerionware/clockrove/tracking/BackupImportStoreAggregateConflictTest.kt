@@ -285,9 +285,9 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             put("payload", originalDocument.copy(number = changedInvoiceNumber).encode())
         }
         replaceArchiveRow("invoices", "id", quotedInvoiceId, staleInvoice)
-        val staleDecision = archiveValues("quote_decisions") { it["quote_id"] == quoteId }.apply {
-            put("note", "Stale backup acceptance note")
-        }
+        val staleDecision = archiveValues("quote_decisions") { it["quote_id"] == quoteId }
+        val localDecisionNote = staleDecision["note"]
+        staleDecision["note"] = "Stale backup acceptance note"
         records.removeAll { it["table"] == "quote_decisions" && values(it)["quote_id"] == quoteId }
         records.add(stagedRow("quote_decisions", staleDecision))
         val localDecisionHead = database.rawQuery(
@@ -311,9 +311,9 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         records.add(headRecord(
             "quote_decision", "$quoteId:${staleDecision.getValue("revision")}", backupDecisionHead,
         ))
-        val staleScopeRevision = archiveValues("quote_scope_revisions") { it["quote_id"] == quoteId }.apply {
-            put("note", "Stale backup scope note")
-        }
+        val staleScopeRevision = archiveValues("quote_scope_revisions") { it["quote_id"] == quoteId }
+        val localScopeNote = staleScopeRevision["note"]
+        staleScopeRevision["note"] = "Stale backup scope note"
         records.removeAll { it["table"] == "quote_scope_revisions" && values(it)["quote_id"] == quoteId }
         records.add(stagedRow("quote_scope_revisions", staleScopeRevision))
 
@@ -389,9 +389,6 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             database, started.importId, preview.previewToken, preview.localStateVersion,
             linkHeadConflict["conflictId"] as String, "MERGE_KEEP_LOCAL_CONTENT",
         )
-        assertFailure("UNRESOLVED_CONFLICTS") {
-            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
-        }
         assertEquals(stateBeforeApply, repository.snapshot())
         assertEquals(localLinkHead, database.rawQuery(
             "SELECT revision_id FROM entity_heads WHERE kind='quote_invoice_link' AND entity_id=?",
@@ -399,10 +396,47 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(originalInvoice.number, repository.invoice(quotedInvoiceId).number)
         assertEquals(quotedInvoiceId, database.rawQuery(
-            "SELECT original_invoice_id FROM quote_invoice_links WHERE invoice_id=?",
+            "SELECT original_invoice_id,created_ms,payload FROM quote_invoice_links WHERE invoice_id=?",
             arrayOf(replacementInvoiceId),
-        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            assertEquals(localLink[2], rows.getString(0))
+            assertEquals(localLink[3], rows.getLong(1))
+            assertEquals(localLink[4], rows.getString(2))
+            rows.getString(0)
+        })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupHeadRevisionId'"))
+
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(originalInvoice.number, repository.invoice(quotedInvoiceId).number)
+        assertEquals(quotedInvoiceId, database.rawQuery(
+            "SELECT original_invoice_id,created_ms,payload FROM quote_invoice_links WHERE invoice_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            assertEquals(localLink[2], rows.getString(0))
+            assertEquals(localLink[3], rows.getLong(1))
+            assertEquals(localLink[4], rows.getString(2))
+            rows.getString(0)
+        })
+        assertEquals(localDecisionNote, database.rawQuery(
+            "SELECT note FROM quote_decisions WHERE quote_id=? AND revision=?",
+            arrayOf(quoteId, staleDecision.getValue("revision").toString()),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(localScopeNote, database.rawQuery(
+            "SELECT note FROM quote_scope_revisions WHERE quote_id=? AND revision=?",
+            arrayOf(quoteId, staleScopeRevision.getValue("revision").toString()),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        val mergedLinkHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='quote_invoice_link' AND entity_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        assertNotEquals(localLinkHead, mergedLinkHead)
+        assertEquals(2L, number(
+            "SELECT COUNT(*) FROM revision_parents WHERE revision_id='$mergedLinkHead' " +
+                "AND parent_id IN('$localLinkHead','$backupHeadRevisionId')",
+        ))
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }

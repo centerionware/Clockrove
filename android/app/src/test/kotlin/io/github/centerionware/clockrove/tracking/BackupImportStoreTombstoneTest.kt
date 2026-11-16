@@ -223,7 +223,10 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             if (page.done) break
         } while (true)
         val deletedEntityIds = conflicts
-            .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+            .filter {
+                it["kind"] == "ENTITY_DELETION_TOMBSTONE" &&
+                    it["table"] in setOf("task_comments", "task_attachments")
+            }
             .map { (it["primaryKey"] as List<*>).single() }
             .toSet()
         assertTrue(deletedEntityIds.containsAll(setOf(commentId, commentImageId, standaloneImageId)))

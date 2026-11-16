@@ -271,7 +271,8 @@ internal fun BackupImportStore.validateApplyChoices(handle: ConflictSelectionHan
 internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, choice: String): Boolean = when (kind) {
         "ACTIVE_JOB_DELETION" -> table == "job_deletions" && choice == "KEEP_LOCAL"
         "JOB_DELETION_TOMBSTONE" -> table == "jobs" && choice == "PRESERVE_LOCAL_DELETION"
-        "ENTITY_DELETION_TOMBSTONE" -> table in revisionTombstoneRows && choice == "PRESERVE_LOCAL_DELETION"
+        "ENTITY_DELETION_TOMBSTONE" ->
+            (table in revisionTombstoneRows || table == "entity_heads") && choice == "PRESERVE_LOCAL_DELETION"
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" && choice == "KEEP_LOCAL"
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" && choice == "KEEP_LOCAL"
         "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
