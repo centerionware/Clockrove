@@ -577,7 +577,8 @@ abstract class BackupImportStoreTestBase {
     }
 
     internal fun conflictDebug(conflicts: List<Map<String, Any?>>): String = conflicts.joinToString(" | ") {
-        "${it["kind"]}/${it["table"]}/${it["primaryKey"]} choices=${it["allowedChoices"]}"
+        "${it["kind"]}/${it["table"]}/${it["primaryKey"]} choices=${it["allowedChoices"]} " +
+            "selected=${it["selectedChoice"]}"
     }
 
     internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? =

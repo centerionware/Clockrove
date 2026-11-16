@@ -190,10 +190,13 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 continue
                             }
                             changed++
-                            val canPreserveDeletion = backupHead != null &&
+                            val canPreserveDeletion = backupHead != null && (
                                 BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
                                     this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                ) || BackupImportDeletionResolution.localJobDeleted(
+                                    db, tombstoneRow.kind, tombstoneId,
                                 )
+                            )
                             val choices = buildList {
                                 if (canPreserveDeletion) add("PRESERVE_LOCAL_DELETION")
                                 if (BackupImportDeletionResolution.restorableTables.contains(table)) {
@@ -405,11 +408,15 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     }
                                     val localEntityDeletionCanBePreserved = localEntityDeletionExists &&
                                         values["kind"] != null && values["entity_id"] != null &&
-                                        values["revision_id"] != null &&
-                                        BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
-                                            this, db, handle, values.getValue("kind").toString(),
-                                            values.getValue("entity_id").toString(),
-                                            values.getValue("revision_id").toString(),
+                                        values["revision_id"] != null && (
+                                            BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
+                                                this, db, handle, values.getValue("kind").toString(),
+                                                values.getValue("entity_id").toString(),
+                                                values.getValue("revision_id").toString(),
+                                            ) || BackupImportDeletionResolution.localJobDeleted(
+                                                db, values.getValue("kind").toString(),
+                                                values.getValue("entity_id").toString(),
+                                            )
                                         )
                                     val localEntityDeletionCanBeRestored = localEntityDeletionExists &&
                                         values["kind"]?.toString().orEmpty() in

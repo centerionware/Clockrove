@@ -138,7 +138,9 @@ internal fun BackupImportStore.resolveAggregateConflicts(
             if (candidate == null || !compatible) {
                 throw ConflictSelectionFailure(
                     "AGGREGATE_CONFLICT_UNSUPPORTED",
-                    "Related backup records do not support one consistent conflict choice.",
+                    "Related backup records do not support one consistent conflict choice: " +
+                        "${staged.json.optString("kind")}/${staged.json.optString("table")} " +
+                        "allowed=$allowed intent=$intent candidate=$candidate compatible=$compatibleIntent",
                 )
             }
             staged.id to (staged.json to candidate)

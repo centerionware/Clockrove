@@ -92,6 +92,15 @@ internal object BackupImportDeletionResolution {
         )
     }
 
+    fun localJobDeleted(db: SQLiteDatabase, kind: String, entityId: String): Boolean {
+        val jobId = db.rawQuery(
+            "SELECT r.job_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind=? AND h.entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> if (rows.moveToFirst() && !rows.isNull(0)) rows.getString(0) else null }
+        return jobId != null && hasJobDeletionTombstone(db, jobId)
+    }
+
     fun canPreserveCurrentLocalDeletion(
         store: BackupImportStore,
         db: SQLiteDatabase,
@@ -364,7 +373,7 @@ internal object BackupImportDeletionResolution {
     ) {
         if (!canPreserveLocalDeletion(
                 store, db, handle, kind, entityId, expectedLocalRevision, backupRevision,
-            )) staleDeletion()
+            ) && !localJobDeleted(db, kind, entityId)) staleDeletion()
         val local = store.revisionContent(db, "entity_revisions", expectedLocalRevision) ?: staleDeletion()
         recordMergedHead(
             store, db, kind, entityId, local.jobId, local.payload, deleted = true,
