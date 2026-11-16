@@ -157,7 +157,7 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
             assertEquals(setOf(item.localHead, item.backupHead), parents)
         }
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 
@@ -381,7 +381,7 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             arrayOf(replacementInvoiceId),
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupHeadRevisionId'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 
@@ -428,7 +428,7 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             arrayOf(kind, entityId),
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupRevision'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -487,7 +487,7 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         assertEquals(0L, number("SELECT COUNT(*) FROM location_points"))
         assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
         assertFalse(preview.applyReady)
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 }

@@ -106,9 +106,17 @@ abstract class BackupImportStoreTestBase {
         return started
     }
 
-    internal fun stageImport(records: List<Map<String, Any?>>): BackupImportStore.Started {
+    internal fun stageImport(
+        records: List<Map<String, Any?>>,
+        synthesizeMissingRevisionHeads: Boolean = true,
+    ): BackupImportStore.Started {
         require(records.isNotEmpty())
-        val archiveRecords = completeLocalRevisionAncestors(records)
+        val revisionCompleteRecords = if (synthesizeMissingRevisionHeads) {
+            completeSyntheticRevisionHeads(records)
+        } else {
+            records
+        }
+        val archiveRecords = completeLocalRevisionAncestors(revisionCompleteRecords)
         val started = importStore.begin(
             database,
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
@@ -137,6 +145,104 @@ abstract class BackupImportStoreTestBase {
         }
         flush()
         return started
+    }
+
+    /** Synthetic row fixtures need the revision metadata real exports already include. */
+    private fun completeSyntheticRevisionHeads(records: List<Map<String, Any?>>): List<Map<String, Any?>> {
+        val result = records.toMutableList()
+        val dataKinds = BackupImportStore.revisionDataTables.entries.associate { (kind, table) -> table to kind }
+        val existingHeads = records.asSequence()
+            .filter { it["table"] == "entity_heads" }
+            .map { values(it)["kind"].toString() to values(it)["entity_id"].toString() }
+            .toMutableSet()
+        val existingRevisions = records.asSequence()
+            .filter { it["table"] == "entity_revisions" }
+            .map { values(it)["kind"].toString() to values(it)["entity_id"].toString() }
+            .toMutableSet()
+
+        fun stagedValue(table: String, keyColumn: String, key: Any?, valueColumn: String): Any? {
+            if (key == null) return null
+            val keyValue = key.toString()
+            records.firstOrNull {
+                it["table"] == table && values(it)[keyColumn]?.toString() == keyValue
+            }?.let { return values(it)[valueColumn] }
+            require(table.matches(Regex("[a-z_]+")) && keyColumn.matches(Regex("[a-z_]+")) &&
+                valueColumn.matches(Regex("[a-z_]+")))
+            return database.rawQuery(
+                "SELECT $valueColumn FROM $table WHERE $keyColumn=? LIMIT 1", arrayOf(keyValue),
+            ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else rows.getString(0) }
+        }
+
+        records.forEach { record ->
+            val table = record["table"] as? String ?: return@forEach
+            val kind = dataKinds[table] ?: return@forEach
+            val rowValues = values(record).entries.associate { it.key.toString() to it.value }
+            val keyColumns = BackupImportStore.revisionDataKeyColumns[kind] ?: listOf("id")
+            val keyColumn = keyColumns.singleOrNull() ?: return@forEach
+            val entityId = rowValues[keyColumn]?.toString() ?: return@forEach
+            val entityKey = kind to entityId
+            if (entityKey in existingHeads || entityKey in existingRevisions) return@forEach
+
+            val payloadValues = when (kind) {
+                "settings_money", "job_money", "card_money", "template_money" -> {
+                    val id = rowValues["id"] ?: return@forEach
+                    val linkedJobId = when (kind) {
+                        "job_money" -> id.toString()
+                        "card_money" -> stagedValue("kanban_cards", "id", id, "job_id")
+                        else -> null
+                    }
+                    mapOf(
+                        "id" to if (kind == "settings_money") id.toString() else id,
+                        "minor_text" to rowValues["minor_text"],
+                        "job_id" to linkedJobId,
+                    )
+                }
+                "task_quantity" -> {
+                    val cardId = rowValues["card_id"] ?: return@forEach
+                    mapOf(
+                        "card_id" to cardId,
+                        "job_id" to stagedValue("kanban_cards", "id", cardId, "job_id"),
+                        "quantity_units" to rowValues["quantity_units"],
+                    )
+                }
+                "template_quantity" -> mapOf(
+                    "template_id" to (rowValues["template_id"] ?: return@forEach),
+                    "quantity_units" to rowValues["quantity_units"],
+                )
+                "payment_destination" -> mapOf(
+                    "payment_id" to (rowValues["payment_id"] ?: return@forEach),
+                    "invoice_id" to (rowValues["invoice_id"] ?: return@forEach),
+                )
+                "quote_draft" -> mapOf(
+                    "id" to (rowValues["quote_id"] ?: return@forEach),
+                    "payload" to (rowValues["payload"] ?: return@forEach),
+                )
+                else -> {
+                    val columns = BackupImportStore.revisionDataColumns[kind] ?: return@forEach
+                    if (columns.any { it !in rowValues }) return@forEach
+                    columns.associateWith { rowValues[it] }
+                }
+            }
+            val jobId = when {
+                "job_id" in payloadValues -> payloadValues["job_id"]?.toString()
+                kind == "job" -> rowValues["id"]?.toString()
+                kind == "quote_draft" -> rowValues["job_id"]?.toString()
+                kind == "invoice_coverage" || kind == "payment_destination" -> stagedValue(
+                    "invoices", "id", rowValues["invoice_id"], "job_id",
+                )?.toString()
+                kind == "task_comment" || kind == "task_attachment" -> stagedValue(
+                    "kanban_cards", "id", rowValues["task_id"], "job_id",
+                )?.toString()
+                else -> null
+            }
+            val payload = JSONObject(payloadValues.toSortedMap()).toString()
+            val revisionId = UUID.nameUUIDFromBytes("$kind:$entityId".toByteArray()).toString()
+            result.add(revisionRecord(revisionId, kind, entityId, jobId, payload = payload))
+            result.add(headRecord(kind, entityId, revisionId))
+            existingHeads.add(entityKey)
+            existingRevisions.add(entityKey)
+        }
+        return result
     }
 
     /** Synthetic archives that parent a local head must carry its full ancestry. */
@@ -250,11 +356,12 @@ abstract class BackupImportStoreTestBase {
         entityId: String,
         parentId: String?,
         payload: String = "{}",
+        jobId: String? = null,
     ) {
         database.execSQL(
             "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
-                "VALUES(?,?,?,NULL,?,0,?,'MUTATION')",
-            arrayOf<Any?>(id, kind, entityId, payload, now),
+                "VALUES(?,?,?,?,?,?,?,'MUTATION')",
+            arrayOf<Any?>(id, kind, entityId, jobId, payload, 0L, now),
         )
         if (parentId != null) {
             database.execSQL(
@@ -533,20 +640,21 @@ abstract class BackupImportStoreTestBase {
     internal fun assertInvalidReference(records: List<Map<String, Any?>>) {
         val before = repository.snapshot()
         val countsBefore = importRelevantCounts()
+        val archiveRecords = completeLocalRevisionAncestors(completeSyntheticRevisionHeads(records))
         val started = importStore.begin(
             database,
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
             BackupExportStore.CURRENT_SCHEMA_VERSION,
             "f".repeat(64),
-            records.size.toLong(),
+            archiveRecords.size.toLong(),
             0,
             0,
         )
         importStore.appendPage(
             started.importId,
             0,
-            records,
-            encodedAppendRequest(started.importId, 0, records),
+            archiveRecords,
+            encodedAppendRequest(started.importId, 0, archiveRecords),
         )
         assertFailure("INVALID_REFERENCE") { importStore.finish(database, started.importId) }
         assertEquals(before, repository.snapshot())

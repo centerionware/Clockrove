@@ -492,7 +492,7 @@ class BackupImportStoreRevisionValidationTest : BackupImportStoreTestBase() {
                 arrayOf(kind, case.entityId),
             ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
             assertEquals(case.localHead, committedHead)
-            assertTrue(importStore.close(started.importId))
+            assertFalse(importStore.close(started.importId))
         }
     }
 }

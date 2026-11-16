@@ -159,7 +159,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         assertEquals(0L, number("SELECT COUNT(*) FROM card_money WHERE id='$cardId'"))
         assertEquals(1L, number("SELECT COUNT(*) FROM task_templates WHERE id='$templateId'"))
         assertEquals(localRevisionFence, revisionFenceSnapshot())
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -242,7 +242,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
                 "WHERE (h.kind='task_comment' AND h.entity_id='$commentId' AND r.deleted=1) OR " +
                 "(h.kind='task_attachment' AND h.entity_id IN('$commentImageId','$standaloneImageId') AND r.deleted=1)",
         ))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -317,7 +317,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_columns WHERE id='$columnId'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -377,7 +377,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             "SELECT revision_id FROM entity_heads WHERE kind='job' AND entity_id=?",
             arrayOf(currentJob),
         ).use { assertTrue(it.moveToFirst()); it.getString(0) })
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -478,7 +478,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         assertEquals(0L, number(
             "SELECT COUNT(*) FROM task_comment_events WHERE id='backup-delete-choice-event'",
         ))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -530,6 +530,6 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         assertEquals(1L, applied.insertedCount)
         assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$firstSessionId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$secondSessionId'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 }

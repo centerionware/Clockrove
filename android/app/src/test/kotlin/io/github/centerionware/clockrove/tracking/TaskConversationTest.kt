@@ -158,6 +158,7 @@ class TaskConversationTest {
                 )
                 db.execSQL("DELETE FROM entity_heads WHERE kind IN('task_comment','task_attachment')")
                 db.execSQL("DELETE FROM entity_revisions WHERE kind IN('task_comment','task_attachment')")
+                db.execSQL("DROP TABLE location_deletion_ranges")
                 db.version = 16
                 db.setTransactionSuccessful()
             } finally {

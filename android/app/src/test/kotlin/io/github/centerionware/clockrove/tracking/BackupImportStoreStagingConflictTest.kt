@@ -472,6 +472,6 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
         assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$sessionId'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 }

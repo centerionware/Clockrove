@@ -47,7 +47,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
     }
 
     @Test
-    fun postChoiceRevisionCycleFailsAtomicallyWithoutChangingTheDatabase() {
+    fun keepLocalChoiceOmitsCyclicBackupGraphWithoutChangingTheDatabase() {
         val kind = "quote_decision"
         val entityId = "post-choice-cycle-entity"
         val parentFirstRevision = "post-choice-cycle-a"
@@ -88,11 +88,12 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             arrayOf(parentSecondRevision, parentFirstRevision),
         ).use { it.moveToFirst() })
 
-        assertFailure("APPLY_FAILED") {
-            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
-        }
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
 
         assertEquals(beforeApply, repository.snapshot())
+        assertEquals(preview.localStateVersion, applied.stateVersion)
         assertEquals(parentCountBeforeApply, number("SELECT COUNT(*) FROM revision_parents"))
         assertFalse(database.rawQuery(
             "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
@@ -102,7 +103,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
             arrayOf(kind, entityId),
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -150,7 +151,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
             arrayOf(backupHead, localHead.first),
         ).use { it.moveToFirst() })
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 
@@ -163,7 +164,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) to rows.getString(1) }
         val localHead = UUID.fromString("d0000000-0000-4000-8000-000000000002").toString()
         val backupHead = UUID.fromString("d0000000-0000-4000-8000-000000000003").toString()
-        insertSyntheticRevision(localHead, "job", jobId, base.first, base.second)
+        insertSyntheticRevision(localHead, "job", jobId, base.first, base.second, jobId = jobId)
         database.execSQL(
             "UPDATE entity_heads SET revision_id=? WHERE kind='job' AND entity_id=?",
             arrayOf(localHead, jobId),
@@ -208,7 +209,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
         assertEquals(setOf(localHead, backupHead), parents.toSet())
         assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
         assertEquals(applied.stateVersion, repository.snapshot().version)
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 
@@ -517,7 +518,9 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
                 arrayOf(case.kind, case.id),
             ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
 
-            val backupRow = baseRow.toMutableMap().apply { put(case.field, case.backupValue) }
+            val backupRow = baseRow.filterKeys(case.columns.toSet()::contains).toMutableMap().apply {
+                put(case.field, case.backupValue)
+            }
             val backupValues = backupRow.filterKeys(case.columns.toSet()::contains)
             val backupRevision = "merge-matrix-backup-$index"
             records.add(stagedRow("entity_revisions", readRowValues("entity_revisions", "id", baseRevision)))
@@ -548,8 +551,8 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             val conflict = requireNotNull(headConflicts[value.case.id])
             assertEquals("DIVERGENT", conflict["revisionRelationship"])
             assertEquals(
-                listOf("MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
-                conflict["allowedChoices"],
+                setOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
+                (conflict["allowedChoices"] as List<*>).toSet(),
             )
         }
         assertTrue(importStore.close(started.importId))
@@ -796,7 +799,7 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
                 arrayOf(committed, localRevision),
             ).use { it.moveToFirst() })
         }
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 }

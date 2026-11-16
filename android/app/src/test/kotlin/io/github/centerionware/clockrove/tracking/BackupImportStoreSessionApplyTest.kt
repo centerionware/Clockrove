@@ -39,7 +39,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         assertEquals(1L, firstApplied.insertedCount)
         val committedAfterFirstImport = repository.snapshot()
         assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
-        assertTrue(importStore.close(first.importId))
+        assertFalse(importStore.close(first.importId))
 
         val second = stageImport(records)
         val secondPreview = importStore.finish(database, second.importId)
@@ -53,7 +53,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         assertEquals(1L, secondApplied.skippedCount)
         assertEquals(committedAfterFirstImport, repository.snapshot())
         assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
-        assertTrue(importStore.close(second.importId))
+        assertFalse(importStore.close(second.importId))
     }
 
     @Test
@@ -319,7 +319,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
             "address" to "",
             "notes" to "",
             "archived" to 0,
-        ))))
+        ))), synthesizeMissingRevisionHeads = false)
 
         assertFailure("INVALID_REVISION_GRAPH") {
             importStore.finish(database, started.importId)
@@ -500,6 +500,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
             assertEquals(commentId, restored.second)
             assertArrayEquals(bytes, restored.third)
         }
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test

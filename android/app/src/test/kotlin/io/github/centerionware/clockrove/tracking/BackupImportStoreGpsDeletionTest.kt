@@ -73,7 +73,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
         assertEquals(0L, number(
             "SELECT COUNT(*) FROM revision_parents WHERE revision_id='$incomingPointRevision' OR parent_id='$incomingPointRevision'",
         ))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -106,7 +106,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
             "SELECT COUNT(*) FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
                 "WHERE h.kind='location' AND h.entity_id='$pointId' AND r.deleted=0",
         ))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -145,7 +145,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
             "SELECT COUNT(*) FROM revision_parents p LEFT JOIN entity_revisions child ON child.id=p.revision_id " +
                 "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id WHERE child.id IS NULL OR parent.id IS NULL",
         ))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -292,12 +292,13 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$revisionId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location_deletion_range' AND entity_id='$rangeId'"))
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
     fun importedRangeDeletionAddsCausalParentsAndRemovesCoveredLocalPoint() {
-        val (pointId, measuredAt) = startAndStopSessionWithPoint("local-point-deleted-by-import")
+        val pointId = "local-point-deleted-by-import"
+        val measuredAt = startAndStopSessionWithPoint(pointId).second
         val rangeId = "synthetic-import-delete-range"
         val rangeRevisionId = "synthetic-import-delete-range-revision"
         val rangeStart = measuredAt
@@ -360,7 +361,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
                 "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id WHERE child.id IS NULL OR parent.id IS NULL",
         ))
         assertEquals(applied.stateVersion, repository.snapshot().version)
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
@@ -449,7 +450,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
             "SELECT parent_id FROM revision_parents WHERE revision_id=?",
             arrayOf(tombstoneRevisionId),
         ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } })
-        assertTrue(importStore.close(started.importId))
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test
