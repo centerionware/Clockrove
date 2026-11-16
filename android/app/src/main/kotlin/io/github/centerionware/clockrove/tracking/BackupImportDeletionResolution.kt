@@ -98,7 +98,9 @@ internal object BackupImportDeletionResolution {
                 "WHERE h.kind=? AND h.entity_id=?",
             arrayOf(kind, entityId),
         ).use { rows -> if (rows.moveToFirst() && !rows.isNull(0)) rows.getString(0) else null }
-        return jobId != null && hasJobDeletionTombstone(db, jobId)
+        return jobId != null && db.rawQuery(
+            "SELECT 1 FROM job_deletions WHERE id=? LIMIT 1", arrayOf(jobId),
+        ).use { it.moveToFirst() }
     }
 
     fun canPreserveCurrentLocalDeletion(
