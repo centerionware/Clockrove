@@ -457,9 +457,9 @@ class _Board extends ConsumerWidget {
                                                   MaterialPageRoute<void>(
                                                     builder: (_) =>
                                                         ReusableTaskLibraryScreen(
-                                                      jobId: board.jobId,
-                                                      columnId: column.id,
-                                                    ),
+                                                          jobId: board.jobId,
+                                                          columnId: column.id,
+                                                        ),
                                                   ),
                                                 ),
                                                 icon: const Icon(
@@ -920,4 +920,3 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
     );
   }
 }
-

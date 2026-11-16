@@ -11,8 +11,7 @@ class ReusableTaskLibraryScreen extends ConsumerStatefulWidget {
   });
   final String jobId, columnId;
   @override
-  ConsumerState<ReusableTaskLibraryScreen> createState() =>
-      _TemplatesState();
+  ConsumerState<ReusableTaskLibraryScreen> createState() => _TemplatesState();
 }
 
 class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
