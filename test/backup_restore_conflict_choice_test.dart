@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' show CheckedState;
 
 import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
@@ -159,7 +160,10 @@ void main() {
         of: restoreOption,
         matching: find.byType(RadioListTile<String>),
       );
-      expect(tester.getSemantics(tile).getSemanticsData().isChecked, isFalse);
+      expect(
+        tester.getSemantics(tile).getSemanticsData().flagsCollection.isChecked,
+        CheckedState.isFalse,
+      );
       expect(pageReads, 1);
 
       await tester.tap(restoreOption);
@@ -167,7 +171,10 @@ void main() {
 
       expect(pageReads, 2);
       expect(resolvedChoice['choice'], 'RESTORE_BACKUP_CONTENT');
-      expect(tester.getSemantics(tile).getSemanticsData().isChecked, isTrue);
+      expect(
+        tester.getSemantics(tile).getSemanticsData().flagsCollection.isChecked,
+        CheckedState.isTrue,
+      );
 
       await tester.ensureVisible(
         find.byKey(const ValueKey('restore-discard-preview')),
