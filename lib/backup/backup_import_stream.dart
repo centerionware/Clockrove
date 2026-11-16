@@ -157,8 +157,10 @@ final class BackupArchiveHeaderProbe implements BackupTransactionalByteSink {
         _archiveBytes > BackupArchiveCodec.maxArchiveBytes - bytes.length) {
       throw const FormatException('This backup is outside the supported size.');
     }
-    final prefixBytes =
-        (_archiveHeaderLength - _headerLength).clamp(0, bytes.length) as int;
+    final prefixBytes = (_archiveHeaderLength - _headerLength).clamp(
+      0,
+      bytes.length,
+    );
     if (prefixBytes > 0) {
       _header.setRange(
         _headerLength,
