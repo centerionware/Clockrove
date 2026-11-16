@@ -321,7 +321,19 @@ internal fun BackupImportStore.validateApplyChoices(handle: ConflictSelectionHan
             throw ConflictSelectionFailure("STORAGE_UNAVAILABLE", "The staged backup conflicts are invalid.")
         }
         if (scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice IS NULL") != 0L) {
-            throw ConflictSelectionFailure("UNRESOLVED_CONFLICTS", "Choose an option for every backup conflict before applying.")
+            val unresolved = handle.database.rawQuery(
+                "SELECT conflict_json FROM import_conflicts WHERE selected_choice IS NULL ORDER BY ordinal",
+                null,
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) {
+                    val json = JSONObject(rows.getString(0))
+                    add("${json.optString("kind")}/${json.optString("table")}/${json.optJSONArray("primaryKey")}")
+                }
+            }.joinToString(" | ") }
+            throw ConflictSelectionFailure(
+                "UNRESOLVED_CONFLICTS",
+                "Choose an option for every backup conflict before applying: $unresolved",
+            )
         }
         val selectedIntents = mutableMapOf<String, String>()
         handle.database.rawQuery(
@@ -344,10 +356,15 @@ internal fun BackupImportStore.validateApplyChoices(handle: ConflictSelectionHan
                 for (index in 0 until groupKeys.length()) {
                     val key = groupKeys.optString(index)
                     val previous = selectedIntents.putIfAbsent(key, intent)
-                    if (previous != null && previous != intent) {
+                    val localPreserve = setOf(
+                        "LOCAL_ONLY", "LOCAL_CONTENT_PRESERVE", "LOCAL_DELETION_PRESERVE",
+                    )
+                    if (previous != null && previous != intent &&
+                        !(previous in localPreserve && intent in localPreserve)) {
                         throw ConflictSelectionFailure(
                             "AGGREGATE_CONFLICT_UNSUPPORTED",
-                            "Related backup records do not have one consistent conflict choice.",
+                            "Related backup records do not have one consistent conflict choice: " +
+                                "key=$key previous=$previous intent=$intent",
                         )
                     }
                 }

@@ -329,7 +329,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         resolveSafeConflictChoices(started.importId, preview, conflicts)
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
-        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(deletedVersion + 1L, repository.snapshot().version)
         assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_columns WHERE id='$columnId'"))

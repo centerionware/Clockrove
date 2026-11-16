@@ -232,13 +232,22 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                         }
                                     }
                                     "PRESERVE_LOCAL_DELETION" -> {
+                                        val headChoice = localTombstoneChoiceForHead(db, handle, values)
+                                        val jobDeleted = BackupImportDeletionResolution.localJobDeleted(db, kind, entityId)
+                                        val preserved = BackupImportDeletionResolution.canPreserveLocalDeletion(
+                                            this, db, handle, kind, entityId, localRevision, backupRevision,
+                                        )
                                         if (localContent.deleted != 1L || backupContent.deleted != 0L ||
                                             localContent.jobId != backupContent.jobId ||
-                                            localTombstoneChoiceForHead(db, handle, values) != "PRESERVE_LOCAL_DELETION" ||
-                                            (!BackupImportDeletionResolution.canPreserveLocalDeletion(
-                                                this, db, handle, kind, entityId, localRevision, backupRevision,
-                                            ) && !BackupImportDeletionResolution.localJobDeleted(db, kind, entityId))) {
-                                            throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                            headChoice != "PRESERVE_LOCAL_DELETION" ||
+                                            (!preserved && !jobDeleted)) {
+                                            throw ApplyFailure(
+                                                "PREVIEW_STALE",
+                                                "A backup deletion changed after preview: $kind/$entityId " +
+                                                    "localDeleted=${localContent.deleted} backupDeleted=${backupContent.deleted} " +
+                                                    "localJob=${localContent.jobId} backupJob=${backupContent.jobId} " +
+                                                    "headChoice=$headChoice preserved=$preserved jobDeleted=$jobDeleted",
+                                            )
                                         }
                                     }
                                 }

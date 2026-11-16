@@ -764,13 +764,13 @@ abstract class BackupImportStoreTestBase {
         val revision = database.rawQuery(
             "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
         ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
-        assertEquals(0L, revision.first)
-        assertEquals("BACKUP_MERGE", revision.second)
         val parents = database.rawQuery(
             "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
             arrayOf(revisionId),
         ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
-        assertEquals(setOf(localTombstone, backupLive), parents)
+        assertEquals("$kind/$entityId head=$revisionId parents=$parents", 0L, revision.first)
+        assertEquals("$kind/$entityId head=$revisionId parents=$parents", "BACKUP_MERGE", revision.second)
+        assertEquals("$kind/$entityId head=$revisionId", setOf(localTombstone, backupLive), parents)
     }
 
     internal fun assertFailure(code: String, action: () -> Unit) {
