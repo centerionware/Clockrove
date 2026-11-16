@@ -10,3 +10,4 @@ part 'backup_archive_stream.dart';
 part 'backup_archive_replay.dart';
 part 'backup_archive_models.dart';
 part 'backup_archive_binary.dart';
+part 'backup_archive_reader.dart';
