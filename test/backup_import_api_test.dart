@@ -270,7 +270,9 @@ void main() {
       'table': 'invoice_time_claims',
       'primaryKey': ['claim-1'],
       'localIdentifier': null,
-      'localSummary': {'identifier': 'A referenced backup record requires a choice'},
+      'localSummary': {
+        'identifier': 'A referenced backup record requires a choice',
+      },
       'backupSummary': <String, Object?>{},
       'allowedChoices': ['OMIT_BACKUP_RECORD'],
       'defaultChoice': null,

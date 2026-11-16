@@ -6,17 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BackupArchiveCodec', () {
-    test('accepts and round trips the current database schema version', () async {
-      final archive = await BackupArchiveCodec.encode(
-        schemaVersion: BackupArchiveCodec.latestSchemaVersion,
-        stateVersion: 0,
-        capturedAtUtcMillis: 0,
-        rows: [_row('jobs', {'id': 'current-schema'})],
-      );
+    test(
+      'accepts and round trips the current database schema version',
+      () async {
+        final archive = await BackupArchiveCodec.encode(
+          schemaVersion: BackupArchiveCodec.latestSchemaVersion,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: [
+            _row('jobs', {'id': 'current-schema'}),
+          ],
+        );
 
-      final decoded = await BackupArchiveCodec.decode(archive);
-      expect(decoded.schemaVersion, BackupArchiveCodec.latestSchemaVersion);
-    });
+        final decoded = await BackupArchiveCodec.decode(archive);
+        expect(decoded.schemaVersion, BackupArchiveCodec.latestSchemaVersion);
+      },
+    );
 
     test('round trips rows and raw media deterministically', () async {
       final rows = [
