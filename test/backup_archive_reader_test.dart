@@ -138,6 +138,10 @@ void main() {
       onRecordsComplete: () async {},
       onMediaChunk: (_, _, _) async {},
     );
+    final parsingFailure = expectLater(
+      parsing,
+      throwsA(isA<FormatException>()),
+    );
     for (var offset = 0; offset < changed.length;) {
       final end = (offset + BackupArchivePlaintextChannel.maxChunkBytes)
           .clamp(0, changed.length)
@@ -146,7 +150,7 @@ void main() {
       offset = end;
     }
     await channel.close();
-    await expectLater(parsing, throwsA(isA<FormatException>()));
+    await parsingFailure;
   });
 
   test('parser failure releases a producer waiting on a chunk', () async {
@@ -161,10 +165,14 @@ void main() {
       onRecordsComplete: () async {},
       onMediaChunk: (_, _, _) async {},
     );
-    await expectLater(
+    final parsingFailure = expectLater(
+      parsing,
+      throwsA(isA<FormatException>()),
+    );
+    final producerFailure = expectLater(
       channel.add(invalidArchive),
       throwsA(isA<FormatException>()),
     );
-    await expectLater(parsing, throwsA(isA<FormatException>()));
+    await Future.wait([parsingFailure, producerFailure]);
   });
 }
