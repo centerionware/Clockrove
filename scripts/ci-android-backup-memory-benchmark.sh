@@ -123,7 +123,7 @@ seed_recreated_after_install_timeout=false
 clockrove_force_stop_backup_benchmark_app
 
 if clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-benchmark \
-  'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ envelope_bytes=[0-9]+ baseline_rss_kib=[0-9]+ after_snapshot_setup_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+ snapshot_setup_ms=[0-9]+ stream_export_encrypt_ms=[0-9]+ integrity_reread_peak_rss_kib=[0-9]+ integrity_reread_peak_delta_rss_kib=[0-9]+ integrity_reread_ms=[0-9]+' \
+  'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ envelope_bytes=[0-9]+ rss_sample_interval_ms=[0-9]+ baseline_rss_kib=[0-9]+ after_snapshot_setup_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+ snapshot_setup_ms=[0-9]+ stream_export_encrypt_ms=[0-9]+ integrity_reread_peak_rss_kib=[0-9]+ integrity_reread_baseline_rss_kib=[0-9]+ integrity_reread_peak_delta_rss_kib=[0-9]+ integrity_reread_ms=[0-9]+' \
   --before-retry-hook clockrove_reseed_backup_memory_fixture \
   -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \

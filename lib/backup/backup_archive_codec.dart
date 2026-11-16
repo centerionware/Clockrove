@@ -208,7 +208,14 @@ abstract final class BackupArchiveCodec {
     preparedRows.sort((left, right) {
       final tableOrder = left.row.table.compareTo(right.row.table);
       if (tableOrder != 0) return tableOrder;
-      return left.primaryKey.compareTo(right.primaryKey);
+      final keyOrder = _compareReplayPrimaryKeyValues(
+        left.row.table,
+        left.row.values,
+        right.row.values,
+      );
+      return keyOrder != 0
+          ? keyOrder
+          : left.primaryKey.compareTo(right.primaryKey);
     });
 
     final totalLength = _headerLength + recordsLength + mediaLength;
@@ -398,7 +405,14 @@ abstract final class BackupArchiveCodec {
     preparedRows.sort((left, right) {
       final tableOrder = left.row.table.compareTo(right.row.table);
       if (tableOrder != 0) return tableOrder;
-      return left.primaryKey.compareTo(right.primaryKey);
+      final keyOrder = _compareReplayPrimaryKeyValues(
+        left.row.table,
+        left.row.values,
+        right.row.values,
+      );
+      return keyOrder != 0
+          ? keyOrder
+          : left.primaryKey.compareTo(right.primaryKey);
     });
 
     final totalLength = _headerLength + recordsLength + mediaLength;

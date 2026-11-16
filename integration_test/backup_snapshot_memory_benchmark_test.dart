@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -10,8 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
-const _targetMediaBytes = 55 * 1024 * 1024;
+const _targetMediaBytes = 63 * 1024 * 1024;
 const _mediaToleranceBytes = 1024 * 1024;
+const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
 const _fixtureJobId = 'ci-backup-memory-job';
 const _fixtureTaskId = 'ci-backup-memory-task';
@@ -53,6 +55,7 @@ void main() {
       'snapshot_media_bytes=${result.snapshotMediaBytes} '
       'archive_bytes=${result.archiveBytes} '
       'envelope_bytes=${result.envelopeBytes} '
+      'rss_sample_interval_ms=${_rssSampleInterval.inMilliseconds} '
       'baseline_rss_kib=${result.baselineRssKiB} '
       'after_snapshot_setup_rss_kib=${result.afterSnapshotSetupRssKiB} '
       'after_encrypt_rss_kib=${result.afterEncryptRssKiB} '
@@ -61,6 +64,8 @@ void main() {
       'snapshot_setup_ms=${result.snapshotSetupMs} '
       'stream_export_encrypt_ms=${result.streamExportEncryptMs} '
       'integrity_reread_peak_rss_kib=${result.integrityRereadPeakRssKiB} '
+      'integrity_reread_baseline_rss_kib='
+      '${result.integrityRereadBaselineRssKiB} '
       'integrity_reread_peak_delta_rss_kib='
       '${result.integrityRereadPeakDeltaRssKiB} '
       'integrity_reread_ms=${result.integrityRereadMs}',
@@ -200,7 +205,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   if ((mediaBytes - _targetMediaBytes).abs() > _mediaToleranceBytes ||
       attachmentCount > 20) {
     throw StateError(
-      'Synthetic media was outside the 55 MiB target: '
+      'Synthetic media was outside the 63 MiB target: '
       '$mediaBytes bytes in $attachmentCount attachments.',
     );
   }
@@ -249,19 +254,24 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     throw StateError('Fresh-process benchmark could not verify seeded media.');
   }
 
-  final baselineRssKiB = await _processHighWaterRssKiB();
-  final snapshotSetupClock = Stopwatch()..start();
-  final exported = await BackupSnapshotExporter().exportStream();
-  snapshotSetupClock.stop();
+  final fullPathRss = _RssPeakSampler();
+  final baselineRssKiB = await fullPathRss.start();
+  BackupSnapshotStreamExport? exported;
   try {
+    final snapshotSetupClock = Stopwatch()..start();
+    final export = await BackupSnapshotExporter().exportStream();
+    exported = export;
+    snapshotSetupClock.stop();
     // This is the snapshot setup peak, before lazy BLOB reads and archive
     // serialization happen while encryption consumes archiveStream below.
-    final afterSnapshotSetupRssKiB = await _processHighWaterRssKiB();
-    if (exported.mediaBytes != seedMediaBytes ||
-        exported.mediaCount != seedAttachmentCount ||
-        exported.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
+    final afterSnapshotSetupRssKiB = await _processRssKiB();
+    if (export.mediaBytes != seedMediaBytes ||
+        export.mediaCount != seedAttachmentCount ||
+        export.archiveByteLength <
+            BackupCryptoV2.maxArchiveBytes - 2 * 1024 * 1024 ||
+        export.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
-        'Snapshot export did not match the isolated fixture or exceeded limits.',
+        'Snapshot export did not match the near-maximum isolated fixture.',
       );
     }
 
@@ -274,14 +284,14 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
       final streamExportEncryptClock = Stopwatch()..start();
       final encrypted = await BackupCryptoV2.encrypt(
         password: 'synthetic-full-path-memory-benchmark-passphrase',
-        archive: exported.archiveStream,
+        archive: export.archiveStream,
         destination: _FileTransactionalSink(envelopeFile),
       );
       streamExportEncryptClock.stop();
-      final afterEncryptRssKiB = await _processHighWaterRssKiB();
+      final afterEncryptRssKiB = await _processRssKiB();
       final expectedEnvelopeBytes =
           BackupCryptoV2.envelopeLengthForArchiveBytes(
-            exported.archiveByteLength,
+            export.archiveByteLength,
           );
       if (encrypted.archiveBytes != exported.archiveByteLength ||
           encrypted.envelopeBytes != expectedEnvelopeBytes ||
@@ -289,25 +299,30 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
         throw StateError('Encrypted snapshot length did not match its result.');
       }
 
-      final peakRssKiB = afterSnapshotSetupRssKiB > afterEncryptRssKiB
-          ? afterSnapshotSetupRssKiB
-          : afterEncryptRssKiB;
+      final peakRssKiB = await fullPathRss.stop();
       final peakDeltaRssKiB = peakRssKiB > baselineRssKiB
           ? peakRssKiB - baselineRssKiB
           : 0;
 
+      final integrityRss = _RssPeakSampler();
+      final integrityRereadBaselineRssKiB = await integrityRss.start();
       final integrityRereadClock = Stopwatch()..start();
-      final verified = await BackupCryptoV2.decrypt(
-        password: 'synthetic-full-path-memory-benchmark-passphrase',
-        envelope: envelopeFile.openRead(),
-        privateArchive: _FileTransactionalSink(restoredFile),
-      );
-      integrityRereadClock.stop();
-      final integrityRereadPeakRssKiB = await _processHighWaterRssKiB();
-      if (verified.archiveBytes != exported.archiveByteLength ||
+      late final BackupCryptoV2Result verified;
+      late final int integrityRereadPeakRssKiB;
+      try {
+        verified = await BackupCryptoV2.decrypt(
+          password: 'synthetic-full-path-memory-benchmark-passphrase',
+          envelope: envelopeFile.openRead(),
+          privateArchive: _FileTransactionalSink(restoredFile),
+        );
+      } finally {
+        integrityRereadClock.stop();
+        integrityRereadPeakRssKiB = await integrityRss.stop();
+      }
+      if (verified.archiveBytes != export.archiveByteLength ||
           verified.envelopeBytes != encrypted.envelopeBytes ||
           !_bytesEqual(verified.archiveSha256, encrypted.archiveSha256) ||
-          await restoredFile.length() != exported.archiveByteLength) {
+          await restoredFile.length() != export.archiveByteLength) {
         throw StateError('Encrypted snapshot failed integrity reread.');
       }
 
@@ -316,8 +331,8 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
         processStartTicks: await _processStartTicks(),
         seedAttachmentCount: seedAttachmentCount,
         seedMediaBytes: seedMediaBytes,
-        snapshotMediaCount: exported.mediaCount,
-        snapshotMediaBytes: exported.mediaBytes,
+        snapshotMediaCount: export.mediaCount,
+        snapshotMediaBytes: export.mediaBytes,
         archiveBytes: encrypted.archiveBytes,
         envelopeBytes: encrypted.envelopeBytes,
         baselineRssKiB: baselineRssKiB,
@@ -326,9 +341,10 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
         peakRssKiB: peakRssKiB,
         peakDeltaRssKiB: peakDeltaRssKiB,
         integrityRereadPeakRssKiB: integrityRereadPeakRssKiB,
+        integrityRereadBaselineRssKiB: integrityRereadBaselineRssKiB,
         integrityRereadPeakDeltaRssKiB:
-            integrityRereadPeakRssKiB > baselineRssKiB
-            ? integrityRereadPeakRssKiB - baselineRssKiB
+            integrityRereadPeakRssKiB > integrityRereadBaselineRssKiB
+            ? integrityRereadPeakRssKiB - integrityRereadBaselineRssKiB
             : 0,
         snapshotSetupMs: snapshotSetupClock.elapsedMilliseconds,
         streamExportEncryptMs: streamExportEncryptClock.elapsedMilliseconds,
@@ -342,7 +358,8 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
       }
     }
   } finally {
-    await exported.close();
+    if (fullPathRss.isRunning) await fullPathRss.stop();
+    await exported?.close();
   }
 }
 
@@ -409,19 +426,69 @@ bool _isBoundedFixtureAttachment(TaskAttachmentInfo attachment) =>
     attachment.id.startsWith(_fixtureImageIdPrefix) &&
     attachment.bytes <= _maximumTaskImageBytes;
 
-Future<int> _processHighWaterRssKiB() async {
+Future<int> _processRssKiB() async {
   final status = await File('/proc/self/status').readAsLines();
   final line = status.firstWhere(
-    (entry) => entry.startsWith('VmHWM:'),
+    (entry) => entry.startsWith('VmRSS:'),
     orElse: () => throw const FormatException(
-      'Android did not report process high-water RSS.',
+      'Android did not report process RSS.',
     ),
   );
-  final match = RegExp(r'^VmHWM:\s+(\d+)\s+kB$').firstMatch(line);
+  final match = RegExp(r'^VmRSS:\s+(\d+)\s+kB$').firstMatch(line);
   if (match == null) {
     throw const FormatException('Android reported an invalid process RSS.');
   }
   return int.parse(match.group(1)!);
+}
+
+final class _RssPeakSampler {
+  Timer? _timer;
+  Future<void>? _pendingSample;
+  int? _peakRssKiB;
+  Object? _sampleFailure;
+
+  bool get isRunning => _timer != null;
+
+  Future<int> start() async {
+    if (_peakRssKiB != null || _timer != null) {
+      throw StateError('The RSS sampler can only be started once.');
+    }
+    final baseline = await _processRssKiB();
+    _peakRssKiB = baseline;
+    _timer = Timer.periodic(_rssSampleInterval, (_) => _scheduleSample());
+    return baseline;
+  }
+
+  void _scheduleSample() {
+    if (_timer == null || _pendingSample != null) return;
+    _pendingSample = _recordSample().whenComplete(() {
+      _pendingSample = null;
+    });
+  }
+
+  Future<void> _recordSample() async {
+    try {
+      final value = await _processRssKiB();
+      if (value > (_peakRssKiB ?? 0)) _peakRssKiB = value;
+    } on Object catch (error) {
+      _sampleFailure ??= error;
+    }
+  }
+
+  Future<int> stop() async {
+    final timer = _timer;
+    if (timer == null) throw StateError('The RSS sampler is not running.');
+    _timer = null;
+    timer.cancel();
+    final pending = _pendingSample;
+    if (pending != null) await pending;
+    await _recordSample();
+    if (_sampleFailure != null) {
+      throw StateError('RSS sampling failed: $_sampleFailure');
+    }
+    return _peakRssKiB ??
+        (throw StateError('The RSS sampler did not record a sample.'));
+  }
 }
 
 Future<String> _processStartTicks() async {
@@ -465,6 +532,7 @@ final class _BenchmarkMetrics {
     required this.peakRssKiB,
     required this.peakDeltaRssKiB,
     required this.integrityRereadPeakRssKiB,
+    required this.integrityRereadBaselineRssKiB,
     required this.integrityRereadPeakDeltaRssKiB,
     required this.snapshotSetupMs,
     required this.streamExportEncryptMs,
@@ -485,6 +553,7 @@ final class _BenchmarkMetrics {
   final int peakRssKiB;
   final int peakDeltaRssKiB;
   final int integrityRereadPeakRssKiB;
+  final int integrityRereadBaselineRssKiB;
   final int integrityRereadPeakDeltaRssKiB;
   final int snapshotSetupMs;
   final int streamExportEncryptMs;

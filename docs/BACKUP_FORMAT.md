@@ -39,14 +39,14 @@ and a blobs list:
     {
       "type": "row",
       "table": "invoices",
-      "values": {"id": "invoice-id", "pdf": null},
+      "values": {"id": "invoice-id"},
       "blobs": [{"id": "opaque blob id", "column": "pdf", "sizeBytes": 1234, "sha256": "<base64 digest>"}]
     }
 
 The row value map contains SQLite null, integer, floating-point, boolean-like
-integer, and string values. Binary columns never cross in a row record. A null
-binary value remains null in values; a non-null value is represented by one
-entry in blobs, with the corresponding field set to null in values.
+integer, and string values. Binary bytes never cross in a row record. A null
+binary value remains null in values; a non-null value is represented only by
+one entry in blobs, and that column is omitted from values.
 readBackupBlob returns offset, nextOffset, done, and a Uint8List bytes chunk.
 Offsets may be resumed at any byte boundary. Blob IDs are generated for one
 snapshot and cannot be used with another handle.
@@ -65,15 +65,26 @@ kind, including financial RECEIPT rows and their PDFs.
 The Dart archive writer must verify complete cursor traversal, contiguous blob
 offsets, declared byte totals, and final archive bounds. It must not parse or
 merge partial snapshots after any native paging error. Before encryption, Dart
-must measure its exact serialized plaintext size, including framing, JSON
-escaping, base64 or other media representation, and all records. If it exceeds
-64 MiB, fail the entire export visibly and close the snapshot; never omit
-comments or media to fit the limit.
+measures the exact binary plaintext size, including scalar framing, row records,
+blob descriptors, raw media and the fixed archive header. If it exceeds 64 MiB,
+fail the entire export visibly and close the snapshot; never omit comments or
+media to fit the limit. Streaming preflight replays the detached,
+immutable native pages instead of retaining all Dart row maps: it scans once to
+validate and measure, once to emit row records, and once to emit media. Each
+pass holds at most one bounded native page. Preflight retains only a bounded
+set of blob IDs (at most 10,000) for uniqueness and incremental row digests; it
+does not build per-revision Dart maps. The native snapshot checks revision
+heads, entity ownership, and parent references in SQLite. It does not traverse
+the local graph for cycles: `RevisionStore` creates a fresh revision ID and
+links only to already-existing parents, while restore validates its selected
+union graph before writing. Those are the only native revision writers, so
+normal application writes preserve acyclicity. Authenticated archive decode
+still validates the complete untrusted revision graph.
 
 ## Limits and lifecycle
 
 - One active snapshot per process; concurrent starts fail with SNAPSHOT_BUSY.
-- Native detached staging input budget: 60 MiB, including framed UTF-8 row
+- Native detached staging input budget: 64 MiB, including framed UTF-8 row
   records and media. This does not guarantee that the Dart archive encoding
   will fit the final limit.
 - Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
@@ -243,10 +254,12 @@ user-selected encrypted source file is never modified or deleted.
 - Verify cancel/failure cleanup for both passes, no preview/apply before full
   authentication, local-version changes before commit, and atomic rollback.
 - On GitHub Actions, run maximum-size end-to-end export and restore on API 24 and
-  API 35. Record peak `VmHWM` before/after; incremental peak RSS must stay at or
-  below 64 MiB on each API. Also assert that no Dart buffer grows with total
-  archive size, report elapsed time, and verify no private staging remains after
-  success, cancellation, corruption or process restart.
+  API 35. Sample process `VmRSS` every 20 ms through export/encryption and record
+  the sampled peak delta; it must stay at or below 64 MiB on each API. Brief RSS
+  spikes shorter than the sampling interval may not be observed. Also assert
+  that no Dart row-map collection grows with total record count, report elapsed
+  time, and verify no private staging remains after success, cancellation,
+  corruption or process restart.
 - Keep the Settings export/restore route withheld until these exact-head checks
   pass. No VM build, test, format or analyzer run is permitted.
 

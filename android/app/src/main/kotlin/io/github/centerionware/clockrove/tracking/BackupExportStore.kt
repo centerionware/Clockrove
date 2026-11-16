@@ -129,7 +129,7 @@ internal class BackupExportStore(
     companion object {
         const val ARCHIVE_FORMAT_VERSION = 1
         const val CURRENT_SCHEMA_VERSION = 16
-        const val MAX_SNAPSHOT_BYTES = 60L * 1024L * 1024L
+        const val MAX_SNAPSHOT_BYTES = 64L * 1024L * 1024L
         const val MAX_PAGE_BYTES = 256 * 1024
         const val MIN_PAGE_BYTES = 1024
         const val MAX_BLOB_CHUNK_BYTES = 256 * 1024
@@ -280,6 +280,7 @@ internal class BackupExportStore(
         try {
             db.beginTransactionNonExclusive()
             transactionStarted = true
+            validateRevisionReferences(db)
             val capturedAt = wallClock()
             val version = stateVersion(db)
             val openSessions = scalarLong(db, "SELECT COUNT(*) FROM sessions WHERE end_ms IS NULL")
@@ -870,6 +871,47 @@ internal class BackupExportStore(
     }
 
     private fun stateVersion(db: SQLiteDatabase): Long = scalarLong(db, "SELECT version FROM state WHERE id=1")
+
+    private fun validateRevisionReferences(db: SQLiteDatabase) {
+        val invalidHeads = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM entity_heads h LEFT JOIN entity_revisions r " +
+                "ON r.id=h.revision_id WHERE r.id IS NULL OR h.kind!=r.kind OR h.entity_id!=r.entity_id",
+        )
+        val invalidParents = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM revision_parents p " +
+                "LEFT JOIN entity_revisions r ON r.id=p.revision_id " +
+                "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id " +
+                "WHERE r.id IS NULL OR parent.id IS NULL OR p.revision_id=p.parent_id",
+        )
+        val invalidAncestry = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM revision_parents p " +
+                "JOIN entity_revisions child ON child.id=p.revision_id " +
+                "JOIN entity_revisions parent ON parent.id=p.parent_id " +
+                "WHERE NOT ((child.kind=parent.kind AND child.entity_id=parent.entity_id) OR " +
+                "(child.kind='location' AND child.deleted=1 AND child.origin='GPS_RANGE_DELETE' " +
+                "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " +
+                "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id)))",
+        )
+        val missingHeads = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM entity_revisions r WHERE NOT EXISTS(" +
+                "SELECT 1 FROM entity_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id)",
+        )
+        if (invalidHeads != 0L ||
+            invalidParents != 0L ||
+            invalidAncestry != 0L ||
+            missingHeads != 0L
+        ) {
+            throw Failure("INVALID_REVISION_GRAPH", "The local revision graph is invalid.")
+        }
+        // RevisionStore creates a fresh UUID for each node and only links to
+        // existing parents. Restore validates the selected union before
+        // writing. These are the only revision writers, so normal app writes
+        // preserve acyclicity without retaining per-node metadata in Dart.
+    }
 
     private fun scalarLong(db: SQLiteDatabase, sql: String): Long = db.rawQuery(sql, null).use {
         if (!it.moveToFirst()) throw Failure("STORAGE_UNAVAILABLE", "The backup state is unavailable.")

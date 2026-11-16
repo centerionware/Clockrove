@@ -127,6 +127,10 @@ void main() {
       'startBackupSnapshot',
       'readBackupSnapshotPage',
       'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
       'readBackupBlob',
       'readBackupBlob',
       'closeBackupSnapshot',
@@ -138,6 +142,7 @@ void main() {
     () async {
       final media = Uint8List.fromList([11, 22, 33, 44]);
       var blobCalls = 0;
+      var pageCalls = 0;
       var closed = false;
       respond = (call) async {
         switch (call.method) {
@@ -146,15 +151,16 @@ void main() {
           case 'startBackupSnapshot':
             return _started(recordCount: 3, mediaCount: 1, mediaBytes: 4);
           case 'readBackupSnapshotPage':
+            pageCalls++;
             return _page(
               records: [
+                _row('jobs', {'id': 'aa', 'name': 'Earlier job'}),
+                _row('jobs', {'id': 'b', 'name': 'Later job'}),
                 _row(
                   'task_attachments',
                   {'id': 'attachment-1'},
                   blobs: [_blobDescriptor('media-1', 'data', media)],
                 ),
-                _row('jobs', {'id': 'job-z', 'name': 'Later job'}),
-                _row('jobs', {'id': 'job-a', 'name': 'Earlier job'}),
               ],
               done: true,
             );
@@ -176,8 +182,8 @@ void main() {
       };
 
       final expectedRows = [
-        _archiveRow('jobs', {'id': 'job-a', 'name': 'Earlier job'}),
-        _archiveRow('jobs', {'id': 'job-z', 'name': 'Later job'}),
+        _archiveRow('jobs', {'id': 'aa', 'name': 'Earlier job'}),
+        _archiveRow('jobs', {'id': 'b', 'name': 'Later job'}),
         _archiveRow(
           'task_attachments',
           {'id': 'attachment-1'},
@@ -206,11 +212,53 @@ void main() {
       }
       expect(chunks.every((chunk) => chunk.length <= 64 * 1024), isTrue);
       expect(actual.takeBytes(), orderedEquals(expected));
+      expect(
+        (await BackupArchiveCodec.decode(expected)).rows
+            .where((row) => row.table == 'jobs')
+            .map((row) => row.values['id']),
+        ['aa', 'b'],
+      );
       expect(blobCalls, 2);
+      expect(pageCalls, 3);
       expect(closed, isTrue);
       expect(calls.last.method, 'closeBackupSnapshot');
     },
   );
+
+  test('rejects row metadata that changes between snapshot replays', () async {
+    var pageReads = 0;
+    var closed = false;
+    respond = (call) async {
+      switch (call.method) {
+        case 'getBackupSnapshotInfo':
+          return _snapshotInfo();
+        case 'startBackupSnapshot':
+          return _started(recordCount: 1);
+        case 'readBackupSnapshotPage':
+          pageReads++;
+          final id = pageReads == 1 ? 'stable-row' : 'changed-row';
+          return _page(
+            records: [_row('jobs', {'id': id})],
+            done: true,
+          );
+        case 'closeBackupSnapshot':
+          closed = true;
+          return {'closed': true};
+        default:
+          throw StateError('Unexpected method ${call.method}.');
+      }
+    };
+
+    final exported = await BackupSnapshotExporter(channel: channel)
+        .exportStream();
+    await expectLater(
+      exported.archiveStream.toList(),
+      throwsA(isA<FormatException>()),
+    );
+
+    expect(pageReads, 2);
+    expect(closed, isTrue);
+  });
 
   test('closes an unconsumed stream when explicitly discarded', () async {
     var closed = false;
@@ -423,7 +471,7 @@ void main() {
 
       await expectLater(
         BackupSnapshotExporter(channel: channel)
-            .exportStream(isCancelled: () => ++cancellationChecks == 4),
+            .exportStream(isCancelled: () => ++cancellationChecks == 5),
         throwsA(isA<BackupExportCancelledException>()),
       );
       expect(closed, isTrue);
@@ -573,6 +621,8 @@ void main() {
       'getBackupSnapshotInfo',
       'startBackupSnapshot',
       'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
       'closeBackupSnapshot',
     ]);
   });
@@ -587,7 +637,7 @@ Map<String, Object?> _snapshotInfo({
   'archiveFormatVersion': 1,
   'schemaVersion': schemaVersion,
   'stateVersion': 19,
-  'maxSnapshotBytes': 60 * 1024 * 1024,
+  'maxSnapshotBytes': 64 * 1024 * 1024,
   'maxPageBytes': maxPageBytes,
   'maxBlobChunkBytes': maxBlobChunkBytes,
   'maxRecords': 500000,

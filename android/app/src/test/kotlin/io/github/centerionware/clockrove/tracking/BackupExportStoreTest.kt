@@ -86,6 +86,10 @@ class BackupExportStoreTest {
 
     @Test
     fun detachedSnapshotKeepsItsOriginalStateAndLeavesAnOpenSessionRunning() {
+        assertEquals(
+            64L * 1024L * 1024L,
+            exportStore.info(database).maxSnapshotBytes,
+        )
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(
             "start-synthetic-session",
@@ -120,6 +124,68 @@ class BackupExportStoreTest {
         assertNull(values(session)["end_ms"])
         assertEquals(runningBefore.copy(jobName = "Changed after snapshot"), repository.snapshot().running)
         assertTrue(exportStore.close(started.snapshotId))
+    }
+
+    @Test
+    fun rejectsRevisionHeadsWhoseOwnerDoesNotMatchBeforeSnapshotCopy() {
+        val revisionId = RevisionStore.record(
+            database,
+            "export-test",
+            "revision-owner",
+            null,
+            mapOf("id" to "revision-owner"),
+            now,
+        )
+        database.execSQL(
+            "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES (?,?,?)",
+            arrayOf("export-test", "different-owner", revisionId),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError(
+                "Expected the malformed revision head to be rejected.",
+            )
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
+    }
+
+    @Test
+    fun rejectsRevisionParentsFromAnotherEntityBeforeSnapshotCopy() {
+        val childRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "child-owner",
+            null,
+            mapOf("id" to "child-owner"),
+            now,
+        )
+        val parentRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "parent-owner",
+            null,
+            mapOf("id" to "parent-owner"),
+            now,
+        )
+        database.execSQL(
+            "INSERT INTO revision_parents(revision_id,parent_id) VALUES (?,?)",
+            arrayOf(childRevision, parentRevision),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError(
+                "Expected the cross-entity parent edge to be rejected.",
+            )
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
     }
 
     @Test
