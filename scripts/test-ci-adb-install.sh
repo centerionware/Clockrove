@@ -2,6 +2,32 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+benchmark_script="$script_dir/ci-android-backup-memory-benchmark.sh"
+no_uninstall_invocations="$(grep -Fc -- 'flutter test --no-uninstall' "$benchmark_script")"
+if [[ "$no_uninstall_invocations" != 2 ]]; then
+  echo 'Backup memory benchmark seed and measurement must use --no-uninstall.' >&2
+  exit 1
+fi
+if grep -Fq -- '--before-retry-hook' "$benchmark_script"; then
+  echo 'Backup memory benchmark recovery must retry the measurement without another Flutter reseed install.' >&2
+  exit 1
+fi
+device_script="$script_dir/ci-android-pdf.sh"
+memory_benchmark_line="$(grep -nF 'ci-android-backup-memory-benchmark.sh' "$device_script" | cut -d: -f1)"
+crypto_benchmark_line="$(grep -nF 'backup_crypto_benchmark_test.dart' "$device_script" | cut -d: -f1)"
+app_install_line="$(grep -nF 'clockrove_install_apk "$clockrove_api" app "$clockrove_validation_apk"' "$device_script" | cut -d: -f1)"
+first_native_journey_line="$(grep -nF 'ci-android-billing.sh' "$device_script" | cut -d: -f1)"
+last_native_journey_line="$(grep -nF 'ci-android-task-media.sh' "$device_script" | cut -d: -f1)"
+if [[ -z "$memory_benchmark_line" || -z "$crypto_benchmark_line" ||
+  -z "$app_install_line" || -z "$first_native_journey_line" ||
+  -z "$last_native_journey_line" ||
+  "$crypto_benchmark_line" -ge "$app_install_line" ||
+  "$app_install_line" -ge "$first_native_journey_line" ||
+  "$last_native_journey_line" -ge "$memory_benchmark_line" ]]; then
+  echo 'Run generated-byte crypto on the fresh emulator; run the isolated full-path benchmark after native journeys.' >&2
+  exit 1
+fi
+
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
 mkdir -p "$test_root/bin" "$test_root/workspace"
@@ -12,9 +38,13 @@ export ADB_INSTALL_COUNT="$test_root/install-count.txt"
 export ADB_PACKAGE_QUERY_COUNT="$test_root/package-query-count.txt"
 export ADB_PACKAGE_STATE_FILE="$test_root/package-state.txt"
 export ADB_REBOOT_COUNT="$test_root/reboot-count.txt"
+export FLUTTER_EVENT_LOG="$test_root/flutter-events.txt"
+export FLUTTER_NO_UNINSTALL_LOG="$test_root/flutter-no-uninstall.txt"
 export AAPT_CALL_LOG="$test_root/aapt-calls.txt"
 export ADB_FAKE_PACKAGE=io.github.centerionware.clockrove
 export ADB_FAKE_VERSION=42
+export ADB_PIDOF_STATUS=1
+export ADB_PIDOF_OUTPUT=''
 export ADB_FAKE_API=24
 export ADB_INSTALL_MODE=timeout-once
 export ADB_PACKAGE_QUERY_MODE=normal
@@ -70,6 +100,12 @@ cat > "$test_root/bin/adb" <<'FAKE_ADB'
 set -euo pipefail
 printf '%s\n' "$*" >> "$ADB_CALL_LOG"
 
+if [[ "${1:-}" == devices ]]; then
+  echo 'List of devices attached'
+  echo 'emulator-5554 device product:sdk_gphone_x86 model:sdk_gphone_x86'
+  exit 0
+fi
+
 if [[ "${1:-}" == -s && "${3:-}" == install ]]; then
   count=0
   [[ ! -f "$ADB_INSTALL_COUNT" ]] || read -r count < "$ADB_INSTALL_COUNT"
@@ -111,6 +147,20 @@ if [[ "${1:-}" == -s && "${3:-}" == install ]]; then
 fi
 
 if [[ "${3:-}" == reboot ]]; then
+  printf '%s\n' 'reboot' >> "$FLUTTER_EVENT_LOG"
+fi
+if [[ "${3:-}" == shell && "${4:-}" == am && "${5:-}" == force-stop ]]; then
+  printf '%s\n' 'force-stop' >> "$FLUTTER_EVENT_LOG"
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == pidof ]]; then
+  printf '%s\n' 'pidof' >> "$FLUTTER_EVENT_LOG"
+  if [[ "$ADB_PIDOF_STATUS" == 0 ]]; then
+    printf '%s\n' "$ADB_PIDOF_OUTPUT"
+  fi
+  exit "$ADB_PIDOF_STATUS"
+fi
+if [[ "${3:-}" == reboot ]]; then
   if [[ "$ADB_REBOOT_MODE" == normal ]]; then
     count=0
     [[ ! -f "$ADB_REBOOT_COUNT" ]] || read -r count < "$ADB_REBOOT_COUNT"
@@ -137,6 +187,27 @@ if [[ "${3:-}" == shell && "${4:-}" == getprop && "${5:-}" == ro.build.version.s
   else
     echo "$ADB_FAKE_API"
   fi
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == service && "${5:-}" == check && "${6:-}" == package ]]; then
+  echo 'Service package: found'
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == pm && "${5:-}" == path ]]; then
+  requested_package="${6:-}"
+  if [[ -s "$ADB_PACKAGE_STATE_FILE" ]]; then
+    read -r installed_package installed_version < "$ADB_PACKAGE_STATE_FILE"
+    if [[ "$installed_package" == "$requested_package" ]]; then
+      echo 'package:/data/app/vmdl123.tmp/base.apk'
+      exit 0
+    fi
+  fi
+  echo 'Synthetic package path unavailable'
+  exit 1
+fi
+if [[ "${3:-}" == logcat && "${4:-}" == -d ]]; then
+  echo '11-16 10:00:00.000  1000  1000 I PackageManager: install package io.github.centerionware.clockrove failed at /data/app/vmdl123.tmp'
+  echo '11-16 10:00:00.100  1000  1000 I ActivityManager: synthetic unrelated activity event'
   exit 0
 fi
 if [[ "${3:-}" == shell && "${4:-}" == cat && "${5:-}" == /proc/sys/kernel/random/boot_id ]]; then
@@ -174,6 +245,13 @@ fi
 echo "Synthetic adb response: $*"
 FAKE_ADB
 
+mkdir -p "$test_root/android-sdk/platform-tools"
+cat > "$test_root/android-sdk/platform-tools/adb" <<'FAKE_SDK_ADB'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$FLUTTER_SDK_ADB_CALL_LOG"
+FAKE_SDK_ADB
+
 cat > "$test_root/bin/sleep" <<'FAKE_SLEEP'
 #!/usr/bin/env bash
 exit 0
@@ -182,16 +260,23 @@ FAKE_SLEEP
 cat > "$test_root/bin/flutter" <<'FAKE_FLUTTER'
 #!/usr/bin/env bash
 set -euo pipefail
+flutter_test_path="${FLUTTER_TEST_PATH:-integration_test/backup_crypto_benchmark_test.dart}"
 count=0
 [[ ! -f "$FLUTTER_TEST_COUNT" ]] || read -r count < "$FLUTTER_TEST_COUNT"
 count=$((count + 1))
 printf '%s\n' "$count" > "$FLUTTER_TEST_COUNT"
+printf 'flutter-attempt-%s\n' "$count" >> "$FLUTTER_EVENT_LOG"
+has_no_uninstall=false
+for argument in "$@"; do
+  if [[ "$argument" == --no-uninstall ]]; then has_no_uninstall=true; fi
+done
+printf '%s\n' "$has_no_uninstall" >> "$FLUTTER_NO_UNINSTALL_LOG"
 case "$FLUTTER_TEST_MODE:$count" in
   install-timeout-once:1|install-timeout-always:*)
     if [[ "$FLUTTER_TEST_MODE" == install-timeout-once ]]; then
-      echo '00:00 +0: loading integration_test/backup_crypto_benchmark_test.dart'
+      echo "00:00 +0: loading $flutter_test_path"
     else
-      echo '00:00 +0: loading /home/runner/work/Clockrove/Clockrove/integration_test/backup_crypto_benchmark_test.dart'
+      echo "00:00 +0: loading /home/runner/work/Clockrove/Clockrove/$flutter_test_path"
     fi
     echo '✓ Built build/app/outputs/flutter-apk/app-debug.apk'
     echo 'Installing build/app/outputs/flutter-apk/app-debug.apk... No tests ran.'
@@ -236,20 +321,88 @@ case "$FLUTTER_TEST_MODE:$count" in
     echo '00:00 +0: Flutter returned without the crypto result'
     exit 0
     ;;
-  *)
+  verify-no-streaming:*)
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 get-state
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pm install synthetic.apk
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 install -t -r synthetic.apk
     echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
+    exit 0
+    ;;
+  *)
+    if [[ "$flutter_test_path" == *backup_snapshot_memory_benchmark_test.dart ]]; then
+      echo 'BACKUP_SNAPSHOT_MEMORY_SEED pid=42 process_start_ticks=7 attachment_count=19 media_bytes=57671680 target_bytes=57671680'
+    else
+      echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
+    fi
     exit 0
     ;;
 esac
 FAKE_FLUTTER
 
-chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter"
+chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter" "$test_root/android-sdk/platform-tools/adb"
+export ANDROID_HOME="$test_root/android-sdk" ANDROID_SDK_ROOT="$test_root/android-sdk"
+export FLUTTER_SDK_ADB_CALL_LOG="$test_root/flutter-sdk-adb-calls.txt"
 source "$script_dir/ci-adb-install.sh"
+
+export ADB_PIDOF_STATUS=0 ADB_PIDOF_OUTPUT='123 456'
+[[ "$(clockrove_app_process_pids "$ADB_FAKE_PACKAGE")" == '123 456' ]]
+export ADB_PIDOF_STATUS=1 ADB_PIDOF_OUTPUT=''
+if clockrove_app_process_pids "$ADB_FAKE_PACKAGE"; then
+  echo 'pidof status 1 with no output must mean the process is absent.' >&2
+  exit 1
+else
+  pidof_status=$?
+fi
+[[ "$pidof_status" == 1 ]]
+export ADB_PIDOF_STATUS=7
+if clockrove_app_process_pids "$ADB_FAKE_PACKAGE" 2>/dev/null; then
+  echo 'Unexpected pidof failure must not be treated as process absence.' >&2
+  exit 1
+else
+  pidof_status=$?
+fi
+[[ "$pidof_status" == 2 ]]
+export ADB_PIDOF_STATUS=1 ADB_PIDOF_OUTPUT=''
+echo 'Verified pidof distinguishes running, absent, and failed process queries.'
+
+clockrove_test_flutter_retry_hook() {
+  [[ "$1" == 24 && "$(cat "$ADB_REBOOT_COUNT")" == 1 ]] || return 1
+  printf '%s\n' 'seed-restored' >> "$FLUTTER_EVENT_LOG"
+  timeout --kill-after=1s 5s adb -s emulator-5554 shell am force-stop "$ADB_FAKE_PACKAGE" || return 1
+  local app_pid process_status
+  if app_pid="$(clockrove_app_process_pids "$ADB_FAKE_PACKAGE")"; then
+    return 1
+  else
+    process_status=$?
+  fi
+  [[ "$process_status" == 1 ]] || return 1
+  printf '%s\n' 'process-absent' >> "$FLUTTER_EVENT_LOG"
+  printf '%s\n' "$1" >> "$FLUTTER_RETRY_HOOK_LOG"
+}
+
+clockrove_test_flutter_retry_hook_failure() {
+  printf '%s\n' 'failed-hook' >> "$FLUTTER_EVENT_LOG"
+  return 7
+}
 
 export ADB_INSTALL_MODE=normal
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ ! -e "$AAPT_CALL_LOG" ]]
+grep -F -- '-s emulator-5554 install --no-streaming -r -t ' "$ADB_CALL_LOG" >/dev/null
 echo 'Verified a successful install does not depend on aapt identity parsing.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_PACKAGE_QUERY_COUNT"
+clockrove_ensure_apk_version 24 app "$test_root/app.apk"
+[[ ! -e "$ADB_INSTALL_COUNT" ]]
+[[ "$(cat "$ADB_PACKAGE_QUERY_COUNT")" == 1 ]]
+echo 'Verified an already-installed exact APK version is reused without another install.'
+
+rm -f "$ADB_INSTALL_COUNT" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_PACKAGE_STATE_FILE"
+clockrove_ensure_apk_version 24 app "$test_root/app.apk"
+[[ "$(cat "$ADB_INSTALL_COUNT")" == 1 ]]
+grep -F 'Synthetic install succeeded' \
+  "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-1.log" >/dev/null
+echo 'Verified a confirmed absent APK version still uses the bounded installer.'
 
 export CLOCKROVE_AAPT_FIXTURE=reordered
 [[ "$(clockrove_apk_identity "$test_root/app.apk" app)" == 'io.github.centerionware.clockrove 42' ]]
@@ -270,6 +423,13 @@ grep -F 'Synthetic install timeout' "$GITHUB_WORKSPACE/build/device-test-results
 grep -F 'Synthetic install succeeded' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-2.log" >/dev/null
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
 grep -F 'result=expected-package-version-absent' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-package-state-attempt-1.txt" >/dev/null
+app_timeout_report="$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-install-timeout-adb-attempt-1.txt"
+grep -F 'bounded-install-timeout-diagnostics=v1' "$app_timeout_report" >/dev/null
+grep -F 'pm path io.github.centerionware.clockrove' "$app_timeout_report" >/dev/null
+! grep -Fq '/data/app/' "$app_timeout_report"
+app_timeout_logcat_line="$(grep -nF -- '-s emulator-5554 logcat -d' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+app_timeout_reboot_line="$(grep -nF -- '-s emulator-5554 reboot' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+[[ "$app_timeout_logcat_line" -lt "$app_timeout_reboot_line" ]]
 echo 'Verified a timed-out install reboots, confirms the expected version absent, and retries once.'
 
 rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
@@ -416,6 +576,7 @@ grep -F 'result=package-state-unknown' "$GITHUB_WORKSPACE/build/device-test-resu
 echo 'Verified failed PackageManager probes cannot confirm an installed version from their text.'
 
 export FLUTTER_TEST_COUNT="$test_root/flutter-test-count.txt"
+export FLUTTER_RETRY_HOOK_LOG="$test_root/flutter-retry-hook.log"
 export FLUTTER_TEST_MODE=success
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
@@ -428,18 +589,50 @@ echo 'Verified a successful Flutter device test requires its crypto result marke
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=install-timeout-once
 export ADB_FAKE_API_CRLF=true
+rm -f "$FLUTTER_EVENT_LOG"
 clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart
 [[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+[[ "$(cat "$FLUTTER_RETRY_HOOK_LOG")" == 24 ]]
+[[ "$(cat "$FLUTTER_EVENT_LOG")" == $'flutter-attempt-1\nreboot\nseed-restored\nforce-stop\npidof\nprocess-absent\nflutter-attempt-2' ]]
 unset ADB_FAKE_API_CRLF
 grep -F 'No tests ran.' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-1.log" >/dev/null
 grep -F 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-2.log" >/dev/null
+flutter_timeout_report="$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-install-timeout-flutter-attempt-1.txt"
+grep -F 'api=24 phase=flutter attempt=1 package=io.github.centerionware.clockrove' "$flutter_timeout_report" >/dev/null
+grep -F '[adb get-state] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '[sys.boot_completed] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '[PackageManager service] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '<android-path>' "$flutter_timeout_report" >/dev/null
+! grep -Fq '/data/app/' "$flutter_timeout_report"
+flutter_timeout_logcat_line="$(grep -nF -- '-s emulator-5554 logcat -d' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+flutter_timeout_reboot_line="$(grep -nF -- '-s emulator-5554 reboot' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+[[ "$flutter_timeout_logcat_line" -lt "$flutter_timeout_reboot_line" ]]
 echo 'Verified the exact Flutter app-install timeout gets one reboot and one real test retry.'
 
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT" "$FLUTTER_EVENT_LOG"
+export FLUTTER_TEST_MODE=install-timeout-once
+if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook_failure \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
+  echo 'A failed fixture-reseed hook must prevent the benchmark retry.' >&2
+  exit 1
+else
+  status=$?
+fi
+[[ "$status" == 2 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
+[[ "$(cat "$ADB_REBOOT_COUNT")" == 1 ]]
+grep -Fx 'failed-hook' "$FLUTTER_EVENT_LOG" >/dev/null
+! grep -Fq 'flutter-attempt-2' "$FLUTTER_EVENT_LOG"
+echo 'Verified a failed post-recovery fixture hook prevents the Flutter retry.'
+
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+rm -f "$FLUTTER_NO_UNINSTALL_LOG"
 export FLUTTER_TEST_MODE=install-timeout-once
 export ADB_FAKE_API=35
 if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
@@ -458,8 +651,10 @@ echo 'Verified the Flutter retry refuses a rebooted emulator on the wrong API le
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
 export FLUTTER_TEST_MODE=unrelated-timeout
+rm -f "$FLUTTER_RETRY_HOOK_LOG"
 if clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
   'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  --before-retry-hook clockrove_test_flutter_retry_hook \
   -- flutter test integration_test/backup_crypto_benchmark_test.dart; then
   echo 'An unrelated Flutter timeout must remain a failure.' >&2
   exit 1
@@ -468,6 +663,7 @@ else
 fi
 [[ "$status" == 124 && "$(cat "$FLUTTER_TEST_COUNT")" == 1 ]]
 ! grep -Fq 'reboot' "$ADB_CALL_LOG"
+[[ ! -s "$FLUTTER_RETRY_HOOK_LOG" ]]
 echo 'Verified unrelated Flutter failures do not trigger a retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
@@ -570,3 +766,35 @@ fi
 grep -F 'boot-restart=not-confirmed' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-35/install-diagnostics/backup-crypto-benchmark-recovery-attempt-1.log" >/dev/null
 echo 'Verified Flutter test recovery refuses retry unless emulator reboot is confirmed.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT"
+rm -f "$FLUTTER_NO_UNINSTALL_LOG"
+export FLUTTER_TEST_MODE=install-timeout-once
+export FLUTTER_TEST_PATH=integration_test/backup_snapshot_memory_benchmark_test.dart
+export ADB_REBOOT_MODE=normal
+export ADB_FAKE_API=24
+clockrove_run_flutter_integration_test 24 backup-snapshot-memory-seed \
+  'BACKUP_SNAPSHOT_MEMORY_SEED pid=[0-9]+ process_start_ticks=[0-9]+ attachment_count=[0-9]+ media_bytes=[0-9]+' \
+  -- flutter test --no-uninstall integration_test/backup_snapshot_memory_benchmark_test.dart
+[[ "$(cat "$FLUTTER_TEST_COUNT")" == 2 ]]
+[[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
+[[ "$(cat "$FLUTTER_NO_UNINSTALL_LOG")" == $'true\ntrue' ]]
+unset FLUTTER_TEST_PATH
+echo 'Verified the synthetic-media integration test loading line permits only the bounded pre-test install retry.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$FLUTTER_SDK_ADB_CALL_LOG"
+export FLUTTER_TEST_MODE=verify-no-streaming
+sdk_adb_path="$ANDROID_HOME/platform-tools/adb"
+sdk_adb_checksum="$(sha256sum "$sdk_adb_path")"
+clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart
+grep -F -- '-s emulator-5554 install --no-streaming -t -r synthetic.apk' \
+  "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+grep -Fx -- '-s emulator-5554 get-state' "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+grep -Fx -- '-s emulator-5554 shell pm install synthetic.apk' \
+  "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+[[ "$(sha256sum "$sdk_adb_path")" == "$sdk_adb_checksum" ]]
+[[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*' -print -quit)" ]]
+[[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*-original' -print -quit)" ]]
+echo 'Verified Flutter’s absolute SDK adb install uses --no-streaming and the original SDK adb is restored.'

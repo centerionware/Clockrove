@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 
 import 'backup_archive.dart';
@@ -42,16 +44,8 @@ final class BackupSnapshotExporter {
       snapshotId = started.snapshotId;
       _validateSnapshotStart(info, started);
 
-      final rows = <BackupArchiveStreamRow>[];
-      final descriptorsById = <String, _SnapshotBlob>{};
-      var mediaCount = 0;
-      var mediaBytes = 0;
-      var mediaBytesHashed = 0;
       var recordsRead = 0;
-      final hashedBlobIds = <String>{};
-      String? cursor;
-      var done = false;
-      var pageCount = 0;
+      var lastReportedMediaBytesRead = 0;
       void reportProgress({int? mediaBytesRead}) {
         onProgress?.call(
           BackupSnapshotProgress(
@@ -64,124 +58,37 @@ final class BackupSnapshotExporter {
       }
 
       reportProgress();
-      while (!done) {
-        _checkCancelled(isCancelled);
-        pageCount++;
-        if (pageCount > info.maxRecords + 1) {
-          throw const FormatException(
-            'The backup snapshot page sequence is invalid.',
-          );
-        }
-        final page = await _readPage(
-          snapshotId: snapshotId,
-          cursor: cursor,
-          maxBytes: info.maxPageBytes,
-        );
-        if (page.snapshotId != snapshotId) {
-          throw const FormatException(
-            'The backup snapshot changed unexpectedly.',
-          );
-        }
-        if (page.records.isEmpty && !page.done) {
-          throw const FormatException(
-            'The backup snapshot stopped making progress.',
-          );
-        }
-
-        for (final record in page.records) {
-          _checkCancelled(isCancelled);
-          if (rows.length >= started.recordCount ||
-              rows.length >= info.maxRecords) {
-            throw const FormatException(
-              'The backup snapshot contains too many records.',
-            );
-          }
-          if (!info.portableTables.contains(record.table)) {
-            throw FormatException(
-              'The backup snapshot contains unsupported table "${record.table}".',
-            );
-          }
-          final blobs = <BackupArchiveBlobSource>[];
-          for (final descriptor in record.blobs) {
-            mediaCount++;
-            if (mediaCount > started.mediaCount ||
-                mediaCount > info.maxMediaCount) {
-              throw const FormatException(
-                'The backup snapshot contains too many media files.',
-              );
-            }
-            if (descriptor.sizeBytes < 0 ||
-                descriptor.sizeBytes > started.mediaBytes - mediaBytes ||
-                descriptor.sizeBytes > info.maxSnapshotBytes - mediaBytes) {
-              throw const FormatException(
-                'The backup snapshot media size is invalid or too large.',
-              );
-            }
-            if (descriptorsById.containsKey(descriptor.id)) {
-              throw const FormatException(
-                'The backup snapshot repeats a media identifier.',
-              );
-            }
-            descriptorsById[descriptor.id] = descriptor;
-            mediaBytes += descriptor.sizeBytes;
-            blobs.add(
-              BackupArchiveBlobSource(
-                id: descriptor.id,
-                column: descriptor.column,
-                sizeBytes: descriptor.sizeBytes,
-              ),
-            );
-          }
-          rows.add(
-            BackupArchiveStreamRow(
-              table: record.table,
-              values: record.values,
-              blobs: blobs,
-            ),
-          );
-          recordsRead++;
-          reportProgress();
-        }
-
-        if (page.done) {
-          if (page.nextCursor != null) {
-            throw const FormatException(
-              'The final backup page has an invalid cursor.',
-            );
-          }
-          done = true;
-        } else {
-          final next = page.nextCursor;
-          if (next == null || next.isEmpty || next == cursor) {
-            throw const FormatException(
-              'The backup snapshot cursor is invalid.',
-            );
-          }
-          cursor = next;
-        }
-      }
-
-      if (rows.length != started.recordCount ||
-          mediaCount != started.mediaCount ||
-          mediaBytes != started.mediaBytes) {
-        throw const FormatException('The backup snapshot counts do not match.');
-      }
       _checkCancelled(isCancelled);
 
-      final plan = BackupArchiveCodec.prepareStream(
+      final currentSnapshotId = snapshotId;
+      Stream<BackupArchiveStreamRow> readRows() => _readSnapshotRows(
+        snapshotId: currentSnapshotId,
+        started: started,
+        info: info,
+        isCancelled: isCancelled,
+      );
+      final plan = await prepareTrustedNativeBackupArchiveReplayStream(
         schemaVersion: started.schemaVersion,
         stateVersion: started.stateVersion,
         capturedAtUtcMillis: started.capturedAtUtcMillis,
-        rows: rows,
+        expectedRecordCount: started.recordCount,
+        expectedBlobCount: started.mediaCount,
+        expectedMediaBytes: started.mediaBytes,
+        rows: readRows,
+        onRecord: (count) {
+          recordsRead = count;
+          reportProgress();
+        },
         maxBytes: BackupArchiveCodec.maxArchiveBytes,
         maxRows: info.maxRecords,
         maxBlobs: info.maxMediaCount,
       );
-      final lease = _SnapshotLease(snapshotId, closeSnapshot: _closeSnapshot);
+      final lease = _SnapshotLease(
+        currentSnapshotId,
+        closeSnapshot: _closeSnapshot,
+      );
       Future<void> closeExport() async {
         plan.dispose();
-        descriptorsById.clear();
-        hashedBlobIds.clear();
         await lease.close();
       }
 
@@ -193,20 +100,18 @@ final class BackupSnapshotExporter {
         capturedAtUtcMillis: started.capturedAtUtcMillis,
         openSessionCount: started.openSessionCount,
         recordCount: started.recordCount,
-        mediaCount: mediaCount,
-        mediaBytes: mediaBytes,
+        mediaCount: plan.blobCount,
+        mediaBytes: plan.mediaLength,
         archiveStream: _streamArchive(
           plan: plan,
           lease: lease,
           closeSnapshot: closeExport,
-          descriptorsById: descriptorsById,
           chunkBytes: info.maxBlobChunkBytes,
           isCancelled: isCancelled,
           onProgress: (bytesRead) {
-            mediaBytesHashed = bytesRead;
-            reportProgress(mediaBytesRead: mediaBytesHashed);
+            lastReportedMediaBytesRead = bytesRead;
+            reportProgress(mediaBytesRead: lastReportedMediaBytesRead);
           },
-          shouldReportBlob: (id) => hashedBlobIds.add(id),
         ),
         closeSnapshot: closeExport,
       );
@@ -240,14 +145,12 @@ final class BackupSnapshotExporter {
   }
 
   Stream<Uint8List> _streamArchive({
-    required BackupArchiveStreamPlan plan,
+    required BackupTrustedNativeArchiveReplayPlan plan,
     required _SnapshotLease lease,
     required Future<void> Function() closeSnapshot,
-    required Map<String, _SnapshotBlob> descriptorsById,
     required int chunkBytes,
     required BackupCancellationCheck? isCancelled,
     required void Function(int bytesRead) onProgress,
-    required bool Function(String blobId) shouldReportBlob,
   }) async* {
     Object? operationFailure;
     StackTrace? operationStack;
@@ -257,24 +160,21 @@ final class BackupSnapshotExporter {
     try {
       yield* plan.encode(
         isCancelled: isCancelled,
-        readBlob: (blobId) async* {
-          final descriptor = descriptorsById[blobId];
-          if (descriptor == null) {
-            throw const FormatException(
-              'The backup archive refers to unknown media.',
-            );
-          }
-          final reportThisPass = shouldReportBlob(blobId);
+        readBlob: (blob) async* {
+          final descriptor = _SnapshotBlob(
+            blob.id,
+            blob.column,
+            blob.sizeBytes,
+            blob.sha256,
+          );
           await for (final chunk in _readBlobChunks(
             snapshotId: lease.snapshotId,
             descriptor: descriptor,
             chunkBytes: chunkBytes,
             isCancelled: isCancelled,
           )) {
-            if (reportThisPass) {
-              reportedMediaBytes += chunk.length;
-              onProgress(reportedMediaBytes);
-            }
+            reportedMediaBytes += chunk.length;
+            onProgress(reportedMediaBytes);
             yield chunk;
           }
         },
@@ -378,12 +278,25 @@ final class BackupSnapshotExporter {
         final id = _requiredString(blob, 'id');
         final column = _requiredString(blob, 'column');
         final sizeBytes = _integer(blob, 'sizeBytes');
-        if (id.isEmpty || column.isEmpty || sizeBytes < 0) {
+        final encodedSha256 = _requiredString(blob, 'sha256');
+        late final List<int> sha256;
+        try {
+          sha256 = base64.decode(encodedSha256);
+        } on FormatException {
+          throw const FormatException(
+            'The backup snapshot media checksum is invalid.',
+          );
+        }
+        if (id.isEmpty ||
+            column.isEmpty ||
+            sizeBytes < 0 ||
+            sha256.length != 32 ||
+            base64.encode(sha256) != encodedSha256) {
           throw const FormatException(
             'The backup snapshot media descriptor is invalid.',
           );
         }
-        blobs.add(_SnapshotBlob(id, column, sizeBytes));
+        blobs.add(_SnapshotBlob(id, column, sizeBytes, sha256));
       }
       records.add(_SnapshotRow(table, values, blobs));
     }
@@ -398,6 +311,111 @@ final class BackupSnapshotExporter {
       done: done,
       records: records,
     );
+  }
+
+  Stream<BackupArchiveStreamRow> _readSnapshotRows({
+    required String snapshotId,
+    required _SnapshotStart started,
+    required _SnapshotInfo info,
+    required BackupCancellationCheck? isCancelled,
+  }) async* {
+    String? cursor;
+    var done = false;
+    var pageCount = 0;
+    var recordCount = 0;
+    var mediaCount = 0;
+    var mediaBytes = 0;
+    while (!done) {
+      _checkCancelled(isCancelled);
+      pageCount++;
+      if (pageCount > info.maxRecords + 1) {
+        throw const FormatException(
+          'The backup snapshot page sequence is invalid.',
+        );
+      }
+      final page = await _readPage(
+        snapshotId: snapshotId,
+        cursor: cursor,
+        maxBytes: info.maxPageBytes,
+      );
+      if (page.snapshotId != snapshotId) {
+        throw const FormatException(
+          'The backup snapshot changed unexpectedly.',
+        );
+      }
+      if (page.records.isEmpty && !page.done) {
+        throw const FormatException(
+          'The backup snapshot stopped making progress.',
+        );
+      }
+
+      for (final record in page.records) {
+        _checkCancelled(isCancelled);
+        if (recordCount >= started.recordCount ||
+            recordCount >= info.maxRecords) {
+          throw const FormatException(
+            'The backup snapshot contains too many records.',
+          );
+        }
+        if (!info.portableTables.contains(record.table)) {
+          throw FormatException(
+            'The backup snapshot contains unsupported table "${record.table}".',
+          );
+        }
+        final blobs = <BackupArchiveBlobSource>[];
+        for (final descriptor in record.blobs) {
+          mediaCount++;
+          if (mediaCount > started.mediaCount ||
+              mediaCount > info.maxMediaCount) {
+            throw const FormatException(
+              'The backup snapshot contains too many media files.',
+            );
+          }
+          if (descriptor.sizeBytes < 0 ||
+              descriptor.sizeBytes > started.mediaBytes - mediaBytes ||
+              descriptor.sizeBytes > info.maxSnapshotBytes - mediaBytes) {
+            throw const FormatException(
+              'The backup snapshot media size is invalid or too large.',
+            );
+          }
+          mediaBytes += descriptor.sizeBytes;
+          blobs.add(
+            BackupArchiveBlobSource(
+              id: descriptor.id,
+              column: descriptor.column,
+              sizeBytes: descriptor.sizeBytes,
+              sha256: descriptor.sha256,
+            ),
+          );
+        }
+        recordCount++;
+        yield BackupArchiveStreamRow(
+          table: record.table,
+          values: record.values,
+          blobs: blobs,
+        );
+      }
+
+      if (page.done) {
+        if (page.nextCursor != null) {
+          throw const FormatException(
+            'The final backup page has an invalid cursor.',
+          );
+        }
+        done = true;
+      } else {
+        final next = page.nextCursor;
+        if (next == null || next.isEmpty || next == cursor) {
+          throw const FormatException('The backup snapshot cursor is invalid.');
+        }
+        cursor = next;
+      }
+    }
+    if (recordCount != started.recordCount ||
+        mediaCount != started.mediaCount ||
+        mediaBytes != started.mediaBytes) {
+      throw const FormatException('The backup snapshot counts do not match.');
+    }
   }
 
   Stream<Uint8List> _readBlobChunks({
@@ -734,9 +752,10 @@ final class _SnapshotRow {
 }
 
 final class _SnapshotBlob {
-  const _SnapshotBlob(this.id, this.column, this.sizeBytes);
+  const _SnapshotBlob(this.id, this.column, this.sizeBytes, this.sha256);
 
   final String id;
   final String column;
   final int sizeBytes;
+  final List<int> sha256;
 }

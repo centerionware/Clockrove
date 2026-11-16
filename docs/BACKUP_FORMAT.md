@@ -39,17 +39,23 @@ and a blobs list:
     {
       "type": "row",
       "table": "invoices",
-      "values": {"id": "invoice-id", "pdf": null},
-      "blobs": [{"id": "opaque blob id", "column": "pdf", "sizeBytes": 1234}]
+      "values": {"id": "invoice-id"},
+      "blobs": [{"id": "opaque blob id", "column": "pdf", "sizeBytes": 1234, "sha256": "<base64 digest>"}]
     }
 
 The row value map contains SQLite null, integer, floating-point, boolean-like
-integer, and string values. Binary columns never cross in a row record. A null
-binary value remains null in values; a non-null value is represented by one
-entry in blobs, with the corresponding field set to null in values.
+integer, and string values. Binary bytes never cross in a row record. A null
+binary value remains null in values; a non-null value is represented only by
+one entry in blobs, and that column is omitted from values.
 readBackupBlob returns offset, nextOffset, done, and a Uint8List bytes chunk.
 Offsets may be resumed at any byte boundary. Blob IDs are generated for one
 snapshot and cannot be used with another handle.
+
+Each media descriptor includes `sha256`, the canonical standard Base64 encoding
+of the 32-byte SHA-256 digest computed while native copies that media into the
+immutable snapshot. The digest is included in the encoded page-size limit. Dart
+checks the streamed media against it while writing the archive; a mismatch
+aborts export before the encrypted destination is committed.
 
 Rows are ordered by allowlisted table name, then by that table's declared
 primary key. Blob data is emitted in full, including cached invoice and quote
@@ -59,15 +65,29 @@ kind, including financial RECEIPT rows and their PDFs.
 The Dart archive writer must verify complete cursor traversal, contiguous blob
 offsets, declared byte totals, and final archive bounds. It must not parse or
 merge partial snapshots after any native paging error. Before encryption, Dart
-must measure its exact serialized plaintext size, including framing, JSON
-escaping, base64 or other media representation, and all records. If it exceeds
-64 MiB, fail the entire export visibly and close the snapshot; never omit
-comments or media to fit the limit.
+measures the exact binary plaintext size, including scalar framing, row records,
+blob descriptors, raw media and the fixed archive header. If it exceeds 64 MiB,
+fail the entire export visibly and close the snapshot; never omit comments or
+media to fit the limit. Streaming preflight replays the detached,
+immutable native pages instead of retaining all Dart row maps: it scans once to
+validate and measure, once to emit row records, and once to emit media. Each
+pass holds at most one bounded native page. Preflight retains only a bounded
+set of blob IDs (at most 10,000) for uniqueness and incremental row digests; it
+does not build per-revision Dart maps. The native snapshot checks revision
+heads, entity ownership, and parent references in SQLite. It copies parent
+edges to a private SQLite validation file capped at 256 MiB (four times the
+archive ceiling), streams node IDs and parent edges from the active source
+transaction into that file with bounded cursors, and runs a batched Kahn
+traversal there. The scratch file is removed after
+success or failure. `RevisionStore` also creates fresh revision IDs and links
+only to already-existing parents, while restore validates its selected union
+graph before writing. Authenticated archive decode still validates the
+complete untrusted revision graph.
 
 ## Limits and lifecycle
 
 - One active snapshot per process; concurrent starts fail with SNAPSHOT_BUSY.
-- Native detached staging input budget: 60 MiB, including framed UTF-8 row
+- Native detached staging input budget: 64 MiB, including framed UTF-8 row
   records and media. This does not guarantee that the Dart archive encoding
   will fit the final limit.
 - Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
@@ -237,12 +257,18 @@ user-selected encrypted source file is never modified or deleted.
 - Verify cancel/failure cleanup for both passes, no preview/apply before full
   authentication, local-version changes before commit, and atomic rollback.
 - On GitHub Actions, run maximum-size end-to-end export and restore on API 24 and
-  API 35. Record peak `VmHWM` before/after; incremental peak RSS must stay at or
-  below 64 MiB on each API. Also assert that no Dart buffer grows with total
-  archive size, report elapsed time, and verify no private staging remains after
-  success, cancellation, corruption or process restart.
+  API 35. Sample process `VmRSS` every 20 ms through export/encryption and record
+  the sampled peak delta; it must stay at or below 64 MiB on each API. Brief RSS
+  spikes shorter than the sampling interval may not be observed. Also assert
+  that no Dart row-map collection grows with total record count, report elapsed
+  time, and verify no private staging remains after success, cancellation,
+  corruption or process restart.
 - Keep the Settings export/restore route withheld until these exact-head checks
   pass. No VM build, test, format or analyzer run is permitted.
+
+PR #65 exact-head run [43820166609](https://github.com/centerionware/Clockrove/actions/runs/43820166609) passed the full-path RSS limit on API 24 and API 35, with sampled deltas of 52,980 KiB and 56,156 KiB. The exported archives were 66,072,344 and 66,072,097 bytes, about 1 MiB below the 67,108,864-byte maximum, so this does not prove maximum-size export memory. The next fixture targets the archive ceiling minus 16 KiB and rejects archives more than 64 KiB below it; that exact-head run is still required.
+
+Exact-head run [43824139548](https://github.com/centerionware/Clockrove/actions/runs/43824139548) passed formatting, analysis, Flutter behavior, Android compilation, instrumentation assembly and native tests, then failed on API 24 before archive creation. The seed contained 19 media objects totaling 67,091,803 bytes, but native snapshot staging rejected media plus framed row data at its 64 MiB staging limit. This run produced no archive-size or RSS measurement; API 35 did not start. The follow-up fixture targets media 64 KiB below the archive ceiling with a 2 KiB seed tolerance, reserves space for native row staging and still requires the resulting archive to be within 64 KiB of the archive maximum. The exact-head result is pending; keep user-facing export withheld.
 
 ## Portable dataset allowlist
 
@@ -291,3 +317,9 @@ comments, and comment events remain portable.
 This is the export contract only. It does not claim that restore preview,
 conflict resolution, transactional merge, or cross-version migration has
 passed validation.
+
+Exact-head run [43827154354](https://github.com/centerionware/Clockrove/actions/runs/43827154354) on `69443d6` passed source, compilation and native gates, then failed on API 24 before the memory test ran. Seeding succeeded with 19 media objects / 67,041,922 bytes. Flutter’s APK install then timed out after 226.8 seconds with ADB exit -15; after confirmed reboot, both separate Flutter reseed install attempts timed out too. PackageManager responded and the app path existed, but the bounded filtered logcat showed no install cause (artifact ID `14207839292`). No archive-size or RSS value was produced, and API 35 did not start. The successor restores the generated-byte crypto benchmark to the pre-native position, keeps the full-path test after native journeys to isolate its app-data reset and synthetic fixture, and retries the memory test directly without a second Flutter reseed install. It retains the existing 64 KiB archive bound and 65,536 KiB RSS limit; exact-head Actions remain required.
+
+The next exact-head run [43832935667](https://github.com/centerionware/Clockrove/actions/runs/43832935667) on `58f510f` passed source, compilation and native gates. API 24 passed 38 native device tests with zero failures, errors or skips. The full-path seed APK install then timed out twice (226.7 and 226.4 seconds; ADB exit -15), including after a confirmed emulator reboot. The device step ended with exit 124 before the full-path benchmark ran; artifact `14210623617` records the failed attempts. PackageManager responded and the package path existed, but filtered logcat did not reveal the underlying install cause. No full-path archive or RSS value was produced, and API 35 did not start. A separate crypto-only test did produce an exact maximum-size archive (67,108,864 bytes; 67,134,601-byte envelope) and RSS deltas of 25,572 KiB for crypto and 60,176 KiB for verification. This is not full-path exporter/encryption evidence. The archive-size and 65,536 KiB full-path RSS gates remain unchanged; exact-head API 24/35 full-path validation is still required.
+
+Comparison with the earlier passing full-path setup (`056156b` / run [43790124516](https://github.com/centerionware/Clockrove/actions/runs/43790124516)) shows it explicitly reinstalled the preserved app and instrumentation APKs through the bounded ADB helper before seeding. The `58f510f` run reused matching installed versions and then timed out during Flutter's seed-test APK install. The source successor restores those explicit installs while preserving crypto-before-native and full-path-after-native ordering. This is a likely harness-interaction hypothesis, not a confirmed emulator or PackageManager root cause. The change retains the 64 MiB fixture and existing archive/RSS checks; exact-head Actions remain required.

@@ -2,7 +2,9 @@ package io.github.centerionware.clockrove.tracking
 
 import android.database.sqlite.SQLiteDatabase
 import android.util.Base64
+import io.flutter.plugin.common.StandardMethodCodec
 import java.io.File
+import java.security.MessageDigest
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
@@ -84,6 +86,10 @@ class BackupExportStoreTest {
 
     @Test
     fun detachedSnapshotKeepsItsOriginalStateAndLeavesAnOpenSessionRunning() {
+        assertEquals(
+            64L * 1024L * 1024L,
+            exportStore.info(database).maxSnapshotBytes,
+        )
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(
             "start-synthetic-session",
@@ -118,6 +124,105 @@ class BackupExportStoreTest {
         assertNull(values(session)["end_ms"])
         assertEquals(runningBefore.copy(jobName = "Changed after snapshot"), repository.snapshot().running)
         assertTrue(exportStore.close(started.snapshotId))
+    }
+
+    @Test
+    fun rejectsRevisionHeadsWhoseOwnerDoesNotMatchBeforeSnapshotCopy() {
+        val revisionId = RevisionStore.record(
+            database,
+            "export-test",
+            "revision-owner",
+            null,
+            mapOf("id" to "revision-owner"),
+            now,
+        )
+        database.execSQL(
+            "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES (?,?,?)",
+            arrayOf("export-test", "different-owner", revisionId),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError(
+                "Expected the malformed revision head to be rejected.",
+            )
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
+    }
+
+    @Test
+    fun rejectsRevisionParentsFromAnotherEntityBeforeSnapshotCopy() {
+        val childRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "child-owner",
+            null,
+            mapOf("id" to "child-owner"),
+            now,
+        )
+        val parentRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "parent-owner",
+            null,
+            mapOf("id" to "parent-owner"),
+            now,
+        )
+        database.execSQL(
+            "INSERT INTO revision_parents(revision_id,parent_id) VALUES (?,?)",
+            arrayOf(childRevision, parentRevision),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError(
+                "Expected the cross-entity parent edge to be rejected.",
+            )
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
+    }
+
+    @Test
+    fun rejectsRevisionCyclesBeforeSnapshotCopy() {
+        val firstRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "same-owner",
+            null,
+            mapOf("id" to "same-owner", "revision" to 1),
+            now,
+        )
+        val secondRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "same-owner",
+            null,
+            mapOf("id" to "same-owner", "revision" to 2),
+            now + 1,
+        )
+        database.execSQL(
+            "INSERT INTO revision_parents(revision_id,parent_id) VALUES (?,?)",
+            arrayOf(firstRevision, secondRevision),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError("Expected the revision cycle to be rejected.")
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
+        val snapshotDirectory = File(app.noBackupFilesDir, "clockrove-backup-snapshots")
+        assertFalse(
+            snapshotDirectory.listFiles().orEmpty().any { it.name.contains("-graph.sqlite") },
+        )
     }
 
     @Test
@@ -305,6 +410,98 @@ class BackupExportStoreTest {
     }
 
     @Test
+    fun snapshotBlobDescriptorsCarrySha256ForEmptyShortAndChunkBoundaryMedia() {
+        val chunkBoundaryBytes = ByteArray(64 * 1024 + 13) { (it * 31).toByte() }
+        val fixtures = listOf(
+            "digest-empty" to ByteArray(0),
+            "digest-short" to "abc".toByteArray(Charsets.UTF_8),
+            "digest-boundary" to chunkBoundaryBytes,
+        )
+        fixtures.forEach { (id, bytes) ->
+            database.execSQL(
+                "INSERT INTO logo_assets(id,mime,width,height,content_hash,bytes) VALUES(?,?,?,?,?,?)",
+                arrayOf<Any?>(id, "image/png", 1, 1, "synthetic-$id", bytes),
+            )
+        }
+
+        val started = exportStore.start(database)
+        val records = readAll(started.snapshotId, BackupExportStore.MIN_PAGE_BYTES)
+        val byId = records.filter { it["table"] == "logo_assets" }
+            .associateBy { values(it)["id"] as String }
+        assertEquals(fixtures.size, byId.size)
+        fixtures.forEach { (id, bytes) ->
+            val record = requireNotNull(byId[id])
+            val descriptor = (record["blobs"] as List<*>).single() as Map<*, *>
+            val expectedDigest = MessageDigest.getInstance("SHA-256").digest(bytes)
+            val expectedBase64 = Base64.encodeToString(expectedDigest, Base64.NO_WRAP)
+            assertEquals(expectedBase64, descriptor["sha256"])
+            assertArrayEquals(bytes, readBlob(started.snapshotId, descriptor["id"] as String))
+        }
+        assertEquals(
+            "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+            ((byId.getValue("digest-empty")["blobs"] as List<*>).single() as Map<*, *>)["sha256"],
+        )
+        assertEquals(
+            "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=",
+            ((byId.getValue("digest-short")["blobs"] as List<*>).single() as Map<*, *>)["sha256"],
+        )
+        assertTrue(exportStore.close(started.snapshotId))
+    }
+
+    @Test
+    fun mediaDigestDescriptorsAreIncludedInEncodedPageLimitAndSplitPages() {
+        val expectedMediaRows = 18
+        repeat(expectedMediaRows) { index ->
+            val id = "digest-page-${index.toString().padStart(3, '0')}"
+            database.execSQL(
+                "INSERT INTO logo_assets(id,mime,width,height,content_hash,bytes) VALUES(?,?,?,?,?,?)",
+                arrayOf<Any?>(id, "image/png", 1, 1, "synthetic-$id", byteArrayOf(index.toByte())),
+            )
+        }
+
+        val started = exportStore.start(database)
+        val maxPageBytes = BackupExportStore.MIN_PAGE_BYTES
+        val pages = mutableListOf<BackupExportStore.Page>()
+        var cursor: String? = null
+        var done = false
+        while (!done) {
+            val page = exportStore.readPage(started.snapshotId, cursor, maxPageBytes)
+            pages.add(page)
+            cursor = page.nextCursor
+            done = page.done
+        }
+
+        val mediaPages = pages.filter { page ->
+            page.records.any { it["table"] == "logo_assets" }
+        }
+        assertTrue("media descriptors should force a page boundary", mediaPages.size > 1)
+        assertEquals(
+            expectedMediaRows,
+            pages.sumOf { page -> page.records.count { it["table"] == "logo_assets" } },
+        )
+        pages.forEach { page ->
+            page.records.filter { it["table"] == "logo_assets" }.forEach { record ->
+                val descriptor = (record["blobs"] as List<*>).single() as Map<*, *>
+                assertEquals(44, (descriptor["sha256"] as String).length)
+            }
+            val wirePage = mapOf(
+                "snapshotId" to page.snapshotId,
+                "nextCursor" to page.nextCursor,
+                "done" to page.done,
+                "records" to page.records,
+            )
+            val encodedBytes = StandardMethodCodec.INSTANCE
+                .encodeSuccessEnvelope(wirePage)
+                .position()
+            assertTrue(
+                "encoded page size $encodedBytes exceeded requested $maxPageBytes bytes",
+                encodedBytes <= maxPageBytes,
+            )
+        }
+        assertTrue(exportStore.close(started.snapshotId))
+    }
+
+    @Test
     fun expiryUsesMonotonicTimeEvenIfWallClockMovesBackwards() {
         val scheduler = ManualScheduler { elapsed }
         val shortLived = BackupExportStore(
@@ -463,12 +660,15 @@ class BackupExportStoreTest {
         assertTrue(stagingPath.delete())
     }
 
-    private fun readAll(snapshotId: String): List<Map<String, Any?>> {
+    private fun readAll(
+        snapshotId: String,
+        maxPageBytes: Int = BackupExportStore.MAX_PAGE_BYTES,
+    ): List<Map<String, Any?>> {
         val result = mutableListOf<Map<String, Any?>>()
         var cursor: String? = null
         var done = false
         while (!done) {
-            val page = exportStore.readPage(snapshotId, cursor, BackupExportStore.MAX_PAGE_BYTES)
+            val page = exportStore.readPage(snapshotId, cursor, maxPageBytes)
             result.addAll(page.records)
             cursor = page.nextCursor
             done = page.done

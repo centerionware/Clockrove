@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:clockrove/backup/backup_archive.dart';
+import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +66,7 @@ void main() {
                 'task_attachments',
                 {'id': 'attachment-1'},
                 blobs: [
-                  {'id': 'media-1', 'column': 'data', 'sizeBytes': 4},
+                  _blobDescriptor('media-1', 'data', [11, 22, 33, 44]),
                 ],
               ),
             ],
@@ -109,7 +112,7 @@ void main() {
     expect(progress.last.mediaBytesRead, 4);
     expect(progress.last.totalMediaBytes, 4);
     expect(progress.last.fraction, 1);
-    expect(blobCalls, 4);
+    expect(blobCalls, 2);
     expect(archive.rows.map((row) => row.table), [
       'jobs',
       'sessions',
@@ -124,8 +127,10 @@ void main() {
       'startBackupSnapshot',
       'readBackupSnapshotPage',
       'readBackupSnapshotPage',
-      'readBackupBlob',
-      'readBackupBlob',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
       'readBackupBlob',
       'readBackupBlob',
       'closeBackupSnapshot',
@@ -137,6 +142,7 @@ void main() {
     () async {
       final media = Uint8List.fromList([11, 22, 33, 44]);
       var blobCalls = 0;
+      var pageCalls = 0;
       var closed = false;
       respond = (call) async {
         switch (call.method) {
@@ -145,17 +151,16 @@ void main() {
           case 'startBackupSnapshot':
             return _started(recordCount: 3, mediaCount: 1, mediaBytes: 4);
           case 'readBackupSnapshotPage':
+            pageCalls++;
             return _page(
               records: [
+                _row('jobs', {'id': 'aa', 'name': 'Earlier job'}),
+                _row('jobs', {'id': 'b', 'name': 'Later job'}),
                 _row(
                   'task_attachments',
                   {'id': 'attachment-1'},
-                  blobs: [
-                    {'id': 'media-1', 'column': 'data', 'sizeBytes': 4},
-                  ],
+                  blobs: [_blobDescriptor('media-1', 'data', media)],
                 ),
-                _row('jobs', {'id': 'job-z', 'name': 'Later job'}),
-                _row('jobs', {'id': 'job-a', 'name': 'Earlier job'}),
               ],
               done: true,
             );
@@ -177,8 +182,8 @@ void main() {
       };
 
       final expectedRows = [
-        _archiveRow('jobs', {'id': 'job-a', 'name': 'Earlier job'}),
-        _archiveRow('jobs', {'id': 'job-z', 'name': 'Later job'}),
+        _archiveRow('jobs', {'id': 'aa', 'name': 'Earlier job'}),
+        _archiveRow('jobs', {'id': 'b', 'name': 'Later job'}),
         _archiveRow(
           'task_attachments',
           {'id': 'attachment-1'},
@@ -207,11 +212,55 @@ void main() {
       }
       expect(chunks.every((chunk) => chunk.length <= 64 * 1024), isTrue);
       expect(actual.takeBytes(), orderedEquals(expected));
-      expect(blobCalls, 4);
+      expect(
+        (await BackupArchiveCodec.decode(expected)).rows
+            .where((row) => row.table == 'jobs')
+            .map((row) => row.values['id']),
+        ['aa', 'b'],
+      );
+      expect(blobCalls, 2);
+      expect(pageCalls, 3);
       expect(closed, isTrue);
       expect(calls.last.method, 'closeBackupSnapshot');
     },
   );
+
+  test('rejects row metadata that changes between snapshot replays', () async {
+    var pageReads = 0;
+    var closed = false;
+    respond = (call) async {
+      switch (call.method) {
+        case 'getBackupSnapshotInfo':
+          return _snapshotInfo();
+        case 'startBackupSnapshot':
+          return _started(recordCount: 1);
+        case 'readBackupSnapshotPage':
+          pageReads++;
+          final id = pageReads == 1 ? 'stable-row' : 'changed-row';
+          return _page(
+            records: [
+              _row('jobs', {'id': id}),
+            ],
+            done: true,
+          );
+        case 'closeBackupSnapshot':
+          closed = true;
+          return {'closed': true};
+        default:
+          throw StateError('Unexpected method ${call.method}.');
+      }
+    };
+
+    final exported = await BackupSnapshotExporter(channel: channel)
+        .exportStream();
+    await expectLater(
+      exported.archiveStream.toList(),
+      throwsA(isA<FormatException>()),
+    );
+
+    expect(pageReads, 2);
+    expect(closed, isTrue);
+  });
 
   test('closes an unconsumed stream when explicitly discarded', () async {
     var closed = false;
@@ -244,52 +293,102 @@ void main() {
     expect(calls.last.method, 'closeBackupSnapshot');
   });
 
-  test('rejects media that changes between hash and output passes', () async {
-    var blobReadCount = 0;
-    var closed = false;
-    respond = (call) async {
-      switch (call.method) {
-        case 'getBackupSnapshotInfo':
-          return _snapshotInfo();
-        case 'startBackupSnapshot':
-          return _started(recordCount: 1, mediaCount: 1, mediaBytes: 2);
-        case 'readBackupSnapshotPage':
-          return _page(
-            records: [
-              _row(
-                'task_attachments',
-                {'id': 'attachment-1'},
-                blobs: [
-                  {'id': 'media-1', 'column': 'data', 'sizeBytes': 2},
-                ],
-              ),
-            ],
-            done: true,
-          );
-        case 'readBackupBlob':
-          blobReadCount++;
-          return _blobChunk(
-            0,
-            blobReadCount == 1 ? [10, 20] : [10, 21],
-            done: true,
-          );
-        case 'closeBackupSnapshot':
-          closed = true;
-          return {'closed': true};
-        default:
-          throw StateError('Unexpected method ${call.method}.');
-      }
-    };
+  test(
+    'mismatched media digest discards encrypted staging before commit',
+    () async {
+      var blobReadCount = 0;
+      var closed = false;
+      respond = (call) async {
+        switch (call.method) {
+          case 'getBackupSnapshotInfo':
+            return _snapshotInfo();
+          case 'startBackupSnapshot':
+            return _started(recordCount: 1, mediaCount: 1, mediaBytes: 2);
+          case 'readBackupSnapshotPage':
+            return _page(
+              records: [
+                _row(
+                  'task_attachments',
+                  {'id': 'attachment-1'},
+                  blobs: [
+                    _blobDescriptor('media-1', 'data', [10, 20]),
+                  ],
+                ),
+              ],
+              done: true,
+            );
+          case 'readBackupBlob':
+            blobReadCount++;
+            return _blobChunk(0, [10, 21], done: true);
+          case 'closeBackupSnapshot':
+            closed = true;
+            return {'closed': true};
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
 
-    final exported = await BackupSnapshotExporter(channel: channel)
-        .exportStream();
-    await expectLater(
-      exported.archiveStream.toList(),
-      throwsA(isA<FormatException>()),
-    );
-    expect(blobReadCount, 2);
-    expect(closed, isTrue);
-  });
+      final exported = await BackupSnapshotExporter(channel: channel)
+          .exportStream();
+      final destination = _TrackingTransactionalSink();
+      await expectLater(
+        BackupCryptoV2.encrypt(
+          password: 'synthetic-checksum-mismatch-backup-password',
+          archive: exported.archiveStream,
+          destination: destination,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(blobReadCount, 1);
+      expect(closed, isTrue);
+      expect(destination.discarded, isTrue);
+      expect(destination.committed, isFalse);
+    },
+  );
+
+  test(
+    'rejects malformed native media digests and closes the snapshot',
+    () async {
+      var closed = false;
+      respond = (call) async {
+        switch (call.method) {
+          case 'getBackupSnapshotInfo':
+            return _snapshotInfo();
+          case 'startBackupSnapshot':
+            return _started(recordCount: 1, mediaCount: 1, mediaBytes: 2);
+          case 'readBackupSnapshotPage':
+            return _page(
+              records: [
+                _row(
+                  'task_attachments',
+                  {'id': 'attachment-1'},
+                  blobs: [
+                    {
+                      'id': 'media-1',
+                      'column': 'data',
+                      'sizeBytes': 2,
+                      'sha256': 'invalid-checksum',
+                    },
+                  ],
+                ),
+              ],
+              done: true,
+            );
+          case 'closeBackupSnapshot':
+            closed = true;
+            return {'closed': true};
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
+
+      await expectLater(
+        BackupSnapshotExporter(channel: channel).exportStream(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(closed, isTrue);
+    },
+  );
 
   test('closes a started snapshot when page reading fails', () async {
     var closed = false;
@@ -374,7 +473,7 @@ void main() {
 
       await expectLater(
         BackupSnapshotExporter(channel: channel)
-            .exportStream(isCancelled: () => ++cancellationChecks == 4),
+            .exportStream(isCancelled: () => ++cancellationChecks == 5),
         throwsA(isA<BackupExportCancelledException>()),
       );
       expect(closed, isTrue);
@@ -403,7 +502,7 @@ void main() {
                 'task_attachments',
                 {'id': 'attachment-1'},
                 blobs: [
-                  {'id': 'media-1', 'column': 'data', 'sizeBytes': 4},
+                  _blobDescriptor('media-1', 'data', [1, 2, 3, 4]),
                 ],
               ),
             ],
@@ -524,6 +623,8 @@ void main() {
       'getBackupSnapshotInfo',
       'startBackupSnapshot',
       'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
+      'readBackupSnapshotPage',
       'closeBackupSnapshot',
     ]);
   });
@@ -538,7 +639,7 @@ Map<String, Object?> _snapshotInfo({
   'archiveFormatVersion': 1,
   'schemaVersion': schemaVersion,
   'stateVersion': 19,
-  'maxSnapshotBytes': 60 * 1024 * 1024,
+  'maxSnapshotBytes': 64 * 1024 * 1024,
   'maxPageBytes': maxPageBytes,
   'maxBlobChunkBytes': maxBlobChunkBytes,
   'maxRecords': 500000,
@@ -573,6 +674,17 @@ Map<String, Object?> _row(
   Map<String, Object?> values, {
   List<Map<String, Object?>> blobs = const [],
 }) => {'type': 'row', 'table': table, 'values': values, 'blobs': blobs};
+
+Map<String, Object?> _blobDescriptor(
+  String id,
+  String column,
+  List<int> bytes,
+) => {
+  'id': id,
+  'column': column,
+  'sizeBytes': bytes.length,
+  'sha256': base64.encode(crypto.sha256.convert(bytes).bytes),
+};
 
 BackupArchiveRow _archiveRow(
   String table,
@@ -611,4 +723,23 @@ Future<Uint8List> _collectArchive(BackupSnapshotStreamExport exported) async {
     output.add(chunk);
   }
   return output.takeBytes();
+}
+
+final class _TrackingTransactionalSink implements BackupTransactionalByteSink {
+  final BytesBuilder _stagedBytes = BytesBuilder(copy: false);
+  bool committed = false;
+  bool discarded = false;
+
+  @override
+  Future<void> write(List<int> bytes) async => _stagedBytes.add(bytes);
+
+  @override
+  Future<void> commit() async {
+    committed = true;
+  }
+
+  @override
+  Future<void> discard() async {
+    discarded = true;
+  }
 }
