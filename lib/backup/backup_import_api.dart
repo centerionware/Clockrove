@@ -341,16 +341,22 @@ final class BackupImportPreview {
   final int mediaCount;
   final int mediaBytes;
   final int stagedRecordBytes;
+
   /// Incoming rows absent locally; summary counts can overlap one another.
   final int addedCount;
+
   /// Incoming rows whose local counterpart differs or has an unresolved change.
   final int changedCount;
+
   /// Incoming tombstone/deletion marker rows, including historical revisions.
   final int deletedCount;
+
   /// Incoming rows whose current local record matches; may overlap deletedCount.
   final int unchangedCount;
+
   /// Initial dependent-reference conflicts, before the user resolves choices.
   final int unresolvedReferenceCount;
+
   /// Initial session-overlap conflicts, before the user resolves choices.
   final int timeOverlapCount;
   final int conflictCount;
