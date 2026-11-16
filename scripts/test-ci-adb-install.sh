@@ -81,6 +81,12 @@ cat > "$test_root/bin/adb" <<'FAKE_ADB'
 set -euo pipefail
 printf '%s\n' "$*" >> "$ADB_CALL_LOG"
 
+if [[ "${1:-}" == devices ]]; then
+  echo 'List of devices attached'
+  echo 'emulator-5554 device product:sdk_gphone_x86 model:sdk_gphone_x86'
+  exit 0
+fi
+
 if [[ "${1:-}" == -s && "${3:-}" == install ]]; then
   count=0
   [[ ! -f "$ADB_INSTALL_COUNT" ]] || read -r count < "$ADB_INSTALL_COUNT"
@@ -162,6 +168,27 @@ if [[ "${3:-}" == shell && "${4:-}" == getprop && "${5:-}" == ro.build.version.s
   else
     echo "$ADB_FAKE_API"
   fi
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == service && "${5:-}" == check && "${6:-}" == package ]]; then
+  echo 'Service package: found'
+  exit 0
+fi
+if [[ "${3:-}" == shell && "${4:-}" == pm && "${5:-}" == path ]]; then
+  requested_package="${6:-}"
+  if [[ -s "$ADB_PACKAGE_STATE_FILE" ]]; then
+    read -r installed_package installed_version < "$ADB_PACKAGE_STATE_FILE"
+    if [[ "$installed_package" == "$requested_package" ]]; then
+      echo 'package:/data/app/vmdl123.tmp/base.apk'
+      exit 0
+    fi
+  fi
+  echo 'Synthetic package path unavailable'
+  exit 1
+fi
+if [[ "${3:-}" == logcat && "${4:-}" == -d ]]; then
+  echo '11-16 10:00:00.000  1000  1000 I PackageManager: install package io.github.centerionware.clockrove failed at /data/app/vmdl123.tmp'
+  echo '11-16 10:00:00.100  1000  1000 I ActivityManager: synthetic unrelated activity event'
   exit 0
 fi
 if [[ "${3:-}" == shell && "${4:-}" == cat && "${5:-}" == /proc/sys/kernel/random/boot_id ]]; then
@@ -347,6 +374,13 @@ grep -F 'Synthetic install timeout' "$GITHUB_WORKSPACE/build/device-test-results
 grep -F 'Synthetic install succeeded' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-attempt-2.log" >/dev/null
 [[ "$(grep -Fc 'reboot' "$ADB_CALL_LOG")" == 1 ]]
 grep -F 'result=expected-package-version-absent' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-package-state-attempt-1.txt" >/dev/null
+app_timeout_report="$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/app-install-timeout-adb-attempt-1.txt"
+grep -F 'bounded-install-timeout-diagnostics=v1' "$app_timeout_report" >/dev/null
+grep -F 'pm path io.github.centerionware.clockrove' "$app_timeout_report" >/dev/null
+! grep -Fq '/data/app/' "$app_timeout_report"
+app_timeout_logcat_line="$(grep -nF -- '-s emulator-5554 logcat -d' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+app_timeout_reboot_line="$(grep -nF -- '-s emulator-5554 reboot' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+[[ "$app_timeout_logcat_line" -lt "$app_timeout_reboot_line" ]]
 echo 'Verified a timed-out install reboots, confirms the expected version absent, and retries once.'
 
 rm -f "$ADB_INSTALL_COUNT" "$ADB_CALL_LOG" "$ADB_PACKAGE_STATE_FILE" "$ADB_PACKAGE_QUERY_COUNT" "$ADB_REBOOT_COUNT"
@@ -519,6 +553,16 @@ unset ADB_FAKE_API_CRLF
 grep -F 'No tests ran.' "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-1.log" >/dev/null
 grep -F 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3' \
   "$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-flutter-attempt-2.log" >/dev/null
+flutter_timeout_report="$GITHUB_WORKSPACE/build/device-test-results/api-24/install-diagnostics/backup-crypto-benchmark-install-timeout-flutter-attempt-1.txt"
+grep -F 'api=24 phase=flutter attempt=1 package=io.github.centerionware.clockrove' "$flutter_timeout_report" >/dev/null
+grep -F '[adb get-state] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '[sys.boot_completed] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '[PackageManager service] exit=0' "$flutter_timeout_report" >/dev/null
+grep -F '<android-path>' "$flutter_timeout_report" >/dev/null
+! grep -Fq '/data/app/' "$flutter_timeout_report"
+flutter_timeout_logcat_line="$(grep -nF -- '-s emulator-5554 logcat -d' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+flutter_timeout_reboot_line="$(grep -nF -- '-s emulator-5554 reboot' "$ADB_CALL_LOG" | head -n1 | cut -d: -f1)"
+[[ "$flutter_timeout_logcat_line" -lt "$flutter_timeout_reboot_line" ]]
 echo 'Verified the exact Flutter app-install timeout gets one reboot and one real test retry.'
 
 rm -f "$FLUTTER_TEST_COUNT" "$ADB_CALL_LOG" "$ADB_REBOOT_COUNT" "$FLUTTER_EVENT_LOG"

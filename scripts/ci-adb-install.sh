@@ -243,6 +243,95 @@ clockrove_recover_and_verify_install() {
   clockrove_verify_installed_apk "$package" "$expected_version" "$diagnostics_dir/$label-package-state-attempt-$attempt.txt"
 }
 
+# Capture bounded device/PackageManager state while the timed-out install is
+# still on the same boot. These diagnostics are best effort and never affect
+# the existing recovery or retry decision.
+clockrove_append_install_timeout_diagnostic() {
+  local report="$1"
+  local description="$2"
+  shift 2
+  local output status line_count=0 line
+
+  if output="$(timeout --kill-after=1s 4s "$@" 2>&1)"; then
+    status=0
+  else
+    status=$?
+  fi
+  {
+    printf '\n[%s] exit=%s\n' "$description" "$status"
+    if [[ -z "$output" ]]; then
+      echo '  (no output)'
+      return 0
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      if (( line_count >= 40 )); then
+        echo '  (remaining output omitted)'
+        break
+      fi
+      line="$(printf '%s' "$line" | LC_ALL=C tr -cd '\11\12\15\40-\176' | \
+        sed -E 's#(/data/(app|user|user_de)/[^[:space:]]+)#<android-path>#g; s#(/home/[^[:space:]]+)#<runner-path>#g' | cut -c1-400)"
+      printf '  %s\n' "$line"
+      line_count=$((line_count + 1))
+    done <<< "$output"
+  } >> "$report"
+}
+
+clockrove_capture_install_timeout_diagnostics() {
+  local api="$1"
+  local label="$2"
+  local phase="$3"
+  local attempt="$4"
+  local package="${5:-unknown}"
+  local diagnostics_dir="${GITHUB_WORKSPACE:?}/build/device-test-results/api-$api/install-diagnostics"
+  local report="$diagnostics_dir/$label-install-timeout-$phase-attempt-$attempt.txt"
+  local logcat_output logcat_status filtered_logcat
+
+  mkdir -p "$diagnostics_dir" || return 0
+  {
+    echo 'bounded-install-timeout-diagnostics=v1'
+    echo "captured_utc=$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo unavailable)"
+    echo "api=$api phase=$phase attempt=$attempt package=$package"
+    echo 'logcat scope: PackageManager/PackageInstaller/installd and install failure lines only; paths redacted.'
+  } > "$report" || return 0
+
+  clockrove_append_install_timeout_diagnostic "$report" 'adb devices -l' adb devices -l || true
+  clockrove_append_install_timeout_diagnostic "$report" 'adb get-state' adb -s emulator-5554 get-state || true
+  clockrove_append_install_timeout_diagnostic "$report" 'sys.boot_completed' adb -s emulator-5554 shell getprop sys.boot_completed || true
+  clockrove_append_install_timeout_diagnostic "$report" 'ro.build.version.sdk' adb -s emulator-5554 shell getprop ro.build.version.sdk || true
+  clockrove_append_install_timeout_diagnostic "$report" 'kernel boot id' adb -s emulator-5554 shell cat /proc/sys/kernel/random/boot_id || true
+  clockrove_append_install_timeout_diagnostic "$report" 'PackageManager service' adb -s emulator-5554 shell service check package || true
+
+  if [[ "$package" =~ ^[A-Za-z0-9._]+$ ]]; then
+    clockrove_append_install_timeout_diagnostic "$report" "pm path $package" \
+      adb -s emulator-5554 shell pm path "$package" || true
+  fi
+
+  if logcat_output="$(timeout --kill-after=1s 4s adb -s emulator-5554 logcat -d -v threadtime -t 120 2>&1)"; then
+    logcat_status=0
+  else
+    logcat_status=$?
+  fi
+  filtered_logcat="$(grep -Eai 'PackageManager|PackageInstaller|installd|INSTALL_[A-Z_]+|install(ed|ing|ation)? (package|session|failed)' <<< "$logcat_output" | tail -n 40 || true)"
+  {
+    printf '\n[filtered install logcat] exit=%s\n' "$logcat_status"
+    if [[ -z "$filtered_logcat" ]]; then
+      echo '  (no matching lines)'
+    else
+      local line_count=0 line
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if (( line_count >= 40 )); then
+          echo '  (remaining output omitted)'
+          break
+        fi
+        line="$(printf '%s' "$line" | LC_ALL=C tr -cd '\11\12\15\40-\176' | \
+          sed -E 's#(/data/(app|user|user_de)/[^[:space:]]+)#<android-path>#g; s#(/home/[^[:space:]]+)#<runner-path>#g' | cut -c1-400)"
+        printf '  %s\n' "$line"
+        line_count=$((line_count + 1))
+      done <<< "$filtered_logcat"
+    fi
+  } >> "$report" || true
+}
+
 # Treat every Flutter expanded-reporter status as evidence that the test phase
 # advanced, except for the pre-test loading line of the two benchmark files.
 clockrove_flutter_test_has_started() {
@@ -355,6 +444,8 @@ clockrove_run_flutter_integration_test() {
     fi
 
     echo 'Confirmed Flutter app-install timeout before any benchmark test ran; recovering the emulator before one retry.'
+    clockrove_capture_install_timeout_diagnostics "$api" "$label" flutter "$attempt" \
+      io.github.centerionware.clockrove || true
     if ! clockrove_reboot_emulator_and_wait "$diagnostics_dir" "$label" "$attempt" "$api"; then
       echo 'Emulator recovery was not confirmed; refusing a blind Flutter retry.' >&2
       return 2
@@ -407,6 +498,7 @@ clockrove_install_apk() {
 
     if (( status == 124 || status == 137 )); then
       echo 'Install response is ambiguous; recovering PackageManager before deciding whether to retry.'
+      clockrove_capture_install_timeout_diagnostics "$api" "$label" adb "$attempt" unknown || true
       if (( identity_parsed == 0 )); then
         if identity="$(clockrove_apk_identity "$apk" "$label")"; then
           read -r package expected_version <<< "$identity"
@@ -416,6 +508,9 @@ clockrove_install_apk() {
           return 2
         fi
       fi
+      clockrove_append_install_timeout_diagnostic \
+        "$diagnostics_dir/$label-install-timeout-adb-attempt-$attempt.txt" \
+        "pm path $package" adb -s emulator-5554 shell pm path "$package" || true
       if clockrove_recover_and_verify_install "$package" "$expected_version" "$diagnostics_dir" "$label" "$attempt" "$api"; then
         echo 'The exact APK package and version are already installed; treating the timed-out install as successful.'
         return 0
