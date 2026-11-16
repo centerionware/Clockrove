@@ -31,6 +31,8 @@ internal class BackupImportStore(
     internal val idleTtlMillis: Long = BackupExportStore.IDLE_EXPIRY_MILLIS,
     internal val scheduler: BackupScheduler = ExecutorBackupScheduler,
     internal val wallClock: () -> Long = { System.currentTimeMillis() },
+    internal val stateVersionReader: ((SQLiteDatabase) -> Long)? = null,
+    internal val closeDatabase: (SQLiteDatabase) -> Unit = { database -> database.close() },
 ) {
     data class Started(
         val importId: String,
@@ -497,6 +499,11 @@ internal class BackupImportStore(
                     throw Failure("LOCAL_TIMER_RUNNING", "Stop the local timer before restoring a backup.")
                 }
                 applyCounts = applyRowsWithinTransaction(db, handle, preview, expectedLocalStateVersion)
+                committedVersion = if (applyCounts.changed > 0L) {
+                    Math.addExact(expectedLocalStateVersion, 1L)
+                } else {
+                    expectedLocalStateVersion
+                }
                 db.setTransactionSuccessful()
             } finally {
                 try {
@@ -505,7 +512,6 @@ internal class BackupImportStore(
                     if (handle.revisionGraphValidated) clearRevisionValidation(handle)
                 }
             }
-            committedVersion = stateVersion(db)
         } catch (failure: Failure) {
             throw failure
         } catch (_: Exception) {
@@ -844,7 +850,8 @@ internal class BackupImportStore(
 
 
 
-    internal fun stateVersion(db: SQLiteDatabase): Long = scalarLong(db, "SELECT version FROM state WHERE id=1")
+    internal fun stateVersion(db: SQLiteDatabase): Long = stateVersionReader?.invoke(db)
+        ?: scalarLong(db, "SELECT version FROM state WHERE id=1")
 
     internal fun scalarLong(db: SQLiteDatabase, sql: String, args: Array<String>? = null): Long = db.rawQuery(sql, args).use {
         if (!it.moveToFirst()) throw Failure("STORAGE_UNAVAILABLE", "The local backup state is unavailable.")

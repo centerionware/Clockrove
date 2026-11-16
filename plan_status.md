@@ -4521,3 +4521,12 @@ The first post-rebase head `e32f16e` / run [43872531759](https://github.com/cent
 PR #73 merged the emulator pin as main SHA `acbd67eee6bbffc976c73f693771eb38b63e9fb9`. PR #71 is now rebased on that main at source head `76481c5ecb06b9ff43f78cdc6623d2fb85a647e4`; the exact-head run on this new base is pending. PR #71 remains a draft and is not merged. No local build, test, formatter or analyzer ran.
 
 The restore path still has no Settings route, SAF file-open screen, Dart apply coordinator or per-record additions/changes/deletions review UI. Imported open sessions support omission but not explicit close-time selection; general deletion/divergence choices remain partial. Static review also flagged cleanup if native close fails and a possible error after durable apply while reading the post-commit state version. These require focused follow-up. M7.3 and M7.6 remain incomplete.
+
+
+### 2026-11-16 — PR #71 native apply and cleanup failure windows
+
+The apply path now computes its committed state version inside the SQL transaction, before commit, and no longer reads it after durable commit. `Math.addExact` makes version overflow fail before commit so the transaction rolls back. A regression injects a state-version reader that fails outside a transaction and verifies apply still reports the committed version and retires its one-shot preview.
+
+Import close and close-all now attempt staged database/media deletion even when closing the staged database throws, schedule cleanup retry if artifact deletion fails, and report cleanup failure if either operation fails. A regression injects a close exception and checks that both private stage artifacts are deleted and the import handle is retired.
+
+Static `git diff --check` passed. No local build, test, formatter or analyzer ran, as required. These regressions are pending exact-head GitHub Actions; no restore milestone is marked complete.

@@ -57,6 +57,44 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
     }
 
     @Test
+    fun committedApplyDoesNotReadStateVersionAfterTransactionReturns() {
+        var rejectOutsideTransaction = false
+        importStore = BackupImportStore(
+            app,
+            catalogProvider = exportStore::importCatalog,
+            stateVersionReader = { source ->
+                if (rejectOutsideTransaction && !source.inTransaction()) {
+                    throw IllegalStateException("synthetic post-commit read failure")
+                }
+                source.rawQuery("SELECT version FROM state WHERE id=1", null).use { rows ->
+                    assertTrue(rows.moveToFirst())
+                    rows.getLong(0)
+                }
+            },
+        )
+        val started = stageImport(listOf(stagedRow("customers", mapOf(
+            "id" to "post-commit-version-customer",
+            "name" to "Committed without a post-commit read",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))))
+        val preview = importStore.finish(database, started.importId)
+        rejectOutsideTransaction = true
+
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+
+        assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+        assertEquals(applied.stateVersion, repository.snapshot().version)
+        assertEquals("Committed without a post-commit read", customerName("post-commit-version-customer"))
+        assertFalse(importStore.close(started.importId))
+    }
+
+    @Test
     fun openBackupSessionIsProvisionalAndRequiresAnExplicitPreviewChoice() {
         val version = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(

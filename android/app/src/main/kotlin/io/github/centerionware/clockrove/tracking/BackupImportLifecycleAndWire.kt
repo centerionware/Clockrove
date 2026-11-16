@@ -234,6 +234,19 @@ internal fun BackupImportStore.destroyHandle(handle: LifecycleWireHandle) {
         if (!deleteArtifacts(handle.id)) scheduleCleanupRetry()
     }
 
+internal fun BackupImportStore.closeHandleAndDeleteArtifacts(handle: LifecycleWireHandle): Boolean {
+        handle.wipeSecret()
+        val databaseClosed = try {
+            closeDatabase(handle.database)
+            true
+        } catch (_: Exception) {
+            false
+        }
+        val artifactsDeleted = deleteArtifacts(handle.id)
+        if (!artifactsDeleted) scheduleCleanupRetry()
+        return databaseClosed && artifactsDeleted
+    }
+
 internal fun BackupImportStore.deleteArtifacts(importId: String): Boolean {
         if (!idPattern.matches(importId)) return true
         cleanupPending.add(importId)
@@ -401,10 +414,7 @@ internal fun BackupImportStore.closeImportCore(importId: String): Boolean {
         if (handle != null && handle.id == importId) {
             active = null
             cancelExpiry()
-            handle.wipeSecret()
-            handle.database.close()
-            if (!deleteArtifacts(handle.id)) {
-                scheduleCleanupRetry()
+            if (!closeHandleAndDeleteArtifacts(handle)) {
                 throw LifecycleWireFailure("CLEANUP_FAILED", "The staged backup could not be removed.")
             }
             return true
@@ -421,10 +431,7 @@ internal fun BackupImportStore.closeAllImportsCore() {
         active = null
         cancelExpiry()
         if (handle != null) {
-            handle.wipeSecret()
-            handle.database.close()
-            if (!deleteArtifacts(handle.id)) {
-                scheduleCleanupRetry()
+            if (!closeHandleAndDeleteArtifacts(handle)) {
                 throw LifecycleWireFailure("CLEANUP_FAILED", "The staged backup could not be removed.")
             }
         }

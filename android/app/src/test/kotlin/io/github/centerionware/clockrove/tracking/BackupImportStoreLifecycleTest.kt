@@ -310,4 +310,40 @@ class BackupImportStoreLifecycleTest : BackupImportStoreTestBase() {
         assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
+
+    @Test
+    fun databaseCloseFailureStillAttemptsToDeletePrivateImportArtifacts() {
+        var openedStageDatabase: SQLiteDatabase? = null
+        val closeFailingStore = BackupImportStore(
+            app,
+            catalogProvider = exportStore::importCatalog,
+            closeDatabase = { stagedDatabase ->
+                openedStageDatabase = stagedDatabase
+                throw IllegalStateException("synthetic database close failure")
+            },
+        )
+        val started = closeFailingStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "9".repeat(64),
+            0,
+            0,
+            0,
+        )
+        val directory = File(app.noBackupFilesDir, "clockrove-backup-imports")
+        val stageDb = File(directory, "clockrove-import-${started.importId}.db")
+        val media = File(directory, "clockrove-import-${started.importId}-media.bin")
+        assertTrue(stageDb.exists())
+        assertTrue(media.exists())
+
+        assertFailure("CLEANUP_FAILED") { closeFailingStore.close(started.importId) }
+
+        assertFalse(stageDb.exists())
+        assertFalse(media.exists())
+        assertFailure("IMPORT_UNAVAILABLE") {
+            closeFailingStore.finish(database, started.importId)
+        }
+        openedStageDatabase?.close()
+    }
 }
