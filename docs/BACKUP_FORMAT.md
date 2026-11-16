@@ -268,6 +268,8 @@ user-selected encrypted source file is never modified or deleted.
 
 PR #65 exact-head run [43820166609](https://github.com/centerionware/Clockrove/actions/runs/43820166609) passed the full-path RSS limit on API 24 and API 35, with sampled deltas of 52,980 KiB and 56,156 KiB. The exported archives were 66,072,344 and 66,072,097 bytes, about 1 MiB below the 67,108,864-byte maximum, so this does not prove maximum-size export memory. The next fixture targets the archive ceiling minus 16 KiB and rejects archives more than 64 KiB below it; that exact-head run is still required.
 
+Exact-head run [43824139548](https://github.com/centerionware/Clockrove/actions/runs/43824139548) passed formatting, analysis, Flutter behavior, Android compilation, instrumentation assembly and native tests, then failed on API 24 before archive creation. The seed contained 19 media objects totaling 67,091,803 bytes, but native snapshot staging rejected media plus framed row data at its 64 MiB staging limit. This run produced no archive-size or RSS measurement; API 35 did not start. The follow-up fixture targets media 64 KiB below the archive ceiling with a 2 KiB seed tolerance, reserves space for native row staging and still requires the resulting archive to be within 64 KiB of the archive maximum. The exact-head result is pending; keep user-facing export withheld.
+
 ## Portable dataset allowlist
 
 Only these table names are emitted:

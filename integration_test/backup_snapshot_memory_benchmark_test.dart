@@ -11,11 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
-const _archiveByteSlackBytes = 16 * 1024;
+const _archiveByteSlackBytes = 64 * 1024;
 const _archiveByteToleranceBytes = 64 * 1024;
 const _targetMediaBytes =
     BackupCryptoV2.maxArchiveBytes - _archiveByteSlackBytes;
-const _mediaToleranceBytes = 32 * 1024;
+const _mediaToleranceBytes = 2 * 1024;
 const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
 const _fixtureJobId = 'ci-backup-memory-job';
