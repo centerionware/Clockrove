@@ -437,6 +437,11 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             "SELECT COUNT(*) FROM revision_parents WHERE revision_id='$mergedLinkHead' " +
                 "AND parent_id IN('$localLinkHead','$backupHeadRevisionId')",
         ))
+        assertNull(importStore.active)
+        assertFalse(importStore.cleanupPending.contains(started.importId))
+        assertTrue(requireNotNull(importStore.directory.listFiles()).none {
+            it.name.contains(started.importId)
+        })
         assertFalse(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
