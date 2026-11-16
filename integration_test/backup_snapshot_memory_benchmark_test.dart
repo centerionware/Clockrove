@@ -108,12 +108,16 @@ void main() {
     expect(result.mediaCount, greaterThanOrEqualTo(14));
     expect(
       result.archiveBytes,
-      greaterThanOrEqualTo(
-        BackupCryptoV2.maxArchiveBytes - 5 * 1024 * 1024,
-      ),
+      greaterThanOrEqualTo(BackupCryptoV2.maxArchiveBytes - 5 * 1024 * 1024),
     );
-    expect(result.stagedRecordBytes + result.mediaBytes, lessThanOrEqualTo(64 * 1024 * 1024));
-    expect(result.archiveBytes, lessThanOrEqualTo(BackupCryptoV2.maxArchiveBytes));
+    expect(
+      result.stagedRecordBytes + result.mediaBytes,
+      lessThanOrEqualTo(64 * 1024 * 1024),
+    );
+    expect(
+      result.archiveBytes,
+      lessThanOrEqualTo(BackupCryptoV2.maxArchiveBytes),
+    );
   });
 }
 
@@ -321,10 +325,13 @@ Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
       '${card.description}${List<String>.filled(probeCharacters, 'x').join()}',
     );
     final probe = await exporter.exportStream();
-    final fixedGrowth = probe.archiveByteLength - before.archiveByteLength -
+    final fixedGrowth =
+        probe.archiveByteLength -
+        before.archiveByteLength -
         probeCharacters * 4;
     await probe.close();
-    final remaining = BackupCryptoV2.maxArchiveBytes -
+    final remaining =
+        BackupCryptoV2.maxArchiveBytes -
         (before.archiveByteLength + probeCharacters * 4 + fixedGrowth);
     final finalCharacters = (remaining - fixedGrowth) ~/ 4;
     if (finalCharacters < 0 ||
@@ -476,8 +483,7 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
         snapshotMediaCount: export.mediaCount,
         snapshotMediaBytes: export.mediaBytes,
         archiveBytes: encrypted.archiveBytes,
-        archiveRecordBytes:
-            export.archiveByteLength - 48 - export.mediaBytes,
+        archiveRecordBytes: export.archiveByteLength - 48 - export.mediaBytes,
         envelopeBytes: encrypted.envelopeBytes,
         baselineRssKiB: baselineRssKiB,
         afterSnapshotSetupRssKiB: afterSnapshotSetupRssKiB,
@@ -519,7 +525,9 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
   final importMediaTarget = maxBackupImportMediaBytes - 32 * 1024;
   while (mediaBytes > importMediaTarget) {
     if (conversation.taskAttachments.isEmpty) {
-      throw StateError('The restore fixture could not fit the import media cap.');
+      throw StateError(
+        'The restore fixture could not fit the import media cap.',
+      );
     }
     final attachment = conversation.taskAttachments.last;
     final outcome = await businessApi.removeTaskImage(
@@ -582,9 +590,8 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
       recordCount: imported.metrics.recordCount,
       conflictCount: imported.preview.conflictCount,
       nativeHandleClosed: imported.nativeHandleClosed,
-      privateTempRemoved: !await Directory(
-        imported.privateDirectoryPath,
-      ).exists(),
+      privateTempRemoved: !await Directory(imported.privateDirectoryPath)
+          .exists(),
     );
   } finally {
     await exported.close();
@@ -601,7 +608,11 @@ Future<Uint8List> _noisePng(int width, int height, int seed) async {
   for (var row = 0; row < height; row++) {
     final rowStart = row * (rowBytes + 1);
     pixels[rowStart] = 0;
-    for (var offset = rowStart + 1; offset < rowStart + rowBytes + 1; offset++) {
+    for (
+      var offset = rowStart + 1;
+      offset < rowStart + rowBytes + 1;
+      offset++
+    ) {
       state = (state ^ (state << 13)) & 0xffffffff;
       state ^= state >> 17;
       state = (state ^ (state << 5)) & 0xffffffff;
@@ -632,7 +643,11 @@ Uint8List _pngChunk(String name, List<int> data) {
   bytes.setUint32(0, data.length, Endian.big);
   chunk.setRange(4, 8, type);
   chunk.setRange(8, 8 + data.length, data);
-  bytes.setUint32(8 + data.length, _crc32(chunk, 4, 8 + data.length), Endian.big);
+  bytes.setUint32(
+    8 + data.length,
+    _crc32(chunk, 4, 8 + data.length),
+    Endian.big,
+  );
   return chunk;
 }
 

@@ -27,7 +27,8 @@ final class BackupRestoreImportResult {
 /// and returns the native preview. The one-shot stage and plaintext temp file
 /// are always closed/discarded before this method completes.
 final class BackupRestoreImporter {
-  BackupRestoreImporter({BackupImportApi? api}) : _api = api ?? BackupImportApi();
+  BackupRestoreImporter({BackupImportApi? api})
+    : _api = api ?? BackupImportApi();
 
   final BackupImportApi _api;
 
@@ -227,7 +228,8 @@ final class BackupRestoreImportCleanupException implements Exception {
   final Object cleanupFailure;
 }
 
-final class _FileBackupTransactionalSink implements BackupTransactionalByteSink {
+final class _FileBackupTransactionalSink
+    implements BackupTransactionalByteSink {
   _FileBackupTransactionalSink(this.file);
 
   final File file;

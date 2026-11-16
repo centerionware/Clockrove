@@ -48,16 +48,11 @@ abstract final class BackupArchiveReader {
     required int authenticatedArchiveBytes,
     required List<int> authenticatedArchiveSha256,
     required Future<int> Function(BackupArchiveImportHeader header) onHeader,
-    required Future<void> Function(
-      int ordinal,
-      Map<String, Object?> record,
-    ) onRecord,
+    required Future<void> Function(int ordinal, Map<String, Object?> record)
+    onRecord,
     required Future<void> Function() onRecordsComplete,
-    required Future<void> Function(
-      String blobId,
-      int offset,
-      Uint8List bytes,
-    ) onMediaChunk,
+    required Future<void> Function(String blobId, int offset, Uint8List bytes)
+    onMediaChunk,
   }) async {
     if (authenticatedArchiveBytes < 48 ||
         authenticatedArchiveBytes > BackupArchiveCodec.maxArchiveBytes ||
@@ -122,7 +117,9 @@ abstract final class BackupArchiveReader {
       );
       final maxMediaChunkBytes = await onHeader(header);
       if (maxMediaChunkBytes < 1 || maxMediaChunkBytes > 255 * 1024) {
-        throw const FormatException('The backup import chunk limit is invalid.');
+        throw const FormatException(
+          'The backup import chunk limit is invalid.',
+        );
       }
 
       final recordEnd = 48 + recordBytes;
@@ -132,7 +129,11 @@ abstract final class BackupArchiveReader {
 
       for (var ordinal = 0; ordinal < recordCount; ordinal++) {
         final rowStart = reader.offset;
-        reader.beginRecord(rowStart, recordEnd, BackupArchiveCodec.maxRecordBytes);
+        reader.beginRecord(
+          rowStart,
+          recordEnd,
+          BackupArchiveCodec.maxRecordBytes,
+        );
         if (await reader.readByte() != 1) {
           throw const FormatException(
             'This backup contains an unknown record type.',
@@ -206,11 +207,7 @@ abstract final class BackupArchiveReader {
           'values': Map<String, Object?>.unmodifiable(values),
           'blobs': [
             for (final blob in rowBlobs)
-              {
-                'id': blob.id,
-                'column': blob.column,
-                'sizeBytes': blob.length,
-              },
+              {'id': blob.id, 'column': blob.column, 'sizeBytes': blob.length},
           ],
         });
       }
@@ -245,7 +242,9 @@ abstract final class BackupArchiveReader {
           blobDigest.close(),
           descriptor.hash,
         )) {
-          throw const FormatException('A backup media file failed its checksum.');
+          throw const FormatException(
+            'A backup media file failed its checksum.',
+          );
         }
       }
 
@@ -297,7 +296,8 @@ final class _BackupArchiveFileReader {
     if (recordEnd != null &&
         recordStart != null &&
         (length > recordEnd - offset ||
-            length > BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
+            length >
+                BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
       throw const FormatException('A backup record is too large.');
     }
 
@@ -310,19 +310,12 @@ final class _BackupArchiveFileReader {
         if (_bufferLength == 0) {
           throw const FormatException('This backup is truncated.');
         }
-        archiveDigest.add(
-          Uint8List.sublistView(_buffer, 0, _bufferLength),
-        );
+        archiveDigest.add(Uint8List.sublistView(_buffer, 0, _bufferLength));
       }
       final amount = (length - written)
           .clamp(0, _bufferLength - _bufferOffset)
           .toInt();
-      result.setRange(
-        written,
-        written + amount,
-        _buffer,
-        _bufferOffset,
-      );
+      result.setRange(written, written + amount, _buffer, _bufferOffset);
       written += amount;
       _bufferOffset += amount;
       offset += amount;
@@ -366,12 +359,15 @@ final class _BackupArchiveFileReader {
       case 0:
         return null;
       case 1:
-        return ByteData.sublistView(await readExactly(8)).getInt64(0, Endian.big);
+        return ByteData.sublistView(await readExactly(8))
+            .getInt64(0, Endian.big);
       case 2:
         final value = ByteData.sublistView(await readExactly(8))
             .getFloat64(0, Endian.big);
         if (!value.isFinite) {
-          throw const FormatException('A backup record contains an invalid number.');
+          throw const FormatException(
+            'A backup record contains an invalid number.',
+          );
         }
         return value;
       case 3:
@@ -381,7 +377,9 @@ final class _BackupArchiveFileReader {
         }
         return utf8.decode(await readExactly(length), allowMalformed: false);
       default:
-        throw const FormatException('A backup record has an unknown value type.');
+        throw const FormatException(
+          'A backup record has an unknown value type.',
+        );
     }
   }
 }

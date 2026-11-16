@@ -26,13 +26,7 @@ void main() {
         BackupArchiveRow(
           table: 'logo_assets',
           values: const {'id': 'streamed-logo'},
-          blobs: [
-            BackupArchiveBlob(
-              id: blobId,
-              column: 'bytes',
-              bytes: media,
-            ),
-          ],
+          blobs: [BackupArchiveBlob(id: blobId, column: 'bytes', bytes: media)],
         ),
       ],
     );
@@ -66,7 +60,10 @@ void main() {
         },
         onMediaChunk: (importedBlobId, offset, bytes) async {
           expect(importedBlobId, blobId);
-          expect(offset, chunks.fold<int>(0, (total, chunk) => total + chunk.length));
+          expect(
+            offset,
+            chunks.fold<int>(0, (total, chunk) => total + chunk.length),
+          );
           expect(bytes.length, lessThanOrEqualTo(128 * 1024));
           chunks.add(bytes);
         },
@@ -77,7 +74,10 @@ void main() {
       expect(records.first['type'], 'row');
       expect(records.map((record) => record['table']), ['jobs', 'logo_assets']);
       expect((records.last['blobs'] as List).single['sizeBytes'], media.length);
-      expect(chunks.fold<int>(0, (total, chunk) => total + chunk.length), media.length);
+      expect(
+        chunks.fold<int>(0, (total, chunk) => total + chunk.length),
+        media.length,
+      );
       expect(metrics.recordCount, 2);
       expect(metrics.mediaBytes, media.length);
       expect(metrics.recordBytes, greaterThan(0));

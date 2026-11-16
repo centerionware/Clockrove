@@ -123,10 +123,7 @@ void main() {
       mediaBytes: 3,
     );
     expect(started.importId, importId);
-    expect(
-      api.encodedAppendRecordBytes(record),
-      greaterThan(0),
-    );
+    expect(api.encodedAppendRecordBytes(record), greaterThan(0));
     expect(
       await api.appendPage(
         importId: importId,
