@@ -392,7 +392,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
     }
 
     @Test
-    fun backupCommentAndImageDeletionCanBeKeptWithoutDeletingTheLocalGraph() {
+    fun backupCommentAndImageDeletionCanBeKeptWithBothCausalParents() {
         val cardId = "backup-delete-choice-card"
         val commentId = "backup-delete-choice-comment"
         val attachmentId = "backup-delete-choice-image"
@@ -472,8 +472,8 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         val deletionHeads = conflicts.filter { it["kind"] == "BACKUP_ENTITY_DELETION" }
         assertEquals(2, deletionHeads.size)
         assertTrue(deletionHeads.all {
-            it["allowedChoices"] == listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION") &&
-                it["defaultChoice"] == "KEEP_LOCAL"
+            it["allowedChoices"] == listOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION") &&
+                it["defaultChoice"] == "PRESERVE_LOCAL_CONTENT"
         })
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
@@ -482,21 +482,24 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         resolveSafeConflictChoices(started.importId, preview, conflicts)
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
-        assertEquals(versionBefore, repository.snapshot().version)
+        assertEquals(versionBefore + 1L, repository.snapshot().version)
         assertEquals(1L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
         assertEquals(1L, number("SELECT COUNT(*) FROM task_attachments WHERE id='$attachmentId'"))
-        assertEquals(commentHead, database.rawQuery(
-            "SELECT revision_id FROM entity_heads WHERE kind='task_comment' AND entity_id=?",
-            arrayOf(commentId),
-        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
-        assertEquals(attachmentHead, database.rawQuery(
-            "SELECT revision_id FROM entity_heads WHERE kind='task_attachment' AND entity_id=?",
-            arrayOf(attachmentId),
-        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertMergedLiveParents("task_comment", commentId, commentHead, commentDeletion)
+        assertMergedLiveParents("task_attachment", attachmentId, attachmentHead, attachmentDeletion)
         assertEquals(0L, number(
             "SELECT COUNT(*) FROM task_comment_events WHERE id='backup-delete-choice-event'",
         ))
         assertFalse(importStore.close(started.importId))
+
+        val replay = stageImport(records)
+        val replayPreview = importStore.finish(database, replay.importId)
+        assertEquals(0L, replayPreview.conflictCount)
+        importStore.apply(database, replay.importId, replayPreview.previewToken, replayPreview.localStateVersion)
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM task_comment_events WHERE id='backup-delete-choice-event'",
+        ))
+        assertFalse(importStore.close(replay.importId))
     }
 
     @Test

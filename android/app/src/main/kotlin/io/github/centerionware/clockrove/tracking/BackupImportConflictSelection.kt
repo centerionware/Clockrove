@@ -78,7 +78,13 @@ internal fun BackupImportStore.resolveAggregateConflicts(
         selectedConflict: JSONObject,
         selectedChoice: String,
     ) {
-        val intent = conflictChoiceIntent(selectedChoice) ?: return
+        val selectedDeletionGraph = selectedConflict.isCommentDeletionConflict()
+        val intent = if (selectedDeletionGraph &&
+            selectedConflict.optString("kind") == "BACKUP_COMMENT_DELETION" && selectedChoice == "KEEP_LOCAL") {
+            "LOCAL_CONTENT_PRESERVE"
+        } else {
+            conflictChoiceIntent(selectedChoice)
+        } ?: return
         if (intent == "NEUTRAL") return
         val aggregateKeys = selectedConflict.optJSONArray("aggregateKeys")?.let { json ->
             buildSet { for (index in 0 until json.length()) add(json.optString(index)) }.toMutableSet()
@@ -86,8 +92,9 @@ internal fun BackupImportStore.resolveAggregateConflicts(
         if (aggregateKeys.isEmpty()) return
 
         data class StagedConflict(val id: String, val json: JSONObject)
-        val selectedDeletionGraph = selectedConflict.isCommentDeletionConflict()
-        val scopedDeletionIntent = intent in setOf("BACKUP_DELETION", "BACKUP_RESTORE")
+        val scopedDeletionIntent = intent in setOf(
+            "BACKUP_DELETION", "BACKUP_RESTORE", "LOCAL_CONTENT_PRESERVE", "LOCAL_DELETION_PRESERVE",
+        )
         if (!selectedDeletionGraph && !scopedDeletionIntent) {
             aggregateKeys.addAll(expandAggregateKeys(handle, aggregateKeys))
         } else {
@@ -99,16 +106,23 @@ internal fun BackupImportStore.resolveAggregateConflicts(
                 )
             }
         }
-        val members = handle.database.rawQuery(
+        val aggregateMembers = handle.database.rawQuery(
             "SELECT DISTINCT c.conflict_id,c.conflict_json FROM import_conflicts c " +
                 "JOIN import_aggregate_keys g ON g.row_ordinal=c.row_ordinal " +
                 "JOIN aggregate_conflict_keys k ON k.group_key=g.group_key ORDER BY c.ordinal",
             null,
         ).use { rows -> buildList {
             while (rows.moveToNext()) add(StagedConflict(rows.getString(0), JSONObject(rows.getString(1))))
-        } }.filterNot { staged ->
-            !selectedDeletionGraph && !scopedDeletionIntent &&
-                staged.id != selectedConflictId && staged.json.isCommentDeletionConflict()
+        } }
+        val selectedIdentity = selectedConflict.deletionEntityIdentity()
+        val members = aggregateMembers.filter { staged ->
+            when {
+                selectedDeletionGraph -> staged.id == selectedConflictId ||
+                    staged.json.isCommentDeletionConflict() || staged.json.isCommentDeletionDependencyConflict()
+                scopedDeletionIntent -> staged.id == selectedConflictId ||
+                    (selectedIdentity != null && staged.json.deletionEntityIdentity() == selectedIdentity)
+                else -> staged.id == selectedConflictId || !staged.json.isCommentDeletionConflict()
+            }
         }
         val choices = members.mapNotNull { staged ->
             val allowed = staged.json.optJSONArray("allowedChoices") ?: return@mapNotNull null
@@ -116,7 +130,9 @@ internal fun BackupImportStore.resolveAggregateConflicts(
                 choiceForConflictIntent(allowed, intent)
             val compatibleIntent = candidate?.let(::conflictChoiceIntent)
             val compatible = compatibleIntent == "NEUTRAL" || compatibleIntent == intent ||
-                (intent == "LOCAL_MERGE" && compatibleIntent == "LOCAL_ONLY")
+                (intent == "LOCAL_MERGE" && compatibleIntent == "LOCAL_ONLY") ||
+                (intent == "LOCAL_CONTENT_PRESERVE" && staged.id == selectedConflictId &&
+                    compatibleIntent == "LOCAL_ONLY")
             if (candidate == null || !compatible) {
                 throw ConflictSelectionFailure(
                     "AGGREGATE_CONFLICT_UNSUPPORTED",
@@ -149,6 +165,29 @@ private fun JSONObject.isCommentDeletionConflict(): Boolean {
     }
 }
 
+private fun JSONObject.isCommentDeletionDependencyConflict(): Boolean =
+    optString("kind") == "DEPENDENT_ON_CONFLICT" && optString("table") == "task_attachments" &&
+        (optJSONArray("allowedChoices")?.let { choices ->
+            (0 until choices.length()).any {
+                choices.optString(it) in setOf("PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT")
+            }
+        } ?: false)
+
+private fun JSONObject.deletionEntityIdentity(): Pair<String, String>? {
+    val table = optString("table")
+    val primaryKey = optJSONArray("primaryKey") ?: return null
+    if (table == "entity_heads" && primaryKey.length() == 2) {
+        return primaryKey.optString(0).takeIf(String::isNotEmpty)?.let { kind ->
+            primaryKey.optString(1).takeIf(String::isNotEmpty)?.let { entityId -> kind to entityId }
+        }
+    }
+    val kind = revisionDataKinds[table]
+        ?: BackupImportStore.revisionTombstoneRows[table]?.kind
+        ?: return null
+    val entityId = primaryKey.optString(0).takeIf(String::isNotEmpty) ?: return null
+    return kind to entityId
+}
+
 internal fun BackupImportStore.writeConflictChoice(handle: ConflictSelectionHandle, id: String, json: JSONObject, choice: String) {
         json.put("resolved", true)
         json.put("selectedChoice", choice)
@@ -170,7 +209,9 @@ internal fun BackupImportStore.conflictChoiceIntent(choice: String): String? = w
         "MERGE_IDENTICAL_CONTENT" -> "NEUTRAL"
         "APPLY_BACKUP_DELETION" -> "BACKUP_DELETION"
         "RESTORE_BACKUP_CONTENT" -> "BACKUP_RESTORE"
-        "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
+        "PRESERVE_LOCAL_CONTENT" -> "LOCAL_CONTENT_PRESERVE"
+        "PRESERVE_LOCAL_DELETION" -> "LOCAL_DELETION_PRESERVE"
+        "KEEP_LOCAL", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
         "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION" -> "LOCAL_ONLY"
         else -> null
     }
@@ -183,10 +224,13 @@ internal fun BackupImportStore.choiceForConflictIntent(allowed: JSONArray, inten
             )
             "BACKUP_MERGE" -> listOf("MERGE_USE_BACKUP_CONTENT")
             "BACKUP_RESTORE" -> listOf("RESTORE_BACKUP_CONTENT")
+            "LOCAL_CONTENT_PRESERVE" -> listOf("PRESERVE_LOCAL_CONTENT", "KEEP_LOCAL")
+            "LOCAL_DELETION_PRESERVE" -> listOf("PRESERVE_LOCAL_DELETION")
             "NEUTRAL" -> listOf("MERGE_IDENTICAL_CONTENT")
             "BACKUP_DELETION" -> listOf("APPLY_BACKUP_DELETION")
             "LOCAL_ONLY" -> listOf(
-                "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
+                "KEEP_LOCAL", "PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION",
+                "OMIT_BACKUP_RECORD",
                 "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION",
             )
             else -> emptyList()
@@ -309,7 +353,7 @@ internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, ch
                     (choice == "RESTORE_BACKUP_CONTENT" &&
                         (table == "entity_heads" || table in BackupImportDeletionResolution.restorableTables)))
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
-            choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
+            choice in setOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION")
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" &&
             choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
         "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
@@ -321,7 +365,10 @@ internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, ch
         "GPS_DELETION_RANGE_HEAD" -> table == "entity_heads" &&
             choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
         "GPS_TOMBSTONE" -> table == "location_points" && choice == "PRESERVE_LOCAL_DELETION"
-        "DEPENDENT_ON_CONFLICT" -> choice == "OMIT_BACKUP_RECORD"
+        "DEPENDENT_ON_CONFLICT" -> choice == "OMIT_BACKUP_RECORD" ||
+            (table == "task_attachments" && choice in setOf(
+                "PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT",
+            ))
         "UNIQUE_VALUE_IN_USE" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_RECORD"
         "IMMUTABLE_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
             (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)

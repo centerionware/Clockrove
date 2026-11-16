@@ -55,6 +55,7 @@ abstract class BackupImportStoreTestBase {
             null,
             SQLiteDatabase.OPEN_READWRITE,
         )
+        database.setForeignKeyConstraintsEnabled(true)
         exportStore = BackupExportStore(app, wallClock = { now })
         importStore = BackupImportStore(app, catalogProvider = exportStore::importCatalog)
     }
@@ -581,7 +582,8 @@ abstract class BackupImportStoreTestBase {
             val choices = conflict["allowedChoices"] as? List<String> ?: emptyList()
             val preferred = when (conflict["kind"]) {
                 "JOB_DELETION_TOMBSTONE", "ENTITY_DELETION_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
-                "ACTIVE_JOB_DELETION", "BACKUP_ENTITY_DELETION" -> "KEEP_LOCAL"
+                "ACTIVE_JOB_DELETION" -> "KEEP_LOCAL"
+                "BACKUP_ENTITY_DELETION" -> "PRESERVE_LOCAL_CONTENT"
                 "GPS_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
                 "GPS_DELETION_COVERAGE" -> "PRESERVE_DELETION"
                 "DEPENDENT_ON_CONFLICT" -> "OMIT_BACKUP_RECORD"

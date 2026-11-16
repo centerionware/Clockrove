@@ -56,7 +56,7 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
                 value["kind"] == "BACKUP_ENTITY_DELETION" && value["table"] == "entity_heads" &&
                     (value["primaryKey"] as? List<*>) == listOf(kind, entityId)
             }
-            assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), head["allowedChoices"])
+            assertEquals(listOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION"), head["allowedChoices"])
         }
 
         importStore.resolveConflict(
@@ -129,12 +129,12 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
             "SELECT conflict_json FROM import_conflicts WHERE conflict_id=?",
             arrayOf(attachmentConflictId),
         ).use { assertTrue(it.moveToFirst()); JSONObject(it.getString(0)) }
-            .put("selectedChoice", "KEEP_LOCAL")
-            .put("aggregateSelectionIntent", "LOCAL_ONLY")
+            .put("selectedChoice", "PRESERVE_LOCAL_CONTENT")
+            .put("aggregateSelectionIntent", "LOCAL_CONTENT_PRESERVE")
         staged.update(
             "import_conflicts",
             ContentValues().apply {
-                put("selected_choice", "KEEP_LOCAL")
+                put("selected_choice", "PRESERVE_LOCAL_CONTENT")
                 put("conflict_json", conflictingChoice.toString())
             },
             "conflict_id=?",
@@ -197,6 +197,13 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertTrue(afterRestoreSelection.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }.all {
             it["selectedChoice"] == "RESTORE_BACKUP_CONTENT"
         })
+        val restoredAttachmentDependencies = afterRestoreSelection.filter {
+            it["kind"] == "DEPENDENT_ON_CONFLICT" && it["table"] == "task_attachments"
+        }
+        assertTrue(restoredAttachmentDependencies.isNotEmpty())
+        assertTrue(restoredAttachmentDependencies.all {
+            it["resolved"] == true && it["selectedChoice"] == "RESTORE_BACKUP_CONTENT"
+        })
         assertEquals(false, conflictById(afterRestoreSelection, cardConflict["conflictId"] as String)["resolved"])
         importStore.resolveConflict(
             database, started.importId, preview.previewToken, preview.localStateVersion,
@@ -234,6 +241,8 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
             "SELECT column_id FROM kanban_cards WHERE id=?", arrayOf(cardId),
         ).use { assertTrue(it.moveToFirst()); it.getString(0) }
         val source = exportStore.start(database)
+        val backupCommentHead = currentHead("task_comment", commentId)
+        val backupAttachmentHead = currentHead("task_attachment", attachmentId)
         assertNull(repository.saveCard(
             "keep-local-delete-card-edit", repository.snapshot().version,
             BoardStore.Draft(cardId, jobId, columnId, "Keep this local card", currency = currency),
@@ -241,8 +250,9 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertNull(repository.removeTaskComment(
             "keep-local-delete-comment", repository.snapshot().version, jobId, cardId, commentId,
         ).conflict)
+        val localCommentTombstone = currentHead("task_comment", commentId)
+        val localAttachmentTombstone = currentHead("task_attachment", attachmentId)
         val started = stageSnapshot(source)
-        assertTrue(exportStore.close(source.snapshotId))
         val preview = importStore.finish(database, started.importId)
         val conflicts = conflictsFor(started.importId, preview)
         val commentDataConflict = conflict(
@@ -261,6 +271,13 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertTrue(afterDeleteChoice.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }.all {
             it["selectedChoice"] == "PRESERVE_LOCAL_DELETION"
         })
+        val preservedAttachmentDependencies = afterDeleteChoice.filter {
+            it["kind"] == "DEPENDENT_ON_CONFLICT" && it["table"] == "task_attachments"
+        }
+        assertTrue(preservedAttachmentDependencies.isNotEmpty())
+        assertTrue(preservedAttachmentDependencies.all {
+            it["resolved"] == true && it["selectedChoice"] == "PRESERVE_LOCAL_DELETION"
+        })
         assertEquals(false, conflictById(afterDeleteChoice, cardConflict["conflictId"] as String)["resolved"])
         importStore.resolveConflict(
             database, started.importId, preview.previewToken, preview.localStateVersion,
@@ -278,29 +295,103 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         ).use { assertTrue(it.moveToFirst()); it.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM task_attachments WHERE id='$attachmentId'"))
+        assertMergedPreservedTombstoneParents(
+            "task_comment", commentId, localCommentTombstone, backupCommentHead,
+        )
+        assertMergedPreservedTombstoneParents(
+            "task_attachment", attachmentId, localAttachmentTombstone, backupAttachmentHead,
+        )
         assertFalse(importStore.close(started.importId))
+
+        val replay = stageSnapshot(source)
+        val replayPreview = importStore.finish(database, replay.importId)
+        val replayConflicts = conflictsFor(replay.importId, replayPreview)
+        assertTrue(replayConflicts.none { value ->
+            value["kind"] in setOf("ENTITY_DELETION_TOMBSTONE", "BACKUP_ENTITY_DELETION") &&
+                (value["primaryKey"] as? List<*>)?.lastOrNull()?.toString() in setOf(commentId, attachmentId)
+        })
+        assertTrue(importStore.close(replay.importId))
+        assertTrue(exportStore.close(source.snapshotId))
     }
 
     @Test
-    fun unsupportedBackupDeletionHasNoChoicesAndCannotApply() {
-        val customerId = "unsupported-delete-customer"
+    fun preservingLocalContentAgainstBackupDeletionKeepsBothCausalParents() {
+        val customerId = "preserved-delete-customer"
         assertNull(repository.saveCustomer(
             "unsupported-delete-customer-create", repository.snapshot().version,
             BusinessStore.Customer(customerId, "Still live"),
         ).conflict)
         val localHead = currentHead("customer", customerId)
-        val backupDeletion = "unsupported-delete-customer-revision"
-        val started = stageImport(listOf(
+        val backupDeletion = "preserved-delete-customer-revision"
+        val records = listOf(
             revisionRecord(
                 backupDeletion, "customer", customerId, null, deleted = 1L,
                 payload = JSONObject().put("id", customerId).toString(),
             ),
             parentRecord(backupDeletion, localHead),
             headRecord("customer", customerId, backupDeletion),
-        ))
+        )
+        val started = stageImport(records)
         val preview = importStore.finish(database, started.importId)
         val conflicts = conflictsFor(started.importId, preview)
         val deletion = conflict(conflicts, "BACKUP_ENTITY_DELETION", "entity_heads", customerId, "customer")
+        assertEquals(listOf("PRESERVE_LOCAL_CONTENT"), deletion["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            deletion["conflictId"] as String, "PRESERVE_LOCAL_CONTENT",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
+        val merged = currentHead("customer", customerId)
+        assertMergedLiveParents("customer", customerId, localHead, backupDeletion)
+        assertNotEquals(localHead, merged)
+        assertFalse(importStore.close(started.importId))
+
+        val replay = stageImport(records)
+        val replayPreview = importStore.finish(database, replay.importId)
+        assertEquals(0L, replayPreview.conflictCount)
+        assertTrue(importStore.close(replay.importId))
+    }
+
+    @Test
+    fun immutableQuoteDecisionDeletionHasNoChoicesAndCannotApply() {
+        val quoteId = "unsupported-delete-quote"
+        assertNull(repository.saveQuote(
+            "unsupported-delete-quote-create", repository.snapshot().version,
+            QuoteStore.Draft(
+                quoteId, null, jobId, "Immutable deletion fixture", "USD", 0,
+                listOf(QuoteStore.Line(
+                    "unsupported-delete-quote-line", "Synthetic work", "Immutable fixture", "ITEM", "10000", "1000",
+                )),
+            ),
+        ).conflict)
+        assertNull(repository.issueQuote(
+            "unsupported-delete-quote-issue", repository.snapshot().version, quoteId, true,
+        ).conflict)
+        assertNull(repository.decideQuote(
+            "unsupported-delete-quote-decision", repository.snapshot().version,
+            quoteId, 1, "ACCEPTED", "Keep the immutable record", true,
+        ).conflict)
+
+        val entityId = "$quoteId:1"
+        val localHead = currentHead("quote_decision", entityId)
+        val localPayload = database.rawQuery(
+            "SELECT payload FROM entity_revisions WHERE id=?", arrayOf(localHead),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val backupDeletion = "unsupported-delete-quote-revision"
+        val started = stageImport(listOf(
+            revisionRecord(
+                backupDeletion, "quote_decision", entityId, jobId,
+                deleted = 1L, payload = localPayload,
+            ),
+            parentRecord(backupDeletion, localHead),
+            headRecord("quote_decision", entityId, backupDeletion),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val conflicts = conflictsFor(started.importId, preview)
+        val deletion = conflict(
+            conflicts, "BACKUP_ENTITY_DELETION", "entity_heads", entityId, "quote_decision",
+        )
         assertEquals(emptyList<String>(), deletion["allowedChoices"])
         assertNull(deletion["defaultChoice"])
         assertFailure("UNSUPPORTED_CHOICE") {
@@ -312,8 +403,11 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
-        assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
-        assertFalse(importStore.close(started.importId))
+        assertEquals(localHead, currentHead("quote_decision", entityId))
+        assertEquals(1L, database.rawQuery(
+            "SELECT COUNT(*) FROM quote_decisions WHERE quote_id=? AND revision=1", arrayOf(quoteId),
+        ).use { assertTrue(it.moveToFirst()); it.getLong(0) })
+        assertTrue(importStore.close(started.importId))
     }
 
     private fun createCommentWithImage(prefix: String): CommentImage {
@@ -418,6 +512,21 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
             "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
         ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
         assertEquals(0L, revision.first)
+        assertEquals("BACKUP_MERGE", revision.second)
+        assertEquals(setOf(localTombstone, backupLive), parentIds(revisionId))
+    }
+
+    private fun assertMergedPreservedTombstoneParents(
+        kind: String,
+        entityId: String,
+        localTombstone: String,
+        backupLive: String,
+    ) {
+        val revisionId = currentHead(kind, entityId)
+        val revision = database.rawQuery(
+            "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
+        ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
+        assertEquals(1L, revision.first)
         assertEquals("BACKUP_MERGE", revision.second)
         assertEquals(setOf(localTombstone, backupLive), parentIds(revisionId))
     }

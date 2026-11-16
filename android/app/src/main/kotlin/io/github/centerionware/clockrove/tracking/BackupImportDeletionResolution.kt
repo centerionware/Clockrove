@@ -13,7 +13,145 @@ internal object BackupImportDeletionResolution {
         val entityId: String,
         val localRevision: String,
         val backupRevision: String,
+        val choice: String,
     )
+
+    fun canPreserveLocalContent(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        expectedLocalRevision: String,
+        backupRevision: String,
+    ): Boolean {
+        val table = BackupImportStore.revisionDataTables[kind] ?: return false
+        if (table in BackupImportStore.immutableTables) return false
+        val head = db.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
+        if (head != expectedLocalRevision) return false
+        val local = store.revisionContent(db, "entity_revisions", head) ?: return false
+        val backup = store.revisionContent(handle.database, "validation_revisions", backupRevision) ?: return false
+        if (!store.validLiveRevision(local, kind, entityId) || backup.kind != kind ||
+            backup.entityId != entityId || backup.deleted != 1L || local.jobId != backup.jobId) {
+            return false
+        }
+        val spec = handle.catalog[table] ?: return false
+        val keyColumns = BackupImportStore.revisionDataKeyColumns[kind] ?: listOf("id")
+        val keyValues = store.revisionDataKeyValues(kind, entityId)
+        if (keyColumns.size != keyValues.size) return false
+        val row = store.findLocalRow(db, table, spec, keyColumns.zip(keyValues).toMap()) ?: return false
+        val values = store.revisionPayloadValuesForDataRow(db, null, kind, row.values) ?: return false
+        val columns = BackupImportStore.revisionDataColumns[kind] ?: return false
+        return store.revisionPayloadMatchesRow(
+            local.payload, columns, values, store.optionalRevisionPayloadKeys(kind),
+        ) && store.revisionJobMatchesData(
+            db, handle, kind, local.jobId, row.values, values, preferStaged = false,
+        )
+    }
+
+    fun canPreserveLocalDeletion(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        expectedLocalRevision: String,
+        backupRevision: String,
+    ): Boolean {
+        val head = db.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
+        if (head != expectedLocalRevision) return false
+        val local = store.revisionContent(db, "entity_revisions", head) ?: return false
+        val backup = store.revisionContent(handle.database, "validation_revisions", backupRevision) ?: return false
+        if (local.kind != kind || local.entityId != entityId || local.deleted != 1L ||
+            !store.validLiveRevision(backup, kind, entityId) || local.jobId != backup.jobId) return false
+        val table = BackupImportStore.revisionDataTables[kind] ?: return false
+        val spec = handle.catalog[table] ?: return false
+        val keyColumns = BackupImportStore.revisionDataKeyColumns[kind] ?: listOf("id")
+        val keyValues = store.revisionDataKeyValues(kind, entityId)
+        if (keyColumns.size != keyValues.size) return false
+        val stagedRow = handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(table, org.json.JSONArray(keyValues).toString()),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            @Suppress("UNCHECKED_CAST")
+            store.jsonValue(org.json.JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<String, Any?>
+        } ?: return false
+        val payloadValues = store.revisionPayloadValuesForDataRow(db, handle, kind, stagedRow) ?: return false
+        val columns = BackupImportStore.revisionDataColumns[kind] ?: return false
+        return store.revisionPayloadMatchesRow(
+            backup.payload, columns, payloadValues, store.optionalRevisionPayloadKeys(kind),
+        ) && store.revisionJobMatchesData(
+            db, handle, kind, backup.jobId, stagedRow, payloadValues, preferStaged = true,
+        )
+    }
+
+    fun canPreserveCurrentLocalDeletion(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        backupRevision: String,
+    ): Boolean {
+        val localRevision = db.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
+        return canPreserveLocalDeletion(
+            store, db, handle, kind, entityId, localRevision, backupRevision,
+        )
+    }
+
+    fun alreadyMergedDeletionResolution(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        backupRevision: String,
+    ): Boolean {
+        val localRevision = db.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
+        val local = store.revisionContent(db, "entity_revisions", localRevision) ?: return false
+        val backup = store.revisionContent(handle.database, "validation_revisions", backupRevision) ?: return false
+        return local.kind == kind && local.entityId == entityId && local.deleted != backup.deleted &&
+            backup.kind == kind && backup.entityId == entityId &&
+            store.revisionHeadRelationship(db, handle, localRevision, backupRevision) == "BACKUP_ANCESTOR"
+    }
+
+    fun alreadyMergedCommentDeletion(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        commentId: String,
+    ): Boolean {
+        val backupHead = stagedHeadRevision(handle, "task_comment", commentId) ?: return false
+        return alreadyMergedDeletionResolution(
+            store, db, handle, "task_comment", commentId, backupHead,
+        )
+    }
+
+    fun stagedHeadRevision(
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+    ): String? = handle.database.rawQuery(
+        "SELECT row_json FROM import_rows WHERE table_name='entity_heads' AND primary_key=? LIMIT 1",
+        arrayOf(org.json.JSONArray(listOf(kind, entityId)).toString()),
+    ).use { rows ->
+        if (!rows.moveToFirst()) null else
+            org.json.JSONObject(rows.getString(0)).getJSONObject("values").optString("revision_id")
+                .takeIf(String::isNotEmpty)
+    }
 
     fun stagedChoice(
         handle: BackupImportStore.Handle,
@@ -189,6 +327,73 @@ internal object BackupImportDeletionResolution {
             staleDeletion()
         }
         store.recordRestoredHead(db, kind, entityId, backup.jobId, values, localHead, backupRevision)
+    }
+
+    fun applyPreserveLocalContent(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        expectedLocalRevision: String,
+        backupRevision: String,
+    ) {
+        if (!canPreserveLocalContent(
+                store, db, handle, kind, entityId, expectedLocalRevision, backupRevision,
+            )) staleDeletion()
+        val local = store.revisionContent(db, "entity_revisions", expectedLocalRevision) ?: staleDeletion()
+        recordMergedHead(
+            store, db, kind, entityId, local.jobId, local.payload, deleted = false,
+            expectedLocalRevision, backupRevision,
+        )
+    }
+
+    fun applyPreserveLocalDeletion(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        handle: BackupImportStore.Handle,
+        kind: String,
+        entityId: String,
+        expectedLocalRevision: String,
+        backupRevision: String,
+    ) {
+        if (!canPreserveLocalDeletion(
+                store, db, handle, kind, entityId, expectedLocalRevision, backupRevision,
+            )) staleDeletion()
+        val local = store.revisionContent(db, "entity_revisions", expectedLocalRevision) ?: staleDeletion()
+        recordMergedHead(
+            store, db, kind, entityId, local.jobId, local.payload, deleted = true,
+            expectedLocalRevision, backupRevision,
+        )
+    }
+
+    private fun recordMergedHead(
+        store: BackupImportStore,
+        db: SQLiteDatabase,
+        kind: String,
+        entityId: String,
+        jobId: String?,
+        payload: String?,
+        deleted: Boolean,
+        expectedLocalRevision: String,
+        backupRevision: String,
+    ) {
+        val merged = UUID.randomUUID().toString()
+        db.execSQL(
+            "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
+                "VALUES(?,?,?,?,?,?,?,'BACKUP_MERGE')",
+            arrayOf<Any?>(merged, kind, entityId, jobId, payload, if (deleted) 1 else 0, store.wallClock()),
+        )
+        listOf(expectedLocalRevision, backupRevision).distinct().sorted().forEach { parent ->
+            db.execSQL("INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)", arrayOf(merged, parent))
+        }
+        val updated = db.update(
+            "entity_heads",
+            ContentValues().apply { put("revision_id", merged) },
+            "kind=? AND entity_id=? AND revision_id=?",
+            arrayOf(kind, entityId, expectedLocalRevision),
+        )
+        if (updated != 1) staleDeletion()
     }
 
     private fun currentDeletionHead(

@@ -117,6 +117,21 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                         val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
                             ?: throw ApplyFailure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
                         if (isOmittedBackupGraphRow(table, values, omittedBackupGraph, rows.getLong(0))) continue
+                        if (table == "entity_heads" && selectedChoice == null) {
+                            val kind = values["kind"]?.toString()
+                            val entityId = values["entity_id"]?.toString()
+                            val backupRevision = values["revision_id"]?.toString()
+                            if (kind != null && entityId != null && backupRevision != null &&
+                                BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, kind, entityId, backupRevision,
+                                )) continue
+                        }
+                        if (table == "task_comment_events" && values["action"] == "DELETED") {
+                            val commentId = values["comment_id"]?.toString()
+                            if (commentId != null && BackupImportDeletionResolution.alreadyMergedCommentDeletion(
+                                    this, db, handle, commentId,
+                                )) continue
+                        }
                         if (table == "jobs" && hasJobDeletionTombstone(db, values["id"]?.toString())) {
                             if (selectedChoice != "PRESERVE_LOCAL_DELETION") {
                                 throw ApplyFailure("PREVIEW_STALE", "A deleted local job can no longer be restored from this preview.")
@@ -130,6 +145,13 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                             if (selectedChoice == "PRESERVE_LOCAL_DELETION") {
                                 continue
                             }
+                            val backupHead = BackupImportDeletionResolution.stagedHeadRevision(
+                                handle, tombstoneRow.kind, tombstoneId,
+                            )
+                            if (selectedChoice == null && backupHead != null &&
+                                BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                )) continue
                             if (selectedChoice != "RESTORE_BACKUP_CONTENT" ||
                                 table !in BackupImportDeletionResolution.restorableTables ||
                                 findLocalRow(db, table, handle.catalog.getValue(table), values) != null ||
@@ -147,8 +169,6 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                         }
                         if (table == "entity_heads" &&
                             activeJobDeletionChoiceForHead(db, handle, values) == "KEEP_LOCAL") continue
-                        if (table == "entity_heads" &&
-                            localTombstoneChoiceForHead(db, handle, values) == "PRESERVE_LOCAL_DELETION") continue
                         if (table == "task_comment_events" && selectedChoice == "APPLY_BACKUP_DELETION") {
                             val commentId = values["comment_id"]?.toString()
                                 ?: throw ApplyFailure("PREVIEW_STALE", "A backup comment deletion changed after preview.")
@@ -165,12 +185,11 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                         if (table == "entity_heads") {
                             val kind = values["kind"]?.toString()
                             val entityId = values["entity_id"]?.toString()
-                            val resolutionChoice = selectedChoice?.takeIf {
-                                (it == "APPLY_BACKUP_DELETION" && kind != null &&
-                                    kind in BackupImportDeletionResolution.deletableKinds) ||
-                                    (it == "RESTORE_BACKUP_CONTENT" &&
-                                        kind != null && kind in BackupImportDeletionResolution.deletableKinds)
-                            }
+                            val headChoice = selectedChoice ?: localTombstoneChoiceForHead(db, handle, values)
+                            val resolutionChoice = headChoice?.takeIf { it in setOf(
+                                "APPLY_BACKUP_DELETION", "RESTORE_BACKUP_CONTENT",
+                                "PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION",
+                            ) }
                             if (resolutionChoice != null) {
                                 if (kind == null || entityId == null) {
                                     throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
@@ -185,23 +204,47 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                     ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
                                 val backupContent = revisionContent(handle.database, "validation_revisions", backupRevision)
                                     ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
-                                if (resolutionChoice == "APPLY_BACKUP_DELETION") {
-                                    if (localContent.deleted != 0L || backupContent.deleted != 1L ||
-                                        localContent.jobId != backupContent.jobId ||
-                                        !BackupImportDeletionResolution.canApplyDeletion(db, kind, entityId)) {
-                                        throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                when (resolutionChoice) {
+                                    "APPLY_BACKUP_DELETION" -> {
+                                        if (localContent.deleted != 0L || backupContent.deleted != 1L ||
+                                            localContent.jobId != backupContent.jobId ||
+                                            !BackupImportDeletionResolution.canApplyDeletion(db, kind, entityId)) {
+                                            throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                        }
+                                        if (kind == "task_comment") {
+                                            BackupImportDeletionResolution.validateCommentDeletionChoices(db, handle, entityId)
+                                        }
                                     }
-                                    if (kind == "task_comment") {
-                                        BackupImportDeletionResolution.validateCommentDeletionChoices(db, handle, entityId)
+                                    "RESTORE_BACKUP_CONTENT" -> {
+                                        if (localContent.deleted != 1L || backupContent.deleted != 0L ||
+                                            localContent.jobId != backupContent.jobId ||
+                                            localTombstoneChoiceForHead(db, handle, values) != "RESTORE_BACKUP_CONTENT") {
+                                            throw ApplyFailure("PREVIEW_STALE", "A backup restore changed after preview.")
+                                        }
                                     }
-                                } else if (localContent.deleted != 1L || backupContent.deleted != 0L ||
-                                    localContent.jobId != backupContent.jobId ||
-                                    localTombstoneChoiceForHead(db, handle, values) != "RESTORE_BACKUP_CONTENT") {
-                                    throw ApplyFailure("PREVIEW_STALE", "A backup restore changed after preview.")
+                                    "PRESERVE_LOCAL_CONTENT" -> {
+                                        if (localContent.deleted != 0L || backupContent.deleted != 1L ||
+                                            localContent.jobId != backupContent.jobId ||
+                                            !BackupImportDeletionResolution.canPreserveLocalContent(
+                                                this, db, handle, kind, entityId, localRevision, backupRevision,
+                                            )) {
+                                            throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                        }
+                                    }
+                                    "PRESERVE_LOCAL_DELETION" -> {
+                                        if (localContent.deleted != 1L || backupContent.deleted != 0L ||
+                                            localContent.jobId != backupContent.jobId ||
+                                            localTombstoneChoiceForHead(db, handle, values) != "PRESERVE_LOCAL_DELETION" ||
+                                            !BackupImportDeletionResolution.canPreserveLocalDeletion(
+                                                this, db, handle, kind, entityId, localRevision, backupRevision,
+                                            )) {
+                                            throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                        }
+                                    }
                                 }
                                 plannedDeletionResolutions[divergentMergeKey(kind, entityId)] =
                                     BackupImportDeletionResolution.Planned(
-                                        kind, entityId, localRevision, backupRevision,
+                                        kind, entityId, localRevision, backupRevision, resolutionChoice,
                                     )
                                 continue
                             }
@@ -320,10 +363,36 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                             val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
                                 ?: throw ApplyFailure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
                             if (isOmittedBackupGraphRow(table, values, omittedBackupGraph, ordinal)) continue
+                            if (table == "task_comment_events" && values["action"] == "DELETED") {
+                                val commentId = values["comment_id"]?.toString()
+                                if (commentId != null && BackupImportDeletionResolution.alreadyMergedCommentDeletion(
+                                        this, db, handle, commentId,
+                                    )) continue
+                            }
+                            if (rows.isNull(2)) {
+                                val tombstoneRow = revisionTombstoneRows[table]
+                                val entityId = tombstoneRow?.let { values[it.entityIdColumn]?.toString() }
+                                val backupHead = if (tombstoneRow == null || entityId == null) null else
+                                    BackupImportDeletionResolution.stagedHeadRevision(
+                                        handle, tombstoneRow.kind, entityId,
+                                    )
+                                if (tombstoneRow != null && entityId != null && backupHead != null &&
+                                    hasLocalEntityDeletionTombstone(db, tombstoneRow.kind, entityId) &&
+                                    BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                        this, db, handle, tombstoneRow.kind, entityId, backupHead,
+                                    )) continue
+                            }
                             if (table == "entity_heads" &&
                                 activeJobDeletionChoiceForHead(db, handle, values) == "KEEP_LOCAL") continue
-                            if (table == "entity_heads" &&
-                                localTombstoneChoiceForHead(db, handle, values) == "PRESERVE_LOCAL_DELETION") continue
+                            if (table == "entity_heads" && rows.isNull(2)) {
+                                val kind = values["kind"]?.toString()
+                                val entityId = values["entity_id"]?.toString()
+                                val backupRevision = values["revision_id"]?.toString()
+                                if (kind != null && entityId != null && backupRevision != null &&
+                                    BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                        this, db, handle, kind, entityId, backupRevision,
+                                    )) continue
+                            }
                             if (!rows.isNull(2)) {
                                 val selectedChoice = rows.getString(3)
                                 if (table == "task_comment_events" && selectedChoice == "APPLY_BACKUP_DELETION") {
@@ -342,6 +411,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                 }
                                 if (table == "entity_heads" && selectedChoice in setOf(
                                         "APPLY_BACKUP_DELETION", "RESTORE_BACKUP_CONTENT",
+                                        "PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION",
                                     )) {
                                     val kind = values["kind"]?.toString()
                                         ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
@@ -349,13 +419,21 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                         ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
                                     val plan = plannedDeletionResolutions[divergentMergeKey(kind, entityId)]
                                         ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
-                                    when (selectedChoice) {
+                                    when (plan.choice) {
                                         "APPLY_BACKUP_DELETION" -> BackupImportDeletionResolution.applyBackupDeletion(
                                             this, db, handle, plan.kind, plan.entityId,
                                             plan.localRevision, plan.backupRevision,
                                         )
                                         "RESTORE_BACKUP_CONTENT" -> BackupImportDeletionResolution.applyBackupRestore(
                                             this, db, handle, plan.kind, plan.entityId, plan.backupRevision,
+                                        )
+                                        "PRESERVE_LOCAL_CONTENT" -> BackupImportDeletionResolution.applyPreserveLocalContent(
+                                            this, db, handle, plan.kind, plan.entityId,
+                                            plan.localRevision, plan.backupRevision,
+                                        )
+                                        "PRESERVE_LOCAL_DELETION" -> BackupImportDeletionResolution.applyPreserveLocalDeletion(
+                                            this, db, handle, plan.kind, plan.entityId,
+                                            plan.localRevision, plan.backupRevision,
                                         )
                                     }
                                     changed++

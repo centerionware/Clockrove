@@ -3,7 +3,12 @@ package io.github.centerionware.clockrove.tracking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [24])
 class BackupImportStoreSummaryTest : BackupImportStoreTestBase() {
     @Test
     fun previewCountsReportDeletionMarkersIndependentlyFromUnchangedRows() {

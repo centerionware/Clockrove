@@ -221,7 +221,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
 
         val preview = importStore.finish(database, started.importId)
         assertEquals(1L, preview.conflictCount)
-        assertEquals(1L, preview.timeOverlapCount)
+        assertEquals(0L, preview.timeOverlapCount)
         assertFalse(preview.applyReady)
         val conflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
         assertEquals("local-quote", conflict["localIdentifier"])

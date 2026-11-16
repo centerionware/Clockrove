@@ -139,6 +139,12 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         if (table == "task_comment_events" && values["action"] == "DELETED") {
                             val commentId = values["comment_id"]?.toString()
                             if (commentId != null && localIdentifierExists(db, "task_comments", commentId)) {
+                                if (BackupImportDeletionResolution.alreadyMergedCommentDeletion(
+                                        this, db, handle, commentId,
+                                    )) {
+                                    unchanged++
+                                    continue
+                                }
                                 changed++
                                 val choices = if (BackupImportDeletionResolution.canApplyDeletion(
                                         db, "task_comment", commentId,
@@ -174,15 +180,29 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         val tombstoneId = tombstoneRow?.let { values[it.entityIdColumn]?.toString() }
                         if (tombstoneRow != null && tombstoneId != null &&
                             hasLocalEntityDeletionTombstone(db, tombstoneRow.kind, tombstoneId)) {
+                            val backupHead = BackupImportDeletionResolution.stagedHeadRevision(
+                                handle, tombstoneRow.kind, tombstoneId,
+                            )
+                            if (backupHead != null && BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                )) {
+                                unchanged++
+                                continue
+                            }
                             changed++
-                            val choices = if (BackupImportDeletionResolution.restorableTables.contains(table)) {
-                                listOf("PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT")
-                            } else {
-                                listOf("PRESERVE_LOCAL_DELETION")
+                            val canPreserveDeletion = backupHead != null &&
+                                BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
+                                    this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                )
+                            val choices = buildList {
+                                if (canPreserveDeletion) add("PRESERVE_LOCAL_DELETION")
+                                if (BackupImportDeletionResolution.restorableTables.contains(table)) {
+                                    add("RESTORE_BACKUP_CONTENT")
+                                }
                             }
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "ENTITY_DELETION_TOMBSTONE",
-                                choices, "PRESERVE_LOCAL_DELETION",
+                                choices, "PRESERVE_LOCAL_DELETION".takeIf { canPreserveDeletion },
                                 localIdentifier = tombstoneId,
                                 localSummary = mapOf("identifier" to "Deleted local entity"),
                                 backupSummary = safeSummary(values),
@@ -287,6 +307,15 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                             }
                             val coordinatedDivergentEntity = !same && table in revisionDataKinds.keys &&
                                 divergentEntityDataForRow(db, handle, table, values) != null
+                            if (table == "entity_heads" && values["kind"] != null &&
+                                values["entity_id"] != null && values["revision_id"] != null &&
+                                BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, values.getValue("kind").toString(),
+                                    values.getValue("entity_id").toString(), values.getValue("revision_id").toString(),
+                                )) {
+                                unchanged++
+                                continue
+                            }
                             if (same) {
                                 unchanged++
                             } else {
@@ -341,6 +370,15 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                             values["kind"]?.toString().orEmpty(),
                                             values["entity_id"]?.toString().orEmpty(),
                                         )
+                                    val backupDeletionCanBePreserved = backupDeletionAgainstLive &&
+                                        values["kind"] != null && values["entity_id"] != null &&
+                                        local.values["revision_id"] != null && values["revision_id"] != null &&
+                                        BackupImportDeletionResolution.canPreserveLocalContent(
+                                            this, db, handle, values.getValue("kind").toString(),
+                                            values.getValue("entity_id").toString(),
+                                            local.values.getValue("revision_id").toString(),
+                                            values.getValue("revision_id").toString(),
+                                        )
                                     val mergeableDivergentHead = table == "entity_heads" &&
                                         revisionRelationship == "DIVERGENT" &&
                                         canMergeDivergentHead(db, handle, values, local)
@@ -356,7 +394,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
                                         values["kind"] == "location" &&
                                         hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
-                                    val localEntityDeletionCanBePreserved = if (table == "entity_heads") {
+                                    val localEntityDeletionExists = if (table == "entity_heads") {
                                         val kind = values["kind"]?.toString()
                                         val entityId = values["entity_id"]?.toString()
                                         kind != null && entityId != null &&
@@ -365,7 +403,15 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     } else {
                                         false
                                     }
-                                    val localEntityDeletionCanBeRestored = localEntityDeletionCanBePreserved &&
+                                    val localEntityDeletionCanBePreserved = localEntityDeletionExists &&
+                                        values["kind"] != null && values["entity_id"] != null &&
+                                        values["revision_id"] != null &&
+                                        BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
+                                            this, db, handle, values.getValue("kind").toString(),
+                                            values.getValue("entity_id").toString(),
+                                            values.getValue("revision_id").toString(),
+                                        )
+                                    val localEntityDeletionCanBeRestored = localEntityDeletionExists &&
                                         values["kind"]?.toString().orEmpty() in
                                             BackupImportDeletionResolution.deletableKinds
                                     val unsupportedDivergentHead = table == "entity_heads" &&
@@ -373,15 +419,14 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                         !selectableDivergentHead && !gpsRangeHeadChoice &&
                                         !localEntityDeletionCanBePreserved && !localGpsTombstoneCanBePreserved
                                     val choices = when {
-                                        backupDeletionAgainstLive -> if (backupDeletionCanBeApplied) {
-                                            listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
-                                        } else {
-                                            emptyList()
+                                        backupDeletionAgainstLive -> buildList {
+                                            if (backupDeletionCanBePreserved) add("PRESERVE_LOCAL_CONTENT")
+                                            if (backupDeletionCanBeApplied) add("APPLY_BACKUP_DELETION")
                                         }
-                                        localEntityDeletionCanBeRestored -> listOf(
-                                            "PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT",
-                                        )
-                                        localEntityDeletionCanBePreserved -> listOf("PRESERVE_LOCAL_DELETION")
+                                        localEntityDeletionExists -> buildList {
+                                            if (localEntityDeletionCanBePreserved) add("PRESERVE_LOCAL_DELETION")
+                                            if (localEntityDeletionCanBeRestored) add("RESTORE_BACKUP_CONTENT")
+                                        }
                                         gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
                                         immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
                                         mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
@@ -397,14 +442,16 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                         handle, conflictOrdinal, ordinal, table, keyJson,
                                         when {
                                             backupDeletionAgainstLive -> "BACKUP_ENTITY_DELETION"
-                                            localEntityDeletionCanBePreserved -> "ENTITY_DELETION_TOMBSTONE"
+                                            localEntityDeletionExists -> "ENTITY_DELETION_TOMBSTONE"
                                             gpsRangeHeadChoice -> "GPS_DELETION_RANGE_HEAD"
                                             immutable -> "IMMUTABLE_RECORD_DIFFERS"
                                             else -> "EXISTING_RECORD_DIFFERS"
                                         },
                                         choices,
                                         when {
-                                            backupDeletionAgainstLive -> "KEEP_LOCAL".takeIf { backupDeletionCanBeApplied }
+                                            backupDeletionAgainstLive -> "PRESERVE_LOCAL_CONTENT".takeIf {
+                                                backupDeletionCanBePreserved
+                                            }
                                             localEntityDeletionCanBePreserved -> "PRESERVE_LOCAL_DELETION"
                                             gpsRangeHeadChoice || unsupportedDivergentHead -> null
                                             selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
@@ -813,6 +860,39 @@ internal fun BackupImportStore.addDependentReferenceConflicts(
                                 attachAggregateGroupKey(handle, rowOrdinal, groupKey)
                             }
                         }
+                        val commentId = values["comment_id"]?.toString()
+                        val dependsOnCommentDeletion = table == "task_attachments" && commentId != null &&
+                            blockedParentGroups.keys.any { parentOrdinal ->
+                                staged.rawQuery(
+                                    "SELECT r.table_name,r.row_json,c.conflict_json FROM import_rows r " +
+                                        "JOIN import_conflicts c ON c.row_ordinal=r.ordinal WHERE r.ordinal=?",
+                                    arrayOf(parentOrdinal.toString()),
+                                ).use { parentRows ->
+                                    while (parentRows.moveToNext()) {
+                                        if (parentRows.getString(0) != "task_comments") continue
+                                        val parentValues = JSONObject(parentRows.getString(1)).getJSONObject("values")
+                                        val parentConflict = JSONObject(parentRows.getString(2))
+                                        if (parentValues.optString("id") == commentId &&
+                                            parentConflict.optString("kind") == "ENTITY_DELETION_TOMBSTONE") {
+                                            return@use true
+                                        }
+                                    }
+                                    false
+                                }
+                            }
+                        val childKind = revisionDataKinds[table]
+                        val childId = if (childKind == null) null else
+                            revisionEntityIdForDataRow(table, values)
+                        val childDeletionIsLocal = childKind != null && childId != null &&
+                            revisionTombstoneRows.values.any { it.kind == childKind } &&
+                            hasLocalEntityDeletionTombstone(localDb, childKind, childId)
+                        val dependentChoices = when {
+                            dependsOnCommentDeletion && childDeletionIsLocal -> listOf(
+                                "PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT",
+                            )
+                            dependsOnCommentDeletion -> listOf("OMIT_BACKUP_RECORD", "RESTORE_BACKUP_CONTENT")
+                            else -> listOf("OMIT_BACKUP_RECORD")
+                        }
                         nextConflictOrdinal = addConflict(
                             handle,
                             nextConflictOrdinal,
@@ -820,7 +900,7 @@ internal fun BackupImportStore.addDependentReferenceConflicts(
                             table,
                             keyJson,
                             "DEPENDENT_ON_CONFLICT",
-                            listOf("OMIT_BACKUP_RECORD"),
+                            dependentChoices,
                             null,
                             localSummary = mapOf("identifier" to "A referenced backup record requires a choice"),
                             backupSummary = safeSummary(values),

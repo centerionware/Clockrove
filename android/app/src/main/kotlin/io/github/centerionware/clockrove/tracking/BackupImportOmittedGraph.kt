@@ -121,13 +121,26 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
         val omittedRangeRevisionIds = mutableSetOf<String>()
         val gpsDeletionParentsByPoint = mutableMapOf<String, MutableSet<String>>()
         val omittedAggregateKeys = mutableSetOf<String>()
+        val protectedDeletionEntities = mutableSetOf<String>()
         handle.database.rawQuery(
-            "SELECT selected_choice,conflict_json FROM import_conflicts ORDER BY ordinal",
+            "SELECT c.selected_choice,c.conflict_json,r.table_name,r.row_json " +
+                "FROM import_conflicts c JOIN import_rows r ON r.ordinal=c.row_ordinal ORDER BY c.ordinal",
             null,
         ).use { rows ->
             while (rows.moveToNext()) {
                 val choice = rows.getString(0)
                 val conflict = JSONObject(rows.getString(1))
+                if (choice in setOf("PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION")) {
+                    val table = rows.getString(2)
+                    val values = JSONObject(rows.getString(3)).getJSONObject("values")
+                    if (table == "entity_heads") {
+                        protectedDeletionEntities.add("${values.optString("kind")}:${values.optString("entity_id")}")
+                    } else {
+                        @Suppress("UNCHECKED_CAST")
+                        val rowValues = jsonValue(values) as? Map<String, Any?>
+                        rowValues?.let { revisionEntityDataKey(table, it)?.let(protectedDeletionEntities::add) }
+                    }
+                }
                 if (conflict.optString("aggregateSelectionIntent") != "LOCAL_ONLY") continue
                 val keys = conflict.optJSONArray("aggregateKeys") ?: continue
                 for (index in 0 until keys.length()) omittedAggregateKeys.add(keys.optString(index))
@@ -136,11 +149,35 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
         omittedAggregateKeys.addAll(expandAggregateKeys(handle, omittedAggregateKeys))
         val omittedRowOrdinals = mutableSetOf<Long>()
         if (omittedAggregateKeys.isNotEmpty()) {
-            omittedRowOrdinals.addAll(handle.database.rawQuery(
-                "SELECT DISTINCT a.row_ordinal FROM import_aggregate_keys a " +
-                    "JOIN aggregate_conflict_keys k ON k.group_key=a.group_key",
+            val protectedRevisionIds = mutableSetOf<String>()
+            if (protectedDeletionEntities.isNotEmpty()) {
+                handle.database.rawQuery("SELECT id,kind,entity_id FROM validation_revisions", null).use { rows ->
+                    while (rows.moveToNext()) {
+                        if ("${rows.getString(1)}:${rows.getString(2)}" in protectedDeletionEntities) {
+                            protectedRevisionIds.add(rows.getString(0))
+                        }
+                    }
+                }
+            }
+            val candidates = handle.database.rawQuery(
+                "SELECT DISTINCT r.ordinal,r.table_name,r.row_json FROM import_aggregate_keys a " +
+                    "JOIN aggregate_conflict_keys k ON k.group_key=a.group_key " +
+                    "JOIN import_rows r ON r.ordinal=a.row_ordinal",
                 null,
-            ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getLong(0)) } })
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) add(Triple(rows.getLong(0), rows.getString(1), rows.getString(2)))
+            } }
+            candidates.forEach { (ordinal, table, rowJson) ->
+                val values = JSONObject(rowJson).getJSONObject("values")
+                val protected = when (table) {
+                    "entity_heads", "entity_revisions" ->
+                        "${values.optString("kind")}:${values.optString("entity_id")}" in protectedDeletionEntities
+                    "revision_parents" -> values.optString("revision_id") in protectedRevisionIds ||
+                        values.optString("parent_id") in protectedRevisionIds
+                    else -> false
+                }
+                if (!protected) omittedRowOrdinals.add(ordinal)
+            }
         }
         handle.database.rawQuery(
             "SELECT r.row_json FROM import_rows r JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
@@ -174,7 +211,7 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
                 val choice = rows.getString(2)
                 val conflict = JSONObject(rows.getString(3))
                 if (table != "entity_heads" && choice in setOf(
-                        "KEEP_LOCAL", "OMIT_BACKUP_RECORD", "PRESERVE_LOCAL_DELETION",
+                        "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
                         "OMIT_BACKUP_SESSION", "OMIT_OPEN_SESSION",
                     )) {
                     @Suppress("UNCHECKED_CAST")
@@ -183,7 +220,7 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
                 }
                 val revisionRow = revisionTombstoneRows[table]
                 if (revisionRow != null && choice in setOf(
-                        "PRESERVE_LOCAL_DELETION", "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
+                        "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
                         "OMIT_BACKUP_SESSION", "OMIT_OPEN_SESSION",
                     )) {
                     if (!row.isNull(revisionRow.entityIdColumn)) {
