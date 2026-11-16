@@ -226,8 +226,12 @@ internal fun BackupImportStore.choiceForConflictIntent(allowed: JSONArray, inten
             )
             "BACKUP_MERGE" -> listOf("MERGE_USE_BACKUP_CONTENT")
             "BACKUP_RESTORE" -> listOf("RESTORE_BACKUP_CONTENT")
-            "LOCAL_CONTENT_PRESERVE" -> listOf("PRESERVE_LOCAL_CONTENT", "KEEP_LOCAL")
-            "LOCAL_DELETION_PRESERVE" -> listOf("PRESERVE_LOCAL_DELETION")
+            "LOCAL_CONTENT_PRESERVE" -> listOf(
+                "PRESERVE_LOCAL_CONTENT", "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
+            )
+            "LOCAL_DELETION_PRESERVE" -> listOf(
+                "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
+            )
             "NEUTRAL" -> listOf("MERGE_IDENTICAL_CONTENT")
             "BACKUP_DELETION" -> listOf("APPLY_BACKUP_DELETION")
             "LOCAL_ONLY" -> listOf(

@@ -123,8 +123,13 @@ internal object BackupImportDeletionResolution {
         ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
         val local = store.revisionContent(db, "entity_revisions", localRevision) ?: return false
         val backup = store.revisionContent(handle.database, "validation_revisions", backupRevision) ?: return false
+        // A plain local deletion is also descended from the backup head. Only a head
+        // created by a previous backup merge should suppress a fresh conflict.
+        val localOrigin = db.rawQuery(
+            "SELECT origin FROM entity_revisions WHERE id=?", arrayOf(localRevision),
+        ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
         return local.kind == kind && local.entityId == entityId && local.deleted != backup.deleted &&
-            backup.kind == kind && backup.entityId == entityId &&
+            backup.kind == kind && backup.entityId == entityId && localOrigin == "BACKUP_MERGE" &&
             store.revisionHeadRelationship(db, handle, localRevision, backupRevision) == "BACKUP_ANCESTOR"
     }
 
