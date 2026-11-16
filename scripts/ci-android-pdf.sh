@@ -11,11 +11,15 @@ sdkmanager="$ANDROID_HOME/cmdline-tools/19.0/bin/sdkmanager"
 avdmanager="$ANDROID_HOME/cmdline-tools/19.0/bin/avdmanager"
 export ANDROID_AVD_HOME="$RUNNER_TEMP/clockrove-pdf-avds"
 mkdir -p "$ANDROID_AVD_HOME" "$GITHUB_WORKSPACE/build/device-test-results"
-# Fixed vendor archive URLs and vendor-published checksums, recorded from the
-# official repository2-3.xml and sys-img/android/sys-img2-3.xml on 2026-11-11.
-curl --fail --location --retry 3 https://dl.google.com/android/repository/emulator-linux_x64-16740729.zip -o "$RUNNER_TEMP/clockrove-emulator.zip"
-echo "f41f9e31eb5ca64926603c03265c50bbc0ff4172  $RUNNER_TEMP/clockrove-emulator.zip" | sha1sum --check
+# Emulator 37.1.11 is pinned per Chromium's CI rollback for the 37.2.13 Linux
+# host crash. URL and published SHA-256 are from Google's Android Emulator
+# Archive: https://developer.android.com/studio/emulator_archive (retrieved
+# 2026-11-16).
+curl --fail --location --retry 3 https://redirector.gvt1.com/edgedl/android/repository/emulator-linux_x64-15917651.zip -o "$RUNNER_TEMP/clockrove-emulator.zip"
+echo "95771e0ae431897b2a4bd2d97fa095f29a8b0624a7b216baf529f9306161c266  $RUNNER_TEMP/clockrove-emulator.zip" | sha256sum --check
 unzip -oq "$RUNNER_TEMP/clockrove-emulator.zip" -d "$ANDROID_HOME"
+# Fixed platform-tools and system-image archives use vendor-published
+# checksums recorded from the official repository metadata on 2026-11-11.
 curl --fail --location --retry 3 https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip -o "$RUNNER_TEMP/clockrove-platform-tools.zip"
 echo "477254aa5f903c15cf51001717bdf347fb6b53e0  $RUNNER_TEMP/clockrove-platform-tools.zip" | sha1sum --check
 unzip -oq "$RUNNER_TEMP/clockrove-platform-tools.zip" -d "$ANDROID_HOME"
@@ -27,14 +31,14 @@ cat > "$ANDROID_HOME/emulator/package.xml" <<'XML'
 <ns2:repository xmlns:ns2="http://schemas.android.com/repository/android/common/02" xmlns:ns3="http://schemas.android.com/repository/android/generic/02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <localPackage path="emulator" obsolete="false">
     <type-details xsi:type="ns3:genericDetailsType"/>
-    <revision><major>37</major><minor>2</minor><micro>13</micro></revision>
+    <revision><major>37</major><minor>1</minor><micro>11</micro></revision>
     <display-name>Android Emulator</display-name>
   </localPackage>
 </ns2:repository>
 XML
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 "$ANDROID_HOME/emulator/emulator" -version | tee "$RUNNER_TEMP/clockrove-emulator-version.txt"
-grep -F 'Android emulator version 37.2.13' "$RUNNER_TEMP/clockrove-emulator-version.txt"
+grep -F 'Android emulator version 37.1.11' "$RUNNER_TEMP/clockrove-emulator-version.txt"
 test -c /dev/kvm
 sudo chmod a+rw /dev/kvm
 (cd "$GITHUB_WORKSPACE/android" && ./gradlew :app:assembleDebugAndroidTest)
@@ -72,7 +76,7 @@ for clockrove_api in 24 35; do
   clockrove_cleanup_emulator() {
     local cleanup_status=$?
     local crash_diagnostics="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/crash-diagnostics"
-    local emulator_crash_db='/tmp/android-runner/emu-crash-37.2.13.db'
+    local emulator_crash_db='/tmp/android-runner/emu-crash-37.1.11.db'
     local crash_db_bytes
 
     cp "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/emulator.log" || true
@@ -81,7 +85,7 @@ for clockrove_api in 24 35; do
       if [[ -f "$emulator_crash_db" ]]; then
         crash_db_bytes="$(stat -c '%s' "$emulator_crash_db" 2>/dev/null || echo 0)"
         if [[ "$crash_db_bytes" =~ ^[0-9]+$ ]] && (( crash_db_bytes <= 16777216 )); then
-          cp -- "$emulator_crash_db" "$crash_diagnostics/emulator-crash-37.2.13.db" || true
+          cp -- "$emulator_crash_db" "$crash_diagnostics/emulator-crash-37.1.11.db" || true
         else
           printf 'emulator_crash_db=omitted\nsize_bytes=%s\nmax_size_bytes=16777216\n' \
             "$crash_db_bytes" > "$crash_diagnostics/emulator-crash-db-omitted.txt"
