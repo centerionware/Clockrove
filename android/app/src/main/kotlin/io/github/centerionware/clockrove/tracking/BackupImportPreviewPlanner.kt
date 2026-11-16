@@ -326,13 +326,24 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
                                     values["kind"] == "location" &&
                                     hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
+                                val localEntityDeletionCanBePreserved = if (table == "entity_heads") {
+                                    val kind = values["kind"]?.toString()
+                                    val entityId = values["entity_id"]?.toString()
+                                    kind != null && entityId != null &&
+                                        revisionTombstoneRows.values.any { it.kind == kind } &&
+                                        hasLocalEntityDeletionTombstone(db, kind, entityId)
+                                } else {
+                                    false
+                                }
                                 val unsupportedDivergentHead = table == "entity_heads" &&
                                     revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
                                     !selectableDivergentHead &&
                                     !gpsRangeHeadChoice &&
+                                    !localEntityDeletionCanBePreserved &&
                                     !localGpsTombstoneCanBePreserved
                                 val choices = when {
                                     backupDeletionAgainstLive -> listOf("KEEP_LOCAL")
+                                    localEntityDeletionCanBePreserved -> listOf("PRESERVE_LOCAL_DELETION")
                                     gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
                                     immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
                                     mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
@@ -349,6 +360,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     handle, conflictOrdinal, ordinal, table, keyJson,
                                     when {
                                         backupDeletionAgainstLive -> "BACKUP_ENTITY_DELETION"
+                                        localEntityDeletionCanBePreserved -> "ENTITY_DELETION_TOMBSTONE"
                                         gpsRangeHeadChoice -> "GPS_DELETION_RANGE_HEAD"
                                         immutable -> "IMMUTABLE_RECORD_DIFFERS"
                                         else -> "EXISTING_RECORD_DIFFERS"
@@ -356,12 +368,17 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     choices,
                                     when {
                                         backupDeletionAgainstLive -> "KEEP_LOCAL"
+                                        localEntityDeletionCanBePreserved -> "PRESERVE_LOCAL_DELETION"
                                         gpsRangeHeadChoice -> null
                                         unsupportedDivergentHead -> null
                                         selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
                                         else -> "KEEP_LOCAL"
                                     },
-                                    localSummary = safeSummary(local.values),
+                                    localSummary = if (localEntityDeletionCanBePreserved) {
+                                        mapOf("identifier" to "Deleted local entity")
+                                    } else {
+                                        safeSummary(local.values)
+                                    },
                                     backupSummary = safeSummary(values),
                                     revisionRelationship = revisionRelationship,
                                 )

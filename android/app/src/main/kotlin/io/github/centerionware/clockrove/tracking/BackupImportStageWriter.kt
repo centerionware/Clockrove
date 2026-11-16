@@ -187,7 +187,11 @@ internal fun BackupImportStore.stagedBlobs(handle: StageWriterHandle, rowOrdinal
             }
         }
 
-internal fun BackupImportStore.applyContentValues(handle: StageWriterHandle, row: StageWriterApplyRow): ContentValues {
+internal fun BackupImportStore.applyContentValues(
+        handle: StageWriterHandle,
+        row: StageWriterApplyRow,
+        existingSiteRegistrationKey: String? = null,
+): ContentValues {
         val values = row.values.toMutableMap()
         if (row.table == "automation_policies") {
             values["enabled"] = 0
@@ -196,7 +200,7 @@ internal fun BackupImportStore.applyContentValues(handle: StageWriterHandle, row
         }
         if (row.table == "work_sites") {
             values["enabled"] = 0
-            values["registration_key"] = UUID.randomUUID().toString()
+            values["registration_key"] = existingSiteRegistrationKey ?: UUID.randomUUID().toString()
         }
         val content = ContentValues()
         values.forEach { (column, value) -> putScalar(content, column, value) }

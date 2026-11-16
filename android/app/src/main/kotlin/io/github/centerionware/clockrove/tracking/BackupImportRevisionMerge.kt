@@ -471,11 +471,24 @@ internal fun BackupImportStore.safeDivergentUpdate(
                 if (indexes.getInt(uniqueIndex) == 0) continue
                 val indexName = indexes.getString(nameIndex)
                 val columns = mutableListOf<String>()
+                var expressionColumn = false
                 db.rawQuery("PRAGMA index_info(${quote(indexName)})", null).use { details ->
                     while (details.moveToNext()) {
-                        if (details.isNull(2)) return false
+                        if (details.isNull(2)) {
+                            expressionColumn = true
+                            break
+                        }
                         columns.add(details.getString(2))
                     }
+                }
+                // Finalized sessions never participate in the one-open-session expression index.
+                // The interval overlap checks above still reject unsafe session changes; rejecting
+                // every expression index would make a safe finalized-session merge impossible.
+                if (expressionColumn) {
+                    if (table == "sessions" && indexName == "one_open_session" && values["end_ms"] != null) {
+                        continue
+                    }
+                    return false
                 }
                 if (columns.isEmpty() || primaryKey.all(columns::contains)) continue
                 if (partialIndex >= 0 && indexes.getInt(partialIndex) != 0) {

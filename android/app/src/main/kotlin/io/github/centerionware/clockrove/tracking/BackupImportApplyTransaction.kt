@@ -299,9 +299,31 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                 )]
                                 if (plan != null) {
                                     if (plan.choice == "MERGE_USE_BACKUP_CONTENT") {
+                                        val existingSiteRegistrationKey = if (table == "work_sites") {
+                                            val siteId = plan.data.values["id"]?.toString()
+                                                ?: throw ApplyFailure(
+                                                    "PREVIEW_STALE",
+                                                    "A divergent backup entity changed after preview.",
+                                                )
+                                            db.rawQuery(
+                                                "SELECT registration_key FROM work_sites WHERE id=?",
+                                                arrayOf(siteId),
+                                            ).use { rows ->
+                                                if (!rows.moveToFirst()) {
+                                                    throw ApplyFailure(
+                                                        "PREVIEW_STALE",
+                                                        "A divergent backup entity changed after preview.",
+                                                    )
+                                                }
+                                                rows.getString(0)
+                                            }
+                                        } else {
+                                            null
+                                        }
                                         val content = applyContentValues(
                                             handle,
                                             ApplyApplyRow(plan.data.ordinal, table, plan.data.values, plan.data.blobs),
+                                            existingSiteRegistrationKey,
                                         )
                                         val where = plan.data.spec.primaryKey.joinToString(" AND ") {
                                             quote(it) + "=?"

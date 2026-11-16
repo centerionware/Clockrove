@@ -212,7 +212,7 @@ class BackupImportStoreQuoteRevisionMergeTest : BackupImportStoreTestBase() {
             put("note", "Backup branch decision")
         }
         replaceRow(records, "quote_decisions", {
-            it["quote_id"] == fixture.quoteId && it["revision"] == 1L
+            it["quote_id"] == fixture.quoteId && it["revision"]?.toString() == "1"
         }, backupDecisionValues)
         val backupDecision = UUID.randomUUID().toString()
         addBackupHead(

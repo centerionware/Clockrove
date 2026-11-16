@@ -305,6 +305,14 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             assertEquals(listOf("PRESERVE_LOCAL_DELETION"), conflict["allowedChoices"])
             assertEquals("PRESERVE_LOCAL_DELETION", conflict["defaultChoice"])
         }
+        listOf(customerId, siteId, columnId).forEach { entityId ->
+            val headConflict = requireNotNull(conflicts.singleOrNull { item ->
+                item["table"] == "entity_heads" &&
+                    (item["primaryKey"] as? List<*>)?.getOrNull(1)?.toString() == entityId
+            })
+            assertEquals(listOf("PRESERVE_LOCAL_DELETION"), headConflict["allowedChoices"])
+            assertEquals("PRESERVE_LOCAL_DELETION", headConflict["defaultChoice"])
+        }
         assertFalse(preview.applyReady)
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
@@ -313,7 +321,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         resolveSafeConflictChoices(started.importId, preview, conflicts)
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
-        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(deletedVersion + 1L, repository.snapshot().version)
         assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_columns WHERE id='$columnId'"))

@@ -475,7 +475,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         val applied = importStore.apply(
             database, started.importId, preview.previewToken, preview.localStateVersion,
         )
-        assertEquals(records.size.toLong(), applied.insertedCount)
+        assertEquals(prepareSyntheticArchiveRecords(records).size.toLong(), applied.insertedCount)
         assertEquals(2L, number(
             "SELECT COUNT(*) FROM task_attachments WHERE id IN ('$firstAttachmentId','$secondAttachmentId')",
         ))

@@ -354,19 +354,21 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
                 row["table"] == table && matches(row["primaryKey"] as List<*>)
             }) { "Missing $table aggregate fixture conflict" }
 
-        val linkRowConflict = conflict("quote_invoice_links") { it.singleOrNull() == replacementInvoiceId }
+        // The divergent immutable row is resolved atomically through its revision-head conflict.
         val linkHeadConflict = conflict("entity_heads") {
             it.getOrNull(0) == "quote_invoice_link" && it.getOrNull(1) == replacementInvoiceId
         }
+        assertFalse(conflicts.any { row ->
+            row["table"] == "quote_invoice_links" &&
+                (row["primaryKey"] as? List<*>)?.singleOrNull() == replacementInvoiceId
+        })
         val originalInvoiceConflict = conflict("invoices") { it.singleOrNull() == quotedInvoiceId }
         val quoteDecisionConflict = conflict("quote_decisions") { it.getOrNull(0) == quoteId }
         val quoteScopeConflict = conflict("quote_scope_revisions") { it.getOrNull(0) == quoteId }
-        listOf(linkRowConflict, linkHeadConflict).forEach { row ->
-            val aggregateKeys = row["aggregateKeys"] as List<*>
-            assertTrue(aggregateKeys.contains("invoice:$quotedInvoiceId"))
-            assertTrue(aggregateKeys.contains("invoice:$replacementInvoiceId"))
-            assertTrue(aggregateKeys.contains("quote:$quoteId"))
-        }
+        val linkAggregateKeys = linkHeadConflict["aggregateKeys"] as List<*>
+        assertTrue(linkAggregateKeys.contains("invoice:$quotedInvoiceId"))
+        assertTrue(linkAggregateKeys.contains("invoice:$replacementInvoiceId"))
+        assertTrue(linkAggregateKeys.contains("quote:$quoteId"))
         assertTrue((originalInvoiceConflict["aggregateKeys"] as List<*>).contains("invoice:$quotedInvoiceId"))
         listOf(quoteDecisionConflict, quoteScopeConflict).forEach { row ->
             assertTrue((row["aggregateKeys"] as List<*>).contains("quote:$quoteId"))
