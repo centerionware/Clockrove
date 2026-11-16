@@ -1,6 +1,8 @@
-import 'dart:typed_data';
-
+import 'package:clockrove/backup/backup_archive.dart';
 import 'package:flutter/services.dart';
+
+const int currentBackupImportSchemaVersion =
+    BackupArchiveCodec.latestSchemaVersion;
 
 const int maxBackupImportRequestBytes = 256 * 1024;
 const int maxBackupImportPageRecords = 512;
@@ -28,7 +30,7 @@ final class BackupImportApi {
     required int mediaBytes,
   }) async {
     if (archiveFormatVersion != 1 ||
-        schemaVersion != 16 ||
+        schemaVersion != currentBackupImportSchemaVersion ||
         !_validDigest(archiveDigest) ||
         recordCount < 0 ||
         recordCount > maxBackupImportRows ||
@@ -334,7 +336,7 @@ final class BackupImportPreview {
       applyReady: _boolean(map, 'applyReady'),
     );
     if (preview.previewToken.isEmpty ||
-        preview.schemaVersion != 16 ||
+        preview.schemaVersion != currentBackupImportSchemaVersion ||
         preview.localStateVersion < 0 ||
         preview.recordCount < 0 ||
         preview.recordCount > maxBackupImportRows ||
@@ -425,7 +427,13 @@ final class BackupImportConflict {
                 conflict.resolved ||
                 conflict.selectedChoice != null)) ||
         (choices.isNotEmpty &&
-            (defaultChoice == null || !choices.contains(defaultChoice))) ||
+            ((defaultChoice == null &&
+                    !(conflict.kind == 'DEPENDENT_ON_CONFLICT' &&
+                        choices.length == 1 &&
+                        choices.single == 'OMIT_BACKUP_RECORD' &&
+                        !conflict.resolved &&
+                        conflict.selectedChoice == null)) ||
+                (defaultChoice != null && !choices.contains(defaultChoice)))) ||
         (conflict.resolved && !choices.contains(conflict.selectedChoice))) {
       throw const FormatException('A backup conflict response is invalid.');
     }

@@ -3731,9 +3731,59 @@ class BackupImportStoreTest {
         val importedJobId = "backup-job"
         val importedCustomerId = "backup-customer"
         val revisionId = "backup-customer-revision"
+        val jobRevisionId = "backup-job-revision"
+        val automationRevisionId = "backup-automation-revision"
+        val siteRevisionId = "backup-site-revision"
+        val customerPayload = JSONObject().apply {
+            put("id", importedCustomerId)
+            put("name", "Backup customer")
+            put("email", "backup@example.invalid")
+            put("phone", "")
+            put("address", "")
+            put("notes", "synthetic fixture")
+            put("archived", 0)
+        }.toString()
+        val jobPayload = JSONObject().apply {
+            put("id", importedJobId)
+            put("name", "Backup job")
+            put("archived", 0)
+            put("archived_ms", JSONObject.NULL)
+            put("color_argb", 4279724885L)
+            put("billing_mode", "HOURLY")
+            put("currency", "USD")
+            put("hourly_rate_minor", JSONObject.NULL)
+            put("customer_id", JSONObject.NULL)
+            put("customer_email_override", JSONObject.NULL)
+        }.toString()
+        val automationPayload = JSONObject().apply {
+            put("job_id", importedJobId)
+            put("enabled", 1)
+            put("auto_start", 1)
+            put("automatic_departure", 1)
+            put("grace_minutes", 30)
+        }.toString()
+        val sitePayload = JSONObject().apply {
+            put("id", "backup-disabled-site")
+            put("job_id", importedJobId)
+            put("name", "Imported site")
+            put("latitude", 12.5)
+            put("longitude", -34.5)
+            put("radius", 100.0)
+            put("enabled", 1)
+        }.toString()
         val records = listOf(
             headRecord("customer", importedCustomerId, revisionId),
-            revisionRecord(revisionId, "customer", importedCustomerId, null),
+            revisionRecord(revisionId, "customer", importedCustomerId, null, payload = customerPayload),
+            headRecord("job", importedJobId, jobRevisionId),
+            revisionRecord(jobRevisionId, "job", importedJobId, importedJobId, payload = jobPayload),
+            headRecord("automation", importedJobId, automationRevisionId),
+            revisionRecord(
+                automationRevisionId, "automation", importedJobId, importedJobId, payload = automationPayload,
+            ),
+            headRecord("site", "backup-disabled-site", siteRevisionId),
+            revisionRecord(
+                siteRevisionId, "site", "backup-disabled-site", importedJobId, payload = sitePayload,
+            ),
             stagedRow("customers", mapOf(
                 "id" to importedCustomerId,
                 "name" to "Backup customer",
@@ -3812,9 +3862,52 @@ class BackupImportStoreTest {
             "SELECT 1 FROM entity_heads WHERE kind='customer' AND entity_id=? AND revision_id=?",
             arrayOf(importedCustomerId, revisionId),
         ).use { it.moveToFirst() })
+        listOf(
+            "automation" to (importedJobId to automationRevisionId),
+            "site" to ("backup-disabled-site" to siteRevisionId),
+        ).forEach { (kind, entity) ->
+            val normalizedRevision = database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                arrayOf(kind, entity.first),
+            ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+            assertNotEquals(entity.second, normalizedRevision)
+            val revision = database.rawQuery(
+                "SELECT payload,origin FROM entity_revisions WHERE id=?",
+                arrayOf(normalizedRevision),
+            ).use { assertTrue(it.moveToFirst()); it.getString(0) to it.getString(1) }
+            assertEquals("BACKUP_RESTORE_NORMALIZE", revision.second)
+            val payload = JSONObject(revision.first)
+            assertEquals(0, payload.getInt("enabled"))
+            if (kind == "automation") assertEquals(0, payload.getInt("auto_start"))
+            assertTrue(database.rawQuery(
+                "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                arrayOf(normalizedRevision, entity.second),
+            ).use { it.moveToFirst() })
+        }
         assertFailure("IMPORT_UNAVAILABLE") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
+    }
+
+    @Test
+    fun previewRejectsRevisionedRowsWithoutMatchingHeads() {
+        val started = stageImport(listOf(stagedRow("customers", mapOf(
+            "id" to "missing-revision-head-customer",
+            "name" to "Untracked customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))))
+
+        assertFailure("INVALID_REVISION_GRAPH") {
+            importStore.finish(database, started.importId)
+        }
+        assertTrue(importStore.close(started.importId))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM customers WHERE id='missing-revision-head-customer'",
+        ))
     }
 
     @Test

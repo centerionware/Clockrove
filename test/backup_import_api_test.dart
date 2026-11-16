@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:clockrove/backup/backup_import_api.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,12 +38,12 @@ void main() {
         case 'beginBackupImport':
           final args = call.arguments as Map;
           expect(args['archiveFormatVersion'], 1);
-          expect(args['schemaVersion'], 16);
+          expect(args['schemaVersion'], currentBackupImportSchemaVersion);
           expect(args['recordCount'], 1);
           return {
             'importId': importId,
             'archiveFormatVersion': 1,
-            'schemaVersion': 16,
+            'schemaVersion': currentBackupImportSchemaVersion,
             'maxPageBytes': 255 * 1024,
             'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
             'idleExpiryMillis': 60000,
@@ -118,7 +116,7 @@ void main() {
     final api = BackupImportApi(channel: channel);
     final started = await api.begin(
       archiveFormatVersion: 1,
-      schemaVersion: 16,
+      schemaVersion: currentBackupImportSchemaVersion,
       archiveDigest: 'f' * 64,
       recordCount: 1,
       mediaCount: 1,
@@ -184,7 +182,7 @@ void main() {
       await expectLater(
         api.begin(
           archiveFormatVersion: 1,
-          schemaVersion: 16,
+          schemaVersion: currentBackupImportSchemaVersion,
           archiveDigest: 'bad',
           recordCount: 0,
           mediaCount: 0,
@@ -215,6 +213,30 @@ void main() {
     },
   );
 
+  test('requires the current archive schema for native import', () async {
+    final api = BackupImportApi(channel: channel);
+    await expectLater(
+      api.begin(
+        archiveFormatVersion: 1,
+        schemaVersion: currentBackupImportSchemaVersion - 1,
+        archiveDigest: 'f' * 64,
+        recordCount: 0,
+        mediaCount: 0,
+        mediaBytes: 0,
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    expect(calls, isEmpty);
+
+    respond = (call) async => _preview(
+      importId: 'import-1',
+      previewToken: 'token-1',
+      recordCount: 0,
+      schemaVersion: currentBackupImportSchemaVersion - 1,
+    );
+    await expectLater(api.finish('import-1'), throwsA(isA<FormatException>()));
+  });
+
   test('rejects malformed previews and resolution acknowledgements', () async {
     respond = (call) async {
       if (call.method == 'finishBackupImport') {
@@ -237,6 +259,45 @@ void main() {
         conflictId: 'conflict-1',
         choice: 'KEEP_LOCAL',
       ),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('accepts dependent conflict with only an explicit omission choice', () {
+    final conflict = BackupImportConflict.fromMap({
+      'conflictId': 'dependent-record',
+      'kind': 'DEPENDENT_ON_CONFLICT',
+      'table': 'invoice_time_claims',
+      'primaryKey': ['claim-1'],
+      'localIdentifier': null,
+      'localSummary': {'identifier': 'A referenced backup record requires a choice'},
+      'backupSummary': <String, Object?>{},
+      'allowedChoices': ['OMIT_BACKUP_RECORD'],
+      'defaultChoice': null,
+      'resolved': false,
+      'selectedChoice': null,
+    });
+
+    expect(conflict.allowedChoices, ['OMIT_BACKUP_RECORD']);
+    expect(conflict.defaultChoice, isNull);
+    expect(conflict.resolved, isFalse);
+  });
+
+  test('rejects missing defaults for ordinary actionable conflicts', () {
+    expect(
+      () => BackupImportConflict.fromMap({
+        'conflictId': 'ordinary-conflict',
+        'kind': 'EXISTING_RECORD_DIFFERS',
+        'table': 'customers',
+        'primaryKey': ['customer-1'],
+        'localIdentifier': null,
+        'localSummary': <String, Object?>{},
+        'backupSummary': <String, Object?>{},
+        'allowedChoices': ['KEEP_LOCAL'],
+        'defaultChoice': null,
+        'resolved': false,
+        'selectedChoice': null,
+      }),
       throwsA(isA<FormatException>()),
     );
   });
@@ -316,10 +377,11 @@ Map<String, Object?> _preview({
   required int recordCount,
   int addedCount = 0,
   int conflictCount = 0,
+  int schemaVersion = currentBackupImportSchemaVersion,
 }) => {
   'importId': importId,
   'previewToken': previewToken,
-  'schemaVersion': 16,
+  'schemaVersion': schemaVersion,
   'localStateVersion': 7,
   'recordCount': recordCount,
   'mediaCount': 0,

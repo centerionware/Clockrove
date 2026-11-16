@@ -332,7 +332,7 @@ internal class BackupImportStore(
         )
         private val revisionDataKinds = revisionDataTables.entries.associate { (kind, table) -> table to kind }
         /**
-         * Kinds emitted by the schema-16 RevisionStore writers, including dynamic
+         * Kinds emitted by the schema-17 RevisionStore writers, including dynamic
          * payment/money kinds and lifecycle tombstones. An archive with a new kind
          * must be explicitly taught how its entity graph is represented before it
          * can be previewed or applied.
@@ -1019,6 +1019,7 @@ internal class BackupImportStore(
                 } else {
                     orderedTables
                 }
+                val runtimeNormalizedEntities = linkedSetOf<Pair<String, String>>()
                 tableOrder.forEach { table ->
                     handle.database.rawQuery(
                         "SELECT r.ordinal,r.row_json,c.ordinal,c.selected_choice FROM import_rows r " +
@@ -1129,11 +1130,20 @@ internal class BackupImportStore(
                             } catch (_: Exception) {
                                 throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
                             }
+                            when (table) {
+                                "automation_policies" -> values["job_id"]?.toString()?.let {
+                                    runtimeNormalizedEntities.add("automation" to it)
+                                }
+                                "work_sites" -> values["id"]?.toString()?.let {
+                                    runtimeNormalizedEntities.add("site" to it)
+                                }
+                            }
                             inserted++
                             changed++
                         }
                     }
                 }
+                changed += normalizeImportedRuntimeRevisions(db, handle, runtimeNormalizedEntities)
                 changed += applyGpsRangeDeletionChoices(db, omittedBackupGraph.gpsDeletionParentsByPoint)
                 validateAppliedState(db)
                 if (changed > 0) {
@@ -1317,6 +1327,55 @@ internal class BackupImportStore(
             content.put(column, bytes)
         }
         return content
+    }
+
+    /** Records restore-time safety normalization as a child of the imported revision. */
+    private fun normalizeImportedRuntimeRevisions(
+        db: SQLiteDatabase,
+        handle: Handle,
+        entities: Set<Pair<String, String>>,
+    ): Long {
+        var changed = 0L
+        entities.forEach { (kind, entityId) ->
+            val table = revisionDataTables[kind]
+                ?: throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+            val keyColumns = revisionDataKeyColumns[kind] ?: listOf("id")
+            val keyValues = revisionDataKeyValues(kind, entityId)
+            val key = keyColumns.zip(keyValues).toMap()
+            val spec = handle.catalog[table]
+                ?: throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+            val row = findLocalRow(db, table, spec, key)
+                ?: throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+            val payloadValues = revisionPayloadValuesForDataRow(db, null, kind, row.values)
+                ?: throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+            val previousHead = db.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                arrayOf(kind, entityId),
+            ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
+                ?: throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+            val jobId = payloadValues["job_id"]?.toString()
+                ?: row.values["job_id"]?.toString()
+            val revisionId = RevisionStore.record(
+                db,
+                kind,
+                entityId,
+                jobId,
+                payloadValues,
+                wallClock(),
+                origin = "BACKUP_RESTORE_NORMALIZE",
+            )
+            if (revisionId != previousHead) {
+                val hasImportedParent = db.rawQuery(
+                    "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                    arrayOf(revisionId, previousHead),
+                ).use { it.moveToFirst() }
+                if (!hasImportedParent) {
+                    throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+                }
+                changed++
+            }
+        }
+        return changed
     }
 
     private fun maximumBlobBytes(table: String, column: String): Long? = when {
@@ -2191,6 +2250,7 @@ internal class BackupImportStore(
             }
 
             validatePortableRows(localDb, handle)
+            validateRevisionedDataCoverage(localDb, handle)
             validatePortableReferences(localDb, handle)
             validateInvoiceClaimRules(localDb, handle)
 
@@ -2335,6 +2395,47 @@ internal class BackupImportStore(
             json.opt("id") !is String || json.optString("id") != entityId ||
             json.opt("session_id") !is String || json.optString("session_id").isBlank()) {
             invalidRevisionGraph()
+        }
+    }
+
+    /** Every live revisioned row in a schema-17 archive must be backed by its exact head payload. */
+    private fun validateRevisionedDataCoverage(localDb: SQLiteDatabase, handle: Handle) {
+        revisionDataTables.forEach { (kind, table) ->
+            handle.database.rawQuery(
+                "SELECT row_json FROM import_rows WHERE table_name=? ORDER BY ordinal",
+                arrayOf(table),
+            ).use { rows ->
+                while (rows.moveToNext()) {
+                    val row = JSONObject(rows.getString(0))
+                    @Suppress("UNCHECKED_CAST")
+                    val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
+                        ?: invalidRevisionGraph()
+                    val entityId = revisionEntityIdForDataRow(table, values) ?: invalidRevisionGraph()
+                    val revisionId = handle.database.rawQuery(
+                        "SELECT revision_id FROM validation_heads WHERE kind=? AND entity_id=?",
+                        arrayOf(kind, entityId),
+                    ).use { head -> if (head.moveToFirst()) head.getString(0) else null }
+                        ?: invalidRevisionGraph()
+                    val revision = revisionContent(
+                        handle.database, "validation_revisions", revisionId,
+                    ) ?: invalidRevisionGraph()
+                    val payloadValues = revisionPayloadValuesForDataRow(
+                        localDb, handle, kind, values,
+                    ) ?: invalidRevisionGraph()
+                    if (!validLiveRevision(revision, kind, entityId) ||
+                        !revisionJobMatchesData(
+                            localDb, handle, kind, revision.jobId, values, payloadValues, preferStaged = true,
+                        ) ||
+                        !revisionPayloadMatchesRow(
+                            revision.payload,
+                            revisionDataColumns.getValue(kind),
+                            payloadValues,
+                            optionalRevisionPayloadKeys(kind),
+                        )) {
+                        invalidRevisionGraph()
+                    }
+                }
+            }
         }
     }
 
@@ -4043,6 +4144,7 @@ internal class BackupImportStore(
 
         val linkedJob = when {
             "job_id" in payloadValues -> payloadValues["job_id"]?.toString()
+            kind == "job" -> rowValues["id"]?.toString()
             kind == "quote_draft" -> rowValues["job_id"]?.toString()
             kind == "invoice_coverage" -> stagedOrLocal(
                 "invoices", "id", rowValues["invoice_id"], "job_id",
