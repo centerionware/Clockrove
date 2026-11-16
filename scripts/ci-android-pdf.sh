@@ -70,7 +70,35 @@ for clockrove_api in 24 35; do
   clockrove_emulator_pid=$!
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api"
   clockrove_cleanup_emulator() {
+    local cleanup_status=$?
+    local crash_diagnostics="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/crash-diagnostics"
+    local emulator_crash_db='/tmp/android-runner/emu-crash-37.2.13.db'
+    local crash_db_bytes
+
     cp "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/emulator.log" || true
+    if (( cleanup_status != 0 )); then
+      mkdir -p "$crash_diagnostics"
+      if [[ -f "$emulator_crash_db" ]]; then
+        crash_db_bytes="$(stat -c '%s' "$emulator_crash_db" 2>/dev/null || echo 0)"
+        if [[ "$crash_db_bytes" =~ ^[0-9]+$ ]] && (( crash_db_bytes <= 16777216 )); then
+          cp -- "$emulator_crash_db" "$crash_diagnostics/emulator-crash-37.2.13.db" || true
+        else
+          printf 'emulator_crash_db=omitted\nsize_bytes=%s\nmax_size_bytes=16777216\n' \
+            "$crash_db_bytes" > "$crash_diagnostics/emulator-crash-db-omitted.txt"
+        fi
+      fi
+      # Keep bounded host crash metadata, never the full process memory dump.
+      {
+        printf 'emulator_pid=%s\n' "$clockrove_emulator_pid"
+        printf 'core_limit='; ulimit -c
+        printf 'kernel_core_pattern='
+        cat /proc/sys/kernel/core_pattern 2>/dev/null || printf 'unavailable\n'
+      } > "$crash_diagnostics/host-crash-context.txt"
+      if command -v coredumpctl >/dev/null 2>&1; then
+        coredumpctl --no-pager info "$clockrove_emulator_pid" \
+          > "$crash_diagnostics/emulator-coredump-info.txt" 2>&1 || true
+      fi
+    fi
     kill "$clockrove_emulator_pid" 2>/dev/null || true
     for clockrove_shutdown_attempt in $(seq 1 10); do
       kill -0 "$clockrove_emulator_pid" 2>/dev/null || break

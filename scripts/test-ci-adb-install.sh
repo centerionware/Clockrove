@@ -322,9 +322,12 @@ case "$FLUTTER_TEST_MODE:$count" in
     exit 0
     ;;
   verify-no-streaming:*)
-    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 get-state
-    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pm install synthetic.apk
-    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 install -t -r synthetic.apk
+    env -u CLOCKROVE_REAL_ADB \
+      "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 get-state
+    env -u CLOCKROVE_REAL_ADB \
+      "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pm install synthetic.apk
+    env -u CLOCKROVE_REAL_ADB \
+      "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 install -t -r synthetic.apk
     echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
     exit 0
     ;;
@@ -796,5 +799,5 @@ grep -Fx -- '-s emulator-5554 shell pm install synthetic.apk' \
   "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
 [[ "$(sha256sum "$sdk_adb_path")" == "$sdk_adb_checksum" ]]
 [[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*' -print -quit)" ]]
-[[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*-original' -print -quit)" ]]
-echo 'Verified Flutter’s absolute SDK adb install uses --no-streaming and the original SDK adb is restored.'
+[[ ! -e "$sdk_adb_path.clockrove-real" && ! -L "$sdk_adb_path.clockrove-real" ]]
+echo 'Verified SDK adb subprocesses without CLOCKROVE_REAL_ADB work, only install gains --no-streaming, and the original SDK adb is restored.'
