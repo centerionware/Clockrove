@@ -16,8 +16,11 @@ internal object GpsDeletionStore {
     data class Point(val id: String, val sessionId: String, val jobId: String)
 
     fun createTables(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE location_deletion_ranges(id TEXT PRIMARY KEY,job_id TEXT,start_ms INTEGER NOT NULL,end_ms INTEGER NOT NULL,timezone_id TEXT NOT NULL,deleted_ms INTEGER NOT NULL,revision_id TEXT NOT NULL UNIQUE REFERENCES entity_revisions(id),CHECK(end_ms>start_ms))")
-        db.execSQL("CREATE INDEX location_deletion_scope_bounds ON location_deletion_ranges(job_id,start_ms,end_ms)")
+        // migrate() runs on every schema upgrade, including 16 -> 17 where this
+        // table already exists. Keep installation idempotent so reopening an
+        // existing database does not abort startup.
+        db.execSQL("CREATE TABLE IF NOT EXISTS location_deletion_ranges(id TEXT PRIMARY KEY,job_id TEXT,start_ms INTEGER NOT NULL,end_ms INTEGER NOT NULL,timezone_id TEXT NOT NULL,deleted_ms INTEGER NOT NULL,revision_id TEXT NOT NULL UNIQUE REFERENCES entity_revisions(id),CHECK(end_ms>start_ms))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS location_deletion_scope_bounds ON location_deletion_ranges(job_id,start_ms,end_ms)")
     }
 
     /** Upgrade points already on disk into coordinate-free revision identities. */
