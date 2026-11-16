@@ -1284,14 +1284,14 @@ class BackupImportStoreTest {
         )
         database.execSQL(
             "INSERT INTO task_comments(id,task_id,body,created_ms,updated_ms) VALUES(?,?,?,?,?)",
-            arrayOf("merge-matrix-comment", cardId, "Base comment", now, now),
+            arrayOf<Any?>("merge-matrix-comment", cardId, "Base comment", now, now),
         )
         database.execSQL(
             "INSERT INTO actual_costs(id,job_id,job_name,customer_id,customer_name,task_id,task_name," +
                 "amount_minor,currency,category,occurred_ms,timezone,offset_seconds,vendor,reference,note," +
                 "created_ms,updated_ms,deleted_ms) VALUES(?,NULL,'',NULL,'',NULL,'','123','USD','MATERIALS',?," +
                 "'Etc/UTC',0,'Base vendor','','',?,?,NULL)",
-            arrayOf("merge-matrix-cost", now, now, now),
+            arrayOf<Any?>("merge-matrix-cost", now, now, now),
         )
 
         val cases = listOf(
@@ -1449,7 +1449,7 @@ class BackupImportStoreTest {
             database, "card_money", cardId, jobId, MoneyMath.parse("200"), now + 1L,
         )
         val localMoneyHead = currentHead("card_money", cardId)
-        database.execSQL("UPDATE task_quantities SET quantity_units=? WHERE card_id=?", arrayOf(20_000L, cardId))
+        database.execSQL("UPDATE task_quantities SET quantity_units=? WHERE card_id=?", arrayOf<Any?>(20_000L, cardId))
         val localQuantityHead = RevisionStore.record(
             database,
             "task_quantity",
@@ -1470,7 +1470,7 @@ class BackupImportStoreTest {
         val localTemplateMoneyHead = currentHead("template_money", templateId)
         database.execSQL(
             "UPDATE template_quantities SET quantity_units=? WHERE template_id=?",
-            arrayOf(20_000L, templateId),
+            arrayOf<Any?>(20_000L, templateId),
         )
         val localTemplateQuantityHead = RevisionStore.record(
             database, "template_quantity", templateId, null,
@@ -1854,7 +1854,7 @@ class BackupImportStoreTest {
         database.execSQL(
             "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
                 "VALUES(?,'quote_invoice_link',?,?,?,0,?,'MUTATION')",
-            arrayOf(baseRevisionId, replacementInvoiceId, linkJobId, basePayload, now - 2L),
+            arrayOf<Any?>(baseRevisionId, replacementInvoiceId, linkJobId, basePayload, now - 2L),
         )
         database.execSQL(
             "INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)",
@@ -4409,7 +4409,7 @@ class BackupImportStoreTest {
         database.execSQL(
             "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
                 "VALUES(?,?,?,NULL,?,0,?,'MUTATION')",
-            arrayOf(id, kind, entityId, payload, now),
+            arrayOf<Any?>(id, kind, entityId, payload, now),
         )
         if (parentId != null) {
             database.execSQL(
