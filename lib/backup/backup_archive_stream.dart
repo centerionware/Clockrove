@@ -189,7 +189,7 @@ final class BackupTrustedNativeArchiveReplayPlan {
     required this.schemaVersion,
     required this.stateVersion,
     required this.capturedAtUtcMillis,
-    required this._rows,
+    required BackupArchiveStreamRows rows,
     required this.recordCount,
     required this.blobCount,
     required this.recordsLength,
@@ -197,7 +197,7 @@ final class BackupTrustedNativeArchiveReplayPlan {
     required this.totalLength,
     required this._headerBytes,
     required this._rowMetadataDigest,
-  });
+  }) : _rows = rows; // ignore: prefer_initializing_formals
 
   final int schemaVersion;
   final int stateVersion;
@@ -466,7 +466,7 @@ final class _ReplayStreamPreflight {
       schemaVersion: schemaVersion,
       stateVersion: stateVersion,
       capturedAtUtcMillis: capturedAtUtcMillis,
-      _rows: rows,
+      rows: rows,
       recordCount: recordCount,
       blobCount: blobCount,
       recordsLength: recordsLength,
