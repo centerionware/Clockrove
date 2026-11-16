@@ -94,6 +94,28 @@ final class BackupImportApi {
     return nextOrdinal;
   }
 
+  /// Returns the exact StandardMethodCodec size used by [appendPage].
+  /// Callers use this to flush a bounded page before invoking the channel.
+  int encodedAppendPageBytes({
+    required String importId,
+    required int firstOrdinal,
+    required List<Map<String, Object?>> records,
+  }) {
+    _requireHandle(importId);
+    final args = <String, Object?>{
+      'importId': importId,
+      'firstOrdinal': firstOrdinal,
+      'records': records,
+    };
+    return const StandardMethodCodec()
+        .encodeMethodCall(MethodCall('appendBackupImportPage', args))
+        .lengthInBytes;
+  }
+
+  /// Encoded size of one row element for conservative page packing.
+  int encodedAppendRecordBytes(Map<String, Object?> record) =>
+      const StandardMessageCodec().encodeMessage(record)!.lengthInBytes;
+
   Future<int> writeBlob({
     required String importId,
     required String blobId,
@@ -297,6 +319,7 @@ final class BackupImportPreview {
     required this.recordCount,
     required this.mediaCount,
     required this.mediaBytes,
+    required this.stagedRecordBytes,
     required this.addedCount,
     required this.unchangedCount,
     required this.conflictCount,
@@ -312,6 +335,7 @@ final class BackupImportPreview {
   final int recordCount;
   final int mediaCount;
   final int mediaBytes;
+  final int stagedRecordBytes;
   final int addedCount;
   final int unchangedCount;
   final int conflictCount;
@@ -328,6 +352,7 @@ final class BackupImportPreview {
       recordCount: _integer(map, 'recordCount'),
       mediaCount: _integer(map, 'mediaCount'),
       mediaBytes: _integer(map, 'mediaBytes'),
+      stagedRecordBytes: _integer(map, 'stagedRecordBytes'),
       addedCount: _integer(map, 'addedCount'),
       unchangedCount: _integer(map, 'unchangedCount'),
       conflictCount: _integer(map, 'conflictCount'),
@@ -344,6 +369,8 @@ final class BackupImportPreview {
         preview.mediaCount > maxBackupImportMediaCount ||
         preview.mediaBytes < 0 ||
         preview.mediaBytes > maxBackupImportMediaBytes ||
+        preview.stagedRecordBytes < 0 ||
+        preview.stagedRecordBytes > 64 * 1024 * 1024 ||
         preview.addedCount < 0 ||
         preview.unchangedCount < 0 ||
         preview.conflictCount < 0 ||

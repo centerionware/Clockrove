@@ -193,6 +193,7 @@ internal class BackupHostApi(
         "recordCount" to recordCount,
         "mediaCount" to mediaCount,
         "mediaBytes" to mediaBytes,
+        "stagedRecordBytes" to stagedRecordBytes,
         "addedCount" to addedCount,
         "unchangedCount" to unchangedCount,
         "conflictCount" to conflictCount,

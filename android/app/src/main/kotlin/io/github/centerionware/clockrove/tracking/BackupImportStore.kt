@@ -49,6 +49,7 @@ internal class BackupImportStore(
         val recordCount: Long,
         val mediaCount: Long,
         val mediaBytes: Long,
+        val stagedRecordBytes: Long,
         val addedCount: Long,
         val unchangedCount: Long,
         val conflictCount: Long,

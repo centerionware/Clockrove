@@ -414,6 +414,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
         return PreviewPlannerPreview(
             handle.id, token, handle.expected.schemaVersion, localVersion,
             handle.recordCount, handle.mediaCount, handle.expected.mediaBytes,
+            handle.rawBytes - handle.expected.mediaBytes,
             added, unchanged, conflictOrdinal, openSessions, localOpenSessions,
             applyReady = conflictOrdinal == 0L && openSessions == 0L && localOpenSessions == 0L,
         )

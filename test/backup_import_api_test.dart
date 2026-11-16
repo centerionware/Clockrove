@@ -124,6 +124,10 @@ void main() {
     );
     expect(started.importId, importId);
     expect(
+      api.encodedAppendRecordBytes(record),
+      greaterThan(0),
+    );
+    expect(
       await api.appendPage(
         importId: importId,
         firstOrdinal: 0,
@@ -388,6 +392,7 @@ Map<String, Object?> _preview({
   'recordCount': recordCount,
   'mediaCount': 0,
   'mediaBytes': 0,
+  'stagedRecordBytes': 0,
   'addedCount': addedCount,
   'unchangedCount': 0,
   'conflictCount': conflictCount,

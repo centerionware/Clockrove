@@ -18,6 +18,7 @@ mkdir -p "$result_dir"
 seed_log="$result_dir/backup-snapshot-memory-seed.txt"
 benchmark_log="$result_dir/backup-snapshot-memory-benchmark.txt"
 process_log="$result_dir/backup-snapshot-memory-process-lifecycle.txt"
+restore_log="$result_dir/backup-streamed-restore-preview.txt"
 
 app_identity="$(clockrove_apk_identity "$app_apk" app)"
 instrumentation_identity="$(clockrove_apk_identity "$instrumentation_apk" instrumentation)"
@@ -95,7 +96,7 @@ clockrove_force_stop_backup_benchmark_app
 # of doing another Flutter APK install solely to reseed; the measurement and
 # the runner below both fail closed if the original media is missing or changed.
 if clockrove_run_flutter_integration_test "$api" backup-snapshot-memory-benchmark \
-  'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ envelope_bytes=[0-9]+ rss_sample_interval_ms=[0-9]+ baseline_rss_kib=[0-9]+ after_snapshot_setup_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+ snapshot_setup_ms=[0-9]+ stream_export_encrypt_ms=[0-9]+ integrity_reread_peak_rss_kib=[0-9]+ integrity_reread_baseline_rss_kib=[0-9]+ integrity_reread_peak_delta_rss_kib=[0-9]+ integrity_reread_ms=[0-9]+' \
+  'BACKUP_SNAPSHOT_MEMORY_BENCHMARK pid=[0-9]+ process_start_ticks=[0-9]+ seed_attachment_count=[0-9]+ seed_media_bytes=[0-9]+ snapshot_media_count=[0-9]+ snapshot_media_bytes=[0-9]+ archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ envelope_bytes=[0-9]+ rss_sample_interval_ms=[0-9]+ baseline_rss_kib=[0-9]+ after_snapshot_setup_rss_kib=[0-9]+ after_encrypt_rss_kib=[0-9]+ full_path_peak_rss_kib=[0-9]+ full_path_peak_delta_rss_kib=[0-9]+ snapshot_setup_ms=[0-9]+ stream_export_encrypt_ms=[0-9]+ integrity_reread_peak_rss_kib=[0-9]+ integrity_reread_baseline_rss_kib=[0-9]+ integrity_reread_peak_delta_rss_kib=[0-9]+ integrity_reread_ms=[0-9]+' \
   -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \
   --plain-name 'measure full-path backup exporter and encryption memory' \
@@ -137,7 +138,7 @@ fi
 }
 
 grep -Eq 'BACKUP_SNAPSHOT_MEMORY_SEED .*media_bytes=([0-9]+)' "$seed_log"
-grep -Eq 'BACKUP_SNAPSHOT_MEMORY_BENCHMARK .*archive_bytes=[0-9]+ envelope_bytes=[0-9]+' "$benchmark_log"
+grep -Eq 'BACKUP_SNAPSHOT_MEMORY_BENCHMARK .*archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ envelope_bytes=[0-9]+' "$benchmark_log"
 cat > "$process_log" <<EOF
 api=$api
 app_apk_identity=$app_identity
@@ -157,3 +158,13 @@ benchmark_media_bytes=$benchmark_media_bytes
 fresh_process_confirmed=true
 EOF
 cat "$process_log"
+
+clockrove_force_stop_backup_benchmark_app
+clockrove_run_flutter_integration_test "$api" backup-streamed-restore-preview \
+  'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 native_closed=true private_temp_removed=true' \
+  -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
+  -d emulator-5554 --reporter expanded \
+  --plain-name 'stage authenticated archive through bounded native preview' \
+  > "$restore_log" 2>&1
+cat "$restore_log"
+grep -Eq 'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 native_closed=true private_temp_removed=true' "$restore_log"

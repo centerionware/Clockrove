@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:clockrove/backup/backup_crypto_v2.dart';
+import 'package:clockrove/backup/backup_import_api.dart';
+import 'package:clockrove/backup/backup_restore_importer.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
 import 'package:clockrove/business/business_api.dart';
 import 'package:clockrove/tracking/timer_api.dart';
@@ -12,7 +14,6 @@ import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
 const _archiveByteSlackBytes = 64 * 1024;
-const _archiveByteToleranceBytes = 64 * 1024;
 const _targetMediaBytes =
     BackupCryptoV2.maxArchiveBytes - _archiveByteSlackBytes;
 const _mediaToleranceBytes = 2 * 1024;
@@ -32,6 +33,7 @@ void main() {
     final metrics = await tester.runAsync(_seedSyntheticTaskMedia);
     expect(metrics, isNotNull);
     final result = metrics!;
+    expect(result.archiveBytes, BackupCryptoV2.maxArchiveBytes);
     // ignore: avoid_print
     print(
       'BACKUP_SNAPSHOT_MEMORY_SEED '
@@ -57,6 +59,7 @@ void main() {
       'snapshot_media_count=${result.snapshotMediaCount} '
       'snapshot_media_bytes=${result.snapshotMediaBytes} '
       'archive_bytes=${result.archiveBytes} '
+      'archive_record_bytes=${result.archiveRecordBytes} '
       'envelope_bytes=${result.envelopeBytes} '
       'rss_sample_interval_ms=${_rssSampleInterval.inMilliseconds} '
       'baseline_rss_kib=${result.baselineRssKiB} '
@@ -78,6 +81,39 @@ void main() {
       lessThanOrEqualTo(64 * 1024),
       reason: 'Full-path peak RSS must stay within the existing 64 MiB gate.',
     );
+  });
+
+  testWidgets('stage authenticated archive through bounded native preview', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    final metrics = await tester.runAsync(_measureStreamedRestorePreview);
+    expect(metrics, isNotNull);
+    final result = metrics!;
+    // ignore: avoid_print
+    print(
+      'BACKUP_STREAMED_RESTORE_PREVIEW '
+      'archive_bytes=${result.archiveBytes} '
+      'archive_record_bytes=${result.archiveRecordBytes} '
+      'staged_record_bytes=${result.stagedRecordBytes} '
+      'media_bytes=${result.mediaBytes} media_count=${result.mediaCount} '
+      'record_count=${result.recordCount} '
+      'conflicts=${result.conflictCount} '
+      'native_closed=${result.nativeHandleClosed} '
+      'private_temp_removed=${result.privateTempRemoved}',
+    );
+    expect(result.nativeHandleClosed, isTrue);
+    expect(result.privateTempRemoved, isTrue);
+    expect(result.conflictCount, 0);
+    expect(result.mediaCount, greaterThanOrEqualTo(14));
+    expect(
+      result.archiveBytes,
+      greaterThanOrEqualTo(
+        BackupCryptoV2.maxArchiveBytes - 5 * 1024 * 1024,
+      ),
+    );
+    expect(result.stagedRecordBytes + result.mediaBytes, lessThanOrEqualTo(64 * 1024 * 1024));
+    expect(result.archiveBytes, lessThanOrEqualTo(BackupCryptoV2.maxArchiveBytes));
   });
 }
 
@@ -124,7 +160,9 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     }
   }
 
-  final fullImage = await _noisePng(1024, 1024, 0x43524f56);
+  // Fourteen-to-sixteen near-limit images keep row and descriptor overhead
+  // to probe the archive/staging byte boundary without changing either cap.
+  final fullImage = await _noisePng(1023, 1024, 0x43524f56);
   if (fullImage.length > _maximumTaskImageBytes) {
     throw StateError('A generated PNG exceeded the native image size limit.');
   }
@@ -136,14 +174,16 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     (total, attachment) => total + attachment.bytes,
   );
   if (attachmentCount > 0 &&
-      attachmentCount <= 20 &&
+      attachmentCount <= 16 &&
       conversation.taskAttachments.every(_isBoundedFixtureAttachment) &&
       (mediaBytes - _targetMediaBytes).abs() <= _mediaToleranceBytes) {
+    final archiveBytes = await _fitFixtureArchiveToExactLimit(businessApi);
     return _SeedMetrics(
       pid: pid,
       processStartTicks: await _processStartTicks(),
       attachmentCount: attachmentCount,
       mediaBytes: mediaBytes,
+      archiveBytes: archiveBytes,
     );
   }
   for (final attachment in List.of(conversation.taskAttachments)) {
@@ -161,7 +201,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   mediaBytes = 0;
 
   Future<void> attach(Uint8List bytes) async {
-    if (attachmentCount >= 20) {
+    if (attachmentCount >= 16) {
       throw StateError('The synthetic task reached its attachment limit.');
     }
     conversation = await businessApi.taskConversation(jobId, taskId);
@@ -206,7 +246,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   }
 
   if ((mediaBytes - _targetMediaBytes).abs() > _mediaToleranceBytes ||
-      attachmentCount > 20) {
+      attachmentCount > 16) {
     throw StateError(
       'Synthetic media was outside the near-maximum archive target: '
       '$mediaBytes bytes in $attachmentCount attachments.',
@@ -224,12 +264,113 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     throw StateError('Native task image metadata did not match the seed.');
   }
 
+  final archiveBytes = await _fitFixtureArchiveToExactLimit(businessApi);
+
   return _SeedMetrics(
     pid: pid,
     processStartTicks: await _processStartTicks(),
     attachmentCount: attachmentCount,
     mediaBytes: mediaBytes,
+    archiveBytes: archiveBytes,
   );
+}
+
+Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
+  final exporter = BackupSnapshotExporter();
+  final before = await exporter.exportStream();
+  final delta = BackupCryptoV2.maxArchiveBytes - before.archiveByteLength;
+  await before.close();
+  if (delta < 0 || delta > 80 * 1024) {
+    throw StateError('The near-limit fixture has an unexpected archive gap.');
+  }
+  if (delta > 0) {
+    final board = await businessApi.board(_fixtureJobId);
+    final card = board.cards.singleWhere(
+      (candidate) => candidate.id == _fixtureTaskId,
+    );
+    Future<void> saveDescription(String description) async {
+      final updated = await businessApi.saveCard(
+        newBusinessId(),
+        board,
+        TaskCard(
+          id: card.id,
+          columnId: card.columnId,
+          title: card.title,
+          description: description,
+          position: card.position,
+          billable: card.billable,
+          currency: card.currency,
+          dueDate: card.dueDate,
+          priceMinor: card.priceMinor,
+          completedMillis: card.completedMillis,
+        ),
+      );
+      if (!updated.committed) {
+        throw StateError('Could not tune the synthetic archive row length.');
+      }
+    }
+
+    // The card and its template are each stored as a row and a revision
+    // payload, so a plain ASCII character adds four archive bytes. Measure the
+    // fixed revision metadata once before solving for the final exact length.
+    final probeCharacters = delta ~/ 8;
+    if (card.description.length + probeCharacters > 20000) {
+      throw StateError('The exact archive target exceeds the card text bound.');
+    }
+    await saveDescription(
+      '${card.description}${List<String>.filled(probeCharacters, 'x').join()}',
+    );
+    final probe = await exporter.exportStream();
+    final fixedGrowth = probe.archiveByteLength - before.archiveByteLength -
+        probeCharacters * 4;
+    await probe.close();
+    final remaining = BackupCryptoV2.maxArchiveBytes -
+        (before.archiveByteLength + probeCharacters * 4 + fixedGrowth);
+    final finalCharacters = (remaining - fixedGrowth) ~/ 4;
+    if (finalCharacters < 0 ||
+        card.description.length + probeCharacters + finalCharacters > 20000) {
+      throw StateError('The exact archive target exceeds the card text bound.');
+    }
+    if (finalCharacters > 0) {
+      final currentBoard = await businessApi.board(_fixtureJobId);
+      final currentCard = currentBoard.cards.singleWhere(
+        (candidate) => candidate.id == _fixtureTaskId,
+      );
+      final updated = await businessApi.saveCard(
+        newBusinessId(),
+        currentBoard,
+        TaskCard(
+          id: currentCard.id,
+          columnId: currentCard.columnId,
+          title: currentCard.title,
+          description:
+              '${currentCard.description}${List<String>.filled(finalCharacters, 'x').join()}',
+          position: currentCard.position,
+          billable: currentCard.billable,
+          currency: currentCard.currency,
+          dueDate: currentCard.dueDate,
+          priceMinor: currentCard.priceMinor,
+          completedMillis: currentCard.completedMillis,
+        ),
+      );
+      if (!updated.committed) {
+        throw StateError('Could not tune the final archive byte remainder.');
+      }
+    }
+  }
+
+  final exact = await exporter.exportStream();
+  try {
+    if (exact.archiveByteLength != BackupCryptoV2.maxArchiveBytes) {
+      throw StateError(
+        'The synthetic archive is ${exact.archiveByteLength} bytes; '
+        'expected exactly ${BackupCryptoV2.maxArchiveBytes}.',
+      );
+    }
+    return exact.archiveByteLength;
+  } finally {
+    await exact.close();
+  }
 }
 
 Future<_BenchmarkMetrics> _measureFullBackupPath() async {
@@ -251,7 +392,7 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
   final seedAttachmentCount = conversation.taskAttachments.length;
   final seedMediaBytes = storedMediaBytes;
   if (seedAttachmentCount == 0 ||
-      seedAttachmentCount > 20 ||
+      seedAttachmentCount > 16 ||
       !conversation.taskAttachments.every(_isBoundedFixtureAttachment) ||
       (seedMediaBytes - _targetMediaBytes).abs() > _mediaToleranceBytes) {
     throw StateError('Fresh-process benchmark could not verify seeded media.');
@@ -270,11 +411,9 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     final afterSnapshotSetupRssKiB = await _processRssKiB();
     if (export.mediaBytes != seedMediaBytes ||
         export.mediaCount != seedAttachmentCount ||
-        export.archiveByteLength <
-            BackupCryptoV2.maxArchiveBytes - _archiveByteToleranceBytes ||
-        export.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
+        export.archiveByteLength != BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
-        'Snapshot export did not match the near-maximum isolated fixture.',
+        'Snapshot export did not match the exact maximum isolated fixture.',
       );
     }
 
@@ -337,6 +476,8 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
         snapshotMediaCount: export.mediaCount,
         snapshotMediaBytes: export.mediaBytes,
         archiveBytes: encrypted.archiveBytes,
+        archiveRecordBytes:
+            export.archiveByteLength - 48 - export.mediaBytes,
         envelopeBytes: encrypted.envelopeBytes,
         baselineRssKiB: baselineRssKiB,
         afterSnapshotSetupRssKiB: afterSnapshotSetupRssKiB,
@@ -366,55 +507,144 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
   }
 }
 
-Future<Uint8List> _noisePng(int width, int height, int seed) async {
-  final pixels = Uint8List(width * height * 4);
-  var state = seed;
-  for (var offset = 0; offset < pixels.length; offset += 4) {
-    state = (state ^ (state << 13)) & 0xffffffff;
-    state ^= state >> 17;
-    state = (state ^ (state << 5)) & 0xffffffff;
-    pixels[offset] = state & 0xff;
-    state = (state ^ (state << 13)) & 0xffffffff;
-    state ^= state >> 17;
-    state = (state ^ (state << 5)) & 0xffffffff;
-    pixels[offset + 1] = state & 0xff;
-    state = (state ^ (state << 13)) & 0xffffffff;
-    state ^= state >> 17;
-    state = (state ^ (state << 5)) & 0xffffffff;
-    pixels[offset + 2] = state & 0xff;
-    pixels[offset + 3] = 0xff;
+Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
+  const jobId = _fixtureJobId;
+  const taskId = _fixtureTaskId;
+  final businessApi = BusinessApi();
+  var conversation = await businessApi.taskConversation(jobId, taskId);
+  var mediaBytes = conversation.taskAttachments.fold<int>(
+    0,
+    (total, attachment) => total + attachment.bytes,
+  );
+  final importMediaTarget = maxBackupImportMediaBytes - 32 * 1024;
+  while (mediaBytes > importMediaTarget) {
+    if (conversation.taskAttachments.isEmpty) {
+      throw StateError('The restore fixture could not fit the import media cap.');
+    }
+    final attachment = conversation.taskAttachments.last;
+    final outcome = await businessApi.removeTaskImage(
+      newBusinessId(),
+      conversation,
+      attachment.id,
+    );
+    if (!outcome.committed) {
+      throw StateError('Could not fit the synthetic restore fixture.');
+    }
+    conversation = await businessApi.taskConversation(jobId, taskId);
+    mediaBytes = conversation.taskAttachments.fold<int>(
+      0,
+      (total, image) => total + image.bytes,
+    );
   }
 
-  final buffer = await ui.ImmutableBuffer.fromUint8List(pixels);
+  final exporter = BackupSnapshotExporter();
+  final exported = await exporter.exportStream();
+  final outputDirectory = await Directory.systemTemp.createTemp(
+    'clockrove-streamed-restore-',
+  );
+  final envelopeFile = File('${outputDirectory.path}/backup.clockrove');
   try {
-    final descriptor = ui.ImageDescriptor.raw(
-      buffer,
-      width: width,
-      height: height,
-      pixelFormat: ui.PixelFormat.rgba8888,
+    expect(exported.mediaBytes, mediaBytes);
+    expect(exported.mediaCount, conversation.taskAttachments.length);
+    expect(exported.mediaBytes, lessThanOrEqualTo(maxBackupImportMediaBytes));
+
+    final encrypted = await BackupCryptoV2.encrypt(
+      password: 'synthetic-streamed-restore-passphrase',
+      archive: exported.archiveStream,
+      destination: _FileTransactionalSink(envelopeFile),
     );
-    try {
-      final codec = await descriptor.instantiateCodec();
-      try {
-        final image = (await codec.getNextFrame()).image;
-        try {
-          final png = await image.toByteData(format: ui.ImageByteFormat.png);
-          if (png == null) throw StateError('Could not encode synthetic PNG.');
-          return Uint8List.fromList(
-            png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes),
-          );
-        } finally {
-          image.dispose();
-        }
-      } finally {
-        codec.dispose();
-      }
-    } finally {
-      descriptor.dispose();
-    }
+    expect(encrypted.archiveBytes, exported.archiveByteLength);
+    expect(
+      encrypted.envelopeBytes,
+      BackupCryptoV2.envelopeLengthForArchiveBytes(exported.archiveByteLength),
+    );
+
+    final imported = await BackupRestoreImporter().decryptAndPreview(
+      encryptedEnvelope: envelopeFile,
+      password: 'synthetic-streamed-restore-passphrase',
+    );
+    expect(imported.preview.recordCount, exported.recordCount);
+    expect(imported.preview.mediaCount, exported.mediaCount);
+    expect(imported.preview.mediaBytes, exported.mediaBytes);
+    expect(imported.preview.conflictCount, 0);
+    expect(imported.preview.localOpenSessionCount, 0);
+    expect(imported.preview.applyReady, isTrue);
+    expect(imported.nativeHandleClosed, isTrue);
+    expect(await Directory(imported.privateDirectoryPath).exists(), isFalse);
+    expect(imported.metrics.archiveBytes, encrypted.archiveBytes);
+
+    return _RestorePreviewMetrics(
+      archiveBytes: imported.metrics.archiveBytes,
+      archiveRecordBytes: imported.metrics.recordBytes,
+      stagedRecordBytes: imported.stagedRecordBytes,
+      mediaBytes: imported.metrics.mediaBytes,
+      mediaCount: imported.metrics.mediaCount,
+      recordCount: imported.metrics.recordCount,
+      conflictCount: imported.preview.conflictCount,
+      nativeHandleClosed: imported.nativeHandleClosed,
+      privateTempRemoved: !await Directory(
+        imported.privateDirectoryPath,
+      ).exists(),
+    );
   } finally {
-    buffer.dispose();
+    await exported.close();
+    if (await outputDirectory.exists()) {
+      await outputDirectory.delete(recursive: true);
+    }
   }
+}
+
+Future<Uint8List> _noisePng(int width, int height, int seed) async {
+  final rowBytes = width * 4;
+  final pixels = Uint8List(height * (rowBytes + 1));
+  var state = seed;
+  for (var row = 0; row < height; row++) {
+    final rowStart = row * (rowBytes + 1);
+    pixels[rowStart] = 0;
+    for (var offset = rowStart + 1; offset < rowStart + rowBytes + 1; offset++) {
+      state = (state ^ (state << 13)) & 0xffffffff;
+      state ^= state >> 17;
+      state = (state ^ (state << 5)) & 0xffffffff;
+      pixels[offset] = state & 0xff;
+    }
+  }
+
+  final compressed = Uint8List.fromList(ZLibEncoder(level: 0).convert(pixels));
+  final header = Uint8List(13);
+  final headerData = ByteData.sublistView(header);
+  headerData.setUint32(0, width, Endian.big);
+  headerData.setUint32(4, height, Endian.big);
+  header[8] = 8;
+  header[9] = 6;
+
+  final output = BytesBuilder(copy: false)
+    ..add(const [137, 80, 78, 71, 13, 10, 26, 10])
+    ..add(_pngChunk('IHDR', header))
+    ..add(_pngChunk('IDAT', compressed))
+    ..add(_pngChunk('IEND', const []));
+  return output.takeBytes();
+}
+
+Uint8List _pngChunk(String name, List<int> data) {
+  final type = ascii.encode(name);
+  final chunk = Uint8List(12 + data.length);
+  final bytes = ByteData.sublistView(chunk);
+  bytes.setUint32(0, data.length, Endian.big);
+  chunk.setRange(4, 8, type);
+  chunk.setRange(8, 8 + data.length, data);
+  bytes.setUint32(8 + data.length, _crc32(chunk, 4, 8 + data.length), Endian.big);
+  return chunk;
+}
+
+int _crc32(List<int> bytes, int start, int end) {
+  var crc = 0xffffffff;
+  for (var index = start; index < end; index++) {
+    crc ^= bytes[index];
+    for (var bit = 0; bit < 8; bit++) {
+      crc = (crc & 1) == 0 ? crc >>> 1 : (crc >>> 1) ^ 0xedb88320;
+    }
+  }
+  return (crc ^ 0xffffffff) & 0xffffffff;
 }
 
 bool _bytesEqual(List<int> left, List<int> right) {
@@ -510,12 +740,14 @@ final class _SeedMetrics {
     required this.processStartTicks,
     required this.attachmentCount,
     required this.mediaBytes,
+    required this.archiveBytes,
   });
 
   final int pid;
   final String processStartTicks;
   final int attachmentCount;
   final int mediaBytes;
+  final int archiveBytes;
 }
 
 final class _BenchmarkMetrics {
@@ -527,6 +759,7 @@ final class _BenchmarkMetrics {
     required this.snapshotMediaCount,
     required this.snapshotMediaBytes,
     required this.archiveBytes,
+    required this.archiveRecordBytes,
     required this.envelopeBytes,
     required this.baselineRssKiB,
     required this.afterSnapshotSetupRssKiB,
@@ -548,6 +781,7 @@ final class _BenchmarkMetrics {
   final int snapshotMediaCount;
   final int snapshotMediaBytes;
   final int archiveBytes;
+  final int archiveRecordBytes;
   final int envelopeBytes;
   final int baselineRssKiB;
   final int afterSnapshotSetupRssKiB;
@@ -560,6 +794,30 @@ final class _BenchmarkMetrics {
   final int snapshotSetupMs;
   final int streamExportEncryptMs;
   final int integrityRereadMs;
+}
+
+final class _RestorePreviewMetrics {
+  const _RestorePreviewMetrics({
+    required this.archiveBytes,
+    required this.archiveRecordBytes,
+    required this.stagedRecordBytes,
+    required this.mediaBytes,
+    required this.mediaCount,
+    required this.recordCount,
+    required this.conflictCount,
+    required this.nativeHandleClosed,
+    required this.privateTempRemoved,
+  });
+
+  final int archiveBytes;
+  final int archiveRecordBytes;
+  final int stagedRecordBytes;
+  final int mediaBytes;
+  final int mediaCount;
+  final int recordCount;
+  final int conflictCount;
+  final bool nativeHandleClosed;
+  final bool privateTempRemoved;
 }
 
 final class _FileTransactionalSink implements BackupTransactionalByteSink {
