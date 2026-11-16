@@ -270,6 +270,32 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('decodes explicit local and backup choices for divergent entity heads', () {
+    final conflict = BackupImportConflict.fromMap({
+      'conflictId': 'divergent-customer-head',
+      'kind': 'EXISTING_RECORD_DIFFERS',
+      'table': 'entity_heads',
+      'primaryKey': ['customer', 'customer-id'],
+      'localIdentifier': null,
+      'localSummary': <String, Object?>{},
+      'backupSummary': <String, Object?>{},
+      'allowedChoices': <String>[
+        'MERGE_KEEP_LOCAL_CONTENT',
+        'MERGE_USE_BACKUP_CONTENT',
+      ],
+      'defaultChoice': 'MERGE_KEEP_LOCAL_CONTENT',
+      'resolved': false,
+      'selectedChoice': null,
+    });
+
+    expect(
+      conflict.allowedChoices,
+      ['MERGE_KEEP_LOCAL_CONTENT', 'MERGE_USE_BACKUP_CONTENT'],
+    );
+    expect(conflict.defaultChoice, 'MERGE_KEEP_LOCAL_CONTENT');
+    expect(conflict.resolved, isFalse);
+  });
 }
 
 Map<String, Object?> _preview({

@@ -6,6 +6,7 @@ import io.flutter.plugin.common.MethodCall
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.zip.CRC32
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -42,6 +43,31 @@ class TaskConversationTest {
     private fun count(table: String) = SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
         db.rawQuery("SELECT COUNT(*) FROM $table", null).use { it.moveToFirst(); it.getInt(0) }
     }
+
+    private fun headDeleted(kind: String, entityId: String): Long =
+        SQLiteDatabase.openDatabase(
+            app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY,
+        ).use { db ->
+            db.rawQuery(
+                "SELECT r.deleted FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                    "WHERE h.kind=? AND h.entity_id=?",
+                arrayOf(kind, entityId),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getLong(0) }
+        }
+
+    private fun headPayload(kind: String, entityId: String): String? =
+        SQLiteDatabase.openDatabase(
+            app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY,
+        ).use { db ->
+            db.rawQuery(
+                "SELECT r.payload FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                    "WHERE h.kind=? AND h.entity_id=?",
+                arrayOf(kind, entityId),
+            ).use { rows ->
+                assertTrue(rows.moveToFirst())
+                if (rows.isNull(0)) null else rows.getString(0)
+            }
+        }
 
     @Before fun setup() {
         app.deleteDatabase("clockrove.db")
@@ -85,11 +111,73 @@ class TaskConversationTest {
         assertNull(repository.taskAttachment("image-one"))
         assertNotNull(repository.taskAttachment("image-two"))
         assertEquals(1, count("task_attachments"))
+        assertEquals(1L, headDeleted("task_comment", "comment-one"))
+        assertEquals(1L, headDeleted("task_attachment", "image-one"))
+        assertNull(headPayload("task_comment", "comment-one"))
+        assertFalse(requireNotNull(headPayload("task_attachment", "image-one")).contains("data"))
+        assertEquals(
+            "TASK_COMMENT_UNAVAILABLE",
+            repository.saveTaskComment(
+                "comment-recreate-after-delete", version, job, task, "comment-one", "Do not resurrect this identity",
+            ).conflict,
+        )
+        assertEquals(
+            "TASK_IMAGE_ID_EXISTS",
+            repository.attachTaskImage(
+                "image-recreate-after-delete", version, job, task, null, "image-one", png(),
+            ).conflict,
+        )
 
         assertNull(repository.removeCard("remove-parent-task", version, job, task).conflict)
         assertEquals(0, count("task_comments"))
         assertEquals(0, count("task_comment_events"))
         assertEquals(0, count("task_attachments"))
+        assertEquals(1L, headDeleted("task_attachment", "image-two"))
+    }
+
+    @Test fun schema17UpgradeBackfillsLiveTaskCommentAndAttachmentHeadsIdempotently() {
+        assertNull(repository.saveTaskComment(
+            "schema17-comment-add", version, job, task, "schema17-comment", "Backfilled note",
+        ).conflict)
+        assertNull(repository.attachTaskImage(
+            "schema17-image-add", version, job, task, "schema17-comment", "schema17-image", png(),
+        ).conflict)
+        repository.close()
+
+        SQLiteDatabase.openDatabase(
+            app.getDatabasePath("clockrove.db").path,
+            null,
+            SQLiteDatabase.OPEN_READWRITE,
+        ).use { db ->
+            db.beginTransaction()
+            try {
+                db.execSQL(
+                    "DELETE FROM revision_parents WHERE revision_id IN " +
+                        "(SELECT id FROM entity_revisions WHERE kind IN('task_comment','task_attachment')) " +
+                        "OR parent_id IN (SELECT id FROM entity_revisions WHERE kind IN('task_comment','task_attachment'))",
+                )
+                db.execSQL("DELETE FROM entity_heads WHERE kind IN('task_comment','task_attachment')")
+                db.execSQL("DELETE FROM entity_revisions WHERE kind IN('task_comment','task_attachment')")
+                db.version = 16
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+            }
+        }
+
+        repository = TimerRepository(app, wallClock = { 2_000_000 })
+        assertEquals(0L, headDeleted("task_comment", "schema17-comment"))
+        assertEquals(0L, headDeleted("task_attachment", "schema17-image"))
+        val commentPayload = JSONObject(requireNotNull(headPayload("task_comment", "schema17-comment")))
+        assertEquals("Backfilled note", commentPayload.getString("body"))
+        val attachmentPayload = JSONObject(requireNotNull(headPayload("task_attachment", "schema17-image")))
+        assertEquals("schema17-comment", attachmentPayload.getString("comment_id"))
+        assertFalse(attachmentPayload.has("data"))
+        val countAfterUpgrade = count("entity_revisions")
+
+        repository.close()
+        repository = TimerRepository(app, wallClock = { 2_000_000 })
+        assertEquals(countAfterUpgrade, count("entity_revisions"))
     }
 
     @Test fun normalizedImageBytesAreBoundedAndTaskAllowsAtMostTwentyAttachments() {

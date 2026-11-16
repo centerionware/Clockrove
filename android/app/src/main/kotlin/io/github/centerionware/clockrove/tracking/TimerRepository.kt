@@ -559,7 +559,7 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun removeTaskImage(id: String, version: Long, jobId: String, taskId: String, attachmentId: String): Outcome =
         boardChange(id, version, "TASK_IMAGE_REMOVE", listOf(jobId, taskId, attachmentId)) {
-            TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId)
+            TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId, wallClock())
         }
     @Synchronized
     internal fun taskTemplates(search: String = ""): List<BoardStore.Template> = BoardStore.templates(helper.readableDatabase, search)
@@ -1198,7 +1198,7 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 16) {
+    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 17) {
         override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
@@ -1231,7 +1231,7 @@ class TimerRepository internal constructor(context: Context,
             db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..15 && newVersion == 16) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
+            check(oldVersion in 1..16 && newVersion == 17) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
             if (oldVersion < 2) createLocationTable(db)
             if (oldVersion < 3) createDepartureTable(db)
             if (oldVersion < 4) GeofenceStore.createTables(db)
@@ -1251,6 +1251,7 @@ class TimerRepository internal constructor(context: Context,
             if (oldVersion == 14) ActualCostStore.migrateCustomerSnapshot(db)
             if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
             GpsDeletionStore.migrate(db, now())
+            TaskConversationStore.backfillEntityRevisions(db, now())
         }
     }
 

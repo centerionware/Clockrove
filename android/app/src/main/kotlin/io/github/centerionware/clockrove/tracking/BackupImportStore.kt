@@ -132,6 +132,55 @@ internal class BackupImportStore(
         val backupRevision: String,
     )
 
+    private data class DivergentEntityData(
+        val entityId: String,
+        val table: String,
+        val ordinal: Long,
+        val values: Map<String, Any?>,
+        val payloadValues: Map<String, Any?>,
+        val localPayloadValues: Map<String, Any?>,
+        val blobs: Map<String, LongArray>,
+        val local: LocalRow,
+        val spec: BackupExportStore.ImportTable,
+    )
+
+    private data class PlannedDivergentMerge(
+        val kind: String,
+        val entityId: String,
+        val choice: String,
+        val localRevision: String,
+        val backupRevision: String,
+        val data: DivergentEntityData,
+    )
+
+    private data class PlannedCustomerDeletionResolution(
+        val entityId: String,
+        val choice: String,
+        val localRevision: String,
+        val backupRevision: String,
+        val backupRowOrdinal: Long?,
+        val backupValues: Map<String, Any?>?,
+    )
+
+    private data class OmittedBackupGraph(
+        val sessionIds: Set<String>,
+        val locationPointIds: Set<String>,
+        val revisionEntityKeys: Set<String>,
+        val revisionIds: Set<String>,
+        val gpsDeletionParentsByPoint: Map<String, Set<String>>,
+        val omittedRowOrdinals: Set<Long>,
+    )
+
+    private data class RevisionContent(
+        val kind: String,
+        val entityId: String,
+        val jobId: String?,
+        val payload: String?,
+        val deleted: Long,
+    )
+
+    private data class RevisionTombstoneRow(val kind: String, val entityIdColumn: String)
+
     private data class ValidationColumn(
         val name: String,
         val declaredType: String,
@@ -159,6 +208,7 @@ internal class BackupImportStore(
             "validation_reference_keys",
             "validation_time_claims",
             "validation_invoice_jobs",
+            "validation_points",
             "validation_ranges",
             "validation_heads",
             "validation_parents",
@@ -190,6 +240,148 @@ internal class BackupImportStore(
             "quote_pdfs" to listOf(listOf("quote_id", "revision")),
             "quote_scope_lines" to listOf(listOf("task_id")),
             "location_deletion_ranges" to listOf(listOf("revision_id")),
+        )
+        private val revisionDataTables = mapOf(
+            "job" to "jobs",
+            "customer" to "customers",
+            "site" to "work_sites",
+            "column" to "kanban_columns",
+            "card" to "kanban_cards",
+            "template" to "task_templates",
+            "session" to "sessions",
+            "automation" to "automation_policies",
+            "task_comment" to "task_comments",
+            "task_attachment" to "task_attachments",
+            "actual_cost" to "actual_costs",
+            "settings" to "app_settings",
+            "job_tax_rate" to "job_tax_rates",
+            "billing_tax_settings" to "billing_tax_settings",
+            "job_location_recording" to "job_location_recording",
+            "location_recording_settings" to "location_recording_settings",
+            "job_invoice_billing_policy" to "job_invoice_billing_policy",
+            "invoice_billing_defaults" to "invoice_billing_defaults",
+            "invoice_accounting_settings" to "invoice_accounting_settings",
+            "invoice_coverage" to "invoice_coverage",
+            "invoice_task_claim" to "invoice_task_claims",
+            "invoice_time_claim" to "invoice_time_claims",
+            "template_quantity" to "template_quantities",
+            "settings_money" to "settings_money",
+            "job_money" to "job_money",
+            "card_money" to "card_money",
+            "template_money" to "template_money",
+            "task_quantity" to "task_quantities",
+            "payment_destination" to "payment_destinations",
+            "quote_draft" to "quote_drafts",
+        )
+        private val revisionDataColumns = mapOf(
+            "job" to BusinessSchema.jobColumns,
+            "customer" to BusinessStore.customerColumns,
+            "site" to BusinessSchema.siteColumns,
+            "column" to BusinessSchema.columnColumns,
+            "card" to BoardStore.cardColumns,
+            "template" to BoardStore.templateColumns,
+            "session" to BusinessSchema.sessionColumns,
+            "automation" to listOf("job_id", "enabled", "auto_start", "automatic_departure", "grace_minutes"),
+            "task_comment" to listOf("id", "task_id", "body", "created_ms", "updated_ms"),
+            "task_attachment" to listOf("id", "task_id", "comment_id", "created_ms", "mime"),
+            "actual_cost" to listOf(
+                "id", "job_id", "job_name", "customer_id", "customer_name", "task_id", "task_name",
+                "amount_minor", "currency", "category", "occurred_ms", "timezone", "offset_seconds",
+                "vendor", "reference", "note", "created_ms", "updated_ms", "deleted_ms",
+            ),
+            "settings" to BusinessSchema.settingsColumns,
+            "job_tax_rate" to listOf("job_id", "tax_units"),
+            "billing_tax_settings" to listOf("id", "default_tax_units"),
+            "job_location_recording" to listOf("job_id", "enabled"),
+            "location_recording_settings" to listOf("id", "enabled"),
+            "job_invoice_billing_policy" to listOf(
+                "job_id", "hourly_mode", "minimum_hours", "task_minimum_minor",
+            ),
+            "invoice_billing_defaults" to listOf(
+                "id", "hourly_mode", "minimum_hours", "task_minimum_minor",
+            ),
+            "invoice_accounting_settings" to listOf("id", "receivables_email"),
+            "invoice_coverage" to listOf("invoice_id", "state", "reviewed_ms", "review_note"),
+            "invoice_task_claim" to listOf("id", "invoice_id", "job_id", "task_id", "released_ms"),
+            "invoice_time_claim" to listOf(
+                "id", "invoice_id", "job_id", "session_id", "start_ms", "end_ms", "timezone", "released_ms",
+            ),
+            "template_quantity" to listOf("template_id", "quantity_units"),
+            "settings_money" to listOf("id", "minor_text", "job_id"),
+            "job_money" to listOf("id", "minor_text", "job_id"),
+            "card_money" to listOf("id", "minor_text", "job_id"),
+            "template_money" to listOf("id", "minor_text", "job_id"),
+            "task_quantity" to listOf("card_id", "job_id", "quantity_units"),
+            "payment_destination" to listOf("payment_id", "invoice_id"),
+            "quote_draft" to listOf("id", "payload"),
+        )
+        private val revisionDataKeyColumns = mapOf(
+            "automation" to listOf("job_id"),
+            "job_tax_rate" to listOf("job_id"),
+            "job_location_recording" to listOf("job_id"),
+            "job_invoice_billing_policy" to listOf("job_id"),
+            "invoice_coverage" to listOf("invoice_id"),
+            "template_quantity" to listOf("template_id"),
+            "task_quantity" to listOf("card_id"),
+            "payment_destination" to listOf("payment_id"),
+            "quote_draft" to listOf("quote_id"),
+        )
+        private val integerRevisionDataKinds = setOf(
+            "billing_tax_settings", "invoice_accounting_settings", "invoice_billing_defaults", "settings",
+            "location_recording_settings", "settings_money",
+        )
+        private val revisionDataKinds = revisionDataTables.entries.associate { (kind, table) -> table to kind }
+        /**
+         * Kinds emitted by the schema-16 RevisionStore writers, including dynamic
+         * payment/money kinds and lifecycle tombstones. An archive with a new kind
+         * must be explicitly taught how its entity graph is represented before it
+         * can be previewed or applied.
+         */
+        private val supportedRevisionKinds = setOf(
+            "actual_cost", "automation", "billing_tax_settings", "card", "card_money", "column",
+            "customer", "invoice", "invoice_accounting_settings", "invoice_billing_defaults",
+            "invoice_copy", "invoice_coverage", "invoice_payment", "invoice_payment_event",
+            "invoice_payment_reversal", "invoice_task_claim", "invoice_time_claim", "invoice_void",
+            "job", "job_invoice_billing_policy", "job_location_recording", "job_money", "job_tax_rate",
+            "location", "location_deletion_range", "location_recording_settings", "logo",
+            "payment_destination", "quote_decision", "quote_draft", "quote_invoice_link", "quote_revision",
+            "quote_scope_line", "quote_scope_revision", "session", "settings", "settings_money", "site",
+            "task_attachment", "task_comment", "task_quantity", "template", "template_money",
+            "template_quantity",
+        )
+        private val revisionTombstoneRows = mapOf(
+            "jobs" to RevisionTombstoneRow("job", "id"),
+            "customers" to RevisionTombstoneRow("customer", "id"),
+            "work_sites" to RevisionTombstoneRow("site", "id"),
+            "kanban_columns" to RevisionTombstoneRow("column", "id"),
+            "kanban_cards" to RevisionTombstoneRow("card", "id"),
+            "task_comments" to RevisionTombstoneRow("task_comment", "id"),
+            "task_attachments" to RevisionTombstoneRow("task_attachment", "id"),
+            "sessions" to RevisionTombstoneRow("session", "id"),
+            "task_templates" to RevisionTombstoneRow("template", "id"),
+            "automation_policies" to RevisionTombstoneRow("automation", "job_id"),
+            "job_tax_rates" to RevisionTombstoneRow("job_tax_rate", "job_id"),
+            "job_money" to RevisionTombstoneRow("job_money", "id"),
+            "card_money" to RevisionTombstoneRow("card_money", "id"),
+            "template_money" to RevisionTombstoneRow("template_money", "id"),
+            "task_quantities" to RevisionTombstoneRow("task_quantity", "card_id"),
+            "template_quantities" to RevisionTombstoneRow("template_quantity", "template_id"),
+            "actual_costs" to RevisionTombstoneRow("actual_cost", "id"),
+            "job_invoice_billing_policy" to RevisionTombstoneRow("job_invoice_billing_policy", "job_id"),
+            "job_location_recording" to RevisionTombstoneRow("job_location_recording", "job_id"),
+            "quote_drafts" to RevisionTombstoneRow("quote_draft", "quote_id"),
+            "logo_assets" to RevisionTombstoneRow("logo", "id"),
+        )
+        private val divergentHeadMergeChoices = setOf(
+            "MERGE_IDENTICAL_CONTENT",
+            "MERGE_KEEP_LOCAL_CONTENT",
+            "MERGE_USE_BACKUP_CONTENT",
+        )
+        private val customerDeletionChoices = setOf(
+            "PRESERVE_LOCAL_DELETION",
+            "RESTORE_BACKUP_CONTENT",
+            "KEEP_LOCAL",
+            "APPLY_BACKUP_DELETION",
         )
     }
 
@@ -480,17 +672,174 @@ internal class BackupImportStore(
             !isSupportedChoice(conflictJson.optString("kind"), conflictJson.optString("table"), choice)) {
             throw Failure("UNSUPPORTED_CHOICE", "That backup conflict choice is not supported.")
         }
-        conflictJson.put("resolved", true)
-        conflictJson.put("selectedChoice", choice)
-        val updated = ContentValues().apply {
-            put("selected_choice", choice)
-            put("conflict_json", conflictJson.toString())
-        }
-        if (handle.database.update("import_conflicts", updated, "conflict_id=?", arrayOf(conflictId)) != 1) {
-            throw Failure("CONFLICT_UNAVAILABLE", "The backup conflict is unavailable.")
+        handle.database.beginTransaction()
+        try {
+            writeConflictChoice(handle, conflictId, conflictJson, choice)
+            resolveAggregateConflicts(handle, conflictId, conflictJson, choice)
+            coupledGpsRangeId(handle, conflictId)?.let { rangeId ->
+                resolveCoupledGpsRangeConflicts(handle, rangeId, choice)
+            }
+            handle.database.setTransactionSuccessful()
+        } finally {
+            handle.database.endTransaction()
         }
         handle.lastAccessElapsedMillis = elapsedClock()
         scheduleExpiry(handle)
+    }
+
+    private fun resolveAggregateConflicts(
+        handle: Handle,
+        selectedConflictId: String,
+        selectedConflict: JSONObject,
+        selectedChoice: String,
+    ) {
+        val intent = conflictChoiceIntent(selectedChoice) ?: return
+        if (intent == "NEUTRAL") return
+        val aggregateKeys = selectedConflict.optJSONArray("aggregateKeys")?.let { json ->
+            buildSet { for (index in 0 until json.length()) add(json.optString(index)) }.toMutableSet()
+        }.orEmpty()
+        if (aggregateKeys.isEmpty()) return
+
+        data class StagedConflict(val id: String, val json: JSONObject)
+        aggregateKeys.addAll(expandAggregateKeys(handle, aggregateKeys))
+        val members = handle.database.rawQuery(
+            "SELECT DISTINCT c.conflict_id,c.conflict_json FROM import_conflicts c " +
+                "JOIN import_aggregate_keys g ON g.row_ordinal=c.row_ordinal " +
+                "JOIN aggregate_conflict_keys k ON k.group_key=g.group_key ORDER BY c.ordinal",
+            null,
+        ).use { rows -> buildList {
+            while (rows.moveToNext()) add(StagedConflict(rows.getString(0), JSONObject(rows.getString(1))))
+        } }
+        val choices = members.mapNotNull { staged ->
+            val allowed = staged.json.optJSONArray("allowedChoices") ?: return@mapNotNull null
+            val candidate = if (staged.id == selectedConflictId) selectedChoice else
+                choiceForConflictIntent(allowed, intent)
+            val compatibleIntent = candidate?.let(::conflictChoiceIntent)
+            val compatible = compatibleIntent == "NEUTRAL" || compatibleIntent == intent ||
+                (intent == "LOCAL_MERGE" && compatibleIntent == "LOCAL_ONLY")
+            if (candidate == null || !compatible) {
+                throw Failure(
+                    "AGGREGATE_CONFLICT_UNSUPPORTED",
+                    "Related backup records do not support one consistent conflict choice.",
+                )
+            }
+            staged.id to (staged.json to candidate)
+        }.toMap()
+        members.forEach { staged ->
+            val (json, memberChoice) = choices[staged.id]
+                ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup conflict is invalid.")
+            json.put("aggregateSelectionIntent", intent)
+            writeConflictChoice(handle, staged.id, json, memberChoice)
+        }
+        handle.database.execSQL("DROP TABLE IF EXISTS aggregate_conflict_keys")
+    }
+
+    private fun writeConflictChoice(handle: Handle, id: String, json: JSONObject, choice: String) {
+        json.put("resolved", true)
+        json.put("selectedChoice", choice)
+        val updated = handle.database.update(
+            "import_conflicts",
+            ContentValues().apply {
+                put("selected_choice", choice)
+                put("conflict_json", json.toString())
+            },
+            "conflict_id=?",
+            arrayOf(id),
+        )
+        if (updated != 1) throw Failure("CONFLICT_UNAVAILABLE", "The backup conflict is unavailable.")
+    }
+
+    private fun conflictChoiceIntent(choice: String): String? = when (choice) {
+        "MERGE_KEEP_LOCAL_CONTENT" -> "LOCAL_MERGE"
+        "MERGE_USE_BACKUP_CONTENT" -> "BACKUP_MERGE"
+        "MERGE_IDENTICAL_CONTENT" -> "NEUTRAL"
+        "APPLY_BACKUP_DELETION" -> "BACKUP_DELETION"
+        "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
+        "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION" -> "LOCAL_ONLY"
+        else -> null
+    }
+
+    private fun choiceForConflictIntent(allowed: JSONArray, intent: String): String? {
+        val preferred = when (intent) {
+            "LOCAL_MERGE" -> listOf(
+                "MERGE_KEEP_LOCAL_CONTENT", "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION",
+                "OMIT_BACKUP_RECORD", "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION",
+            )
+            "BACKUP_MERGE" -> listOf("MERGE_USE_BACKUP_CONTENT")
+            "NEUTRAL" -> listOf("MERGE_IDENTICAL_CONTENT")
+            "BACKUP_DELETION" -> listOf("APPLY_BACKUP_DELETION")
+            "LOCAL_ONLY" -> listOf(
+                "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
+                "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION",
+            )
+            else -> emptyList()
+        }
+        if ((0 until allowed.length()).any { allowed.optString(it) == "MERGE_IDENTICAL_CONTENT" }) {
+            return "MERGE_IDENTICAL_CONTENT"
+        }
+        return preferred.firstOrNull { candidate ->
+            (conflictChoiceIntent(candidate) == intent ||
+                (intent == "LOCAL_MERGE" && conflictChoiceIntent(candidate) == "LOCAL_ONLY")) &&
+                (0 until allowed.length()).any { allowed.optString(it) == candidate }
+        }
+    }
+
+    private fun coupledGpsRangeId(handle: Handle, conflictId: String): String? =
+        handle.database.rawQuery(
+            "SELECT r.table_name,r.row_json FROM import_conflicts c JOIN import_rows r " +
+                "ON r.ordinal=c.row_ordinal WHERE c.conflict_id=?",
+            arrayOf(conflictId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            val table = rows.getString(0)
+            val values = JSONObject(rows.getString(1)).getJSONObject("values")
+            when {
+                table == "location_deletion_ranges" -> values.optString("id").takeIf(String::isNotEmpty)
+                table == "entity_heads" && values.optString("kind") == "location_deletion_range" ->
+                    values.optString("entity_id").takeIf(String::isNotEmpty)
+                else -> null
+            }
+        }
+
+    /** One range decision resolves the staged range row and its matching revision head together. */
+    private fun resolveCoupledGpsRangeConflicts(handle: Handle, rangeId: String, choice: String) {
+        val db = handle.database
+        val rowKeys = listOf(
+            "location_deletion_ranges" to jsonArray(listOf(rangeId)),
+            "entity_heads" to jsonArray(listOf("location_deletion_range", rangeId)),
+        )
+        val conflictIds = rowKeys.flatMap { (table, primaryKey) ->
+            db.rawQuery(
+                "SELECT c.conflict_id,c.conflict_json FROM import_conflicts c " +
+                    "JOIN import_rows r ON r.ordinal=c.row_ordinal " +
+                    "WHERE r.table_name=? AND r.primary_key=?",
+                arrayOf(table, primaryKey),
+            ).use { rows ->
+                buildList {
+                    while (rows.moveToNext()) {
+                    val json = JSONObject(rows.getString(1))
+                    if (json.optString("kind") !in setOf(
+                            "GPS_DELETION_COVERAGE", "GPS_DELETION_RANGE_HEAD",
+                        )) continue
+                    val allowed = json.optJSONArray("allowedChoices") ?: continue
+                    if ((0 until allowed.length()).none { allowed.optString(it) == choice }) continue
+                    add(rows.getString(0))
+                    }
+                }
+            }
+        }
+        conflictIds.forEach { coupledConflictId ->
+            val json = db.rawQuery(
+                "SELECT conflict_json FROM import_conflicts WHERE conflict_id=?",
+                arrayOf(coupledConflictId),
+            ).use { rows -> if (rows.moveToFirst()) JSONObject(rows.getString(0)) else return@forEach }
+            json.put("resolved", true)
+            json.put("selectedChoice", choice)
+            db.update("import_conflicts", ContentValues().apply {
+                put("selected_choice", choice)
+                put("conflict_json", json.toString())
+            }, "conflict_id=?", arrayOf(coupledConflictId))
+        }
     }
 
     /** Applies the previewed rows and verified no-content descendant head advances atomically. */
@@ -524,10 +873,14 @@ internal class BackupImportStore(
                 validateRevisionGraph(db, handle)
 
                 validateApplyChoices(handle, preview.conflictCount)
+                val omittedBackupGraph = omittedBackupGraph(db, handle)
                 skipped = scalarLong(
                     handle.database,
-                    "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice<>'MERGE_IDENTICAL_CONTENT'",
+                    "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice NOT IN(" +
+                        "'MERGE_IDENTICAL_CONTENT','MERGE_KEEP_LOCAL_CONTENT','MERGE_USE_BACKUP_CONTENT'," +
+                        "'APPLY_BACKUP_DELETION')",
                 )
+                val plannedDivergentMerges = mutableMapOf<String, PlannedDivergentMerge>()
 
                 // Preflight every row before making the first local mutation. The transaction
                 // remains open, so the decisions cannot race a repository writer.
@@ -541,11 +894,69 @@ internal class BackupImportStore(
                         val ordinal = rows.getLong(0)
                         val table = rows.getString(1)
                         val selectedChoice = if (rows.isNull(6)) null else rows.getString(7)
-                        if (selectedChoice != null && selectedChoice != "MERGE_IDENTICAL_CONTENT") continue
                         val row = JSONObject(rows.getString(3))
                         @Suppress("UNCHECKED_CAST")
                         val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
                             ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                        if (isOmittedBackupGraphRow(table, values, omittedBackupGraph, rows.getLong(0))) continue
+                        if (table == "jobs" && hasJobDeletionTombstone(db, values["id"]?.toString())) {
+                            if (selectedChoice != "PRESERVE_LOCAL_DELETION") {
+                                throw Failure("PREVIEW_STALE", "A deleted local job can no longer be restored from this preview.")
+                            }
+                            continue
+                        }
+                        val tombstoneRow = revisionTombstoneRows[table]
+                        val tombstoneId = tombstoneRow?.let { values[it.entityIdColumn]?.toString() }
+                        if (tombstoneRow != null && tombstoneId != null &&
+                            hasLocalEntityDeletionTombstone(db, tombstoneRow.kind, tombstoneId)) {
+                            if (selectedChoice != "PRESERVE_LOCAL_DELETION") {
+                                throw Failure("PREVIEW_STALE", "A deleted local entity changed after preview.")
+                            }
+                            continue
+                        }
+                        if (table == "job_deletions" && hasLocalJob(db, values["id"]?.toString()) &&
+                            selectedChoice != "KEEP_LOCAL") {
+                            throw Failure("ACTIVE_JOB_DELETION", "A backup deletion conflicts with a live local job.")
+                        }
+                        if (table == "entity_heads" &&
+                            activeJobDeletionChoiceForHead(db, handle, values) == "KEEP_LOCAL") continue
+                        if (table == "entity_heads" &&
+                            localTombstoneChoiceForHead(db, handle, values) == "PRESERVE_LOCAL_DELETION") continue
+                        if (selectedChoice == null && table in revisionDataKinds.keys) {
+                            val mergeChoice = divergentMergeChoiceForDataRow(handle, table, values)
+                            if (mergeChoice != null) {
+                                val data = divergentEntityDataForRow(db, handle, table, values)
+                                    ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                                val plan = plannedMergeForDataRow(db, handle, data, mergeChoice)
+                                putConsistentMergePlan(plannedDivergentMerges, plan)
+                                continue
+                            }
+                        }
+                        if (table == "entity_heads" && selectedChoice != null &&
+                            selectedChoice in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT") {
+                            val kind = values["kind"]?.toString()
+                                ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                            val entityId = values["entity_id"]?.toString()
+                                ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                            val headSpec = handle.catalog.getValue("entity_heads")
+                            val localHead = findLocalRow(db, "entity_heads", headSpec, values)
+                                ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+                            val data = divergentEntityDataForHead(db, handle, values, localHead)
+                                ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                            val plan = PlannedDivergentMerge(
+                                kind,
+                                entityId,
+                                requireNotNull(selectedChoice),
+                                localHead.values["revision_id"]?.toString()
+                                    ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview."),
+                                values["revision_id"]?.toString()
+                                    ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview."),
+                                data,
+                            )
+                            putConsistentMergePlan(plannedDivergentMerges, plan)
+                            continue
+                        }
+                        if (selectedChoice != null && selectedChoice != "MERGE_IDENTICAL_CONTENT") continue
                         val spec = handle.catalog[table]
                             ?: throw Failure("TABLE_NOT_ALLOWED", "The backup contains an unsupported table.")
                         if (selectedChoice == "MERGE_IDENTICAL_CONTENT") {
@@ -590,19 +1001,24 @@ internal class BackupImportStore(
                             findOverlappingSessionId(db, handle, ordinal, sessionStart, sessionEnd, values["id"].toString()) != null) {
                             throw Failure("PREVIEW_STALE", "A backup session now overlaps local time; create a new preview.")
                         }
-                        if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
+                        if (table == "location_points" && hasUnprovenLocalGpsCoverage(db, handle, values)) {
                             throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
                         }
-                        if (table == "location_deletion_ranges" && hasUnprovenLocalGpsPoints(db, values)) {
+                        if (table == "location_deletion_ranges" && selectedChoice != "APPLY_BACKUP_DELETION" &&
+                            hasUnprovenLocalGpsPoints(db, values)) {
                             throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
                         }
                     }
                 }
 
-                // A divergent head can merge only when its live payload and application row are
-                // identical; all other semantic choices remain explicit keep/omit operations.
+                // A divergent head merge and its selected business row are applied together.
                 db.execSQL("PRAGMA defer_foreign_keys=ON")
-                val tableOrder = dependencyOrder(db, handle.catalog.keys.toList())
+                val orderedTables = dependencyOrder(db, handle.catalog.keys.toList())
+                val tableOrder = if ("entity_heads" in orderedTables) {
+                    orderedTables.filterNot { it == "entity_heads" } + "entity_heads"
+                } else {
+                    orderedTables
+                }
                 tableOrder.forEach { table ->
                     handle.database.rawQuery(
                         "SELECT r.ordinal,r.row_json,c.ordinal,c.selected_choice FROM import_rows r " +
@@ -616,14 +1032,69 @@ internal class BackupImportStore(
                             @Suppress("UNCHECKED_CAST")
                             val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
                                 ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
+                            if (isOmittedBackupGraphRow(table, values, omittedBackupGraph, ordinal)) continue
+                            if (table == "entity_heads" &&
+                                activeJobDeletionChoiceForHead(db, handle, values) == "KEEP_LOCAL") continue
+                            if (table == "entity_heads" &&
+                                localTombstoneChoiceForHead(db, handle, values) == "PRESERVE_LOCAL_DELETION") continue
                             if (!rows.isNull(2)) {
-                                if (rows.getString(3) != "MERGE_IDENTICAL_CONTENT") continue
-                                if (table != "entity_heads") {
-                                    throw Failure("UNSUPPORTED_CHOICE", "A backup merge choice is invalid.")
+                                val selectedChoice = rows.getString(3)
+                                if (selectedChoice in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT") {
+                                    if (table != "entity_heads") {
+                                        throw Failure("UNSUPPORTED_CHOICE", "A backup merge choice is invalid.")
+                                    }
+                                    val plan = plannedDivergentMerges[divergentMergeKey(
+                                        values["kind"].toString(), values["entity_id"].toString(),
+                                    )] ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                                    applySelectedDivergentHeadMerge(db, handle, plan)
+                                    changed++
+                                    continue
                                 }
-                                applyIdenticalContentHeadMerge(db, handle, values)
-                                changed++
-                                continue
+                                if (selectedChoice == "APPLY_BACKUP_DELETION") {
+                                    val isRangeRow = table == "location_deletion_ranges"
+                                    val isRangeHead = table == "entity_heads" &&
+                                        values["kind"] == "location_deletion_range"
+                                    if (!isRangeRow && !isRangeHead) {
+                                        throw Failure("UNSUPPORTED_CHOICE", "A backup deletion choice is invalid.")
+                                    }
+                                    // Insert/retain the range, then materialize causal point
+                                    // tombstones after all selected range rows are present.
+                                } else if (selectedChoice == "MERGE_IDENTICAL_CONTENT") {
+                                    if (table != "entity_heads") {
+                                        throw Failure("UNSUPPORTED_CHOICE", "A backup merge choice is invalid.")
+                                    }
+                                    applyIdenticalContentHeadMerge(db, handle, values)
+                                    changed++
+                                    continue
+                                } else {
+                                    continue
+                                }
+                            }
+                            if (table in revisionDataKinds.keys) {
+                                val kind = revisionDataKinds.getValue(table)
+                                val entityId = revisionEntityIdForDataRow(table, values)
+                                    ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                                val plan = plannedDivergentMerges[divergentMergeKey(
+                                    kind, entityId,
+                                )]
+                                if (plan != null) {
+                                    if (plan.choice == "MERGE_USE_BACKUP_CONTENT") {
+                                        val content = applyContentValues(
+                                            handle,
+                                            ApplyRow(plan.data.ordinal, table, plan.data.values, plan.data.blobs),
+                                        )
+                                        val where = plan.data.spec.primaryKey.joinToString(" AND ") {
+                                            quote(it) + "=?"
+                                        }
+                                        val args = plan.data.spec.primaryKey.map {
+                                            plan.data.values[it].toString()
+                                        }.toTypedArray()
+                                        if (db.update(table, content, where, args) != 1) {
+                                            throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+                                        }
+                                    }
+                                    continue
+                                }
                             }
                             val spec = handle.catalog.getValue(table)
                             val headAdvance = headAdvanceForRow(handle, ordinal)
@@ -663,6 +1134,7 @@ internal class BackupImportStore(
                         }
                     }
                 }
+                changed += applyGpsRangeDeletionChoices(db, omittedBackupGraph.gpsDeletionParentsByPoint)
                 validateAppliedState(db)
                 if (changed > 0) {
                     db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
@@ -737,6 +1209,7 @@ internal class BackupImportStore(
         if (scalarLong(handle.database, "SELECT COUNT(*) FROM import_conflicts WHERE selected_choice IS NULL") != 0L) {
             throw Failure("UNRESOLVED_CONFLICTS", "Choose an option for every backup conflict before applying.")
         }
+        val selectedIntents = mutableMapOf<String, String>()
         handle.database.rawQuery(
             "SELECT selected_choice,conflict_json FROM import_conflicts ORDER BY ordinal",
             null,
@@ -750,23 +1223,45 @@ internal class BackupImportStore(
                     !conflict.optBoolean("resolved") || conflict.optString("selectedChoice") != choice) {
                     throw Failure("UNSUPPORTED_CHOICE", "A backup conflict contains an unsupported choice.")
                 }
+                val intent = conflict.optString("aggregateSelectionIntent")
+                    .takeIf(String::isNotEmpty) ?: conflictChoiceIntent(choice) ?: continue
+                if (intent == "NEUTRAL") continue
+                val groupKeys = conflict.optJSONArray("aggregateKeys") ?: continue
+                for (index in 0 until groupKeys.length()) {
+                    val key = groupKeys.optString(index)
+                    val previous = selectedIntents.putIfAbsent(key, intent)
+                    if (previous != null && previous != intent) {
+                        throw Failure(
+                            "AGGREGATE_CONFLICT_UNSUPPORTED",
+                            "Related backup records do not have one consistent conflict choice.",
+                        )
+                    }
+                }
             }
         }
     }
 
     private fun isSupportedChoice(kind: String, table: String, choice: String): Boolean = when (kind) {
+        "ACTIVE_JOB_DELETION" -> table == "job_deletions" && choice == "KEEP_LOCAL"
+        "JOB_DELETION_TOMBSTONE" -> table == "jobs" && choice == "PRESERVE_LOCAL_DELETION"
+        "ENTITY_DELETION_TOMBSTONE" -> table in revisionTombstoneRows && choice == "PRESERVE_LOCAL_DELETION"
+        "BACKUP_ENTITY_DELETION" -> table == "entity_heads" && choice == "KEEP_LOCAL"
+        "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" && choice == "KEEP_LOCAL"
         "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
         "SESSION_OVERLAP" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_SESSION"
-        // A covered backup point may only be omitted while preserving local deletion history.
-        // Importing a range over local points still needs coordinated causal graph rewriting.
-        "GPS_DELETION_COVERAGE" -> table == "location_points" && choice == "PRESERVE_DELETION"
+        // Covered points can be omitted as an entity graph, or a selected backup range can
+        // delete local points by adding both their prior head and the range as causal parents.
+        "GPS_DELETION_COVERAGE" -> (table == "location_points" && choice == "PRESERVE_DELETION") ||
+            (table == "location_deletion_ranges" && choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"))
+        "GPS_DELETION_RANGE_HEAD" -> table == "entity_heads" &&
+            choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
         "GPS_TOMBSTONE" -> table == "location_points" && choice == "PRESERVE_LOCAL_DELETION"
         "DEPENDENT_ON_CONFLICT" -> choice == "OMIT_BACKUP_RECORD"
         "UNIQUE_VALUE_IN_USE" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_RECORD"
         "IMMUTABLE_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
             (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)
         "EXISTING_RECORD_DIFFERS" -> choice == "KEEP_LOCAL" ||
-            (table == "entity_heads" && choice == "MERGE_IDENTICAL_CONTENT") ||
+            (table == "entity_heads" && choice in divergentHeadMergeChoices) ||
             (choice == "OMIT_BACKUP_RECORD" && table !in mergeOnlyTables)
         else -> false
     }
@@ -851,6 +1346,21 @@ internal class BackupImportStore(
     private fun validateAppliedState(db: SQLiteDatabase) {
         db.rawQuery("PRAGMA foreign_key_check", null).use { rows ->
             if (rows.moveToFirst()) throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
+        }
+        val liveJobsWithDeletionFence = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM jobs j JOIN job_deletions d ON d.id=j.id",
+        )
+        val invalidJobDeletionFences = scalarLong(
+            db,
+            "SELECT COUNT(*) FROM job_deletions d " +
+                "LEFT JOIN entity_revisions r ON r.id=d.revision_id " +
+                "LEFT JOIN entity_heads h ON h.kind='job' AND h.entity_id=d.id " +
+                "WHERE r.id IS NULL OR r.kind<>'job' OR r.entity_id<>d.id OR r.deleted<>1 " +
+                "OR h.revision_id IS NOT d.revision_id",
+        )
+        if (liveJobsWithDeletionFence != 0L || invalidJobDeletionFences != 0L) {
+            throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
         }
         val invalidRangeHeads = scalarLong(
             db,
@@ -1149,6 +1659,15 @@ internal class BackupImportStore(
                         "first_ordinal INTEGER NOT NULL,first_primary_key TEXT NOT NULL," +
                         "PRIMARY KEY(table_name,columns_json,values_json))",
                 )
+                handle.database.execSQL("DROP TABLE IF EXISTS import_aggregate_keys")
+                handle.database.execSQL(
+                    "CREATE TABLE import_aggregate_keys(row_ordinal INTEGER NOT NULL,group_key TEXT NOT NULL," +
+                        "PRIMARY KEY(row_ordinal,group_key))",
+                )
+                handle.database.execSQL(
+                    "CREATE INDEX import_aggregate_group ON import_aggregate_keys(group_key,row_ordinal)",
+                )
+                buildAggregateKeyIndex(handle)
                 handle.database.rawQuery(
                     "SELECT ordinal,table_name,primary_key,row_json,session_start_ms,session_end_ms FROM import_rows ORDER BY ordinal",
                     null,
@@ -1160,6 +1679,54 @@ internal class BackupImportStore(
                         val row = JSONObject(rows.getString(3))
                         @Suppress("UNCHECKED_CAST")
                         val values = jsonValue(row.getJSONObject("values")) as Map<String, Any?>
+                        if (table == "job_deletions" && hasLocalJob(db, values["id"]?.toString())) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "ACTIVE_JOB_DELETION",
+                                listOf("KEEP_LOCAL"), null,
+                                localIdentifier = values["id"]?.toString(),
+                                localSummary = mapOf("identifier" to "Live local job"),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
+                        if (table == "task_comment_events" && values["action"] == "DELETED") {
+                            val commentId = values["comment_id"]?.toString()
+                            if (commentId != null && localIdentifierExists(db, "task_comments", commentId)) {
+                                conflictOrdinal = addConflict(
+                                    handle, conflictOrdinal, ordinal, table, keyJson, "BACKUP_COMMENT_DELETION",
+                                    listOf("KEEP_LOCAL"), "KEEP_LOCAL",
+                                    localIdentifier = commentId,
+                                    localSummary = mapOf("identifier" to "Live local comment"),
+                                    backupSummary = safeSummary(values),
+                                )
+                                continue
+                            }
+                        }
+                        if (table == "entity_heads" &&
+                            activeJobDeletionChoiceForHead(db, handle, values) != null) continue
+                        if (table == "jobs" && hasJobDeletionTombstone(db, values["id"]?.toString())) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "JOB_DELETION_TOMBSTONE",
+                                listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
+                                localIdentifier = values["id"]?.toString(),
+                                localSummary = mapOf("identifier" to "Permanently deleted job"),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
+                        val tombstoneRow = revisionTombstoneRows[table]
+                        val tombstoneId = tombstoneRow?.let { values[it.entityIdColumn]?.toString() }
+                        if (tombstoneRow != null && tombstoneId != null &&
+                            hasLocalEntityDeletionTombstone(db, tombstoneRow.kind, tombstoneId)) {
+                            conflictOrdinal = addConflict(
+                                handle, conflictOrdinal, ordinal, table, keyJson, "ENTITY_DELETION_TOMBSTONE",
+                                listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
+                                localIdentifier = tombstoneId,
+                                localSummary = mapOf("identifier" to "Deleted local entity"),
+                                backupSummary = safeSummary(values),
+                            )
+                            continue
+                        }
                         val spec = handle.catalog.getValue(table)
                         val blobFields = stagedBlobs(handle, ordinal)
                         val earlierBackupDuplicate = registerStagedUniqueKeys(
@@ -1175,8 +1742,8 @@ internal class BackupImportStore(
                             )
                             continue
                         }
-                        if (table == "location_points" && hasUnprovenIncomingGpsCoverage(db, handle, values)) {
-                            val canPreserveDeletion = canSafelyPreserveLocalGpsDeletion(db, values)
+                        if (table == "location_points" && hasUnprovenLocalGpsCoverage(db, handle, values)) {
+                            val canPreserveDeletion = canSafelyPreserveLocalGpsDeletion(db, handle, values)
                             val choices = if (canPreserveDeletion) listOf("PRESERVE_DELETION") else emptyList()
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
@@ -1203,11 +1770,20 @@ internal class BackupImportStore(
                             continue
                         }
                         if (table == "location_deletion_ranges") {
-                            if (hasUnprovenLocalGpsPoints(db, values)) {
+                            val hasUnprovenLocalPoints = hasUnprovenLocalGpsPoints(db, values)
+                            val hasUnprovenBackupPoints = backupGpsPointsWithoutRangeParent(handle, values).isNotEmpty()
+                            if (hasUnprovenLocalPoints || hasUnprovenBackupPoints) {
+                                val choices = listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
-                                    emptyList(), null,
-                                    localSummary = mapOf("identifier" to "Unproven local GPS points are covered"),
+                                    choices, null,
+                                    localSummary = mapOf(
+                                        "identifier" to if (hasUnprovenLocalPoints) {
+                                            "Unproven local GPS points are covered"
+                                        } else {
+                                            "Unproven backup GPS points are covered"
+                                        },
+                                    ),
                                     backupSummary = safeSummary(values),
                                 )
                                 continue
@@ -1247,8 +1823,12 @@ internal class BackupImportStore(
                                 // different content cannot be repaired by a row-level choice.
                                 invalidRevisionGraph()
                             }
+                            val coordinatedDivergentEntity = !same && table in revisionDataKinds.keys &&
+                                divergentEntityDataForRow(db, handle, table, values) != null
                             if (same) {
                                 unchanged++
+                            } else if (coordinatedDivergentEntity) {
+                                // The associated entity-head choice controls this row atomically.
                             } else if (table == "entity_heads" && canAutoAdvanceHead(
                                     db, handle, values, local,
                                 )) {
@@ -1276,29 +1856,73 @@ internal class BackupImportStore(
                                 } else {
                                     null
                                 }
+                                val incomingRevision = if (table == "entity_heads") {
+                                    values["revision_id"]?.toString()?.let {
+                                        revisionContent(handle.database, "validation_revisions", it)
+                                    }
+                                } else {
+                                    null
+                                }
+                                val currentRevision = if (table == "entity_heads") {
+                                    local.values["revision_id"]?.toString()?.let {
+                                        revisionContent(db, "entity_revisions", it)
+                                    }
+                                } else {
+                                    null
+                                }
+                                val backupDeletionAgainstLive = table == "entity_heads" &&
+                                    incomingRevision?.deleted == 1L && currentRevision?.deleted == 0L
                                 val mergeableDivergentHead = table == "entity_heads" &&
                                     revisionRelationship == "DIVERGENT" &&
                                     canMergeDivergentHead(db, handle, values, local)
+                                val selectableDivergentHead = table == "entity_heads" &&
+                                    revisionRelationship == "DIVERGENT" &&
+                                    divergentEntityDataForHead(db, handle, values, local) != null
+                                val gpsRangeHeadChoice = table == "entity_heads" &&
+                                    values["kind"] == "location_deletion_range" &&
+                                    revisionRelationship == "DIVERGENT" &&
+                                    hasStagedGpsRangeCoverageConflict(
+                                        db, handle, values.getValue("entity_id").toString(),
+                                    )
                                 val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
                                     values["kind"] == "location" &&
                                     hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
-                                // M7.3 remains blocked for non-identical divergent content until a
-                                // two-sided take-backup/keep-local decision can preserve both histories.
                                 val unsupportedDivergentHead = table == "entity_heads" &&
                                     revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
+                                    !selectableDivergentHead &&
+                                    !gpsRangeHeadChoice &&
                                     !localGpsTombstoneCanBePreserved
                                 val choices = when {
+                                    backupDeletionAgainstLive -> listOf("KEEP_LOCAL")
+                                    gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
                                     immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
                                     mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
-                                    unsupportedDivergentHead -> emptyList()
+                                    selectableDivergentHead -> listOf(
+                                        "KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT",
+                                    )
+                                    // A kind without a validated row adapter can safely retain
+                                    // only the local head. A zero-choice conflict cannot be
+                                    // resolved and would strand every otherwise valid archive.
+                                    unsupportedDivergentHead -> listOf("KEEP_LOCAL")
                                     table in mergeOnlyTables -> listOf("KEEP_LOCAL")
                                     else -> listOf("KEEP_LOCAL")
                                 }
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson,
-                                    if (immutable) "IMMUTABLE_RECORD_DIFFERS" else "EXISTING_RECORD_DIFFERS",
+                                    when {
+                                        backupDeletionAgainstLive -> "BACKUP_ENTITY_DELETION"
+                                        gpsRangeHeadChoice -> "GPS_DELETION_RANGE_HEAD"
+                                        immutable -> "IMMUTABLE_RECORD_DIFFERS"
+                                        else -> "EXISTING_RECORD_DIFFERS"
+                                    },
                                     choices,
-                                    if (unsupportedDivergentHead) null else "KEEP_LOCAL",
+                                    when {
+                                        backupDeletionAgainstLive -> "KEEP_LOCAL"
+                                        gpsRangeHeadChoice -> null
+                                        unsupportedDivergentHead -> "KEEP_LOCAL"
+                                        selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
+                                        else -> "KEEP_LOCAL"
+                                    },
                                     localSummary = safeSummary(local.values),
                                     backupSummary = safeSummary(values),
                                     revisionRelationship = revisionRelationship,
@@ -1400,13 +2024,15 @@ internal class BackupImportStore(
         val db = handle.database
         db.beginTransaction()
         try {
-            db.execSQL("CREATE TABLE validation_revisions(id TEXT PRIMARY KEY,kind TEXT NOT NULL,entity_id TEXT NOT NULL,job_id TEXT,deleted INTEGER NOT NULL,origin TEXT NOT NULL)")
+            db.execSQL("CREATE TABLE validation_revisions(id TEXT PRIMARY KEY,kind TEXT NOT NULL,entity_id TEXT NOT NULL,job_id TEXT,payload TEXT,deleted INTEGER NOT NULL,origin TEXT NOT NULL)")
             db.execSQL("CREATE TABLE validation_parents(revision_id TEXT NOT NULL,parent_id TEXT NOT NULL,PRIMARY KEY(revision_id,parent_id))")
             db.execSQL("CREATE INDEX validation_parent_child ON validation_parents(revision_id)")
             db.execSQL("CREATE INDEX validation_parent_parent ON validation_parents(parent_id)")
             db.execSQL("CREATE TABLE validation_heads(kind TEXT NOT NULL,entity_id TEXT NOT NULL,revision_id TEXT NOT NULL,PRIMARY KEY(kind,entity_id))")
             db.execSQL("CREATE TABLE validation_ranges(id TEXT PRIMARY KEY,job_id TEXT,start_ms INTEGER NOT NULL,end_ms INTEGER NOT NULL,revision_id TEXT NOT NULL UNIQUE)")
             db.execSQL("CREATE INDEX validation_range_scope_bounds ON validation_ranges(job_id,start_ms,end_ms)")
+            db.execSQL("CREATE TABLE validation_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL,job_id TEXT NOT NULL,measured_ms INTEGER NOT NULL,revision_id TEXT NOT NULL)")
+            db.execSQL("CREATE INDEX validation_point_time ON validation_points(measured_ms,job_id)")
             db.execSQL("CREATE TABLE validation_reference_keys(parent_table TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL,PRIMARY KEY(parent_table,columns_json,values_json))")
 
             forEachImportedValues(handle, "entity_revisions") { values ->
@@ -1414,14 +2040,17 @@ internal class BackupImportStore(
                 if (deleted !in 0L..1L) invalidRevisionGraph()
                 val kind = revisionString(values["kind"])
                 val entityId = revisionString(values["entity_id"])
+                if (kind !in supportedRevisionKinds) invalidRevisionGraph()
+                values["payload"]?.let(::validateRevisionObjectPayload)
                 if (kind == "location" && values["payload"] != null) {
                     validateLocationRevisionPayload(values["payload"], entityId)
                 }
                 db.execSQL(
-                    "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?)",
+                    "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?,?)",
                     arrayOf<Any?>(
                         revisionString(values["id"]), kind,
                         entityId, nullableRevisionString(values["job_id"]),
+                        values["payload"]?.toString(),
                         deleted, revisionString(values["origin"]),
                     ),
                 )
@@ -1440,6 +2069,25 @@ internal class BackupImportStore(
                         revisionString(values["revision_id"]),
                     ),
                 )
+            }
+            forEachImportedValues(handle, "job_deletions") { values ->
+                val jobId = revisionString(values["id"])
+                val deletionRevision = revisionString(values["revision_id"])
+                val revisionMatches = db.rawQuery(
+                    "SELECT kind,entity_id,deleted FROM validation_revisions WHERE id=?",
+                    arrayOf(deletionRevision),
+                ).use { rows ->
+                    rows.moveToFirst() && rows.getString(0) == "job" && rows.getString(1) == jobId &&
+                        rows.getLong(2) == 1L
+                }
+                val headMatches = scalarLong(
+                    db,
+                    "SELECT COUNT(*) FROM validation_heads WHERE kind='job' AND entity_id=? AND revision_id=?",
+                    arrayOf(jobId, deletionRevision),
+                ) == 1L
+                if (!revisionMatches || !headMatches || stagedIdentifierExists(handle, "jobs", jobId)) {
+                    invalidReference()
+                }
             }
             forEachImportedValues(handle, "location_deletion_ranges") { values ->
                 val start = revisionInteger(values["start_ms"])
@@ -1506,15 +2154,23 @@ internal class BackupImportStore(
 
             forEachImportedValues(handle, "location_points") { values ->
                 val pointId = revisionString(values["id"])
-                val pointRevisionDeleted = db.rawQuery(
-                    "SELECT r.deleted FROM validation_heads h JOIN validation_revisions r ON r.id=h.revision_id " +
+                val pointRevision = db.rawQuery(
+                    "SELECT h.revision_id,r.deleted FROM validation_heads h JOIN validation_revisions r ON r.id=h.revision_id " +
                         "WHERE h.kind='location' AND h.entity_id=?",
                     arrayOf(pointId),
                 ).use { rows ->
                     if (!rows.moveToFirst()) invalidReference()
-                    rows.getLong(0)
+                    rows.getString(0) to rows.getLong(1)
                 }
-                if (pointRevisionDeleted != 0L) invalidReference()
+                if (pointRevision.second != 0L) invalidReference()
+                val sessionId = revisionString(values["session_id"])
+                val jobId = stagedSessionJobId(localDb, handle, sessionId) ?: invalidReference()
+                db.execSQL(
+                    "INSERT INTO validation_points VALUES(?,?,?,?,?)",
+                    arrayOf(
+                        pointId, sessionId, jobId, revisionInteger(values["measured_ms"]), pointRevision.first,
+                    ),
+                )
             }
             val invalidRangeHeadCount = scalarLong(
                 db,
@@ -1653,6 +2309,17 @@ internal class BackupImportStore(
 
     private fun invalidRevisionGraph(): Nothing =
         throw Failure("INVALID_REVISION_GRAPH", "The backup revision history is invalid.")
+
+    /** All writers serialize a JSON object; null is reserved for intentional redaction. */
+    private fun validateRevisionObjectPayload(payload: Any?) {
+        val jsonText = payload as? String ?: invalidRevisionGraph()
+        if (!jsonText.trimStart().startsWith("{")) invalidRevisionGraph()
+        try {
+            JSONObject(jsonText)
+        } catch (_: Exception) {
+            invalidRevisionGraph()
+        }
+    }
 
     private fun validateLocationRevisionPayload(payload: Any?, entityId: String) {
         val jsonText = payload as? String ?: invalidRevisionGraph()
@@ -2024,7 +2691,7 @@ internal class BackupImportStore(
     private fun localIdentifierExists(db: SQLiteDatabase, table: String, id: String): Boolean =
         db.rawQuery("SELECT 1 FROM ${quote(table)} WHERE id=? LIMIT 1", arrayOf(id)).use { it.moveToFirst() }
 
-    private fun hasUnprovenIncomingGpsCoverage(
+    private fun hasUnprovenLocalGpsCoverage(
         localDb: SQLiteDatabase,
         handle: Handle,
         point: Map<String, Any?>,
@@ -2047,16 +2714,30 @@ internal class BackupImportStore(
                 unproven = !hasDirectCausalParent(handle, pointRevision, rows.getString(0))
             }
         }
-        handle.database.rawQuery(
-            "SELECT revision_id FROM validation_ranges WHERE start_ms<=? AND end_ms>? " +
-                "AND (job_id IS NULL OR job_id=?)",
-            arrayOf(measuredAt.toString(), measuredAt.toString(), jobId),
-        ).use { rows ->
-            while (rows.moveToNext() && !unproven) {
-                unproven = !hasDirectCausalParent(handle, pointRevision, rows.getString(0))
-            }
-        }
         return unproven
+    }
+
+    private fun backupGpsPointsWithoutRangeParent(
+        handle: Handle,
+        range: Map<String, Any?>,
+    ): Set<String> {
+        val start = revisionInteger(range["start_ms"])
+        val end = revisionInteger(range["end_ms"])
+        val rangeJobId = nullableRevisionString(range["job_id"])
+        val rangeRevisionId = revisionString(range["revision_id"])
+        val jobFilter = if (rangeJobId == null) "" else " AND job_id=?"
+        val args = buildList {
+            add(start.toString())
+            add(end.toString())
+            rangeJobId?.let(::add)
+            add(rangeRevisionId)
+        }.toTypedArray()
+        return handle.database.rawQuery(
+            "SELECT p.id FROM validation_points p WHERE measured_ms>=? AND measured_ms<?$jobFilter " +
+                "AND NOT EXISTS(SELECT 1 FROM validation_parents rp " +
+                "WHERE rp.revision_id=p.revision_id AND rp.parent_id=?) ORDER BY p.id",
+            args,
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
     }
 
     private fun hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean =
@@ -2071,18 +2752,27 @@ internal class BackupImportStore(
     }
 
     /**
-     * Omitting a covered backup point is safe only when local state already represents that
-     * point as either a deleted tombstone or a live point whose head proves every local range.
-     * A backup-only point cannot be omitted alone because its live revision and head would then
-     * remain orphaned in the restored graph.
+     * A covered backup point can be omitted only when a local range already fences the same
+     * measured time and scope, or local state has a causally valid point head. Omission removes
+     * the point row and its complete revision/head graph together.
      */
     private fun canSafelyPreserveLocalGpsDeletion(
         db: SQLiteDatabase,
+        handle: Handle,
         point: Map<String, Any?>,
     ): Boolean {
         val pointId = revisionString(point["id"])
         if (!localIdentifierExists(db, "location_points", pointId)) {
-            return hasLocalLocationTombstone(db, point)
+            if (hasLocalLocationTombstone(db, point)) return true
+            val measuredAt = revisionInteger(point["measured_ms"])
+            val sessionId = revisionString(point["session_id"])
+            val jobId = stagedSessionJobId(db, handle, sessionId) ?: return false
+            return scalarLong(
+                db,
+                "SELECT COUNT(*) FROM location_deletion_ranges WHERE start_ms<=? AND end_ms>? " +
+                    "AND (job_id IS NULL OR job_id=?)",
+                arrayOf(measuredAt.toString(), measuredAt.toString(), jobId),
+            ) > 0L
         }
         val localPoint = db.rawQuery(
             "SELECT p.measured_ms,s.job_id,h.revision_id,r.deleted " +
@@ -2158,6 +2848,109 @@ internal class BackupImportStore(
                 "AND EXISTS(SELECT 1 FROM revision_parents rp WHERE rp.revision_id=h.revision_id AND rp.parent_id=?)) LIMIT 1",
             args,
         ).use { it.moveToFirst() }
+    }
+
+    private fun hasStagedGpsRangeCoverageConflict(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        rangeId: String,
+    ): Boolean {
+        val range = handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name='location_deletion_ranges' " +
+                "AND primary_key=? LIMIT 1",
+            arrayOf(jsonArray(listOf(rangeId))),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return false
+            @Suppress("UNCHECKED_CAST")
+            jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<String, Any?>
+                ?: invalidRevisionGraph()
+        }
+        return hasUnprovenLocalGpsPoints(localDb, range) ||
+            backupGpsPointsWithoutRangeParent(handle, range).isNotEmpty()
+    }
+
+    private fun localGpsPointsWithoutRangeParent(
+        db: SQLiteDatabase,
+        range: Map<String, Any?>,
+    ): List<String> {
+        val start = revisionInteger(range["start_ms"])
+        val end = revisionInteger(range["end_ms"])
+        val revisionId = revisionString(range["revision_id"])
+        val jobId = nullableRevisionString(range["job_id"])
+        val jobFilter = if (jobId == null) "" else " AND s.job_id=?"
+        val args = buildList {
+            add(start.toString())
+            add(end.toString())
+            jobId?.let(::add)
+            add(revisionId)
+        }.toTypedArray()
+        return db.rawQuery(
+            "SELECT p.id FROM location_points p JOIN sessions s ON s.id=p.session_id " +
+                "JOIN entity_heads h ON h.kind='location' AND h.entity_id=p.id " +
+                "WHERE p.measured_ms>=? AND p.measured_ms<?$jobFilter AND NOT EXISTS(" +
+                "SELECT 1 FROM revision_parents rp WHERE rp.revision_id=h.revision_id AND rp.parent_id=?) " +
+                "ORDER BY p.id",
+            args,
+        ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+    }
+
+    /**
+     * A user-selected incoming range deletion writes local point tombstones with both the
+     * previous point head and every selected range as direct parents, then removes the rows.
+     */
+    private fun applyGpsRangeDeletionChoices(
+        db: SQLiteDatabase,
+        parentsByPoint: Map<String, Set<String>>,
+    ): Long {
+        var deletedPoints = 0L
+        parentsByPoint.toSortedMap().forEach { (pointId, rangeRevisionIds) ->
+            val localPoint = db.rawQuery(
+                "SELECT p.session_id,p.measured_ms,s.job_id,h.revision_id,r.changed_ms,r.deleted " +
+                    "FROM location_points p JOIN sessions s ON s.id=p.session_id " +
+                    "JOIN entity_heads h ON h.kind='location' AND h.entity_id=p.id " +
+                    "JOIN entity_revisions r ON r.id=h.revision_id WHERE p.id=?",
+                arrayOf(pointId),
+            ).use { rows ->
+                if (!rows.moveToFirst() || rows.getLong(5) != 0L) {
+                    throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
+                }
+                arrayOf(
+                    rows.getString(0),
+                    rows.getLong(1).toString(),
+                    rows.getString(2),
+                    rows.getString(3),
+                    rows.getLong(4).toString(),
+                )
+            }
+            var deletedAt = localPoint[4].toLong()
+            rangeRevisionIds.forEach { rangeRevisionId ->
+                val rangeDeletedAt = db.rawQuery(
+                    "SELECT deleted_ms FROM location_deletion_ranges d WHERE d.revision_id=? " +
+                        "AND d.start_ms<=? AND d.end_ms>? AND (d.job_id IS NULL OR d.job_id=?)",
+                    arrayOf(rangeRevisionId, localPoint[1], localPoint[1], localPoint[2]),
+                ).use { rows -> if (rows.moveToFirst()) rows.getLong(0) else null }
+                if (rangeDeletedAt == null) {
+                    throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
+                }
+                deletedAt = maxOf(deletedAt, rangeDeletedAt)
+            }
+            RevisionStore.record(
+                db,
+                "location",
+                pointId,
+                localPoint[2],
+                mapOf("id" to pointId, "session_id" to localPoint[0]),
+                deletedAt,
+                deleted = true,
+                origin = "GPS_RANGE_DELETE",
+                additionalParents = rangeRevisionIds,
+            )
+            if (db.delete("location_points", "id=?", arrayOf(pointId)) != 1) {
+                throw Failure("PREVIEW_STALE", "GPS deletion coverage changed after preview.")
+            }
+            deletedPoints++
+        }
+        return deletedPoints
     }
 
     private fun stagedBlobs(handle: Handle, rowOrdinal: Long): Map<String, LongArray> =
@@ -2275,6 +3068,7 @@ internal class BackupImportStore(
         revisionRelationship: String? = null,
     ): Long {
         val conflictId = conflictId(handle, rowOrdinal, table, keyJson, reason)
+        val aggregateKeys = aggregateKeysForStagedRow(handle, rowOrdinal, table)
         val conflict = JSONObject()
             .put("conflictId", conflictId)
             .put("kind", reason)
@@ -2284,6 +3078,7 @@ internal class BackupImportStore(
             .put("localSummary", safeSummaryObject(localSummary))
             .put("backupSummary", safeSummaryObject(backupSummary))
             .put("allowedChoices", JSONArray(choices))
+            .put("aggregateKeys", JSONArray(aggregateKeys.sorted()))
             .put("defaultChoice", defaultChoice ?: JSONObject.NULL)
             .put("resolved", false)
         if (revisionRelationship != null) conflict.put("revisionRelationship", revisionRelationship)
@@ -2294,6 +3089,361 @@ internal class BackupImportStore(
             put("conflict_json", conflict.toString())
         })
         return ordinal + 1
+    }
+
+    private fun aggregateKeysForStagedRow(handle: Handle, rowOrdinal: Long, table: String): Set<String> {
+        val exists = handle.database.rawQuery(
+            "SELECT 1 FROM import_rows WHERE ordinal=? AND table_name=? LIMIT 1",
+            arrayOf(rowOrdinal.toString(), table),
+        ).use { it.moveToFirst() }
+        if (!exists) return emptySet()
+        return handle.database.rawQuery(
+            "SELECT group_key FROM import_aggregate_keys WHERE row_ordinal=? ORDER BY group_key",
+            arrayOf(rowOrdinal.toString()),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+    }
+
+    /** Adds one scoped reference edge to both rows in the staged dependency conflict. */
+    private fun attachAggregateGroupKey(handle: Handle, rowOrdinal: Long, groupKey: String) {
+        handle.database.insertWithOnConflict(
+            "import_aggregate_keys",
+            null,
+            ContentValues().apply {
+                put("row_ordinal", rowOrdinal)
+                put("group_key", groupKey)
+            },
+            SQLiteDatabase.CONFLICT_IGNORE,
+        )
+        val conflicts = handle.database.rawQuery(
+            "SELECT conflict_id,conflict_json FROM import_conflicts WHERE row_ordinal=?",
+            arrayOf(rowOrdinal.toString()),
+        ).use { rows -> buildList {
+            while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1))
+        } }
+        conflicts.forEach { (conflictId, conflictJson) ->
+            val json = JSONObject(conflictJson)
+            val keys = json.optJSONArray("aggregateKeys")
+            val merged = buildSet {
+                if (keys != null) for (index in 0 until keys.length()) add(keys.optString(index))
+                add(groupKey)
+            }
+            json.put("aggregateKeys", JSONArray(merged.sorted()))
+            handle.database.update(
+                "import_conflicts",
+                ContentValues().apply { put("conflict_json", json.toString()) },
+                "conflict_id=?",
+                arrayOf(conflictId),
+            )
+        }
+    }
+
+    private fun buildAggregateKeyIndex(handle: Handle) {
+        val db = handle.database
+        var lastOrdinal = -1L
+        while (true) {
+            val batch = db.rawQuery(
+                "SELECT ordinal,table_name,row_json FROM import_rows WHERE ordinal>? ORDER BY ordinal LIMIT 256",
+                arrayOf(lastOrdinal.toString()),
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) {
+                    @Suppress("UNCHECKED_CAST")
+                    val values = jsonValue(JSONObject(rows.getString(2)).getJSONObject("values"))
+                        as? Map<String, Any?> ?: invalidArchiveRow()
+                    add(Triple(rows.getLong(0), rows.getString(1), values))
+                }
+            } }
+            if (batch.isEmpty()) return
+            batch.forEach { (ordinal, table, values) ->
+                aggregateKeysForRow(handle, table, values).forEach { groupKey ->
+                    db.insertOrThrow("import_aggregate_keys", null, ContentValues().apply {
+                        put("row_ordinal", ordinal)
+                        put("group_key", groupKey)
+                    })
+                }
+                lastOrdinal = ordinal
+            }
+        }
+    }
+
+    /** Stable aggregate IDs bind conflicts and rows that must be imported as one snapshot. */
+    private fun aggregateKeysForRow(
+        handle: Handle,
+        table: String,
+        values: Map<String, Any?>,
+    ): Set<String> {
+        fun key(prefix: String, value: Any?): String? = value?.toString()?.takeIf(String::isNotEmpty)
+            ?.let { "$prefix:$it" }
+        fun stagedValue(rowTable: String, keyColumn: String, keyValue: Any?, valueColumn: String): Any? {
+            if (keyValue == null) return null
+            val rowKey = handle.catalog[rowTable]?.primaryKey?.let { columns ->
+                if (columns == listOf(keyColumn)) jsonArray(listOf(keyValue)) else null
+            } ?: return null
+            return handle.database.rawQuery(
+                "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+                arrayOf(rowTable, rowKey),
+            ).use { rows ->
+                if (!rows.moveToFirst()) null else {
+                    val row = JSONObject(rows.getString(0)).getJSONObject("values")
+                    if (!row.has(valueColumn) || row.isNull(valueColumn)) null else jsonValue(row.get(valueColumn))
+                }
+            }
+        }
+        val result = linkedSetOf<String>()
+        fun add(vararg value: String?) { value.filterNotNull().forEach(result::add) }
+        fun addInvoice(invoiceId: Any?) { add(key("invoice", invoiceId)) }
+        fun addQuote(quoteId: Any?) { add(key("quote", quoteId)) }
+        fun addJob(jobId: Any?) { add(key("job-config", jobId)) }
+
+        when (table) {
+            "entity_heads" -> {
+                val revisionId = values["revision_id"]?.toString() ?: return emptySet()
+                val revision = handle.database.rawQuery(
+                    "SELECT kind,entity_id,job_id,payload FROM validation_revisions WHERE id=? LIMIT 1",
+                    arrayOf(revisionId),
+                ).use { rows ->
+                    if (!rows.moveToFirst()) return emptySet()
+                    listOf(
+                        rows.getString(0), rows.getString(1),
+                        if (rows.isNull(2)) null else rows.getString(2),
+                        if (rows.isNull(3)) null else rows.getString(3),
+                    )
+                }
+                @Suppress("UNCHECKED_CAST")
+                val payload = (revision[3] as? String)?.let { raw ->
+                    try { jsonValue(JSONObject(raw)) as? Map<String, Any?> } catch (_: Exception) { null }
+                }.orEmpty()
+                result.addAll(revisionAggregateKeys(
+                    revision[0] as String, revision[1] as String, revision[2] as String?, payload,
+                ))
+                if (revision[0] == "quote_scope_revision") {
+                    val parts = (revision[1] as String).split(':')
+                    if (parts.size == 3) {
+                        val scopeKey = jsonArray(listOf(parts[0], parts[1].toLongOrNull() ?: return result, parts[2]))
+                        handle.database.rawQuery(
+                            "SELECT row_json FROM import_rows WHERE table_name='quote_scope_revisions' " +
+                                "AND primary_key=? LIMIT 1",
+                            arrayOf(scopeKey),
+                        ).use { scopeRows ->
+                            if (scopeRows.moveToFirst()) {
+                                val scope = JSONObject(scopeRows.getString(0)).getJSONObject("values")
+                                val lineKey = jsonArray(listOf(parts[0], parts[2]))
+                                handle.database.rawQuery(
+                                    "SELECT row_json FROM import_rows WHERE table_name='quote_scope_lines' " +
+                                        "AND primary_key=? LIMIT 1",
+                                    arrayOf(lineKey),
+                                ).use { lineRows ->
+                                    if (lineRows.moveToFirst()) {
+                                        val line = JSONObject(lineRows.getString(0)).getJSONObject("values")
+                                        result.add("card-fields:${line.optString("task_id")}")
+                                    }
+                                }
+                                result.add("quote:${scope.optString("quote_id")}")
+                            }
+                        }
+                    }
+                }
+            }
+            "entity_revisions" -> {
+                val payload = (values["payload"] as? String)?.let { raw ->
+                    try { jsonValue(JSONObject(raw)) as? Map<String, Any?> } catch (_: Exception) { null }
+                }.orEmpty()
+                result.addAll(revisionAggregateKeys(
+                    values["kind"]?.toString() ?: return emptySet(),
+                    values["entity_id"]?.toString() ?: return emptySet(), values["job_id"]?.toString(), payload,
+                ))
+            }
+            "revision_parents" -> listOf("revision_id", "parent_id").forEach { revisionIdColumn ->
+                val revisionId = values[revisionIdColumn]?.toString() ?: return@forEach
+                handle.database.rawQuery(
+                    "SELECT kind,entity_id,job_id,payload FROM validation_revisions WHERE id=? LIMIT 1",
+                    arrayOf(revisionId),
+                ).use { rows ->
+                    if (rows.moveToFirst()) {
+                        @Suppress("UNCHECKED_CAST")
+                        val payload = if (rows.isNull(3)) emptyMap() else try {
+                            jsonValue(JSONObject(rows.getString(3))) as? Map<String, Any?> ?: emptyMap()
+                        } catch (_: Exception) { emptyMap() }
+                        result.addAll(revisionAggregateKeys(
+                            rows.getString(0), rows.getString(1), if (rows.isNull(2)) null else rows.getString(2),
+                            payload,
+                        ))
+                    }
+                }
+            }
+            "app_settings", "settings_money", "billing_tax_settings", "invoice_billing_defaults",
+            "invoice_accounting_settings", "location_recording_settings" -> {
+                add("global:settings")
+                if (table == "app_settings") add(key("logo", values["logo_id"]))
+            }
+            "logo_assets" -> add(key("logo", values["id"]))
+            "jobs" -> {
+                addJob(values["id"])
+            }
+            "customers" -> add(key("customer", values["id"]))
+            "job_tax_rates", "job_location_recording", "job_invoice_billing_policy",
+            "job_money", "automation_policies" -> {
+                addJob(values["job_id"])
+            }
+            "work_sites" -> add(key("site", values["id"]))
+            "kanban_columns" -> add(key("column", values["id"]))
+            "actual_costs" -> add(key("actual-cost", values["id"]))
+            "sessions" -> add(key("session", values["id"]))
+            "invoice_task_claims", "invoice_time_claims" -> addInvoice(values["invoice_id"])
+            "kanban_cards" -> {
+                add(key("card-fields", values["id"]))
+            }
+            "card_money", "task_quantities", "task_comments", "task_attachments" -> {
+                when (table) {
+                    "card_money" -> add(key("card-fields", values["id"]))
+                    "task_quantities" -> add(key("card-fields", values["card_id"]))
+                    "task_comments" -> {
+                        add(key("task-comment", values["id"]))
+                        add(key("card-fields", values["task_id"]))
+                    }
+                    else -> {
+                        add(key("task-attachment", values["id"]))
+                        add(key("task-comment", values["comment_id"]))
+                        add(key("card-fields", values["task_id"]))
+                    }
+                }
+            }
+            "task_comment_events" -> {
+                add(key("task-comment", values["comment_id"]))
+            }
+            "task_templates" -> {
+                add(key("template-fields", values["id"]))
+            }
+            "template_money", "template_quantities" ->
+                add(key("template-fields", values["id"] ?: values["template_id"]))
+            "invoice_coverage" -> addInvoice(values["invoice_id"])
+            "invoices" -> {
+                addInvoice(values["id"])
+            }
+            "invoice_payments" -> {
+                add(key("payment", values["id"]))
+                addInvoice(values["original_invoice_id"])
+            }
+            "payment_destinations" -> {
+                add(key("payment", values["payment_id"]))
+                addInvoice(values["invoice_id"])
+            }
+            "invoice_payment_events" -> {
+                add(key("payment", values["payment_id"]))
+                addInvoice(values["invoice_id"])
+            }
+            "invoice_payment_reversals" -> {
+                val paymentId = values["payment_id"]
+                add(key("payment", paymentId))
+                addInvoice(stagedValue("invoice_payments", "id", paymentId, "original_invoice_id"))
+            }
+            "invoice_copies", "invoice_voids" -> {
+                addInvoice(values["invoice_id"])
+                addInvoice(values["replacement_id"])
+            }
+            "quotes", "quote_drafts", "quote_revisions", "quote_decisions", "quote_pdfs" -> {
+                addQuote(values["quote_id"] ?: values["id"])
+            }
+            "quote_scope_lines" -> {
+                addQuote(values["quote_id"])
+                add(key("card-fields", values["task_id"]))
+            }
+            "quote_scope_revisions" -> {
+                addQuote(values["quote_id"])
+                val lineKey = jsonArray(listOf(values["quote_id"], values["line_id"]))
+                handle.database.rawQuery(
+                    "SELECT row_json FROM import_rows WHERE table_name='quote_scope_lines' AND primary_key=? LIMIT 1",
+                    arrayOf(lineKey),
+                ).use { rows ->
+                    if (rows.moveToFirst()) {
+                        val line = JSONObject(rows.getString(0)).getJSONObject("values")
+                        add(key("card-fields", line.optString("task_id")))
+                    }
+                }
+            }
+            "quote_invoice_links" -> {
+                addQuote(values["quote_id"])
+                addInvoice(values["invoice_id"])
+                addInvoice(values["original_invoice_id"])
+            }
+            "location_points" -> {
+                val sessionId = values["session_id"]
+                add(key("session", sessionId))
+            }
+            "location_deletion_ranges" -> add(key("gps-range", values["id"]))
+            "job_deletions" -> addJob(values["id"])
+            else -> values["job_id"]?.let(::addJob)
+        }
+        return result
+    }
+
+    private fun revisionAggregateKeys(
+        kind: String,
+        entityId: String,
+        jobId: String?,
+        payload: Map<String, Any?>,
+    ): Set<String> {
+        val result = linkedSetOf<String>()
+        fun key(prefix: String, value: Any?): String? = value?.toString()?.takeIf(String::isNotEmpty)
+            ?.let { "$prefix:$it" }
+        fun add(vararg values: String?) { values.filterNotNull().forEach(result::add) }
+        fun addJob(value: Any?) { add(key("job-config", value)) }
+        fun addInvoice(value: Any?) { add(key("invoice", value)) }
+        fun addQuote(value: Any?) { add(key("quote", value)) }
+        when (kind) {
+            "settings", "settings_money", "billing_tax_settings", "invoice_billing_defaults",
+            "invoice_accounting_settings", "location_recording_settings" -> {
+                add("global:settings")
+                payload["logo_id"]?.let { add(key("logo", it)) }
+            }
+            "logo" -> add(key("logo", entityId))
+            "customer" -> add(key("customer", entityId))
+            "job" -> addJob(entityId)
+            "card", "card_money", "task_quantity" -> {
+                add(key("card-fields", payload["card_id"] ?: entityId))
+            }
+            "task_comment" -> {
+                add(key("task-comment", payload["id"] ?: entityId))
+                add(key("card-fields", payload["task_id"]))
+            }
+            "task_attachment" -> {
+                add(key("task-attachment", entityId))
+                add(key("task-comment", payload["comment_id"]))
+                add(key("card-fields", payload["task_id"]))
+            }
+            "template", "template_money", "template_quantity" ->
+                add(key("template-fields", payload["template_id"] ?: entityId))
+            "job_tax_rate", "job_money", "job_location_recording", "job_invoice_billing_policy",
+            "automation" -> addJob(jobId ?: entityId)
+            "site" -> add(key("site", entityId))
+            "column" -> add(key("column", entityId))
+            "actual_cost" -> add(key("actual-cost", entityId))
+            "invoice", "invoice_coverage", "invoice_task_claim", "invoice_time_claim", "invoice_payment",
+            "invoice_payment_event", "invoice_payment_reversal", "invoice_copy", "invoice_void",
+            "payment_destination" -> {
+                payload["invoice_id"]?.let(::addInvoice)
+                payload["original_invoice_id"]?.let(::addInvoice)
+                if (kind == "invoice") addInvoice(entityId)
+                if (kind == "invoice_payment") add(key("payment", entityId))
+                payload["payment_id"]?.let { add(key("payment", it)) }
+                payload["replacement_id"]?.let(::addInvoice)
+            }
+            "quote_draft", "quote_revision", "quote_decision", "quote_scope_line", "quote_scope_revision",
+            "quote_invoice_link" -> {
+                val quoteId = payload["quote_id"] ?: payload["id"] ?: entityId.substringBefore(':')
+                addQuote(quoteId)
+                payload["invoice_id"]?.let(::addInvoice)
+                payload["original_invoice_id"]?.let(::addInvoice)
+                payload["task_id"]?.let { add(key("card-fields", it)) }
+            }
+            "session" -> add(key("session", entityId))
+            "location" -> {
+                val sessionId = payload["session_id"]
+                add(key("session", sessionId))
+            }
+            "location_deletion_range" -> add(key("gps-range", entityId))
+            else -> if (jobId != null) addJob(jobId)
+        }
+        return result
     }
 
     /** Labels the imported head's graph position without guessing from clocks or state versions. */
@@ -2342,6 +3492,822 @@ internal class BackupImportStore(
         return sameLiveHeadContentAndData(localDb, handle, kind, entityId, localRevisionId, backupRevisionId)
     }
 
+    private fun omittedBackupGraph(localDb: SQLiteDatabase, handle: Handle): OmittedBackupGraph {
+        val omittedSessions = mutableSetOf<String>()
+        val omittedRangeRevisionIds = mutableSetOf<String>()
+        val gpsDeletionParentsByPoint = mutableMapOf<String, MutableSet<String>>()
+        val omittedAggregateKeys = mutableSetOf<String>()
+        handle.database.rawQuery(
+            "SELECT selected_choice,conflict_json FROM import_conflicts ORDER BY ordinal",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val choice = rows.getString(0)
+                val conflict = JSONObject(rows.getString(1))
+                if (conflict.optString("aggregateSelectionIntent") != "LOCAL_ONLY") continue
+                val keys = conflict.optJSONArray("aggregateKeys") ?: continue
+                for (index in 0 until keys.length()) omittedAggregateKeys.add(keys.optString(index))
+            }
+        }
+        omittedAggregateKeys.addAll(expandAggregateKeys(handle, omittedAggregateKeys))
+        val omittedRowOrdinals = mutableSetOf<Long>()
+        if (omittedAggregateKeys.isNotEmpty()) {
+            omittedRowOrdinals.addAll(handle.database.rawQuery(
+                "SELECT DISTINCT a.row_ordinal FROM import_aggregate_keys a " +
+                    "JOIN aggregate_conflict_keys k ON k.group_key=a.group_key",
+                null,
+            ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getLong(0)) } })
+        }
+        handle.database.rawQuery(
+            "SELECT r.row_json FROM import_rows r JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
+                "WHERE r.table_name='sessions' AND c.selected_choice IN('OMIT_BACKUP_SESSION','OMIT_OPEN_SESSION')",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val record = JSONObject(rows.getString(0)).getJSONObject("values")
+                omittedSessions.add(record.getString("id"))
+            }
+        }
+        val omittedPoints = mutableSetOf<String>()
+        handle.database.rawQuery("SELECT row_json FROM import_rows WHERE table_name='location_points'", null).use { rows ->
+            while (rows.moveToNext()) {
+                val values = JSONObject(rows.getString(0)).getJSONObject("values")
+                if (values.optString("session_id") in omittedSessions) omittedPoints.add(values.getString("id"))
+            }
+        }
+        val omittedEntities = mutableSetOf<String>().apply {
+            omittedSessions.forEach { add("session:$it") }
+            omittedPoints.forEach { add("location:$it") }
+        }
+        handle.database.rawQuery(
+            "SELECT r.table_name,r.row_json,c.selected_choice,c.conflict_json FROM import_rows r " +
+                "JOIN import_conflicts c ON c.row_ordinal=r.ordinal ORDER BY c.ordinal",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val table = rows.getString(0)
+                val row = JSONObject(rows.getString(1)).getJSONObject("values")
+                val choice = rows.getString(2)
+                val conflict = JSONObject(rows.getString(3))
+                if (table != "entity_heads" && choice in setOf(
+                        "KEEP_LOCAL", "OMIT_BACKUP_RECORD", "PRESERVE_LOCAL_DELETION",
+                        "OMIT_BACKUP_SESSION", "OMIT_OPEN_SESSION",
+                    )) {
+                    @Suppress("UNCHECKED_CAST")
+                    val rowValues = jsonValue(row) as? Map<String, Any?>
+                    rowValues?.let { revisionEntityDataKey(table, it)?.let(omittedEntities::add) }
+                }
+                val revisionRow = revisionTombstoneRows[table]
+                if (revisionRow != null && choice in setOf(
+                        "PRESERVE_LOCAL_DELETION", "KEEP_LOCAL", "OMIT_BACKUP_RECORD",
+                        "OMIT_BACKUP_SESSION", "OMIT_OPEN_SESSION",
+                    )) {
+                    if (!row.isNull(revisionRow.entityIdColumn)) {
+                        omittedEntities.add("${revisionRow.kind}:${row.get(revisionRow.entityIdColumn)}")
+                    }
+                }
+                if (table == "entity_heads" && choice == "KEEP_LOCAL") {
+                    omittedEntities.add("${row.optString("kind")}:${row.optString("entity_id")}")
+                }
+                if (table == "location_points" && choice in setOf("PRESERVE_DELETION", "PRESERVE_LOCAL_DELETION")) {
+                    val pointId = row.optString("id")
+                    omittedPoints.add(pointId)
+                    omittedEntities.add("location:$pointId")
+                }
+                if (table == "location_deletion_ranges" &&
+                    conflict.optString("kind") == "GPS_DELETION_COVERAGE") {
+                    val rangeId = revisionString(row.opt("id"))
+                    val rangeRevisionId = revisionString(row.opt("revision_id"))
+                    when (choice) {
+                        "KEEP_LOCAL" -> {
+                            omittedEntities.add("location_deletion_range:$rangeId")
+                            omittedRangeRevisionIds.add(rangeRevisionId)
+                        }
+                        "APPLY_BACKUP_DELETION" -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val rangeValues = jsonValue(row) as? Map<String, Any?> ?: invalidRevisionGraph()
+                            backupGpsPointsWithoutRangeParent(handle, rangeValues).forEach { pointId ->
+                                omittedPoints.add(pointId)
+                                omittedEntities.add("location:$pointId")
+                            }
+                            localGpsPointsWithoutRangeParent(localDb, rangeValues).forEach { pointId ->
+                                omittedPoints.add(pointId)
+                                omittedEntities.add("location:$pointId")
+                                gpsDeletionParentsByPoint.getOrPut(pointId) { mutableSetOf() }
+                                    .add(rangeRevisionId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        handle.database.rawQuery("SELECT row_json FROM import_rows WHERE table_name='entity_heads'", null).use { rows ->
+            while (rows.moveToNext()) {
+                val values = jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<String, Any?>
+                    ?: continue
+                if (activeJobDeletionChoiceForHead(
+                        localDb,
+                        handle,
+                        values,
+                    ) == "KEEP_LOCAL") {
+                    omittedEntities.add("${values["kind"]}:${values["entity_id"]}")
+                }
+            }
+        }
+        if (omittedRangeRevisionIds.isNotEmpty()) {
+            handle.database.rawQuery(
+                "SELECT row_json FROM import_rows WHERE table_name='revision_parents'",
+                null,
+            ).use { rows ->
+                while (rows.moveToNext()) {
+                    val edge = JSONObject(rows.getString(0)).getJSONObject("values")
+                    if (edge.optString("parent_id") !in omittedRangeRevisionIds) continue
+                    val childRevision = edge.optString("revision_id")
+                    val child = handle.database.rawQuery(
+                        "SELECT row_json FROM import_rows WHERE table_name='entity_revisions' AND primary_key=? LIMIT 1",
+                        arrayOf(jsonArray(listOf(childRevision))),
+                    ).use { childRows ->
+                        if (!childRows.moveToFirst()) null else
+                            JSONObject(childRows.getString(0)).getJSONObject("values")
+                    } ?: invalidRevisionGraph()
+                    if (child.optString("kind") == "location") {
+                        val pointId = child.optString("entity_id")
+                        omittedEntities.add("location:$pointId")
+                        omittedPoints.add(pointId)
+                    }
+                }
+            }
+        }
+        val omittedRevisions = mutableSetOf<String>()
+        omittedRevisions.addAll(omittedRangeRevisionIds)
+        handle.database.rawQuery("SELECT row_json FROM import_rows WHERE table_name='entity_revisions'", null).use { rows ->
+            while (rows.moveToNext()) {
+                val values = JSONObject(rows.getString(0)).getJSONObject("values")
+                val key = values.optString("kind") + ":" + values.optString("entity_id")
+                if (key in omittedEntities) omittedRevisions.add(values.getString("id"))
+            }
+        }
+        handle.database.rawQuery(
+            "SELECT r.row_json,c.selected_choice FROM import_rows r JOIN import_conflicts c " +
+                "ON c.row_ordinal=r.ordinal WHERE r.table_name='entity_revisions' " +
+                "AND c.selected_choice='OMIT_BACKUP_RECORD'",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                omittedRevisions.add(
+                    JSONObject(rows.getString(0)).getJSONObject("values").getString("id"),
+                )
+            }
+        }
+        return OmittedBackupGraph(
+            omittedSessions,
+            omittedPoints,
+            omittedEntities,
+            omittedRevisions,
+            gpsDeletionParentsByPoint.mapValues { (_, parents) -> parents.toSet() },
+            omittedRowOrdinals,
+        )
+    }
+
+    private fun expandAggregateKeys(handle: Handle, seedKeys: Set<String>): Set<String> {
+        if (seedKeys.isEmpty()) return emptySet()
+        val db = handle.database
+        db.execSQL("DROP TABLE IF EXISTS aggregate_conflict_keys")
+        db.execSQL("CREATE TABLE aggregate_conflict_keys(group_key TEXT PRIMARY KEY)")
+        seedKeys.forEach { key ->
+            db.insertOrThrow("aggregate_conflict_keys", null, ContentValues().apply { put("group_key", key) })
+        }
+        while (true) {
+            val previousCount = scalarLong(db, "SELECT COUNT(*) FROM aggregate_conflict_keys")
+            db.execSQL(
+                "INSERT OR IGNORE INTO aggregate_conflict_keys(group_key) " +
+                    "SELECT DISTINCT source.group_key FROM import_aggregate_keys source " +
+                    "JOIN import_aggregate_keys bridge ON bridge.row_ordinal=source.row_ordinal " +
+                    "JOIN aggregate_conflict_keys selected ON selected.group_key=bridge.group_key",
+            )
+            if (scalarLong(db, "SELECT COUNT(*) FROM aggregate_conflict_keys") == previousCount) break
+        }
+        return db.rawQuery("SELECT group_key FROM aggregate_conflict_keys ORDER BY group_key", null)
+            .use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+    }
+
+    private fun isOmittedBackupGraphRow(
+        table: String,
+        values: Map<String, Any?>,
+        omitted: OmittedBackupGraph,
+        ordinal: Long,
+    ): Boolean {
+        if (ordinal in omitted.omittedRowOrdinals) return true
+        val entityKey = revisionEntityDataKey(table, values)
+        if (entityKey != null && entityKey in omitted.revisionEntityKeys) return true
+        return when (table) {
+        "sessions" -> values["id"]?.toString()?.let(omitted.sessionIds::contains) == true
+        "location_points" -> values["id"]?.toString()?.let(omitted.locationPointIds::contains) == true
+        "location_deletion_ranges" -> "location_deletion_range:${values["id"]}" in omitted.revisionEntityKeys
+        "entity_revisions", "entity_heads" ->
+            (values["kind"]?.toString() + ":" + values["entity_id"]?.toString()) in omitted.revisionEntityKeys
+        "revision_parents" -> values["revision_id"]?.toString()?.let(omitted.revisionIds::contains) == true ||
+            values["parent_id"]?.toString()?.let(omitted.revisionIds::contains) == true
+        else -> false
+        }
+    }
+
+    /** Maps archived business rows back to the revision entity whose choice owns them. */
+    private fun revisionEntityDataKey(table: String, values: Map<String, Any?>): String? {
+        fun key(kind: String, column: String = "id"): String? =
+            values[column]?.toString()?.let { "$kind:$it" }
+        fun composite(kind: String, vararg columns: String): String? {
+            val parts = mutableListOf<String>()
+            columns.forEach { column ->
+                parts.add(values[column]?.toString() ?: return null)
+            }
+            return "$kind:${parts.joinToString(":")}"
+        }
+        return when (table) {
+            "jobs" -> key("job")
+            "customers" -> key("customer")
+            "work_sites" -> key("site")
+            "kanban_columns" -> key("column")
+            "kanban_cards" -> key("card")
+            "task_templates" -> key("template")
+            "sessions" -> key("session")
+            "task_comments" -> key("task_comment")
+            "task_comment_events" -> key("task_comment", "comment_id")
+            "task_attachments" -> key("task_attachment")
+            "actual_costs" -> key("actual_cost")
+            "location_points" -> key("location")
+            "location_deletion_ranges" -> key("location_deletion_range")
+            "app_settings" -> key("settings")
+            "settings_money", "job_money", "card_money", "template_money" ->
+                key(table.removeSuffix("_money") + "_money")
+            "automation_policies" -> key("automation", "job_id")
+            "job_tax_rates" -> key("job_tax_rate", "job_id")
+            "billing_tax_settings" -> key("billing_tax_settings")
+            "task_quantities" -> key("task_quantity", "card_id")
+            "template_quantities" -> key("template_quantity", "template_id")
+            "job_invoice_billing_policy" -> key("job_invoice_billing_policy", "job_id")
+            "invoice_billing_defaults" -> key("invoice_billing_defaults")
+            "job_location_recording" -> key("job_location_recording", "job_id")
+            "location_recording_settings" -> key("location_recording_settings")
+            "invoice_accounting_settings" -> key("invoice_accounting_settings")
+            "invoices" -> key("invoice")
+            "invoice_coverage" -> key("invoice_coverage", "invoice_id")
+            "invoice_task_claims" -> key("invoice_task_claim")
+            "invoice_time_claims" -> key("invoice_time_claim")
+            "invoice_payments" -> key("invoice_payment")
+            "invoice_payment_reversals" -> key("invoice_payment_reversal")
+            "invoice_payment_events" -> key("invoice_payment_event")
+            "invoice_copies" -> key("invoice_copy")
+            "invoice_voids" -> key("invoice_void", "invoice_id")
+            "payment_destinations" -> key("payment_destination", "payment_id")
+            "quote_drafts" -> key("quote_draft", "quote_id")
+            "quote_revisions", "quote_pdfs" -> composite("quote_revision", "quote_id", "revision")
+            "quote_decisions" -> composite("quote_decision", "quote_id", "revision")
+            "quote_scope_lines" -> composite("quote_scope_line", "quote_id", "line_id")
+            "quote_scope_revisions" -> composite("quote_scope_revision", "quote_id", "revision", "line_id")
+            "quote_invoice_links" -> key("quote_invoice_link", "invoice_id")
+            "job_deletions" -> key("job")
+            "logo_assets" -> key("logo")
+            else -> null
+        }
+    }
+
+    private fun hasJobDeletionTombstone(db: SQLiteDatabase, jobId: String?): Boolean {
+        if (jobId == null) return false
+        return db.rawQuery("SELECT 1 FROM job_deletions WHERE id=? LIMIT 1", arrayOf(jobId))
+            .use { it.moveToFirst() }
+    }
+
+    private fun hasLocalEntityDeletionTombstone(db: SQLiteDatabase, kind: String, entityId: String): Boolean =
+        db.rawQuery(
+            "SELECT 1 FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind=? AND h.entity_id=? AND r.deleted=1 LIMIT 1",
+            arrayOf(kind, entityId),
+        ).use { it.moveToFirst() }
+
+    private fun hasLocalJob(db: SQLiteDatabase, jobId: String?): Boolean {
+        if (jobId == null) return false
+        return db.rawQuery("SELECT 1 FROM jobs WHERE id=? LIMIT 1", arrayOf(jobId))
+            .use { it.moveToFirst() }
+    }
+
+    /** A job deletion fence owns its job and operational child heads as one conflict. */
+    private fun activeJobDeletionChoiceForHead(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        head: Map<String, Any?>,
+    ): String? {
+        val kind = head["kind"]?.toString() ?: return null
+        val entityId = head["entity_id"]?.toString() ?: return null
+        val revisionId = head["revision_id"]?.toString() ?: return null
+        val revision = revisionContent(handle.database, "validation_revisions", revisionId) ?: return null
+        val jobId = if (kind == "job") entityId else revision.jobId ?: return null
+        if (!hasLocalJob(localDb, jobId) || !stagedIdentifierExists(handle, "job_deletions", jobId)) return null
+        val key = jsonArray(listOf(jobId))
+        return handle.database.rawQuery(
+            "SELECT c.selected_choice FROM import_rows r LEFT JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
+                "WHERE r.table_name='job_deletions' AND r.primary_key=? LIMIT 1",
+            arrayOf(key),
+        ).use { rows ->
+            if (!rows.moveToFirst() || rows.isNull(0)) "UNRESOLVED" else rows.getString(0)
+        }
+    }
+
+    /** A data-row tombstone and its revision head are one local-deletion decision. */
+    private fun localTombstoneChoiceForHead(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        head: Map<String, Any?>,
+    ): String? {
+        val kind = head["kind"]?.toString() ?: return null
+        val entityId = head["entity_id"]?.toString() ?: return null
+        val rowEntry = revisionTombstoneRows.entries.firstOrNull { it.value.kind == kind } ?: return null
+        if (!hasLocalEntityDeletionTombstone(localDb, kind, entityId)) return null
+        val primaryKey = jsonArray(listOf(entityId))
+        val ordinal = handle.database.rawQuery(
+            "SELECT ordinal FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(rowEntry.key, primaryKey),
+        ).use { rows -> if (rows.moveToFirst()) rows.getLong(0) else return null }
+        return handle.database.rawQuery(
+            "SELECT selected_choice FROM import_conflicts WHERE row_ordinal=? LIMIT 1",
+            arrayOf(ordinal.toString()),
+        ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) "UNRESOLVED" else rows.getString(0) }
+    }
+
+    private fun divergentEntityDataForRow(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        table: String,
+        values: Map<String, Any?>,
+    ): DivergentEntityData? {
+        val kind = revisionDataKinds[table] ?: return null
+        val entityId = revisionEntityIdForDataRow(table, values) ?: return null
+        val head = stagedEntityHead(handle, kind, entityId) ?: return null
+        val localHead = findLocalRow(
+            localDb, "entity_heads", handle.catalog["entity_heads"] ?: return null, head,
+        ) ?: return null
+        return divergentEntityDataForHead(localDb, handle, head, localHead)
+    }
+
+    private fun divergentEntityDataForHead(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        backupHead: Map<String, Any?>,
+        localHead: LocalRow,
+    ): DivergentEntityData? {
+        val kind = backupHead["kind"]?.toString() ?: return null
+        val entityId = backupHead["entity_id"]?.toString() ?: return null
+        val localRevisionId = localHead.values["revision_id"]?.toString() ?: return null
+        val backupRevisionId = backupHead["revision_id"]?.toString() ?: return null
+        if (revisionHeadRelationship(localDb, handle, localRevisionId, backupRevisionId) != "DIVERGENT") return null
+        val table = revisionDataTables[kind] ?: return null
+        val columns = revisionDataColumns[kind] ?: return null
+        val spec = handle.catalog[table] ?: return null
+        val keyColumns = revisionDataKeyColumns[kind] ?: listOf("id")
+        if (spec.primaryKey != keyColumns) return null
+        val staged = handle.database.rawQuery(
+            "SELECT ordinal,row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(table, jsonArray(revisionDataKeyValues(kind, entityId))),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            @Suppress("UNCHECKED_CAST")
+            val values = jsonValue(JSONObject(rows.getString(1)).getJSONObject("values")) as? Map<String, Any?>
+                ?: return null
+            Triple(rows.getLong(0), values, stagedBlobs(handle, rows.getLong(0)))
+        }
+        val local = findLocalRow(localDb, table, spec, staged.second) ?: return null
+        val localRevision = revisionContent(localDb, "entity_revisions", localRevisionId) ?: return null
+        val backupRevision = revisionContent(handle.database, "validation_revisions", backupRevisionId) ?: return null
+        val localPayloadValues = revisionPayloadValuesForDataRow(localDb, null, kind, local.values) ?: return null
+        val backupPayloadValues = revisionPayloadValuesForDataRow(localDb, handle, kind, staged.second) ?: return null
+        if (!validLiveRevision(localRevision, kind, entityId) ||
+            !validLiveRevision(backupRevision, kind, entityId) ||
+            localRevision.jobId != backupRevision.jobId ||
+            !revisionJobMatchesData(
+                localDb, handle, kind, localRevision.jobId, local.values, localPayloadValues, preferStaged = false,
+            ) ||
+            !revisionJobMatchesData(
+                localDb, handle, kind, backupRevision.jobId, staged.second, backupPayloadValues, preferStaged = true,
+            ) ||
+            !revisionPayloadMatchesRow(
+                localRevision.payload, columns, localPayloadValues, optionalRevisionPayloadKeys(kind),
+            ) ||
+            !revisionPayloadMatchesRow(
+                backupRevision.payload, columns, backupPayloadValues, optionalRevisionPayloadKeys(kind),
+            ) ||
+            canonicalValues(localPayloadValues, columns.toSet()) ==
+                canonicalValues(backupPayloadValues, columns.toSet()) ||
+            !safeDivergentUpdate(localDb, handle, table, spec, staged.first, staged.second, local)) return null
+        return DivergentEntityData(
+            entityId, table, staged.first, staged.second, backupPayloadValues, localPayloadValues,
+            staged.third, local, spec,
+        )
+    }
+
+    private fun stagedEntityHead(handle: Handle, kind: String, entityId: String): Map<String, Any?>? =
+        handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name='entity_heads' AND primary_key=? LIMIT 1",
+            arrayOf(jsonArray(listOf(kind, entityId))),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            @Suppress("UNCHECKED_CAST")
+            jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<String, Any?>
+        }
+
+    private fun revisionEntityIdForDataRow(table: String, values: Map<String, Any?>): String? {
+        val kind = revisionDataKinds[table] ?: return null
+        val keyColumn = (revisionDataKeyColumns[kind] ?: listOf("id")).singleOrNull() ?: return null
+        return values[keyColumn]?.toString()
+    }
+
+    private fun revisionDataKeyValues(kind: String, entityId: String): List<Any?> =
+        (revisionDataKeyColumns[kind] ?: listOf("id")).map { column ->
+            if (column == "id" && kind in integerRevisionDataKinds) entityId.toLongOrNull() ?: entityId
+            else entityId
+        }
+
+    private fun revisionContent(db: SQLiteDatabase, table: String, revisionId: String): RevisionContent? =
+        db.rawQuery(
+            "SELECT kind,entity_id,job_id,payload,deleted FROM ${quote(table)} WHERE id=?",
+            arrayOf(revisionId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            RevisionContent(
+                rows.getString(0), rows.getString(1),
+                if (rows.isNull(2)) null else rows.getString(2),
+                if (rows.isNull(3)) null else rows.getString(3), rows.getLong(4),
+            )
+        }
+
+    private fun validLiveRevision(revision: RevisionContent, kind: String, entityId: String): Boolean =
+        revision.kind == kind && revision.entityId == entityId && revision.deleted == 0L && revision.payload != null
+
+    private fun revisionPayloadValuesForDataRow(
+        db: SQLiteDatabase,
+        handle: Handle?,
+        kind: String,
+        rowValues: Map<String, Any?>,
+    ): Map<String, Any?>? {
+        fun value(column: String): Any? = rowValues[column]
+
+        fun linkedValue(table: String, keyColumn: String, keyValue: Any?, valueColumn: String): Any? {
+            if (keyValue == null) return null
+            val key = keyValue.toString()
+            val staged = handle?.database?.rawQuery(
+                "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+                arrayOf(table, jsonArray(listOf(key))),
+            )?.use { rows ->
+                if (!rows.moveToFirst()) null else {
+                    val row = JSONObject(rows.getString(0)).getJSONObject("values")
+                    if (!row.has(valueColumn) || row.isNull(valueColumn)) null else jsonValue(row.get(valueColumn))
+                }
+            }
+            if (staged != null) return staged
+            return db.rawQuery(
+                "SELECT ${quote(valueColumn)} FROM ${quote(table)} WHERE ${quote(keyColumn)}=? LIMIT 1",
+                arrayOf(key),
+            ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else cursorValue(rows, 0) }
+        }
+
+        val columns = revisionDataColumns[kind] ?: return null
+        val values = when (kind) {
+            "settings_money", "job_money", "card_money", "template_money" -> {
+                val id = value("id") ?: return null
+                val jobId = when (kind) {
+                    "job_money" -> id.toString()
+                    "card_money" -> linkedValue("kanban_cards", "id", id, "job_id") ?: return null
+                    else -> null
+                }
+                // MoneyStore.save records the singleton settings-money ID as text,
+                // although SQLite returns its INTEGER primary key as a Long.
+                mapOf(
+                    "id" to if (kind == "settings_money") id.toString() else id,
+                    "minor_text" to value("minor_text"),
+                    "job_id" to jobId,
+                )
+            }
+            "task_quantity" -> {
+                val cardId = value("card_id") ?: return null
+                val jobId = linkedValue("kanban_cards", "id", cardId, "job_id") ?: return null
+                mapOf("card_id" to cardId, "job_id" to jobId, "quantity_units" to value("quantity_units"))
+            }
+            "template_quantity" -> mapOf(
+                "template_id" to (value("template_id") ?: return null),
+                "quantity_units" to value("quantity_units"),
+            )
+            "payment_destination" -> mapOf(
+                "payment_id" to (value("payment_id") ?: return null),
+                "invoice_id" to (value("invoice_id") ?: return null),
+            )
+            "quote_draft" -> mapOf(
+                "id" to (value("quote_id") ?: return null),
+                "payload" to (value("payload") ?: return null),
+            )
+            else -> {
+                if (columns.any { it !in rowValues }) return null
+                columns.associateWith { rowValues[it] }
+            }
+        }
+        return values.takeIf { it.keys.containsAll(columns) }
+    }
+
+    private fun revisionJobMatchesData(
+        db: SQLiteDatabase,
+        handle: Handle,
+        kind: String,
+        revisionJobId: String?,
+        rowValues: Map<String, Any?>,
+        payloadValues: Map<String, Any?>,
+        preferStaged: Boolean,
+    ): Boolean {
+        fun stagedOrLocal(table: String, keyColumn: String, key: Any?, valueColumn: String): Any? {
+            if (key == null) return null
+            val keyValue = key.toString()
+            if (preferStaged) {
+                handle.database.rawQuery(
+                    "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+                    arrayOf(table, jsonArray(listOf(keyValue))),
+                ).use { rows ->
+                    if (rows.moveToFirst()) {
+                        val values = JSONObject(rows.getString(0)).getJSONObject("values")
+                        return if (!values.has(valueColumn) || values.isNull(valueColumn)) null else
+                            jsonValue(values.get(valueColumn))
+                    }
+                }
+            }
+            return db.rawQuery(
+                "SELECT ${quote(valueColumn)} FROM ${quote(table)} WHERE ${quote(keyColumn)}=? LIMIT 1",
+                arrayOf(keyValue),
+            ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else cursorValue(rows, 0) }
+        }
+
+        val linkedJob = when {
+            "job_id" in payloadValues -> payloadValues["job_id"]?.toString()
+            kind == "quote_draft" -> rowValues["job_id"]?.toString()
+            kind == "invoice_coverage" -> stagedOrLocal(
+                "invoices", "id", rowValues["invoice_id"], "job_id",
+            )?.toString()
+            kind == "payment_destination" -> stagedOrLocal(
+                "invoices", "id", rowValues["invoice_id"], "job_id",
+            )?.toString()
+            kind == "task_comment" || kind == "task_attachment" -> stagedOrLocal(
+                "kanban_cards", "id", rowValues["task_id"], "job_id",
+            )?.toString()
+            kind in setOf(
+                "customer", "template", "settings", "billing_tax_settings", "invoice_billing_defaults",
+                "invoice_accounting_settings", "settings_money", "template_money", "template_quantity",
+                "location_recording_settings",
+            ) -> null
+            else -> return false
+        }
+        return linkedJob == revisionJobId
+    }
+
+    private fun optionalRevisionPayloadKeys(kind: String): Set<String> = when (kind) {
+        "invoice_coverage", "payment_destination" -> setOf("predecessor_id")
+        else -> emptySet()
+    }
+
+    private fun revisionPayloadMatchesRow(
+        payload: String?,
+        columns: List<String>,
+        values: Map<String, Any?>,
+        optionalKeys: Set<String> = emptySet(),
+    ): Boolean {
+        if (payload == null) return false
+        val revisionValues = try {
+            val json = JSONObject(payload)
+            val keys = mutableSetOf<String>()
+            val iterator = json.keys()
+            while (iterator.hasNext()) keys.add(iterator.next())
+            if (keys.size !in columns.size..(columns.size + optionalKeys.size) ||
+                !keys.containsAll(columns) || (keys - columns.toSet()).any { it !in optionalKeys }) return false
+            columns.associateWith { column ->
+                if (json.isNull(column)) null else jsonValue(json.get(column))
+            }
+        } catch (_: Exception) {
+            return false
+        }
+        return canonicalValues(revisionValues, columns.toSet()) == canonicalValues(values, columns.toSet())
+    }
+
+    private fun safeDivergentUpdate(
+        db: SQLiteDatabase,
+        handle: Handle,
+        table: String,
+        spec: BackupExportStore.ImportTable,
+        ordinal: Long,
+        values: Map<String, Any?>,
+        local: LocalRow,
+    ): Boolean {
+        if (table == "sessions") {
+            val sessionId = values["id"] as? String ?: return false
+            val start = try { revisionInteger(values["start_ms"]) } catch (_: Failure) { return false }
+            val end = try { revisionInteger(values["end_ms"]) } catch (_: Failure) { return false }
+            if (end <= start) return false
+            val localOverlap = db.rawQuery(
+                "SELECT 1 FROM sessions WHERE id<>? AND start_ms<? " +
+                    "AND (end_ms IS NULL OR end_ms>?) LIMIT 1",
+                arrayOf(sessionId, end.toString(), start.toString()),
+            ).use { it.moveToFirst() }
+            val stagedOverlap = handle.database.rawQuery(
+                "SELECT 1 FROM import_rows WHERE table_name='sessions' AND ordinal<>? " +
+                    "AND session_start_ms<? AND (session_end_ms IS NULL OR session_end_ms>?) LIMIT 1",
+                arrayOf(ordinal.toString(), end.toString(), start.toString()),
+            ).use { it.moveToFirst() }
+            if (localOverlap || stagedOverlap) return false
+        }
+        val foreignKeys = try { foreignKeySpecs(db, table, handle.catalog) } catch (_: Exception) { return false }
+        if (foreignKeys.any { foreignKey ->
+                val referenced = foreignKey.childColumns.map { values[it] }
+                referenced.any { it != null } && !referenced.any { it == null } &&
+                    !localForeignKeyExists(db, foreignKey, referenced)
+            }) return false
+
+        val primaryKey = spec.primaryKey
+        val primaryWhere = primaryKey.joinToString(" AND ") { quote(it) + "=?" }
+        val primaryArgs = primaryKey.map { local.values[it]?.toString().orEmpty() }
+        db.rawQuery("PRAGMA index_list(${quote(table)})", null).use { indexes ->
+            val uniqueIndex = indexes.getColumnIndex("unique")
+            val nameIndex = indexes.getColumnIndex("name")
+            val partialIndex = indexes.getColumnIndex("partial")
+            while (indexes.moveToNext()) {
+                if (indexes.getInt(uniqueIndex) == 0) continue
+                val indexName = indexes.getString(nameIndex)
+                val columns = mutableListOf<String>()
+                db.rawQuery("PRAGMA index_info(${quote(indexName)})", null).use { details ->
+                    while (details.moveToNext()) {
+                        if (details.isNull(2)) return false
+                        columns.add(details.getString(2))
+                    }
+                }
+                if (columns.isEmpty() || primaryKey.all(columns::contains)) continue
+                if (partialIndex >= 0 && indexes.getInt(partialIndex) != 0) {
+                    if (table != "invoice_task_claims" || columns != listOf("task_id")) return false
+                    if (values["released_ms"] != null) continue
+                    val taskId = values["task_id"]?.toString() ?: return false
+                    val claimId = values["id"]?.toString() ?: return false
+                    val activeTaskCollision = db.rawQuery(
+                        "SELECT 1 FROM invoice_task_claims WHERE task_id=? AND released_ms IS NULL " +
+                            "AND id<>? LIMIT 1",
+                        arrayOf(taskId, claimId),
+                    ).use { it.moveToFirst() }
+                    if (activeTaskCollision) return false
+                    continue
+                }
+                if (columns.any { values[it] == null }) return false
+                val where = columns.joinToString(" AND ") { quote(it) + "=?" }
+                val args = columns.map { values.getValue(it).toString() } + primaryArgs
+                val collision = db.rawQuery(
+                    "SELECT 1 FROM ${quote(table)} WHERE $where AND NOT ($primaryWhere) LIMIT 1",
+                    args.toTypedArray(),
+                ).use { it.moveToFirst() }
+                if (collision) return false
+            }
+        }
+        return true
+    }
+
+    private fun divergentMergeChoiceForDataRow(
+        handle: Handle,
+        table: String,
+        values: Map<String, Any?>,
+    ): String? {
+        val kind = revisionDataKinds[table] ?: return null
+        val entityId = revisionEntityIdForDataRow(table, values) ?: return null
+        return handle.database.rawQuery(
+            "SELECT c.selected_choice FROM import_rows r JOIN import_conflicts c ON c.row_ordinal=r.ordinal " +
+                "WHERE r.table_name='entity_heads' AND r.primary_key=? LIMIT 1",
+            arrayOf(jsonArray(listOf(kind, entityId))),
+        ).use { rows ->
+            if (!rows.moveToFirst() || rows.isNull(0)) return null
+            rows.getString(0).takeIf { it in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT" }
+        }
+    }
+
+    private fun plannedMergeForDataRow(
+        localDb: SQLiteDatabase,
+        handle: Handle,
+        data: DivergentEntityData,
+        choice: String,
+    ): PlannedDivergentMerge {
+        if (choice !in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT") {
+            throw Failure("UNSUPPORTED_CHOICE", "A backup conflict contains an unsupported choice.")
+        }
+        val kind = revisionDataKinds[data.table]
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        val entityId = data.entityId
+        val head = stagedEntityHead(handle, kind, entityId)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+        val localHead = findLocalRow(
+            localDb, "entity_heads", handle.catalog.getValue("entity_heads"), head,
+        ) ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+        return PlannedDivergentMerge(
+            kind, entityId, choice,
+            localHead.values["revision_id"]?.toString()
+                ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview."),
+            head["revision_id"]?.toString()
+                ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview."),
+            data,
+        )
+    }
+
+    private fun putConsistentMergePlan(
+        plans: MutableMap<String, PlannedDivergentMerge>,
+        plan: PlannedDivergentMerge,
+    ) {
+        val key = divergentMergeKey(plan.kind, plan.entityId)
+        val previous = plans.putIfAbsent(key, plan)
+        if (previous != null && (previous.choice != plan.choice ||
+                previous.localRevision != plan.localRevision || previous.backupRevision != plan.backupRevision ||
+                previous.data.ordinal != plan.data.ordinal)) {
+            throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        }
+    }
+
+    private fun divergentMergeKey(kind: String, entityId: String): String = "$kind:$entityId"
+
+    private fun mergeRevisionPayload(plan: PlannedDivergentMerge, values: Map<String, Any?>): String {
+        val columns = revisionDataColumns.getValue(plan.kind)
+        return JSONObject().apply {
+            columns.sorted().forEach { column -> put(column, values[column] ?: JSONObject.NULL) }
+        }.toString()
+    }
+
+    private fun applySelectedDivergentHeadMerge(
+        db: SQLiteDatabase,
+        handle: Handle,
+        plan: PlannedDivergentMerge,
+    ) {
+        val selectedRevisionId = if (plan.choice == "MERGE_KEEP_LOCAL_CONTENT") {
+            plan.localRevision
+        } else {
+            plan.backupRevision
+        }
+        val selectedRevision = revisionContent(db, "entity_revisions", selectedRevisionId)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+        val expectedValues = if (plan.choice == "MERGE_KEEP_LOCAL_CONTENT") {
+            plan.data.local.values
+        } else {
+            plan.data.values.toMutableMap().apply {
+                if (plan.data.table == "automation_policies") {
+                    this["enabled"] = 0L
+                    this["auto_start"] = 0L
+                }
+                if (plan.data.table == "work_sites") this["enabled"] = 0L
+            }
+        }
+        val actual = findLocalRow(db, plan.data.table, plan.data.spec, expectedValues)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        val expectedPayloadValues = revisionPayloadValuesForDataRow(db, null, plan.kind, expectedValues)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        val actualPayloadValues = revisionPayloadValuesForDataRow(db, null, plan.kind, actual.values)
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        val revisionColumns = revisionDataColumns.getValue(plan.kind).toSet()
+        if (canonicalValues(actualPayloadValues, revisionColumns) !=
+            canonicalValues(expectedPayloadValues, revisionColumns)) {
+            throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        }
+        val payloadObject = JSONObject(mergeRevisionPayload(plan, expectedPayloadValues))
+        val selectedPayload = JSONObject(selectedRevision.payload
+            ?: throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview."))
+        optionalRevisionPayloadKeys(plan.kind).forEach { key ->
+            if (selectedPayload.has(key)) payloadObject.put(key, selectedPayload.get(key))
+        }
+        val payload = payloadObject.toString()
+        if (!revisionPayloadMatchesRow(
+                payload,
+                revisionDataColumns.getValue(plan.kind),
+                actualPayloadValues,
+                optionalRevisionPayloadKeys(plan.kind),
+            ) || !revisionJobMatchesData(
+                db, handle, plan.kind, selectedRevision.jobId, actual.values, actualPayloadValues,
+                preferStaged = false,
+            ) ||
+            !validLiveRevision(selectedRevision, plan.kind, plan.entityId)) {
+            throw Failure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
+        }
+        val mergedRevision = UUID.randomUUID().toString()
+        db.execSQL(
+            "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
+                "VALUES(?,?,?,?,?,0,?,'BACKUP_MERGE')",
+            arrayOf<Any?>(mergedRevision, plan.kind, plan.entityId, selectedRevision.jobId, payload, wallClock()),
+        )
+        listOf(plan.localRevision, plan.backupRevision).distinct().sorted().forEach { parent ->
+            db.execSQL(
+                "INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)",
+                arrayOf(mergedRevision, parent),
+            )
+        }
+        val updated = db.update(
+            "entity_heads",
+            ContentValues().apply { put("revision_id", mergedRevision) },
+            "kind=? AND entity_id=? AND revision_id=?",
+            arrayOf(plan.kind, plan.entityId, plan.localRevision),
+        )
+        if (updated != 1) throw Failure("PREVIEW_STALE", "A divergent backup head changed after preview.")
+    }
+
     private fun sameLiveHeadContentAndData(
         localDb: SQLiteDatabase,
         handle: Handle,
@@ -2376,20 +4342,13 @@ internal class BackupImportStore(
         }
         if (localRevision != backupRevision || localRevision[4] != 0L) return false
 
-        val table = when (kind) {
-            "job" -> "jobs"
-            "customer" -> "customers"
-            "session" -> "sessions"
-            "site" -> "work_sites"
-            "column" -> "kanban_columns"
-            "card" -> "kanban_cards"
-            else -> return false
-        }
+        val table = revisionDataTables[kind] ?: return false
         val spec = handle.catalog[table] ?: return false
-        if (spec.primaryKey != listOf("id")) return false
+        val keyColumns = revisionDataKeyColumns[kind] ?: listOf("id")
+        if (spec.primaryKey != keyColumns) return false
         val dataRow = handle.database.rawQuery(
             "SELECT ordinal,row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
-            arrayOf(table, jsonArray(listOf(entityId))),
+            arrayOf(table, jsonArray(revisionDataKeyValues(kind, entityId))),
         ).use { rows ->
             if (!rows.moveToFirst()) return false
             val values = jsonValue(JSONObject(rows.getString(1)).getJSONObject("values")) as? Map<String, Any?>
@@ -2550,10 +4509,11 @@ internal class BackupImportStore(
                     @Suppress("UNCHECKED_CAST")
                     val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
                         ?: throw Failure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
-                    val dependencyConflict = foreignKeysByChild.getValue(table).any { foreignKey ->
+                    val blockedParentGroups = linkedMapOf<Long, MutableSet<String>>()
+                    foreignKeysByChild.getValue(table).forEach { foreignKey ->
                         val referenceValues = foreignKey.childColumns.map { values[it] }
                         if (referenceValues.any { it == null } || localForeignKeyExists(localDb, foreignKey, referenceValues)) {
-                            return@any false
+                            return@forEach
                         }
                         val keyArgs = arrayOf(
                             foreignKey.parentTable,
@@ -2566,15 +4526,29 @@ internal class BackupImportStore(
                                 "AND p.values_json=? AND c.row_ordinal IS NULL LIMIT 1",
                             keyArgs,
                         ).use { it.moveToFirst() }
-                        if (hasNonConflictedStagedParent) return@any false
-                        staged.rawQuery(
-                            "SELECT 1 FROM preview_reference_rows p JOIN import_conflicts c " +
+                        if (hasNonConflictedStagedParent) return@forEach
+                        val conflictedParents = staged.rawQuery(
+                            "SELECT DISTINCT p.row_ordinal FROM preview_reference_rows p JOIN import_conflicts c " +
                                 "ON c.row_ordinal=p.row_ordinal WHERE p.parent_table=? AND p.columns_json=? " +
-                                "AND p.values_json=? LIMIT 1",
+                                "AND p.values_json=? ORDER BY p.row_ordinal",
                             keyArgs,
-                        ).use { it.moveToFirst() }
+                        ).use { parentRows ->
+                            buildList { while (parentRows.moveToNext()) add(parentRows.getLong(0)) }
+                        }
+                        if (conflictedParents.isEmpty()) return@forEach
+                        val groupKey = "dependency:${foreignKey.parentTable}:" +
+                            "${JSONArray(foreignKey.parentColumns).toString()}:${jsonArray(referenceValues)}"
+                        conflictedParents.forEach { parentOrdinal ->
+                            blockedParentGroups.getOrPut(parentOrdinal) { linkedSetOf() }.add(groupKey)
+                        }
                     }
-                    if (dependencyConflict) {
+                    if (blockedParentGroups.isNotEmpty()) {
+                        blockedParentGroups.forEach { (parentOrdinal, groupKeys) ->
+                            groupKeys.forEach { groupKey ->
+                                attachAggregateGroupKey(handle, parentOrdinal, groupKey)
+                                attachAggregateGroupKey(handle, rowOrdinal, groupKey)
+                            }
+                        }
                         nextConflictOrdinal = addConflict(
                             handle,
                             nextConflictOrdinal,

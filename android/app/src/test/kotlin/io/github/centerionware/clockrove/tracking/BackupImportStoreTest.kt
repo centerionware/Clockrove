@@ -276,7 +276,7 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun schema16PreviewAcceptsGpsDeletionRangeAndCausalRevisionRecords() {
+    fun schema17PreviewAcceptsGpsDeletionRangeAndCausalRevisionRecords() {
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(
             "start-synthetic-gps-import-session",
@@ -314,7 +314,7 @@ class BackupImportStoreTest {
         ).conflict)
 
         val source = exportStore.start(database)
-        assertEquals(16, source.schemaVersion)
+        assertEquals(17, source.schemaVersion)
         val exportedRecords = readAllRows(source.snapshotId)
         assertTrue(exportedRecords.any { it["table"] == "location_deletion_ranges" })
         val rangeRevision = exportedRecords.first {
@@ -340,11 +340,11 @@ class BackupImportStoreTest {
             source.mediaCount,
             source.mediaBytes,
         )
-        assertEquals(16, started.schemaVersion)
+        assertEquals(17, started.schemaVersion)
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
 
-        assertEquals(16, preview.schemaVersion)
+        assertEquals(17, preview.schemaVersion)
         assertEquals(source.recordCount, preview.recordCount)
         assertEquals(source.recordCount, preview.unchangedCount)
         assertEquals(0L, preview.conflictCount)
@@ -548,10 +548,12 @@ class BackupImportStoreTest {
             database, started.importId, preview.previewToken, preview.localStateVersion,
             invoiceConflict["conflictId"] as String, "OMIT_BACKUP_RECORD",
         )
-        importStore.resolveConflict(
-            database, started.importId, preview.previewToken, preview.localStateVersion,
-            dependentConflict["conflictId"] as String, "OMIT_BACKUP_RECORD",
-        )
+        val resolvedDependent = requireNotNull(findConflict(
+            started.importId, preview, "DEPENDENT_ON_CONFLICT",
+        ))
+        assertEquals(dependentConflict["conflictId"], resolvedDependent["conflictId"])
+        assertTrue(resolvedDependent["resolved"] as Boolean)
+        assertEquals("OMIT_BACKUP_RECORD", resolvedDependent["selectedChoice"])
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
         assertEquals(0L, number("SELECT COUNT(*) FROM invoices WHERE id='backup-number-collision'"))
@@ -741,6 +743,24 @@ class BackupImportStoreTest {
     }
 
     @Test
+    fun rejectsUnknownRevisionKindsAndMalformedObjectPayloadsBeforePreview() {
+        assertInvalidRevisionGraph(listOf(
+            revisionRecord("unknown-kind-revision", "future_kind", "future-entity", null),
+            headRecord("future_kind", "future-entity", "unknown-kind-revision"),
+        ))
+
+        listOf("not-json", "[]").forEachIndexed { index, payload ->
+            val revisionId = "malformed-object-payload-$index"
+            assertInvalidRevisionGraph(listOf(
+                revisionRecord(
+                    revisionId, "quote_decision", "malformed-quote:$index", null, payload = payload,
+                ),
+                headRecord("quote_decision", "malformed-quote:$index", revisionId),
+            ))
+        }
+    }
+
+    @Test
     fun conflictingHeadsClassifyAncestorDescendantAndDivergentHistoryExplicitly() {
         data class Node(val id: String, val parent: String? = null)
         data class Case(
@@ -751,7 +771,7 @@ class BackupImportStoreTest {
             val backupHead: String,
             val relationship: String,
         )
-        val kind = "synthetic_revision_entity"
+        val kind = "quote_decision"
         val cases = listOf(
             Case(
                 "backup-descendant-case",
@@ -801,25 +821,13 @@ class BackupImportStoreTest {
             assertEquals(case.relationship, conflict["revisionRelationship"])
             assertFalse(conflict["resolved"] as Boolean)
             if (case.relationship == "DIVERGENT") {
-                assertEquals(emptyList<String>(), conflict["allowedChoices"])
-                assertNull(conflict["defaultChoice"])
-                assertFailure("UNSUPPORTED_CHOICE") {
-                    importStore.resolveConflict(
-                        database, started.importId, preview.previewToken, preview.localStateVersion,
-                        conflict["conflictId"] as String, "KEEP_LOCAL",
-                    )
-                }
-                assertFailure("UNRESOLVED_CONFLICTS") {
-                    importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
-                }
-            } else {
                 assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
-                importStore.resolveConflict(
-                    database, started.importId, preview.previewToken, preview.localStateVersion,
-                    conflict["conflictId"] as String, "KEEP_LOCAL",
-                )
-                importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
             }
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                conflict["conflictId"] as String, "KEEP_LOCAL",
+            )
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
             val committedHead = database.rawQuery(
                 "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
                 arrayOf(kind, case.entityId),
@@ -831,7 +839,7 @@ class BackupImportStoreTest {
 
     @Test
     fun rejectsARevisionIdReusedForDifferentImmutableContent() {
-        val kind = "synthetic_revision_collision"
+        val kind = "quote_decision"
         val entityId = "revision-id-collision-entity"
         insertSyntheticRevision("shared-revision-id", kind, entityId, null, payload = "{}")
         database.execSQL(
@@ -858,7 +866,7 @@ class BackupImportStoreTest {
 
     @Test
     fun postChoiceRevisionCycleFailsAtomicallyWithoutChangingTheDatabase() {
-        val kind = "synthetic_post_choice_cycle"
+        val kind = "quote_decision"
         val entityId = "post-choice-cycle-entity"
         val parentFirstRevision = "post-choice-cycle-a"
         val parentSecondRevision = "post-choice-cycle-b"
@@ -1023,8 +1031,962 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun nonIdenticalDivergentHeadsFailClosedWithoutAnImplicitResolution() {
-        val kind = "synthetic_nonidentical_divergence"
+    fun divergentCustomerHeadsCanSelectEitherSideAndReimportWithoutAnotherMerge() {
+        data class Case(
+            val id: String,
+            val baseRevision: String,
+            val localRevision: String,
+            val backupRevision: String,
+            val localName: String,
+            val backupName: String,
+            val selectedChoice: String,
+        )
+        val cases = listOf(
+            Case(
+                "divergent-customer-local", "divergent-customer-local-base",
+                "divergent-customer-local-head", "divergent-customer-local-backup",
+                "Local customer", "Backup customer", "MERGE_KEEP_LOCAL_CONTENT",
+            ),
+            Case(
+                "divergent-customer-backup", "divergent-customer-backup-base",
+                "divergent-customer-backup-head", "divergent-customer-backup-branch",
+                "Another local customer", "Selected backup customer", "MERGE_USE_BACKUP_CONTENT",
+            ),
+        )
+        fun customerValues(id: String, name: String) = mapOf<String, Any?>(
+            "id" to id,
+            "name" to name,
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        )
+        fun payload(values: Map<String, Any?>) = JSONObject(values.toSortedMap()).toString()
+
+        val records = mutableListOf<Map<String, Any?>>()
+        cases.forEach { case ->
+            val baseValues = customerValues(case.id, "Common customer")
+            val localValues = customerValues(case.id, case.localName)
+            val backupValues = customerValues(case.id, case.backupName)
+            database.execSQL(
+                "INSERT INTO customers(id,name,email,phone,address,notes,archived) VALUES(?,?,?,?,?,?,?)",
+                arrayOf<Any?>(case.id, case.localName, "", "", "", "", 0),
+            )
+            insertSyntheticRevision(
+                case.baseRevision, "customer", case.id, null, payload(baseValues),
+            )
+            insertSyntheticRevision(
+                case.localRevision, "customer", case.id, case.baseRevision, payload(localValues),
+            )
+            database.execSQL(
+                "INSERT INTO entity_heads(kind,entity_id,revision_id) VALUES('customer',?,?)",
+                arrayOf(case.id, case.localRevision),
+            )
+            records.add(revisionRecord(
+                case.baseRevision, "customer", case.id, null, payload = payload(baseValues),
+            ))
+            records.add(revisionRecord(
+                case.backupRevision, "customer", case.id, null, payload = payload(backupValues),
+            ))
+            records.add(parentRecord(case.backupRevision, case.baseRevision))
+            records.add(stagedRow("customers", backupValues))
+            records.add(headRecord("customer", case.id, case.backupRevision))
+        }
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val headConflicts = conflicts.filter { it["table"] == "entity_heads" }
+            .associateBy { (it["primaryKey"] as List<*>)[1].toString() }
+        assertEquals(cases.size, headConflicts.size)
+        cases.forEach { case ->
+            val conflict = requireNotNull(headConflicts[case.id])
+            assertEquals("DIVERGENT", conflict["revisionRelationship"])
+            assertEquals(
+                listOf("MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
+                conflict["allowedChoices"],
+            )
+            assertEquals("MERGE_KEEP_LOCAL_CONTENT", conflict["defaultChoice"])
+        }
+
+        val beforeInvalidChoice = repository.snapshot()
+        val revisionCountBeforeInvalidChoice = number("SELECT COUNT(*) FROM entity_revisions")
+        val invalidTarget = requireNotNull(headConflicts[cases.first().id])
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                invalidTarget["conflictId"] as String, "MERGE_TAKE_BACKUP",
+            )
+        }
+        assertEquals(beforeInvalidChoice, repository.snapshot())
+        assertEquals(revisionCountBeforeInvalidChoice, number("SELECT COUNT(*) FROM entity_revisions"))
+        cases.forEach { case ->
+            assertEquals(case.localName, customerName(case.id))
+            assertEquals(case.localRevision, database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind='customer' AND entity_id=?",
+                arrayOf(case.id),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        }
+
+        cases.forEach { case ->
+            val conflict = requireNotNull(headConflicts[case.id])
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                conflict["conflictId"] as String, case.selectedChoice,
+            )
+        }
+        val beforeInjectedRollback = repository.snapshot()
+        val revisionCountBeforeRollback = number("SELECT COUNT(*) FROM entity_revisions")
+        val parentCountBeforeRollback = number("SELECT COUNT(*) FROM revision_parents")
+        database.execSQL(
+            "CREATE TRIGGER reject_backup_merge_parent BEFORE INSERT ON revision_parents " +
+                "WHEN (SELECT origin FROM entity_revisions WHERE id=NEW.revision_id)='BACKUP_MERGE' " +
+                "BEGIN SELECT RAISE(ABORT,'synthetic divergent merge failure'); END",
+        )
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+        database.execSQL("DROP TRIGGER reject_backup_merge_parent")
+        assertEquals(beforeInjectedRollback, repository.snapshot())
+        assertEquals(revisionCountBeforeRollback, number("SELECT COUNT(*) FROM entity_revisions"))
+        assertEquals(parentCountBeforeRollback, number("SELECT COUNT(*) FROM revision_parents"))
+        cases.forEach { case ->
+            assertEquals(case.localName, customerName(case.id))
+            assertEquals(case.localRevision, database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind='customer' AND entity_id=?",
+                arrayOf(case.id),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        }
+
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+        val mergedHeads = mutableMapOf<String, String>()
+        cases.forEach { case ->
+            val expectedName = if (case.selectedChoice == "MERGE_KEEP_LOCAL_CONTENT") {
+                case.localName
+            } else {
+                case.backupName
+            }
+            assertEquals(expectedName, customerName(case.id))
+            val committed = database.rawQuery(
+                "SELECT h.revision_id,r.payload,r.origin FROM entity_heads h " +
+                    "JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='customer' AND h.entity_id=?",
+                arrayOf(case.id),
+            ).use { rows ->
+                assertTrue(rows.moveToFirst())
+                Triple(rows.getString(0), rows.getString(1), rows.getString(2))
+            }
+            assertEquals("BACKUP_MERGE", committed.third)
+            assertEquals(expectedName, JSONObject(committed.second).getString("name"))
+            assertNotEquals(case.localRevision, committed.first)
+            assertNotEquals(case.backupRevision, committed.first)
+            val parents = database.rawQuery(
+                "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
+                arrayOf(committed.first),
+            ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+            assertEquals(setOf(case.localRevision, case.backupRevision), parents)
+            mergedHeads[case.id] = committed.first
+        }
+
+        val repeatStarted = stageImport(records)
+        val repeatPreview = importStore.finish(database, repeatStarted.importId)
+        var repeatCursor: String? = null
+        val repeatConflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, repeatStarted.importId, repeatPreview.previewToken, repeatCursor, null,
+            )
+            repeatConflicts.addAll(page.conflicts)
+            repeatCursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        repeatConflicts.forEach { conflict ->
+            val choice = conflict["defaultChoice"] as? String
+                ?: throw AssertionError("A repeat-import conflict needs an explicit safe default")
+            importStore.resolveConflict(
+                database, repeatStarted.importId, repeatPreview.previewToken,
+                repeatPreview.localStateVersion, conflict["conflictId"] as String, choice,
+            )
+        }
+        val versionBeforeRepeat = repository.snapshot().version
+        val revisionCountBeforeRepeat = number("SELECT COUNT(*) FROM entity_revisions")
+        val repeated = importStore.apply(
+            database, repeatStarted.importId, repeatPreview.previewToken, repeatPreview.localStateVersion,
+        )
+        assertEquals(versionBeforeRepeat, repeated.stateVersion)
+        assertEquals(revisionCountBeforeRepeat, number("SELECT COUNT(*) FROM entity_revisions"))
+        cases.forEach { case ->
+            assertEquals(mergedHeads.getValue(case.id), database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind='customer' AND entity_id=?",
+                arrayOf(case.id),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+            assertEquals(
+                if (case.selectedChoice == "MERGE_KEEP_LOCAL_CONTENT") case.localName else case.backupName,
+                customerName(case.id),
+            )
+        }
+    }
+
+    @Test
+    fun simpleMutableRevisionKindsPreviewValidatedTwoSidedChoices() {
+        data class Case(
+            val kind: String,
+            val table: String,
+            val id: String,
+            val jobId: String?,
+            val columns: List<String>,
+            val field: String,
+            val localValue: String,
+            val backupValue: String,
+        )
+
+        val boardColumnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val cardId = "merge-matrix-card"
+        database.execSQL(
+            "INSERT INTO customers(id,name,email,phone,address,notes,archived) VALUES(?,?,?,?,?,?,0)",
+            arrayOf<Any?>("merge-matrix-customer", "Base customer", "", "", "", ""),
+        )
+        database.execSQL(
+            "INSERT INTO work_sites(id,job_id,name,latitude,longitude,radius,enabled,registration_key) " +
+                "VALUES(?,?,?,0,0,50,0,?)",
+            arrayOf("merge-matrix-site", jobId, "Base site", UUID.randomUUID().toString()),
+        )
+        database.execSQL(
+            "INSERT INTO kanban_columns(id,job_id,name,position,completed) VALUES(?,?,?,91,0)",
+            arrayOf("merge-matrix-column", jobId, "Base column"),
+        )
+        database.execSQL(
+            "INSERT INTO kanban_cards(id,job_id,column_id,title,description,due_date,position,completed_ms," +
+                "billable,price_minor,currency,template_id,charge_type) VALUES(?,?,?,?,'',NULL,92,NULL,1,NULL,'USD',NULL,'UNCLASSIFIED')",
+            arrayOf(cardId, jobId, boardColumnId, "Base card"),
+        )
+        database.execSQL(
+            "INSERT INTO task_templates(id,title,description,price_minor,currency,source_job_id,source_card_id,charge_type) " +
+                "VALUES(?,?, '',NULL,'USD',NULL,NULL,'UNCLASSIFIED')",
+            arrayOf("merge-matrix-template", "Base template"),
+        )
+        database.execSQL(
+            "INSERT INTO sessions(id,job_id,start_ms,end_ms,timezone,offset_seconds,origin) VALUES(?,?,?,?,?,?,?)",
+            arrayOf<Any?>("merge-matrix-session", jobId, now + 1_000_000L, now + 1_001_000L, "Etc/UTC", 0, "MANUAL"),
+        )
+        database.execSQL(
+            "INSERT INTO task_comments(id,task_id,body,created_ms,updated_ms) VALUES(?,?,?,?,?)",
+            arrayOf("merge-matrix-comment", cardId, "Base comment", now, now),
+        )
+        database.execSQL(
+            "INSERT INTO actual_costs(id,job_id,job_name,customer_id,customer_name,task_id,task_name," +
+                "amount_minor,currency,category,occurred_ms,timezone,offset_seconds,vendor,reference,note," +
+                "created_ms,updated_ms,deleted_ms) VALUES(?,NULL,'',NULL,'',NULL,'','123','USD','MATERIALS',?," +
+                "'Etc/UTC',0,'Base vendor','','',?,?,NULL)",
+            arrayOf("merge-matrix-cost", now, now, now),
+        )
+
+        val cases = listOf(
+            Case("customer", "customers", "merge-matrix-customer", null, BusinessStore.customerColumns,
+                "name", "Local customer", "Backup customer"),
+            Case("site", "work_sites", "merge-matrix-site", jobId, BusinessSchema.siteColumns,
+                "name", "Local site", "Backup site"),
+            Case("column", "kanban_columns", "merge-matrix-column", jobId, BusinessSchema.columnColumns,
+                "name", "Local column", "Backup column"),
+            Case("card", "kanban_cards", cardId, jobId, BoardStore.cardColumns,
+                "title", "Local card", "Backup card"),
+            Case("template", "task_templates", "merge-matrix-template", null, BoardStore.templateColumns,
+                "title", "Local template", "Backup template"),
+            Case("session", "sessions", "merge-matrix-session", jobId, BusinessSchema.sessionColumns,
+                "origin", "REPAIR", "WIDGET"),
+            Case("task_comment", "task_comments", "merge-matrix-comment", jobId,
+                listOf("id", "task_id", "body", "created_ms", "updated_ms"),
+                "body", "Local comment", "Backup comment"),
+            Case("actual_cost", "actual_costs", "merge-matrix-cost", null, listOf(
+                "id", "job_id", "job_name", "customer_id", "customer_name", "task_id", "task_name",
+                "amount_minor", "currency", "category", "occurred_ms", "timezone", "offset_seconds",
+                "vendor", "reference", "note", "created_ms", "updated_ms", "deleted_ms",
+            ), "vendor", "Local vendor", "Backup vendor"),
+        )
+
+        val records = mutableListOf<Map<String, Any?>>()
+        data class Expected(val case: Case, val localRevision: String, val backupRevision: String)
+        val expected = cases.mapIndexed { index, case ->
+            val baseRow = readRowValues(case.table, "id", case.id)
+            val baseValues = baseRow.filterKeys(case.columns.toSet()::contains)
+            val baseRevision = RevisionStore.record(database, case.kind, case.id, case.jobId, baseValues, now)
+            database.execSQL(
+                "UPDATE ${case.table} SET ${case.field}=? WHERE id=?",
+                arrayOf(case.localValue, case.id),
+            )
+            val localValues = readRowValues(case.table, "id", case.id).filterKeys(case.columns.toSet()::contains)
+            RevisionStore.record(database, case.kind, case.id, case.jobId, localValues, now + 1L)
+                .also { assertNotEquals(baseRevision, it) }
+            val localHead = database.rawQuery(
+                "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                arrayOf(case.kind, case.id),
+            ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+
+            val backupRow = baseRow.toMutableMap().apply { put(case.field, case.backupValue) }
+            val backupValues = backupRow.filterKeys(case.columns.toSet()::contains)
+            val backupRevision = "merge-matrix-backup-$index"
+            records.add(stagedRow("entity_revisions", readRowValues("entity_revisions", "id", baseRevision)))
+            records.add(revisionRecord(
+                backupRevision, case.kind, case.id, case.jobId,
+                payload = JSONObject(backupValues.toSortedMap()).toString(),
+            ))
+            records.add(parentRecord(backupRevision, baseRevision))
+            records.add(stagedRow(case.table, backupRow))
+            records.add(headRecord(case.kind, case.id, backupRevision))
+            Expected(case, localHead, backupRevision)
+        }
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        var cursor: String? = null
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val headConflicts = conflicts.filter { it["table"] == "entity_heads" }
+            .associateBy { (it["primaryKey"] as List<*>)[1].toString() }
+        assertEquals(expected.size, headConflicts.size)
+        expected.forEach { value ->
+            val conflict = requireNotNull(headConflicts[value.case.id])
+            assertEquals("DIVERGENT", conflict["revisionRelationship"])
+            assertEquals(
+                listOf("MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
+                conflict["allowedChoices"],
+            )
+        }
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun cardMoneyAndQuantityConflictsUseOneBackupSideAndPreserveBothParents() {
+        val columnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val cardId = "aggregate-card-money-quantity"
+        assertNull(BoardStore.saveCard(
+            database,
+            BoardStore.Draft(
+                cardId, jobId, columnId, "Base card", priceMinor = MoneyMath.parse("100"),
+                currency = "USD", quantityUnits = 10_000L,
+            ),
+            now,
+        ))
+        val templateId = readRowValues("kanban_cards", "id", cardId).getValue("template_id").toString()
+        val source = exportStore.start(database)
+        val records = readAllRows(source.snapshotId).toMutableList()
+
+        fun currentHead(kind: String, id: String): String = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, id),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+
+        fun archiveValues(table: String, keyColumn: String, key: String): MutableMap<String, Any?> {
+            val record = records.first { it["table"] == table && values(it)[keyColumn]?.toString() == key }
+            return values(record).entries.associate { it.key.toString() to it.value }.toMutableMap()
+        }
+
+        fun replaceArchiveRow(table: String, keyColumn: String, key: String, replacement: Map<String, Any?>) {
+            records.removeAll { it["table"] == table && values(it)[keyColumn]?.toString() == key }
+            records.add(stagedRow(table, replacement))
+        }
+
+        fun addBackupHead(
+            kind: String,
+            entityId: String,
+            entityJobId: String?,
+            baseRevision: String,
+            backupRevision: String,
+            payload: Map<String, Any?>,
+        ) {
+            records.add(revisionRecord(
+                backupRevision, kind, entityId, entityJobId,
+                payload = JSONObject(payload.toSortedMap()).toString(),
+            ))
+            records.add(parentRecord(backupRevision, baseRevision))
+            records.removeAll {
+                it["table"] == "entity_heads" && values(it)["kind"] == kind &&
+                    values(it)["entity_id"] == entityId
+            }
+            records.add(headRecord(kind, entityId, backupRevision))
+        }
+
+        val baseCardHead = currentHead("card", cardId)
+        val baseMoneyHead = currentHead("card_money", cardId)
+        val baseQuantityHead = currentHead("task_quantity", cardId)
+        val baseTemplateHead = currentHead("template", templateId)
+        val baseTemplateMoneyHead = currentHead("template_money", templateId)
+        val baseTemplateQuantityHead = currentHead("template_quantity", templateId)
+        val baseCard = archiveValues("kanban_cards", "id", cardId)
+            .filterKeys(BoardStore.cardColumns.toSet()::contains)
+        val baseMoney = archiveValues("card_money", "id", cardId)
+        val baseQuantity = archiveValues("task_quantities", "card_id", cardId)
+        val baseTemplate = archiveValues("task_templates", "id", templateId)
+            .filterKeys(BoardStore.templateColumns.toSet()::contains)
+        val baseTemplateMoney = archiveValues("template_money", "id", templateId)
+        val baseTemplateQuantity = archiveValues("template_quantities", "template_id", templateId)
+
+        database.execSQL("UPDATE kanban_cards SET title=? WHERE id=?", arrayOf("Local card", cardId))
+        val localCard = readRowValues("kanban_cards", "id", cardId).filterKeys(BoardStore.cardColumns.toSet()::contains)
+        val localCardHead = RevisionStore.record(database, "card", cardId, jobId, localCard, now + 1L)
+        MoneyStore.save(
+            database, "card_money", cardId, jobId, MoneyMath.parse("200"), now + 1L,
+        )
+        val localMoneyHead = currentHead("card_money", cardId)
+        database.execSQL("UPDATE task_quantities SET quantity_units=? WHERE card_id=?", arrayOf(20_000L, cardId))
+        val localQuantityHead = RevisionStore.record(
+            database,
+            "task_quantity",
+            cardId,
+            jobId,
+            mapOf("card_id" to cardId, "job_id" to jobId, "quantity_units" to 20_000L),
+            now + 1L,
+        )
+        database.execSQL("UPDATE task_templates SET title=? WHERE id=?", arrayOf("Local template", templateId))
+        val localTemplate = readRowValues("task_templates", "id", templateId)
+            .filterKeys(BoardStore.templateColumns.toSet()::contains)
+        val localTemplateHead = RevisionStore.record(
+            database, "template", templateId, null, localTemplate, now + 1L,
+        )
+        MoneyStore.save(
+            database, "template_money", templateId, null, MoneyMath.parse("200"), now + 1L,
+        )
+        val localTemplateMoneyHead = currentHead("template_money", templateId)
+        database.execSQL(
+            "UPDATE template_quantities SET quantity_units=? WHERE template_id=?",
+            arrayOf(20_000L, templateId),
+        )
+        val localTemplateQuantityHead = RevisionStore.record(
+            database, "template_quantity", templateId, null,
+            mapOf("template_id" to templateId, "quantity_units" to 20_000L), now + 1L,
+        )
+        assertNotEquals(baseCardHead, localCardHead)
+        assertNotEquals(baseMoneyHead, localMoneyHead)
+        assertNotEquals(baseQuantityHead, localQuantityHead)
+        assertNotEquals(baseTemplateHead, localTemplateHead)
+        assertNotEquals(baseTemplateMoneyHead, localTemplateMoneyHead)
+        assertNotEquals(baseTemplateQuantityHead, localTemplateQuantityHead)
+
+        val backupCard = baseCard.toMutableMap().apply { put("title", "Backup card") }
+        val backupMoney = baseMoney.toMutableMap().apply { put("minor_text", "300") }
+        val backupQuantity = baseQuantity.toMutableMap().apply { put("quantity_units", 30_000L) }
+        val backupTemplate = baseTemplate.toMutableMap().apply { put("title", "Backup template") }
+        val backupTemplateMoney = baseTemplateMoney.toMutableMap().apply { put("minor_text", "300") }
+        val backupTemplateQuantity = baseTemplateQuantity.toMutableMap().apply { put("quantity_units", 30_000L) }
+        replaceArchiveRow("kanban_cards", "id", cardId, backupCard)
+        replaceArchiveRow("card_money", "id", cardId, backupMoney)
+        replaceArchiveRow("task_quantities", "card_id", cardId, backupQuantity)
+        replaceArchiveRow("task_templates", "id", templateId, backupTemplate)
+        replaceArchiveRow("template_money", "id", templateId, backupTemplateMoney)
+        replaceArchiveRow("template_quantities", "template_id", templateId, backupTemplateQuantity)
+        addBackupHead("card", cardId, jobId, baseCardHead, "aggregate-backup-card-head", backupCard)
+        addBackupHead(
+            "card_money", cardId, jobId, baseMoneyHead, "aggregate-backup-card-money-head",
+            mapOf("id" to cardId, "minor_text" to "300", "job_id" to jobId),
+        )
+        addBackupHead(
+            "task_quantity", cardId, jobId, baseQuantityHead, "aggregate-backup-card-quantity-head",
+            mapOf("card_id" to cardId, "job_id" to jobId, "quantity_units" to 30_000L),
+        )
+        addBackupHead(
+            "template", templateId, null, baseTemplateHead, "aggregate-backup-template-head", backupTemplate,
+        )
+        addBackupHead(
+            "template_money", templateId, null, baseTemplateMoneyHead, "aggregate-backup-template-money-head",
+            mapOf("id" to templateId, "minor_text" to "300", "job_id" to null),
+        )
+        addBackupHead(
+            "template_quantity", templateId, null, baseTemplateQuantityHead,
+            "aggregate-backup-template-quantity-head",
+            mapOf("template_id" to templateId, "quantity_units" to 30_000L),
+        )
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        var cursor: String? = null
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val headConflicts = conflicts.filter { it["table"] == "entity_heads" }
+            .associateBy { (it["primaryKey"] as List<*>)[0].toString() }
+        assertEquals(
+            setOf("card", "card_money", "task_quantity", "template", "template_money", "template_quantity"),
+            headConflicts.keys,
+        )
+        val cardConflict = requireNotNull(headConflicts["card"])
+        val cardGroups = cardConflict["aggregateKeys"] as List<*>
+        assertTrue(cardGroups.contains("card-fields:$cardId"))
+
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            cardConflict["conflictId"] as String,
+            "MERGE_USE_BACKUP_CONTENT",
+        )
+        val templateConflict = requireNotNull(headConflicts["template"])
+        assertTrue((templateConflict["aggregateKeys"] as List<*>).contains("template-fields:$templateId"))
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            templateConflict["conflictId"] as String,
+            "MERGE_KEEP_LOCAL_CONTENT",
+        )
+        val resolvedConflicts = mutableListOf<Map<String, Any?>>()
+        cursor = null
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            resolvedConflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        resolvedConflicts.filter { it["table"] == "entity_heads" }.forEach { conflict ->
+            assertTrue(conflict["resolved"] as Boolean)
+            val kind = (conflict["primaryKey"] as List<*>)[0].toString()
+            val expected = if (kind in setOf("card", "card_money", "task_quantity")) {
+                "MERGE_USE_BACKUP_CONTENT"
+            } else {
+                "MERGE_KEEP_LOCAL_CONTENT"
+            }
+            assertEquals(expected, conflict["selectedChoice"])
+        }
+
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals("Backup card", readRowValues("kanban_cards", "id", cardId)["title"])
+        assertEquals("300", readRowValues("card_money", "id", cardId)["minor_text"])
+        assertEquals(30_000L, readRowValues("task_quantities", "card_id", cardId)["quantity_units"])
+        assertEquals("Local template", readRowValues("task_templates", "id", templateId)["title"])
+        assertEquals("200", readRowValues("template_money", "id", templateId)["minor_text"])
+        assertEquals(20_000L, readRowValues("template_quantities", "template_id", templateId)["quantity_units"])
+        listOf(
+            Triple("template", localTemplateHead, "aggregate-backup-template-head"),
+            Triple("template_money", localTemplateMoneyHead, "aggregate-backup-template-money-head"),
+            Triple("template_quantity", localTemplateQuantityHead, "aggregate-backup-template-quantity-head"),
+        ).forEach { (kind, localRevision, backupRevision) ->
+            val committed = currentHead(kind, templateId)
+            assertNotEquals(backupRevision, committed)
+            assertTrue(database.rawQuery(
+                "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                arrayOf(committed, backupRevision),
+            ).use { it.moveToFirst() })
+            assertTrue(database.rawQuery(
+                "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                arrayOf(committed, localRevision),
+            ).use { it.moveToFirst() })
+        }
+        listOf(
+            Triple("card", localCardHead, "aggregate-backup-card-head"),
+            Triple("card_money", localMoneyHead, "aggregate-backup-card-money-head"),
+            Triple("task_quantity", localQuantityHead, "aggregate-backup-card-quantity-head"),
+        ).forEach { (kind, localRevision, backupRevision) ->
+            val committed = currentHead(kind, cardId)
+            assertNotEquals(backupRevision, committed)
+            assertTrue(database.rawQuery(
+                "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                arrayOf(committed, backupRevision),
+            ).use { it.moveToFirst() })
+            assertTrue(database.rawQuery(
+                "SELECT 1 FROM revision_parents WHERE revision_id=? AND parent_id=?",
+                arrayOf(committed, localRevision),
+            ).use { it.moveToFirst() })
+        }
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun globalSettingsConflictsResolveAsOneLocalSnapshot() {
+        data class SettingCase(
+            val kind: String,
+            val table: String,
+            val field: String,
+            val localValue: Any,
+            val backupValue: Any,
+            val revisionColumns: List<String>,
+        )
+
+        val cases = listOf(
+            SettingCase(
+                "settings", "app_settings", "company_name", "Local company", "Backup company",
+                BusinessSchema.settingsColumns,
+            ),
+            SettingCase(
+                "settings_money", "settings_money", "minor_text", "7200", "8400",
+                listOf("id", "minor_text", "job_id"),
+            ),
+            SettingCase(
+                "billing_tax_settings", "billing_tax_settings", "default_tax_units", 1_250, 1_500,
+                listOf("id", "default_tax_units"),
+            ),
+        )
+        val source = exportStore.start(database)
+        val records = readAllRows(source.snapshotId).toMutableList()
+
+        fun archiveValues(table: String): MutableMap<String, Any?> {
+            val record = records.first { it["table"] == table && values(it)["id"].toString() == "1" }
+            return values(record).entries.associate { it.key.toString() to it.value }.toMutableMap()
+        }
+        fun replaceArchiveRow(table: String, replacement: Map<String, Any?>) {
+            records.removeAll { it["table"] == table && values(it)["id"].toString() == "1" }
+            records.add(stagedRow(table, replacement))
+        }
+        fun currentHead(kind: String): String = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id='1'",
+            arrayOf(kind),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        fun rowValues(table: String): Map<String, Any?> = readRowValues(table, "id", "1")
+
+        data class Expected(val case: SettingCase, val localHead: String, val backupHead: String)
+        val expected = cases.mapIndexed { index, case ->
+            val backupRow = archiveValues(case.table)
+            val baseHead = currentHead(case.kind)
+            database.execSQL(
+                "UPDATE ${case.table} SET ${case.field}=? WHERE id=1",
+                arrayOf(case.localValue),
+            )
+            val localRow = rowValues(case.table)
+            val localPayload = case.revisionColumns.associateWith { column ->
+                when {
+                    column == "job_id" -> null
+                    case.kind == "settings_money" && column == "id" -> "1"
+                    else -> localRow[column]
+                }
+            }
+            val localHead = RevisionStore.record(
+                database, case.kind, "1", null, localPayload, now + 1L,
+            )
+
+            val backupRevisionId = "global-settings-backup-$index"
+            val backupRowUpdated = backupRow.toMutableMap().apply { put(case.field, case.backupValue) }
+            val backupPayload = case.revisionColumns.associateWith { column ->
+                when {
+                    column == "job_id" -> null
+                    case.kind == "settings_money" && column == "id" -> "1"
+                    else -> backupRowUpdated[column]
+                }
+            }
+            records.add(revisionRecord(
+                backupRevisionId, case.kind, "1", null,
+                payload = JSONObject(backupPayload.toSortedMap()).toString(),
+            ))
+            records.add(parentRecord(backupRevisionId, baseHead))
+            records.removeAll {
+                it["table"] == "entity_heads" && values(it)["kind"] == case.kind &&
+                    values(it)["entity_id"].toString() == "1"
+            }
+            records.add(headRecord(case.kind, "1", backupRevisionId))
+            replaceArchiveRow(case.table, backupRowUpdated)
+            Expected(case, localHead, backupRevisionId)
+        }
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        var cursor: String? = null
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val heads = conflicts.filter { it["table"] == "entity_heads" }
+            .associateBy { (it["primaryKey"] as List<*>)[0].toString() }
+        assertEquals(cases.map { it.kind }.toSet(), heads.keys)
+        heads.values.forEach { conflict ->
+            assertTrue((conflict["aggregateKeys"] as List<*>).contains("global:settings"))
+            assertEquals(
+                listOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
+                conflict["allowedChoices"],
+            )
+        }
+
+        val selected = requireNotNull(heads["settings"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            selected["conflictId"] as String, "MERGE_KEEP_LOCAL_CONTENT",
+        )
+        val resolved = mutableListOf<Map<String, Any?>>()
+        cursor = null
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            resolved.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        resolved.filter { it["aggregateKeys"] is List<*> &&
+            (it["aggregateKeys"] as List<*>).contains("global:settings") }.forEach { conflict ->
+            assertTrue(conflict["resolved"] as Boolean)
+            assertTrue(conflict["selectedChoice"] == "MERGE_KEEP_LOCAL_CONTENT" ||
+                conflict["selectedChoice"] == "KEEP_LOCAL")
+        }
+
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertEquals("Local company", rowValues("app_settings")["company_name"])
+        assertEquals("7200", rowValues("settings_money")["minor_text"])
+        assertEquals(1_250L, rowValues("billing_tax_settings")["default_tax_units"])
+        expected.forEach { item ->
+            val mergedHead = currentHead(item.case.kind)
+            val parents = database.rawQuery(
+                "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
+                arrayOf(mergedHead),
+            ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+            assertEquals(setOf(item.localHead, item.backupHead), parents)
+        }
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun quoteInvoiceAggregateIncludesOriginalInvoiceForRowsAndRevisionHeads() {
+        val quoteId = "aggregate-quote-origin"
+        val invoiceJobId = "aggregate-quote-origin-job"
+        val taskId = "aggregate-quote-origin-task"
+        val quotedInvoiceId = "aggregate-quote-origin-invoice"
+        val replacementInvoiceId = "aggregate-quote-origin-replacement"
+        assertNull(repository.saveQuote(
+            "aggregate-quote-origin-save",
+            repository.snapshot().version,
+            QuoteStore.Draft(
+                quoteId, null, null, "Quoted tile installation", "USD", 75_000,
+                listOf(QuoteStore.Line("tile", "Tile", "Synthetic tile work", "ITEM", "260000", "1250")),
+            ),
+        ).conflict)
+        assertNull(repository.issueQuote(
+            "aggregate-quote-origin-issue", repository.snapshot().version, quoteId, true,
+        ).conflict)
+        assertNull(repository.decideQuote(
+            "aggregate-quote-origin-accept", repository.snapshot().version, quoteId, 1,
+            "ACCEPTED", "Explicit aggregate fixture acceptance", true,
+        ).conflict)
+        assertNull(repository.applyQuoteScope(
+            "aggregate-quote-origin-scope",
+            repository.snapshot().version,
+            QuoteScopeStore.Draft(
+                quoteId, 1, invoiceJobId,
+                listOf(QuoteScopeStore.Item("tile", taskId, "Install tile")),
+                "Reviewed scope for aggregate fixture", true, "Aggregate fixture job",
+                jobDifferencesReviewed = true,
+            ),
+        ).conflict)
+        val board = repository.boardSnapshot(invoiceJobId).board
+        val completedColumn = board.columns.single { it.completed }.id
+        assertNull(repository.saveCard(
+            "aggregate-quote-origin-complete",
+            repository.snapshot().version,
+            BoardStore.Draft(
+                taskId, invoiceJobId, completedColumn, "Install tile",
+                priceMinor = java.math.BigInteger("999"), currency = "USD", quantityUnits = 260_000L,
+            ),
+        ).conflict)
+        val request = QuoteInvoiceReviewStore.Request(
+            quoteId, 1,
+            ReportStore.Selection("2026-01-01", "2026-12-31", "UTC", listOf(invoiceJobId)),
+        )
+        val choices = QuoteInvoiceReviewStore.Choices(
+            listOf(taskId), emptyList(), note = "Reviewed actual tile work", confirmed = true,
+        )
+        assertNull(repository.prepareQuoteInvoice(
+            "aggregate-quote-origin-prepare",
+            repository.snapshot().version,
+            QuoteInvoiceStore.Draft(quotedInvoiceId, request, choices),
+        ).conflict)
+        val originalInvoice = repository.invoice(quotedInvoiceId)
+        val originalDocument = InvoiceStore.Snapshot.decode(originalInvoice.payload)
+        val originalLine = originalDocument.lines.single()
+        assertNull(repository.replaceInvoice(
+            "aggregate-quote-origin-replace",
+            repository.snapshot().version,
+            InvoiceLifecycleStore.ReplacementDraft(
+                quotedInvoiceId, replacementInvoiceId,
+                listOf(InvoiceLifecycleStore.LineEdit(
+                    0, originalLine.title, originalLine.detail, "39000", "260000", "1500",
+                )),
+                75_000, "Synthetic correction for aggregate fixture", "UTC", true,
+            ),
+        ).conflict)
+
+        val localLink = database.rawQuery(
+            "SELECT quote_id,revision,original_invoice_id,created_ms,payload FROM quote_invoice_links WHERE invoice_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            listOf(rows.getString(0), rows.getInt(1), rows.getString(2), rows.getLong(3), rows.getString(4))
+        }
+        assertEquals(quotedInvoiceId, localLink[2])
+        val localLinkHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='quote_invoice_link' AND entity_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val linkJobId = repository.invoice(replacementInvoiceId).jobId
+        val baseRevisionId = "aggregate-quote-origin-common-base"
+        val basePayload = JSONObject(mapOf(
+            "invoice_id" to replacementInvoiceId,
+            "quote_id" to quoteId,
+            "revision" to localLink[1],
+            "original_invoice_id" to quotedInvoiceId,
+            "created_ms" to localLink[3],
+            "payload" to localLink[4],
+        )).toString()
+        database.execSQL(
+            "INSERT INTO entity_revisions(id,kind,entity_id,job_id,payload,deleted,changed_ms,origin) " +
+                "VALUES(?,'quote_invoice_link',?,?,?,0,?,'MUTATION')",
+            arrayOf(baseRevisionId, replacementInvoiceId, linkJobId, basePayload, now - 2L),
+        )
+        database.execSQL(
+            "INSERT INTO revision_parents(revision_id,parent_id) VALUES(?,?)",
+            arrayOf(localLinkHead, baseRevisionId),
+        )
+        val source = exportStore.start(database)
+        val records = readAllRows(source.snapshotId).toMutableList()
+
+        fun replaceArchiveRow(table: String, keyColumn: String, key: String, replacement: Map<String, Any?>) {
+            records.removeAll { it["table"] == table && values(it)[keyColumn]?.toString() == key }
+            records.add(stagedRow(table, replacement))
+        }
+        fun archiveValues(table: String, predicate: (Map<*, *>) -> Boolean): MutableMap<String, Any?> {
+            val record = records.first { it["table"] == table && predicate(values(it)) }
+            return values(record).entries.associate { it.key.toString() to it.value }.toMutableMap()
+        }
+
+        val backupCreatedMs = (localLink[3] as Long) + 1L
+        val replacementLink = archiveValues("quote_invoice_links") {
+            it["invoice_id"] == replacementInvoiceId
+        }.apply { put("created_ms", backupCreatedMs) }
+        replaceArchiveRow("quote_invoice_links", "invoice_id", replacementInvoiceId, replacementLink)
+
+        val changedInvoiceNumber = "INV-9997"
+        val staleInvoice = archiveValues("invoices") { it["id"] == quotedInvoiceId }.apply {
+            put("number", changedInvoiceNumber)
+            put("payload", originalDocument.copy(number = changedInvoiceNumber).encode())
+        }
+        replaceArchiveRow("invoices", "id", quotedInvoiceId, staleInvoice)
+        val staleDecision = archiveValues("quote_decisions") { it["quote_id"] == quoteId }.apply {
+            put("note", "Stale backup acceptance note")
+        }
+        records.removeAll { it["table"] == "quote_decisions" && values(it)["quote_id"] == quoteId }
+        records.add(stagedRow("quote_decisions", staleDecision))
+        val staleScopeRevision = archiveValues("quote_scope_revisions") { it["quote_id"] == quoteId }.apply {
+            put("note", "Stale backup scope note")
+        }
+        records.removeAll { it["table"] == "quote_scope_revisions" && values(it)["quote_id"] == quoteId }
+        records.add(stagedRow("quote_scope_revisions", staleScopeRevision))
+
+        val backupHeadRevisionId = "aggregate-quote-origin-backup-head"
+        val backupPayload = JSONObject(mapOf(
+            "invoice_id" to replacementInvoiceId,
+            "quote_id" to quoteId,
+            "revision" to localLink[1],
+            "original_invoice_id" to quotedInvoiceId,
+            "created_ms" to backupCreatedMs,
+            "payload" to localLink[4],
+        )).toString()
+        records.add(revisionRecord(
+            backupHeadRevisionId, "quote_invoice_link", replacementInvoiceId,
+            linkJobId, payload = backupPayload,
+        ))
+        records.add(parentRecord(backupHeadRevisionId, baseRevisionId))
+        records.removeAll {
+            it["table"] == "entity_heads" && values(it)["kind"] == "quote_invoice_link" &&
+                values(it)["entity_id"] == replacementInvoiceId
+        }
+        records.add(headRecord("quote_invoice_link", replacementInvoiceId, backupHeadRevisionId))
+
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        var cursor: String? = null
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        fun conflict(table: String, matches: (List<*>) -> Boolean): Map<String, Any?> =
+            requireNotNull(conflicts.singleOrNull { row ->
+                row["table"] == table && matches(row["primaryKey"] as List<*>)
+            }) { "Missing $table aggregate fixture conflict" }
+
+        val linkRowConflict = conflict("quote_invoice_links") { it.singleOrNull() == replacementInvoiceId }
+        val linkHeadConflict = conflict("entity_heads") {
+            it.getOrNull(0) == "quote_invoice_link" && it.getOrNull(1) == replacementInvoiceId
+        }
+        val originalInvoiceConflict = conflict("invoices") { it.singleOrNull() == quotedInvoiceId }
+        val quoteDecisionConflict = conflict("quote_decisions") { it.getOrNull(0) == quoteId }
+        val quoteScopeConflict = conflict("quote_scope_revisions") { it.getOrNull(0) == quoteId }
+        listOf(linkRowConflict, linkHeadConflict).forEach { row ->
+            val aggregateKeys = row["aggregateKeys"] as List<*>
+            assertTrue(aggregateKeys.contains("invoice:$quotedInvoiceId"))
+            assertTrue(aggregateKeys.contains("invoice:$replacementInvoiceId"))
+            assertTrue(aggregateKeys.contains("quote:$quoteId"))
+        }
+        assertEquals(listOf("KEEP_LOCAL"), linkHeadConflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            linkHeadConflict["conflictId"] as String, "KEEP_LOCAL",
+        )
+        val resolved = mutableListOf<Map<String, Any?>>()
+        cursor = null
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            resolved.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        listOf(linkRowConflict, linkHeadConflict, originalInvoiceConflict, quoteDecisionConflict, quoteScopeConflict)
+            .forEach { original ->
+                val current = requireNotNull(resolved.singleOrNull { it["conflictId"] == original["conflictId"] })
+                assertTrue(current["resolved"] as Boolean)
+                assertEquals("KEEP_LOCAL", current["selectedChoice"])
+            }
+
+        val stateBeforeApply = repository.snapshot()
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertEquals(stateBeforeApply, repository.snapshot())
+        assertEquals(localLinkHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='quote_invoice_link' AND entity_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(originalInvoice.number, repository.invoice(quotedInvoiceId).number)
+        assertEquals(quotedInvoiceId, database.rawQuery(
+            "SELECT original_invoice_id FROM quote_invoice_links WHERE invoice_id=?",
+            arrayOf(replacementInvoiceId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupHeadRevisionId'"))
+        assertTrue(importStore.close(started.importId))
+        assertTrue(exportStore.close(source.snapshotId))
+    }
+
+    @Test
+    fun nonIdenticalDivergentHeadsOfferOnlyAnExplicitSafeLocalChoice() {
+        val kind = "quote_decision"
         val entityId = "nonidentical-divergent-entity"
         val baseRevision = "nonidentical-divergent-base"
         val localRevision = "nonidentical-divergent-local"
@@ -1044,24 +2006,20 @@ class BackupImportStoreTest {
         val preview = importStore.finish(database, started.importId)
         val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
         assertEquals("DIVERGENT", conflict["revisionRelationship"])
-        assertEquals(emptyList<String>(), conflict["allowedChoices"])
-        assertNull(conflict["defaultChoice"])
+        assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+        assertEquals("KEEP_LOCAL", conflict["defaultChoice"])
         assertFalse(conflict["resolved"] as Boolean)
 
         val before = repository.snapshot()
-        assertFailure("UNSUPPORTED_CHOICE") {
-            importStore.resolveConflict(
-                database,
-                started.importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                "KEEP_LOCAL",
-            )
-        }
-        assertFailure("UNRESOLVED_CONFLICTS") {
-            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
-        }
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "KEEP_LOCAL",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
         assertEquals(before, repository.snapshot())
         assertEquals(localRevision, database.rawQuery(
@@ -1133,41 +2091,29 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun backupOnlyPointCoveredByLocalRangeCannotChoosePreserveDeletion() {
-        val rangeStart = now + 1_000L
-        val rangeEnd = now + 2_000L
+    fun backupOnlyPointCoveredByLocalRangeOmitsItsCompleteRevisionGraph() {
+        val (sessionId, measuredAt) = startAndStopSessionWithPoint("local-point-for-backup-only-preserve")
         assertNull(repository.deleteLocationRange(
             "create-empty-local-deletion-range",
             repository.snapshot().version,
-            GpsDeletionStore.Range(jobId, rangeStart, rangeEnd, "Etc/UTC"),
+            GpsDeletionStore.Range(jobId, measuredAt, measuredAt + 1L, "Etc/UTC"),
         ).conflict)
         val localStateBeforePreview = repository.snapshot()
-        val incomingSessionId = "backup-only-covered-point-session"
         val incomingPointId = "backup-only-covered-point"
         val incomingPointRevision = "backup-only-covered-point-revision"
-        val measuredAt = rangeStart + 100L
         val started = stageImport(listOf(
-            stagedRow("sessions", mapOf(
-                "id" to incomingSessionId,
-                "job_id" to jobId,
-                "start_ms" to now + 500L,
-                "end_ms" to now + 3_000L,
-                "timezone" to "Etc/UTC",
-                "offset_seconds" to 0,
-                "origin" to "MANUAL",
-            )),
             revisionRecord(
                 incomingPointRevision,
                 "location",
                 incomingPointId,
                 jobId,
                 payload = JSONObject().put("id", incomingPointId)
-                    .put("session_id", incomingSessionId).toString(),
+                    .put("session_id", sessionId).toString(),
             ),
             headRecord("location", incomingPointId, incomingPointRevision),
             stagedRow("location_points", mapOf(
                 "id" to incomingPointId,
-                "session_id" to incomingSessionId,
+                "session_id" to sessionId,
                 "measured_ms" to measuredAt,
                 "received_ms" to measuredAt,
                 "latitude" to 12.0,
@@ -1178,29 +2124,98 @@ class BackupImportStoreTest {
 
         val preview = importStore.finish(database, started.importId)
         val conflict = requireNotNull(findConflict(started.importId, preview, "GPS_DELETION_COVERAGE"))
-        assertNull(conflict["defaultChoice"])
-        assertEquals(emptyList<String>(), conflict["allowedChoices"])
+        assertEquals(listOf("PRESERVE_DELETION"), conflict["allowedChoices"])
         assertFalse(conflict["resolved"] as Boolean)
-        assertFailure("UNSUPPORTED_CHOICE") {
-            importStore.resolveConflict(
-                database,
-                started.importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                "PRESERVE_DELETION",
-            )
-        }
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "PRESERVE_DELETION",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
         assertEquals(localStateBeforePreview, repository.snapshot())
         assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
-        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$incomingSessionId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$sessionId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$incomingPointId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location' AND entity_id='$incomingPointId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$incomingPointRevision'"))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM revision_parents WHERE revision_id='$incomingPointRevision' OR parent_id='$incomingPointRevision'",
+        ))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun stagedRangeConflictCanKeepAnUnparentedBackupPointByOmittingTheRange() {
+        val (sessionId, measuredAt) = sessionWithoutLivePoint("staged-range-keep-point")
+        val rangeId = "staged-range-keep-point-range"
+        val rangeRevisionId = "staged-range-keep-point-range-revision"
+        val pointId = "staged-range-keep-point-point"
+        val pointRevisionId = "staged-range-keep-point-point-revision"
+        val started = stageImport(backupRangeAndUnparentedPointRecords(
+            rangeId, rangeRevisionId, pointId, pointRevisionId, sessionId, measuredAt,
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "GPS_DELETION_COVERAGE"))
+        assertEquals("location_deletion_ranges", conflict["table"])
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), conflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "KEEP_LOCAL",
+        )
+
+        val applied = importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_deletion_ranges WHERE id='$rangeId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$rangeRevisionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location_deletion_range' AND entity_id='$rangeId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_points WHERE id='$pointId'"))
+        assertEquals(1L, number(
+            "SELECT COUNT(*) FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='location' AND h.entity_id='$pointId' AND r.deleted=0",
+        ))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun stagedRangeConflictCanApplyDeletionAndOmitUnparentedBackupPointGraph() {
+        val (sessionId, measuredAt) = sessionWithoutLivePoint("staged-range-apply-delete")
+        val rangeId = "staged-range-apply-delete-range"
+        val rangeRevisionId = "staged-range-apply-delete-range-revision"
+        val pointId = "staged-range-apply-delete-point"
+        val pointRevisionId = "staged-range-apply-delete-point-revision"
+        val started = stageImport(backupRangeAndUnparentedPointRecords(
+            rangeId, rangeRevisionId, pointId, pointRevisionId, sessionId, measuredAt,
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "GPS_DELETION_COVERAGE"))
+        assertEquals("location_deletion_ranges", conflict["table"])
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), conflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "APPLY_BACKUP_DELETION",
+        )
+
+        val applied = importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(preview.localStateVersion + 1L, applied.stateVersion)
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges WHERE id='$rangeId'"))
+        assertEquals(1L, number(
+            "SELECT COUNT(*) FROM entity_heads WHERE kind='location_deletion_range' AND entity_id='$rangeId' AND revision_id='$rangeRevisionId'",
+        ))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$pointId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$pointRevisionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location' AND entity_id='$pointId'"))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM entity_heads h LEFT JOIN entity_revisions r ON r.id=h.revision_id WHERE r.id IS NULL",
+        ))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM revision_parents p LEFT JOIN entity_revisions child ON child.id=p.revision_id " +
+                "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id WHERE child.id IS NULL OR parent.id IS NULL",
+        ))
         assertTrue(importStore.close(started.importId))
     }
 
@@ -1274,15 +2289,18 @@ class BackupImportStoreTest {
     }
 
     @Test
-    fun importedRangeChoiceThatNeedsCausalRewriteFailsClosed() {
-        val session = startAndStopSessionWithPoint("local-point-covered-by-import")
+    fun importedRangeCanBeKeptLocalWithoutChangingThePointGraph() {
+        val pointId = "local-point-covered-by-import"
+        val session = startAndStopSessionWithPoint(pointId)
         val rangeId = "synthetic-imported-range"
         val revisionId = "synthetic-imported-range-revision"
-        val range = mapOf(
+        val rangeStart = session.second
+        val rangeEnd = session.second + 1L
+        val range = mapOf<String, Any?>(
             "id" to rangeId,
             "job_id" to jobId,
-            "start_ms" to session.second,
-            "end_ms" to session.second + 1L,
+            "start_ms" to rangeStart,
+            "end_ms" to rangeEnd,
             "timezone_id" to "Etc/UTC",
             "deleted_ms" to now,
             "revision_id" to revisionId,
@@ -1291,6 +2309,9 @@ class BackupImportStoreTest {
             revisionRecord(
                 revisionId, "location_deletion_range", rangeId, jobId,
                 origin = "GPS_RANGE_DELETE",
+                payload = JSONObject().put("id", rangeId).put("job_id", jobId)
+                    .put("start_ms", rangeStart).put("end_ms", rangeEnd)
+                    .put("timezone_id", "Etc/UTC").toString(),
             ),
             headRecord("location_deletion_range", rangeId, revisionId),
             stagedRow("location_deletion_ranges", range),
@@ -1319,30 +2340,186 @@ class BackupImportStoreTest {
         assertNotNull(coverageConflict)
         val conflict = requireNotNull(coverageConflict)
         assertNull(conflict["defaultChoice"])
-        assertEquals(emptyList<String>(), conflict["allowedChoices"])
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), conflict["allowedChoices"])
         assertEquals(false, conflict["resolved"])
-        assertFailure("UNSUPPORTED_CHOICE") {
-            importStore.resolveConflict(
-                database,
-                started.importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                "KEEP_LOCAL_POINTS",
-            )
-        }
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
-        assertEquals(
-            "Unproven local GPS points are covered",
-            (conflict["localSummary"] as Map<*, *>)["identifier"],
+        val localHeadBefore = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "KEEP_LOCAL",
         )
-        assertNoCoordinates(conflict)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         assertEquals(before, repository.snapshot())
         assertEquals(1L, number("SELECT COUNT(*) FROM location_points"))
         assertEquals(0L, number("SELECT COUNT(*) FROM location_deletion_ranges"))
-        assertFalse(preview.applyReady)
+        assertEquals(localHeadBefore, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$revisionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_heads WHERE kind='location_deletion_range' AND entity_id='$rangeId'"))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun importedRangeDeletionAddsCausalParentsAndRemovesCoveredLocalPoint() {
+        val (pointId, measuredAt) = startAndStopSessionWithPoint("local-point-deleted-by-import")
+        val rangeId = "synthetic-import-delete-range"
+        val rangeRevisionId = "synthetic-import-delete-range-revision"
+        val rangeStart = measuredAt
+        val rangeEnd = measuredAt + 1L
+        val range = mapOf<String, Any?>(
+            "id" to rangeId,
+            "job_id" to jobId,
+            "start_ms" to rangeStart,
+            "end_ms" to rangeEnd,
+            "timezone_id" to "Etc/UTC",
+            "deleted_ms" to now,
+            "revision_id" to rangeRevisionId,
+        )
+        val records = listOf(
+            revisionRecord(
+                rangeRevisionId, "location_deletion_range", rangeId, jobId,
+                origin = "GPS_RANGE_DELETE",
+                payload = JSONObject().put("id", rangeId).put("job_id", jobId)
+                    .put("start_ms", rangeStart).put("end_ms", rangeEnd)
+                    .put("timezone_id", "Etc/UTC").toString(),
+            ),
+            headRecord("location_deletion_range", rangeId, rangeRevisionId),
+            stagedRow("location_deletion_ranges", range),
+        )
+        val localHeadBefore = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val before = repository.snapshot()
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "GPS_DELETION_COVERAGE"))
+        assertEquals("location_deletion_ranges", conflict["table"])
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), conflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "APPLY_BACKUP_DELETION",
+        )
+
+        val applied = importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(before.version + 1L, applied.stateVersion)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$pointId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges WHERE id='$rangeId'"))
+        val tombstoneRevisionId = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        assertNotEquals(localHeadBefore, tombstoneRevisionId)
+        assertEquals(1L, number(
+            "SELECT COUNT(*) FROM entity_revisions WHERE id='$tombstoneRevisionId' AND deleted=1 AND origin='GPS_RANGE_DELETE'",
+        ))
+        val parents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=?",
+            arrayOf(tombstoneRevisionId),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertEquals(setOf(localHeadBefore, rangeRevisionId), parents)
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM revision_parents p LEFT JOIN entity_revisions child ON child.id=p.revision_id " +
+                "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id WHERE child.id IS NULL OR parent.id IS NULL",
+        ))
+        assertEquals(applied.stateVersion, repository.snapshot().version)
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun failedImportedRangeTombstoneRollsBackRangePointAndRevisionGraph() {
+        val (pointId, measuredAt) = startAndStopSessionWithPoint("range-rollback-local-point")
+        val rangeId = "range-rollback-imported-range"
+        val rangeRevisionId = "range-rollback-imported-range-revision"
+        val range = mapOf<String, Any?>(
+            "id" to rangeId,
+            "job_id" to jobId,
+            "start_ms" to measuredAt,
+            "end_ms" to measuredAt + 1L,
+            "timezone_id" to "Etc/UTC",
+            "deleted_ms" to now,
+            "revision_id" to rangeRevisionId,
+        )
+        val started = stageImport(listOf(
+            revisionRecord(
+                rangeRevisionId, "location_deletion_range", rangeId, jobId,
+                origin = "GPS_RANGE_DELETE",
+                payload = JSONObject().put("id", rangeId).put("job_id", jobId)
+                    .put("start_ms", measuredAt).put("end_ms", measuredAt + 1L)
+                    .put("timezone_id", "Etc/UTC").toString(),
+            ),
+            headRecord("location_deletion_range", rangeId, rangeRevisionId),
+            stagedRow("location_deletion_ranges", range),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        val coverageConflict = requireNotNull(findConflict(
+            started.importId, preview, "GPS_DELETION_COVERAGE",
+        ))
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            coverageConflict["conflictId"] as String, "APPLY_BACKUP_DELETION",
+        )
+        val localPointHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val versionBefore = repository.snapshot().version
+        database.execSQL(
+            "CREATE TRIGGER reject_imported_gps_tombstone BEFORE INSERT ON entity_revisions " +
+                "WHEN NEW.kind='location' AND NEW.entity_id='$pointId' AND NEW.origin='GPS_RANGE_DELETE' " +
+                "BEGIN SELECT RAISE(ABORT,'synthetic imported GPS tombstone failure'); END",
+        )
+
+        assertFailure("APPLY_FAILED") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        assertEquals(versionBefore, repository.snapshot().version)
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_points WHERE id='$pointId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_deletion_ranges WHERE id='$rangeId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$rangeRevisionId'"))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM entity_heads WHERE kind='location_deletion_range' AND entity_id='$rangeId'",
+        ))
+        assertEquals(localPointHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM entity_revisions WHERE kind='location' AND entity_id='$pointId' " +
+                "AND origin='GPS_RANGE_DELETE'",
+        ))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM revision_parents WHERE revision_id='$rangeRevisionId' OR parent_id='$rangeRevisionId'",
+        ))
+
+        database.execSQL("DROP TRIGGER reject_imported_gps_tombstone")
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(versionBefore + 1L, applied.stateVersion)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$pointId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM location_deletion_ranges WHERE id='$rangeId'"))
+        val tombstoneRevisionId = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='location' AND entity_id=?",
+            arrayOf(pointId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        assertEquals(1L, number(
+            "SELECT COUNT(*) FROM entity_revisions WHERE id='$tombstoneRevisionId' " +
+                "AND deleted=1 AND origin='GPS_RANGE_DELETE'",
+        ))
+        assertEquals(setOf(localPointHead, rangeRevisionId), database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=?",
+            arrayOf(tombstoneRevisionId),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } })
         assertTrue(importStore.close(started.importId))
     }
 
@@ -1744,6 +2921,630 @@ class BackupImportStoreTest {
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$incomingId'"))
         assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$localSessionId'"))
         assertEquals(beforeApply, applied.stateVersion)
+    }
+
+    @Test
+    fun omittingOverlappingBackupSessionAlsoOmitsItsGpsRevisionGraph() {
+        val localSessionId = startAndStopSessionWithPoint("local-overlap-gps-point").first
+        val backupSessionId = "omitted-backup-session-with-gps"
+        val backupPointId = "omitted-backup-session-point"
+        val sessionValues = mapOf<String, Any?>(
+            "id" to backupSessionId,
+            "job_id" to jobId,
+            "start_ms" to now + 500L,
+            "end_ms" to now + 1_500L,
+            "timezone" to "Etc/UTC",
+            "offset_seconds" to 0,
+            "origin" to "MANUAL",
+        )
+        val pointValues = mapOf<String, Any?>(
+            "id" to backupPointId,
+            "session_id" to backupSessionId,
+            "measured_ms" to now + 1_000L,
+            "received_ms" to now + 1_000L,
+            "latitude" to 12.0,
+            "longitude" to -34.0,
+            "accuracy" to 5.0,
+        )
+        val records = listOf(
+            stagedRow("sessions", sessionValues),
+            revisionRecord(
+                "omitted-backup-session-revision", "session", backupSessionId, jobId,
+                payload = JSONObject(sessionValues.toSortedMap()).toString(),
+            ),
+            headRecord("session", backupSessionId, "omitted-backup-session-revision"),
+            stagedRow("location_points", pointValues),
+            revisionRecord(
+                "omitted-backup-point-revision", "location", backupPointId, jobId,
+                payload = JSONObject().put("id", backupPointId).put("session_id", backupSessionId).toString(),
+            ),
+            headRecord("location", backupPointId, "omitted-backup-point-revision"),
+        )
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val sessionConflict = requireNotNull(findConflict(started.importId, preview, "SESSION_OVERLAP"))
+        val pointConflict = requireNotNull(findConflict(started.importId, preview, "DEPENDENT_ON_CONFLICT"))
+        assertEquals("LOCAL:$localSessionId", sessionConflict["localIdentifier"])
+        assertEquals(listOf("OMIT_BACKUP_RECORD"), pointConflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            sessionConflict["conflictId"] as String, "OMIT_BACKUP_SESSION",
+        )
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            pointConflict["conflictId"] as String, "OMIT_BACKUP_RECORD",
+        )
+
+        val countsBefore = importRelevantCounts()
+        val versionBefore = repository.snapshot().version
+        val applied = importStore.apply(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+        )
+        assertEquals(versionBefore, applied.stateVersion)
+        assertEquals(countsBefore, importRelevantCounts())
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$backupSessionId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE id='$backupPointId'"))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM entity_heads WHERE (kind='session' AND entity_id='$backupSessionId') " +
+                "OR (kind='location' AND entity_id='$backupPointId')",
+        ))
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM entity_revisions WHERE id IN(" +
+                "'omitted-backup-session-revision','omitted-backup-point-revision')",
+        ))
+    }
+
+    @Test
+    fun stalePrePurgeBackupCannotRestoreJobOrItsChildren() {
+        val siteId = "stale-backup-purged-site"
+        val cardId = "stale-backup-purged-card"
+        val sessionId = "stale-backup-purged-session"
+        val jobSettings = repository.jobDetail(jobId).job.settings.copy(
+            hourlyRateMinor = java.math.BigInteger.valueOf(3_000L),
+            taxUnits = 1_500,
+        )
+        assertNull(repository.saveJobSettings(
+            "set-stale-backup-job-sidecars", repository.snapshot().version, jobSettings,
+        ).conflict)
+        val columnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val currency = database.rawQuery(
+            "SELECT currency FROM jobs WHERE id=?", arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        assertNull(repository.saveSite(
+            "add-stale-backup-site", repository.snapshot().version,
+            GeofenceStore.Site(siteId, jobId, "Stale backup site", 12.0, -34.0, enabled = false),
+        ).conflict)
+        assertNull(repository.saveCard(
+            "add-stale-backup-card", repository.snapshot().version,
+            BoardStore.Draft(cardId, jobId, columnId, "Stale backup card", currency = currency),
+        ).conflict)
+        assertNull(repository.createManualSession(
+            "add-stale-backup-session", repository.snapshot().version,
+            SessionHistoryStore.Draft(
+                sessionId, jobId, now + 1_000L, now + 2_000L, "Etc/UTC", 0,
+            ),
+        ).conflict)
+
+        val source = exportStore.start(database)
+        val staleRecords = readAllRows(source.snapshotId)
+        assertTrue(staleRecords.any { it["table"] == "work_sites" && values(it)["id"] == siteId })
+        assertTrue(staleRecords.any { it["table"] == "kanban_cards" && values(it)["id"] == cardId })
+        assertTrue(staleRecords.any { it["table"] == "sessions" && values(it)["id"] == sessionId })
+        assertTrue(exportStore.close(source.snapshotId))
+
+        assertNull(repository.archiveJob("archive-before-stale-backup-purge", repository.snapshot().version, jobId).conflict)
+        now += JobLifecycleStore.retentionMillis
+        assertNull(repository.deleteJob("purge-before-stale-backup-restore", repository.snapshot().version, jobId).conflict)
+        val deletedVersion = repository.snapshot().version
+        assertEquals(1L, number("SELECT COUNT(*) FROM job_deletions WHERE id='$jobId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM jobs WHERE id='$jobId'"))
+
+        val started = stageImport(staleRecords)
+        val preview = importStore.finish(database, started.importId)
+        val deletionConflict = requireNotNull(
+            findConflict(started.importId, preview, "JOB_DELETION_TOMBSTONE"),
+        )
+        assertEquals("jobs", deletionConflict["table"])
+        assertEquals(listOf("PRESERVE_LOCAL_DELETION"), deletionConflict["allowedChoices"])
+        assertEquals("PRESERVE_LOCAL_DELETION", deletionConflict["defaultChoice"])
+        assertFalse(preview.applyReady)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val blockedTables = conflicts
+            .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+            .map { it["table"] }
+            .toSet()
+        assertTrue(blockedTables.containsAll(setOf("work_sites", "kanban_cards", "sessions")))
+        assertTrue(blockedTables.containsAll(setOf("automation_policies", "job_money", "job_tax_rates")))
+        assertTrue(conflicts.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+            .all { it["allowedChoices"] == listOf("PRESERVE_LOCAL_DELETION") })
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        resolveSafeConflictChoices(started.importId, preview, conflicts)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(1L, number("SELECT COUNT(*) FROM job_deletions WHERE id='$jobId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM jobs WHERE id='$jobId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$sessionId'"))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun staleBackupCannotResurrectDeletedBoardCard() {
+        val cardId = "stale-deleted-card"
+        val commentId = "stale-deleted-card-comment"
+        val attachmentId = "stale-deleted-card-attachment"
+        val columnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val currency = database.rawQuery(
+            "SELECT currency FROM jobs WHERE id=?", arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        assertNull(repository.saveCard(
+            "add-card-for-stale-restore", repository.snapshot().version,
+            BoardStore.Draft(
+                cardId, jobId, columnId, "Card to delete",
+                priceMinor = java.math.BigInteger.valueOf(2_500L),
+                currency = currency,
+                quantityUnits = 25_000L,
+            ),
+        ).conflict)
+        assertNull(repository.saveTaskComment(
+            "comment-for-stale-restore", repository.snapshot().version,
+            jobId, cardId, commentId, "This comment and image must stay deleted.",
+        ).conflict)
+        val png = android.util.Base64.decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AP8AAP8FAAH/+lyI0QAAAABJRU5ErkJggg==",
+            android.util.Base64.DEFAULT,
+        )
+        assertNull(repository.attachTaskImage(
+            "image-for-stale-restore", repository.snapshot().version,
+            jobId, cardId, commentId, attachmentId, png,
+        ).conflict)
+        val templateId = database.rawQuery(
+            "SELECT template_id FROM kanban_cards WHERE id=?", arrayOf(cardId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val source = exportStore.start(database)
+        val staleRecords = readAllRows(source.snapshotId)
+        assertTrue(staleRecords.any { it["table"] == "task_comments" && values(it)["id"] == commentId })
+        assertTrue(staleRecords.any { it["table"] == "task_attachments" && values(it)["id"] == attachmentId })
+        assertTrue(staleRecords.any { it["table"] == "task_quantities" && values(it)["card_id"] == cardId })
+        assertTrue(staleRecords.any { it["table"] == "card_money" && values(it)["id"] == cardId })
+        assertTrue(exportStore.close(source.snapshotId))
+
+        assertNull(repository.removeCard(
+            "delete-card-before-stale-restore", repository.snapshot().version, jobId, cardId,
+        ).conflict)
+        val deletedVersion = repository.snapshot().version
+        val deletedHead = database.rawQuery(
+            "SELECT h.revision_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='card' AND h.entity_id=? AND r.deleted=1",
+            arrayOf(cardId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val fencedEntities = listOf(
+            "card" to cardId,
+            "card_money" to cardId,
+            "task_quantity" to cardId,
+            "task_comment" to commentId,
+            "task_attachment" to attachmentId,
+        )
+        fun revisionFenceSnapshot(): Triple<List<List<String?>>, List<List<String?>>, List<List<String?>>> {
+            val identityFilter = fencedEntities.joinToString(" OR ") { "(kind=? AND entity_id=?)" }
+            val identityArgs = fencedEntities.flatMap { listOf(it.first, it.second) }.toTypedArray()
+            val revisions = database.rawQuery(
+                "SELECT id,kind,entity_id,job_id,payload,deleted,changed_ms,origin " +
+                    "FROM entity_revisions WHERE $identityFilter ORDER BY kind,entity_id,id",
+                identityArgs,
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) add((0 until rows.columnCount).map { index ->
+                    if (rows.isNull(index)) null else rows.getString(index)
+                })
+            } }
+            val revisionIds = revisions.map { requireNotNull(it.first()) }
+            val graphArgs = revisionIds.toTypedArray()
+            val graphFilter = revisionIds.joinToString(",") { "?" }
+            val parents = if (revisionIds.isEmpty()) emptyList() else database.rawQuery(
+                "SELECT revision_id,parent_id FROM revision_parents " +
+                    "WHERE revision_id IN ($graphFilter) OR parent_id IN ($graphFilter) " +
+                    "ORDER BY revision_id,parent_id",
+                graphArgs + graphArgs,
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) add(listOf(rows.getString(0), rows.getString(1)))
+            } }
+            val heads = database.rawQuery(
+                "SELECT kind,entity_id,revision_id FROM entity_heads WHERE $identityFilter ORDER BY kind,entity_id",
+                identityArgs,
+            ).use { rows -> buildList {
+                while (rows.moveToNext()) add(listOf(rows.getString(0), rows.getString(1), rows.getString(2)))
+            } }
+            return Triple(revisions, parents, heads)
+        }
+        val localRevisionFence = revisionFenceSnapshot()
+
+        val started = stageImport(staleRecords)
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val tombstoneConflict = requireNotNull(conflicts.singleOrNull { conflict ->
+            conflict["kind"] == "ENTITY_DELETION_TOMBSTONE" && conflict["table"] == "kanban_cards" &&
+                (conflict["primaryKey"] as List<*>).singleOrNull() == cardId
+        })
+        assertEquals("kanban_cards", tombstoneConflict["table"])
+        assertEquals(listOf("PRESERVE_LOCAL_DELETION"), tombstoneConflict["allowedChoices"])
+        assertEquals("PRESERVE_LOCAL_DELETION", tombstoneConflict["defaultChoice"])
+        assertFalse(preview.applyReady)
+        val tombstoneTables = conflicts
+            .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+            .map { it["table"] }
+            .toSet()
+        assertTrue(tombstoneTables.containsAll(setOf(
+            "kanban_cards", "task_quantities", "card_money", "task_comments", "task_attachments",
+        )))
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        resolveSafeConflictChoices(started.importId, preview, conflicts)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
+        assertEquals(deletedHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='card' AND entity_id=?",
+            arrayOf(cardId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_comment_events WHERE task_id='$cardId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_attachments WHERE id='$attachmentId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_quantities WHERE card_id='$cardId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM card_money WHERE id='$cardId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM task_templates WHERE id='$templateId'"))
+        assertEquals(localRevisionFence, revisionFenceSnapshot())
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun staleBackupCannotResurrectIndividuallyDeletedCommentOrImage() {
+        val cardId = "stale-individual-delete-card"
+        val commentId = "stale-individual-delete-comment"
+        val commentImageId = "stale-individual-delete-comment-image"
+        val standaloneImageId = "stale-individual-delete-standalone-image"
+        val columnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val currency = database.rawQuery(
+            "SELECT currency FROM jobs WHERE id=?", arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        assertNull(repository.saveCard(
+            "stale-individual-delete-card-create", repository.snapshot().version,
+            BoardStore.Draft(cardId, jobId, columnId, "Deletion test card", currency = currency),
+        ).conflict)
+        assertNull(repository.saveTaskComment(
+            "stale-individual-delete-comment-create", repository.snapshot().version,
+            jobId, cardId, commentId, "This note will be deleted.",
+        ).conflict)
+        val png = android.util.Base64.decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AP8AAP8FAAH/+lyI0QAAAABJRU5ErkJggg==",
+            android.util.Base64.DEFAULT,
+        )
+        assertNull(repository.attachTaskImage(
+            "stale-individual-delete-comment-image-create", repository.snapshot().version,
+            jobId, cardId, commentId, commentImageId, png,
+        ).conflict)
+        assertNull(repository.attachTaskImage(
+            "stale-individual-delete-standalone-image-create", repository.snapshot().version,
+            jobId, cardId, null, standaloneImageId, png,
+        ).conflict)
+
+        val source = exportStore.start(database)
+        val staleRecords = readAllRows(source.snapshotId)
+        assertTrue(staleRecords.any { it["table"] == "task_comments" && values(it)["id"] == commentId })
+        assertTrue(staleRecords.any { it["table"] == "task_attachments" && values(it)["id"] == commentImageId })
+        assertTrue(staleRecords.any { it["table"] == "task_attachments" && values(it)["id"] == standaloneImageId })
+        assertTrue(exportStore.close(source.snapshotId))
+
+        assertNull(repository.removeTaskComment(
+            "stale-individual-delete-comment-remove", repository.snapshot().version, jobId, cardId, commentId,
+        ).conflict)
+        assertNull(repository.removeTaskImage(
+            "stale-individual-delete-image-remove", repository.snapshot().version, jobId, cardId, standaloneImageId,
+        ).conflict)
+        val deletedVersion = repository.snapshot().version
+        val started = stageImport(staleRecords)
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val deletedEntityIds = conflicts
+            .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+            .map { (it["primaryKey"] as List<*>).single() }
+            .toSet()
+        assertTrue(deletedEntityIds.containsAll(setOf(commentId, commentImageId, standaloneImageId)))
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        resolveSafeConflictChoices(started.importId, preview, conflicts)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM task_attachments WHERE id IN('$commentImageId','$standaloneImageId')"))
+        assertEquals(3L, number(
+            "SELECT COUNT(*) FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE (h.kind='task_comment' AND h.entity_id='$commentId' AND r.deleted=1) OR " +
+                "(h.kind='task_attachment' AND h.entity_id IN('$commentImageId','$standaloneImageId') AND r.deleted=1)",
+        ))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun staleBackupDeletionFencesCoverUnusedCustomerSiteAndEmptyColumn() {
+        val customerId = "stale-deleted-customer"
+        val siteId = "stale-deleted-site"
+        val columnId = "stale-deleted-column"
+        assertNull(repository.saveCustomer(
+            "add-customer-for-stale-restore", repository.snapshot().version,
+            BusinessStore.Customer(customerId, "Unused stale customer", email = "stale@example.test"),
+        ).conflict)
+        assertNull(repository.saveSite(
+            "add-site-for-stale-restore", repository.snapshot().version,
+            GeofenceStore.Site(siteId, jobId, "Stale site", 12.0, -34.0, enabled = false),
+        ).conflict)
+        assertNull(repository.saveColumn(
+            "add-column-for-stale-restore", repository.snapshot().version,
+            columnId, jobId, "Stale column", false,
+        ).conflict)
+
+        val source = exportStore.start(database)
+        val staleRecords = readAllRows(source.snapshotId)
+        assertTrue(staleRecords.any { it["table"] == "customers" && values(it)["id"] == customerId })
+        assertTrue(staleRecords.any { it["table"] == "work_sites" && values(it)["id"] == siteId })
+        assertTrue(staleRecords.any { it["table"] == "kanban_columns" && values(it)["id"] == columnId })
+        assertTrue(exportStore.close(source.snapshotId))
+
+        assertNull(repository.removeCustomer(
+            "delete-customer-before-stale-restore", repository.snapshot().version, customerId,
+        ).conflict)
+        assertNull(repository.removeSite(
+            "delete-site-before-stale-restore", repository.snapshot().version, siteId,
+        ).conflict)
+        assertNull(repository.removeColumn(
+            "delete-column-before-stale-restore", repository.snapshot().version, jobId, columnId, null,
+        ).conflict)
+        val deletedVersion = repository.snapshot().version
+
+        val started = stageImport(staleRecords)
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        listOf(
+            "customers" to customerId,
+            "work_sites" to siteId,
+            "kanban_columns" to columnId,
+        ).forEach { (table, entityId) ->
+            val conflict = conflicts.single { item ->
+                item["kind"] == "ENTITY_DELETION_TOMBSTONE" && item["table"] == table &&
+                    (item["primaryKey"] as List<*>).singleOrNull() == entityId
+            }
+            assertEquals(listOf("PRESERVE_LOCAL_DELETION"), conflict["allowedChoices"])
+            assertEquals("PRESERVE_LOCAL_DELETION", conflict["defaultChoice"])
+        }
+        assertFalse(preview.applyReady)
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        resolveSafeConflictChoices(started.importId, preview, conflicts)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM kanban_columns WHERE id='$columnId'"))
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun backupJobDeletionCannotFenceStillLiveLocalJob() {
+        val currentJob = database.rawQuery(
+            "SELECT id FROM jobs WHERE id=?", arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val parentRevision = "active-job-deletion-parent"
+        val deletionRevision = "active-job-deletion-head"
+        val deletionPayload = JSONObject().put("id", currentJob).put("job_id", currentJob).toString()
+        val records = listOf(
+            revisionRecord(
+                parentRevision, "job", currentJob, currentJob, payload = null,
+            ),
+            revisionRecord(
+                deletionRevision, "job", currentJob, currentJob,
+                deleted = 1L, payload = deletionPayload,
+            ),
+            parentRecord(deletionRevision, parentRevision),
+            headRecord("job", currentJob, deletionRevision),
+            stagedRow("job_deletions", mapOf(
+                "id" to currentJob,
+                "revision_id" to deletionRevision,
+                "deleted_ms" to now,
+            )),
+        )
+        val versionBefore = repository.snapshot().version
+        val localHeadBefore = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='job' AND entity_id=?",
+            arrayOf(currentJob),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val conflict = requireNotNull(findConflict(started.importId, preview, "ACTIVE_JOB_DELETION"))
+        assertEquals("job_deletions", conflict["table"])
+        assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+        assertNull(conflict["defaultChoice"])
+        assertFalse(preview.applyReady)
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            conflict["conflictId"] as String,
+            "KEEP_LOCAL",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(versionBefore, repository.snapshot().version)
+        assertEquals(1L, number("SELECT COUNT(*) FROM jobs WHERE id='$currentJob'"))
+        assertEquals(0L, number("SELECT COUNT(*) FROM job_deletions WHERE id='$currentJob'"))
+        assertEquals(localHeadBefore, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='job' AND entity_id=?",
+            arrayOf(currentJob),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun backupCommentAndImageDeletionCanBeKeptWithoutDeletingTheLocalGraph() {
+        val cardId = "backup-delete-choice-card"
+        val commentId = "backup-delete-choice-comment"
+        val attachmentId = "backup-delete-choice-image"
+        val columnId = database.rawQuery(
+            "SELECT id FROM kanban_columns WHERE job_id=? ORDER BY position,id LIMIT 1",
+            arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val currency = database.rawQuery(
+            "SELECT currency FROM jobs WHERE id=?", arrayOf(jobId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        assertNull(repository.saveCard(
+            "backup-delete-choice-card-create", repository.snapshot().version,
+            BoardStore.Draft(cardId, jobId, columnId, "Keep local content", currency = currency),
+        ).conflict)
+        assertNull(repository.saveTaskComment(
+            "backup-delete-choice-comment-create", repository.snapshot().version,
+            jobId, cardId, commentId, "Local comment stays live.",
+        ).conflict)
+        val png = android.util.Base64.decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AP8AAP8FAAH/+lyI0QAAAABJRU5ErkJggg==",
+            android.util.Base64.DEFAULT,
+        )
+        assertNull(repository.attachTaskImage(
+            "backup-delete-choice-image-create", repository.snapshot().version,
+            jobId, cardId, commentId, attachmentId, png,
+        ).conflict)
+        val commentHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='task_comment' AND entity_id=?",
+            arrayOf(commentId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val attachmentHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='task_attachment' AND entity_id=?",
+            arrayOf(attachmentId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val commentDeletion = "backup-delete-choice-comment-head"
+        val attachmentDeletion = "backup-delete-choice-image-head"
+        val records = listOf(
+            revisionRecord(
+                commentDeletion, "task_comment", commentId, jobId, deleted = 1L,
+                payload = JSONObject().put("id", commentId).put("task_id", cardId).toString(),
+            ),
+            parentRecord(commentDeletion, commentHead),
+            headRecord("task_comment", commentId, commentDeletion),
+            revisionRecord(
+                attachmentDeletion, "task_attachment", attachmentId, jobId, deleted = 1L,
+                payload = JSONObject().put("id", attachmentId).put("task_id", cardId)
+                    .put("comment_id", commentId).toString(),
+            ),
+            parentRecord(attachmentDeletion, attachmentHead),
+            headRecord("task_attachment", attachmentId, attachmentDeletion),
+            stagedRow("task_comment_events", mapOf(
+                "id" to "backup-delete-choice-event",
+                "task_id" to cardId,
+                "comment_id" to commentId,
+                "action" to "DELETED",
+                "recorded_ms" to now + 1L,
+            )),
+        )
+        val versionBefore = repository.snapshot().version
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(
+                database, started.importId, preview.previewToken, cursor, null,
+            )
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        assertTrue(conflicts.any { it["kind"] == "BACKUP_COMMENT_DELETION" })
+        val deletionHeads = conflicts.filter { it["kind"] == "BACKUP_ENTITY_DELETION" }
+        assertEquals(2, deletionHeads.size)
+        assertTrue(deletionHeads.all { it["allowedChoices"] == listOf("KEEP_LOCAL") })
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
+
+        resolveSafeConflictChoices(started.importId, preview, conflicts)
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(versionBefore, repository.snapshot().version)
+        assertEquals(1L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
+        assertEquals(1L, number("SELECT COUNT(*) FROM task_attachments WHERE id='$attachmentId'"))
+        assertEquals(commentHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='task_comment' AND entity_id=?",
+            arrayOf(commentId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertEquals(attachmentHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='task_attachment' AND entity_id=?",
+            arrayOf(attachmentId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        assertEquals(0L, number(
+            "SELECT COUNT(*) FROM task_comment_events WHERE id='backup-delete-choice-event'",
+        ))
+        assertTrue(importStore.close(started.importId))
     }
 
     @Test
@@ -2452,6 +4253,25 @@ class BackupImportStoreTest {
 
     private fun values(record: Map<String, Any?>): Map<*, *> = record["values"] as Map<*, *>
 
+    private fun readRowValues(table: String, keyColumn: String, keyValue: String): Map<String, Any?> {
+        require(table.matches(Regex("[a-z_]+")) && keyColumn.matches(Regex("[a-z_]+")))
+        return database.rawQuery(
+            "SELECT * FROM $table WHERE $keyColumn=? LIMIT 1",
+            arrayOf(keyValue),
+        ).use { cursor ->
+            assertTrue("Missing $table row", cursor.moveToFirst())
+            cursor.columnNames.mapIndexed { index, column ->
+                column to when (cursor.getType(index)) {
+                    android.database.Cursor.FIELD_TYPE_NULL -> null
+                    android.database.Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(index)
+                    android.database.Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
+                    android.database.Cursor.FIELD_TYPE_BLOB -> cursor.getBlob(index)
+                    else -> cursor.getString(index)
+                }
+            }.toMap()
+        }
+    }
+
     private fun readAllRows(snapshotId: String): List<Map<String, Any?>> {
         val records = mutableListOf<Map<String, Any?>>()
         var cursor: String? = null
@@ -2565,6 +4385,69 @@ class BackupImportStoreTest {
         "released_ms" to releasedMs,
     ))
 
+    private fun sessionWithoutLivePoint(commandPrefix: String): Pair<String, Long> {
+        val (sessionId, originalPointTime) = startAndStopSessionWithPoint("$commandPrefix-original")
+        val end = database.rawQuery("SELECT end_ms FROM sessions WHERE id=?", arrayOf(sessionId)).use {
+            assertTrue(it.moveToFirst())
+            it.getLong(0)
+        }
+        assertNull(repository.correctSession(
+            "$commandPrefix-remove-original-point",
+            repository.snapshot().version,
+            SessionHistoryStore.Draft(
+                sessionId, jobId, originalPointTime + 1L, end, "Etc/UTC", 0,
+            ),
+        ).conflict)
+        assertEquals(0L, number("SELECT COUNT(*) FROM location_points WHERE session_id='$sessionId'"))
+        return sessionId to originalPointTime + 10L
+    }
+
+    private fun backupRangeAndUnparentedPointRecords(
+        rangeId: String,
+        rangeRevisionId: String,
+        pointId: String,
+        pointRevisionId: String,
+        sessionId: String,
+        measuredAt: Long,
+    ): List<Map<String, Any?>> {
+        val rangeStart = measuredAt
+        val rangeEnd = measuredAt + 1L
+        val range = mapOf<String, Any?>(
+            "id" to rangeId,
+            "job_id" to jobId,
+            "start_ms" to rangeStart,
+            "end_ms" to rangeEnd,
+            "timezone_id" to "Etc/UTC",
+            "deleted_ms" to now,
+            "revision_id" to rangeRevisionId,
+        )
+        return listOf(
+            revisionRecord(
+                rangeRevisionId, "location_deletion_range", rangeId, jobId,
+                origin = "GPS_RANGE_DELETE",
+                payload = JSONObject().put("id", rangeId).put("job_id", jobId)
+                    .put("start_ms", rangeStart).put("end_ms", rangeEnd)
+                    .put("timezone_id", "Etc/UTC").toString(),
+            ),
+            headRecord("location_deletion_range", rangeId, rangeRevisionId),
+            stagedRow("location_deletion_ranges", range),
+            revisionRecord(
+                pointRevisionId, "location", pointId, jobId,
+                payload = JSONObject().put("id", pointId).put("session_id", sessionId).toString(),
+            ),
+            headRecord("location", pointId, pointRevisionId),
+            stagedRow("location_points", mapOf(
+                "id" to pointId,
+                "session_id" to sessionId,
+                "measured_ms" to measuredAt,
+                "received_ms" to measuredAt,
+                "latitude" to 12.0,
+                "longitude" to -34.0,
+                "accuracy" to 5.0,
+            )),
+        )
+    }
+
     private fun startAndStopSessionWithPoint(pointId: String): Pair<String, Long> {
         assertNull(repository.execute(TimerRepository.Command(
             "start-$pointId",
@@ -2604,6 +4487,38 @@ class BackupImportStoreTest {
             page.conflicts.firstOrNull { it["kind"] == kind }?.let { return it }
             if (page.done) return null
             cursor = page.nextCursor
+        }
+    }
+
+    private fun resolveSafeConflictChoices(
+        importId: String,
+        preview: BackupImportStore.Preview,
+        conflicts: List<Map<String, Any?>>,
+    ) {
+        conflicts.forEach { conflict ->
+            @Suppress("UNCHECKED_CAST")
+            val choices = conflict["allowedChoices"] as? List<String> ?: emptyList()
+            val preferred = when (conflict["kind"]) {
+                "JOB_DELETION_TOMBSTONE", "ENTITY_DELETION_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
+                "ACTIVE_JOB_DELETION", "BACKUP_ENTITY_DELETION" -> "KEEP_LOCAL"
+                "GPS_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
+                "GPS_DELETION_COVERAGE" -> "PRESERVE_DELETION"
+                "DEPENDENT_ON_CONFLICT" -> "OMIT_BACKUP_RECORD"
+                else -> conflict["defaultChoice"] as? String
+            }
+            val choice = preferred?.takeIf(choices::contains)
+                ?: choices.firstOrNull { it == "KEEP_LOCAL" }
+                ?: choices.firstOrNull { it == "OMIT_BACKUP_RECORD" }
+                ?: choices.firstOrNull()
+            assertNotNull("No explicit safe choice for ${conflict["kind"]} / ${conflict["table"]}", choice)
+            importStore.resolveConflict(
+                database,
+                importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                requireNotNull(choice),
+            )
         }
     }
 

@@ -31,6 +31,79 @@ internal object TaskConversationStore {
         db.execSQL("CREATE INDEX task_attachments_task ON task_attachments(task_id,created_ms,id)")
     }
 
+    /** Seed revision heads for schema-16 live comments and images exactly once during upgrade. */
+    fun backfillEntityRevisions(db: SQLiteDatabase, at: Long) {
+        db.rawQuery(
+            "SELECT c.id,c.task_id,c.body,c.created_ms,c.updated_ms,k.job_id " +
+                "FROM task_comments c JOIN kanban_cards k ON k.id=c.task_id ORDER BY c.id",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val id = rows.getString(0)
+                if (hasRevisionHead(db, "task_comment", id)) continue
+                RevisionStore.record(
+                    db, "task_comment", id, rows.getString(5),
+                    mapOf(
+                        "id" to id,
+                        "task_id" to rows.getString(1),
+                        "body" to rows.getString(2),
+                        "created_ms" to rows.getLong(3),
+                        "updated_ms" to rows.getLong(4),
+                    ),
+                    at, origin = "MIGRATION",
+                )
+            }
+        }
+        db.rawQuery(
+            "SELECT e.comment_id,e.task_id,MAX(e.recorded_ms) FROM task_comment_events e " +
+                "LEFT JOIN task_comments c ON c.id=e.comment_id " +
+                "WHERE e.action='DELETED' AND c.id IS NULL GROUP BY e.comment_id,e.task_id ORDER BY e.comment_id",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val id = rows.getString(0)
+                if (hasRevisionHead(db, "task_comment", id)) continue
+                RevisionStore.record(
+                    db, "task_comment", id, rows.getString(1),
+                    mapOf("id" to id, "task_id" to rows.getString(1)),
+                    maxOf(at, rows.getLong(2)), deleted = true, origin = "MIGRATION",
+                )
+            }
+        }
+        db.rawQuery(
+            "SELECT a.id,a.task_id,a.comment_id,a.created_ms,a.mime,k.job_id " +
+                "FROM task_attachments a JOIN kanban_cards k ON k.id=a.task_id ORDER BY a.id",
+            null,
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val id = rows.getString(0)
+                if (hasRevisionHead(db, "task_attachment", id)) continue
+                RevisionStore.record(
+                    db, "task_attachment", id, rows.getString(5),
+                    mapOf(
+                        "id" to id,
+                        "task_id" to rows.getString(1),
+                        "comment_id" to if (rows.isNull(2)) null else rows.getString(2),
+                        "created_ms" to rows.getLong(3),
+                        "mime" to rows.getString(4),
+                    ),
+                    at, origin = "MIGRATION",
+                )
+            }
+        }
+    }
+
+    private fun hasRevisionHead(db: SQLiteDatabase, kind: String, id: String): Boolean = db.rawQuery(
+        "SELECT 1 FROM entity_heads WHERE kind=? AND entity_id=? LIMIT 1",
+        arrayOf(kind, id),
+    ).use { it.moveToFirst() }
+
+    private fun hasDeletedRevisionHead(db: SQLiteDatabase, kind: String, id: String): Boolean = db.rawQuery(
+        "SELECT 1 FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+            "WHERE h.kind=? AND h.entity_id=? AND r.deleted=1 LIMIT 1",
+        arrayOf(kind, id),
+    ).use { it.moveToFirst() }
+
     /** Rebuild the old size-constrained table while retaining every existing attachment. */
     fun migrateImageByteLimit(db: SQLiteDatabase) {
         createAttachmentsTable(db, "task_attachments_expanded")
@@ -116,6 +189,9 @@ internal object TaskConversationStore {
             if (it.moveToFirst()) it.getString(0) to it.getLong(1) else null
         }
         if (previous != null && previous.first != taskId) return "TASK_COMMENT_MISMATCH"
+        if (previous == null && hasDeletedRevisionHead(db, "task_comment", commentId)) {
+            return "TASK_COMMENT_UNAVAILABLE"
+        }
         if (previous == null) {
             db.execSQL("INSERT INTO task_comments VALUES(?,?,?,?,?)", arrayOf<Any?>(commentId, taskId, body.trim(), at, at))
             event(db, taskId, commentId, "ADDED", at)
@@ -123,6 +199,7 @@ internal object TaskConversationStore {
             db.execSQL("UPDATE task_comments SET body=?,updated_ms=? WHERE id=?", arrayOf<Any?>(body.trim(), maxOf(at, previous.second), commentId))
             event(db, taskId, commentId, "EDITED", at)
         }
+        recordCommentRevision(db, jobId, commentId, taskId, body.trim(), at)
         return null
     }
 
@@ -130,8 +207,14 @@ internal object TaskConversationStore {
         if (!exists(db, jobId, taskId, editable = true)) return "TASK_UNAVAILABLE"
         val found = db.rawQuery("SELECT id FROM task_comments WHERE id=? AND task_id=?", arrayOf(commentId, taskId)).use { it.moveToFirst() }
         if (!found) return "TASK_COMMENT_UNAVAILABLE"
+        recordAttachmentDeletionsForComment(db, jobId, taskId, commentId, at)
         event(db, taskId, commentId, "DELETED", at)
         db.execSQL("DELETE FROM task_comments WHERE id=?", arrayOf(commentId))
+        db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_comment' AND entity_id=?", arrayOf(commentId))
+        RevisionStore.record(
+            db, "task_comment", commentId, jobId,
+            mapOf("id" to commentId, "task_id" to taskId), at, deleted = true,
+        )
         return null
     }
 
@@ -151,6 +234,7 @@ internal object TaskConversationStore {
         if (commentId != null && db.rawQuery("SELECT id FROM task_comments WHERE id=? AND task_id=?", arrayOf(commentId, taskId)).use { !it.moveToFirst() }) return "TASK_COMMENT_UNAVAILABLE"
         for ((attachmentId, image) in attachments) {
             if (db.rawQuery("SELECT id FROM task_attachments WHERE id=?", arrayOf(attachmentId)).use { it.moveToFirst() }) return "TASK_IMAGE_ID_EXISTS"
+            if (hasDeletedRevisionHead(db, "task_attachment", attachmentId)) return "TASK_IMAGE_ID_EXISTS"
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(image, 0, image.size, bounds)
             if (bounds.outWidth !in 1..1024 || bounds.outHeight !in 1..1024 || bounds.outWidth.toLong() * bounds.outHeight > 1_048_576) return "INVALID_TASK_IMAGE"
@@ -162,16 +246,122 @@ internal object TaskConversationStore {
         val jobBytes = db.rawQuery("SELECT COALESCE(SUM(length(a.data)),0) FROM task_attachments a JOIN kanban_cards c ON c.id=a.task_id WHERE c.job_id=?", arrayOf(jobId)).use { it.moveToFirst(); it.getLong(0) }
         if (jobBytes + batchBytes > MAX_IMAGE_BYTES_PER_JOB) return "TASK_IMAGE_STORAGE_LIMIT"
         attachments.forEachIndexed { index, (attachmentId, image) ->
-            db.execSQL("INSERT INTO task_attachments(id,task_id,comment_id,created_ms,mime,data) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(attachmentId, taskId, commentId, Math.addExact(at, index.toLong()), "image/png", image))
+            val createdAt = Math.addExact(at, index.toLong())
+            db.execSQL("INSERT INTO task_attachments(id,task_id,comment_id,created_ms,mime,data) VALUES(?,?,?,?,?,?)", arrayOf<Any?>(attachmentId, taskId, commentId, createdAt, "image/png", image))
+            recordAttachmentRevision(db, jobId, attachmentId, taskId, commentId, createdAt)
         }
         return null
     }
 
-    fun removeAttachment(db: SQLiteDatabase, jobId: String, taskId: String, attachmentId: String): String? {
+    fun removeAttachment(db: SQLiteDatabase, jobId: String, taskId: String, attachmentId: String, at: Long): String? {
         if (!exists(db, jobId, taskId, editable = true)) return "TASK_UNAVAILABLE"
-        val found = db.rawQuery("SELECT id FROM task_attachments WHERE id=? AND task_id=?", arrayOf(attachmentId, taskId)).use { it.moveToFirst() }
-        if (!found) return "TASK_IMAGE_UNAVAILABLE"
+        val attachment = db.rawQuery(
+            "SELECT comment_id FROM task_attachments WHERE id=? AND task_id=?",
+            arrayOf(attachmentId, taskId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return "TASK_IMAGE_UNAVAILABLE"
+            if (rows.isNull(0)) null else rows.getString(0)
+        }
         db.execSQL("DELETE FROM task_attachments WHERE id=?", arrayOf(attachmentId))
+        db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_attachment' AND entity_id=?", arrayOf(attachmentId))
+        RevisionStore.record(
+            db, "task_attachment", attachmentId, jobId,
+            mapOf("id" to attachmentId, "task_id" to taskId, "comment_id" to attachment),
+            at, deleted = true,
+        )
         return null
+    }
+
+    /** Record child tombstones before a card's foreign-key cascades erase its comments and images. */
+    fun recordCardContentsDeleted(db: SQLiteDatabase, jobId: String, taskId: String, at: Long) {
+        val commentIds = db.rawQuery(
+            "SELECT id FROM task_comments WHERE task_id=? ORDER BY id", arrayOf(taskId),
+        ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+        commentIds.forEach { commentId ->
+            db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_comment' AND entity_id=?", arrayOf(commentId))
+            RevisionStore.record(
+                db, "task_comment", commentId, jobId,
+                mapOf("id" to commentId, "task_id" to taskId), at, deleted = true,
+            )
+        }
+        val attachmentIds = db.rawQuery(
+            "SELECT id FROM task_attachments WHERE task_id=? ORDER BY id", arrayOf(taskId),
+        ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+        attachmentIds.forEach { attachmentId ->
+            db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_attachment' AND entity_id=?", arrayOf(attachmentId))
+            RevisionStore.record(
+                db, "task_attachment", attachmentId, jobId,
+                mapOf("id" to attachmentId, "task_id" to taskId), at, deleted = true,
+            )
+        }
+    }
+
+    private fun recordAttachmentDeletionsForComment(
+        db: SQLiteDatabase,
+        jobId: String,
+        taskId: String,
+        commentId: String,
+        at: Long,
+    ) {
+        val attachmentIds = db.rawQuery(
+            "SELECT id FROM task_attachments WHERE task_id=? AND comment_id=? ORDER BY id",
+            arrayOf(taskId, commentId),
+        ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0)) } }
+        attachmentIds.forEach { attachmentId ->
+            db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_attachment' AND entity_id=?", arrayOf(attachmentId))
+            RevisionStore.record(
+                db, "task_attachment", attachmentId, jobId,
+                mapOf("id" to attachmentId, "task_id" to taskId, "comment_id" to commentId),
+                at, deleted = true,
+            )
+        }
+    }
+
+    private fun recordCommentRevision(
+        db: SQLiteDatabase,
+        jobId: String,
+        commentId: String,
+        taskId: String,
+        body: String,
+        at: Long,
+    ) {
+        val times = db.rawQuery(
+            "SELECT created_ms,updated_ms FROM task_comments WHERE id=?", arrayOf(commentId),
+        ).use { rows ->
+            check(rows.moveToFirst())
+            rows.getLong(0) to rows.getLong(1)
+        }
+        RevisionStore.record(
+            db, "task_comment", commentId, jobId,
+            mapOf(
+                "id" to commentId,
+                "task_id" to taskId,
+                "body" to body,
+                "created_ms" to times.first,
+                "updated_ms" to times.second,
+            ),
+            at,
+        )
+    }
+
+    private fun recordAttachmentRevision(
+        db: SQLiteDatabase,
+        jobId: String,
+        attachmentId: String,
+        taskId: String,
+        commentId: String?,
+        createdAt: Long,
+    ) {
+        RevisionStore.record(
+            db, "task_attachment", attachmentId, jobId,
+            mapOf(
+                "id" to attachmentId,
+                "task_id" to taskId,
+                "comment_id" to commentId,
+                "created_ms" to createdAt,
+                "mime" to "image/png",
+            ),
+            createdAt,
+        )
     }
 }
