@@ -697,7 +697,7 @@ internal class BackupImportStore(
         if (intent == "NEUTRAL") return
         val aggregateKeys = selectedConflict.optJSONArray("aggregateKeys")?.let { json ->
             buildSet { for (index in 0 until json.length()) add(json.optString(index)) }.toMutableSet()
-        }.orEmpty()
+        }.orEmpty().toMutableSet()
         if (aggregateKeys.isEmpty()) return
 
         data class StagedConflict(val id: String, val json: JSONObject)
