@@ -355,8 +355,9 @@ clockrove_flutter_test_has_started() {
 # Flutter resolves adb to the SDK's absolute platform-tools path, so a PATH
 # shim does not affect its integration-test APK install. Temporarily wrap that
 # executable while a Flutter command runs and add --no-streaming only to install
-# subcommands. The original adb stays in platform-tools while renamed so its
-# $ORIGIN library resolution is unchanged, then is restored on every exit.
+# subcommands. Keep the original adb as a same-directory sibling so emulator
+# processes that predate the wrapper can find it without inheriting an
+# environment variable. This also preserves its $ORIGIN library resolution.
 clockrove_with_nonstreaming_adb() (
   local sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
   local sdk_adb="$sdk_root/platform-tools/adb"
@@ -368,17 +369,22 @@ clockrove_with_nonstreaming_adb() (
   fi
   wrapper_dir="$(mktemp -d "$sdk_root/platform-tools/.clockrove-adb-wrapper.XXXXXX")" || return 2
   wrapper_path="$wrapper_dir/adb-wrapper"
-  saved_adb="${wrapper_dir}-original"
+  saved_adb="${sdk_adb}.clockrove-real"
   if [[ -e "$saved_adb" || -L "$saved_adb" ]]; then
     rm -rf -- "$wrapper_dir"
     echo 'Could not reserve a same-directory path for the Android SDK adb.' >&2
     return 2
   fi
 
-  cat > "$wrapper_path" <<'CLOCKROVE_ADB_WRAPPER'
-#!/usr/bin/env bash
-set -euo pipefail
-real_adb="${CLOCKROVE_REAL_ADB:?}"
+  {
+    printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
+    printf 'real_adb=%q\n' "$saved_adb"
+    cat <<'CLOCKROVE_ADB_WRAPPER'
+real_adb="${CLOCKROVE_REAL_ADB:-$real_adb}"
+if [[ ! -x "$real_adb" ]]; then
+  echo 'Could not find the saved Android SDK adb executable.' >&2
+  exit 126
+fi
 args=("$@")
 command_index=0
 while (( command_index < ${#args[@]} )); do
@@ -411,6 +417,7 @@ if (( command_index < ${#args[@]} )) && [[ "${args[command_index]}" == install ]
 fi
 exec "$real_adb" "${args[@]}"
 CLOCKROVE_ADB_WRAPPER
+  } > "$wrapper_path"
   chmod --reference="$sdk_adb" "$wrapper_path" || {
     rm -rf -- "$wrapper_dir"
     echo 'Could not set permissions on the Android SDK adb wrapper.' >&2
