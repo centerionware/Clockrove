@@ -16,8 +16,7 @@ import 'package:integration_test/integration_test.dart';
 const _archiveSlackBytes = 64 * 1024;
 const _archiveMinimumBytes =
     BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
-const _targetMediaBytes =
-    BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
+const _targetMediaBytes = BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
 const _mediaToleranceBytes = 2 * 1024;
 const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
