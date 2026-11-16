@@ -352,6 +352,78 @@ clockrove_flutter_test_has_started() {
   return 1
 }
 
+# Flutter resolves adb to the SDK's absolute platform-tools path, so a PATH
+# shim does not affect its integration-test APK install. Temporarily wrap that
+# executable while a Flutter command runs and add --no-streaming only to install
+# subcommands. The SDK binary is restored on every normal exit path.
+clockrove_with_nonstreaming_adb() (
+  local sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+  local sdk_adb="$sdk_root/platform-tools/adb"
+  local wrapper_dir wrapper_path saved_adb real_adb
+
+  if [[ -z "$sdk_root" || ! -x "$sdk_adb" ]]; then
+    echo 'Android SDK adb is unavailable; cannot apply the non-streaming Flutter install policy.' >&2
+    return 2
+  fi
+  wrapper_dir="$(mktemp -d "$sdk_root/platform-tools/.clockrove-adb-wrapper.XXXXXX")" || return 2
+  wrapper_path="$wrapper_dir/adb-wrapper"
+  saved_adb="$wrapper_dir/adb-original"
+  real_adb="$wrapper_dir/adb-real"
+
+  if ! cp -L -p -- "$sdk_adb" "$real_adb"; then
+    rm -rf -- "$wrapper_dir"
+    echo 'Could not preserve the Android SDK adb before wrapping it.' >&2
+    return 2
+  fi
+
+  cat > "$wrapper_path" <<'CLOCKROVE_ADB_WRAPPER'
+#!/usr/bin/env bash
+set -euo pipefail
+real_adb="${CLOCKROVE_REAL_ADB:?}"
+args=("$@")
+for ((index = 0; index < ${#args[@]}; index++)); do
+  if [[ "${args[index]}" != install ]]; then
+    continue
+  fi
+  for ((option_index = index + 1; option_index < ${#args[@]}; option_index++)); do
+    if [[ "${args[option_index]}" == --no-streaming ]]; then
+      exec "$real_adb" "${args[@]}"
+    fi
+  done
+  exec "$real_adb" "${args[@]:0:index+1}" --no-streaming "${args[@]:index+1}"
+done
+exec "$real_adb" "${args[@]}"
+CLOCKROVE_ADB_WRAPPER
+  chmod --reference="$sdk_adb" "$wrapper_path" || {
+    rm -rf -- "$wrapper_dir"
+    echo 'Could not set permissions on the Android SDK adb wrapper.' >&2
+    return 2
+  }
+
+  clockrove_restore_sdk_adb() {
+    local command_status=$?
+    trap - EXIT
+    if [[ -e "$saved_adb" || -L "$saved_adb" ]]; then
+      rm -f -- "$sdk_adb"
+      if ! mv -- "$saved_adb" "$sdk_adb"; then
+        echo 'Could not restore the Android SDK adb after the Flutter command.' >&2
+        rm -rf -- "$wrapper_dir"
+        exit 2
+      fi
+    fi
+    rm -rf -- "$wrapper_dir"
+    exit "$command_status"
+  }
+
+  trap clockrove_restore_sdk_adb EXIT
+  if ! mv -- "$sdk_adb" "$saved_adb" || ! mv -- "$wrapper_path" "$sdk_adb"; then
+    echo 'Could not install the temporary Android SDK adb wrapper.' >&2
+    return 2
+  fi
+  export CLOCKROVE_REAL_ADB="$real_adb"
+  "$@"
+)
+
 # Return the app's process IDs on success, status 1 only when `pidof` reports
 # no process, and status 2 for ADB, timeout, or malformed-output failures.
 clockrove_app_process_pids() {
@@ -420,7 +492,8 @@ clockrove_run_flutter_integration_test() {
   while (( attempt <= 2 )); do
     attempt_log="$diagnostics_dir/$label-flutter-attempt-$attempt.log"
     echo "Running Flutter integration test $label on API $api (attempt $attempt of 2)"
-    if timeout --kill-after=10s "${timeout_seconds}s" "$@" > "$attempt_log" 2>&1; then
+    if clockrove_with_nonstreaming_adb \
+      timeout --kill-after=10s "${timeout_seconds}s" "$@" > "$attempt_log" 2>&1; then
       cat "$attempt_log"
       if grep -Eq "$success_pattern" "$attempt_log"; then
         echo "Verified Flutter integration-test result marker for $label."
@@ -485,7 +558,7 @@ clockrove_install_apk() {
   while (( attempt <= 2 )); do
     local attempt_log="$diagnostics_dir/$label-attempt-$attempt.log"
     echo "Installing $label APK on API $api (attempt $attempt of 2)"
-    if timeout --kill-after=10s 120s adb -s emulator-5554 install -r -t "$apk" > "$attempt_log" 2>&1; then
+    if timeout --kill-after=10s 120s adb -s emulator-5554 install --no-streaming -r -t "$apk" > "$attempt_log" 2>&1; then
       status=0
     else
       status=$?

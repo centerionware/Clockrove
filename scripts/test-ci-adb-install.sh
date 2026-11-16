@@ -245,6 +245,13 @@ fi
 echo "Synthetic adb response: $*"
 FAKE_ADB
 
+mkdir -p "$test_root/android-sdk/platform-tools"
+cat > "$test_root/android-sdk/platform-tools/adb" <<'FAKE_SDK_ADB'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$FLUTTER_SDK_ADB_CALL_LOG"
+FAKE_SDK_ADB
+
 cat > "$test_root/bin/sleep" <<'FAKE_SLEEP'
 #!/usr/bin/env bash
 exit 0
@@ -314,6 +321,12 @@ case "$FLUTTER_TEST_MODE:$count" in
     echo '00:00 +0: Flutter returned without the crypto result'
     exit 0
     ;;
+  verify-no-streaming:*)
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 get-state
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 install -t -r synthetic.apk
+    echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
+    exit 0
+    ;;
   *)
     if [[ "$flutter_test_path" == *backup_snapshot_memory_benchmark_test.dart ]]; then
       echo 'BACKUP_SNAPSHOT_MEMORY_SEED pid=42 process_start_ticks=7 attachment_count=19 media_bytes=57671680 target_bytes=57671680'
@@ -325,7 +338,9 @@ case "$FLUTTER_TEST_MODE:$count" in
 esac
 FAKE_FLUTTER
 
-chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter"
+chmod +x "$test_root/bin/timeout" "$test_root/bin/aapt" "$test_root/bin/adb" "$test_root/bin/sleep" "$test_root/bin/flutter" "$test_root/android-sdk/platform-tools/adb"
+export ANDROID_HOME="$test_root/android-sdk" ANDROID_SDK_ROOT="$test_root/android-sdk"
+export FLUTTER_SDK_ADB_CALL_LOG="$test_root/flutter-sdk-adb-calls.txt"
 source "$script_dir/ci-adb-install.sh"
 
 export ADB_PIDOF_STATUS=0 ADB_PIDOF_OUTPUT='123 456'
@@ -372,6 +387,7 @@ clockrove_test_flutter_retry_hook_failure() {
 export ADB_INSTALL_MODE=normal
 clockrove_install_apk 24 app "$test_root/app.apk"
 [[ ! -e "$AAPT_CALL_LOG" ]]
+grep -F -- '-s emulator-5554 install --no-streaming -r -t ' "$ADB_CALL_LOG" >/dev/null
 echo 'Verified a successful install does not depend on aapt identity parsing.'
 
 rm -f "$ADB_INSTALL_COUNT" "$ADB_PACKAGE_QUERY_COUNT"
@@ -764,3 +780,17 @@ clockrove_run_flutter_integration_test 24 backup-snapshot-memory-seed \
 [[ "$(cat "$FLUTTER_NO_UNINSTALL_LOG")" == $'true\ntrue' ]]
 unset FLUTTER_TEST_PATH
 echo 'Verified the synthetic-media integration test loading line permits only the bounded pre-test install retry.'
+
+rm -f "$FLUTTER_TEST_COUNT" "$FLUTTER_SDK_ADB_CALL_LOG"
+export FLUTTER_TEST_MODE=verify-no-streaming
+sdk_adb_path="$ANDROID_HOME/platform-tools/adb"
+sdk_adb_checksum="$(sha256sum "$sdk_adb_path")"
+clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
+  'BACKUP_CRYPTO_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ envelope_bytes=[0-9]+' \
+  -- flutter test integration_test/backup_crypto_benchmark_test.dart
+grep -F -- '-s emulator-5554 install --no-streaming -t -r synthetic.apk' \
+  "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+grep -Fx -- '-s emulator-5554 get-state' "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+[[ "$(sha256sum "$sdk_adb_path")" == "$sdk_adb_checksum" ]]
+[[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*' -print -quit)" ]]
+echo 'Verified Flutter’s absolute SDK adb install uses --no-streaming and the original SDK adb is restored.'
