@@ -129,10 +129,12 @@ internal fun BackupImportStore.resolveAggregateConflicts(
             val candidate = if (staged.id == selectedConflictId) selectedChoice else
                 choiceForConflictIntent(allowed, intent)
             val compatibleIntent = candidate?.let(::conflictChoiceIntent)
+            // Keeping a live local row and preserving a local tombstone are the same
+            // local-wins decision for records that share an aggregate conflict group.
+            val localPreserve = setOf("LOCAL_ONLY", "LOCAL_CONTENT_PRESERVE", "LOCAL_DELETION_PRESERVE")
             val compatible = compatibleIntent == "NEUTRAL" || compatibleIntent == intent ||
                 (intent == "LOCAL_MERGE" && compatibleIntent == "LOCAL_ONLY") ||
-                (intent == "LOCAL_CONTENT_PRESERVE" && staged.id == selectedConflictId &&
-                    compatibleIntent == "LOCAL_ONLY")
+                (intent in localPreserve && compatibleIntent in localPreserve)
             if (candidate == null || !compatible) {
                 throw ConflictSelectionFailure(
                     "AGGREGATE_CONFLICT_UNSUPPORTED",
