@@ -13,9 +13,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
-const _archiveByteSlackBytes = 64 * 1024;
+const _archiveSlackBytes = 64 * 1024;
+const _archiveMinimumBytes =
+    BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
 const _targetMediaBytes =
-    BackupCryptoV2.maxArchiveBytes - _archiveByteSlackBytes;
+    BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
 const _mediaToleranceBytes = 2 * 1024;
 const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
@@ -33,7 +35,10 @@ void main() {
     final metrics = await tester.runAsync(_seedSyntheticTaskMedia);
     expect(metrics, isNotNull);
     final result = metrics!;
-    expect(result.archiveBytes, BackupCryptoV2.maxArchiveBytes);
+    expect(
+      result.archiveBytes,
+      inInclusiveRange(_archiveMinimumBytes, BackupCryptoV2.maxArchiveBytes),
+    );
     // ignore: avoid_print
     print(
       'BACKUP_SNAPSHOT_MEMORY_SEED '
@@ -110,25 +115,21 @@ void main() {
     expect(result.conflictCount, 0);
     expect(result.mediaCount, greaterThanOrEqualTo(14));
     expect(
+      result.archiveBytes,
+      inInclusiveRange(_archiveMinimumBytes, BackupCryptoV2.maxArchiveBytes),
+    );
+    expect(
       result.stagedPlusMediaBytes,
       lessThanOrEqualTo(maxBackupImportStagedBytes),
+    );
+    expect(
+      result.stagedPlusMediaBytes,
+      greaterThanOrEqualTo(maxBackupImportStagedBytes - 2 * _archiveSlackBytes),
     );
     expect(
       result.restorePeakDeltaRssKiB,
       lessThanOrEqualTo(64 * 1024),
       reason: 'Streamed restore peak RSS must stay within the 64 MiB gate.',
-    );
-    expect(
-      result.archiveBytes,
-      greaterThanOrEqualTo(BackupCryptoV2.maxArchiveBytes - 5 * 1024 * 1024),
-    );
-    expect(
-      result.stagedRecordBytes + result.mediaBytes,
-      lessThanOrEqualTo(64 * 1024 * 1024),
-    );
-    expect(
-      result.archiveBytes,
-      lessThanOrEqualTo(BackupCryptoV2.maxArchiveBytes),
     );
   });
 }
@@ -192,8 +193,9 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   if (attachmentCount > 0 &&
       attachmentCount <= 16 &&
       conversation.taskAttachments.every(_isBoundedFixtureAttachment) &&
-      (mediaBytes - _targetMediaBytes).abs() <= _mediaToleranceBytes) {
-    final archiveBytes = await _fitFixtureArchiveToExactLimit(businessApi);
+      mediaBytes <= _targetMediaBytes &&
+      _targetMediaBytes - mediaBytes <= _mediaToleranceBytes) {
+    final archiveBytes = await _fitFixtureArchiveWithinLimit(businessApi);
     return _SeedMetrics(
       pid: pid,
       processStartTicks: await _processStartTicks(),
@@ -280,7 +282,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
     throw StateError('Native task image metadata did not match the seed.');
   }
 
-  final archiveBytes = await _fitFixtureArchiveToExactLimit(businessApi);
+  final archiveBytes = await _fitFixtureArchiveWithinLimit(businessApi);
 
   return _SeedMetrics(
     pid: pid,
@@ -291,7 +293,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
   );
 }
 
-Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
+Future<int> _fitFixtureArchiveWithinLimit(BusinessApi businessApi) async {
   final exporter = BackupSnapshotExporter();
   final before = await exporter.exportStream();
   final delta = BackupCryptoV2.maxArchiveBytes - before.archiveByteLength;
@@ -299,12 +301,19 @@ Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
   if (delta < 0 || delta > 80 * 1024) {
     throw StateError('The near-limit fixture has an unexpected archive gap.');
   }
+
   if (delta > 0) {
     final board = await businessApi.board(_fixtureJobId);
     final card = board.cards.singleWhere(
       (candidate) => candidate.id == _fixtureTaskId,
     );
-    Future<void> saveDescription(String description) async {
+    // Save once: each card edit adds a persistent revision payload. Repeated
+    // probe writes would accumulate old descriptions against the native cap.
+    final paddingCharacters = delta ~/ 8;
+    if (card.description.length + paddingCharacters > 20000) {
+      throw StateError('The near-limit fixture exceeds the card text bound.');
+    }
+    if (paddingCharacters > 0) {
       final updated = await businessApi.saveCard(
         newBusinessId(),
         board,
@@ -312,7 +321,8 @@ Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
           id: card.id,
           columnId: card.columnId,
           title: card.title,
-          description: description,
+          description:
+              '${card.description}${List<String>.filled(paddingCharacters, 'x').join()}',
           position: card.position,
           billable: card.billable,
           currency: card.currency,
@@ -322,73 +332,24 @@ Future<int> _fitFixtureArchiveToExactLimit(BusinessApi businessApi) async {
         ),
       );
       if (!updated.committed) {
-        throw StateError('Could not tune the synthetic archive row length.');
-      }
-    }
-
-    // The card and its template are each stored as a row and a revision
-    // payload, so a plain ASCII character adds four archive bytes. Measure the
-    // fixed revision metadata once before solving for the final exact length.
-    final probeCharacters = delta ~/ 8;
-    if (card.description.length + probeCharacters > 20000) {
-      throw StateError('The exact archive target exceeds the card text bound.');
-    }
-    await saveDescription(
-      '${card.description}${List<String>.filled(probeCharacters, 'x').join()}',
-    );
-    final probe = await exporter.exportStream();
-    final fixedGrowth =
-        probe.archiveByteLength -
-        before.archiveByteLength -
-        probeCharacters * 4;
-    await probe.close();
-    final remaining =
-        BackupCryptoV2.maxArchiveBytes -
-        (before.archiveByteLength + probeCharacters * 4 + fixedGrowth);
-    final finalCharacters = (remaining - fixedGrowth) ~/ 4;
-    if (finalCharacters < 0 ||
-        card.description.length + probeCharacters + finalCharacters > 20000) {
-      throw StateError('The exact archive target exceeds the card text bound.');
-    }
-    if (finalCharacters > 0) {
-      final currentBoard = await businessApi.board(_fixtureJobId);
-      final currentCard = currentBoard.cards.singleWhere(
-        (candidate) => candidate.id == _fixtureTaskId,
-      );
-      final updated = await businessApi.saveCard(
-        newBusinessId(),
-        currentBoard,
-        TaskCard(
-          id: currentCard.id,
-          columnId: currentCard.columnId,
-          title: currentCard.title,
-          description:
-              '${currentCard.description}${List<String>.filled(finalCharacters, 'x').join()}',
-          position: currentCard.position,
-          billable: currentCard.billable,
-          currency: currentCard.currency,
-          dueDate: currentCard.dueDate,
-          priceMinor: currentCard.priceMinor,
-          completedMillis: currentCard.completedMillis,
-        ),
-      );
-      if (!updated.committed) {
-        throw StateError('Could not tune the final archive byte remainder.');
+        throw StateError('Could not tune the near-limit fixture row.');
       }
     }
   }
 
-  final exact = await exporter.exportStream();
+  final exported = await exporter.exportStream();
   try {
-    if (exact.archiveByteLength != BackupCryptoV2.maxArchiveBytes) {
+    if (exported.archiveByteLength < _archiveMinimumBytes ||
+        exported.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
-        'The synthetic archive is ${exact.archiveByteLength} bytes; '
-        'expected exactly ${BackupCryptoV2.maxArchiveBytes}.',
+        'The synthetic archive is ${exported.archiveByteLength} bytes; '
+        'expected between $_archiveMinimumBytes and '
+        '${BackupCryptoV2.maxArchiveBytes}.',
       );
     }
-    return exact.archiveByteLength;
+    return exported.archiveByteLength;
   } finally {
-    await exact.close();
+    await exported.close();
   }
 }
 
@@ -430,9 +391,10 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     final afterSnapshotSetupRssKiB = await _processRssKiB();
     if (export.mediaBytes != seedMediaBytes ||
         export.mediaCount != seedAttachmentCount ||
-        export.archiveByteLength != BackupCryptoV2.maxArchiveBytes) {
+        export.archiveByteLength < _archiveMinimumBytes ||
+        export.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
       throw StateError(
-        'Snapshot export did not match the exact maximum isolated fixture.',
+        'Snapshot export did not match the isolated near-maximum fixture.',
       );
     }
 
@@ -534,29 +496,9 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
     0,
     (total, attachment) => total + attachment.bytes,
   );
-  // Reserve headroom for native JSON row bytes, which are measured separately
-  // from the archive's binary row section in the returned preview.
-  final importMediaTarget = maxBackupImportStagedBytes - 4 * 1024 * 1024;
-  while (mediaBytes > importMediaTarget) {
-    if (conversation.taskAttachments.isEmpty) {
-      throw StateError(
-        'The restore fixture could not fit the import media cap.',
-      );
-    }
-    final attachment = conversation.taskAttachments.last;
-    final outcome = await businessApi.removeTaskImage(
-      newBusinessId(),
-      conversation,
-      attachment.id,
-    );
-    if (!outcome.committed) {
-      throw StateError('Could not fit the synthetic restore fixture.');
-    }
-    conversation = await businessApi.taskConversation(jobId, taskId);
-    mediaBytes = conversation.taskAttachments.fold<int>(
-      0,
-      (total, image) => total + image.bytes,
-    );
+  if (mediaBytes > _targetMediaBytes ||
+      _targetMediaBytes - mediaBytes > _mediaToleranceBytes) {
+    throw StateError('The seeded restore fixture is not near the archive cap.');
   }
 
   final exporter = BackupSnapshotExporter();
