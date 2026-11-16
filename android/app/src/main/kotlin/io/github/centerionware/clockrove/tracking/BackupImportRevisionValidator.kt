@@ -54,6 +54,7 @@ private const val MAX_STAGE_DATABASE_BYTES = BackupImportStore.MAX_STAGE_DATABAS
 private const val MAX_STAGE_PHYSICAL_BYTES = BackupImportStore.MAX_STAGE_PHYSICAL_BYTES
 private const val REVISION_VALIDATION_BATCH_SIZE = BackupImportStore.REVISION_VALIDATION_BATCH_SIZE
 private const val FILE_PREFIX = BackupImportStore.FILE_PREFIX
+private val revisionValidationTables = BackupImportStore.revisionValidationTables
 private val idPattern = BackupImportStore.idPattern
 private val blobIdPattern = BackupImportStore.blobIdPattern
 private val digestPattern = BackupImportStore.digestPattern
