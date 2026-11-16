@@ -687,7 +687,17 @@ class BackupImportStoreTest {
         var done = false
         while (!done) {
             val page = exportStore.readPage(source.snapshotId, cursor, started.maxPageBytes)
-            assertTrue(encodedAppendRequest(started.importId, firstOrdinal, page.records) <= BackupImportStore.MAX_REQUEST_BYTES)
+            // Export pages carry the snapshot digest; native import staging
+            // accepts archive media descriptors without that export-only field.
+            val importRecords = page.records.map { record ->
+                record + ("blobs" to (record["blobs"] as List<*>).map { raw ->
+                    (raw as Map<*, *>).filterKeys { it != "sha256" }
+                })
+            }
+            assertTrue(
+                encodedAppendRequest(started.importId, firstOrdinal, importRecords) <=
+                    BackupImportStore.MAX_REQUEST_BYTES,
+            )
             page.records.forEach { record ->
                 val descriptors = record["blobs"] as List<*>
                 descriptors.forEach { raw ->
@@ -700,8 +710,8 @@ class BackupImportStoreTest {
             firstOrdinal = importStore.appendPage(
                 started.importId,
                 firstOrdinal,
-                page.records,
-                encodedAppendRequest(started.importId, firstOrdinal, page.records),
+                importRecords,
+                encodedAppendRequest(started.importId, firstOrdinal, importRecords),
             )
             cursor = page.nextCursor
             done = page.done
