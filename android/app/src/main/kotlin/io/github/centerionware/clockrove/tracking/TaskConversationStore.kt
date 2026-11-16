@@ -211,10 +211,11 @@ internal object TaskConversationStore {
         event(db, taskId, commentId, "DELETED", at)
         db.execSQL("DELETE FROM task_comments WHERE id=?", arrayOf(commentId))
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_comment' AND entity_id=?", arrayOf(commentId))
-        RevisionStore.record(
+        val tombstone = RevisionStore.record(
             db, "task_comment", commentId, jobId,
             mapOf("id" to commentId, "task_id" to taskId), at, deleted = true,
         )
+        db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE id=?", arrayOf(tombstone))
         return null
     }
 

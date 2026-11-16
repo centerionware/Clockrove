@@ -166,6 +166,7 @@ class TaskConversationTest {
         }
 
         repository = TimerRepository(app, wallClock = { 2_000_000 })
+        repository.snapshot() // Trigger SQLiteOpenHelper's 16 -> 17 migration before raw reads.
         assertEquals(0L, headDeleted("task_comment", "schema17-comment"))
         assertEquals(0L, headDeleted("task_attachment", "schema17-image"))
         val commentPayload = JSONObject(requireNotNull(headPayload("task_comment", "schema17-comment")))
