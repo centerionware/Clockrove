@@ -125,11 +125,14 @@ void main() {
       mediaBytes: 3,
     );
     expect(started.importId, importId);
-    expect(await api.appendPage(
-      importId: importId,
-      firstOrdinal: 0,
-      records: [record],
-    ), 1);
+    expect(
+      await api.appendPage(
+        importId: importId,
+        firstOrdinal: 0,
+        records: [record],
+      ),
+      1,
+    );
     expect(
       await api.writeBlob(
         importId: importId,
@@ -174,40 +177,43 @@ void main() {
     ]);
   });
 
-  test('rejects invalid bounds and oversized encoded pages before native calls', () async {
-    final api = BackupImportApi(channel: channel);
-    await expectLater(
-      api.begin(
-        archiveFormatVersion: 1,
-        schemaVersion: 16,
-        archiveDigest: 'bad',
-        recordCount: 0,
-        mediaCount: 0,
-        mediaBytes: 0,
-      ),
-      throwsA(isA<FormatException>()),
-    );
-    await expectLater(
-      api.appendPage(
-        importId: 'import-1',
-        firstOrdinal: 0,
-        records: [
-          {'type': 'row', 'payload': 'x' * maxBackupImportRequestBytes},
-        ],
-      ),
-      throwsA(isA<FormatException>()),
-    );
-    await expectLater(
-      api.writeBlob(
-        importId: 'import-1',
-        blobId: 'a' * 43,
-        offset: 0,
-        bytes: Uint8List(maxBackupImportBlobChunkBytes + 1),
-      ),
-      throwsA(isA<FormatException>()),
-    );
-    expect(calls, isEmpty);
-  });
+  test(
+    'rejects invalid bounds and oversized encoded pages before native calls',
+    () async {
+      final api = BackupImportApi(channel: channel);
+      await expectLater(
+        api.begin(
+          archiveFormatVersion: 1,
+          schemaVersion: 16,
+          archiveDigest: 'bad',
+          recordCount: 0,
+          mediaCount: 0,
+          mediaBytes: 0,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      await expectLater(
+        api.appendPage(
+          importId: 'import-1',
+          firstOrdinal: 0,
+          records: [
+            {'type': 'row', 'payload': 'x' * maxBackupImportRequestBytes},
+          ],
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      await expectLater(
+        api.writeBlob(
+          importId: 'import-1',
+          blobId: 'a' * 43,
+          offset: 0,
+          bytes: Uint8List(maxBackupImportBlobChunkBytes + 1),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(calls, isEmpty);
+    },
+  );
 
   test('rejects malformed previews and resolution acknowledgements', () async {
     respond = (call) async {
@@ -235,67 +241,73 @@ void main() {
     );
   });
 
-  test('preserves blocking conflicts without offering an unsafe resolution', () {
-    final conflict = BackupImportConflict.fromMap({
-      'conflictId': 'gps-range-conflict',
-      'kind': 'GPS_DELETION_COVERAGE',
-      'table': 'location_deletion_ranges',
-      'primaryKey': ['range-id'],
-      'localIdentifier': null,
-      'localSummary': {'identifier': 'Unproven local GPS points are covered'},
-      'backupSummary': <String, Object?>{},
-      'allowedChoices': <String>[],
-      'defaultChoice': null,
-      'resolved': false,
-      'selectedChoice': null,
-    });
-    expect(conflict.allowedChoices, isEmpty);
-    expect(conflict.defaultChoice, isNull);
-    expect(conflict.resolved, isFalse);
-
-    expect(
-      () => BackupImportConflict.fromMap({
-        'conflictId': 'resolved-gps-range-conflict',
+  test(
+    'preserves blocking conflicts without offering an unsafe resolution',
+    () {
+      final conflict = BackupImportConflict.fromMap({
+        'conflictId': 'gps-range-conflict',
         'kind': 'GPS_DELETION_COVERAGE',
         'table': 'location_deletion_ranges',
         'primaryKey': ['range-id'],
         'localIdentifier': null,
-        'localSummary': <String, Object?>{},
+        'localSummary': {'identifier': 'Unproven local GPS points are covered'},
         'backupSummary': <String, Object?>{},
         'allowedChoices': <String>[],
         'defaultChoice': null,
-        'resolved': true,
+        'resolved': false,
         'selectedChoice': null,
-      }),
-      throwsA(isA<FormatException>()),
-    );
-  });
+      });
+      expect(conflict.allowedChoices, isEmpty);
+      expect(conflict.defaultChoice, isNull);
+      expect(conflict.resolved, isFalse);
 
-  test('decodes explicit local and backup choices for divergent entity heads', () {
-    final conflict = BackupImportConflict.fromMap({
-      'conflictId': 'divergent-customer-head',
-      'kind': 'EXISTING_RECORD_DIFFERS',
-      'table': 'entity_heads',
-      'primaryKey': ['customer', 'customer-id'],
-      'localIdentifier': null,
-      'localSummary': <String, Object?>{},
-      'backupSummary': <String, Object?>{},
-      'allowedChoices': <String>[
+      expect(
+        () => BackupImportConflict.fromMap({
+          'conflictId': 'resolved-gps-range-conflict',
+          'kind': 'GPS_DELETION_COVERAGE',
+          'table': 'location_deletion_ranges',
+          'primaryKey': ['range-id'],
+          'localIdentifier': null,
+          'localSummary': <String, Object?>{},
+          'backupSummary': <String, Object?>{},
+          'allowedChoices': <String>[],
+          'defaultChoice': null,
+          'resolved': true,
+          'selectedChoice': null,
+        }),
+        throwsA(isA<FormatException>()),
+      );
+    },
+  );
+
+  test(
+    'decodes explicit local and backup choices for divergent entity heads',
+    () {
+      final conflict = BackupImportConflict.fromMap({
+        'conflictId': 'divergent-customer-head',
+        'kind': 'EXISTING_RECORD_DIFFERS',
+        'table': 'entity_heads',
+        'primaryKey': ['customer', 'customer-id'],
+        'localIdentifier': null,
+        'localSummary': <String, Object?>{},
+        'backupSummary': <String, Object?>{},
+        'allowedChoices': <String>[
+          'MERGE_KEEP_LOCAL_CONTENT',
+          'MERGE_USE_BACKUP_CONTENT',
+        ],
+        'defaultChoice': 'MERGE_KEEP_LOCAL_CONTENT',
+        'resolved': false,
+        'selectedChoice': null,
+      });
+
+      expect(conflict.allowedChoices, [
         'MERGE_KEEP_LOCAL_CONTENT',
         'MERGE_USE_BACKUP_CONTENT',
-      ],
-      'defaultChoice': 'MERGE_KEEP_LOCAL_CONTENT',
-      'resolved': false,
-      'selectedChoice': null,
-    });
-
-    expect(
-      conflict.allowedChoices,
-      ['MERGE_KEEP_LOCAL_CONTENT', 'MERGE_USE_BACKUP_CONTENT'],
-    );
-    expect(conflict.defaultChoice, 'MERGE_KEEP_LOCAL_CONTENT');
-    expect(conflict.resolved, isFalse);
-  });
+      ]);
+      expect(conflict.defaultChoice, 'MERGE_KEEP_LOCAL_CONTENT');
+      expect(conflict.resolved, isFalse);
+    },
+  );
 }
 
 Map<String, Object?> _preview({

@@ -126,7 +126,9 @@ final class BackupImportApi {
 
   Future<BackupImportPreview> finish(String importId) async {
     _requireHandle(importId);
-    final result = await _invokeMap('finishBackupImport', {'importId': importId});
+    final result = await _invokeMap('finishBackupImport', {
+      'importId': importId,
+    });
     final preview = BackupImportPreview.fromMap(result);
     if (preview.importId != importId) {
       throw const FormatException('The backup import preview handle changed.');
@@ -145,7 +147,9 @@ final class BackupImportApi {
     if (cursor != null && (cursor.isEmpty || cursor.length > 128) ||
         maxBytes < minBackupImportConflictPageBytes ||
         maxBytes > maxBackupImportConflictPageBytes) {
-      throw const FormatException('The backup conflict page request is invalid.');
+      throw const FormatException(
+        'The backup conflict page request is invalid.',
+      );
     }
     final result = await _invokeMap('readBackupImportConflictPage', {
       'importId': importId,
@@ -158,7 +162,9 @@ final class BackupImportApi {
         page.previewToken != previewToken ||
         (page.done && page.nextCursor != null) ||
         (!page.done && (page.nextCursor == null || page.nextCursor!.isEmpty))) {
-      throw const FormatException('The backup conflict page response is invalid.');
+      throw const FormatException(
+        'The backup conflict page response is invalid.',
+      );
     }
     return page;
   }
@@ -201,7 +207,9 @@ final class BackupImportApi {
     _requireToken(previewToken);
     if (expectedLocalStateVersion < 0 ||
         expectedLocalStateVersion > 0x7fffffffffffffff) {
-      throw const FormatException('The expected backup state version is invalid.');
+      throw const FormatException(
+        'The expected backup state version is invalid.',
+      );
     }
     final result = await _invokeMap('applyBackupImport', {
       'importId': importId,
@@ -221,21 +229,26 @@ final class BackupImportApi {
 
   Future<bool> close(String importId) async {
     _requireHandle(importId);
-    final result = await _invokeMap('closeBackupImport', {'importId': importId});
+    final result = await _invokeMap('closeBackupImport', {
+      'importId': importId,
+    });
     return _boolean(result, 'closed');
   }
 
   Future<Map<String, Object?>> _invokeMap(
     String method,
     Map<String, Object?> arguments,
-  ) async => _stringMap(await _channel.invokeMethod<Object?>(method, arguments));
+  ) async =>
+      _stringMap(await _channel.invokeMethod<Object?>(method, arguments));
 
   static void _requireEncodedSize(String method, Map<String, Object?> args) {
     final size = const StandardMethodCodec()
         .encodeMethodCall(MethodCall(method, args))
         .lengthInBytes;
     if (size < 1 || size > maxBackupImportRequestBytes) {
-      throw const FormatException('The backup import request exceeds its limit.');
+      throw const FormatException(
+        'The backup import request exceeds its limit.',
+      );
     }
   }
 
@@ -374,15 +387,20 @@ final class BackupImportConflict {
     if (rawKey is! List || rawKey.isEmpty || rawKey.length > 4) {
       throw const FormatException('A backup conflict key is invalid.');
     }
-    final key = rawKey.map<Object?>((value) {
-      if (value != null && value is! String && value is! int && value is! double) {
-        throw const FormatException('A backup conflict key is invalid.');
-      }
-      if (value is double && !value.isFinite) {
-        throw const FormatException('A backup conflict key is invalid.');
-      }
-      return value;
-    }).toList(growable: false);
+    final key = rawKey
+        .map<Object?>((value) {
+          if (value != null &&
+              value is! String &&
+              value is! int &&
+              value is! double) {
+            throw const FormatException('A backup conflict key is invalid.');
+          }
+          if (value is double && !value.isFinite) {
+            throw const FormatException('A backup conflict key is invalid.');
+          }
+          return value;
+        })
+        .toList(growable: false);
     final choices = _stringList(map, 'allowedChoices');
     if (choices.toSet().length != choices.length) {
       throw const FormatException('A backup conflict choice list is invalid.');
@@ -403,7 +421,9 @@ final class BackupImportConflict {
     );
     if (conflict.conflictId.isEmpty ||
         (choices.isEmpty &&
-            (defaultChoice != null || conflict.resolved || conflict.selectedChoice != null)) ||
+            (defaultChoice != null ||
+                conflict.resolved ||
+                conflict.selectedChoice != null)) ||
         (choices.isNotEmpty &&
             (defaultChoice == null || !choices.contains(defaultChoice))) ||
         (conflict.resolved && !choices.contains(conflict.selectedChoice))) {
@@ -437,7 +457,9 @@ final class BackupImportConflictPage {
         .map((item) => BackupImportConflict.fromMap(_stringMap(item)))
         .toList(growable: false);
     if (conflicts.length > 4096) {
-      throw const FormatException('The backup conflict list exceeds its limit.');
+      throw const FormatException(
+        'The backup conflict list exceeds its limit.',
+      );
     }
     return BackupImportConflictPage(
       importId: _requiredString(map, 'importId'),
