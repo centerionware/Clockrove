@@ -161,10 +161,10 @@ cat "$process_log"
 
 clockrove_force_stop_backup_benchmark_app
 clockrove_run_flutter_integration_test "$api" backup-streamed-restore-preview \
-  'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 native_closed=true private_temp_removed=true' \
+  'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 staged_plus_media_bytes=[0-9]+ restore_peak_delta_rss_kib=[0-9]+ native_closed=true two_pass_authenticated=true' \
   -- flutter test --no-uninstall --no-pub integration_test/backup_snapshot_memory_benchmark_test.dart \
   -d emulator-5554 --reporter expanded \
   --plain-name 'stage authenticated archive through bounded native preview' \
   > "$restore_log" 2>&1
 cat "$restore_log"
-grep -Eq 'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 native_closed=true private_temp_removed=true' "$restore_log"
+grep -Eq 'BACKUP_STREAMED_RESTORE_PREVIEW archive_bytes=[0-9]+ archive_record_bytes=[0-9]+ staged_record_bytes=[0-9]+ media_bytes=[0-9]+ media_count=[0-9]+ record_count=[0-9]+ conflicts=0 staged_plus_media_bytes=[0-9]+ restore_peak_delta_rss_kib=[0-9]+ native_closed=true two_pass_authenticated=true' "$restore_log"

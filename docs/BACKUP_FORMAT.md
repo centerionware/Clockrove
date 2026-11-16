@@ -94,6 +94,11 @@ complete untrusted revision graph.
 - Native detached staging input budget: 64 MiB, including framed UTF-8 row
   records and media. This does not guarantee that the Dart archive encoding
   will fit the final limit.
+- Restore media input may be as large as 64 MiB, but a completed preview must
+  report native normalized row JSON bytes (including the four-byte per-row
+  charge) plus media bytes at or below the same 64 MiB staging ceiling. Binary
+  archive record bytes are reported separately and are not used as a proxy for
+  native staged row bytes.
 - Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
 - Maximum 500,000 records and 10,000 media objects.
 - Maximum encoded row size: 128 KiB.

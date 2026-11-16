@@ -11,7 +11,8 @@ const int minBackupImportConflictPageBytes = 1024;
 const int maxBackupImportBlobChunkBytes = 255 * 1024;
 const int maxBackupImportRows = 500000;
 const int maxBackupImportMediaCount = 10000;
-const int maxBackupImportMediaBytes = 60 * 1024 * 1024;
+const int maxBackupImportMediaBytes = 64 * 1024 * 1024;
+const int maxBackupImportStagedBytes = 64 * 1024 * 1024;
 
 /// Typed transport for the native, bounded backup staging and restore boundary.
 /// It never interprets archive contents or writes a local file path.
@@ -370,7 +371,9 @@ final class BackupImportPreview {
         preview.mediaBytes < 0 ||
         preview.mediaBytes > maxBackupImportMediaBytes ||
         preview.stagedRecordBytes < 0 ||
-        preview.stagedRecordBytes > 64 * 1024 * 1024 ||
+        preview.stagedRecordBytes > maxBackupImportStagedBytes ||
+        preview.stagedRecordBytes >
+            maxBackupImportStagedBytes - preview.mediaBytes ||
         preview.addedCount < 0 ||
         preview.unchangedCount < 0 ||
         preview.conflictCount < 0 ||

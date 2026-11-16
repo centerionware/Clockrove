@@ -10,7 +10,6 @@ final class BackupRestoreImportResult {
     required this.metrics,
     required this.stagedRecordBytes,
     required this.nativeHandleClosed,
-    required this.privateDirectoryPath,
   });
 
   final BackupImportPreview preview;
@@ -20,12 +19,12 @@ final class BackupRestoreImportResult {
   final int stagedRecordBytes;
 
   final bool nativeHandleClosed;
-  final String privateDirectoryPath;
 }
 
-/// Authenticates an encrypted file, streams its archive into native staging,
-/// and returns the native preview. The one-shot stage and plaintext temp file
-/// are always closed/discarded before this method completes.
+/// Authenticates an encrypted file, then streams a second authenticated pass
+/// through a bounded in-memory parser into the hidden native import stage.
+/// Plaintext archive bytes are never written to a file or accumulated in a
+/// whole-archive buffer. Preview is exposed only after the second pass commits.
 final class BackupRestoreImporter {
   BackupRestoreImporter({BackupImportApi? api})
     : _api = api ?? BackupImportApi();
@@ -37,10 +36,17 @@ final class BackupRestoreImporter {
     required String password,
     BackupCryptoCancellationToken? cancellationToken,
   }) async {
-    final privateDirectory = await Directory.systemTemp.createTemp(
-      'clockrove-restore-stage-',
+    // The native stage's identity includes the archive digest. Authenticate a
+    // first bounded pass to learn that digest without retaining plaintext, then
+    // authenticate and stream a second pass into native staging.
+    final authenticated = await BackupCryptoV2.decrypt(
+      password: password,
+      envelope: encryptedEnvelope.openRead(),
+      privateArchive: _DiscardingAuthenticatedSink(),
+      cancellationToken: cancellationToken,
     );
-    final archiveFile = File('${privateDirectory.path}/authenticated.archive');
+
+    final plaintext = BackupArchivePlaintextChannel();
     BackupImportStarted? started;
     _BackupImportPageBuffer? pageBuffer;
     BackupImportPreview? preview;
@@ -50,59 +56,71 @@ final class BackupRestoreImporter {
     StackTrace? operationStack;
     Object? cleanupFailure;
 
+    final parseFuture = BackupArchiveReader.stage(
+      plaintext: plaintext,
+      authenticatedArchiveBytes: authenticated.archiveBytes,
+      authenticatedArchiveSha256: authenticated.archiveSha256,
+      onHeader: (header) async {
+        if (header.schemaVersion != currentBackupImportSchemaVersion ||
+            header.recordCount > maxBackupImportRows ||
+            header.mediaCount > maxBackupImportMediaCount ||
+            header.mediaBytes > maxBackupImportMediaBytes) {
+          throw const FormatException(
+            'This backup exceeds the supported restore limits.',
+          );
+        }
+        started = await _api.begin(
+          archiveFormatVersion: header.formatVersion,
+          schemaVersion: header.schemaVersion,
+          archiveDigest: _digestHex(authenticated.archiveSha256),
+          recordCount: header.recordCount,
+          mediaCount: header.mediaCount,
+          mediaBytes: header.mediaBytes,
+        );
+        pageBuffer = _BackupImportPageBuffer(_api, started!);
+        return started!.maxBlobChunkBytes;
+      },
+      onRecord: (ordinal, record) => pageBuffer!.add(ordinal, record),
+      onRecordsComplete: () => pageBuffer!.flush(),
+      onMediaChunk: (blobId, offset, bytes) async {
+        final handle = started;
+        if (handle == null) {
+          throw StateError('Backup import was not started.');
+        }
+        await _api.writeBlob(
+          importId: handle.importId,
+          blobId: blobId,
+          offset: offset,
+          bytes: bytes,
+          maxChunkBytes: handle.maxBlobChunkBytes,
+        );
+      },
+    );
+
     try {
-      final authenticated = await BackupCryptoV2.decrypt(
+      final streamed = await BackupCryptoV2.decrypt(
         password: password,
         envelope: encryptedEnvelope.openRead(),
-        privateArchive: _FileBackupTransactionalSink(archiveFile),
+        privateArchive: _BackupArchiveParserSink(plaintext, parseFuture),
         cancellationToken: cancellationToken,
       );
-
-      metrics = await BackupArchiveReader.stage(
-        archiveFile: archiveFile,
-        authenticatedArchiveBytes: authenticated.archiveBytes,
-        authenticatedArchiveSha256: authenticated.archiveSha256,
-        onHeader: (header) async {
-          if (header.schemaVersion != currentBackupImportSchemaVersion ||
-              header.recordCount > maxBackupImportRows ||
-              header.mediaCount > maxBackupImportMediaCount) {
-            throw const FormatException(
-              'This backup exceeds the supported restore limits.',
-            );
-          }
-          started = await _api.begin(
-            archiveFormatVersion: header.formatVersion,
-            schemaVersion: header.schemaVersion,
-            archiveDigest: _digestHex(authenticated.archiveSha256),
-            recordCount: header.recordCount,
-            mediaCount: header.mediaCount,
-            mediaBytes: header.mediaBytes,
-          );
-          pageBuffer = _BackupImportPageBuffer(_api, started!);
-          return started!.maxBlobChunkBytes;
-        },
-        onRecord: (ordinal, record) => pageBuffer!.add(ordinal, record),
-        onRecordsComplete: () => pageBuffer!.flush(),
-        onMediaChunk: (blobId, offset, bytes) async {
-          final handle = started;
-          if (handle == null) {
-            throw StateError('Backup import was not started.');
-          }
-          await _api.writeBlob(
-            importId: handle.importId,
-            blobId: blobId,
-            offset: offset,
-            bytes: bytes,
-            maxChunkBytes: handle.maxBlobChunkBytes,
-          );
-        },
-      );
+      metrics = await parseFuture;
+      if (streamed.archiveBytes != authenticated.archiveBytes ||
+          !_sameDigest(streamed.archiveSha256, authenticated.archiveSha256) ||
+          metrics.archiveBytes != streamed.archiveBytes ||
+          !_sameDigest(metrics.archiveSha256, streamed.archiveSha256)) {
+        throw const FormatException(
+          'The authenticated backup changed between verification passes.',
+        );
+      }
       final handle = started;
       if (handle == null) throw StateError('Backup import was not started.');
       preview = await _api.finish(handle.importId);
       if (preview.recordCount != metrics.recordCount ||
           preview.mediaCount != metrics.mediaCount ||
-          preview.mediaBytes != metrics.mediaBytes) {
+          preview.mediaBytes != metrics.mediaBytes ||
+          preview.stagedRecordBytes + preview.mediaBytes >
+              maxBackupImportStagedBytes) {
         throw const FormatException(
           'The native preview does not match the authenticated archive.',
         );
@@ -118,13 +136,6 @@ final class BackupRestoreImporter {
         } on Object catch (error) {
           cleanupFailure ??= error;
         }
-      }
-      try {
-        if (await privateDirectory.exists()) {
-          await privateDirectory.delete(recursive: true);
-        }
-      } on Object catch (error) {
-        cleanupFailure ??= error;
       }
     }
 
@@ -151,12 +162,20 @@ final class BackupRestoreImporter {
       metrics: metrics,
       stagedRecordBytes: preview.stagedRecordBytes,
       nativeHandleClosed: nativeHandleClosed,
-      privateDirectoryPath: privateDirectory.path,
     );
   }
 
   String _digestHex(List<int> bytes) =>
       bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+
+  bool _sameDigest(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    var difference = 0;
+    for (var index = 0; index < left.length; index++) {
+      difference |= left[index] ^ right[index];
+    }
+    return difference == 0;
+  }
 }
 
 final class _BackupImportPageBuffer {
@@ -228,36 +247,57 @@ final class BackupRestoreImportCleanupException implements Exception {
   final Object cleanupFailure;
 }
 
-final class _FileBackupTransactionalSink
+final class _DiscardingAuthenticatedSink
     implements BackupTransactionalByteSink {
-  _FileBackupTransactionalSink(this.file);
-
-  final File file;
-  RandomAccessFile? _output;
   bool _completed = false;
 
   @override
   Future<void> write(List<int> bytes) async {
-    if (_completed) throw StateError('The private archive sink is closed.');
-    final output = _output ??= await file.open(mode: FileMode.writeOnly);
-    await output.writeFrom(bytes);
+    if (_completed) throw StateError('The verification sink is closed.');
   }
 
   @override
   Future<void> commit() async {
-    if (_completed) throw StateError('The private archive sink is closed.');
-    await _output?.flush();
-    await _output?.close();
-    _output = null;
+    if (_completed) throw StateError('The verification sink is closed.');
     _completed = true;
+  }
+
+  @override
+  Future<void> discard() async {
+    _completed = true;
+  }
+}
+
+final class _BackupArchiveParserSink implements BackupTransactionalByteSink {
+  _BackupArchiveParserSink(this.plaintext, this.parseFuture);
+
+  final BackupArchivePlaintextChannel plaintext;
+  final Future<BackupArchiveReadMetrics> parseFuture;
+  bool _completed = false;
+
+  @override
+  Future<void> write(List<int> bytes) async {
+    if (_completed) throw StateError('The plaintext parser sink is closed.');
+    await plaintext.add(bytes);
+  }
+
+  @override
+  Future<void> commit() async {
+    if (_completed) throw StateError('The plaintext parser sink is closed.');
+    _completed = true;
+    await plaintext.close();
+    await parseFuture;
   }
 
   @override
   Future<void> discard() async {
     if (_completed) return;
     _completed = true;
-    await _output?.close();
-    _output = null;
-    if (await file.exists()) await file.delete();
+    await plaintext.close();
+    try {
+      await parseFuture;
+    } on Object {
+      // Preserve the envelope/authentication failure that caused discard.
+    }
   }
 }

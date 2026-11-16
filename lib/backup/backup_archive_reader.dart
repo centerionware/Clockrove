@@ -25,26 +25,100 @@ final class BackupArchiveImportHeader {
 }
 
 final class BackupArchiveReadMetrics {
-  const BackupArchiveReadMetrics({
+  BackupArchiveReadMetrics({
     required this.recordCount,
     required this.mediaCount,
     required this.recordBytes,
     required this.mediaBytes,
     required this.archiveBytes,
-  });
+    required List<int> archiveSha256,
+  }) : archiveSha256 = List<int>.unmodifiable(archiveSha256);
 
   final int recordCount;
   final int mediaCount;
   final int recordBytes;
   final int mediaBytes;
   final int archiveBytes;
+  final List<int> archiveSha256;
 }
 
-/// Parses an authenticated plaintext archive without loading it into memory.
-/// Rows and media are delivered in archive order to private staging callbacks.
+/// One bounded plaintext chunk waiting for the archive parser to consume it.
+final class BackupArchivePlaintextChunk {
+  BackupArchivePlaintextChunk._(this.bytes);
+
+  final Uint8List bytes;
+  final Completer<void> _consumed = Completer<void>();
+}
+
+/// Backpressured, in-memory handoff from the authenticated decryptor to the
+/// archive parser. The producer cannot submit another chunk until this one is
+/// fully consumed, so a slow native method-channel write cannot queue an
+/// archive-sized plaintext stream in Dart memory.
+final class BackupArchivePlaintextChannel {
+  BackupArchivePlaintextChannel()
+    : _controller = StreamController<BackupArchivePlaintextChunk>(sync: true);
+
+  static const int maxChunkBytes = 64 * 1024;
+
+  final StreamController<BackupArchivePlaintextChunk> _controller;
+  final Completer<void> _consumerFailed = Completer<void>();
+  BackupArchivePlaintextChunk? _pending;
+  Object? _failure;
+  StackTrace? _failureStack;
+  bool _closed = false;
+
+  Stream<BackupArchivePlaintextChunk> get stream => _controller.stream;
+
+  Future<void> add(List<int> bytes) async {
+    _throwIfFailed();
+    if (_closed || _pending != null || bytes.isEmpty || bytes.length > maxChunkBytes) {
+      throw StateError('The plaintext archive channel is not writable.');
+    }
+    final chunk = BackupArchivePlaintextChunk._(
+      bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
+    );
+    _pending = chunk;
+    _controller.add(chunk);
+    await Future.any<void>([chunk._consumed.future, _consumerFailed.future]);
+    _throwIfFailed();
+  }
+
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    await _controller.close();
+  }
+
+  void _acknowledge(BackupArchivePlaintextChunk chunk) {
+    if (identical(_pending, chunk)) _pending = null;
+    if (!chunk._consumed.isCompleted) chunk._consumed.complete();
+  }
+
+  void _fail(Object error, StackTrace stackTrace) {
+    _failure ??= error;
+    _failureStack ??= stackTrace;
+    if (!_consumerFailed.isCompleted) _consumerFailed.complete();
+    final pending = _pending;
+    _pending = null;
+    if (pending != null && !pending._consumed.isCompleted) {
+      pending._consumed.completeError(error, stackTrace);
+    }
+  }
+
+  void _throwIfFailed() {
+    final error = _failure;
+    if (error != null) {
+      Error.throwWithStackTrace(error, _failureStack!);
+    }
+  }
+}
+
+/// Parses decrypted archive chunks and streams rows/media to private native
+/// staging callbacks. The caller supplies the digest/length from an earlier
+/// authenticated pass; this pass checks those values again while parsing.
 abstract final class BackupArchiveReader {
   static Future<BackupArchiveReadMetrics> stage({
-    required File archiveFile,
+    required BackupArchivePlaintextChannel plaintext,
     required int authenticatedArchiveBytes,
     required List<int> authenticatedArchiveSha256,
     required Future<int> Function(BackupArchiveImportHeader header) onHeader,
@@ -54,20 +128,14 @@ abstract final class BackupArchiveReader {
     required Future<void> Function(String blobId, int offset, Uint8List bytes)
     onMediaChunk,
   }) async {
-    if (authenticatedArchiveBytes < 48 ||
-        authenticatedArchiveBytes > BackupArchiveCodec.maxArchiveBytes ||
-        authenticatedArchiveSha256.length != 32) {
-      throw const FormatException('The backup archive bounds are invalid.');
-    }
-
-    final archiveLength = await archiveFile.length();
-    if (archiveLength != authenticatedArchiveBytes) {
-      throw const FormatException('The authenticated backup changed length.');
-    }
-
-    final file = await archiveFile.open(mode: FileMode.read);
-    final reader = _BackupArchiveFileReader(file, archiveLength);
+    final reader = _BackupArchiveStreamReader(plaintext, authenticatedArchiveBytes);
     try {
+      if (authenticatedArchiveBytes < 48 ||
+          authenticatedArchiveBytes > BackupArchiveCodec.maxArchiveBytes ||
+          authenticatedArchiveSha256.length != 32) {
+        throw const FormatException('The backup archive bounds are invalid.');
+      }
+
       final headerBytes = await reader.readExactly(48);
       for (var index = 0; index < BackupArchiveCodec._magic.length; index++) {
         if (headerBytes[index] != BackupArchiveCodec._magic[index]) {
@@ -90,7 +158,7 @@ abstract final class BackupArchiveReader {
 
       if (formatVersion != BackupArchiveCodec.currentFormatVersion ||
           headerLength != 48 ||
-          48 + recordBytes + mediaBytes != archiveLength ||
+          48 + recordBytes + mediaBytes != authenticatedArchiveBytes ||
           recordCount > BackupArchiveCodec.maxRecords ||
           mediaCount > BackupArchiveCodec.maxMediaCount) {
         throw const FormatException('This backup has invalid size metadata.');
@@ -113,7 +181,7 @@ abstract final class BackupArchiveReader {
         mediaCount: mediaCount,
         recordBytes: recordBytes,
         mediaBytes: mediaBytes,
-        archiveBytes: archiveLength,
+        archiveBytes: authenticatedArchiveBytes,
       );
       final maxMediaChunkBytes = await onHeader(header);
       if (maxMediaChunkBytes < 1 || maxMediaChunkBytes > 255 * 1024) {
@@ -248,14 +316,15 @@ abstract final class BackupArchiveReader {
         }
       }
 
-      if (mediaOffset != mediaBytes || reader.offset != archiveLength) {
+      if (mediaOffset != mediaBytes || reader.offset != authenticatedArchiveBytes) {
         throw const FormatException('This backup contains unreferenced data.');
       }
-      if (await archiveFile.length() != archiveLength ||
-          !BackupArchiveCodec._constantTimeBytesEqual(
-            reader.archiveDigest.close(),
-            authenticatedArchiveSha256,
-          )) {
+      await reader.requireEndOfStream();
+      final actualDigest = reader.archiveDigest.close();
+      if (!BackupArchiveCodec._constantTimeBytesEqual(
+        actualDigest,
+        authenticatedArchiveSha256,
+      )) {
         throw const FormatException(
           'The authenticated backup changed while it was being read.',
         );
@@ -265,25 +334,29 @@ abstract final class BackupArchiveReader {
         mediaCount: mediaCount,
         recordBytes: recordBytes,
         mediaBytes: mediaBytes,
-        archiveBytes: archiveLength,
+        archiveBytes: authenticatedArchiveBytes,
+        archiveSha256: actualDigest,
       );
-    } finally {
-      await file.close();
+    } on Object catch (error, stackTrace) {
+      plaintext._fail(error, stackTrace);
+      await reader.cancel();
+      rethrow;
     }
   }
 }
 
-final class _BackupArchiveFileReader {
-  _BackupArchiveFileReader(this.file, this.archiveBytes);
+final class _BackupArchiveStreamReader {
+  _BackupArchiveStreamReader(this.input, this.archiveBytes)
+    : _iterator = StreamIterator<BackupArchivePlaintextChunk>(input.stream);
 
-  static const int _bufferBytes = 64 * 1024;
-  final RandomAccessFile file;
+  final BackupArchivePlaintextChannel input;
   final int archiveBytes;
-  final Uint8List _buffer = Uint8List(_bufferBytes);
+  final StreamIterator<BackupArchivePlaintextChunk> _iterator;
   final _ArchiveSha256Stream archiveDigest = _ArchiveSha256Stream();
   int offset = 0;
-  int _bufferOffset = 0;
-  int _bufferLength = 0;
+  int _receivedBytes = 0;
+  BackupArchivePlaintextChunk? _chunk;
+  int _chunkOffset = 0;
   int? _recordStart;
   int? _recordEnd;
 
@@ -296,31 +369,70 @@ final class _BackupArchiveFileReader {
     if (recordEnd != null &&
         recordStart != null &&
         (length > recordEnd - offset ||
-            length >
-                BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
+            length > BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
       throw const FormatException('A backup record is too large.');
     }
 
     final result = Uint8List(length);
     var written = 0;
     while (written < length) {
-      if (_bufferOffset == _bufferLength) {
-        _bufferOffset = 0;
-        _bufferLength = await file.readInto(_buffer, 0, _buffer.length);
-        if (_bufferLength == 0) {
+      if (_chunk == null || _chunkOffset == _chunk!.bytes.length) {
+        if (_chunk != null) {
+          input._acknowledge(_chunk!);
+          _chunk = null;
+          _chunkOffset = 0;
+        }
+        if (!await _readNextChunk()) {
           throw const FormatException('This backup is truncated.');
         }
-        archiveDigest.add(Uint8List.sublistView(_buffer, 0, _bufferLength));
       }
+      final chunk = _chunk!;
       final amount = (length - written)
-          .clamp(0, _bufferLength - _bufferOffset)
+          .clamp(0, chunk.bytes.length - _chunkOffset)
           .toInt();
-      result.setRange(written, written + amount, _buffer, _bufferOffset);
+      result.setRange(
+        written,
+        written + amount,
+        chunk.bytes,
+        _chunkOffset,
+      );
       written += amount;
-      _bufferOffset += amount;
+      _chunkOffset += amount;
       offset += amount;
     }
     return result;
+  }
+
+  Future<void> requireEndOfStream() async {
+    if (_chunk != null && _chunkOffset < _chunk!.bytes.length) {
+      throw const FormatException('This backup contains unreferenced data.');
+    }
+    if (_chunk != null) {
+      input._acknowledge(_chunk!);
+      _chunk = null;
+      _chunkOffset = 0;
+    }
+    if (await _readNextChunk()) {
+      throw const FormatException('This backup contains unreferenced data.');
+    }
+    if (_receivedBytes != archiveBytes || offset != archiveBytes) {
+      throw const FormatException('This backup is truncated.');
+    }
+  }
+
+  Future<bool> _readNextChunk() async {
+    if (!await _iterator.moveNext()) return false;
+    final next = _iterator.current;
+    if (next.bytes.isEmpty ||
+        next.bytes.length > BackupArchivePlaintextChannel.maxChunkBytes ||
+        next.bytes.length > archiveBytes - _receivedBytes) {
+      throw const FormatException('The backup plaintext stream is invalid.');
+    }
+    _receivedBytes += next.bytes.length;
+    archiveDigest.add(next.bytes);
+    _chunk = next;
+    _chunkOffset = 0;
+    return true;
   }
 
   void beginRecord(int start, int recordsEnd, int maximumBytes) {
@@ -336,6 +448,13 @@ final class _BackupArchiveFileReader {
   void endRecord() {
     _recordStart = null;
     _recordEnd = null;
+  }
+
+  Future<void> cancel() async {
+    final chunk = _chunk;
+    if (chunk != null) input._acknowledge(chunk);
+    _chunk = null;
+    await _iterator.cancel();
   }
 
   Future<int> readByte() async => (await readExactly(1))[0];

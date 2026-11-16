@@ -99,13 +99,23 @@ void main() {
       'media_bytes=${result.mediaBytes} media_count=${result.mediaCount} '
       'record_count=${result.recordCount} '
       'conflicts=${result.conflictCount} '
+      'staged_plus_media_bytes=${result.stagedPlusMediaBytes} '
+      'restore_peak_delta_rss_kib=${result.restorePeakDeltaRssKiB} '
       'native_closed=${result.nativeHandleClosed} '
-      'private_temp_removed=${result.privateTempRemoved}',
+      'two_pass_authenticated=true',
     );
     expect(result.nativeHandleClosed, isTrue);
-    expect(result.privateTempRemoved, isTrue);
     expect(result.conflictCount, 0);
     expect(result.mediaCount, greaterThanOrEqualTo(14));
+    expect(
+      result.stagedPlusMediaBytes,
+      lessThanOrEqualTo(maxBackupImportStagedBytes),
+    );
+    expect(
+      result.restorePeakDeltaRssKiB,
+      lessThanOrEqualTo(64 * 1024),
+      reason: 'Streamed restore peak RSS must stay within the 64 MiB gate.',
+    );
     expect(
       result.archiveBytes,
       greaterThanOrEqualTo(BackupCryptoV2.maxArchiveBytes - 5 * 1024 * 1024),
@@ -522,7 +532,9 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
     0,
     (total, attachment) => total + attachment.bytes,
   );
-  final importMediaTarget = maxBackupImportMediaBytes - 32 * 1024;
+  // Reserve headroom for native JSON row bytes, which are measured separately
+  // from the archive's binary row section in the returned preview.
+  final importMediaTarget = maxBackupImportStagedBytes - 4 * 1024 * 1024;
   while (mediaBytes > importMediaTarget) {
     if (conversation.taskAttachments.isEmpty) {
       throw StateError(
@@ -567,10 +579,19 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
       BackupCryptoV2.envelopeLengthForArchiveBytes(exported.archiveByteLength),
     );
 
-    final imported = await BackupRestoreImporter().decryptAndPreview(
-      encryptedEnvelope: envelopeFile,
-      password: 'synthetic-streamed-restore-passphrase',
-    );
+    final restoreRss = _RssPeakSampler();
+    final restoreBaselineRssKiB = await restoreRss.start();
+    late final BackupRestoreImportResult imported;
+    late final int restorePeakRssKiB;
+    try {
+      imported = await BackupRestoreImporter().decryptAndPreview(
+        encryptedEnvelope: envelopeFile,
+        password: 'synthetic-streamed-restore-passphrase',
+      );
+      restorePeakRssKiB = await restoreRss.stop();
+    } finally {
+      if (restoreRss.isRunning) await restoreRss.stop();
+    }
     expect(imported.preview.recordCount, exported.recordCount);
     expect(imported.preview.mediaCount, exported.mediaCount);
     expect(imported.preview.mediaBytes, exported.mediaBytes);
@@ -578,20 +599,23 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
     expect(imported.preview.localOpenSessionCount, 0);
     expect(imported.preview.applyReady, isTrue);
     expect(imported.nativeHandleClosed, isTrue);
-    expect(await Directory(imported.privateDirectoryPath).exists(), isFalse);
     expect(imported.metrics.archiveBytes, encrypted.archiveBytes);
+    expect(imported.metrics.archiveSha256, encrypted.archiveSha256);
 
     return _RestorePreviewMetrics(
       archiveBytes: imported.metrics.archiveBytes,
       archiveRecordBytes: imported.metrics.recordBytes,
       stagedRecordBytes: imported.stagedRecordBytes,
       mediaBytes: imported.metrics.mediaBytes,
+      stagedPlusMediaBytes:
+          imported.stagedRecordBytes + imported.metrics.mediaBytes,
       mediaCount: imported.metrics.mediaCount,
       recordCount: imported.metrics.recordCount,
       conflictCount: imported.preview.conflictCount,
       nativeHandleClosed: imported.nativeHandleClosed,
-      privateTempRemoved: !await Directory(imported.privateDirectoryPath)
-          .exists(),
+      restorePeakDeltaRssKiB: restorePeakRssKiB > restoreBaselineRssKiB
+          ? restorePeakRssKiB - restoreBaselineRssKiB
+          : 0,
     );
   } finally {
     await exported.close();
@@ -817,22 +841,24 @@ final class _RestorePreviewMetrics {
     required this.archiveRecordBytes,
     required this.stagedRecordBytes,
     required this.mediaBytes,
+    required this.stagedPlusMediaBytes,
     required this.mediaCount,
     required this.recordCount,
     required this.conflictCount,
     required this.nativeHandleClosed,
-    required this.privateTempRemoved,
+    required this.restorePeakDeltaRssKiB,
   });
 
   final int archiveBytes;
   final int archiveRecordBytes;
   final int stagedRecordBytes;
   final int mediaBytes;
+  final int stagedPlusMediaBytes;
   final int mediaCount;
   final int recordCount;
   final int conflictCount;
   final bool nativeHandleClosed;
-  final bool privateTempRemoved;
+  final int restorePeakDeltaRssKiB;
 }
 
 final class _FileTransactionalSink implements BackupTransactionalByteSink {

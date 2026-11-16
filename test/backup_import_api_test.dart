@@ -214,6 +214,27 @@ void main() {
     },
   );
 
+  test('accepts the full native media ceiling before row reconciliation', () async {
+    respond = (call) async => {
+      'importId': 'import-64m',
+      'archiveFormatVersion': 1,
+      'schemaVersion': currentBackupImportSchemaVersion,
+      'maxPageBytes': 255 * 1024,
+      'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
+      'idleExpiryMillis': 60000,
+    };
+    final started = await BackupImportApi(channel: channel).begin(
+      archiveFormatVersion: 1,
+      schemaVersion: currentBackupImportSchemaVersion,
+      archiveDigest: 'f' * 64,
+      recordCount: 1,
+      mediaCount: 1,
+      mediaBytes: maxBackupImportMediaBytes,
+    );
+    expect(started.importId, 'import-64m');
+    expect(maxBackupImportMediaBytes, maxBackupImportStagedBytes);
+  });
+
   test('requires the current archive schema for native import', () async {
     final api = BackupImportApi(channel: channel);
     await expectLater(
@@ -260,6 +281,27 @@ void main() {
         conflictId: 'conflict-1',
         choice: 'KEEP_LOCAL',
       ),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('preview enforces the shared 64 MiB rows plus media budget', () async {
+    respond = (call) async {
+      if (call.method == 'finishBackupImport') {
+        return _preview(
+          importId: 'import-1',
+          previewToken: 'token-1',
+          recordCount: 1,
+          addedCount: 1,
+          mediaCount: 1,
+          mediaBytes: maxBackupImportStagedBytes - 1,
+          stagedRecordBytes: 2,
+        );
+      }
+      throw StateError('Unexpected backup import call.');
+    };
+    await expectLater(
+      BackupImportApi(channel: channel).finish('import-1'),
       throwsA(isA<FormatException>()),
     );
   });
@@ -381,15 +423,18 @@ Map<String, Object?> _preview({
   int addedCount = 0,
   int conflictCount = 0,
   int schemaVersion = currentBackupImportSchemaVersion,
+  int mediaCount = 0,
+  int mediaBytes = 0,
+  int stagedRecordBytes = 0,
 }) => {
   'importId': importId,
   'previewToken': previewToken,
   'schemaVersion': schemaVersion,
   'localStateVersion': 7,
   'recordCount': recordCount,
-  'mediaCount': 0,
-  'mediaBytes': 0,
-  'stagedRecordBytes': 0,
+  'mediaCount': mediaCount,
+  'mediaBytes': mediaBytes,
+  'stagedRecordBytes': stagedRecordBytes,
   'addedCount': addedCount,
   'unchangedCount': 0,
   'conflictCount': conflictCount,
