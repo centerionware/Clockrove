@@ -2,34 +2,46 @@
 
 ## Rule
 
-Keep every maintained source, test, and documentation file at or below 1,000 lines. Split by cohesive feature or topic before extending an oversized file. Existing exceptions below are tracked follow-up work; files actively changed by an open PR must wait until that PR lands.
+Keep every maintained source, test, and documentation file at or below 1,000 lines. Split by cohesive feature or topic before extending an oversized file. Do not split a file while an open PR is actively changing it. Track existing exceptions and a conflict-safe order here.
 
-## Evidence
+## Main baseline and split boundaries
 
-Counts are from read-only GitHub source archives inspected on 2026-11-16: verified `main` at `fcd6d7978aa42ab03abc6dfe0b352f5c27d682ea`, PR #65 at `414a052f9cbcf98754c6caffae02fb00e20ecbaf`, and PR #66 at `adbae1d904f2a8bcab6d5d5542450e1ba2b6fcbd`. Earlier requested PR snapshots `0ee5fda` and `a5a6e32` had already moved. Counts include tracked text files, count a final unterminated line, and exclude binary and generated build output.
+Counts below are tracked text lines from verified `main` at `fcd6d7978aa42ab03abc6dfe0b352f5c27d682ea`, read from GitHub on 2026-11-16. They include a final unterminated line and exclude binary and generated build output.
 
-| Maintained file | Main (`fcd6d79`) | PR #65 (`414a052`) | PR #66 (`adbae1d`) | Safe split boundary |
-| --- | ---: | ---: | ---: | --- |
-| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStore.kt` | 1,958 | 1,958 | 4,996 | Split import session staging/expiry, preview validation, conflict planning, revision merge, GPS deletion conflicts, transactional apply, and staged-file cleanup behind the existing store API. Keep apply on the same serialized SQLite transaction boundary. |
-| `android/app/src/test/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStoreTest.kt` | 1,400 | 1,410 | 4,748 | Split into staging/expiry, preview validation, revision merge, GPS/deletion conflicts, apply/rollback, and cleanup suites; move common DB/archive helpers to `BackupImportTestSupport`. |
-| `plan_status.md` | 4,420 | 4,435 | 4,428 | Keep current status and active milestone summary in the index; archive chronological validation entries at complete heading boundaries. This PR does so. |
-| `app_plan.md` | 3,444 | 3,458 | 3,445 | Keep the product-contract index concise; move start/context, product contract, CI references, milestones, release gates, and chronological evidence to linked topical files. This PR does so. |
-| `lib/backup/backup_archive.dart` | 1,416 | 1,404 | 1,416 | Split schema/model definitions, buffered codec and validation, streaming plan/encoder, and binary reader/writer/digest primitives under `lib/backup/archive/`. |
-| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/TimerRepository.kt` | 1,244 | 1,244 | 1,269 | Separate timer/session, location/geofence, board/conversation, business/billing, quote/invoice, and backup collaborators. Keep the repository as the serialized command coordinator and move schema lifecycle to a focused database component. |
-| `lib/tracking/history_screen.dart` | 1,265 | 1,265 | 1,265 | PR #69 moves the history list/GPS dialog, editor, audit, revisions, and formatter into `lib/tracking/history/`; its six-line public barrel preserves existing imports. |
-| `lib/business/job_screen.dart` | 1,112 | 1,112 | 1,112 | Move the board screen, task editor, column editor, and task-template picker into `lib/business/boards/`. |
+| Maintained file on main | Lines | Safe split boundary |
+| --- | ---: | --- |
+| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStore.kt` | 1,958 | Split import staging/expiry, preview validation, conflict planning, revision merge, GPS deletion conflicts, transactional apply, and staged-file cleanup behind the existing store API. Keep apply on the serialized SQLite transaction boundary. |
+| `android/app/src/test/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStoreTest.kt` | 1,400 | Split staging/expiry, preview validation, revision merge, GPS/deletion conflicts, apply/rollback, and cleanup suites; move common fixtures to focused test support. |
+| `plan_status.md` | 4,420 | Keep current status and active milestone summary in the index; archive chronological validation entries at complete heading boundaries. This PR does so. |
+| `app_plan.md` | 3,444 | Keep the product-contract index concise; move start/context, product contract, CI references, milestones, release gates, and chronological evidence to linked topical files. This PR does so. |
+| `lib/backup/backup_archive.dart` | 1,416 | Split schema/models, buffered codec/validation, streaming plan/encoder, and binary reader/writer/digest primitives while preserving archive compatibility. |
+| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/TimerRepository.kt` | 1,244 | Separate timer/session, location/geofence, board/conversation, business/billing, quote/invoice, and backup collaborators. Keep the repository as serialized command coordinator and move schema lifecycle to a focused database component. |
+| `lib/tracking/history_screen.dart` | 1,265 | PR #69 extracts list/GPS dialog, editor, audit, revisions, and formatter into `lib/tracking/history/`; preserve the public barrel. |
+| `lib/business/job_screen.dart` | 1,112 | PR #68 extracts board UI into `lib/business/board/`; preserve the existing screen import through an export barrel. |
 
-All three audited snapshots contain these eight files over 1,000 lines. The docs-only PR reduces the two planning files below the limit; six source/test exceptions remain in the audited base. PR #68 moves the board implementation: at current head `4f0bef36d7d2039cc92b7061b704c62661699653`, `job_screen.dart` is a one-line compatibility export and `board_view.dart` is 922 lines. Its previous head failed the quote device journey because the app did not expose `Move task`; the current Validate run `43786829951` is in progress, so do not merge until it passes. PR #69 independently splits history; its exact head `19ba36c44c78a38f2efd413cbc7fb48bea4a7299` passed full Validate run `43786465867`. Its compatibility entrypoint is 6 lines, and the largest extracted screen is 599 lines. Hold its merge until #68 resolves; after #68 lands, refresh #69 against the new base and recheck Actions before merging.
+## Current open-PR snapshots
+
+The following line counts were checked from exact GitHub heads on 2026-11-16. All listed PRs remain open; none of #65, #66, #68, or #69 has merged. GitHub currently reports each PR mergeable against `main`, which does not mean they can be combined with each other.
+
+- PR #65, head `056156b8060567d6ac7dcdd44e58c874a9c8ef0a`: over-limit `BackupImportStore.kt` (1,958), `BackupImportStoreTest.kt` (1,410), `app_plan.md` (3,462), `plan_status.md` (4,439), `TimerRepository.kt` (1,244), `history_screen.dart` (1,265), and `job_screen.dart` (1,112). The archive split reduced `backup_archive.dart` to a 10-line compatibility entrypoint.
+- PR #66, head `05db4127a864a39c391fd699fd88bfebd14627cb`: over-limit `app_plan.md` (3,447), `plan_status.md` (4,428), `backup_archive.dart` (1,416), `history_screen.dart` (1,265), and `job_screen.dart` (1,112). `BackupImportStore.kt` is 906 lines, `TimerRepository.kt` is 932, and the old `BackupImportStoreTest.kt` is split into focused test files.
+- PR #67, head `6f21fd4e109d7e2eb18baa5ede25b7b40e3bab94`: all plan/status/audit documents are at or below 1,000 lines. Six source/test exceptions inherited from `main` remain: `BackupImportStore.kt`, `BackupImportStoreTest.kt`, `backup_archive.dart`, `TimerRepository.kt`, `history_screen.dart`, and `job_screen.dart`.
+- PR #68, head `4f0bef36d7d2039cc92b7061b704c62661699653`: the board split is correctly located at `lib/business/board/board_view.dart` (922 lines), with `job_screen.dart` at 1 line. The seven other over-limit files are the baseline files except `job_screen.dart`.
+- PR #69, head `19ba36c44c78a38f2efd413cbc7fb48bea4a7299`: `history_screen.dart` is a 6-line public barrel; extracted files are at most 599 lines. The six other over-limit files are the baseline files except `history_screen.dart`.
+
+## Integration and validation evidence
+
+- PR #67 conflicts with #65 and #66 in `app_plan.md` and `plan_status.md`; its current mergeability only describes the base `main`. Keep #67 draft until the backup PRs' plan changes are reconciled with this split, then refresh the branch and rerun Actions on its exact head.
+- PRs #65 and #66 also conflict with each other: `BackupImportStoreTest.kt` is modified by #65 and deleted by #66, and `backup_archive.dart`, `app_plan.md`, and `plan_status.md` have content conflicts. Validate a deliberate integration of both behavior branches before merging either. Preserve archive compatibility and the single serialized SQLite apply/write boundary.
+- A read-only `git merge-tree` check found no conflicts between #67 and #68 or #69, nor between #68 and #69. The board and history source splits do not update plan files. #69 does not need plan-evidence changes because of #68's split; this audit now records both actual paths and line counts.
+- PR #65 exact-head Actions run [43790124516](https://github.com/centerionware/Clockrove/actions/runs/43790124516) is in progress. PR #66 exact-head run [43789836359](https://github.com/centerionware/Clockrove/actions/runs/43789836359) failed during Android Kotlin compilation in `BackupImportStore.kt`; Flutter behavior tests passed, while Android build and later native/device gates did not run. Fix and rerun before considering it validated.
+- PR #68 exact-head run [43786829951](https://github.com/centerionware/Clockrove/actions/runs/43786829951) is in progress after the earlier head failed because the quote journey could not find “Move task”. PR #69 exact-head run [43786465867](https://github.com/centerionware/Clockrove/actions/runs/43786465867) passed full Validate. Hold #69 until #68 resolves, then refresh #69 against the resulting base and rerun Actions.
+- The pre-refresh PR #67 head `6f21fd4` failed Validate run [43788953889](https://github.com/centerionware/Clockrove/actions/runs/43788953889) during the API-24 backup crypto benchmark: APK installation timed out on both attempts, so no benchmark test ran. Earlier steps and the other reported device journeys passed, but this is not a full Validate pass. Any documentation update creates a new head; only a completed run on that new exact head counts.
 
 ## Safe order
 
-1. Finish the behavior changes in PRs #65 and #66 first, but do not merge either while a maintained file in its change set remains over 1,000 lines. They currently share `BackupExportStore.kt`, its test, `BackupImportStoreTest.kt`, `app_plan.md`, `docs/BACKUP_FORMAT.md`, `lib/backup/backup_archive.dart`, `plan_status.md`, and `test/backup_archive_test.dart`.
-2. Before merging the backup work, split the oversized files on their owning branches or on a validated integration branch stacked on both heads. Cover `BackupImportStore.kt`, the shared `BackupImportStoreTest.kt`, `backup_archive.dart`, and `TimerRepository.kt`; keep each new file at or below 1,000 lines. Preserve the stable import API, portable archive compatibility, and one serialized SQLite write/apply boundary. Run Actions against the exact integration head before merging.
-3. PR #68 moves the board implementation to `lib/business/board/board_view.dart` (922 lines) and leaves `job_screen.dart` as a one-line compatibility export. Its latest exact-head Actions run is pending; the preceding head failed the quote device journey because `Move task` was not exposed. Merge only after the behavior correction and a green exact-head run.
-4. PR #69 has split `history_screen.dart` independently from `main` into `lib/tracking/history/`, keeping the public export entrypoint. Exact-head run `43786465867` passed. Hold its merge until #68 resolves, then refresh its base and recheck Actions before merging; it does not overlap the backup branches.
-5. Re-audit every maintained file after those changes and split any remaining over-limit source or test files before merging the affected work. This PR itself keeps all plan, status, and audit documents within the limit.
-
-
-## Import test grouping detail
-
-At PR #66's audited head, the 4,748-line test file groups naturally as follows: expiry/media limits (roughly lines 71–277); portable-row and revision validation (278–762); revision ancestry, merge and aggregate conflict cases (763–2,032); GPS range/tombstone behavior (2,033–2,525); staging, uniqueness, overlap and deletion-fence cases (2,526–3,549); idempotency and transactional apply/rollback (3,550–4,232); expiry cleanup (4,233–4,309); shared fixture and assertion helpers (4,310 onward). Reconfirm these boundaries after W2/W3 merge because both PRs edit the test file.
+1. Finish and validate the behavior in backup PRs #65 and #66. Resolve their code and planning-file conflicts on a deliberately stacked integration branch or owning branches.
+2. Keep every maintained file changed by the integrated backup work at or below 1,000 lines. Current heads already split some files, but #65 still has the oversized import store/test and TimerRepository, while #66 still has the oversized archive file; both retain oversized plan files until reconciled with #67.
+3. Refresh #67's plan split from the integrated backup evidence and run Actions on the exact integrated head. Do not merge it against stale main content.
+4. Resolve #68's task-move behavior and green exact-head run. Then rebase/refresh #69 onto the new main and rerun its complete validation before merging.
+5. Re-audit all maintained source, tests, and docs after integration; split remaining over-limit files on their owning changes before those changes merge.
