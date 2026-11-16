@@ -199,6 +199,11 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 ),
               ),
             ),
+            TextButton.icon(
+              onPressed: eligible ? () => _open() : null,
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('View original PDF'),
+            ),
             const SizedBox(height: 16),
             if (correctable)
               ExpansionTile(
@@ -295,11 +300,6 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                     : null,
                 child: const Text('Open original invoice'),
               ),
-            TextButton.icon(
-              onPressed: eligible ? () => _open() : null,
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('View original PDF'),
-            ),
             if (data.accountingEmail.isEmpty)
               const Text(
                 'No accounting copy address is configured. Add a company or accounts receivable email in Settings.',
