@@ -381,17 +381,35 @@ clockrove_with_nonstreaming_adb() (
 set -euo pipefail
 real_adb="${CLOCKROVE_REAL_ADB:?}"
 args=("$@")
-for ((index = 0; index < ${#args[@]}; index++)); do
-  if [[ "${args[index]}" != install ]]; then
-    continue
-  fi
-  for ((option_index = index + 1; option_index < ${#args[@]}; option_index++)); do
+command_index=0
+while (( command_index < ${#args[@]} )); do
+  case "${args[command_index]}" in
+    -s|-H|-P|-L|-t|--one-device)
+      command_index=$((command_index + 2))
+      ;;
+    -d|-e|-a)
+      command_index=$((command_index + 1))
+      ;;
+    --)
+      command_index=$((command_index + 1))
+      break
+      ;;
+    -*)
+      command_index=$((command_index + 1))
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+if (( command_index < ${#args[@]} )) && [[ "${args[command_index]}" == install ]]; then
+  for ((option_index = command_index + 1; option_index < ${#args[@]}; option_index++)); do
     if [[ "${args[option_index]}" == --no-streaming ]]; then
       exec "$real_adb" "${args[@]}"
     fi
   done
-  exec "$real_adb" "${args[@]:0:index+1}" --no-streaming "${args[@]:index+1}"
-done
+  exec "$real_adb" "${args[@]:0:command_index+1}" --no-streaming "${args[@]:command_index+1}"
+fi
 exec "$real_adb" "${args[@]}"
 CLOCKROVE_ADB_WRAPPER
   chmod --reference="$sdk_adb" "$wrapper_path" || {

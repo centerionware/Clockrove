@@ -323,6 +323,7 @@ case "$FLUTTER_TEST_MODE:$count" in
     ;;
   verify-no-streaming:*)
     "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 get-state
+    "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pm install synthetic.apk
     "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 install -t -r synthetic.apk
     echo 'BACKUP_CRYPTO_BENCHMARK encrypt_ms=1 decrypt_ms=2 envelope_bytes=3'
     exit 0
@@ -791,6 +792,8 @@ clockrove_run_flutter_integration_test 24 backup-crypto-benchmark \
 grep -F -- '-s emulator-5554 install --no-streaming -t -r synthetic.apk' \
   "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
 grep -Fx -- '-s emulator-5554 get-state' "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
+grep -Fx -- '-s emulator-5554 shell pm install synthetic.apk' \
+  "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
 [[ "$(sha256sum "$sdk_adb_path")" == "$sdk_adb_checksum" ]]
 [[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*' -print -quit)" ]]
 echo 'Verified Flutter’s absolute SDK adb install uses --no-streaming and the original SDK adb is restored.'
