@@ -1517,7 +1517,6 @@ internal class BackupImportStore(
 
     private fun appliedGraphInvalid(): Nothing =
         throw Failure("APPLY_FAILED", "The backup could not be applied atomically.")
-    }
 
     @Synchronized
     fun readConflictPage(
