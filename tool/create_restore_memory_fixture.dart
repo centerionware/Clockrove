@@ -75,42 +75,42 @@ List<int> _exactNoteLengths() {
 }
 
 List<BackupArchiveStreamRow> _fixtureRows(List<int> noteLengths) => [
-      ...List<BackupArchiveStreamRow>.generate(
-      noteLengths.length,
-      (index) => BackupArchiveStreamRow(
-        table: 'customers',
-        values: {
-          'id': 'restore-benchmark-${index.toString().padLeft(4, '0')}',
-          'name': 'Synthetic customer $index',
-          'email': '',
-          'phone': '',
-          'address': '',
-          'notes': 'x' * noteLengths[index],
-          'archived': 0,
-        },
-        blobs: const [],
+  ...List<BackupArchiveStreamRow>.generate(
+    noteLengths.length,
+    (index) => BackupArchiveStreamRow(
+      table: 'customers',
+      values: {
+        'id': 'restore-benchmark-${index.toString().padLeft(4, '0')}',
+        'name': 'Synthetic customer $index',
+        'email': '',
+        'phone': '',
+        'address': '',
+        'notes': 'x' * noteLengths[index],
+        'archived': 0,
+      },
+      blobs: const [],
+    ),
+    growable: false,
+  ),
+  BackupArchiveStreamRow(
+    table: 'logo_assets',
+    values: {
+      'id': 'restore-benchmark-logo',
+      'mime': 'image/png',
+      'width': 1,
+      'height': 1,
+      'content_hash': 'synthetic-restore-benchmark',
+      'bytes': null,
+    },
+    blobs: const [
+      BackupArchiveBlobSource(
+        id: _mediaId,
+        column: 'bytes',
+        sizeBytes: _mediaBytes,
       ),
-      growable: false,
-      ),
-      BackupArchiveStreamRow(
-        table: 'logo_assets',
-        values: {
-          'id': 'restore-benchmark-logo',
-          'mime': 'image/png',
-          'width': 1,
-          'height': 1,
-          'content_hash': 'synthetic-restore-benchmark',
-          'bytes': null,
-        },
-        blobs: const [
-          BackupArchiveBlobSource(
-            id: _mediaId,
-            column: 'bytes',
-            sizeBytes: _mediaBytes,
-          ),
-        ],
-      ),
-    ];
+    ],
+  ),
+];
 
 Stream<Uint8List> _syntheticMedia(String id) async* {
   if (id != _mediaId) throw StateError('The fixture requested unknown media.');

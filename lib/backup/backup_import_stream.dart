@@ -452,9 +452,8 @@ final class _BackupArchiveImportParser {
       final table = reader.readShortString(
         maximumBytes: BackupArchiveCodec.maxRecordBytes,
       );
-      if (!BackupArchiveCodec.portableTablesForSchema(
-        _header.schemaVersion,
-      ).contains(table)) {
+      if (!BackupArchiveCodec.portableTablesForSchema(_header.schemaVersion)
+          .contains(table)) {
         throw const FormatException(
           'This backup contains an unsupported table.',
         );

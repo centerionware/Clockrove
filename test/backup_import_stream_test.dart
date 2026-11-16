@@ -21,9 +21,11 @@ void main() {
     expect(header.recordCount, 0);
     expect(header.mediaCount, 0);
 
-    for (var schemaVersion = 1;
-        schemaVersion <= BackupArchiveCodec.latestSchemaVersion;
-        schemaVersion++) {
+    for (
+      var schemaVersion = 1;
+      schemaVersion <= BackupArchiveCodec.latestSchemaVersion;
+      schemaVersion++
+    ) {
       final historical = BackupArchiveImportHeader.parse(
         _header(schemaVersion: schemaVersion),
         authenticatedArchiveBytes: 48,

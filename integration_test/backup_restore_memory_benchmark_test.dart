@@ -37,153 +37,150 @@ void main() {
       late List<int> expectedDigest;
       late int maximumParserBufferBytes;
       try {
-          final firstPass = BackupArchiveHeaderProbe();
-          final authenticated = await BackupCryptoV2.decrypt(
-            password: _password,
-            envelope: envelopeFile.openRead(),
-            privateArchive: firstPass,
-          );
-          expect(
-            authenticated.archiveBytes,
-            BackupArchiveCodec.maxArchiveBytes,
-          );
-          expect(firstPass.archiveBytes, BackupArchiveCodec.maxArchiveBytes);
-          importHeader = BackupArchiveImportHeader.parse(
-            firstPass.headerBytes,
-            authenticatedArchiveBytes: authenticated.archiveBytes,
-          );
-          expectedDigest = authenticated.archiveSha256;
-          expect(importHeader.recordCount, _rowCount);
-          expect(importHeader.mediaCount, 1);
-          expect(importHeader.mediaBytes, _mediaBytes);
+        final firstPass = BackupArchiveHeaderProbe();
+        final authenticated = await BackupCryptoV2.decrypt(
+          password: _password,
+          envelope: envelopeFile.openRead(),
+          privateArchive: firstPass,
+        );
+        expect(authenticated.archiveBytes, BackupArchiveCodec.maxArchiveBytes);
+        expect(firstPass.archiveBytes, BackupArchiveCodec.maxArchiveBytes);
+        importHeader = BackupArchiveImportHeader.parse(
+          firstPass.headerBytes,
+          authenticatedArchiveBytes: authenticated.archiveBytes,
+        );
+        expectedDigest = authenticated.archiveSha256;
+        expect(importHeader.recordCount, _rowCount);
+        expect(importHeader.mediaCount, 1);
+        expect(importHeader.mediaBytes, _mediaBytes);
 
-          final started = await api.begin(
-            archiveFormatVersion: importHeader.formatVersion,
-            schemaVersion: importHeader.schemaVersion,
-            archiveDigest: _hex(authenticated.archiveSha256),
-            recordCount: importHeader.recordCount,
-            mediaCount: importHeader.mediaCount,
-            mediaBytes: importHeader.mediaBytes,
-          );
-          final sink = BackupArchiveImportSink(
-            api: api,
-            importId: started.importId,
-            header: importHeader,
-            expectedArchiveSha256: authenticated.archiveSha256,
-          );
-          final restored = await BackupCryptoV2.decrypt(
-            password: _password,
-            envelope: envelopeFile.openRead(),
-            privateArchive: sink,
-          );
-          expect(restored.archiveBytes, authenticated.archiveBytes);
-          expect(restored.archiveSha256, authenticated.archiveSha256);
-          expect(sink.rowsStaged, _rowCount);
-          expect(
-            sink.maximumBufferedArchiveBytes,
-            lessThanOrEqualTo(
-              BackupArchiveCodec.maxRecordBytes + BackupCryptoV2.chunkBytes,
-            ),
-          );
-          maximumParserBufferBytes = sink.maximumBufferedArchiveBytes;
+        final started = await api.begin(
+          archiveFormatVersion: importHeader.formatVersion,
+          schemaVersion: importHeader.schemaVersion,
+          archiveDigest: _hex(authenticated.archiveSha256),
+          recordCount: importHeader.recordCount,
+          mediaCount: importHeader.mediaCount,
+          mediaBytes: importHeader.mediaBytes,
+        );
+        final sink = BackupArchiveImportSink(
+          api: api,
+          importId: started.importId,
+          header: importHeader,
+          expectedArchiveSha256: authenticated.archiveSha256,
+        );
+        final restored = await BackupCryptoV2.decrypt(
+          password: _password,
+          envelope: envelopeFile.openRead(),
+          privateArchive: sink,
+        );
+        expect(restored.archiveBytes, authenticated.archiveBytes);
+        expect(restored.archiveSha256, authenticated.archiveSha256);
+        expect(sink.rowsStaged, _rowCount);
+        expect(
+          sink.maximumBufferedArchiveBytes,
+          lessThanOrEqualTo(
+            BackupArchiveCodec.maxRecordBytes + BackupCryptoV2.chunkBytes,
+          ),
+        );
+        maximumParserBufferBytes = sink.maximumBufferedArchiveBytes;
 
-          final preview = await sink.seal();
-          expect(preview.recordCount, _rowCount);
-          expect(preview.addedCount, _rowCount);
-          expect(preview.conflictCount, 0);
-          expect(preview.applyReady, isTrue);
-          final applied = await api.apply(
-            importId: started.importId,
-            previewToken: preview.previewToken,
-            expectedLocalStateVersion: preview.localStateVersion,
-          );
-          expect(applied.insertedCount, _rowCount);
-          await sink.discard();
-          expect(await api.close(started.importId), isFalse);
+        final preview = await sink.seal();
+        expect(preview.recordCount, _rowCount);
+        expect(preview.addedCount, _rowCount);
+        expect(preview.conflictCount, 0);
+        expect(preview.applyReady, isTrue);
+        final applied = await api.apply(
+          importId: started.importId,
+          previewToken: preview.previewToken,
+          expectedLocalStateVersion: preview.localStateVersion,
+        );
+        expect(applied.insertedCount, _rowCount);
+        await sink.discard();
+        expect(await api.close(started.importId), isFalse);
       } finally {
         await rss.stop();
         restoreClock.stop();
       }
 
-        expect(rss.sampleCount, greaterThanOrEqualTo(2));
-        expect(
-          rss.peakDeltaKiB,
-          lessThanOrEqualTo(64 * 1024),
-          reason: 'The complete authenticated restore must stay under 64 MiB.',
-        );
-        expect(
-          rss.peakDeltaHwmKiB,
-          lessThanOrEqualTo(64 * 1024),
-          reason: 'Restore high-water RSS must stay under 64 MiB.',
-        );
-        // ignore: avoid_print
-        print(
-          'RESTORE_MEMORY_BENCHMARK '
-          'archive_bytes=${BackupArchiveCodec.maxArchiveBytes} '
-          'envelope_bytes=${BackupCryptoV2.maxEnvelopeBytes} '
-          'record_count=$_rowCount samples=${rss.sampleCount} '
-          'max_parser_buffer_bytes=$maximumParserBufferBytes '
-          'elapsed_ms=${restoreClock.elapsedMilliseconds} '
-          'sample_period_ms=20 baseline_rss_kib=${rss.baselineKiB} '
-          'baseline_hwm_kib=${rss.baselineHwmKiB} '
-          'peak_rss_kib=${rss.peakKiB} '
-          'peak_delta_rss_kib=${rss.peakDeltaKiB} '
-          'after_hwm_kib=${rss.afterHwmKiB} '
-          'peak_delta_hwm_kib=${rss.peakDeltaHwmKiB}',
-        );
+      expect(rss.sampleCount, greaterThanOrEqualTo(2));
+      expect(
+        rss.peakDeltaKiB,
+        lessThanOrEqualTo(64 * 1024),
+        reason: 'The complete authenticated restore must stay under 64 MiB.',
+      );
+      expect(
+        rss.peakDeltaHwmKiB,
+        lessThanOrEqualTo(64 * 1024),
+        reason: 'Restore high-water RSS must stay under 64 MiB.',
+      );
+      // ignore: avoid_print
+      print(
+        'RESTORE_MEMORY_BENCHMARK '
+        'archive_bytes=${BackupArchiveCodec.maxArchiveBytes} '
+        'envelope_bytes=${BackupCryptoV2.maxEnvelopeBytes} '
+        'record_count=$_rowCount samples=${rss.sampleCount} '
+        'max_parser_buffer_bytes=$maximumParserBufferBytes '
+        'elapsed_ms=${restoreClock.elapsedMilliseconds} '
+        'sample_period_ms=20 baseline_rss_kib=${rss.baselineKiB} '
+        'baseline_hwm_kib=${rss.baselineHwmKiB} '
+        'peak_rss_kib=${rss.peakKiB} '
+        'peak_delta_rss_kib=${rss.peakDeltaKiB} '
+        'after_hwm_kib=${rss.afterHwmKiB} '
+        'peak_delta_hwm_kib=${rss.peakDeltaHwmKiB}',
+      );
 
-        final cancelledStart = await api.begin(
-          archiveFormatVersion: importHeader.formatVersion,
-          schemaVersion: importHeader.schemaVersion,
-          archiveDigest: _hex(expectedDigest),
-          recordCount: importHeader.recordCount,
-          mediaCount: importHeader.mediaCount,
-          mediaBytes: importHeader.mediaBytes,
-        );
-        final cancelledSink = BackupArchiveImportSink(
-          api: api,
-          importId: cancelledStart.importId,
-          header: importHeader,
-          expectedArchiveSha256: expectedDigest,
-        );
-        final cancellation = BackupCryptoCancellationToken()..cancel();
-        await expectLater(
-          BackupCryptoV2.decrypt(
-            password: _password,
-            envelope: envelopeFile.openRead(),
-            privateArchive: cancelledSink,
-            cancellationToken: cancellation,
-          ),
-          throwsA(isA<BackupCryptoV2CancelledException>()),
-        );
-        expect(await api.close(cancelledStart.importId), isFalse);
+      final cancelledStart = await api.begin(
+        archiveFormatVersion: importHeader.formatVersion,
+        schemaVersion: importHeader.schemaVersion,
+        archiveDigest: _hex(expectedDigest),
+        recordCount: importHeader.recordCount,
+        mediaCount: importHeader.mediaCount,
+        mediaBytes: importHeader.mediaBytes,
+      );
+      final cancelledSink = BackupArchiveImportSink(
+        api: api,
+        importId: cancelledStart.importId,
+        header: importHeader,
+        expectedArchiveSha256: expectedDigest,
+      );
+      final cancellation = BackupCryptoCancellationToken()..cancel();
+      await expectLater(
+        BackupCryptoV2.decrypt(
+          password: _password,
+          envelope: envelopeFile.openRead(),
+          privateArchive: cancelledSink,
+          cancellationToken: cancellation,
+        ),
+        throwsA(isA<BackupCryptoV2CancelledException>()),
+      );
+      expect(await api.close(cancelledStart.importId), isFalse);
 
-        final corruptedStart = await api.begin(
-          archiveFormatVersion: importHeader.formatVersion,
-          schemaVersion: importHeader.schemaVersion,
-          archiveDigest: _hex(expectedDigest),
-          recordCount: importHeader.recordCount,
-          mediaCount: importHeader.mediaCount,
-          mediaBytes: importHeader.mediaBytes,
-        );
-        final corruptedSink = BackupArchiveImportSink(
-          api: api,
-          importId: corruptedStart.importId,
-          header: importHeader,
-          expectedArchiveSha256: expectedDigest,
-        );
-        await expectLater(
-          BackupCryptoV2.decrypt(
-            password: _password,
-            envelope: _corruptLastByte(
-              envelopeFile.openRead(),
-              expectedLength: envelopeBytes,
-            ),
-            privateArchive: corruptedSink,
+      final corruptedStart = await api.begin(
+        archiveFormatVersion: importHeader.formatVersion,
+        schemaVersion: importHeader.schemaVersion,
+        archiveDigest: _hex(expectedDigest),
+        recordCount: importHeader.recordCount,
+        mediaCount: importHeader.mediaCount,
+        mediaBytes: importHeader.mediaBytes,
+      );
+      final corruptedSink = BackupArchiveImportSink(
+        api: api,
+        importId: corruptedStart.importId,
+        header: importHeader,
+        expectedArchiveSha256: expectedDigest,
+      );
+      await expectLater(
+        BackupCryptoV2.decrypt(
+          password: _password,
+          envelope: _corruptLastByte(
+            envelopeFile.openRead(),
+            expectedLength: envelopeBytes,
           ),
-          throwsA(isA<FormatException>()),
-        );
-        expect(await api.close(corruptedStart.importId), isFalse);
+          privateArchive: corruptedSink,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(await api.close(corruptedStart.importId), isFalse);
 
       return (
         archiveBytes: BackupArchiveCodec.maxArchiveBytes,
@@ -256,13 +253,10 @@ final class _RssSampler {
   int get baselineHwmKiB => _baselineHwmKiB;
   int get peakKiB => _peakKiB;
   int get afterHwmKiB => _afterHwmKiB;
-  int get peakDeltaHwmKiB => _afterHwmKiB > _baselineHwmKiB
-      ? _afterHwmKiB - _baselineHwmKiB
-      : 0;
+  int get peakDeltaHwmKiB =>
+      _afterHwmKiB > _baselineHwmKiB ? _afterHwmKiB - _baselineHwmKiB : 0;
   int get sampleCount => _sampleCount;
-  int get peakDeltaKiB => _peakKiB > _baselineKiB
-      ? _peakKiB - _baselineKiB
-      : 0;
+  int get peakDeltaKiB => _peakKiB > _baselineKiB ? _peakKiB - _baselineKiB : 0;
 
   Future<void> start() async {
     final baseline = await _processMemoryKiB();
