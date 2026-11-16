@@ -61,6 +61,56 @@ class BackupImportStoreLifecycleTest : BackupImportStoreTestBase() {
     }
 
     @Test
+    fun closingPopulatedImportRemovesStagedRowsAndMediaFiles() {
+        val blobId = "a".repeat(43)
+        val record = blobRecord(
+            "logo_assets",
+            mapOf(
+                "id" to "synthetic-logo-cleanup",
+                "mime" to "image/png",
+                "width" to 1,
+                "height" to 1,
+                "content_hash" to "synthetic-hash",
+            ),
+            "bytes",
+            4,
+        )
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "b".repeat(64),
+            1,
+            1,
+            4,
+        )
+        val directory = File(app.noBackupFilesDir, "clockrove-backup-imports")
+        val stageDb = File(directory, "clockrove-import-${started.importId}.db")
+        val media = File(directory, "clockrove-import-${started.importId}-media.bin")
+
+        assertEquals(
+            1L,
+            importStore.appendPage(
+                started.importId,
+                0,
+                listOf(record),
+                encodedAppendRequest(started.importId, 0, listOf(record)),
+            ),
+        )
+        val bytes = byteArrayOf(11, 22, 33, 44)
+        assertEquals(4L, importStore.writeBlob(started.importId, blobId, 0, bytes, 128))
+        assertTrue(stageDb.exists())
+        assertTrue(media.exists())
+        assertArrayEquals(bytes, media.readBytes())
+
+        assertTrue(importStore.close(started.importId))
+
+        assertFalse(stageDb.exists())
+        assertFalse(media.exists())
+        assertTrue(directory.listFiles().orEmpty().none { it.name.startsWith("clockrove-import-") })
+    }
+
+    @Test
     fun failedExpirySchedulingDoesNotLeaveAStaleActiveImport() {
         val failedScheduler = BackupScheduler { _, _ ->
             throw IllegalStateException("synthetic scheduler failure")

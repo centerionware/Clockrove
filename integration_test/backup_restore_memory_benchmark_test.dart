@@ -79,8 +79,7 @@ void main() {
             expect(
               sink.maximumBufferedArchiveBytes,
               lessThanOrEqualTo(
-                BackupArchiveCodec.maxRecordBytes +
-                    BackupCryptoV2.chunkBytes,
+                BackupArchiveCodec.maxRecordBytes + BackupCryptoV2.chunkBytes,
               ),
             );
 
@@ -96,7 +95,7 @@ void main() {
             );
             expect(applied.insertedCount, _rowCount);
             return sink.maximumBufferedArchiveBytes;
-          ),
+          },
         );
         expect(await api.close(started.importId), isFalse);
       } finally {
@@ -273,7 +272,7 @@ Stream<List<int>> _cancelBeforeManifest(
     }
     final remainingBeforeManifest = manifestOffset - bytesRead;
     if (bytes.length > remainingBeforeManifest) {
-      yield Uint8List.sublistView(bytes, 0, remainingBeforeManifest);
+      yield bytes.take(remainingBeforeManifest).toList();
       cancellationToken.cancel();
       return;
     }

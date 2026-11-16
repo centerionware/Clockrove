@@ -101,7 +101,7 @@ void main() {
     final encryptedFile = _MemorySink();
     await BackupCryptoV2.encrypt(
       password: 'synthetic-digest-mismatch-passphrase',
-      archive: Stream<List<int>>.value(archive),
+      archive: _chunks(archive),
       destination: encryptedFile,
     );
 
@@ -109,7 +109,7 @@ void main() {
       final probe = BackupArchiveHeaderProbe();
       final firstPass = await BackupCryptoV2.decrypt(
         password: 'synthetic-digest-mismatch-passphrase',
-        envelope: Stream<List<int>>.value(encryptedFile.bytes),
+        envelope: _chunks(encryptedFile.bytes),
         privateArchive: probe,
       );
       final header = BackupArchiveImportHeader.parse(
@@ -135,7 +135,7 @@ void main() {
       await expectLater(
         BackupCryptoV2.decrypt(
           password: 'synthetic-digest-mismatch-passphrase',
-          envelope: Stream<List<int>>.value(encryptedFile.bytes),
+          envelope: _chunks(encryptedFile.bytes),
           privateArchive: sink,
         ),
         throwsA(isA<FormatException>()),
@@ -150,6 +150,15 @@ void main() {
       messenger.setMockMethodCallHandler(channel, null);
     }
   });
+}
+
+Stream<List<int>> _chunks(Uint8List bytes) async* {
+  var offset = 0;
+  while (offset < bytes.length) {
+    final end = offset + BackupCryptoV2.chunkBytes;
+    yield bytes.sublist(offset, end > bytes.length ? bytes.length : end);
+    offset = end;
+  }
 }
 
 Uint8List _header({required int schemaVersion}) {
