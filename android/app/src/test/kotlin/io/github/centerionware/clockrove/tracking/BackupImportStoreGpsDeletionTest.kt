@@ -21,6 +21,7 @@ import org.robolectric.annotation.Config
 class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
     @Test
     fun stripsExportOnlySha256BeforeNativeImportStaging() {
+        val validBlobId = "sha256-strip-blob-" + "0".repeat(25)
         val exportRecord = mapOf<String, Any?>(
             "type" to "row",
             "table" to "logo_assets",
@@ -32,7 +33,7 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
                 "content_hash" to "synthetic-content-hash",
             ),
             "blobs" to listOf(mapOf(
-                "id" to "sha256-strip-blob",
+                "id" to validBlobId,
                 "column" to "bytes",
                 "sizeBytes" to 3L,
                 "sha256" to "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=",
