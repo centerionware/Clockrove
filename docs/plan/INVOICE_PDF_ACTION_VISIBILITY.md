@@ -14,4 +14,4 @@ PR #70 exact head 58ca416dfe8c3b82fff8d58898db9ca7acc86a26 passed full Validate 
 
 Attempt 1 of the same run stopped at Android APK installation timeouts before the affected device journey ran. The bounded exact-head rerun completed successfully; no app or test-runner change was made in response to the install timeout.
 
-PR #70 was merged by the owner as main commit 025cc10f5aac80ce6f56005f694e448ee4473761. Merged-main Validate [43804094163](https://github.com/centerionware/Clockrove/actions/runs/43804094163) is running on that exact commit; Play delivery remains gated on its successful completion. No local build or test was run.
+PR #70 was merged by the owner as main commit 025cc10f5aac80ce6f56005f694e448ee4473761. Merged-main Validate [43804094163](https://github.com/centerionware/Clockrove/actions/runs/43804094163) passed on that exact commit. Play delivery [43806883748](https://github.com/centerionware/Clockrove/actions/runs/43806883748) accepted internal submission of `0.1.0-internal.53.1` / version code `216968203`. This confirms upload/submission only, not review approval or tester availability. No local build or test was run.
