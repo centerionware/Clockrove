@@ -186,9 +186,7 @@ abstract class BackupImportStoreTestBase {
             val table = record["table"] as? String ?: return@forEach
             val kind = dataKinds[table] ?: return@forEach
             val rowValues = values(record).entries.associate { it.key.toString() to it.value }
-            val keyColumns = BackupImportStore.revisionDataKeyColumns[kind] ?: listOf("id")
-            val keyColumn = keyColumns.singleOrNull() ?: return@forEach
-            val entityId = rowValues[keyColumn]?.toString() ?: return@forEach
+            val entityId = BackupImportStore.revisionEntityIdForDataRow(table, rowValues) ?: return@forEach
             val entityKey = kind to entityId
             if (entityKey in existingHeads || entityKey in existingRevisions) return@forEach
 
@@ -239,6 +237,24 @@ abstract class BackupImportStoreTestBase {
                 kind == "invoice_coverage" || kind == "payment_destination" -> stagedValue(
                     "invoices", "id", rowValues["invoice_id"], "job_id",
                 )?.toString()
+                kind == "quote_invoice_link" -> stagedValue(
+                    "invoices", "id", rowValues["invoice_id"], "job_id",
+                )?.toString()
+                kind == "quote_decision" -> {
+                    val quoteId = rowValues["quote_id"]?.toString()
+                    val revision = rowValues["revision"]?.toString()
+                    if (quoteId == null || revision == null) null else {
+                        val staged = records.firstOrNull { row ->
+                            row["table"] == "quote_revisions" &&
+                                values(row)["quote_id"]?.toString() == quoteId &&
+                                values(row)["revision"]?.toString() == revision
+                        }
+                        if (staged != null) values(staged)["job_id"]?.toString() else database.rawQuery(
+                            "SELECT job_id FROM quote_revisions WHERE quote_id=? AND revision=? LIMIT 1",
+                            arrayOf(quoteId, revision),
+                        ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else rows.getString(0) }
+                    }
+                }
                 kind == "task_comment" || kind == "task_attachment" -> stagedValue(
                     "kanban_cards", "id", rowValues["task_id"], "job_id",
                 )?.toString()

@@ -290,6 +290,27 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         }
         records.removeAll { it["table"] == "quote_decisions" && values(it)["quote_id"] == quoteId }
         records.add(stagedRow("quote_decisions", staleDecision))
+        val localDecisionHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='quote_decision' AND entity_id=?",
+            arrayOf("$quoteId:${staleDecision.getValue("revision")}"),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val decisionJobId = database.rawQuery(
+            "SELECT job_id FROM entity_revisions WHERE id=?",
+            arrayOf(localDecisionHead),
+        ).use { rows -> assertTrue(rows.moveToFirst()); if (rows.isNull(0)) null else rows.getString(0) }
+        val backupDecisionHead = "aggregate-quote-decision-backup-head"
+        records.add(revisionRecord(
+            backupDecisionHead, "quote_decision", "$quoteId:${staleDecision.getValue("revision")}",
+            decisionJobId, payload = JSONObject(staleDecision).toString(),
+        ))
+        records.add(parentRecord(backupDecisionHead, localDecisionHead))
+        records.removeAll {
+            it["table"] == "entity_heads" && values(it)["kind"] == "quote_decision" &&
+                values(it)["entity_id"] == "$quoteId:${staleDecision.getValue("revision")}"
+        }
+        records.add(headRecord(
+            "quote_decision", "$quoteId:${staleDecision.getValue("revision")}", backupDecisionHead,
+        ))
         val staleScopeRevision = archiveValues("quote_scope_revisions") { it["quote_id"] == quoteId }.apply {
             put("note", "Stale backup scope note")
         }
@@ -351,14 +372,21 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             assertTrue((row["aggregateKeys"] as List<*>).contains("quote:$quoteId"))
         }
         val stateBeforeApply = repository.snapshot()
-        assertEquals(emptyList<String>(), linkHeadConflict["allowedChoices"])
-        assertNull(linkHeadConflict["defaultChoice"])
+        assertEquals(
+            listOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT"),
+            linkHeadConflict["allowedChoices"],
+        )
+        assertEquals("MERGE_KEEP_LOCAL_CONTENT", linkHeadConflict["defaultChoice"])
         assertFailure("UNSUPPORTED_CHOICE") {
             importStore.resolveConflict(
                 database, started.importId, preview.previewToken, preview.localStateVersion,
-                linkHeadConflict["conflictId"] as String, "KEEP_LOCAL",
+                linkHeadConflict["conflictId"] as String, "MERGE_USE_BACKUP_CONTENT",
             )
         }
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            linkHeadConflict["conflictId"] as String, "MERGE_KEEP_LOCAL_CONTENT",
+        )
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }

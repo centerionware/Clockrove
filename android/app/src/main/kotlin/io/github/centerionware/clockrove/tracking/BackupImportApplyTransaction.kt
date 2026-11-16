@@ -142,6 +142,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                         if (selectedChoice == null && table in revisionDataKinds.keys) {
                             val mergeChoice = divergentMergeChoiceForDataRow(handle, table, values)
                             if (mergeChoice != null) {
+                                if (mergeChoice == "KEEP_LOCAL") continue
                                 val data = divergentEntityDataForRow(db, handle, table, values)
                                     ?: throw ApplyFailure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
                                 val plan = plannedMergeForDataRow(db, handle, data, mergeChoice)
@@ -290,6 +291,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                             }
                             if (table in revisionDataKinds.keys) {
                                 val kind = revisionDataKinds.getValue(table)
+                                if (divergentMergeChoiceForDataRow(handle, table, values) == "KEEP_LOCAL") continue
                                 val entityId = revisionEntityIdForDataRow(table, values)
                                     ?: throw ApplyFailure("PREVIEW_STALE", "A divergent backup entity changed after preview.")
                                 val plan = plannedDivergentMerges[divergentMergeKey(

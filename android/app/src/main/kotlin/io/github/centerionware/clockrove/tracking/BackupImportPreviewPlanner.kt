@@ -336,8 +336,8 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
                                     immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
                                     mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
-                                    selectableDivergentHead -> listOf(
-                                        "KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT",
+                                    selectableDivergentHead -> divergentHeadChoices(
+                                        values["kind"]?.toString().orEmpty(),
                                     )
                                     // Do not expose a one-sided choice when this kind has no
                                     // validated adapter to preserve both divergent histories.
@@ -448,7 +448,7 @@ internal fun BackupImportStore.sameRecord(
             val kind = values["kind"]?.toString()
             val entityId = values["entity_id"]?.toString()
             val revisionId = values["id"]?.toString()
-            val identityColumns = spec.valueColumns.filterNot { it == "payload" }
+            val identityColumns = spec.valueColumns.filterNot { it == "payload" }.toSet()
             val identityMatches = canonicalValues(values, identityColumns) ==
                 canonicalValues(local.values, identityColumns)
             val localHead = if (kind == null || entityId == null || revisionId == null) null else {
@@ -458,7 +458,7 @@ internal fun BackupImportStore.sameRecord(
                 ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
             }
             kind != null && kind !in JobLifecycleStore.financialRevisionKinds && identityMatches &&
-                localHead != null && localHead != revisionId &&
+                localHead != null && revisionId != null && localHead != revisionId &&
                 revisionHeadRelationship(db, handle, localHead, revisionId) == "BACKUP_ANCESTOR"
         } else {
             false

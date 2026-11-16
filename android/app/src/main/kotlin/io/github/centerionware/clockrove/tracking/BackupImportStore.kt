@@ -274,6 +274,8 @@ internal class BackupImportStore(
             "task_quantity" to "task_quantities",
             "payment_destination" to "payment_destinations",
             "quote_draft" to "quote_drafts",
+            "quote_decision" to "quote_decisions",
+            "quote_invoice_link" to "quote_invoice_links",
         )
         internal val revisionDataColumns = mapOf(
             "job" to BusinessSchema.jobColumns,
@@ -316,6 +318,10 @@ internal class BackupImportStore(
             "task_quantity" to listOf("card_id", "job_id", "quantity_units"),
             "payment_destination" to listOf("payment_id", "invoice_id"),
             "quote_draft" to listOf("id", "payload"),
+            "quote_decision" to listOf("quote_id", "revision", "decision", "note", "recorded_ms"),
+            "quote_invoice_link" to listOf(
+                "invoice_id", "quote_id", "revision", "original_invoice_id", "created_ms", "payload",
+            ),
         )
         internal val revisionDataKeyColumns = mapOf(
             "automation" to listOf("job_id"),
@@ -327,6 +333,8 @@ internal class BackupImportStore(
             "task_quantity" to listOf("card_id"),
             "payment_destination" to listOf("payment_id"),
             "quote_draft" to listOf("quote_id"),
+            "quote_decision" to listOf("quote_id", "revision"),
+            "quote_invoice_link" to listOf("invoice_id"),
         )
         internal val integerRevisionDataKinds = setOf(
             "billing_tax_settings", "invoice_accounting_settings", "invoice_billing_defaults", "settings",
@@ -379,6 +387,9 @@ internal class BackupImportStore(
             "MERGE_KEEP_LOCAL_CONTENT",
             "MERGE_USE_BACKUP_CONTENT",
         )
+        // Issued decisions and invoice provenance are protected by immutable-table triggers.
+        // A restore can retain both branches while selecting the currently committed content.
+        internal val immutableDivergentMergeKinds = setOf("quote_decision", "quote_invoice_link")
         internal val customerDeletionChoices = setOf(
             "PRESERVE_LOCAL_DELETION",
             "RESTORE_BACKUP_CONTENT",

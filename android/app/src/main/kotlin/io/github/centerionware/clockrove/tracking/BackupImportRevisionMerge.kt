@@ -69,6 +69,7 @@ private val revisionDataKinds = BackupImportStore.revisionDataKinds
 private val supportedRevisionKinds = BackupImportStore.supportedRevisionKinds
 private val revisionTombstoneRows = BackupImportStore.revisionTombstoneRows
 private val divergentHeadMergeChoices = BackupImportStore.divergentHeadMergeChoices
+private val immutableDivergentMergeKinds = BackupImportStore.immutableDivergentMergeKinds
 private val customerDeletionChoices = BackupImportStore.customerDeletionChoices
 
 
@@ -202,14 +203,33 @@ internal fun BackupImportStore.stagedEntityHead(handle: RevisionMergeHandle, kin
 
 internal fun BackupImportStore.revisionEntityIdForDataRow(table: String, values: Map<String, Any?>): String? {
         val kind = revisionDataKinds[table] ?: return null
-        val keyColumn = (revisionDataKeyColumns[kind] ?: listOf("id")).singleOrNull() ?: return null
-        return values[keyColumn]?.toString()
+        val keyValues = (revisionDataKeyColumns[kind] ?: listOf("id")).map { column ->
+            values[column]?.toString() ?: return null
+        }
+        return when (kind) {
+            "quote_decision" -> "${keyValues[0]}:${keyValues[1]}"
+            else -> keyValues.singleOrNull()
+        }
     }
 
 internal fun BackupImportStore.revisionDataKeyValues(kind: String, entityId: String): List<Any?> =
-        (revisionDataKeyColumns[kind] ?: listOf("id")).map { column ->
-            if (column == "id" && kind in integerRevisionDataKinds) entityId.toLongOrNull() ?: entityId
-            else entityId
+        when (kind) {
+            "quote_decision" -> {
+                val separator = entityId.lastIndexOf(':')
+                if (separator <= 0 || separator == entityId.lastIndex) listOf(entityId, entityId)
+                else listOf(entityId.substring(0, separator), entityId.substring(separator + 1).toLongOrNull() ?: entityId)
+            }
+            else -> (revisionDataKeyColumns[kind] ?: listOf("id")).map { column ->
+                if (column == "id" && kind in integerRevisionDataKinds) entityId.toLongOrNull() ?: entityId
+                else entityId
+            }
+        }
+
+internal fun BackupImportStore.divergentHeadChoices(kind: String): List<String> =
+        if (kind in immutableDivergentMergeKinds) {
+            listOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT")
+        } else {
+            listOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT")
         }
 
 internal fun BackupImportStore.revisionContent(db: SQLiteDatabase, table: String, revisionId: String): RevisionMergeRevisionContent? =
@@ -334,6 +354,12 @@ internal fun BackupImportStore.revisionJobMatchesData(
             kind == "payment_destination" -> stagedOrLocal(
                 "invoices", "id", rowValues["invoice_id"], "job_id",
             )?.toString()
+            kind == "quote_invoice_link" -> stagedOrLocal(
+                "invoices", "id", rowValues["invoice_id"], "job_id",
+            )?.toString()
+            kind == "quote_decision" -> quoteRevisionJobId(
+                db, handle, rowValues["quote_id"], rowValues["revision"], preferStaged,
+            )
             kind == "task_comment" || kind == "task_attachment" -> stagedOrLocal(
                 "kanban_cards", "id", rowValues["task_id"], "job_id",
             )?.toString()
@@ -345,6 +371,32 @@ internal fun BackupImportStore.revisionJobMatchesData(
             else -> return false
         }
         return linkedJob == revisionJobId
+    }
+
+private fun BackupImportStore.quoteRevisionJobId(
+        db: SQLiteDatabase,
+        handle: RevisionMergeHandle,
+        quoteId: Any?,
+        revision: Any?,
+        preferStaged: Boolean,
+    ): String? {
+        if (quoteId == null || revision == null) return null
+        val key = jsonArray(listOf(quoteId, revision))
+        if (preferStaged) {
+            handle.database.rawQuery(
+                "SELECT row_json FROM import_rows WHERE table_name='quote_revisions' AND primary_key=? LIMIT 1",
+                arrayOf(key),
+            ).use { rows ->
+                if (rows.moveToFirst()) {
+                    val values = JSONObject(rows.getString(0)).getJSONObject("values")
+                    return if (values.isNull("job_id")) null else jsonValue(values.get("job_id"))?.toString()
+                }
+            }
+        }
+        return db.rawQuery(
+            "SELECT job_id FROM quote_revisions WHERE quote_id=? AND revision=? LIMIT 1",
+            arrayOf(quoteId.toString(), revision.toString()),
+        ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else rows.getString(0) }
     }
 
 internal fun BackupImportStore.optionalRevisionPayloadKeys(kind: String): Set<String> = when (kind) {
@@ -469,7 +521,9 @@ internal fun BackupImportStore.divergentMergeChoiceForDataRow(
             arrayOf(jsonArray(listOf(kind, entityId))),
         ).use { rows ->
             if (!rows.moveToFirst() || rows.isNull(0)) return null
-            rows.getString(0).takeIf { it in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT" }
+            rows.getString(0).takeIf {
+                it == "KEEP_LOCAL" || it in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT"
+            }
         }
     }
 
