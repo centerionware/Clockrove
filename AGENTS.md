@@ -1,6 +1,6 @@
 # Clockrove development instructions
 
-Read `app_plan.md` before implementing or changing behavior. It is the product contract and ordered handoff to Luna. Update its milestone evidence as work completes; do not mark work complete based on scaffolding or mocked native behavior.
+Read `app_plan.md` before implementing or changing behavior. It is the product-contract index and ordered handoff to Luna; follow its linked contract and milestone documents. Update `plan_status.md` and the linked evidence archive as work completes; do not mark work complete based on scaffolding or mocked native behavior.
 
 ## Working agreement
 
@@ -10,6 +10,7 @@ Read `app_plan.md` before implementing or changing behavior. It is the product c
 - Inspect the actual environment, repository, and installed tools before assuming setup exists. Do not overwrite an existing remote or unrelated user work.
 - Record concrete validation results and unresolved blockers in the plan. Never claim an Android build, device test, store upload, or publication passed without evidence.
 - Keep changes small enough to review. Avoid speculative server infrastructure and unrelated refactors.
+- Keep maintained source, test, and documentation files at or below 1,000 lines. Split by cohesive feature or topic before adding to an oversized file; the existing audited exceptions and non-conflicting order are tracked in `docs/plan/maintainability-audit.md`. Do not split files while an open PR is actively changing them.
 - Pin toolchains and dependencies when selected, commit application lockfiles, and document setup commands. Do not use floating `latest` versions in CI.
 - Add tests for time calculations, concurrent commands, migrations, geofence transitions, CSV safety, and backup merge integrity as these behaviors are implemented.
 
