@@ -61,9 +61,6 @@ final class BackupSnapshotExporter {
       _checkCancelled(isCancelled);
 
       final currentSnapshotId = snapshotId;
-      if (currentSnapshotId == null) {
-        throw StateError('The backup snapshot did not start.');
-      }
       Stream<BackupArchiveStreamRow> readRows() => _readSnapshotRows(
         snapshotId: currentSnapshotId,
         started: started,
