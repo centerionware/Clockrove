@@ -4,16 +4,27 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 benchmark_script="$script_dir/ci-android-backup-memory-benchmark.sh"
 no_uninstall_invocations="$(grep -Fc -- 'flutter test --no-uninstall' "$benchmark_script")"
-if [[ "$no_uninstall_invocations" != 3 ]]; then
-  echo 'Backup memory benchmark seed, reseed, and measurement must all use --no-uninstall.' >&2
+if [[ "$no_uninstall_invocations" != 2 ]]; then
+  echo 'Backup memory benchmark seed and measurement must use --no-uninstall.' >&2
+  exit 1
+fi
+if grep -Fq -- '--before-retry-hook' "$benchmark_script"; then
+  echo 'Backup memory benchmark recovery must retry the measurement without another Flutter reseed install.' >&2
   exit 1
 fi
 device_script="$script_dir/ci-android-pdf.sh"
 memory_benchmark_line="$(grep -nF 'ci-android-backup-memory-benchmark.sh' "$device_script" | cut -d: -f1)"
 crypto_benchmark_line="$(grep -nF 'backup_crypto_benchmark_test.dart' "$device_script" | cut -d: -f1)"
+app_install_line="$(grep -nF 'clockrove_install_apk "$clockrove_api" app "$clockrove_validation_apk"' "$device_script" | cut -d: -f1)"
+first_native_journey_line="$(grep -nF 'ci-android-billing.sh' "$device_script" | cut -d: -f1)"
+last_native_journey_line="$(grep -nF 'ci-android-task-media.sh' "$device_script" | cut -d: -f1)"
 if [[ -z "$memory_benchmark_line" || -z "$crypto_benchmark_line" ||
-  "$memory_benchmark_line" -ge "$crypto_benchmark_line" ]]; then
-  echo 'The generated-byte crypto benchmark must run after native journeys and the full-path memory gate.' >&2
+  -z "$app_install_line" || -z "$first_native_journey_line" ||
+  -z "$last_native_journey_line" ||
+  "$crypto_benchmark_line" -ge "$app_install_line" ||
+  "$app_install_line" -ge "$first_native_journey_line" ||
+  "$last_native_journey_line" -ge "$memory_benchmark_line" ]]; then
+  echo 'Run generated-byte crypto on the fresh emulator; run the isolated full-path benchmark after native journeys.' >&2
   exit 1
 fi
 
