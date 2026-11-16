@@ -100,7 +100,6 @@ List<BackupArchiveStreamRow> _fixtureRows(List<int> noteLengths) => [
       'width': 1,
       'height': 1,
       'content_hash': 'synthetic-restore-benchmark',
-      'bytes': null,
     },
     blobs: const [
       BackupArchiveBlobSource(
