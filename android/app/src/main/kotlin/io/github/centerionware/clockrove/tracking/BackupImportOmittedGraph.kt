@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias OmittedGraphFailure = BackupImportStore.Failure
 internal typealias OmittedGraphStarted = BackupImportStore.Started
 internal typealias OmittedGraphPreview = BackupImportStore.Preview

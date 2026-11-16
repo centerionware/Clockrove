@@ -456,10 +456,6 @@ internal class BackupImportStore(
 
 
 
-
-
-
-
     /** One range decision resolves the staged range row and its matching revision head together. */
 
 
@@ -488,7 +484,7 @@ internal class BackupImportStore(
                 if (scalarLong(db, "SELECT COUNT(*) FROM sessions WHERE end_ms IS NULL") != 0L) {
                     throw Failure("LOCAL_TIMER_RUNNING", "Stop the local timer before restoring a backup.")
                 }
-                applyCounts = applyRowsWithinTransaction(db, handle, preview)
+                applyCounts = applyRowsWithinTransaction(db, handle, preview, expectedLocalStateVersion)
                 db.setTransactionSuccessful()
             } finally {
                 try {
@@ -527,11 +523,7 @@ internal class BackupImportStore(
 
 
 
-
-
     /** Records restore-time safety normalization as a child of the imported revision. */
-
-
 
 
 
@@ -559,11 +551,6 @@ internal class BackupImportStore(
     @Synchronized
     fun closeAll() = closeAllImportsCore()
 
-    @Synchronized
-    internal fun expireIfIdle(importId: String) = expireIfIdleCore(importId)
-
-
-
 
 
 
@@ -587,12 +574,6 @@ internal class BackupImportStore(
 
 
 
- ?: invalidRevisionGraph()
-
-
-
-
-
     internal fun invalidRevisionGraph(): Nothing =
         throw Failure("INVALID_REVISION_GRAPH", "The backup revision history is invalid.")
 
@@ -609,19 +590,6 @@ internal class BackupImportStore(
 
     /** Exercises the installed CHECK/NOT NULL/type rules against one staged row at a time. */
 
-
-)", null).use { rows ->
-            buildList {
-                while (rows.moveToNext()) {
-                    add(ValidationColumn(
-                        name = rows.getString(1),
-                        declaredType = rows.getString(2).orEmpty().uppercase(),
-                        notNull = rows.getInt(3) != 0,
-                        defaultSql = if (rows.isNull(4)) null else rows.getString(4),
-                    ))
-                }
-            }
-        }
 
 
 
@@ -646,18 +614,9 @@ internal class BackupImportStore(
 
 
 
-.toString()
 
 
 
- WHERE id=? LIMIT 1", arrayOf(id)).use { it.moveToFirst() }
-
-
-
-
-
-    internal fun hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean =
-        hasLocalLocationTombstone(db, revisionString(point["id"]))
 
 
 
@@ -666,8 +625,6 @@ internal class BackupImportStore(
      * measured time and scope, or local state has a causally valid point head. Omission removes
      * the point row and its complete revision/head graph together.
      */
-
-
 
 
 
@@ -694,10 +651,6 @@ internal class BackupImportStore(
 
 
 
-
-
-
-
     /** Adds one scoped reference edge to both rows in the staged dependency conflict. */
 
 
@@ -709,8 +662,6 @@ internal class BackupImportStore(
 
 
     /** Labels the imported head's graph position without guessing from clocks or state versions. */
-
-
     /** Fast-forwards only a proven descendant whose live business row and payload are unchanged. */
 
 
@@ -729,8 +680,6 @@ internal class BackupImportStore(
 
 
 
-
-
     /** A job deletion fence owns its job and operational child heads as one conflict. */
 
 
@@ -743,25 +692,8 @@ internal class BackupImportStore(
 
 
 
-
-
-
-
- WHERE id=?",
-            arrayOf(revisionId),
-        ).use { rows ->
-            if (!rows.moveToFirst()) return null
-            RevisionContent(
-                rows.getString(0), rows.getString(1),
-                if (rows.isNull(2)) null else rows.getString(2),
-                if (rows.isNull(3)) null else rows.getString(3), rows.getLong(4),
-            )
-        }
-
     internal fun validLiveRevision(revision: RevisionContent, kind: String, entityId: String): Boolean =
         revision.kind == kind && revision.entityId == entityId && revision.deleted == 0L && revision.payload != null
-
-
 
 
 
@@ -789,21 +721,11 @@ internal class BackupImportStore(
 
 
 
-
-
     /**
      * If a backup row depends on another staged row that already needs a choice, require an
      * explicit omission for the child whenever no local row can satisfy that reference. This
      * keeps a KEEP_LOCAL/OMIT choice on a parent from turning into a late foreign-key failure.
      */
-
-
-.toMap()
-
-
-
-
-
 
 
 
@@ -870,6 +792,13 @@ internal class BackupImportStore(
     internal fun encodedEnvelopeSize(value: Any): Int =
         StandardMethodCodec.INSTANCE.encodeSuccessEnvelope(value).position()
 
+    internal fun ConflictPage.toWireMap(): Map<String, Any?> = mapOf(
+        "importId" to importId,
+        "previewToken" to previewToken,
+        "nextCursor" to nextCursor,
+        "done" to done,
+        "conflicts" to conflicts,
+    )
 
 
 
@@ -883,9 +812,19 @@ internal class BackupImportStore(
 
 
 
-
-
-
+    @Synchronized
+    internal fun expireIfIdle(importId: String) {
+        val handle = active
+        if (handle == null || handle.id != importId) return
+        expiryTask = null
+        val now = elapsedClock()
+        if (now >= handle.lastAccessElapsedMillis && now - handle.lastAccessElapsedMillis >= idleTtlMillis) {
+            active = null
+            destroyHandle(handle)
+        } else {
+            try { scheduleExpiry(handle) } catch (_: Failure) { }
+        }
+    }
 
 
 
@@ -899,8 +838,6 @@ internal class BackupImportStore(
         if (!it.moveToFirst()) throw Failure("STORAGE_UNAVAILABLE", "The local backup state is unavailable.")
         it.getLong(0)
     }
-
-
 
     internal fun quote(identifier: String): String = "\"" + identifier.replace("\"", "\"\"") + "\""
 }

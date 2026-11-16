@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias GpsDeletionFailure = BackupImportStore.Failure
 internal typealias GpsDeletionStarted = BackupImportStore.Started
 internal typealias GpsDeletionPreview = BackupImportStore.Preview
@@ -73,7 +74,7 @@ private val customerDeletionChoices = BackupImportStore.customerDeletionChoices
 
 internal fun BackupImportStore.jsonArray(values: List<Any?>): String = JSONArray().apply {
         values.forEach { put(it ?: JSONObject.NULL) }
-    }
+    }.toString()
 
 internal fun BackupImportStore.stagedIdentifierExists(handle: GpsDeletionHandle, table: String, id: String): Boolean =
         handle.database.rawQuery(
@@ -82,7 +83,7 @@ internal fun BackupImportStore.stagedIdentifierExists(handle: GpsDeletionHandle,
         ).use { it.moveToFirst() }
 
 internal fun BackupImportStore.localIdentifierExists(db: SQLiteDatabase, table: String, id: String): Boolean =
-        db.rawQuery("SELECT 1 FROM ${quote(table)}
+        db.rawQuery("SELECT 1 FROM ${quote(table)} WHERE id=? LIMIT 1", arrayOf(id)).use { it.moveToFirst() }
 
 internal fun BackupImportStore.hasUnprovenLocalGpsCoverage(
         localDb: SQLiteDatabase,
@@ -132,6 +133,9 @@ internal fun BackupImportStore.backupGpsPointsWithoutRangeParent(
             args,
         ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
     }
+
+internal fun BackupImportStore.hasLocalLocationTombstone(db: SQLiteDatabase, point: Map<String, Any?>): Boolean =
+        hasLocalLocationTombstone(db, revisionString(point["id"]))
 
 internal fun BackupImportStore.hasLocalLocationTombstone(db: SQLiteDatabase, pointId: String): Boolean {
         return db.rawQuery(

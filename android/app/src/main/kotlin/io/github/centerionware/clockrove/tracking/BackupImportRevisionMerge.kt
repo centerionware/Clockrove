@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias RevisionMergeFailure = BackupImportStore.Failure
 internal typealias RevisionMergeStarted = BackupImportStore.Started
 internal typealias RevisionMergePreview = BackupImportStore.Preview
@@ -213,7 +214,16 @@ internal fun BackupImportStore.revisionDataKeyValues(kind: String, entityId: Str
 
 internal fun BackupImportStore.revisionContent(db: SQLiteDatabase, table: String, revisionId: String): RevisionMergeRevisionContent? =
         db.rawQuery(
-            "SELECT kind,entity_id,job_id,payload,deleted FROM ${quote(table)}
+            "SELECT kind,entity_id,job_id,payload,deleted FROM ${quote(table)} WHERE id=?",
+            arrayOf(revisionId),
+        ).use { rows ->
+            if (!rows.moveToFirst()) return null
+            RevisionMergeRevisionContent(
+                rows.getString(0), rows.getString(1),
+                if (rows.isNull(2)) null else rows.getString(2),
+                if (rows.isNull(3)) null else rows.getString(3), rows.getLong(4),
+            )
+        }
 
 internal fun BackupImportStore.revisionPayloadValuesForDataRow(
         db: SQLiteDatabase,

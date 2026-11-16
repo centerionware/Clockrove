@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias ConflictSelectionFailure = BackupImportStore.Failure
 internal typealias ConflictSelectionStarted = BackupImportStore.Started
 internal typealias ConflictSelectionPreview = BackupImportStore.Preview

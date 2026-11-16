@@ -81,6 +81,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
     db: SQLiteDatabase,
     handle: ApplyHandle,
     preview: ApplyPreview,
+    expectedLocalStateVersion: Long,
 ): BackupImportApplyCounts {
     var inserted = 0L
     var changed = 0L

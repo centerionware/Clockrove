@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias RevisionValidatorFailure = BackupImportStore.Failure
 internal typealias RevisionValidatorStarted = BackupImportStore.Started
 internal typealias RevisionValidatorPreview = BackupImportStore.Preview
@@ -343,7 +344,7 @@ internal fun BackupImportStore.forEachImportedValues(handle: RevisionValidatorHa
     }
 
 internal fun BackupImportStore.revisionString(value: Any?): String = (value as? String)
-        ?.takeIf { it.isNotEmpty() }
+        ?.takeIf { it.isNotEmpty() } ?: invalidRevisionGraph()
 
 internal fun BackupImportStore.nullableRevisionString(value: Any?): String? = when (value) {
         null -> null
@@ -489,7 +490,18 @@ internal fun BackupImportStore.validatePortableRows(localDb: SQLiteDatabase, han
     }
 
 internal fun BackupImportStore.validationColumns(db: SQLiteDatabase, table: String): List<RevisionValidatorValidationColumn> =
-        db.rawQuery("PRAGMA table_info(${quote(table)}
+        db.rawQuery("PRAGMA table_info(${quote(table)})", null).use { rows ->
+            buildList {
+                while (rows.moveToNext()) {
+                    add(RevisionValidatorValidationColumn(
+                        name = rows.getString(1),
+                        declaredType = rows.getString(2).orEmpty().uppercase(),
+                        notNull = rows.getInt(3) != 0,
+                        defaultSql = if (rows.isNull(4)) null else rows.getString(4),
+                    ))
+                }
+            }
+        }
 
 internal fun BackupImportStore.validatePortableValueTypes(
         table: String,

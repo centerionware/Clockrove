@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Bounded native staging and read-only preview for authenticated backup imports. */
 internal typealias LifecycleWireFailure = BackupImportStore.Failure
 internal typealias LifecycleWireStarted = BackupImportStore.Started
 internal typealias LifecycleWirePreview = BackupImportStore.Preview
@@ -108,7 +109,7 @@ internal fun BackupImportStore.safeSummary(values: Map<String, Any?>): Map<Strin
                 else -> return@mapNotNull null
             }
             column to safe
-        }
+        }.toMap()
 
 internal fun BackupImportStore.safeSummaryObject(values: Map<String, Any?>): JSONObject = JSONObject().apply {
         values.toSortedMap().forEach { (key, value) ->
@@ -293,19 +294,6 @@ internal fun BackupImportStore.scheduleExpiry(handle: LifecycleWireHandle) {
         }
     }
 
-internal fun BackupImportStore.expireIfIdleCore(importId: String) {
-        val handle = active
-        if (handle == null || handle.id != importId) return
-        expiryTask = null
-        val now = elapsedClock()
-        if (now >= handle.lastAccessElapsedMillis && now - handle.lastAccessElapsedMillis >= idleTtlMillis) {
-            active = null
-            destroyHandle(handle)
-        } else {
-            try { scheduleExpiry(handle) } catch (_: LifecycleWireFailure) { }
-        }
-    }
-
 internal fun BackupImportStore.cancelExpiry() {
         expiryTask?.cancel()
         expiryTask = null
@@ -346,12 +334,12 @@ internal fun BackupImportStore.integer(value: Any?, label: String): Long = when 
         else -> throw LifecycleWireFailure("INVALID_ARCHIVE", "A backup $label is invalid.")
     }
 
-internal fun LifecycleWireConflictPage.toWireMap(): Map<String, Any?> = mapOf(
-    "importId" to importId,
-    "previewToken" to previewToken,
-    "nextCursor" to nextCursor,
-    "done" to done,
-    "conflicts" to conflicts,
+private fun conflictPageWireMap(page: LifecycleWireConflictPage): Map<String, Any?> = mapOf(
+    "importId" to page.importId,
+    "previewToken" to page.previewToken,
+    "nextCursor" to page.nextCursor,
+    "done" to page.done,
+    "conflicts" to page.conflicts,
 )
 
 internal fun BackupImportStore.readConflictPageCore(
@@ -390,7 +378,7 @@ internal fun BackupImportStore.readConflictPageCore(
                     if (candidateNext < total) encodeCursor(handle, preview, candidateNext) else null,
                     candidateNext >= total, conflicts,
                 )
-                if (encodedEnvelopeSize(candidatePage.toWireMap()) > maxBytes) {
+                if (encodedEnvelopeSize(conflictPageWireMap(candidatePage)) > maxBytes) {
                     conflicts.removeAt(conflicts.lastIndex)
                     if (conflicts.isEmpty()) throw LifecycleWireFailure("PAGE_LIMIT_TOO_SMALL", "One conflict exceeds the requested page size.")
                     break
