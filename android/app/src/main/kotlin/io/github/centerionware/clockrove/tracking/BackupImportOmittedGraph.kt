@@ -130,7 +130,9 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
             while (rows.moveToNext()) {
                 val choice = rows.getString(0)
                 val conflict = JSONObject(rows.getString(1))
-                if (choice in setOf("PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION")) {
+                if (choice in setOf(
+                        "PRESERVE_LOCAL_CONTENT", "PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT",
+                    )) {
                     val table = rows.getString(2)
                     val values = JSONObject(rows.getString(3)).getJSONObject("values")
                     if (table == "entity_heads") {

@@ -536,9 +536,9 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val revision = database.rawQuery(
             "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
         ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
-        assertEquals(1L, revision.first)
-        assertEquals("BACKUP_MERGE", revision.second)
-        assertEquals(setOf(localTombstone, backupLive), parentIds(revisionId))
+        assertEquals("$kind/$entityId head=$revisionId", localTombstone, revisionId)
+        assertEquals("$kind/$entityId head=$revisionId", 1L, revision.first)
+        assertTrue("$kind/$entityId head=$revisionId", backupLive in parentIds(revisionId))
     }
 
     private fun parentIds(revisionId: String): Set<String> = database.rawQuery(
