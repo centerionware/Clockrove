@@ -13,8 +13,8 @@ internal object RevisionGraphValidator {
     class LimitExceeded : IllegalStateException("The revision graph exceeds its validation limit.")
 
     private const val BATCH_SIZE = 256
+    private const val COPY_CHECK_INTERVAL = 4096L
     private const val MAX_VALIDATION_DATABASE_BYTES = 256L * 1024L * 1024L
-    private const val SOURCE_ALIAS = "revision_source"
     private const val PENDING = "backup_revision_check_pending"
     private const val BATCH = "backup_revision_check_batch"
     private const val PENDING_INDEX = "backup_revision_check_pending_count"
@@ -58,10 +58,10 @@ internal object RevisionGraphValidator {
     }
 
     /**
-     * Copies parent edges into a bounded private database and builds the
-     * pending-node table directly from the attached source. A batched Kahn
-     * traversal runs there. The caller owns a source read transaction and
-     * supplies static table identifiers and a private file.
+     * Copies node IDs and parent edges from the caller's read transaction into
+     * a bounded private database using cursors and prepared inserts. A batched
+     * Kahn traversal runs there without attaching the live database to a
+     * second SQLite connection.
      */
     fun validateSnapshotAcyclicity(
         sourceDb: SQLiteDatabase,
@@ -82,7 +82,6 @@ internal object RevisionGraphValidator {
         if (graphRowCount > maxRows) throw LimitExceeded()
 
         var graphDb: SQLiteDatabase? = null
-        var attachedSource = false
         var transactionStarted = false
         var failure: Throwable? = null
         try {
@@ -105,14 +104,13 @@ internal object RevisionGraphValidator {
             if (!journalMode.equals("off", ignoreCase = true)) {
                 throw IllegalStateException("The revision validation database is not disposable.")
             }
-            validationDb.execSQL(
-                "ATTACH DATABASE ? AS $SOURCE_ALIAS",
-                arrayOf<Any>(sourceDb.path),
-            )
-            attachedSource = true
             validationDb.beginTransaction()
             transactionStarted = true
 
+            validationDb.execSQL(
+                "CREATE TABLE ${quote(PENDING)}(" +
+                    "revision_id TEXT PRIMARY KEY,remaining_parents INTEGER NOT NULL) WITHOUT ROWID",
+            )
             validationDb.execSQL(
                 "CREATE TABLE graph_parents(" +
                     "revision_id TEXT NOT NULL,parent_id TEXT NOT NULL," +
@@ -121,12 +119,8 @@ internal object RevisionGraphValidator {
             validationDb.execSQL(
                 "CREATE INDEX graph_parent_lookup ON graph_parents(parent_id,revision_id)",
             )
-            validationDb.execSQL(
-                "INSERT INTO graph_parents SELECT revision_id,parent_id " +
-                    "FROM $SOURCE_ALIAS.${quote(parentTable)}",
-            )
-            requireWithinLimit(validationDb)
-            validateAcyclicity(validationDb, revisionTable, "graph_parents")
+            copyGraphRows(sourceDb, validationDb, revisionTable, parentTable)
+            validateAcyclicity(validationDb, "graph_parents")
             validationDb.setTransactionSuccessful()
         } catch (error: Throwable) {
             failure = if (error is SQLiteFullException) LimitExceeded() else error
@@ -134,13 +128,6 @@ internal object RevisionGraphValidator {
             if (transactionStarted) {
                 try {
                     graphDb?.endTransaction()
-                } catch (error: Throwable) {
-                    failure = combineFailures(failure, error)
-                }
-            }
-            if (attachedSource) {
-                try {
-                    graphDb?.execSQL("DETACH DATABASE $SOURCE_ALIAS")
                 } catch (error: Throwable) {
                     failure = combineFailures(failure, error)
                 }
@@ -163,26 +150,15 @@ internal object RevisionGraphValidator {
 
     private fun validateAcyclicity(
         db: SQLiteDatabase,
-        revisionTable: String,
         parentTable: String,
     ) {
         val pending = quote(PENDING)
         val batch = quote(BATCH)
         val pendingIndex = quote(PENDING_INDEX)
-        db.execSQL("DROP TABLE IF EXISTS $pending")
         db.execSQL("DROP TABLE IF EXISTS $batch")
         try {
-            db.execSQL(
-                "CREATE TABLE $pending(" +
-                    "revision_id TEXT PRIMARY KEY,remaining_parents INTEGER NOT NULL) WITHOUT ROWID",
-            )
             db.execSQL("CREATE INDEX $pendingIndex ON $pending(remaining_parents,revision_id)")
             db.execSQL("CREATE TABLE $batch(revision_id TEXT PRIMARY KEY) WITHOUT ROWID")
-            db.execSQL(
-                "INSERT INTO $pending " +
-                    "SELECT r.id,COUNT(p.parent_id) FROM $SOURCE_ALIAS.${quote(revisionTable)} r " +
-                    "LEFT JOIN ${quote(parentTable)} p ON p.revision_id=r.id GROUP BY r.id",
-            )
             requireWithinLimit(db)
             while (true) {
                 db.execSQL("DELETE FROM $batch")
@@ -210,6 +186,66 @@ internal object RevisionGraphValidator {
             db.execSQL("DROP TABLE IF EXISTS $batch")
             db.execSQL("DROP TABLE IF EXISTS $pending")
         }
+    }
+
+    private fun copyGraphRows(
+        sourceDb: SQLiteDatabase,
+        validationDb: SQLiteDatabase,
+        revisionTable: String,
+        parentTable: String,
+    ) {
+        val insertNode = validationDb.compileStatement(
+            "INSERT INTO ${quote(PENDING)}(revision_id,remaining_parents) VALUES (?,0)",
+        )
+        try {
+            sourceDb.rawQuery(
+                "SELECT id FROM ${quote(revisionTable)} ORDER BY id",
+                null,
+            ).use { rows ->
+                var copied = 0L
+                while (rows.moveToNext()) {
+                    insertNode.bindString(1, rows.getString(0))
+                    insertNode.execute()
+                    insertNode.clearBindings()
+                    copied++
+                    if (copied % COPY_CHECK_INTERVAL == 0L) requireWithinLimit(validationDb)
+                }
+            }
+        } finally {
+            insertNode.close()
+        }
+
+        val insertParent = validationDb.compileStatement(
+            "INSERT INTO graph_parents(revision_id,parent_id) VALUES (?,?)",
+        )
+        val incrementParents = validationDb.compileStatement(
+            "UPDATE ${quote(PENDING)} SET remaining_parents=remaining_parents+1 WHERE revision_id=?",
+        )
+        try {
+            sourceDb.rawQuery(
+                "SELECT revision_id,parent_id FROM ${quote(parentTable)} ORDER BY revision_id,parent_id",
+                null,
+            ).use { rows ->
+                var copied = 0L
+                while (rows.moveToNext()) {
+                    val revisionId = rows.getString(0)
+                    insertParent.bindString(1, revisionId)
+                    insertParent.bindString(2, rows.getString(1))
+                    insertParent.execute()
+                    insertParent.clearBindings()
+
+                    incrementParents.bindString(1, revisionId)
+                    if (incrementParents.executeUpdateDelete() != 1) throw InvalidGraph()
+                    incrementParents.clearBindings()
+                    copied++
+                    if (copied % COPY_CHECK_INTERVAL == 0L) requireWithinLimit(validationDb)
+                }
+            }
+        } finally {
+            insertParent.close()
+            incrementParents.close()
+        }
+        requireWithinLimit(validationDb)
     }
 
     private fun requireWithinLimit(db: SQLiteDatabase) {

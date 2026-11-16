@@ -76,8 +76,9 @@ set of blob IDs (at most 10,000) for uniqueness and incremental row digests; it
 does not build per-revision Dart maps. The native snapshot checks revision
 heads, entity ownership, and parent references in SQLite. It copies parent
 edges to a private SQLite validation file capped at 256 MiB (four times the
-archive ceiling), builds pending-node state directly from the source database,
-and runs a batched Kahn traversal there. The scratch file is removed after
+archive ceiling), streams node IDs and parent edges from the active source
+transaction into that file with bounded cursors, and runs a batched Kahn
+traversal there. The scratch file is removed after
 success or failure. `RevisionStore` also creates fresh revision IDs and links
 only to already-existing parents, while restore validates its selected union
 graph before writing. Authenticated archive decode still validates the
