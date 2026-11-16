@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 
 
 abstract class BackupImportStoreTestBase {
-    protected class ManualScheduler(private val elapsed: () -> Long) : BackupScheduler {
+    internal class ManualScheduler(private val elapsed: () -> Long) : BackupScheduler {
         private data class Entry(val dueAt: Long, val action: () -> Unit, var cancelled: Boolean = false)
         private val entries = mutableListOf<Entry>()
 
@@ -37,13 +37,13 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected val app get() = RuntimeEnvironment.getApplication()
-    protected lateinit var repository: TimerRepository
-    protected lateinit var database: SQLiteDatabase
-    protected lateinit var exportStore: BackupExportStore
-    protected lateinit var importStore: BackupImportStore
-    protected lateinit var jobId: String
-    protected var now = 1_793_494_800_000L
+    internal val app get() = RuntimeEnvironment.getApplication()
+    internal lateinit var repository: TimerRepository
+    internal lateinit var database: SQLiteDatabase
+    internal lateinit var exportStore: BackupExportStore
+    internal lateinit var importStore: BackupImportStore
+    internal lateinit var jobId: String
+    internal var now = 1_793_494_800_000L
 
     @Before
     fun setUp() {
@@ -67,7 +67,7 @@ abstract class BackupImportStoreTestBase {
         if (::repository.isInitialized) repository.close()
     }
 
-    protected fun transferRows(snapshotId: String, importId: String) {
+    internal fun transferRows(snapshotId: String, importId: String) {
         var ordinal = 0L
         var cursor: String? = null
         var done = false
@@ -97,7 +97,7 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun stageSnapshot(snapshot: BackupExportStore.Started): BackupImportStore.Started {
+    internal fun stageSnapshot(snapshot: BackupExportStore.Started): BackupImportStore.Started {
         val started = importStore.begin(
             database, snapshot.archiveFormatVersion, snapshot.schemaVersion, "d".repeat(64),
             snapshot.recordCount, snapshot.mediaCount, snapshot.mediaBytes,
@@ -106,7 +106,7 @@ abstract class BackupImportStoreTestBase {
         return started
     }
 
-    protected fun stageImport(records: List<Map<String, Any?>>): BackupImportStore.Started {
+    internal fun stageImport(records: List<Map<String, Any?>>): BackupImportStore.Started {
         require(records.isNotEmpty())
         val archiveRecords = completeLocalRevisionAncestors(records)
         val started = importStore.begin(
@@ -140,7 +140,7 @@ abstract class BackupImportStoreTestBase {
     }
 
     /** Synthetic archives that parent a local head must carry its full ancestry. */
-    protected fun completeLocalRevisionAncestors(records: List<Map<String, Any?>>): List<Map<String, Any?>> {
+    internal fun completeLocalRevisionAncestors(records: List<Map<String, Any?>>): List<Map<String, Any?>> {
         val result = records.toMutableList()
         val revisionIds = records.asSequence()
             .filter { it["table"] == "entity_revisions" }
@@ -185,13 +185,13 @@ abstract class BackupImportStoreTestBase {
         return result
     }
 
-    protected fun customerName(id: String): String = database.rawQuery(
+    internal fun customerName(id: String): String = database.rawQuery(
         "SELECT name FROM customers WHERE id=?", arrayOf(id),
     ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
 
-    protected fun values(record: Map<String, Any?>): Map<*, *> = record["values"] as Map<*, *>
+    internal fun values(record: Map<String, Any?>): Map<*, *> = record["values"] as Map<*, *>
 
-    protected fun readRowValues(table: String, keyColumn: String, keyValue: String): Map<String, Any?> {
+    internal fun readRowValues(table: String, keyColumn: String, keyValue: String): Map<String, Any?> {
         require(table.matches(Regex("[a-z_]+")) && keyColumn.matches(Regex("[a-z_]+")))
         return database.rawQuery(
             "SELECT * FROM $table WHERE $keyColumn=? LIMIT 1",
@@ -210,7 +210,7 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun readAllRows(snapshotId: String): List<Map<String, Any?>> {
+    internal fun readAllRows(snapshotId: String): List<Map<String, Any?>> {
         val records = mutableListOf<Map<String, Any?>>()
         var cursor: String? = null
         var done = false
@@ -223,7 +223,7 @@ abstract class BackupImportStoreTestBase {
         return records
     }
 
-    protected fun revisionRecord(
+    internal fun revisionRecord(
         id: String,
         kind: String,
         entityId: String,
@@ -244,7 +244,7 @@ abstract class BackupImportStoreTestBase {
         "origin" to origin,
     ))
 
-    protected fun insertSyntheticRevision(
+    internal fun insertSyntheticRevision(
         id: String,
         kind: String,
         entityId: String,
@@ -264,20 +264,20 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun parentRecord(revisionId: String, parentId: String): Map<String, Any?> =
+    internal fun parentRecord(revisionId: String, parentId: String): Map<String, Any?> =
         stagedRow("revision_parents", mapOf("revision_id" to revisionId, "parent_id" to parentId))
 
-    protected fun headRecord(kind: String, entityId: String, revisionId: String): Map<String, Any?> =
+    internal fun headRecord(kind: String, entityId: String, revisionId: String): Map<String, Any?> =
         stagedRow("entity_heads", mapOf("kind" to kind, "entity_id" to entityId, "revision_id" to revisionId))
 
-    protected fun stagedRow(table: String, values: Map<String, Any?>): Map<String, Any?> = mapOf(
+    internal fun stagedRow(table: String, values: Map<String, Any?>): Map<String, Any?> = mapOf(
         "type" to "row",
         "table" to table,
         "values" to values,
         "blobs" to emptyList<Any>(),
     )
 
-    protected fun blobRecord(
+    internal fun blobRecord(
         table: String,
         values: Map<String, Any?>,
         column: String,
@@ -293,7 +293,7 @@ abstract class BackupImportStoreTestBase {
         )),
     )
 
-    protected fun invoiceRecord(id: String, invoiceJobId: String, number: String): Map<String, Any?> =
+    internal fun invoiceRecord(id: String, invoiceJobId: String, number: String): Map<String, Any?> =
         stagedRow("invoices", mapOf(
             "id" to id,
             "job_id" to invoiceJobId,
@@ -305,7 +305,7 @@ abstract class BackupImportStoreTestBase {
             "logo_id" to null,
         ))
 
-    protected fun invoiceTimeClaimRecord(
+    internal fun invoiceTimeClaimRecord(
         id: String,
         invoiceId: String,
         claimJobId: String,
@@ -323,7 +323,7 @@ abstract class BackupImportStoreTestBase {
         "released_ms" to releasedMs,
     ))
 
-    protected fun sessionWithoutLivePoint(commandPrefix: String): Pair<String, Long> {
+    internal fun sessionWithoutLivePoint(commandPrefix: String): Pair<String, Long> {
         val (sessionId, originalPointTime) = startAndStopSessionWithPoint("$commandPrefix-original")
         val end = database.rawQuery("SELECT end_ms FROM sessions WHERE id=?", arrayOf(sessionId)).use {
             assertTrue(it.moveToFirst())
@@ -340,7 +340,7 @@ abstract class BackupImportStoreTestBase {
         return sessionId to originalPointTime + 10L
     }
 
-    protected fun backupRangeAndUnparentedPointRecords(
+    internal fun backupRangeAndUnparentedPointRecords(
         rangeId: String,
         rangeRevisionId: String,
         pointId: String,
@@ -386,7 +386,7 @@ abstract class BackupImportStoreTestBase {
         )
     }
 
-    protected fun startAndStopSessionWithPoint(pointId: String): Pair<String, Long> {
+    internal fun startAndStopSessionWithPoint(pointId: String): Pair<String, Long> {
         assertNull(repository.execute(TimerRepository.Command(
             "start-$pointId",
             repository.snapshot().version,
@@ -418,7 +418,7 @@ abstract class BackupImportStoreTestBase {
         return sessionId to measuredAt
     }
 
-    protected fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? {
+    internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? {
         var cursor: String? = null
         while (true) {
             val page = importStore.readConflictPage(database, importId, preview.previewToken, cursor, null)
@@ -428,7 +428,7 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun resolveSafeConflictChoices(
+    internal fun resolveSafeConflictChoices(
         importId: String,
         preview: BackupImportStore.Preview,
         conflicts: List<Map<String, Any?>>,
@@ -460,17 +460,17 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun number(sql: String): Long = database.rawQuery(sql, null).use { rows ->
+    internal fun number(sql: String): Long = database.rawQuery(sql, null).use { rows ->
         assertTrue(rows.moveToFirst())
         rows.getLong(0)
     }
 
-    protected fun importRelevantCounts(): Map<String, Long> = listOf(
+    internal fun importRelevantCounts(): Map<String, Long> = listOf(
         "sessions", "location_points", "entity_revisions", "invoices",
         "invoice_task_claims", "invoice_time_claims",
     ).associateWith { table -> number("SELECT COUNT(*) FROM $table") }
 
-    protected fun validationTableCount(): Long {
+    internal fun validationTableCount(): Long {
         val activeField = BackupImportStore::class.java.getDeclaredField("active").apply { isAccessible = true }
         val handle = requireNotNull(activeField.get(importStore))
         val databaseField = handle.javaClass.getDeclaredField("database").apply { isAccessible = true }
@@ -485,7 +485,7 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun assertNoCoordinates(conflict: Map<String, Any?>) {
+    internal fun assertNoCoordinates(conflict: Map<String, Any?>) {
         listOf("localSummary", "backupSummary").forEach { key ->
             val summary = conflict[key] as? Map<*, *> ?: return@forEach
             assertFalse(summary.containsKey("latitude"))
@@ -493,7 +493,7 @@ abstract class BackupImportStoreTestBase {
         }
     }
 
-    protected fun assertInvalidRevisionGraph(
+    internal fun assertInvalidRevisionGraph(
         records: List<Map<String, Any?>>,
         forbiddenDiagnostic: String? = null,
     ) {
@@ -530,7 +530,7 @@ abstract class BackupImportStoreTestBase {
         assertTrue(importStore.close(started.importId))
     }
 
-    protected fun assertInvalidReference(records: List<Map<String, Any?>>) {
+    internal fun assertInvalidReference(records: List<Map<String, Any?>>) {
         val before = repository.snapshot()
         val countsBefore = importRelevantCounts()
         val started = importStore.begin(
@@ -554,7 +554,7 @@ abstract class BackupImportStoreTestBase {
         assertTrue(importStore.close(started.importId))
     }
 
-    protected fun assertInvalidArchive(records: List<Map<String, Any?>>) {
+    internal fun assertInvalidArchive(records: List<Map<String, Any?>>) {
         val before = repository.snapshot()
         val started = importStore.begin(
             database,
@@ -576,13 +576,13 @@ abstract class BackupImportStoreTestBase {
         assertTrue(importStore.close(started.importId))
     }
 
-    protected fun encodedAppendRequest(importId: String, ordinal: Long, rows: List<*>): Int =
+    internal fun encodedAppendRequest(importId: String, ordinal: Long, rows: List<*>): Int =
         StandardMethodCodec.INSTANCE.encodeMethodCall(MethodCall(
             "appendBackupImportPage",
             mapOf("importId" to importId, "firstOrdinal" to ordinal, "records" to rows),
         )).position()
 
-    protected fun assertFailure(code: String, action: () -> Unit) {
+    internal fun assertFailure(code: String, action: () -> Unit) {
         try {
             action()
             fail("Expected import failure " + code)
