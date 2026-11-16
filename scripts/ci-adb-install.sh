@@ -355,11 +355,12 @@ clockrove_flutter_test_has_started() {
 # Flutter resolves adb to the SDK's absolute platform-tools path, so a PATH
 # shim does not affect its integration-test APK install. Temporarily wrap that
 # executable while a Flutter command runs and add --no-streaming only to install
-# subcommands. The SDK binary is restored on every normal exit path.
+# subcommands. The original adb stays in platform-tools while renamed so its
+# $ORIGIN library resolution is unchanged, then is restored on every exit.
 clockrove_with_nonstreaming_adb() (
   local sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
   local sdk_adb="$sdk_root/platform-tools/adb"
-  local wrapper_dir wrapper_path saved_adb real_adb
+  local wrapper_dir wrapper_path saved_adb
 
   if [[ -z "$sdk_root" || ! -x "$sdk_adb" ]]; then
     echo 'Android SDK adb is unavailable; cannot apply the non-streaming Flutter install policy.' >&2
@@ -367,12 +368,10 @@ clockrove_with_nonstreaming_adb() (
   fi
   wrapper_dir="$(mktemp -d "$sdk_root/platform-tools/.clockrove-adb-wrapper.XXXXXX")" || return 2
   wrapper_path="$wrapper_dir/adb-wrapper"
-  saved_adb="$wrapper_dir/adb-original"
-  real_adb="$wrapper_dir/adb-real"
-
-  if ! cp -L -p -- "$sdk_adb" "$real_adb"; then
+  saved_adb="${wrapper_dir}-original"
+  if [[ -e "$saved_adb" || -L "$saved_adb" ]]; then
     rm -rf -- "$wrapper_dir"
-    echo 'Could not preserve the Android SDK adb before wrapping it.' >&2
+    echo 'Could not reserve a same-directory path for the Android SDK adb.' >&2
     return 2
   fi
 
@@ -417,28 +416,34 @@ CLOCKROVE_ADB_WRAPPER
     echo 'Could not set permissions on the Android SDK adb wrapper.' >&2
     return 2
   }
-
   clockrove_restore_sdk_adb() {
     local command_status=$?
     trap - EXIT
     if [[ -e "$saved_adb" || -L "$saved_adb" ]]; then
-      rm -f -- "$sdk_adb"
-      if ! mv -- "$saved_adb" "$sdk_adb"; then
+      if ! mv -f -- "$saved_adb" "$sdk_adb"; then
         echo 'Could not restore the Android SDK adb after the Flutter command.' >&2
         rm -rf -- "$wrapper_dir"
         exit 2
       fi
+    elif [[ ! -e "$sdk_adb" && ! -L "$sdk_adb" ]]; then
+      echo 'The Android SDK adb disappeared before restoration.' >&2
+      rm -rf -- "$wrapper_dir"
+      exit 2
     fi
     rm -rf -- "$wrapper_dir"
     exit "$command_status"
   }
 
   trap clockrove_restore_sdk_adb EXIT
-  if ! mv -- "$sdk_adb" "$saved_adb" || ! mv -- "$wrapper_path" "$sdk_adb"; then
+  if ! mv -- "$sdk_adb" "$saved_adb"; then
     echo 'Could not install the temporary Android SDK adb wrapper.' >&2
     return 2
   fi
-  export CLOCKROVE_REAL_ADB="$real_adb"
+  if ! mv -- "$wrapper_path" "$sdk_adb"; then
+    echo 'Could not install the temporary Android SDK adb wrapper.' >&2
+    return 2
+  fi
+  export CLOCKROVE_REAL_ADB="$saved_adb"
   "$@"
 )
 

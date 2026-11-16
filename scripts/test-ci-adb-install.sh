@@ -796,4 +796,5 @@ grep -Fx -- '-s emulator-5554 shell pm install synthetic.apk' \
   "$FLUTTER_SDK_ADB_CALL_LOG" >/dev/null
 [[ "$(sha256sum "$sdk_adb_path")" == "$sdk_adb_checksum" ]]
 [[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*' -print -quit)" ]]
+[[ -z "$(find "$ANDROID_HOME/platform-tools" -maxdepth 1 -name '.clockrove-adb-wrapper.*-original' -print -quit)" ]]
 echo 'Verified Flutter’s absolute SDK adb install uses --no-streaming and the original SDK adb is restored.'
