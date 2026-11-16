@@ -22,12 +22,10 @@ process_log="$result_dir/backup-snapshot-memory-process-lifecycle.txt"
 app_identity="$(clockrove_apk_identity "$app_apk" app)"
 instrumentation_identity="$(clockrove_apk_identity "$instrumentation_apk" instrumentation)"
 
-# The native device journeys ran against these saved APKs and do not replace
-# installed packages. Reuse the expected package versions instead of
-# reinstalling them before the fresh-process memory measurement. A different
-# or absent version still uses the bounded recovery helper.
-clockrove_ensure_apk_version "$api" app "$app_apk"
-clockrove_ensure_apk_version "$api" instrumentation "$instrumentation_apk"
+# Restore the explicit, bounded APK installs before Flutter seeds the fresh
+# full-path benchmark process.
+clockrove_install_apk "$api" app "$app_apk"
+clockrove_install_apk "$api" instrumentation "$instrumentation_apk"
 
 clockrove_clear_backup_benchmark_app_data() {
   local output
