@@ -184,7 +184,7 @@ internal object BackupImportDeletionResolution {
         val columns = BackupImportStore.revisionDataColumns[kind] ?: staleDeletion()
         if (!store.validLiveRevision(backup, kind, entityId) ||
             !store.revisionPayloadMatchesRow(
-                backup.payload, columns, values, BackupImportStore.optionalRevisionPayloadKeys(kind),
+                backup.payload, columns, values, store.optionalRevisionPayloadKeys(kind),
             ) || !store.revisionJobMatchesData(db, handle, kind, backup.jobId, row.values, values, preferStaged = true)) {
             staleDeletion()
         }
