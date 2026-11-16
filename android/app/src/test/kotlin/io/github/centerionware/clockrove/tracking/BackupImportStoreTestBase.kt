@@ -67,14 +67,24 @@ abstract class BackupImportStoreTestBase {
         if (::repository.isInitialized) repository.close()
     }
 
+    internal fun stripExportOnlySha256(
+        records: List<Map<String, Any?>>,
+    ): List<Map<String, Any?>> = records.map { record ->
+        val blobs = record["blobs"] as? List<*> ?: return@map record
+        record + ("blobs" to blobs.map { raw ->
+            (raw as Map<*, *>).filterKeys { it != "sha256" }
+        })
+    }
+
     internal fun transferRows(snapshotId: String, importId: String) {
         var ordinal = 0L
         var cursor: String? = null
         var done = false
         while (!done) {
             val page = exportStore.readPage(snapshotId, cursor, BackupImportStore.MAX_PAGE_BYTES)
-            ordinal = importStore.appendPage(importId, ordinal, page.records,
-                encodedAppendRequest(importId, ordinal, page.records))
+            val importRecords = stripExportOnlySha256(page.records)
+            ordinal = importStore.appendPage(importId, ordinal, importRecords,
+                encodedAppendRequest(importId, ordinal, importRecords))
             page.records.forEach { record ->
                 @Suppress("UNCHECKED_CAST")
                 val blobs = record["blobs"] as? List<Map<String, Any?>> ?: emptyList()

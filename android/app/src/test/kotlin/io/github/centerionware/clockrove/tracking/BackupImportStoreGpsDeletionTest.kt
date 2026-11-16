@@ -20,6 +20,56 @@ import org.robolectric.annotation.Config
 @Config(sdk = [24])
 class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
     @Test
+    fun stripsExportOnlySha256BeforeNativeImportStaging() {
+        val exportRecord = mapOf<String, Any?>(
+            "type" to "row",
+            "table" to "logo_assets",
+            "values" to mapOf(
+                "id" to "sha256-strip-logo",
+                "mime" to "image/png",
+                "width" to 1,
+                "height" to 1,
+                "content_hash" to "synthetic-content-hash",
+            ),
+            "blobs" to listOf(mapOf(
+                "id" to "sha256-strip-blob",
+                "column" to "bytes",
+                "sizeBytes" to 3L,
+                "sha256" to "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=",
+            )),
+        )
+
+        val stagedRecord = stripExportOnlySha256(listOf(exportRecord)).single()
+        val exportDescriptor = (exportRecord["blobs"] as List<*>).single() as Map<*, *>
+        val stagedDescriptor = (stagedRecord["blobs"] as List<*>).single() as Map<*, *>
+
+        assertTrue(exportDescriptor.containsKey("sha256"))
+        assertFalse(stagedDescriptor.containsKey("sha256"))
+        assertEquals(setOf("id", "column", "sizeBytes"), stagedDescriptor.keys)
+        assertEquals(exportRecord["values"], stagedRecord["values"])
+
+        val started = importStore.begin(
+            database,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
+            "f".repeat(64),
+            1,
+            1,
+            3,
+        )
+        val stagedRecords = listOf(stagedRecord)
+        assertEquals(
+            1L,
+            importStore.appendPage(
+                started.importId,
+                0,
+                stagedRecords,
+                encodedAppendRequest(started.importId, 0, stagedRecords),
+            ),
+        )
+    }
+
+    @Test
     fun backupOnlyPointCoveredByLocalRangeOmitsItsCompleteRevisionGraph() {
         val (sessionId, measuredAt) = startAndStopSessionWithPoint("local-point-for-backup-only-preserve")
         assertNull(repository.deleteLocationRange(
@@ -481,7 +531,11 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
         var done = false
         while (!done) {
             val page = exportStore.readPage(source.snapshotId, cursor, started.maxPageBytes)
-            assertTrue(encodedAppendRequest(started.importId, firstOrdinal, page.records) <= BackupImportStore.MAX_REQUEST_BYTES)
+            val importRecords = stripExportOnlySha256(page.records)
+            assertTrue(
+                encodedAppendRequest(started.importId, firstOrdinal, importRecords) <=
+                    BackupImportStore.MAX_REQUEST_BYTES,
+            )
             page.records.forEach { record ->
                 val descriptors = record["blobs"] as List<*>
                 descriptors.forEach { raw ->
@@ -494,8 +548,8 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
             firstOrdinal = importStore.appendPage(
                 started.importId,
                 firstOrdinal,
-                page.records,
-                encodedAppendRequest(started.importId, firstOrdinal, page.records),
+                importRecords,
+                encodedAppendRequest(started.importId, firstOrdinal, importRecords),
             )
             cursor = page.nextCursor
             done = page.done

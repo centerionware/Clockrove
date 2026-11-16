@@ -9,6 +9,7 @@ void main() {
     test(
       'accepts and round trips the current database schema version',
       () async {
+        expect(BackupArchiveCodec.latestSchemaVersion, 17);
         final archive = await BackupArchiveCodec.encode(
           schemaVersion: BackupArchiveCodec.latestSchemaVersion,
           stateVersion: 0,
