@@ -5,26 +5,42 @@ import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_import_api.dart';
 
 final class BackupRestoreImportResult {
-  const BackupRestoreImportResult({
+  BackupRestoreImportResult({
     required this.preview,
     required this.metrics,
     required this.stagedRecordBytes,
-    required this.nativeHandleClosed,
-  });
+    required BackupImportApi api,
+  }) : _api = api;
 
   final BackupImportPreview preview;
   final BackupArchiveReadMetrics metrics;
+  final BackupImportApi _api;
+  bool _closed = false;
 
   /// Native JSON row bytes, including the per-row framing charge.
   final int stagedRecordBytes;
 
-  final bool nativeHandleClosed;
+  bool get nativeHandleClosed => _closed;
+
+  /// The same transport used to create this stage. Keep it with the preview so
+  /// callers can page conflicts, resolve choices, apply, and then close it.
+  BackupImportApi get api => _api;
+
+  /// Discards this one-shot preview stage and its private files.
+  Future<bool> close() async {
+    if (_closed) return false;
+    final closed = await _api.close(preview.importId);
+    _closed = true;
+    return closed;
+  }
 }
 
 /// Authenticates an encrypted file, then streams a second authenticated pass
 /// through a bounded in-memory parser into the hidden native import stage.
 /// Plaintext archive bytes are never written to a file or accumulated in a
-/// whole-archive buffer. Preview is exposed only after the second pass commits.
+/// whole-archive buffer. The sealed native preview handle stays open for
+/// conflict paging/resolution and apply until the caller closes the result or
+/// the native idle expiry removes it.
 final class BackupRestoreImporter {
   BackupRestoreImporter({BackupImportApi? api})
     : _api = api ?? BackupImportApi();
@@ -51,7 +67,7 @@ final class BackupRestoreImporter {
     _BackupImportPageBuffer? pageBuffer;
     BackupImportPreview? preview;
     BackupArchiveReadMetrics? metrics;
-    var nativeHandleClosed = true;
+    var retainPreviewHandle = false;
     Object? operationFailure;
     StackTrace? operationStack;
     Object? cleanupFailure;
@@ -125,14 +141,15 @@ final class BackupRestoreImporter {
           'The native preview does not match the authenticated archive.',
         );
       }
+      retainPreviewHandle = true;
     } on Object catch (error, stackTrace) {
       operationFailure = error;
       operationStack = stackTrace;
     } finally {
       final handle = started;
-      if (handle != null) {
+      if (handle != null && !retainPreviewHandle) {
         try {
-          nativeHandleClosed = await _api.close(handle.importId);
+          await _api.close(handle.importId);
         } on Object catch (error) {
           cleanupFailure ??= error;
         }
@@ -161,7 +178,7 @@ final class BackupRestoreImporter {
       preview: preview,
       metrics: metrics,
       stagedRecordBytes: preview.stagedRecordBytes,
-      nativeHandleClosed: nativeHandleClosed,
+      api: _api,
     );
   }
 

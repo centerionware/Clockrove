@@ -8,106 +8,111 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('streams bounded records and checksums media with backpressure', () async {
-    final media = Uint8List.fromList(
-      List<int>.generate(600_123, (index) => index * 31 & 0xff),
-    );
-    final blobId = List<String>.filled(43, 'a').join();
-    final archive = await BackupArchiveCodec.encode(
-      schemaVersion: BackupArchiveCodec.latestSchemaVersion,
-      stateVersion: 0,
-      capturedAtUtcMillis: 0,
-      rows: [
-        const BackupArchiveRow(
-          table: 'jobs',
-          values: {'id': 'streamed-job'},
-          blobs: [],
-        ),
-        BackupArchiveRow(
-          table: 'logo_assets',
-          values: const {'id': 'streamed-logo'},
-          blobs: [BackupArchiveBlob(id: blobId, column: 'bytes', bytes: media)],
-        ),
-      ],
-    );
-    final channel = BackupArchivePlaintextChannel();
-    final callbackEntered = Completer<void>();
-    final allowRecord = Completer<void>();
-    final records = <Map<String, Object?>>[];
-    final chunks = <Uint8List>[];
-    var recordsComplete = false;
-    final parsing = BackupArchiveReader.stage(
-      plaintext: channel,
-      authenticatedArchiveBytes: archive.length,
-      authenticatedArchiveSha256: crypto.sha256.convert(archive).bytes,
-      onHeader: (header) async {
-        expect(header.schemaVersion, BackupArchiveCodec.latestSchemaVersion);
-        expect(header.recordCount, 2);
-        expect(header.mediaCount, 1);
-        return 128 * 1024;
-      },
-      onRecord: (ordinal, record) async {
-        expect(ordinal, records.length);
-        if (ordinal == 0) {
-          callbackEntered.complete();
-          await allowRecord.future;
-        }
-        records.add(record);
-      },
-      onRecordsComplete: () async {
-        recordsComplete = true;
-      },
-      onMediaChunk: (importedBlobId, offset, bytes) async {
-        expect(importedBlobId, blobId);
-        expect(
-          offset,
-          chunks.fold<int>(0, (total, chunk) => total + chunk.length),
-        );
-        expect(bytes.length, lessThanOrEqualTo(128 * 1024));
-        chunks.add(bytes);
-      },
-    );
+  test(
+    'streams bounded records and checksums media with backpressure',
+    () async {
+      final media = Uint8List.fromList(
+        List<int>.generate(600_123, (index) => index * 31 & 0xff),
+      );
+      final blobId = List<String>.filled(43, 'a').join();
+      final archive = await BackupArchiveCodec.encode(
+        schemaVersion: BackupArchiveCodec.latestSchemaVersion,
+        stateVersion: 0,
+        capturedAtUtcMillis: 0,
+        rows: [
+          const BackupArchiveRow(
+            table: 'jobs',
+            values: {'id': 'streamed-job'},
+            blobs: [],
+          ),
+          BackupArchiveRow(
+            table: 'logo_assets',
+            values: const {'id': 'streamed-logo'},
+            blobs: [
+              BackupArchiveBlob(id: blobId, column: 'bytes', bytes: media),
+            ],
+          ),
+        ],
+      );
+      final channel = BackupArchivePlaintextChannel();
+      final callbackEntered = Completer<void>();
+      final allowRecord = Completer<void>();
+      final records = <Map<String, Object?>>[];
+      final chunks = <Uint8List>[];
+      var recordsComplete = false;
+      final parsing = BackupArchiveReader.stage(
+        plaintext: channel,
+        authenticatedArchiveBytes: archive.length,
+        authenticatedArchiveSha256: crypto.sha256.convert(archive).bytes,
+        onHeader: (header) async {
+          expect(header.schemaVersion, BackupArchiveCodec.latestSchemaVersion);
+          expect(header.recordCount, 2);
+          expect(header.mediaCount, 1);
+          return 128 * 1024;
+        },
+        onRecord: (ordinal, record) async {
+          expect(ordinal, records.length);
+          if (ordinal == 0) {
+            callbackEntered.complete();
+            await allowRecord.future;
+          }
+          records.add(record);
+        },
+        onRecordsComplete: () async {
+          recordsComplete = true;
+        },
+        onMediaChunk: (importedBlobId, offset, bytes) async {
+          expect(importedBlobId, blobId);
+          expect(
+            offset,
+            chunks.fold<int>(0, (total, chunk) => total + chunk.length),
+          );
+          expect(bytes.length, lessThanOrEqualTo(128 * 1024));
+          chunks.add(bytes);
+        },
+      );
 
-    final firstChunkLength = BackupArchivePlaintextChannel.maxChunkBytes;
-    var firstWriteCompleted = false;
-    final firstWrite = channel.add(
-      Uint8List.sublistView(archive, 0, firstChunkLength),
-    ).then<void>((_) {
-      firstWriteCompleted = true;
-    });
-    try {
-      await callbackEntered.future.timeout(const Duration(seconds: 5));
-      await Future<void>.delayed(Duration.zero);
-      expect(firstWriteCompleted, isFalse);
-    } finally {
-      if (!allowRecord.isCompleted) allowRecord.complete();
-    }
-    await firstWrite;
+      final firstChunkLength = BackupArchivePlaintextChannel.maxChunkBytes;
+      var firstWriteCompleted = false;
+      final firstWrite = channel
+          .add(Uint8List.sublistView(archive, 0, firstChunkLength))
+          .then<void>((_) {
+            firstWriteCompleted = true;
+          });
+      try {
+        await callbackEntered.future.timeout(const Duration(seconds: 5));
+        await Future<void>.delayed(Duration.zero);
+        expect(firstWriteCompleted, isFalse);
+      } finally {
+        if (!allowRecord.isCompleted) allowRecord.complete();
+      }
+      await firstWrite;
 
-    for (var offset = firstChunkLength; offset < archive.length;) {
-      final end = (offset + BackupArchivePlaintextChannel.maxChunkBytes)
-          .clamp(0, archive.length)
-          .toInt();
-      await channel.add(Uint8List.sublistView(archive, offset, end));
-      offset = end;
-    }
-    await channel.close();
-    final metrics = await parsing;
+      for (var offset = firstChunkLength; offset < archive.length;) {
+        final end = (offset + BackupArchivePlaintextChannel.maxChunkBytes)
+            .clamp(0, archive.length)
+            .toInt();
+        await channel.add(Uint8List.sublistView(archive, offset, end));
+        offset = end;
+      }
+      await channel.close();
+      final metrics = await parsing;
 
-    expect(recordsComplete, isTrue);
-    expect(records.first['type'], 'row');
-    expect(records.map((record) => record['table']), ['jobs', 'logo_assets']);
-    expect((records.last['blobs'] as List).single['sizeBytes'], media.length);
-    expect(
-      chunks.fold<int>(0, (total, chunk) => total + chunk.length),
-      media.length,
-    );
-    expect(metrics.recordCount, 2);
-    expect(metrics.mediaBytes, media.length);
-    expect(metrics.recordBytes, greaterThan(0));
-    expect(metrics.archiveBytes, archive.length);
-    expect(metrics.archiveSha256, crypto.sha256.convert(archive).bytes);
-  });
+      expect(recordsComplete, isTrue);
+      expect(records.first['type'], 'row');
+      expect(records.map((record) => record['table']), ['jobs', 'logo_assets']);
+      expect((records.last['blobs'] as List).single['sizeBytes'], media.length);
+      expect(
+        chunks.fold<int>(0, (total, chunk) => total + chunk.length),
+        media.length,
+      );
+      expect(metrics.recordCount, 2);
+      expect(metrics.mediaBytes, media.length);
+      expect(metrics.recordBytes, greaterThan(0));
+      expect(metrics.archiveBytes, archive.length);
+      expect(metrics.archiveSha256, crypto.sha256.convert(archive).bytes);
+    },
+  );
 
   test('rejects changed plaintext against the authenticated digest', () async {
     final archive = await BackupArchiveCodec.encode(

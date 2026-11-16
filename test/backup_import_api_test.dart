@@ -214,26 +214,29 @@ void main() {
     },
   );
 
-  test('accepts the full native media ceiling before row reconciliation', () async {
-    respond = (call) async => {
-      'importId': 'import-64m',
-      'archiveFormatVersion': 1,
-      'schemaVersion': currentBackupImportSchemaVersion,
-      'maxPageBytes': 255 * 1024,
-      'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
-      'idleExpiryMillis': 60000,
-    };
-    final started = await BackupImportApi(channel: channel).begin(
-      archiveFormatVersion: 1,
-      schemaVersion: currentBackupImportSchemaVersion,
-      archiveDigest: 'f' * 64,
-      recordCount: 1,
-      mediaCount: 1,
-      mediaBytes: maxBackupImportMediaBytes,
-    );
-    expect(started.importId, 'import-64m');
-    expect(maxBackupImportMediaBytes, maxBackupImportStagedBytes);
-  });
+  test(
+    'accepts the full native media ceiling before row reconciliation',
+    () async {
+      respond = (call) async => {
+        'importId': 'import-64m',
+        'archiveFormatVersion': 1,
+        'schemaVersion': currentBackupImportSchemaVersion,
+        'maxPageBytes': 255 * 1024,
+        'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
+        'idleExpiryMillis': 60000,
+      };
+      final started = await BackupImportApi(channel: channel).begin(
+        archiveFormatVersion: 1,
+        schemaVersion: currentBackupImportSchemaVersion,
+        archiveDigest: 'f' * 64,
+        recordCount: 1,
+        mediaCount: 1,
+        mediaBytes: maxBackupImportMediaBytes,
+      );
+      expect(started.importId, 'import-64m');
+      expect(maxBackupImportMediaBytes, maxBackupImportStagedBytes);
+    },
+  );
 
   test('requires the current archive schema for native import', () async {
     final api = BackupImportApi(channel: channel);
@@ -303,6 +306,24 @@ void main() {
     await expectLater(
       BackupImportApi(channel: channel).finish('import-1'),
       throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('accepts media above 60 MiB when combined staged bytes fit', () async {
+    respond = (call) async => _preview(
+      importId: 'import-1',
+      previewToken: 'token-1',
+      recordCount: 1,
+      addedCount: 1,
+      mediaCount: 1,
+      mediaBytes: 61 * 1024 * 1024,
+      stagedRecordBytes: 2 * 1024 * 1024,
+    );
+    final preview = await BackupImportApi(channel: channel).finish('import-1');
+    expect(preview.mediaBytes, 61 * 1024 * 1024);
+    expect(
+      preview.stagedRecordBytes + preview.mediaBytes,
+      lessThanOrEqualTo(maxBackupImportStagedBytes),
     );
   });
 

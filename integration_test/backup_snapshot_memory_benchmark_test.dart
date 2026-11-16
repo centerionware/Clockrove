@@ -101,10 +101,12 @@ void main() {
       'conflicts=${result.conflictCount} '
       'staged_plus_media_bytes=${result.stagedPlusMediaBytes} '
       'restore_peak_delta_rss_kib=${result.restorePeakDeltaRssKiB} '
+      'native_open_at_preview=${result.nativeHandleOpenAtPreview} '
       'native_closed=${result.nativeHandleClosed} '
       'two_pass_authenticated=true',
     );
     expect(result.nativeHandleClosed, isTrue);
+    expect(result.nativeHandleOpenAtPreview, isTrue);
     expect(result.conflictCount, 0);
     expect(result.mediaCount, greaterThanOrEqualTo(14));
     expect(
@@ -592,31 +594,47 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
     } finally {
       if (restoreRss.isRunning) await restoreRss.stop();
     }
-    expect(imported.preview.recordCount, exported.recordCount);
-    expect(imported.preview.mediaCount, exported.mediaCount);
-    expect(imported.preview.mediaBytes, exported.mediaBytes);
-    expect(imported.preview.conflictCount, 0);
-    expect(imported.preview.localOpenSessionCount, 0);
-    expect(imported.preview.applyReady, isTrue);
-    expect(imported.nativeHandleClosed, isTrue);
-    expect(imported.metrics.archiveBytes, encrypted.archiveBytes);
-    expect(imported.metrics.archiveSha256, encrypted.archiveSha256);
+    var nativeHandleOpenAtPreview = false;
+    var nativeHandleClosed = false;
+    try {
+      expect(imported.preview.recordCount, exported.recordCount);
+      expect(imported.preview.mediaCount, exported.mediaCount);
+      expect(imported.preview.mediaBytes, exported.mediaBytes);
+      expect(imported.preview.conflictCount, 0);
+      expect(imported.preview.localOpenSessionCount, 0);
+      expect(imported.preview.applyReady, isTrue);
+      expect(imported.nativeHandleClosed, isFalse);
+      final conflictPage = await imported.api.readConflicts(
+        importId: imported.preview.importId,
+        previewToken: imported.preview.previewToken,
+      );
+      expect(conflictPage.done, isTrue);
+      expect(conflictPage.conflicts, isEmpty);
+      nativeHandleOpenAtPreview = true;
+      expect(imported.metrics.archiveBytes, encrypted.archiveBytes);
+      expect(imported.metrics.archiveSha256, encrypted.archiveSha256);
+      nativeHandleClosed = await imported.close();
+      expect(nativeHandleClosed, isTrue);
 
-    return _RestorePreviewMetrics(
-      archiveBytes: imported.metrics.archiveBytes,
-      archiveRecordBytes: imported.metrics.recordBytes,
-      stagedRecordBytes: imported.stagedRecordBytes,
-      mediaBytes: imported.metrics.mediaBytes,
-      stagedPlusMediaBytes:
-          imported.stagedRecordBytes + imported.metrics.mediaBytes,
-      mediaCount: imported.metrics.mediaCount,
-      recordCount: imported.metrics.recordCount,
-      conflictCount: imported.preview.conflictCount,
-      nativeHandleClosed: imported.nativeHandleClosed,
-      restorePeakDeltaRssKiB: restorePeakRssKiB > restoreBaselineRssKiB
-          ? restorePeakRssKiB - restoreBaselineRssKiB
-          : 0,
-    );
+      return _RestorePreviewMetrics(
+        archiveBytes: imported.metrics.archiveBytes,
+        archiveRecordBytes: imported.metrics.recordBytes,
+        stagedRecordBytes: imported.stagedRecordBytes,
+        mediaBytes: imported.metrics.mediaBytes,
+        stagedPlusMediaBytes:
+            imported.stagedRecordBytes + imported.metrics.mediaBytes,
+        mediaCount: imported.metrics.mediaCount,
+        recordCount: imported.metrics.recordCount,
+        conflictCount: imported.preview.conflictCount,
+        nativeHandleOpenAtPreview: nativeHandleOpenAtPreview,
+        nativeHandleClosed: nativeHandleClosed,
+        restorePeakDeltaRssKiB: restorePeakRssKiB > restoreBaselineRssKiB
+            ? restorePeakRssKiB - restoreBaselineRssKiB
+            : 0,
+      );
+    } finally {
+      if (!imported.nativeHandleClosed) await imported.close();
+    }
   } finally {
     await exported.close();
     if (await outputDirectory.exists()) {
@@ -845,6 +863,7 @@ final class _RestorePreviewMetrics {
     required this.mediaCount,
     required this.recordCount,
     required this.conflictCount,
+    required this.nativeHandleOpenAtPreview,
     required this.nativeHandleClosed,
     required this.restorePeakDeltaRssKiB,
   });
@@ -857,6 +876,7 @@ final class _RestorePreviewMetrics {
   final int mediaCount;
   final int recordCount;
   final int conflictCount;
+  final bool nativeHandleOpenAtPreview;
   final bool nativeHandleClosed;
   final int restorePeakDeltaRssKiB;
 }

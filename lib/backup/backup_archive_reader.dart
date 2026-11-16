@@ -71,7 +71,10 @@ final class BackupArchivePlaintextChannel {
 
   Future<void> add(List<int> bytes) async {
     _throwIfFailed();
-    if (_closed || _pending != null || bytes.isEmpty || bytes.length > maxChunkBytes) {
+    if (_closed ||
+        _pending != null ||
+        bytes.isEmpty ||
+        bytes.length > maxChunkBytes) {
       throw StateError('The plaintext archive channel is not writable.');
     }
     final chunk = BackupArchivePlaintextChunk._(
@@ -128,7 +131,10 @@ abstract final class BackupArchiveReader {
     required Future<void> Function(String blobId, int offset, Uint8List bytes)
     onMediaChunk,
   }) async {
-    final reader = _BackupArchiveStreamReader(plaintext, authenticatedArchiveBytes);
+    final reader = _BackupArchiveStreamReader(
+      plaintext,
+      authenticatedArchiveBytes,
+    );
     try {
       if (authenticatedArchiveBytes < 48 ||
           authenticatedArchiveBytes > BackupArchiveCodec.maxArchiveBytes ||
@@ -316,7 +322,8 @@ abstract final class BackupArchiveReader {
         }
       }
 
-      if (mediaOffset != mediaBytes || reader.offset != authenticatedArchiveBytes) {
+      if (mediaOffset != mediaBytes ||
+          reader.offset != authenticatedArchiveBytes) {
         throw const FormatException('This backup contains unreferenced data.');
       }
       await reader.requireEndOfStream();
@@ -369,7 +376,8 @@ final class _BackupArchiveStreamReader {
     if (recordEnd != null &&
         recordStart != null &&
         (length > recordEnd - offset ||
-            length > BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
+            length >
+                BackupArchiveCodec.maxRecordBytes - (offset - recordStart))) {
       throw const FormatException('A backup record is too large.');
     }
 
@@ -390,12 +398,7 @@ final class _BackupArchiveStreamReader {
       final amount = (length - written)
           .clamp(0, chunk.bytes.length - _chunkOffset)
           .toInt();
-      result.setRange(
-        written,
-        written + amount,
-        chunk.bytes,
-        _chunkOffset,
-      );
+      result.setRange(written, written + amount, chunk.bytes, _chunkOffset);
       written += amount;
       _chunkOffset += amount;
       offset += amount;
