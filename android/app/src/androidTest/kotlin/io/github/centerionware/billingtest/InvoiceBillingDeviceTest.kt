@@ -513,7 +513,12 @@ class InvoiceBillingDeviceTest {
             assertTrue(repository.invoices().invoices.all { it.jobDeleted })
             assertArrayEquals(originalPdf, repository.invoice("legacy-invoice").pdf)
             launch(); click("App settings and customers"); click("Invoices")
-            waitFor("$jobName · job deleted"); click("INV-1001"); reveal("View original PDF"); click("View original PDF"); waitFor("Prepared invoice"); waitFor("Page 1 of 1")
+            waitFor("$jobName · job deleted"); click("INV-1001")
+            assertNotNull(
+                "Original PDF action should be visible without scrolling the invoice detail",
+                safeTapBounds(waitFor("View original PDF")),
+            )
+            click("View original PDF"); waitFor("Prepared invoice"); waitFor("Page 1 of 1")
             capture("retained-invoice")
             assertEquals(frozen, InvoiceStore.Snapshot.decode(repository.invoice(issued.id).payload))
         } catch (failure: Throwable) {
