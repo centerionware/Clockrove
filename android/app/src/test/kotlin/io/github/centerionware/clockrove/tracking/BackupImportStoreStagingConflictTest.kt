@@ -117,6 +117,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
         assertTrue(preview.conflictCount > 0)
+        assertTrue(preview.changedCount > 0L)
         assertFalse(preview.applyReady)
         val page = importStore.readConflictPage(
             database, started.importId, preview.previewToken, null, 1024,
@@ -220,6 +221,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
 
         val preview = importStore.finish(database, started.importId)
         assertEquals(1L, preview.conflictCount)
+        assertEquals(1L, preview.timeOverlapCount)
         assertFalse(preview.applyReady)
         val conflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
         assertEquals("local-quote", conflict["localIdentifier"])

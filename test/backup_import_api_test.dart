@@ -327,6 +327,34 @@ void main() {
     );
   });
 
+  test('accepts overlapping preview summary counts from native planning', () async {
+    respond = (call) async => _preview(
+      importId: 'summary-import',
+      previewToken: 'summary-token',
+      recordCount: 4,
+      addedCount: 1,
+      changedCount: 2,
+      deletedCount: 3,
+      unchangedCount: 4,
+      unresolvedReferenceCount: 1,
+      timeOverlapCount: 2,
+      conflictCount: 3,
+    );
+
+    final preview = await BackupImportApi(channel: channel).finish('summary-import');
+
+    expect(preview.addedCount, 1);
+    expect(preview.changedCount, 2);
+    expect(preview.deletedCount, 3);
+    expect(preview.unchangedCount, 4);
+    expect(preview.unresolvedReferenceCount, 1);
+    expect(preview.timeOverlapCount, 2);
+    expect(
+      preview.unchangedCount + preview.deletedCount,
+      greaterThan(preview.recordCount),
+    );
+  });
+
   test('accepts dependent conflict with only an explicit omission choice', () {
     final conflict = BackupImportConflict.fromMap({
       'conflictId': 'dependent-record',
@@ -349,9 +377,8 @@ void main() {
     expect(conflict.resolved, isFalse);
   });
 
-  test('rejects missing defaults for ordinary actionable conflicts', () {
-    expect(
-      () => BackupImportConflict.fromMap({
+  test('accepts unresolved actionable conflicts with a null default choice', () {
+    final conflict = BackupImportConflict.fromMap({
         'conflictId': 'ordinary-conflict',
         'kind': 'EXISTING_RECORD_DIFFERS',
         'table': 'customers',
@@ -363,9 +390,10 @@ void main() {
         'defaultChoice': null,
         'resolved': false,
         'selectedChoice': null,
-      }),
-      throwsA(isA<FormatException>()),
-    );
+      });
+    expect(conflict.allowedChoices, ['KEEP_LOCAL']);
+    expect(conflict.defaultChoice, isNull);
+    expect(conflict.resolved, isFalse);
   });
 
   test(
@@ -442,6 +470,11 @@ Map<String, Object?> _preview({
   required String previewToken,
   required int recordCount,
   int addedCount = 0,
+  int changedCount = 0,
+  int deletedCount = 0,
+  int unchangedCount = 0,
+  int unresolvedReferenceCount = 0,
+  int timeOverlapCount = 0,
   int conflictCount = 0,
   int schemaVersion = currentBackupImportSchemaVersion,
   int mediaCount = 0,
@@ -457,7 +490,11 @@ Map<String, Object?> _preview({
   'mediaBytes': mediaBytes,
   'stagedRecordBytes': stagedRecordBytes,
   'addedCount': addedCount,
-  'unchangedCount': 0,
+  'changedCount': changedCount,
+  'deletedCount': deletedCount,
+  'unchangedCount': unchangedCount,
+  'unresolvedReferenceCount': unresolvedReferenceCount,
+  'timeOverlapCount': timeOverlapCount,
   'conflictCount': conflictCount,
   'openSessionCount': 0,
   'localOpenSessionCount': 0,

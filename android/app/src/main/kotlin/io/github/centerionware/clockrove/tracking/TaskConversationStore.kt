@@ -203,12 +203,19 @@ internal object TaskConversationStore {
         return null
     }
 
-    fun removeComment(db: SQLiteDatabase, jobId: String, taskId: String, commentId: String, at: Long): String? {
+    fun removeComment(
+        db: SQLiteDatabase,
+        jobId: String,
+        taskId: String,
+        commentId: String,
+        at: Long,
+        recordEvent: Boolean = true,
+    ): String? {
         if (!exists(db, jobId, taskId, editable = true)) return "TASK_UNAVAILABLE"
         val found = db.rawQuery("SELECT id FROM task_comments WHERE id=? AND task_id=?", arrayOf(commentId, taskId)).use { it.moveToFirst() }
         if (!found) return "TASK_COMMENT_UNAVAILABLE"
         recordAttachmentDeletionsForComment(db, jobId, taskId, commentId, at)
-        event(db, taskId, commentId, "DELETED", at)
+        if (recordEvent) event(db, taskId, commentId, "DELETED", at)
         db.execSQL("DELETE FROM task_comments WHERE id=?", arrayOf(commentId))
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='task_comment' AND entity_id=?", arrayOf(commentId))
         val tombstone = RevisionStore.record(

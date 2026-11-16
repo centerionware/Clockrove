@@ -464,10 +464,15 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             cursor = page.nextCursor
             if (page.done) break
         } while (true)
-        assertTrue(conflicts.any { it["kind"] == "BACKUP_COMMENT_DELETION" })
+        val commentDeletion = requireNotNull(conflicts.singleOrNull { it["kind"] == "BACKUP_COMMENT_DELETION" })
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), commentDeletion["allowedChoices"])
+        assertEquals("KEEP_LOCAL", commentDeletion["defaultChoice"])
         val deletionHeads = conflicts.filter { it["kind"] == "BACKUP_ENTITY_DELETION" }
         assertEquals(2, deletionHeads.size)
-        assertTrue(deletionHeads.all { it["allowedChoices"] == listOf("KEEP_LOCAL") })
+        assertTrue(deletionHeads.all {
+            it["allowedChoices"] == listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION") &&
+                it["defaultChoice"] == "KEEP_LOCAL"
+        })
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }

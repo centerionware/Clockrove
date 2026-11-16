@@ -86,7 +86,19 @@ internal fun BackupImportStore.resolveAggregateConflicts(
         if (aggregateKeys.isEmpty()) return
 
         data class StagedConflict(val id: String, val json: JSONObject)
-        aggregateKeys.addAll(expandAggregateKeys(handle, aggregateKeys))
+        val selectedDeletionGraph = selectedConflict.isCommentDeletionConflict()
+        val scopedDeletionIntent = intent in setOf("BACKUP_DELETION", "BACKUP_RESTORE")
+        if (!selectedDeletionGraph && !scopedDeletionIntent) {
+            aggregateKeys.addAll(expandAggregateKeys(handle, aggregateKeys))
+        } else {
+            handle.database.execSQL("DROP TABLE IF EXISTS aggregate_conflict_keys")
+            handle.database.execSQL("CREATE TABLE aggregate_conflict_keys(group_key TEXT PRIMARY KEY)")
+            aggregateKeys.forEach { key ->
+                handle.database.insertOrThrow(
+                    "aggregate_conflict_keys", null, ContentValues().apply { put("group_key", key) },
+                )
+            }
+        }
         val members = handle.database.rawQuery(
             "SELECT DISTINCT c.conflict_id,c.conflict_json FROM import_conflicts c " +
                 "JOIN import_aggregate_keys g ON g.row_ordinal=c.row_ordinal " +
@@ -94,7 +106,10 @@ internal fun BackupImportStore.resolveAggregateConflicts(
             null,
         ).use { rows -> buildList {
             while (rows.moveToNext()) add(StagedConflict(rows.getString(0), JSONObject(rows.getString(1))))
-        } }
+        } }.filterNot { staged ->
+            !selectedDeletionGraph && !scopedDeletionIntent &&
+                staged.id != selectedConflictId && staged.json.isCommentDeletionConflict()
+        }
         val choices = members.mapNotNull { staged ->
             val allowed = staged.json.optJSONArray("allowedChoices") ?: return@mapNotNull null
             val candidate = if (staged.id == selectedConflictId) selectedChoice else
@@ -119,6 +134,21 @@ internal fun BackupImportStore.resolveAggregateConflicts(
         handle.database.execSQL("DROP TABLE IF EXISTS aggregate_conflict_keys")
     }
 
+private fun JSONObject.isCommentDeletionConflict(): Boolean {
+    val table = optString("table")
+    return when (optString("kind")) {
+        "BACKUP_COMMENT_DELETION" -> table == "task_comment_events"
+        "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
+            optJSONArray("primaryKey")?.optString(0).orEmpty() in
+                BackupImportDeletionResolution.deletableKinds
+        "ENTITY_DELETION_TOMBSTONE" -> table in BackupImportDeletionResolution.restorableTables ||
+            (table == "entity_heads" &&
+                optJSONArray("primaryKey")?.optString(0).orEmpty() in
+                    BackupImportDeletionResolution.deletableKinds)
+        else -> false
+    }
+}
+
 internal fun BackupImportStore.writeConflictChoice(handle: ConflictSelectionHandle, id: String, json: JSONObject, choice: String) {
         json.put("resolved", true)
         json.put("selectedChoice", choice)
@@ -139,6 +169,7 @@ internal fun BackupImportStore.conflictChoiceIntent(choice: String): String? = w
         "MERGE_USE_BACKUP_CONTENT" -> "BACKUP_MERGE"
         "MERGE_IDENTICAL_CONTENT" -> "NEUTRAL"
         "APPLY_BACKUP_DELETION" -> "BACKUP_DELETION"
+        "RESTORE_BACKUP_CONTENT" -> "BACKUP_RESTORE"
         "KEEP_LOCAL", "PRESERVE_LOCAL_DELETION", "PRESERVE_DELETION", "OMIT_BACKUP_RECORD",
         "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION" -> "LOCAL_ONLY"
         else -> null
@@ -151,6 +182,7 @@ internal fun BackupImportStore.choiceForConflictIntent(allowed: JSONArray, inten
                 "OMIT_BACKUP_RECORD", "OMIT_OPEN_SESSION", "OMIT_BACKUP_SESSION",
             )
             "BACKUP_MERGE" -> listOf("MERGE_USE_BACKUP_CONTENT")
+            "BACKUP_RESTORE" -> listOf("RESTORE_BACKUP_CONTENT")
             "NEUTRAL" -> listOf("MERGE_IDENTICAL_CONTENT")
             "BACKUP_DELETION" -> listOf("APPLY_BACKUP_DELETION")
             "LOCAL_ONLY" -> listOf(
@@ -272,9 +304,14 @@ internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, ch
         "ACTIVE_JOB_DELETION" -> table == "job_deletions" && choice == "KEEP_LOCAL"
         "JOB_DELETION_TOMBSTONE" -> table == "jobs" && choice == "PRESERVE_LOCAL_DELETION"
         "ENTITY_DELETION_TOMBSTONE" ->
-            (table in revisionTombstoneRows || table == "entity_heads") && choice == "PRESERVE_LOCAL_DELETION"
-        "BACKUP_ENTITY_DELETION" -> table == "entity_heads" && choice == "KEEP_LOCAL"
-        "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" && choice == "KEEP_LOCAL"
+            (table in revisionTombstoneRows || table == "entity_heads") &&
+                (choice == "PRESERVE_LOCAL_DELETION" ||
+                    (choice == "RESTORE_BACKUP_CONTENT" &&
+                        (table == "entity_heads" || table in BackupImportDeletionResolution.restorableTables)))
+        "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
+            choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
+        "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" &&
+            choice in setOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
         "OPEN_SESSION" -> choice == "OMIT_OPEN_SESSION"
         "SESSION_OVERLAP" -> choice == "KEEP_LOCAL" || choice == "OMIT_BACKUP_SESSION"
         // Covered points can be omitted as an entity graph, or a selected backup range can
