@@ -151,9 +151,7 @@ void main() {
                 _row(
                   'task_attachments',
                   {'id': 'attachment-1'},
-                  blobs: [
-                    _blobDescriptor('media-1', 'data', media),
-                  ],
+                  blobs: [_blobDescriptor('media-1', 'data', media)],
                 ),
                 _row('jobs', {'id': 'job-z', 'name': 'Later job'}),
                 _row('jobs', {'id': 'job-a', 'name': 'Earlier job'}),
@@ -454,7 +452,7 @@ void main() {
                 'task_attachments',
                 {'id': 'attachment-1'},
                 blobs: [
-                    _blobDescriptor('media-1', 'data', [1, 2, 3, 4]),
+                  _blobDescriptor('media-1', 'data', [1, 2, 3, 4]),
                 ],
               ),
             ],

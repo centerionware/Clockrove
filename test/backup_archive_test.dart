@@ -402,9 +402,9 @@ void main() {
         );
         try {
           await expectLater(
-            plan.encode(
-              readBlob: (_) => Stream<List<int>>.value([11]),
-            ).toList(),
+            plan
+                .encode(readBlob: (_) => Stream<List<int>>.value([11]))
+                .toList(),
             throwsFormatException,
           );
         } finally {
