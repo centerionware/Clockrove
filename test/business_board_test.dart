@@ -169,7 +169,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('move dialog reflects native version refresh before confirming', (
+  testWidgets('task move uses the latest board without a confirmation dialog', (
     tester,
   ) async {
     final api = _MovingApi();
@@ -190,12 +190,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Task actions').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Move to Doing'));
-    await tester.pumpAndSettle();
     api.current = 2;
     timer.versions.add(2);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Move task'));
+    await tester.tap(find.text('Move to Doing'));
     await tester.pumpAndSettle();
     expect(api.submittedVersion, 2);
     expect(find.byType(AlertDialog), findsNothing);
