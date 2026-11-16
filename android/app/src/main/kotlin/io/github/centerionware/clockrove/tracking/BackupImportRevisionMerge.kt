@@ -439,6 +439,10 @@ internal fun BackupImportStore.safeDivergentUpdate(
                     if (activeTaskCollision) return false
                     continue
                 }
+                // Ignore a unique key only when every column is private/local-only and unchanged.
+                // A mixed composite key needs all values to prove the proposed update is safe.
+                if (columns.all { it !in values }) continue
+                if (columns.any { it !in values }) return false
                 if (columns.any { values[it] == null }) return false
                 val where = columns.joinToString(" AND ") { quote(it) + "=?" }
                 val args = columns.map { values.getValue(it).toString() } + primaryArgs

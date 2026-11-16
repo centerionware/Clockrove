@@ -109,22 +109,19 @@ abstract class BackupImportStoreTestBase {
     internal fun stageImport(
         records: List<Map<String, Any?>>,
         synthesizeMissingRevisionHeads: Boolean = true,
+        mediaCount: Long = 0,
+        mediaBytes: Long = 0,
     ): BackupImportStore.Started {
         require(records.isNotEmpty())
-        val revisionCompleteRecords = if (synthesizeMissingRevisionHeads) {
-            completeSyntheticRevisionHeads(records)
-        } else {
-            records
-        }
-        val archiveRecords = completeLocalRevisionAncestors(revisionCompleteRecords)
+        val archiveRecords = prepareSyntheticArchiveRecords(records, synthesizeMissingRevisionHeads)
         val started = importStore.begin(
             database,
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
             BackupExportStore.CURRENT_SCHEMA_VERSION,
             "d".repeat(64),
             archiveRecords.size.toLong(),
-            0,
-            0,
+            mediaCount,
+            mediaBytes,
         )
         var ordinal = 0L
         var page = mutableListOf<Map<String, Any?>>()
@@ -145,6 +142,18 @@ abstract class BackupImportStoreTestBase {
         }
         flush()
         return started
+    }
+
+    internal fun prepareSyntheticArchiveRecords(
+        records: List<Map<String, Any?>>,
+        synthesizeMissingRevisionHeads: Boolean = true,
+    ): List<Map<String, Any?>> {
+        val revisionCompleteRecords = if (synthesizeMissingRevisionHeads) {
+            completeSyntheticRevisionHeads(records)
+        } else {
+            records
+        }
+        return completeLocalRevisionAncestors(revisionCompleteRecords)
     }
 
     /** Synthetic row fixtures need the revision metadata real exports already include. */
@@ -419,11 +428,12 @@ abstract class BackupImportStoreTestBase {
         start: Long,
         end: Long,
         releasedMs: Long? = null,
+        sessionId: String = "synthetic-session-$id",
     ): Map<String, Any?> = stagedRow("invoice_time_claims", mapOf(
         "id" to id,
         "invoice_id" to invoiceId,
         "job_id" to claimJobId,
-        "session_id" to "synthetic-session-$id",
+        "session_id" to sessionId,
         "start_ms" to start,
         "end_ms" to end,
         "timezone" to "Etc/UTC",

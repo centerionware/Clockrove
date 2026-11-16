@@ -339,10 +339,9 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     selectableDivergentHead -> listOf(
                                         "KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT",
                                     )
-                                    // A kind without a validated row adapter can safely retain
-                                    // only the local head. A zero-choice conflict cannot be
-                                    // resolved and would strand every otherwise valid archive.
-                                    unsupportedDivergentHead -> listOf("KEEP_LOCAL")
+                                    // Do not expose a one-sided choice when this kind has no
+                                    // validated adapter to preserve both divergent histories.
+                                    unsupportedDivergentHead -> emptyList()
                                     table in mergeOnlyTables -> listOf("KEEP_LOCAL")
                                     else -> listOf("KEEP_LOCAL")
                                 }
@@ -358,7 +357,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     when {
                                         backupDeletionAgainstLive -> "KEEP_LOCAL"
                                         gpsRangeHeadChoice -> null
-                                        unsupportedDivergentHead -> "KEEP_LOCAL"
+                                        unsupportedDivergentHead -> null
                                         selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
                                         else -> "KEEP_LOCAL"
                                     },
@@ -439,7 +438,32 @@ internal fun BackupImportStore.sameRecord(
         staged: Map<String, LongArray>,
         local: PreviewPlannerLocalRow,
     ): Boolean {
-        if (canonicalValues(values, spec.valueColumns) != canonicalValues(local.values, spec.valueColumns)) return false
+        val valuesMatch = canonicalValues(values, spec.valueColumns) ==
+            canonicalValues(local.values, spec.valueColumns)
+        // Privacy deletion deliberately redacts nonfinancial history payloads.
+        val redactedRevisionAncestor = if (
+            !valuesMatch && table == "entity_revisions" && values["payload"] != null &&
+            local.values["payload"] == null
+        ) {
+            val kind = values["kind"]?.toString()
+            val entityId = values["entity_id"]?.toString()
+            val revisionId = values["id"]?.toString()
+            val identityColumns = spec.valueColumns.filterNot { it == "payload" }
+            val identityMatches = canonicalValues(values, identityColumns) ==
+                canonicalValues(local.values, identityColumns)
+            val localHead = if (kind == null || entityId == null || revisionId == null) null else {
+                db.rawQuery(
+                    "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                    arrayOf(kind, entityId),
+                ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
+            }
+            kind != null && kind !in JobLifecycleStore.financialRevisionKinds && identityMatches &&
+                localHead != null && localHead != revisionId &&
+                revisionHeadRelationship(db, handle, localHead, revisionId) == "BACKUP_ANCESTOR"
+        } else {
+            false
+        }
+        if (!valuesMatch && !redactedRevisionAncestor) return false
         spec.blobColumns.forEach { column ->
             val source = staged[column]
             val localSize = local.blobSizes[column]

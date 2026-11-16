@@ -21,19 +21,25 @@ import org.robolectric.annotation.Config
 class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
     @Test
     fun aDuplicateRowRollsBackTheWholePageBeforeAValidRetry() {
-        val source = exportStore.start(database)
-        val sourcePage = exportStore.readPage(source.snapshotId, null, BackupImportStore.MAX_PAGE_BYTES)
-        assertTrue(sourcePage.records.size >= 2)
+        val archiveRecords = prepareSyntheticArchiveRecords(listOf(stagedRow("customers", mapOf(
+            "id" to "duplicate-page-customer",
+            "name" to "Duplicate page customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        ))))
         val started = importStore.begin(
             database,
-            source.archiveFormatVersion,
-            source.schemaVersion,
+            BackupExportStore.ARCHIVE_FORMAT_VERSION,
+            BackupExportStore.CURRENT_SCHEMA_VERSION,
             "d".repeat(64),
-            2,
+            archiveRecords.size.toLong(),
             0,
             0,
         )
-        val duplicatePage = listOf(sourcePage.records.first(), sourcePage.records.first())
+        val duplicatePage = listOf(archiveRecords.first(), archiveRecords.first())
         assertFailure("DUPLICATE_RECORD") {
             importStore.appendPage(
                 started.importId,
@@ -42,9 +48,9 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
                 encodedAppendRequest(started.importId, 0, duplicatePage),
             )
         }
-        val validPage = sourcePage.records.take(2)
+        val validPage = archiveRecords
         assertEquals(
-            2L,
+            archiveRecords.size.toLong(),
             importStore.appendPage(
                 started.importId,
                 0,
@@ -53,10 +59,10 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
             ),
         )
         val preview = importStore.finish(database, started.importId)
-        assertEquals(2L, preview.recordCount)
-        assertEquals(2L, preview.unchangedCount)
+        assertEquals(archiveRecords.size.toLong(), preview.recordCount)
+        assertEquals(0L, preview.conflictCount)
+        assertTrue(preview.applyReady)
         assertTrue(importStore.close(started.importId))
-        assertTrue(exportStore.close(source.snapshotId))
     }
 
     @Test
@@ -246,21 +252,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
             "offset_seconds" to 0,
             "origin" to "MANUAL",
         )))
-        val started = importStore.begin(
-            database,
-            BackupExportStore.ARCHIVE_FORMAT_VERSION,
-            BackupExportStore.CURRENT_SCHEMA_VERSION,
-            "6".repeat(64),
-            records.size.toLong(),
-            0,
-            0,
-        )
-        importStore.appendPage(
-            started.importId,
-            0,
-            records,
-            encodedAppendRequest(started.importId, 0, records),
-        )
+        val started = stageImport(records)
 
         val preview = importStore.finish(database, started.importId)
         assertEquals(1L, preview.conflictCount)
@@ -432,6 +424,14 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
         assertEquals(1L, number("SELECT COUNT(*) FROM job_deletions WHERE id='$jobId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM jobs WHERE id='$jobId'"))
 
+        val staleRevisionPayloads = staleRecords
+            .filter { it["table"] == "entity_revisions" }
+            .map { values(it) }
+            .filter {
+                it["job_id"] == jobId && it["payload"] != null &&
+                    it["kind"]?.toString() !in JobLifecycleStore.financialRevisionKinds
+            }
+            .map { it["id"].toString() }
         val started = stageImport(staleRecords)
         val preview = importStore.finish(database, started.importId)
         val deletionConflict = requireNotNull(
@@ -472,6 +472,11 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
         assertEquals(0L, number("SELECT COUNT(*) FROM work_sites WHERE id='$siteId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$sessionId'"))
+        staleRevisionPayloads.forEach { revisionId ->
+            assertEquals(0L, number(
+                "SELECT COUNT(*) FROM entity_revisions WHERE id='$revisionId' AND payload IS NOT NULL",
+            ))
+        }
         assertFalse(importStore.close(started.importId))
     }
 }

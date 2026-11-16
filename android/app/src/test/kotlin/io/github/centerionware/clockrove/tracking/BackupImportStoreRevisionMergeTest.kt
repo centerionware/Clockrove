@@ -47,6 +47,48 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
     }
 
     @Test
+    fun redactedRevisionIdCollisionWithoutCausalAncestryRemainsInvalid() {
+        val kind = "customer"
+        val entityId = "redacted-revision-id-collision-entity"
+        val redactedRevision = "redacted-unrelated-revision"
+        val customerValues = mapOf<String, Any?>(
+            "id" to entityId,
+            "name" to "Unrelated local customer",
+            "email" to "",
+            "phone" to "",
+            "address" to "",
+            "notes" to "",
+            "archived" to 0,
+        )
+        database.execSQL(
+            "INSERT INTO customers VALUES(?,?,?,?,?,?,?)",
+            arrayOf<Any?>(entityId, "Unrelated local customer", "", "", "", "", 0),
+        )
+        val payload = JSONObject(customerValues.toSortedMap()).toString()
+        insertSyntheticRevision(redactedRevision, kind, entityId, null, payload = payload)
+        database.execSQL("UPDATE entity_revisions SET payload=NULL WHERE id=?", arrayOf(redactedRevision))
+        val unrelatedHead = RevisionStore.record(database, kind, entityId, null, customerValues, now + 1L)
+        val started = stageImport(listOf(
+            revisionRecord(redactedRevision, kind, entityId, null, payload = payload),
+            headRecord(kind, entityId, redactedRevision),
+            stagedRow("customers", customerValues),
+        ))
+
+        assertFailure("INVALID_REVISION_GRAPH") {
+            importStore.finish(database, started.importId)
+        }
+        assertEquals(unrelatedHead, database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+        assertTrue(database.rawQuery(
+            "SELECT payload FROM entity_revisions WHERE id=?",
+            arrayOf(redactedRevision),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.isNull(0) })
+        assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
     fun keepLocalChoiceOmitsCyclicBackupGraphWithoutChangingTheDatabase() {
         val kind = "quote_decision"
         val entityId = "post-choice-cycle-entity"
@@ -294,8 +336,8 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             val conflict = requireNotNull(headConflicts[case.id])
             assertEquals("DIVERGENT", conflict["revisionRelationship"])
             assertEquals(
-                listOf("MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
-                conflict["allowedChoices"],
+                setOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
+                (conflict["allowedChoices"] as List<*>).toSet(),
             )
             assertEquals("MERGE_KEEP_LOCAL_CONTENT", conflict["defaultChoice"])
         }
@@ -553,9 +595,83 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             assertEquals(
                 setOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
                 (conflict["allowedChoices"] as List<*>).toSet(),
+                "Unexpected choices for ${value.case.kind}",
             )
         }
         assertTrue(importStore.close(started.importId))
+    }
+
+    @Test
+    fun divergentSiteMergeKeepsPrivateRegistrationKeyAndBothRevisionParents() {
+        val siteId = "divergent-private-registration-site"
+        val registrationKey = UUID.randomUUID().toString()
+        database.execSQL(
+            "INSERT INTO work_sites(id,job_id,name,latitude,longitude,radius,enabled,registration_key) " +
+                "VALUES(?,?,?,0,0,50,0,?)",
+            arrayOf(siteId, jobId, "Base site", registrationKey),
+        )
+        val baseValues = readRowValues("work_sites", "id", siteId)
+            .filterKeys(BusinessSchema.siteColumns.toSet()::contains)
+        val baseRevision = RevisionStore.record(database, "site", siteId, jobId, baseValues, now)
+        database.execSQL("UPDATE work_sites SET name=? WHERE id=?", arrayOf("Local site", siteId))
+        val localValues = readRowValues("work_sites", "id", siteId)
+            .filterKeys(BusinessSchema.siteColumns.toSet()::contains)
+        val localRevision = RevisionStore.record(database, "site", siteId, jobId, localValues, now + 1L)
+        val backupValues = baseValues + ("name" to "Backup site")
+        val backupRevision = "divergent-private-registration-backup"
+        val started = stageImport(listOf(
+            stagedRow("entity_revisions", readRowValues("entity_revisions", "id", baseRevision)),
+            revisionRecord(
+                backupRevision,
+                "site",
+                siteId,
+                jobId,
+                payload = JSONObject(backupValues.toSortedMap()).toString(),
+            ),
+            parentRecord(backupRevision, baseRevision),
+            stagedRow("work_sites", backupValues),
+            headRecord("site", siteId, backupRevision),
+        ))
+        val preview = importStore.finish(database, started.importId)
+        var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
+        do {
+            val page = importStore.readConflictPage(database, started.importId, preview.previewToken, cursor, null)
+            conflicts.addAll(page.conflicts)
+            cursor = page.nextCursor
+            if (page.done) break
+        } while (true)
+        val headConflict = requireNotNull(
+            conflicts.singleOrNull { conflict ->
+                conflict["table"] == "entity_heads" &&
+                    (conflict["primaryKey"] as? List<*>)?.getOrNull(1)?.toString() == siteId
+            },
+        )
+        assertEquals("DIVERGENT", headConflict["revisionRelationship"])
+        assertTrue((headConflict["allowedChoices"] as List<*>).contains("MERGE_USE_BACKUP_CONTENT"))
+        importStore.resolveConflict(
+            database,
+            started.importId,
+            preview.previewToken,
+            preview.localStateVersion,
+            headConflict["conflictId"] as String,
+            "MERGE_USE_BACKUP_CONTENT",
+        )
+
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals("Backup site", readRowValues("work_sites", "id", siteId)["name"])
+        assertEquals(registrationKey, readRowValues("work_sites", "id", siteId)["registration_key"])
+        val mergedHead = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='site' AND entity_id=?",
+            arrayOf(siteId),
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        val parents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=?",
+            arrayOf(mergedHead),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertEquals(setOf(localRevision, backupRevision), parents)
+        assertFalse(importStore.close(started.importId))
     }
 
     @Test

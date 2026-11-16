@@ -36,7 +36,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         val firstApplied = importStore.apply(
             database, first.importId, firstPreview.previewToken, firstPreview.localStateVersion,
         )
-        assertEquals(1L, firstApplied.insertedCount)
+        assertEquals(3L, firstApplied.insertedCount)
         val committedAfterFirstImport = repository.snapshot()
         assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
         assertFalse(importStore.close(first.importId))
@@ -44,13 +44,13 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         val second = stageImport(records)
         val secondPreview = importStore.finish(database, second.importId)
         assertEquals(0L, secondPreview.conflictCount)
-        assertEquals(1L, secondPreview.unchangedCount)
+        assertEquals(3L, secondPreview.unchangedCount)
         val secondApplied = importStore.apply(
             database, second.importId, secondPreview.previewToken, secondPreview.localStateVersion,
         )
 
         assertEquals(0L, secondApplied.insertedCount)
-        assertEquals(1L, secondApplied.skippedCount)
+        assertEquals(3L, secondApplied.skippedCount)
         assertEquals(committedAfterFirstImport, repository.snapshot())
         assertEquals(1L, number("SELECT COUNT(*) FROM customers WHERE id='repeat-import-customer'"))
         assertFalse(importStore.close(second.importId))
@@ -138,7 +138,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
             database, started.importId, preview.previewToken, preview.localStateVersion,
         )
 
-        assertEquals(1L, applied.insertedCount)
+        assertEquals(3L, applied.insertedCount)
         assertEquals(1L, applied.skippedCount)
         assertEquals("Restored beside omitted timer", customerName(importedCustomerId))
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$importedSessionId'"))
@@ -341,12 +341,12 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
             "notes" to "",
             "archived" to 0,
         ))
-        val records = listOf(record)
+        val records = prepareSyntheticArchiveRecords(listOf(record))
         val started = repository.beginBackupImport(
             BackupExportStore.ARCHIVE_FORMAT_VERSION,
             BackupExportStore.CURRENT_SCHEMA_VERSION,
             "e".repeat(64),
-            1,
+            records.size.toLong(),
             0,
             0,
         )
@@ -428,20 +428,10 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
             attachmentRecord(firstAttachmentId, firstBlobId, firstBytes),
             attachmentRecord(secondAttachmentId, secondBlobId, secondBytes),
         )
-        val started = importStore.begin(
-            database,
-            BackupExportStore.ARCHIVE_FORMAT_VERSION,
-            BackupExportStore.CURRENT_SCHEMA_VERSION,
-            "f".repeat(64),
-            records.size.toLong(),
-            2,
-            (firstBytes.size + secondBytes.size).toLong(),
-        )
-        importStore.appendPage(
-            started.importId,
-            0,
+        val started = stageImport(
             records,
-            encodedAppendRequest(started.importId, 0, records),
+            mediaCount = 2,
+            mediaBytes = (firstBytes.size + secondBytes.size).toLong(),
         )
         listOf(firstBlobId to firstBytes, secondBlobId to secondBytes).forEach { (blobId, bytes) ->
             val writeCall = MethodCall("writeBackupImportBlob", mapOf(
@@ -610,7 +600,7 @@ class BackupImportStoreSessionApplyTest : BackupImportStoreTestBase() {
         val retried = importStore.apply(
             database, started.importId, preview.previewToken, preview.localStateVersion,
         )
-        assertEquals(2L, retried.insertedCount)
+        assertEquals(6L, retried.insertedCount)
         assertEquals(2L, number("SELECT COUNT(*) FROM customers WHERE id IN ('rollback-first','rollback-second')"))
     }
 

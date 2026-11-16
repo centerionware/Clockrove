@@ -241,29 +241,30 @@ class BackupImportStoreRevisionValidationTest : BackupImportStoreTestBase() {
 
     @Test
     fun acceptsDisjointAndReleasedInvoiceTimeClaims() {
+        val sessionId = "valid-time-claims-session"
         val records = listOf(
+            stagedRow("sessions", mapOf(
+                "id" to sessionId,
+                "job_id" to jobId,
+                "start_ms" to 100L,
+                "end_ms" to 300L,
+                "timezone" to "Etc/UTC",
+                "offset_seconds" to 0,
+                "origin" to "MANUAL",
+            )),
             invoiceRecord("valid-time-claims-invoice", jobId, "INV-SYNTHETIC-VALID-TIME"),
-            invoiceTimeClaimRecord("valid-time-claim-a", "valid-time-claims-invoice", jobId, 100, 200),
-            invoiceTimeClaimRecord("valid-time-claim-b", "valid-time-claims-invoice", jobId, 200, 300),
             invoiceTimeClaimRecord(
-                "released-time-claim", "valid-time-claims-invoice", jobId, 150, 250, releasedMs = now,
+                "valid-time-claim-a", "valid-time-claims-invoice", jobId, 100, 200, sessionId = sessionId,
+            ),
+            invoiceTimeClaimRecord(
+                "valid-time-claim-b", "valid-time-claims-invoice", jobId, 200, 300, sessionId = sessionId,
+            ),
+            invoiceTimeClaimRecord(
+                "released-time-claim", "valid-time-claims-invoice", jobId, 150, 250,
+                releasedMs = now, sessionId = sessionId,
             ),
         )
-        val started = importStore.begin(
-            database,
-            BackupExportStore.ARCHIVE_FORMAT_VERSION,
-            BackupExportStore.CURRENT_SCHEMA_VERSION,
-            "b".repeat(64),
-            records.size.toLong(),
-            0,
-            0,
-        )
-        importStore.appendPage(
-            started.importId,
-            0,
-            records,
-            encodedAppendRequest(started.importId, 0, records),
-        )
+        val started = stageImport(records)
 
         val preview = importStore.finish(database, started.importId)
 
@@ -480,7 +481,23 @@ class BackupImportStoreRevisionValidationTest : BackupImportStoreTestBase() {
             assertEquals(case.relationship, conflict["revisionRelationship"])
             assertFalse(conflict["resolved"] as Boolean)
             if (case.relationship == "DIVERGENT") {
-                assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
+                assertEquals(emptyList<String>(), conflict["allowedChoices"])
+                assertNull(conflict["defaultChoice"])
+                assertFailure("UNSUPPORTED_CHOICE") {
+                    importStore.resolveConflict(
+                        database, started.importId, preview.previewToken, preview.localStateVersion,
+                        conflict["conflictId"] as String, "KEEP_LOCAL",
+                    )
+                }
+                assertFailure("UNRESOLVED_CONFLICTS") {
+                    importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+                }
+                assertEquals(case.localHead, database.rawQuery(
+                    "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+                    arrayOf(kind, case.entityId),
+                ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
+                assertTrue(importStore.close(started.importId))
+                return@forEach
             }
             importStore.resolveConflict(
                 database, started.importId, preview.previewToken, preview.localStateVersion,

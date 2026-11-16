@@ -366,7 +366,8 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
 
     @Test
     fun failedImportedRangeTombstoneRollsBackRangePointAndRevisionGraph() {
-        val (pointId, measuredAt) = startAndStopSessionWithPoint("range-rollback-local-point")
+        val pointId = "range-rollback-local-point"
+        val (_, measuredAt) = startAndStopSessionWithPoint(pointId)
         val rangeId = "range-rollback-imported-range"
         val rangeRevisionId = "range-rollback-imported-range-revision"
         val range = mapOf<String, Any?>(

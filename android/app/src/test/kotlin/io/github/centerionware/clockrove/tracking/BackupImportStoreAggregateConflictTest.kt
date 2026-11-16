@@ -346,30 +346,22 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             assertTrue(aggregateKeys.contains("invoice:$replacementInvoiceId"))
             assertTrue(aggregateKeys.contains("quote:$quoteId"))
         }
-        assertEquals(listOf("KEEP_LOCAL"), linkHeadConflict["allowedChoices"])
-        importStore.resolveConflict(
-            database, started.importId, preview.previewToken, preview.localStateVersion,
-            linkHeadConflict["conflictId"] as String, "KEEP_LOCAL",
-        )
-        val resolved = mutableListOf<Map<String, Any?>>()
-        cursor = null
-        do {
-            val page = importStore.readConflictPage(
-                database, started.importId, preview.previewToken, cursor, null,
-            )
-            resolved.addAll(page.conflicts)
-            cursor = page.nextCursor
-            if (page.done) break
-        } while (true)
-        listOf(linkRowConflict, linkHeadConflict, originalInvoiceConflict, quoteDecisionConflict, quoteScopeConflict)
-            .forEach { original ->
-                val current = requireNotNull(resolved.singleOrNull { it["conflictId"] == original["conflictId"] })
-                assertTrue(current["resolved"] as Boolean)
-                assertEquals("KEEP_LOCAL", current["selectedChoice"])
-            }
-
+        assertTrue((originalInvoiceConflict["aggregateKeys"] as List<*>).contains("invoice:$quotedInvoiceId"))
+        listOf(quoteDecisionConflict, quoteScopeConflict).forEach { row ->
+            assertTrue((row["aggregateKeys"] as List<*>).contains("quote:$quoteId"))
+        }
         val stateBeforeApply = repository.snapshot()
-        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertEquals(emptyList<String>(), linkHeadConflict["allowedChoices"])
+        assertNull(linkHeadConflict["defaultChoice"])
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database, started.importId, preview.previewToken, preview.localStateVersion,
+                linkHeadConflict["conflictId"] as String, "KEEP_LOCAL",
+            )
+        }
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
         assertEquals(stateBeforeApply, repository.snapshot())
         assertEquals(localLinkHead, database.rawQuery(
             "SELECT revision_id FROM entity_heads WHERE kind='quote_invoice_link' AND entity_id=?",
@@ -381,12 +373,12 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             arrayOf(replacementInvoiceId),
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupHeadRevisionId'"))
-        assertFalse(importStore.close(started.importId))
+        assertTrue(importStore.close(started.importId))
         assertTrue(exportStore.close(source.snapshotId))
     }
 
     @Test
-    fun nonIdenticalDivergentHeadsOfferOnlyAnExplicitSafeLocalChoice() {
+    fun nonIdenticalDivergentHeadsRemainUnresolvedWithoutAMergeAdapter() {
         val kind = "quote_decision"
         val entityId = "nonidentical-divergent-entity"
         val baseRevision = "nonidentical-divergent-base"
@@ -407,20 +399,24 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         val preview = importStore.finish(database, started.importId)
         val conflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
         assertEquals("DIVERGENT", conflict["revisionRelationship"])
-        assertEquals(listOf("KEEP_LOCAL"), conflict["allowedChoices"])
-        assertEquals("KEEP_LOCAL", conflict["defaultChoice"])
+        assertEquals(emptyList<String>(), conflict["allowedChoices"])
+        assertNull(conflict["defaultChoice"])
         assertFalse(conflict["resolved"] as Boolean)
 
         val before = repository.snapshot()
-        importStore.resolveConflict(
-            database,
-            started.importId,
-            preview.previewToken,
-            preview.localStateVersion,
-            conflict["conflictId"] as String,
-            "KEEP_LOCAL",
-        )
-        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertFailure("UNSUPPORTED_CHOICE") {
+            importStore.resolveConflict(
+                database,
+                started.importId,
+                preview.previewToken,
+                preview.localStateVersion,
+                conflict["conflictId"] as String,
+                "KEEP_LOCAL",
+            )
+        }
+        assertFailure("UNRESOLVED_CONFLICTS") {
+            importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        }
 
         assertEquals(before, repository.snapshot())
         assertEquals(localRevision, database.rawQuery(
@@ -428,7 +424,7 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             arrayOf(kind, entityId),
         ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) })
         assertEquals(0L, number("SELECT COUNT(*) FROM entity_revisions WHERE id='$backupRevision'"))
-        assertFalse(importStore.close(started.importId))
+        assertTrue(importStore.close(started.importId))
     }
 
     @Test

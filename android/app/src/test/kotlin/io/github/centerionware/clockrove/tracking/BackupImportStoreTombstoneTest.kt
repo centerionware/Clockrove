@@ -527,7 +527,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         val applied = importStore.apply(
             database, started.importId, preview.previewToken, preview.localStateVersion,
         )
-        assertEquals(1L, applied.insertedCount)
+        assertEquals(3L, applied.insertedCount)
         assertEquals(1L, number("SELECT COUNT(*) FROM sessions WHERE id='$firstSessionId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM sessions WHERE id='$secondSessionId'"))
         assertFalse(importStore.close(started.importId))
