@@ -62,40 +62,42 @@ void main() {
           mediaCount: importHeader.mediaCount,
           mediaBytes: importHeader.mediaBytes,
         );
-        final sink = BackupArchiveImportSink(
+        maximumParserBufferBytes = await _withNativeImportStage<int>(
           api: api,
           importId: started.importId,
           header: importHeader,
           expectedArchiveSha256: authenticated.archiveSha256,
-        );
-        final restored = await BackupCryptoV2.decrypt(
-          password: _password,
-          envelope: envelopeFile.openRead(),
-          privateArchive: sink,
-        );
-        expect(restored.archiveBytes, authenticated.archiveBytes);
-        expect(restored.archiveSha256, authenticated.archiveSha256);
-        expect(sink.rowsStaged, _rowCount);
-        expect(
-          sink.maximumBufferedArchiveBytes,
-          lessThanOrEqualTo(
-            BackupArchiveCodec.maxRecordBytes + BackupCryptoV2.chunkBytes,
+          run: (sink) async {
+            final restored = await BackupCryptoV2.decrypt(
+              password: _password,
+              envelope: envelopeFile.openRead(),
+              privateArchive: sink,
+            );
+            expect(restored.archiveBytes, authenticated.archiveBytes);
+            expect(restored.archiveSha256, authenticated.archiveSha256);
+            expect(sink.rowsStaged, _rowCount);
+            expect(
+              sink.maximumBufferedArchiveBytes,
+              lessThanOrEqualTo(
+                BackupArchiveCodec.maxRecordBytes +
+                    BackupCryptoV2.chunkBytes,
+              ),
+            );
+
+            final preview = await sink.seal();
+            expect(preview.recordCount, _rowCount);
+            expect(preview.addedCount, _rowCount);
+            expect(preview.conflictCount, 0);
+            expect(preview.applyReady, isTrue);
+            final applied = await api.apply(
+              importId: started.importId,
+              previewToken: preview.previewToken,
+              expectedLocalStateVersion: preview.localStateVersion,
+            );
+            expect(applied.insertedCount, _rowCount);
+            return sink.maximumBufferedArchiveBytes;
           ),
         );
-        maximumParserBufferBytes = sink.maximumBufferedArchiveBytes;
-
-        final preview = await sink.seal();
-        expect(preview.recordCount, _rowCount);
-        expect(preview.addedCount, _rowCount);
-        expect(preview.conflictCount, 0);
-        expect(preview.applyReady, isTrue);
-        final applied = await api.apply(
-          importId: started.importId,
-          previewToken: preview.previewToken,
-          expectedLocalStateVersion: preview.localStateVersion,
-        );
-        expect(applied.insertedCount, _rowCount);
-        await sink.discard();
         expect(await api.close(started.importId), isFalse);
       } finally {
         await rss.stop();
@@ -137,21 +139,29 @@ void main() {
         mediaCount: importHeader.mediaCount,
         mediaBytes: importHeader.mediaBytes,
       );
-      final cancelledSink = BackupArchiveImportSink(
+      final cancellation = BackupCryptoCancellationToken();
+      await _withNativeImportStage<void>(
         api: api,
         importId: cancelledStart.importId,
         header: importHeader,
         expectedArchiveSha256: expectedDigest,
-      );
-      final cancellation = BackupCryptoCancellationToken()..cancel();
-      await expectLater(
-        BackupCryptoV2.decrypt(
-          password: _password,
-          envelope: envelopeFile.openRead(),
-          privateArchive: cancelledSink,
-          cancellationToken: cancellation,
-        ),
-        throwsA(isA<BackupCryptoV2CancelledException>()),
+        run: (sink) async {
+          await expectLater(
+            BackupCryptoV2.decrypt(
+              password: _password,
+              envelope: _cancelBeforeManifest(
+                envelopeFile.openRead(),
+                envelopeBytes: envelopeBytes,
+                cancellationToken: cancellation,
+              ),
+              privateArchive: sink,
+              cancellationToken: cancellation,
+            ),
+            throwsA(isA<BackupCryptoV2CancelledException>()),
+          );
+          expect(sink.rowsStaged, greaterThan(0));
+          expect(sink.mediaBytesStaged, importHeader.mediaBytes);
+        },
       );
       expect(await api.close(cancelledStart.importId), isFalse);
 
@@ -163,22 +173,26 @@ void main() {
         mediaCount: importHeader.mediaCount,
         mediaBytes: importHeader.mediaBytes,
       );
-      final corruptedSink = BackupArchiveImportSink(
+      await _withNativeImportStage<void>(
         api: api,
         importId: corruptedStart.importId,
         header: importHeader,
         expectedArchiveSha256: expectedDigest,
-      );
-      await expectLater(
-        BackupCryptoV2.decrypt(
-          password: _password,
-          envelope: _corruptLastByte(
-            envelopeFile.openRead(),
-            expectedLength: envelopeBytes,
-          ),
-          privateArchive: corruptedSink,
-        ),
-        throwsA(isA<FormatException>()),
+        run: (sink) async {
+          await expectLater(
+            BackupCryptoV2.decrypt(
+              password: _password,
+              envelope: _corruptLastByte(
+                envelopeFile.openRead(),
+                expectedLength: envelopeBytes,
+              ),
+              privateArchive: sink,
+            ),
+            throwsA(isA<FormatException>()),
+          );
+          expect(sink.rowsStaged, _rowCount);
+          expect(sink.mediaBytesStaged, importHeader.mediaBytes);
+        },
       );
       expect(await api.close(corruptedStart.importId), isFalse);
 
@@ -213,6 +227,60 @@ void main() {
       'peak_delta_hwm_kib=${result.peakDeltaHwmKiB}',
     );
   });
+}
+
+Future<T> _withNativeImportStage<T>({
+  required BackupImportApi api,
+  required String importId,
+  required BackupArchiveImportHeader header,
+  required List<int> expectedArchiveSha256,
+  required Future<T> Function(BackupArchiveImportSink sink) run,
+}) async {
+  BackupArchiveImportSink? sink;
+  try {
+    final activeSink = BackupArchiveImportSink(
+      api: api,
+      importId: importId,
+      header: header,
+      expectedArchiveSha256: expectedArchiveSha256,
+    );
+    sink = activeSink;
+    return await run(activeSink);
+  } finally {
+    try {
+      await sink?.discard();
+    } finally {
+      await api.close(importId);
+    }
+  }
+}
+
+Stream<List<int>> _cancelBeforeManifest(
+  Stream<List<int>> source, {
+  required int envelopeBytes,
+  required BackupCryptoCancellationToken cancellationToken,
+}) async* {
+  final manifestFrameBytes =
+      BackupCryptoV2.frameHeaderBytes +
+      BackupCryptoV2.manifestBytes +
+      BackupCryptoV2.tagBytes;
+  final manifestOffset = envelopeBytes - manifestFrameBytes;
+  var bytesRead = 0;
+  await for (final bytes in source) {
+    if (bytesRead >= manifestOffset) {
+      cancellationToken.cancel();
+      return;
+    }
+    final remainingBeforeManifest = manifestOffset - bytesRead;
+    if (bytes.length > remainingBeforeManifest) {
+      yield Uint8List.sublistView(bytes, 0, remainingBeforeManifest);
+      cancellationToken.cancel();
+      return;
+    }
+    bytesRead += bytes.length;
+    yield bytes;
+  }
+  cancellationToken.cancel();
 }
 
 Stream<List<int>> _corruptLastByte(

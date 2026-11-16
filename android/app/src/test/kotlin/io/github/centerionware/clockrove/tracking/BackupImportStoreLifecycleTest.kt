@@ -42,6 +42,25 @@ class BackupImportStoreLifecycleTest : BackupImportStoreTestBase() {
     }
 
     @Test
+    fun schema17NativeStagingRejectsSchema16ArchiveBeforeCreatingFiles() {
+        assertEquals(17, database.version)
+        assertFailure("SCHEMA_UNSUPPORTED") {
+            importStore.begin(
+                database,
+                BackupExportStore.ARCHIVE_FORMAT_VERSION,
+                BackupExportStore.CURRENT_SCHEMA_VERSION - 1,
+                "a".repeat(64),
+                0,
+                0,
+                0,
+            )
+        }
+
+        val directory = File(app.noBackupFilesDir, "clockrove-backup-imports")
+        assertTrue(directory.listFiles().orEmpty().none { it.name.startsWith("clockrove-import-") })
+    }
+
+    @Test
     fun failedExpirySchedulingDoesNotLeaveAStaleActiveImport() {
         val failedScheduler = BackupScheduler { _, _ ->
             throw IllegalStateException("synthetic scheduler failure")

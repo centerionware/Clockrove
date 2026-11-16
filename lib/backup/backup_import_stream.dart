@@ -224,6 +224,7 @@ final class BackupArchiveImportSink implements BackupTransactionalByteSink {
   BackupImportPreview? _preview;
 
   int get rowsStaged => _parser.rowsStaged;
+  int get mediaBytesStaged => _parser.mediaBytesStaged;
   int get maximumBufferedArchiveBytes => _parser.maximumBufferedArchiveBytes;
 
   @override
@@ -310,6 +311,7 @@ final class _BackupArchiveImportParser {
   ByteConversionSink? _digestInput;
 
   int get rowsStaged => _rowsStaged;
+  int get mediaBytesStaged => _mediaBytesConsumed;
   int get maximumBufferedArchiveBytes => _maximumBufferedBytes;
 
   Future<void> add(List<int> bytes) async {

@@ -35,9 +35,11 @@ revision heads for existing live task comments and images and records future
 comment/image deletions in the existing revision graph. Revision payloads do
 not contain image bytes. The exact-schema restore gate therefore rejects
 schema-16 archives on schema-17 devices until a coordinated migration policy
-preserves the revision graph. A future schema must update the explicit native
-allowlist and the archive adapter before export is enabled for that schema.
-Unknown schemas fail closed.
+preserves the revision graph. The native test suite explicitly verifies that a
+schema-16 archive is rejected by schema-17 staging before any private stage
+files are created. A future schema must update the explicit native allowlist
+and the archive adapter before export is enabled for that schema. Unknown
+schemas fail closed.
 
 ## Row and media records
 
