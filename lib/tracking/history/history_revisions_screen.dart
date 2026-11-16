@@ -53,7 +53,7 @@ class _HistoryRevisionsScreenState
             if (snapshot.data!.isEmpty)
               const Text('No retained changes for this entry.'),
             for (final revision in snapshot.data!)
-              _RevisionTile(revision: revision),
+              HistoryRevisionTile(revision: revision),
           ],
         );
       },
@@ -61,8 +61,8 @@ class _HistoryRevisionsScreenState
   );
 }
 
-class _RevisionTile extends StatelessWidget {
-  const _RevisionTile({required this.revision, this.onTap});
+class HistoryRevisionTile extends StatelessWidget {
+  const HistoryRevisionTile({required this.revision, this.onTap});
   final HistoryRevision revision;
   final VoidCallback? onTap;
   String _summary() {

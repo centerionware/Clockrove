@@ -92,7 +92,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
             child: Text('No saved changes yet.'),
           ),
         for (final event in _events)
-          _RevisionTile(
+          HistoryRevisionTile(
             revision: event.revision,
             onTap: () => Navigator.push(
               context,
