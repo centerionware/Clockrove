@@ -1,22 +1,57 @@
 # Clockrove task status
 
 Updated 2026-11-16. Product contract: [app_plan.md](app_plan.md).
-Statuses describe evidence, not intent. The original M6.5 quote/task-media/GPS
-slice passed API-24/35 CI and its internal Play upload was accepted; the newly
-requested 49-sample report-map regression passed on API 24, with API 35 and
-owner-device map, GPS and camera checks pending. PR #44's exact-head Actions
-passed, but merged-main validation later failed an API-24 job-tax scroll
-assertion and Play delivery was skipped. PR #45 exact-head run `43590405687`
-passed Flutter formatting, analysis, behavior tests and the Android build; its
-native suite had 15 failures among 594. Exported reports identify stale v12
-schema assertions, a retry test using a changed expected version, and image
-BLOB reads exceeding CursorWindow. These source/test issues are corrected and
-await a new Actions run; no device tests ran on that head. M6.6 business features
-and M7 backup remain before M7.6 (whole-app UI overhaul and exhaustive
-E2E/screenshots), which must pass before closed testing. iOS and future service
+Statuses describe evidence, not intent.
+
+**M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run
+[43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
+passed 35 actual Android tests on each of API 24 and 35, including task media,
+GPS settings and the 49-sample map route. PR #45's later exact head `942659a` /
+run [43626467570](https://github.com/centerionware/Clockrove/actions/runs/43626467570)
+also passed the full API 24/35 suite and was merged as `69e1dab`. Quote customer
+management and the report-map fix are included. Physical owner-device map, GPS
+and camera acceptance remains pending.
+
+**M6.6 source and CI are complete.** PR #49 exact-head run
+[43665273986](https://github.com/centerionware/Clockrove/actions/runs/43665273986)
+and merged-main run
+[43667760290](https://github.com/centerionware/Clockrove/actions/runs/43667760290)
+passed the full matrix. The requested billing, costs, reports and provider
+settings are implemented; physical owner-device acceptance remains pending.
+The earlier PR #45 native-test failure
+[43590405687](https://github.com/centerionware/Clockrove/actions/runs/43590405687)
+and API-24 journey failure
+[43595000940](https://github.com/centerionware/Clockrove/actions/runs/43595000940),
+and PR #70's first attempt
+[43798809470](https://github.com/centerionware/Clockrove/actions/runs/43798809470/attempts/1),
+are superseded by the later passing exact-head evidence below. PR #45's
+merged-main invoice failure
+[43628166015](https://github.com/centerionware/Clockrove/actions/runs/43628166015)
+explains its skipped Play delivery
+[43630004858](https://github.com/centerionware/Clockrove/actions/runs/43630004858);
+PR #70 fixed the PDF action, followed by the successful merged-main validation
+and internal submission below. Their detailed history is retained.
+
+M7 encrypted backup and safe merge are incomplete. M7.6's route inventory is
+preparation only; its whole-app UI overhaul and exhaustive E2E/screenshots have
+not started. Per the milestone order, finish M7 before starting M7.6, and pass
+M7.6 before moving from internal to closed testing. Owner-device and upgrade
+checks remain separate launch-readiness work under M8.2. iOS and future service
 remain deferred.
 
-PR #70 fixed the invoice PDF action visibility failure from PR #45. Exact head 58ca416dfe8c3b82fff8d58898db9ca7acc86a26 passed Validate run [43798809470, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43798809470/attempts/2), including 38 actual Android tests each on API 24 and 35 with zero failures, errors, or skips. The owner merged it as main 025cc10f5aac80ce6f56005f694e448ee4473761; merged-main Validate [43804094163](https://github.com/centerionware/Clockrove/actions/runs/43804094163) is running on that SHA. Play delivery remains gated on its success. Details: [invoice PDF action evidence](docs/plan/INVOICE_PDF_ACTION_VISIBILITY.md).
+PR #70 fixed the invoice PDF action visibility failure. Exact head
+`58ca416dfe8c3b82fff8d58898db9ca7acc86a26` passed Validate run
+[43798809470, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43798809470/attempts/2),
+including 38 actual Android tests each on API 24 and 35 with zero failures,
+errors or skips. On exact main SHA `025cc10f5aac80ce6f56005f694e448ee4473761`,
+merged-main Validate run
+[43804094163](https://github.com/centerionware/Clockrove/actions/runs/43804094163)
+passed. Play delivery run
+[43806883748](https://github.com/centerionware/Clockrove/actions/runs/43806883748)
+then accepted internal submission of `0.1.0-internal.53.1` / version code
+`216968203` on that SHA. This confirms upload/submission, not review approval,
+tester availability or closed-track readiness. Details: [invoice PDF action
+evidence](docs/plan/INVOICE_PDF_ACTION_VISIBILITY.md).
 
 Current M7 priority: PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Its exact PR head `defb4e6` / Actions run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557) passed formatting, analysis, Flutter behavior tests, Android/instrumentation builds, 635 native tests, invoice-viewer and release-tooling checks, and 38 actual Android tests on each of API 24 and 35 with zero failures/errors/skips. The 1 MiB benchmark reported encrypt/decrypt 755/301 ms on API 24 and 869/273 ms on API 35; envelope size was 1,048,648 bytes on both. PR #59's 64 MiB crypto-only benchmark [43700311041](https://github.com/centerionware/Clockrove/actions/runs/43700311041), head `02931e5`, measured peak VmHWM of 823,572 KiB on API 24 and 951,840 KiB on API 35; the full Dart export path retains more copies. Keep Settings export withheld pending streaming or a materially lower memory bound. PR #60 run [43702626041](https://github.com/centerionware/Clockrove/actions/runs/43702626041) passed formatting and analysis but failed Flutter behavior (223 passed, 5 failed, 14 skipped). Follow-up run [43705585212](https://github.com/centerionware/Clockrove/actions/runs/43705585212) passed formatting and analysis, then had 224 passed, 4 failed, 14 skipped; all remaining failures were `scrollUntilVisible` using a non-unique `Scrollable` finder. The PlatformException assertion and +0 retry-policy synthetic passed. The finder now scopes scrolling to the export ListView. Exact head `a6ba266` / run [43706188558](https://github.com/centerionware/Clockrove/actions/runs/43706188558) passed formatting, analysis, Flutter behavior, Android build, instrumentation assembly and bounded install-recovery synthetics, then failed 16/675 native tests. JUnit shows all 16 were `BackupImportStoreTest` preview failures: the active local time-claim overlap query referenced a local-only table on the staging SQLite connection, and the generic exception was surfaced as `INVALID_REVISION_GRAPH`. Rebased commit `f9b223f` moves each incoming-claim probe to the local database and adds an empty-preview regression; the existing real local-overlap test covers the overlap case. PR #60 rebased head `ead1a8518fda0f3f4d65da0ab7f7ed4ce1f3b158` / Actions run [43708093424](https://github.com/centerionware/Clockrove/actions/runs/43708093424) passed formatting, analysis, Flutter behavior (228 passed, 14 skipped), Android build, release Java compilation, instrumentation assembly, install-recovery synthetics, and the complete API 24/35 workflow. Native JUnit totaled 676 tests with zero failures, errors or skips, including two `NativeVisualPreviewTest` cases. The earlier run [43706188558](https://github.com/centerionware/Clockrove/actions/runs/43706188558) also included those two cases in its 675-test JUnit total; the new aggregate is not a count that excludes them. API 24 and API 35 each passed 38 Android tests with zero failures, errors or skips. The 1 MiB crypto benchmark measured encrypt/decrypt 878/280 ms on API 24 and 877/287 ms on API 35; each envelope was 1,048,648 bytes. Invoice viewer, artifact export, and locked release tooling passed. Commit `9dc1542` makes expiry rescheduling fail closed: it detaches the active snapshot, wipes the key, attempts artifact deletion and retries failed deletions on the next store interaction. Regression coverage injects a later scheduler failure and a deferred deletion failure. Exact-head run [43710812843](https://github.com/centerionware/Clockrove/actions/runs/43710812843) passed on SHA `9dc154288111af1219166d5eaeeea8661dfee1aa`: formatting, analysis, Flutter behavior, Android build/release compile, instrumentation assembly, bounded install-recovery synthetic, 677 native tests (zero failures/errors/skips, including two `NativeVisualPreviewTest` cases), 38 actual Android tests each on API 24 and 35 (zero failures/errors/skips), invoice-viewer validation, artifact exports and locked release tooling. API 24 benchmark attempt 1 timed out before test start during APK install; recovery confirmed a changed emulator boot ID and boot completion, then the single retry passed. The 1 MiB benchmark measured encrypt/decrypt 742/273 ms on API 24 and 951/292 ms on API 35; both envelopes were 1,048,648 bytes. PR #58 exact head `a51fcd7` passed run [43703761294](https://github.com/centerionware/Clockrove/actions/runs/43703761294) and merged as `fefdcdf`. Validate run [43706417644](https://github.com/centerionware/Clockrove/actions/runs/43706417644) passed on main SHA `fefdcdf9f0bcfbdf451ab3fad9eaeaf7f4bccf24`. JUnit reports 38 actual Android tests on each API 24 and 35 with zero failures, errors or skips. The 1 MiB crypto benchmark measured encrypt/decrypt at 884/363 ms on API 24 and 1,105/343 ms on API 35; each envelope was 1,048,648 bytes. Guarded Play delivery run [43708670483](https://github.com/centerionware/Clockrove/actions/runs/43708670483) completed successfully on exact main SHA `fefdcdf9f0bcfbdf451ab3fad9eaeaf7f4bccf24`; the internal AAB upload/submission was accepted at 11:30:34 UTC. This proves upload/submission only, not review approval or tester availability. No VM build, test, formatter or analyzer ran.
 
