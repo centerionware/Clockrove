@@ -331,9 +331,10 @@ class QuoteBillingDeviceTest {
             click("Labor"); reveal("Save task"); click("Save task")
             until("Actual task quantity edit was not saved") { repository.boardSnapshot(binding.jobId).board.cards.single().quantityUnits == 300000L }
             waitFor("Task board"); capture("actual-task-quantity")
-            click("Task actions"); click("Move to Done"); click("Move task")
-            until("Actual task completion was not committed") { repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis != null }
-            until("Task move confirmation did not close") { find("Move task") == null && find("Task board") != null }
+            click("Task actions"); click("Move to Done")
+            until("Actual task move was not committed directly") { repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis != null }
+            until("Task board did not remain open after moving") { find("Task board") != null }
+            assertNull("Task move should not open a confirmation dialog", find("Move task"))
             assertEquals(BigInteger("999"), repository.boardSnapshot(binding.jobId).board.cards.single().priceMinor)
             assertEquals(0, count("sessions")); assertEquals(0, count("invoices"))
             val completedDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getDefault() }.format(java.util.Date(requireNotNull(repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis)))
