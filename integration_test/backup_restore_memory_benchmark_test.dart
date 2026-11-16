@@ -301,7 +301,7 @@ Future<({int rss, int hwm})> _processMemoryKiB() async {
       (entry) => entry.startsWith('$name:'),
       orElse: () => throw FormatException('Android did not report $name.'),
     );
-    final match = RegExp('^$name:\\s+(\\d+)\\s+kB$').firstMatch(line);
+    final match = RegExp('^$name:\\s+(\\d+)\\s+kB\$').firstMatch(line);
     if (match == null) throw FormatException('Android reported invalid $name.');
     return int.parse(match.group(1)!);
   }

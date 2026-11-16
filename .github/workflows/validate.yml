@@ -84,8 +84,14 @@ jobs:
         # Collect behavior evidence in the same run; the final gate still fails.
         continue-on-error: true
         run: |
+          set +e
           dart format lib test integration_test tool
+          format_status=$?
+          set -e
           git diff --binary -- lib test integration_test tool > "$RUNNER_TEMP/format.patch"
+          if [[ "$format_status" -ne 0 ]]; then
+            exit "$format_status"
+          fi
           git diff --exit-code -- lib test integration_test tool
       - name: Export formatter correction for source review
         if: always() && steps.format.outcome == 'failure'
