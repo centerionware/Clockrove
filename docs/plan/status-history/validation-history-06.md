@@ -665,3 +665,11 @@ then allows up to 1.5 seconds for an observed animation to settle. A source-tagg
 ### 2026-11-15 — owner decision: Google Maps deferred beyond launch
 
 Launch map support is limited to keyless OpenStreetMap tiles and user-configured custom HTTPS raster tiles. Google Maps, its SDK/key setup, billing and restriction verification, and Google-specific device acceptance are deferred beyond launch and are not launch gates. OSM/custom-provider privacy, attribution, outage behavior, and physical owner-device acceptance remain launch work. Earlier runtime-key feasibility research, CI results, and status entries are retained as historical evidence; this decision does not imply new implementation or validation.
+
+### 2026-11-16 — PR #70 fixes invoice PDF action visibility
+
+PR #45's merged-main Validate run [43628166015](https://github.com/centerionware/Clockrove/actions/runs/43628166015) failed the API-35 invoice journey because “View original PDF” was below the initial invoice detail viewport. The generated document existed; the action was not reliably discoverable. Guarded Play delivery run [43630004858](https://github.com/centerionware/Clockrove/actions/runs/43630004858) was skipped because main Validate had failed.
+
+PR #70 moved the existing action directly below invoice totals and added a real Android assertion that it is tappable before scrolling. Exact head 58ca416dfe8c3b82fff8d58898db9ca7acc86a26 passed [run 43798809470, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43798809470/attempts/2), based on eb07857ed24344c4d7cbe4bd3e04d9ff5a33b4a7. API 24 and API 35 each passed 38 actual Android tests with zero failures, errors, or skips; the generated PDF opened in the Android viewer. All other Validate stages also passed. Attempt 1 had Android APK installation timeouts before the affected tests started; the bounded unchanged-head attempt 2 succeeded.
+
+The owner merged PR #70 as main commit 025cc10f5aac80ce6f56005f694e448ee4473761. Merged-main Validate [43804094163](https://github.com/centerionware/Clockrove/actions/runs/43804094163) was triggered for that SHA and remains the gate before Play delivery. No local build or test ran.
