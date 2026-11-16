@@ -62,7 +62,7 @@ class _HistoryRevisionsScreenState
 }
 
 class HistoryRevisionTile extends StatelessWidget {
-  const HistoryRevisionTile({required this.revision, this.onTap});
+  const HistoryRevisionTile({super.key, required this.revision, this.onTap});
   final HistoryRevision revision;
   final VoidCallback? onTap;
   String _summary() {
