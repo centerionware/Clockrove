@@ -226,7 +226,7 @@ class BackupExportStoreTest {
     }
 
     @Test
-    fun schema16ExportPreservesGpsDeletionCoverageAndCoordinateFreeCausalHistory() {
+    fun schema17ExportPreservesDeletionCoverageAndCoordinateFreeCausalHistory() {
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(
             "start-synthetic-gps-export-session",
@@ -263,10 +263,10 @@ class BackupExportStoreTest {
         ).conflict)
 
         val info = exportStore.info(database)
-        assertEquals(16, info.schemaVersion)
+        assertEquals(17, info.schemaVersion)
         assertTrue(info.portableTables.contains("location_deletion_ranges"))
         val started = exportStore.start(database)
-        assertEquals(16, started.schemaVersion)
+        assertEquals(17, started.schemaVersion)
         val records = readAll(started.snapshotId)
         val rangeRecord = records.single {
             it["table"] == "location_deletion_ranges" && values(it)["job_id"] == jobId

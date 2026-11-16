@@ -24,9 +24,13 @@ read-only info response is only a capability/current-state estimate; a later
 write can change it before the snapshot begins.
 
 archiveFormatVersion is independent of the Android SQLite schemaVersion.
-Format version 1 currently supports SQLite schema version 16. Schema 16 adds
+Format version 1 currently supports SQLite schema version 17. Schema 16 added
 portable GPS deletion-range coverage; the range bounds and coordinate-free
-revisions allow restored histories to retain GPS deletions. A future schema
+revisions allow restored histories to retain GPS deletions. Schema 17 seeds
+revision heads for existing live task comments and images and records future
+comment/image deletions in the existing revision graph. Revision payloads do
+not contain image bytes. The schema gate rejects older schema-16 archives so
+both devices must use schema 17 before exchanging backups. A future schema
 must update the explicit native allowlist and the archive adapter before export
 is enabled for that schema. Unknown schemas fail closed.
 
@@ -90,6 +94,11 @@ complete untrusted revision graph.
 - Native detached staging input budget: 64 MiB, including framed UTF-8 row
   records and media. This does not guarantee that the Dart archive encoding
   will fit the final limit.
+- Restore media input may be as large as 64 MiB, but a completed preview must
+  report native normalized row JSON bytes (including the four-byte per-row
+  charge) plus media bytes at or below the same 64 MiB staging ceiling. Binary
+  archive record bytes are reported separately and are not used as a proxy for
+  native staged row bytes.
 - Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
 - Maximum 500,000 records and 10,000 media objects.
 - Maximum encoded row size: 128 KiB.
@@ -245,6 +254,17 @@ entire merge on any error. It never starts a timer or enables imported
 automation. Discard/cancel closes snapshot/import handles and removes every
 private staging file. Expiry and next-start cleanup cover process death; the
 user-selected encrypted source file is never modified or deleted.
+
+The current native restore draft treats quote/invoice, card/template/quantity,
+and global-settings conflicts as connected aggregates. A single compatible
+choice is propagated across each aggregate, and a content merge creates a
+revision with both local and backup heads as parents. When a selected parent
+row is omitted and a staged dependent row has no surviving local reference,
+preview requires explicit omission of that dependent row. There is no
+`INCLUDE_BACKUP_DEPENDENT` choice: inclusion is not exposed until a user-facing
+resolution flow can validate the complete dependency closure. These semantics
+are source-level draft behavior pending exact-head Actions and end-to-end
+file-open, authentication, preview and apply validation.
 
 ### Required v2 evidence before enabling export
 

@@ -42,6 +42,24 @@ const _emptySha256 = <int>[
 
 void main() {
   group('BackupArchiveCodec', () {
+    test(
+      'accepts and round trips the current database schema version',
+      () async {
+        expect(BackupArchiveCodec.latestSchemaVersion, 17);
+        final archive = await BackupArchiveCodec.encode(
+          schemaVersion: BackupArchiveCodec.latestSchemaVersion,
+          stateVersion: 0,
+          capturedAtUtcMillis: 0,
+          rows: [
+            _row('jobs', {'id': 'current-schema'}),
+          ],
+        );
+
+        final decoded = await BackupArchiveCodec.decode(archive);
+        expect(decoded.schemaVersion, BackupArchiveCodec.latestSchemaVersion);
+      },
+    );
+
     test('round trips rows and raw media deterministically', () async {
       final rows = [
         _row('jobs', {'name': 'North site', 'id': 'job-b'}),
@@ -423,7 +441,7 @@ void main() {
       );
 
       final futureSchema = Uint8List.fromList(encoded);
-      ByteData.sublistView(futureSchema).setUint32(12, 17, Endian.big);
+      ByteData.sublistView(futureSchema).setUint32(12, 18, Endian.big);
       await expectLater(
         BackupArchiveCodec.decode(futureSchema),
         throwsA(isA<FormatException>()),

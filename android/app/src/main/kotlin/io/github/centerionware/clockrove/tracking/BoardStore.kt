@@ -144,6 +144,7 @@ internal object BoardStore {
     fun removeCard(db: SQLiteDatabase, jobId: String, id: String, at: Long): String? {
         if (!available(db, jobId)) return "JOB_UNAVAILABLE"
         val card = cards(db, jobId).firstOrNull { it.id == id } ?: return "TASK_UNAVAILABLE"
+        TaskConversationStore.recordCardContentsDeleted(db, jobId, id, at)
         db.execSQL("DELETE FROM kanban_cards WHERE id=?", arrayOf(id))
         positions(db, ordered(db, card.columnId))
         RevisionStore.record(db, "card", id, jobId, mapOf("id" to id, "job_id" to jobId), at, deleted = true)

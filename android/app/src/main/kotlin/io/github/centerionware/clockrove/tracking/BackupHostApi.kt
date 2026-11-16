@@ -154,6 +154,28 @@ internal class BackupHostApi(
                     "conflicts" to page.conflicts,
                 )
             }
+            "resolveBackupImportConflict" -> {
+                repository.resolveBackupImportConflict(
+                    input.string("importId"),
+                    input.string("previewToken"),
+                    input.long("expectedLocalStateVersion"),
+                    input.string("conflictId"),
+                    input.string("choice"),
+                )
+                mapOf("resolved" to true)
+            }
+            "applyBackupImport" -> repository.applyBackupImport(
+                input.string("importId"),
+                input.string("previewToken"),
+                input.long("expectedLocalStateVersion"),
+            ).let { applied ->
+                mapOf(
+                    "importId" to applied.importId,
+                    "stateVersion" to applied.stateVersion,
+                    "insertedCount" to applied.insertedCount,
+                    "skippedCount" to applied.skippedCount,
+                )
+            }
             "closeBackupImport" -> mapOf(
                 "closed" to repository.closeBackupImport(input.string("importId")),
             )
@@ -171,6 +193,7 @@ internal class BackupHostApi(
         "recordCount" to recordCount,
         "mediaCount" to mediaCount,
         "mediaBytes" to mediaBytes,
+        "stagedRecordBytes" to stagedRecordBytes,
         "addedCount" to addedCount,
         "unchangedCount" to unchangedCount,
         "conflictCount" to conflictCount,

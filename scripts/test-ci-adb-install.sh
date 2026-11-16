@@ -4,8 +4,8 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 benchmark_script="$script_dir/ci-android-backup-memory-benchmark.sh"
 no_uninstall_invocations="$(grep -Fc -- 'flutter test --no-uninstall' "$benchmark_script")"
-if [[ "$no_uninstall_invocations" != 2 ]]; then
-  echo 'Backup memory benchmark seed and measurement must use --no-uninstall.' >&2
+if [[ "$no_uninstall_invocations" != 3 ]]; then
+  echo 'Backup memory benchmark seed, measurement, and restore preview must use --no-uninstall.' >&2
   exit 1
 fi
 if grep -Fq -- '--before-retry-hook' "$benchmark_script"; then
