@@ -217,6 +217,10 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertTrue(afterCardSelection.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }.all {
             it["selectedChoice"] == "RESTORE_BACKUP_CONTENT"
         })
+        resolveSafeConflictChoices(
+            started.importId, preview,
+            afterCardSelection.filter { it["resolved"] != true },
+        )
 
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
@@ -295,6 +299,10 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         assertTrue(afterCardChoice.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }.all {
             it["selectedChoice"] == "PRESERVE_LOCAL_DELETION"
         })
+        resolveSafeConflictChoices(
+            started.importId, preview,
+            afterCardChoice.filter { it["resolved"] != true },
+        )
 
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 

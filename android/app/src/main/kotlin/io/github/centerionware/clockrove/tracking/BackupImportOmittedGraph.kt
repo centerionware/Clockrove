@@ -320,6 +320,7 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
                 )
             }
         }
+        omittedEntities.removeAll(protectedDeletionEntities)
         return OmittedGraphOmittedBackupGraph(
             omittedSessions,
             omittedPoints,
@@ -460,7 +461,11 @@ internal fun BackupImportStore.localTombstoneChoiceForHead(
         val rowEntry = revisionTombstoneRows.entries.firstOrNull { it.value.kind == kind } ?: return null
         if (!hasLocalEntityDeletionTombstone(localDb, kind, entityId)) return null
         val primaryKey = jsonArray(listOf(entityId))
+        val entityHeadKey = jsonArray(listOf(kind, entityId))
         val ordinal = handle.database.rawQuery(
+            "SELECT ordinal FROM import_rows WHERE table_name='entity_heads' AND primary_key=? LIMIT 1",
+            arrayOf(entityHeadKey),
+        ).use { rows -> if (rows.moveToFirst()) rows.getLong(0) else null } ?: handle.database.rawQuery(
             "SELECT ordinal FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
             arrayOf(rowEntry.key, primaryKey),
         ).use { rows -> if (rows.moveToFirst()) rows.getLong(0) else return null }
