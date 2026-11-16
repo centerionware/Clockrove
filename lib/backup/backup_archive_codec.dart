@@ -9,7 +9,7 @@ part of 'backup_archive.dart';
 /// AES-GCM authentication succeeds.
 abstract final class BackupArchiveCodec {
   static const int currentFormatVersion = 1;
-  static const int latestSchemaVersion = 16;
+  static const int latestSchemaVersion = 17;
   static const int maxArchiveBytes = 64 * 1024 * 1024;
   static const int maxRecordBytes = 256 * 1024;
   static const int maxRecords = 1000000;

@@ -5,10 +5,12 @@ import android.os.ParcelFileDescriptor
 
 /** Keep bounded document bytes out of the metadata cursor's fixed-size window. */
 internal object InvoiceBlobs {
-    fun original(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoices", "pdf", id, 20_000_000)
-    fun copy(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoice_copies", "pdf", id, 20_000_000)
+    const val MAX_DOCUMENT_BYTES = 20_000_000
+
+    fun original(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoices", "pdf", id, MAX_DOCUMENT_BYTES)
+    fun copy(db: SQLiteDatabase, id: String): ByteArray? = read(db, "invoice_copies", "pdf", id, MAX_DOCUMENT_BYTES)
     fun logo(db: SQLiteDatabase, id: String): ByteArray? = read(db, "logo_assets", "bytes", id, ImageLimits.NORMALIZED_BYTES)
-    fun quote(db: SQLiteDatabase, id: String): ByteArray? = read(db, "quote_pdfs", "bytes", id, 20_000_000)
+    fun quote(db: SQLiteDatabase, id: String): ByteArray? = read(db, "quote_pdfs", "bytes", id, MAX_DOCUMENT_BYTES)
 
     private fun read(db: SQLiteDatabase, table: String, column: String, id: String, maximum: Int): ByteArray? {
         // Table/column names are private constants. Only the identity is bound.

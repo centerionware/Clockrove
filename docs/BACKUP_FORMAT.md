@@ -24,9 +24,13 @@ read-only info response is only a capability/current-state estimate; a later
 write can change it before the snapshot begins.
 
 archiveFormatVersion is independent of the Android SQLite schemaVersion.
-Format version 1 currently supports SQLite schema version 16. Schema 16 adds
+Format version 1 currently supports SQLite schema version 17. Schema 16 added
 portable GPS deletion-range coverage; the range bounds and coordinate-free
-revisions allow restored histories to retain GPS deletions. A future schema
+revisions allow restored histories to retain GPS deletions. Schema 17 seeds
+revision heads for existing live task comments and images and records future
+comment/image deletions in the existing revision graph. Revision payloads do
+not contain image bytes. The schema gate rejects older schema-16 archives so
+both devices must use schema 17 before exchanging backups. A future schema
 must update the explicit native allowlist and the archive adapter before export
 is enabled for that schema. Unknown schemas fail closed.
 
@@ -245,6 +249,17 @@ entire merge on any error. It never starts a timer or enables imported
 automation. Discard/cancel closes snapshot/import handles and removes every
 private staging file. Expiry and next-start cleanup cover process death; the
 user-selected encrypted source file is never modified or deleted.
+
+The current native restore draft treats quote/invoice, card/template/quantity,
+and global-settings conflicts as connected aggregates. A single compatible
+choice is propagated across each aggregate, and a content merge creates a
+revision with both local and backup heads as parents. When a selected parent
+row is omitted and a staged dependent row has no surviving local reference,
+preview requires explicit omission of that dependent row. There is no
+`INCLUDE_BACKUP_DEPENDENT` choice: inclusion is not exposed until a user-facing
+resolution flow can validate the complete dependency closure. These semantics
+are source-level draft behavior pending exact-head Actions and end-to-end
+file-open, authentication, preview and apply validation.
 
 ### Required v2 evidence before enabling export
 

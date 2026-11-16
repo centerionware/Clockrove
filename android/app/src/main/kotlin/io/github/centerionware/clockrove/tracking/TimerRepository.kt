@@ -7,9 +7,9 @@ import java.util.UUID
 
 /** Native prototype boundary. Callers share this instance; Flutter never writes SQL. */
 class TimerRepository internal constructor(context: Context,
-    private val eventDigest: (String) -> String = GeofenceEventDigest::digest,
-    private val wallClock: () -> Long = System::currentTimeMillis) {
-    private val helper = Store(context.applicationContext, wallClock)
+    internal val eventDigest: (String) -> String = GeofenceEventDigest::digest,
+    internal val wallClock: () -> Long = System::currentTimeMillis) {
+    internal val helper = TimerDatabase(context.applicationContext, wallClock)
     private val backupExportStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         BackupExportStore(context.applicationContext, wallClock)
     }
@@ -120,6 +120,30 @@ class TimerRepository internal constructor(context: Context,
     ): BackupImportStore.ConflictPage = backupImportStore.readConflictPage(
         helper.readableDatabase, importId, previewToken, cursor, maxBytes,
     )
+
+    @Synchronized
+    internal fun resolveBackupImportConflict(
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+        conflictId: String,
+        choice: String,
+    ) = backupImportStore.resolveConflict(
+        helper.readableDatabase, importId, previewToken, expectedLocalStateVersion, conflictId, choice,
+    )
+
+    @Synchronized
+    internal fun applyBackupImport(
+        importId: String,
+        previewToken: String,
+        expectedLocalStateVersion: Long,
+    ): BackupImportStore.Applied {
+        val applied = backupImportStore.apply(
+            helper.writableDatabase, importId, previewToken, expectedLocalStateVersion,
+        )
+        if (applied.stateVersion != expectedLocalStateVersion) publishVersion(applied.stateVersion)
+        return applied
+    }
 
     @Synchronized
     internal fun closeBackupImport(importId: String): Boolean = backupImportStore.close(importId)
@@ -263,60 +287,7 @@ class TimerRepository internal constructor(context: Context,
 
     /** Accept observations only for the session that requested them, never idle history. */
     @Synchronized
-    fun recordLocation(point: LocationPoint): SampleResult {
-        if (point.id.isBlank() || point.sessionId.isBlank() ||
-            !point.latitude.isFinite() || point.latitude !in -90.0..90.0 ||
-            !point.longitude.isFinite() || point.longitude !in -180.0..180.0 ||
-            !point.accuracyMeters.isFinite() || point.accuracyMeters < 0 ||
-            point.measuredUtcMillis > point.receivedUtcMillis) return SampleResult.INVALID_SAMPLE
-        val db = helper.writableDatabase
-        var recorded = false
-        db.beginTransaction()
-        try {
-            db.rawQuery("SELECT * FROM location_points WHERE id=?", arrayOf(point.id)).use {
-                if (it.moveToFirst()) {
-                    val result = if (decodePoint(it).copy(receivedUtcMillis = point.receivedUtcMillis) == point) SampleResult.DUPLICATE else SampleResult.ID_CONFLICT
-                    db.setTransactionSuccessful()
-                    return result
-                }
-            }
-            val active = readSnapshot(db).running
-            if (active == null || active.id != point.sessionId || point.measuredUtcMillis < active.startUtcMillis) {
-                db.setTransactionSuccessful()
-                return SampleResult.OUTSIDE_SESSION
-            }
-            if (!LocationRecordingStore.enabled(db, active.jobId)) {
-                db.setTransactionSuccessful()
-                return SampleResult.RECORDING_DISABLED
-            }
-            val tooSoon = db.rawQuery(
-                "SELECT measured_ms FROM location_points WHERE session_id=? ORDER BY measured_ms DESC,id DESC LIMIT 1",
-                arrayOf(point.sessionId),
-            ).use { it.moveToFirst() && point.measuredUtcMillis - it.getLong(0) < MIN_LOCATION_SAMPLE_INTERVAL_MS }
-            if (tooSoon) {
-                db.setTransactionSuccessful()
-                return SampleResult.THROTTLED
-            }
-            db.execSQL("INSERT INTO location_points(id,session_id,measured_ms,received_ms,latitude,longitude,accuracy) VALUES (?,?,?,?,?,?,?)",
-                arrayOf<Any?>(point.id, point.sessionId, point.measuredUtcMillis, point.receivedUtcMillis,
-                    point.latitude, point.longitude, point.accuracyMeters))
-            RevisionStore.record(
-                db,
-                "location",
-                point.id,
-                active.jobId,
-                mapOf("id" to point.id, "session_id" to point.sessionId),
-                point.receivedUtcMillis,
-                origin = "LOCATION_OBSERVATION",
-                additionalParents = GpsDeletionStore.parentsForPoint(db, active.jobId, point.measuredUtcMillis),
-            )
-            db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
-            db.setTransactionSuccessful()
-            recorded = true
-        } finally { db.endTransaction() }
-        if (recorded) publishVersion(readSnapshot(db).version)
-        return SampleResult.RECORDED
-    }
+    fun recordLocation(point: LocationPoint): SampleResult = recordLocationCore(point)
 
     @Synchronized
     fun locationPoints(sessionId: String): List<LocationPoint> =
@@ -325,10 +296,7 @@ class TimerRepository internal constructor(context: Context,
         ).use { cursor -> buildList { while (cursor.moveToNext()) add(decodePoint(cursor)) } }
 
     @Synchronized
-    fun trackingObservation(): TrackingObservation {
-        val running = readSnapshot(helper.readableDatabase).running
-        return TrackingObservation(running, running?.let { latestLocation(it.id) })
-    }
+    fun trackingObservation(): TrackingObservation = trackingObservationCore()
 
     @Synchronized
     fun latestLocation(sessionId: String): LocationPoint? =
@@ -345,7 +313,7 @@ class TimerRepository internal constructor(context: Context,
     internal fun defaultLocationRecordingEnabled(): Boolean =
         LocationRecordingStore.defaultEnabled(helper.readableDatabase)
 
-    private fun decodePoint(cursor: android.database.Cursor) = LocationPoint(
+    internal fun decodePoint(cursor: android.database.Cursor) = LocationPoint(
         cursor.getString(cursor.getColumnIndexOrThrow("id")),
         cursor.getString(cursor.getColumnIndexOrThrow("session_id")),
         cursor.getLong(cursor.getColumnIndexOrThrow("measured_ms")),
@@ -362,68 +330,19 @@ class TimerRepository internal constructor(context: Context,
 
     /** One coherent read for the Android alarm adapter; review holds must not spin alarms. */
     @Synchronized
-    internal fun schedulableDeparture(): Departure? {
-        val candidate = pendingDeparture() ?: return null
-        return candidate.takeIf { readSnapshot(helper.readableDatabase).running?.id == it.sessionId &&
-            !GeofenceStore.needsReview(helper.readableDatabase, it.sessionId) }
-    }
+    internal fun schedulableDeparture(): Departure? = schedulableDepartureCore()
 
     /** Called only after qualified native exits from all of a job's enabled sites. */
     @Synchronized
-    internal fun beginDeparture(sessionId: String, detectedUtcMillis: Long, graceMinutes: Int): DepartureResult {
-        require(graceMinutes in 0..1440)
-        val running = readSnapshot(helper.readableDatabase).running
-        if (running?.id != sessionId) return DepartureResult.STALE_SESSION
-        if (detectedUtcMillis <= running.startUtcMillis) return DepartureResult.INVALID_BOUNDARY
-        if (pendingDeparture() != null) return DepartureResult.ALREADY_PENDING
-        val deadline = Math.addExact(detectedUtcMillis, graceMinutes * 60_000L)
-        return changeDeparture {
-            it.execSQL("INSERT INTO pending_departure(session_id,detected_ms,deadline_ms) VALUES (?,?,?)",
-                arrayOf<Any?>(sessionId, detectedUtcMillis, deadline))
-            DepartureResult.RECORDED
-        }
-    }
+    internal fun beginDeparture(sessionId: String, detectedUtcMillis: Long, graceMinutes: Int): DepartureResult = beginDepartureCore(sessionId, detectedUtcMillis, graceMinutes)
 
     @Synchronized
-    internal fun reenterBeforeDeadline(sessionId: String, detectedUtcMillis: Long): DepartureResult {
-        val candidate = pendingDeparture() ?: return DepartureResult.NO_PENDING
-        if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
-            return DepartureResult.STALE_SESSION
-        if (detectedUtcMillis < candidate.detectedUtcMillis) return DepartureResult.INVALID_BOUNDARY
-        if (detectedUtcMillis >= candidate.deadlineUtcMillis) return DepartureResult.EXPIRED
-        return changeDeparture {
-            it.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(sessionId))
-            DepartureResult.CANCELLED
-        }
-    }
+    internal fun reenterBeforeDeadline(sessionId: String, detectedUtcMillis: Long): DepartureResult = reenterBeforeDeadlineCore(sessionId, detectedUtcMillis)
 
     @Synchronized
-    internal fun finalizeDeparture(sessionId: String, nowUtcMillis: Long, expectedDeadlineUtcMillis: Long? = null): DepartureResult {
-        val candidate = pendingDeparture() ?: return DepartureResult.NO_PENDING
-        if (expectedDeadlineUtcMillis != null && candidate.deadlineUtcMillis != expectedDeadlineUtcMillis)
-            return DepartureResult.STALE_CANDIDATE
-        if (candidate.sessionId != sessionId || readSnapshot(helper.readableDatabase).running?.id != sessionId)
-            return DepartureResult.STALE_SESSION
-        if (nowUtcMillis < candidate.deadlineUtcMillis) return DepartureResult.NOT_DUE
-        if (GeofenceStore.needsReview(helper.readableDatabase, sessionId)) return DepartureResult.NEEDS_REVIEW
-        return changeDeparture {
-            finalizeDepartureRows(it, candidate)
-            DepartureResult.FINALIZED
-        }
-    }
+    internal fun finalizeDeparture(sessionId: String, nowUtcMillis: Long, expectedDeadlineUtcMillis: Long? = null): DepartureResult = finalizeDepartureCore(sessionId, nowUtcMillis, expectedDeadlineUtcMillis)
 
-    private fun changeDeparture(change: (SQLiteDatabase) -> DepartureResult): DepartureResult {
-        val db = helper.writableDatabase
-        val result: DepartureResult
-        db.beginTransaction()
-        try {
-            result = change(db)
-            db.execSQL("UPDATE state SET version=version+1 WHERE id=1")
-            db.setTransactionSuccessful()
-        } finally { db.endTransaction() }
-        publishVersion(readSnapshot(db).version)
-        return result
-    }
+
 
     internal enum class GeofenceProblem { REGISTRATION_UNAVAILABLE, LOCATION_PERMISSION_MISSING, PROVIDER_UNAVAILABLE, RECOVERY_UNCERTAIN }
     internal data class GeofenceOutcome(val version: Long, val startedSessionId: String? = null,
@@ -535,7 +454,7 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun removeTaskImage(id: String, version: Long, jobId: String, taskId: String, attachmentId: String): Outcome =
         boardChange(id, version, "TASK_IMAGE_REMOVE", listOf(jobId, taskId, attachmentId)) {
-            TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId)
+            TaskConversationStore.removeAttachment(it, jobId, taskId, attachmentId, wallClock())
         }
     @Synchronized
     internal fun taskTemplates(search: String = ""): List<BoardStore.Template> = BoardStore.templates(helper.readableDatabase, search)
@@ -906,7 +825,7 @@ class TimerRepository internal constructor(context: Context,
         return outcome
     }
 
-    private fun priorOutcome(db: SQLiteDatabase, id: String, fingerprint: String): Outcome? = db.rawQuery(
+    internal fun priorOutcome(db: SQLiteDatabase, id: String, fingerprint: String): Outcome? = db.rawQuery(
         "SELECT fingerprint,version,conflict FROM commands WHERE id=?", arrayOf(id),
     ).use {
         if (!it.moveToFirst()) null else if (!OpaqueReceipt.matches(it.getString(0), fingerprint))
@@ -918,206 +837,29 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun geofenceEvent(id: String, registrationKeys: Set<String>,
         presence: io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence,
-        observedUtcMillis: Long, receivedUtcMillis: Long): GeofenceOutcome {
-        require(id.isNotBlank())
-        val identity = try {
-            geofenceCommandId(id) to eventDigest(org.json.JSONArray(listOf("GEOFENCE_EVENT", presence.name,
-                observedUtcMillis, org.json.JSONArray(registrationKeys.sorted()))).toString())
-        } catch (_: Exception) {
-            return holdGeofenceForReview("GEOFENCE_RECEIPTS_UNAVAILABLE", receivedUtcMillis)
-        }
-        val (commandId, fingerprint) = identity
-        val db = helper.writableDatabase
-        val result: GeofenceOutcome
-        var changed = false
-        db.beginTransaction()
-        try {
-            val prior = priorOutcome(db, commandId, fingerprint)
-            if (prior != null) {
-                if (prior.conflict == "COMMAND_ID_REUSED") {
-                    db.setTransactionSuccessful()
-                    return GeofenceOutcome(prior.version, conflict = prior.conflict, replayed = true)
-                }
-                val payload = db.rawQuery("SELECT payload FROM geofence_event_results WHERE id=?", arrayOf(commandId)).use {
-                    check(it.moveToFirst()) { "Missing persisted geofence result" }; it.getString(0)
-                }
-                db.setTransactionSuccessful()
-                return decodeGeofenceOutcome(payload).copy(replayed = true)
-            }
-            val before = readSnapshot(db)
-            val invalid = presence == io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence.UNKNOWN ||
-                registrationKeys.isEmpty() || registrationKeys.size > 100 || observedUtcMillis > receivedUtcMillis
-            if (invalid) {
-                changed = markGeofenceReviewRows(db, "INVALID_GEOFENCE_EVENT", receivedUtcMillis)
-                val version = if (changed) before.version + 1 else before.version
-                if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
-                result = GeofenceOutcome(version, conflict = "INVALID_GEOFENCE_EVENT")
-            } else {
-                val observation = GeofenceStore.observe(db, registrationKeys, presence, observedUtcMillis, before.running?.id)
-                changed = observation.changed
-                val membership = observation.membership
-                var warning = if (membership.lateOrConflictingSites.isEmpty()) null else
-                    if (GeofenceStore.unresolvedJobs(db).isEmpty()) "TRANSITION_IGNORED" else "TRANSITION_NEEDS_REVIEW"
-                if (presence == io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence.INSIDE) {
-                    val policies = GeofenceStore.policies(db).associateBy { it.settings.jobId }
-                    GeofenceStore.sites(db, true).filter { it.registrationKey in registrationKeys &&
-                        observedUtcMillis >= policies.getValue(it.jobId).configuredUtcMillis }.map { it.jobId }.toSet().forEach { jobId ->
-                        GeofenceStore.timelyFinalizedSessions(db, jobId, observedUtcMillis).forEach { sessionId ->
-                            GeofenceStore.conflict(db, sessionId, observedUtcMillis, "REENTRY_AFTER_FINALIZATION", true)
-                            warning = "TRANSITION_NEEDS_REVIEW"
-                            changed = true
-                        }
-                    }
-                }
-                val running = before.running
-                val policy = GeofenceStore.policies(db).firstOrNull { it.settings.jobId == running?.jobId }
-                if (running != null && policy?.settings?.enabled == true) {
-                    val candidate = pendingDeparture()
-                    if (running.jobId in membership.enteredJobs && candidate != null &&
-                        candidate.sessionId == running.id && observedUtcMillis >= candidate.detectedUtcMillis &&
-                        observedUtcMillis < candidate.deadlineUtcMillis) {
-                        db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(running.id))
-                        db.execSQL("DELETE FROM geofence_conflicts WHERE session_id=? AND requires_history_review=0", arrayOf(running.id))
-                        changed = true
-                    }
-                    if (!GeofenceStore.needsReview(db, running.id) &&
-                        running.jobId in membership.departedJobs && policy.settings.automaticDeparture && pendingDeparture() == null) {
-                        val boundary = GeofenceStore.departureBoundary(db, running.jobId)
-                        if (boundary != null && boundary > running.startUtcMillis) {
-                            val deadline = Math.addExact(boundary, policy.settings.graceMinutes * 60_000L)
-                            db.execSQL("INSERT INTO pending_departure(session_id,detected_ms,deadline_ms) VALUES (?,?,?)",
-                                arrayOf<Any?>(running.id, boundary, deadline))
-                            changed = true
-                        } else {
-                            GeofenceStore.conflict(db, running.id, observedUtcMillis, "INVALID_DEPARTURE_BOUNDARY", true)
-                            warning = "TRANSITION_NEEDS_REVIEW"
-                            changed = true
-                        }
-                    }
-                }
-                val candidate = pendingDeparture()
-                if (candidate != null && receivedUtcMillis >= candidate.deadlineUtcMillis &&
-                    readSnapshot(db).running?.id == candidate.sessionId &&
-                    !GeofenceStore.needsReview(db, candidate.sessionId)) {
-                    finalizeDepartureRows(db, candidate)
-                    changed = true
-                }
-                val current = readSnapshot(db)
-                val selection = if (warning == null) GeofenceStore.select(db, membership, current.running?.id)
-                    else io.github.centerionware.clockrove.location.geofence.GeofenceMembership.StartSelection()
-                var started: String? = null
-                var conflict = warning
-                if (selection.startJobId != null) {
-                    val command = Command("$commandId/start", before.version, Action.START, selection.startJobId,
-                        observedUtcMillis, "Etc/UTC", 0, Origin.GEOFENCE)
-                    val error = validate(db, current, command, true)
-                    if (error == null) {
-                        applyTimerRows(db, current, command)
-                        started = readSnapshot(db).running!!.id
-                        changed = true
-                    } else {
-                        conflict = error
-                    }
-                }
-                val version = if (changed) before.version + 1 else before.version
-                if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
-                result = GeofenceOutcome(version, started, selection.choices,
-                    membership.lateOrConflictingSites, conflict)
-            }
-            db.execSQL("INSERT INTO commands(id,fingerprint,version,conflict) VALUES (?,?,?,?)",
-                arrayOf<Any?>(commandId, fingerprint, result.version, result.conflict))
-            db.execSQL("INSERT INTO geofence_event_results(id,payload) VALUES (?,?)", arrayOf(commandId, encodeGeofenceOutcome(result)))
-            db.setTransactionSuccessful()
-        } finally { db.endTransaction() }
-        if (changed) publishVersion(result.version)
-        return result
-    }
+        observedUtcMillis: Long, receivedUtcMillis: Long): GeofenceOutcome = geofenceEventCore(id, registrationKeys, presence, observedUtcMillis, receivedUtcMillis)
 
     @Synchronized
     internal fun geofenceProblem(problem: GeofenceProblem): GeofenceOutcome = holdGeofenceForReview(problem.name, wallClock())
 
-    private fun markGeofenceReviewRows(db: SQLiteDatabase, reason: String, at: Long): Boolean {
-        val before = readSnapshot(db)
-        val policies = GeofenceStore.policies(db).associateBy { it.settings.jobId }
-        val jobs = GeofenceStore.sites(db, true).map { it.jobId }.toMutableSet()
-        val candidate = pendingDeparture()
-        if (candidate != null) before.running?.let { jobs.add(it.jobId) }
-        jobs.forEach { GeofenceStore.suspendFacts(db, it, at) }
-        before.running?.let {
-            if (candidate != null || (it.jobId in jobs && policies[it.jobId]?.settings?.enabled == true &&
-                    policies[it.jobId]?.settings?.automaticDeparture == true)) {
-                GeofenceStore.conflict(db, it.id, at, reason)
-            }
-        }
-        return jobs.isNotEmpty()
-    }
 
-    private fun holdGeofenceForReview(reason: String, at: Long): GeofenceOutcome {
-        val db = helper.writableDatabase
-        val version: Long
-        var changed = false
-        db.beginTransaction()
-        try {
-            val before = readSnapshot(db)
-            changed = markGeofenceReviewRows(db, reason, at)
-            version = if (changed) before.version + 1 else before.version
-            if (changed) db.execSQL("UPDATE state SET version=? WHERE id=1", arrayOf(version))
-            db.setTransactionSuccessful()
-        } finally { db.endTransaction() }
-        if (changed) publishVersion(version)
-        return GeofenceOutcome(version, conflict = reason)
-    }
 
-    private fun encodeGeofenceOutcome(value: GeofenceOutcome) = org.json.JSONObject().apply {
+
+
+    internal fun encodeGeofenceOutcome(value: GeofenceOutcome) = org.json.JSONObject().apply {
         put("version", value.version)
         put("started", value.startedSessionId ?: org.json.JSONObject.NULL)
         put("choiceRequired", value.choiceRequired)
         put("conflict", value.conflict ?: org.json.JSONObject.NULL)
     }.toString()
-    private fun decodeGeofenceOutcome(text: String): GeofenceOutcome {
-        val json = org.json.JSONObject(text)
-        // Notification choices and raw warning keys are transient, not an idle trail.
-        return GeofenceOutcome(json.getLong("version"),
-            startedSessionId = if (json.isNull("started")) null else json.getString("started"),
-            conflict = if (json.isNull("conflict")) null else json.getString("conflict"),
-            choiceRequired = json.getBoolean("choiceRequired"))
-    }
+
 
     @Synchronized
     internal fun geofenceCommandId(id: String): String = "geofence/" + eventDigest("id/$id")
 
-    private fun applyTimerRows(db: SQLiteDatabase, before: Snapshot, command: Command) {
-        if (command.action != Action.START) {
-            val closing = requireNotNull(before.running)
-            if (command.origin != Origin.GEOFENCE) GeofenceStore.manualStop(db, closing.jobId, command.atUtcMillis)
-            db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(closing.id))
-            db.execSQL("UPDATE sessions SET end_ms=? WHERE id=?", arrayOf<Any?>(command.atUtcMillis, closing.id))
-            db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?", arrayOf<Any?>(closing.id, command.atUtcMillis))
-            RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, command.atUtcMillis,
-                "job_id", "id=?", arrayOf(closing.id))
-        }
-        if (command.action != Action.STOP) {
-            if (command.origin != Origin.GEOFENCE) GeofenceStore.manualStart(db, requireNotNull(command.jobId), command.atUtcMillis)
-            val sessionId = UUID.randomUUID().toString()
-            db.execSQL("INSERT INTO sessions(id,job_id,start_ms,timezone,offset_seconds,origin) VALUES (?,?,?,?,?,?)",
-                arrayOf<Any?>(sessionId, command.jobId, command.atUtcMillis,
-                    command.timezone, command.offsetSeconds, command.origin.name))
-            RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, command.atUtcMillis,
-                "job_id", "id=?", arrayOf(sessionId))
-        }
-    }
 
-    private fun finalizeDepartureRows(db: SQLiteDatabase, candidate: Departure) {
-        db.execSQL("INSERT OR IGNORE INTO finalized_departures(session_id,detected_ms,deadline_ms) VALUES (?,?,?)",
-            arrayOf<Any?>(candidate.sessionId, candidate.detectedUtcMillis, candidate.deadlineUtcMillis))
-        db.execSQL("UPDATE sessions SET end_ms=? WHERE id=? AND end_ms IS NULL",
-            arrayOf<Any?>(candidate.detectedUtcMillis, candidate.sessionId))
-        db.execSQL("DELETE FROM location_points WHERE session_id=? AND measured_ms>?",
-            arrayOf<Any?>(candidate.sessionId, candidate.detectedUtcMillis))
-        db.execSQL("DELETE FROM pending_departure WHERE session_id=?", arrayOf(candidate.sessionId))
-        RevisionStore.snapshotRows(db, "sessions", "session", BusinessSchema.sessionColumns, candidate.detectedUtcMillis,
-            "job_id", "id=?", arrayOf(candidate.sessionId))
-    }
+
+
 
     @Synchronized
     internal fun close() {
@@ -1138,14 +880,14 @@ class TimerRepository internal constructor(context: Context,
         return AutoCloseable { synchronized(this) { listeners.remove(listener) } }
     }
 
-    private fun publishVersion(version: Long) {
+    internal fun publishVersion(version: Long) {
         // Subscriber failures must not turn a durable commit into an apparent failure.
         listeners.toList().forEach { listener ->
             try { listener(version) } catch (_: Exception) { }
         }
     }
 
-    private fun validate(db: SQLiteDatabase, state: Snapshot, c: Command, qualifiedAutomation: Boolean = false): String? {
+    internal fun validate(db: SQLiteDatabase, state: Snapshot, c: Command, qualifiedAutomation: Boolean = false): String? {
         if (c.expectedVersion != state.version) return "STALE_STATE"
         if (c.origin == Origin.GEOFENCE && !qualifiedAutomation) return "AUTOMATION_NOT_READY"
         if (c.origin == Origin.GEOFENCE && c.action != Action.START) return "NO_AUTO_SWITCH"
@@ -1163,7 +905,7 @@ class TimerRepository internal constructor(context: Context,
         return null
     }
 
-    private fun readSnapshot(db: SQLiteDatabase): Snapshot {
+    internal fun readSnapshot(db: SQLiteDatabase): Snapshot {
         val version = db.rawQuery("SELECT version FROM state WHERE id=1", null).use { it.moveToFirst(); it.getLong(0) }
         val running = db.rawQuery("SELECT s.id,s.job_id,s.start_ms,j.name FROM sessions s JOIN jobs j ON j.id=s.job_id WHERE s.end_ms IS NULL", null).use {
             if (it.moveToFirst()) Session(it.getString(0), it.getString(1), it.getLong(2), it.getString(3)) else null
@@ -1174,64 +916,10 @@ class TimerRepository internal constructor(context: Context,
         return Snapshot(version, running, jobs)
     }
 
-    private class Store(context: Context, private val now: () -> Long) : SQLiteOpenHelper(context, "clockrove.db", null, 16) {
-        override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
-        override fun onCreate(db: SQLiteDatabase) {
-            db.execSQL("CREATE TABLE state(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL)")
-            db.execSQL("INSERT INTO state VALUES(1,0)")
-            db.execSQL("CREATE TABLE jobs(id TEXT PRIMARY KEY,name TEXT NOT NULL,archived INTEGER NOT NULL DEFAULT 0)")
-            db.execSQL("CREATE TABLE sessions(id TEXT PRIMARY KEY,job_id TEXT NOT NULL REFERENCES jobs(id),start_ms INTEGER NOT NULL,end_ms INTEGER,timezone TEXT NOT NULL,offset_seconds INTEGER NOT NULL,origin TEXT NOT NULL,CHECK(end_ms IS NULL OR end_ms>start_ms))")
-            db.execSQL("CREATE UNIQUE INDEX one_open_session ON sessions((1)) WHERE end_ms IS NULL")
-            db.execSQL("CREATE INDEX session_dates ON sessions(start_ms,end_ms)")
-            db.execSQL("CREATE TABLE commands(id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,version INTEGER NOT NULL,conflict TEXT)")
-            createLocationTable(db)
-            createDepartureTable(db)
-            GeofenceStore.createTables(db)
-            BusinessSchema.install(db, now())
-            WidgetConfigurationStore.install(db)
-            InvoiceCoverageStore.install(db, now())
-            InvoicePaymentStore.install(db)
-            QuoteStore.install(db)
-            LocationRecordingStore.install(db, now())
-            TaskConversationStore.install(db)
-            InvoiceBillingPolicyStore.install(db, now())
-            ActualCostStore.install(db)
-            GpsDeletionStore.createTables(db)
-        }
-        private fun createLocationTable(db: SQLiteDatabase) {
-            db.execSQL("CREATE TABLE location_points(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id),measured_ms INTEGER NOT NULL,received_ms INTEGER NOT NULL,latitude REAL NOT NULL CHECK(latitude BETWEEN -90 AND 90),longitude REAL NOT NULL CHECK(longitude BETWEEN -180 AND 180),accuracy REAL NOT NULL CHECK(accuracy>=0))")
-            db.execSQL("CREATE INDEX location_session_date ON location_points(session_id,measured_ms)")
-        }
-        private fun createDepartureTable(db: SQLiteDatabase) {
-            db.execSQL("CREATE TABLE pending_departure(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL CHECK(deadline_ms>=detected_ms))")
-            db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
-        }
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            check(oldVersion in 1..15 && newVersion == 16) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
-            if (oldVersion < 2) createLocationTable(db)
-            if (oldVersion < 3) createDepartureTable(db)
-            if (oldVersion < 4) GeofenceStore.createTables(db)
-            if (oldVersion < 5) BusinessSchema.install(db, now())
-            if (oldVersion < 6) WidgetConfigurationStore.install(db)
-            if (oldVersion < 7) InvoiceCoverageStore.install(db, now())
-            if (oldVersion < 8) InvoicePaymentStore.install(db)
-            if (oldVersion < 9) QuoteStore.install(db)
-            if (oldVersion < 10) {
-                LocationRecordingStore.install(db, now())
-                TaskConversationStore.install(db)
-            }
-            if (oldVersion < 11) InvoiceBillingPolicyStore.install(db, now())
-            if (oldVersion < 12) TaskClassificationStore.install(db, now())
-            if (oldVersion < 13) TaskConversationStore.migrateImageByteLimit(db)
-            if (oldVersion < 14) ActualCostStore.install(db)
-            if (oldVersion == 14) ActualCostStore.migrateCustomerSnapshot(db)
-            if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
-            GpsDeletionStore.migrate(db, now())
-        }
-    }
+
 
     companion object {
-        private const val MIN_LOCATION_SAMPLE_INTERVAL_MS = 300_000L
+        internal const val MIN_LOCATION_SAMPLE_INTERVAL_MS = 300_000L
         @Volatile private var instance: TimerRepository? = null
         fun get(context: Context): TimerRepository = instance ?: synchronized(this) {
             instance ?: TimerRepository(context).also {

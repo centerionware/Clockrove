@@ -12,7 +12,7 @@ release candidate and selected tile provider before publication.
 | Default OSM tile request | Requested over HTTPS from `tile.openstreetmap.org`; attribution links to OSM copyright | OSM receives requested tile coordinates and network metadata. No account or API key is used | Confirm live tile load and attribution on supported device/network configurations |
 | Custom raster provider template and attribution | Saved in app-private settings | Tile coordinates and network metadata go to the user-selected host | Confirm provider identity, terms, attribution and privacy policy before configuration |
 | Custom provider authentication header | Android stores the configuration encrypted with AES-GCM under an Android Keystore key; public settings expose only credential presence, while a separate channel supplies the value for tile requests | The configured header goes to the chosen provider. Redirects are disabled so credentials cannot be forwarded to another host | Recheck Keystore round-trip, reset, redaction and redirect behavior in Actions/device evidence; confirm the selected provider's terms |
-| Google Maps key and map requests | Google Maps is not an implemented provider. Current settings do not request or accept a Google SDK key | Clockrove's map screens make no Google Maps requests | The documented Android setup uses application manifest metadata for the key; no supported runtime-key path has been identified. Do not add a Google key field/provider until a supported runtime path is established and exercised with an owner-provided restricted key. Any build-time-key alternative requires an explicit contract decision |
+| Google Maps key and map requests | Google Maps is not an implemented provider. Current settings do not request or accept a Google SDK key | Clockrove's map screens make no Google Maps requests | Owner decision on 2026-11-15 deferred Google Maps beyond launch. The documented manifest-key/runtime-key findings below are historical research, not a launch gate |
 | Tile cache | `flutter_map` cache is local to the app and Android may clear it; no bulk download or prefetch is provided | Cache misses cause requests to the selected provider | Inspect release cache behavior and confirm relevant cached displays are cleared after location deletion as designed |
 
 Map tile URLs, provider errors and credentials must not be written to logs or
@@ -39,16 +39,15 @@ crash reporting is part of the launch contract.
   artifacts.
 - [ ] Verify location-history deletion updates map/report displays and record
   cache behavior. Existing exports/backups are not retroactively erased.
-- [ ] If a supported Google runtime-key path is established and approved, use an
-  owner-provided restricted key to verify successful rendering and missing or
-  invalid-key fallback without breaking OSM. Record billing/project ownership
-  and Android signing identity; never add the key to Git or CI logs.
+- [ ] Google Maps runtime-key and billing verification are deferred beyond
+  launch by the owner decision dated 2026-11-15; this is future research, not a
+  launch acceptance item.
 
 Record device/build, provider, network state, observed behavior and sanitized
 evidence under the existing device-validation process. Synthetic tiles and
 emulator Keystore tests do not substitute for physical provider evidence.
 
-## Google Maps runtime-key feasibility
+## Historical Google Maps runtime-key feasibility (deferred beyond launch)
 
 Google's [Flutter configuration guide](https://developers.google.com/maps/flutter-package/config)
 and [Android project setup](https://developers.google.com/maps/documentation/android-sdk/config)
@@ -59,4 +58,6 @@ initializes the SDK using an Android `Context` and has no API-key argument.
 Therefore the standard Flutter/Android SDK integration has no documented
 runtime user-key initialization path. A platform-view wrapper does not change
 the SDK's authentication contract. Keyless OSM and the existing custom raster
-provider remain available while this requirement is open.
+provider remain the launch options. The owner deferred Google Maps beyond
+launch on 2026-11-15; this feasibility note does not leave a launch requirement
+open.

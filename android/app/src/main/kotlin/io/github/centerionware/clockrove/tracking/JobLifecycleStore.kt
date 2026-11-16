@@ -4,6 +4,12 @@ import android.database.sqlite.SQLiteDatabase
 
 internal object JobLifecycleStore {
     const val retentionMillis = 30L * 24 * 60 * 60 * 1000
+    internal val financialRevisionKinds = setOf(
+        "invoice", "invoice_coverage", "invoice_task_claim", "invoice_time_claim", "invoice_payment",
+        "payment_destination", "invoice_payment_reversal", "invoice_payment_event", "invoice_copy",
+        "invoice_void", "quote_draft", "quote_revision", "quote_decision", "quote_scope_line",
+        "quote_scope_revision", "quote_invoice_link",
+    )
     data class Archived(val id: String, val name: String, val archivedMillis: Long?, val canDelete: Boolean)
     fun eligible(archived: Boolean, since: Long?, now: Long): Boolean = archived && since != null && since >= 0 && now >= since && now - since >= retentionMillis
     fun archived(db: SQLiteDatabase, now: Long): List<Archived> = db.rawQuery("SELECT id,name,archived_ms FROM jobs WHERE archived=1 ORDER BY archived_ms DESC,id", null).use { rows -> buildList {
@@ -57,7 +63,7 @@ internal object JobLifecycleStore {
         }
         // Issued documents and their source reservations are retained financial
         // records. Purging work must neither erase them nor release billed work.
-        val financial = "'invoice','invoice_coverage','invoice_task_claim','invoice_time_claim','invoice_payment','payment_destination','invoice_payment_reversal','invoice_payment_event','invoice_copy','invoice_void','quote_draft','quote_revision','quote_decision','quote_scope_line','quote_scope_revision','quote_invoice_link'"
+        val financial = financialRevisionKinds.joinToString(",") { "'$it'" }
         val entities = db.rawQuery("SELECT kind,entity_id FROM entity_heads WHERE revision_id IN (SELECT id FROM entity_revisions WHERE job_id=? AND kind NOT IN($financial))", arrayOf(id)).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1)) } }
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE job_id=? AND kind NOT IN($financial)", arrayOf(id))
         entities.forEach { (kind, entityId) -> RevisionStore.record(db, kind, entityId, id, mapOf("id" to entityId, "job_id" to id), now, deleted = true) }

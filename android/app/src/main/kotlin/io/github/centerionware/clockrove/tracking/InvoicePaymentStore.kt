@@ -19,9 +19,13 @@ internal object InvoicePaymentStore {
         db.execSQL("UPDATE invoice_accounting_settings SET receivables_email=? WHERE id=1", arrayOf(value))
         RevisionStore.record(db, "invoice_accounting_settings", "1", null, mapOf("id" to 1, "receivables_email" to value), at)
     }
-    fun install(db: SQLiteDatabase) {
+    fun install(db: SQLiteDatabase, at: Long) {
         db.execSQL("CREATE TABLE invoice_accounting_settings(id INTEGER PRIMARY KEY CHECK(id=1),receivables_email TEXT NOT NULL DEFAULT '')")
         db.execSQL("INSERT INTO invoice_accounting_settings(id) VALUES(1)")
+        RevisionStore.record(
+            db, "invoice_accounting_settings", "1", null,
+            mapOf("id" to 1, "receivables_email" to ""), at, origin = "MIGRATION",
+        )
         db.execSQL("CREATE TABLE invoice_payments(id TEXT PRIMARY KEY NOT NULL,original_invoice_id TEXT NOT NULL REFERENCES invoices(id),${amountColumn("amount_minor")},currency TEXT NOT NULL,received_ms INTEGER NOT NULL CHECK(received_ms>=0),timezone TEXT NOT NULL,offset_seconds INTEGER NOT NULL CHECK(offset_seconds BETWEEN -64800 AND 64800),received_label TEXT NOT NULL,method TEXT NOT NULL,reference TEXT NOT NULL,note TEXT NOT NULL,recorded_ms INTEGER NOT NULL CHECK(recorded_ms>=0),CHECK(amount_minor<>'0'))")
         db.execSQL("CREATE TABLE payment_destinations(payment_id TEXT PRIMARY KEY NOT NULL REFERENCES invoice_payments(id),invoice_id TEXT NOT NULL REFERENCES invoices(id))")
         db.execSQL("CREATE INDEX payment_destination_invoice ON payment_destinations(invoice_id,payment_id)")
