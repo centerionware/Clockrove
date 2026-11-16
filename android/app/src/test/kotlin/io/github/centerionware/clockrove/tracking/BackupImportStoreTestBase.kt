@@ -186,7 +186,7 @@ abstract class BackupImportStoreTestBase {
             val table = record["table"] as? String ?: return@forEach
             val kind = dataKinds[table] ?: return@forEach
             val rowValues = values(record).entries.associate { it.key.toString() to it.value }
-            val entityId = BackupImportStore.revisionEntityIdForDataRow(table, rowValues) ?: return@forEach
+            val entityId = importStore.revisionEntityIdForDataRow(table, rowValues) ?: return@forEach
             val entityKey = kind to entityId
             if (entityKey in existingHeads || entityKey in existingRevisions) return@forEach
 

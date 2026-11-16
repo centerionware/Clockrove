@@ -58,7 +58,7 @@ class BackupImportStoreQuoteRevisionMergeTest : BackupImportStoreTestBase() {
         database.execSQL(
             "INSERT INTO invoices(id,job_id,customer_id,number,created_ms,payload,pdf,logo_id) " +
                 "VALUES(?,?,NULL,?,?,?,NULL,NULL)",
-            arrayOf(invoiceId, jobId, invoiceNumber, now + 2L, "{}"),
+            arrayOf<Any?>(invoiceId, jobId, invoiceNumber, now + 2L, "{}"),
         )
         RevisionStore.snapshotRows(
             database, "invoices", "invoice",
@@ -85,7 +85,7 @@ class BackupImportStoreQuoteRevisionMergeTest : BackupImportStoreTestBase() {
         database.execSQL(
             "INSERT INTO quote_invoice_links(invoice_id,quote_id,revision,original_invoice_id,created_ms,payload) " +
                 "VALUES(?,?,?,?,?,?)",
-            arrayOf(
+            arrayOf<Any?>(
                 invoiceId, quoteId, 1L, invoiceId, now + 4L, "local provenance",
             ),
         )

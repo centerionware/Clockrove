@@ -593,9 +593,9 @@ class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
             val conflict = requireNotNull(headConflicts[value.case.id])
             assertEquals("DIVERGENT", conflict["revisionRelationship"])
             assertEquals(
+                "Unexpected choices for ${value.case.kind}",
                 setOf("KEEP_LOCAL", "MERGE_KEEP_LOCAL_CONTENT", "MERGE_USE_BACKUP_CONTENT"),
                 (conflict["allowedChoices"] as List<*>).toSet(),
-                "Unexpected choices for ${value.case.kind}",
             )
         }
         assertTrue(importStore.close(started.importId))
