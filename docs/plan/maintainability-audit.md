@@ -6,18 +6,20 @@ Keep every maintained source, test, and documentation file at or below 1,000 lin
 
 ## Evidence
 
-Counts are from read-only GitHub source archives for the live PR heads checked on 2026-11-16. The request's prior SHAs `0ee5fda` and `a5a6e32` are not the live heads now: PR #66 is `ccb4a2bcdd91d81cedce033e570a4a1608929f25`; PR #65 is `414a052f9cbcf98754c6caffae02fb00e20ecbaf`. Counts include tracked text files, count a final unterminated line, and exclude binary and generated build output.
+Counts are from read-only GitHub source archives inspected on 2026-11-16: verified `main` at `fcd6d7978aa42ab03abc6dfe0b352f5c27d682ea`, PR #65 at `414a052f9cbcf98754c6caffae02fb00e20ecbaf`, and PR #66 at `adbae1d904f2a8bcab6d5d5542450e1ba2b6fcbd`. Earlier requested PR snapshots `0ee5fda` and `a5a6e32` had already moved. Counts include tracked text files, count a final unterminated line, and exclude binary and generated build output.
 
-| Maintained file | PR #66 (`ccb4a2b`) | PR #65 (`414a052`) | Safe split boundary |
-| --- | ---: | ---: | --- |
-| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStore.kt` | 4,996 | 1,958 | Split import session staging/expiry, preview validation, conflict planning, revision merge, GPS deletion conflicts, transactional apply, and staged-file cleanup behind the existing store API. Keep apply on the same serialized SQLite transaction boundary. |
-| `android/app/src/test/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStoreTest.kt` | 4,748 | 1,410 | Split into staging/expiry, preview validation, revision merge, GPS/deletion conflicts, apply/rollback, and cleanup suites; move common DB/archive helpers to `BackupImportTestSupport`. |
-| `plan_status.md` | 4,428 | 4,435 | Keep current status and active milestone summary in the index; archive chronological validation entries at complete heading boundaries. This PR does so. |
-| `app_plan.md` | 3,445 | 3,458 | Keep the product-contract index concise; move start/context, product contract, CI references, milestones, release gates, and chronological evidence to linked topical files. This PR does so. |
-| `lib/backup/backup_archive.dart` | 1,416 | 1,404 | Split schema/model definitions, buffered codec and validation, streaming plan/encoder, and binary reader/writer/digest primitives under `lib/backup/archive/`. |
-| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/TimerRepository.kt` | 1,269 | 1,244 | Separate timer/session, location/geofence, board/conversation, business/billing, quote/invoice, and backup collaborators. Keep the repository as the serialized command coordinator and move schema lifecycle to a focused database component. |
-| `lib/tracking/history_screen.dart` | 1,265 | 1,265 | Move the history list, GPS range deletion dialog, history editor, audit screen, and revision screen into `lib/tracking/history/`. |
-| `lib/business/job_screen.dart` | 1,112 | 1,112 | Move the board screen, task editor, column editor, and task-template picker into `lib/business/boards/`. |
+| Maintained file | Main (`fcd6d79`) | PR #65 (`414a052`) | PR #66 (`adbae1d`) | Safe split boundary |
+| --- | ---: | ---: | ---: | --- |
+| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStore.kt` | 1,958 | 1,958 | 4,996 | Split import session staging/expiry, preview validation, conflict planning, revision merge, GPS deletion conflicts, transactional apply, and staged-file cleanup behind the existing store API. Keep apply on the same serialized SQLite transaction boundary. |
+| `android/app/src/test/kotlin/io/github/centerionware/clockrove/tracking/BackupImportStoreTest.kt` | 1,400 | 1,410 | 4,748 | Split into staging/expiry, preview validation, revision merge, GPS/deletion conflicts, apply/rollback, and cleanup suites; move common DB/archive helpers to `BackupImportTestSupport`. |
+| `plan_status.md` | 4,420 | 4,435 | 4,428 | Keep current status and active milestone summary in the index; archive chronological validation entries at complete heading boundaries. This PR does so. |
+| `app_plan.md` | 3,444 | 3,458 | 3,445 | Keep the product-contract index concise; move start/context, product contract, CI references, milestones, release gates, and chronological evidence to linked topical files. This PR does so. |
+| `lib/backup/backup_archive.dart` | 1,416 | 1,404 | 1,416 | Split schema/model definitions, buffered codec and validation, streaming plan/encoder, and binary reader/writer/digest primitives under `lib/backup/archive/`. |
+| `android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/TimerRepository.kt` | 1,244 | 1,244 | 1,269 | Separate timer/session, location/geofence, board/conversation, business/billing, quote/invoice, and backup collaborators. Keep the repository as the serialized command coordinator and move schema lifecycle to a focused database component. |
+| `lib/tracking/history_screen.dart` | 1,265 | 1,265 | 1,265 | Move the history list, GPS range deletion dialog, history editor, audit screen, and revision screen into `lib/tracking/history/`. |
+| `lib/business/job_screen.dart` | 1,112 | 1,112 | 1,112 | Move the board screen, task editor, column editor, and task-template picker into `lib/business/boards/`. |
+
+All three audited snapshots contain these eight files over 1,000 lines. The docs-only PR reduces the two planning files below the limit; six existing source/test files remain follow-up work.
 
 ## Safe order
 
