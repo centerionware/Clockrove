@@ -335,8 +335,11 @@ run [43738238801](https://github.com/centerionware/Clockrove/actions/runs/437382
 submitted internal.45.1 / versionCode `216925099`; Play accepted it at
 17:04:46 UTC. This confirms upload/submission only, not review approval or
 tester availability. M7.2 remains open because Settings export is withheld
-pending full-path memory evidence and transactional restore/merge remains
-outstanding. No local build, test, formatter or analyzer ran.
+pending full-path memory evidence. PR #71 adds a CI-validated native
+streamed-restore preview/apply core; the Settings/SAF route, Dart apply
+coordinator, record-by-record review, and M7.3 conflict resolution remain
+incomplete. See [validation history 06](../status-history/validation-history-06.md).
+No local build, test, formatter or analyzer ran.
 
 ### 2026-11-15 — PR #62 Settings scroll fallback rebased
 
