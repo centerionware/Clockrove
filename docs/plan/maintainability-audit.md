@@ -19,15 +19,16 @@ Counts are from read-only GitHub source archives inspected on 2026-11-16: verifi
 | `lib/tracking/history_screen.dart` | 1,265 | 1,265 | 1,265 | Move the history list, GPS range deletion dialog, history editor, audit screen, and revision screen into `lib/tracking/history/`. |
 | `lib/business/job_screen.dart` | 1,112 | 1,112 | 1,112 | Move the board screen, task editor, column editor, and task-template picker into `lib/business/boards/`. |
 
-All three audited snapshots contain these eight files over 1,000 lines. The docs-only PR reduces the two planning files below the limit; six existing source/test files remain follow-up work.
+All three audited snapshots contain these eight files over 1,000 lines. The docs-only PR reduces the two planning files below the limit; six existing source/test files remain in the audited base. PR #68 separately moves the board implementation: at head `b167b7ad2173a7bdd78eb6cf2f1e0c46b7c86bee`, `lib/business/job_screen.dart` is a one-line compatibility export and `lib/business/board/board_view.dart` is 922 lines. That PR is still awaiting Actions validation.
 
 ## Safe order
 
-1. Let W2's PR #66 and W3's PR #65 finish. They currently share `BackupExportStore.kt`, its test, `BackupImportStoreTest.kt`, `app_plan.md`, `docs/BACKUP_FORMAT.md`, `lib/backup/backup_archive.dart`, `plan_status.md`, and `test/backup_archive_test.dart`. Do not extract or rewrite those files while either branch is active.
-2. After both are integrated, split `BackupImportStore.kt` behind its stable public API. Start with lifecycle/staging and cleanup, then preview validation, conflict planners, and revision/GPS merge logic; keep apply atomic and version-checked.
-3. Split the oversized import test into the domain suites in the table, retaining one shared fixture. Run the full existing Actions validation at the exact commit after each extraction step; do not use this as a reason to run builds or tests on the VM.
-4. Split the archive codec and its tests after W3's benchmark work is integrated. Keep archive-format compatibility fixtures and streaming bounds tests with the codec they cover.
-5. Split `TimerRepository.kt` while preserving one native write/command boundary. Then split history and board UI files along the widget/editor/screen boundaries listed above.
+1. Finish the behavior changes in PRs #65 and #66 first, but do not merge either while a maintained file in its change set remains over 1,000 lines. They currently share `BackupExportStore.kt`, its test, `BackupImportStoreTest.kt`, `app_plan.md`, `docs/BACKUP_FORMAT.md`, `lib/backup/backup_archive.dart`, `plan_status.md`, and `test/backup_archive_test.dart`.
+2. Before merging the backup work, split the oversized files on their owning branches or on a validated integration branch stacked on both heads. Cover `BackupImportStore.kt`, the shared `BackupImportStoreTest.kt`, `backup_archive.dart`, and `TimerRepository.kt`; keep each new file at or below 1,000 lines. Preserve the stable import API, portable archive compatibility, and one serialized SQLite write/apply boundary. Run Actions against the exact integration head before merging.
+3. PR #68 already moves the board implementation to `lib/business/board/board_view.dart` (922 lines) and leaves `job_screen.dart` as a one-line compatibility export. Merge it only after its exact-head Actions check passes.
+4. Split `history_screen.dart` independently from `main` into `lib/tracking/history/`, keeping `lib/tracking/history_screen.dart` as the public export entrypoint. This does not overlap the backup branches; validate its exact head in Actions.
+5. Re-audit every maintained file after those changes and split any remaining over-limit source or test files before merging the affected work. This PR itself keeps all plan, status, and audit documents within the limit.
+
 
 ## Import test grouping detail
 
