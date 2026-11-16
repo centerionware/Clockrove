@@ -409,9 +409,7 @@ final class BackupSnapshotExporter {
       } else {
         final next = page.nextCursor;
         if (next == null || next.isEmpty || next == cursor) {
-          throw const FormatException(
-            'The backup snapshot cursor is invalid.',
-          );
+          throw const FormatException('The backup snapshot cursor is invalid.');
         }
         cursor = next;
       }

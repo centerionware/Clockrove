@@ -238,7 +238,9 @@ void main() {
           pageReads++;
           final id = pageReads == 1 ? 'stable-row' : 'changed-row';
           return _page(
-            records: [_row('jobs', {'id': id})],
+            records: [
+              _row('jobs', {'id': id}),
+            ],
             done: true,
           );
         case 'closeBackupSnapshot':

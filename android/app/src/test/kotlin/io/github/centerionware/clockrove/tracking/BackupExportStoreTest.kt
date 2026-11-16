@@ -189,6 +189,43 @@ class BackupExportStoreTest {
     }
 
     @Test
+    fun rejectsRevisionCyclesBeforeSnapshotCopy() {
+        val firstRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "same-owner",
+            null,
+            mapOf("id" to "same-owner", "revision" to 1),
+            now,
+        )
+        val secondRevision = RevisionStore.record(
+            database,
+            "export-test",
+            "same-owner",
+            null,
+            mapOf("id" to "same-owner", "revision" to 2),
+            now + 1,
+        )
+        database.execSQL(
+            "INSERT INTO revision_parents(revision_id,parent_id) VALUES (?,?)",
+            arrayOf(firstRevision, secondRevision),
+        )
+
+        val failure = try {
+            exportStore.start(database)
+            throw AssertionError("Expected the revision cycle to be rejected.")
+        } catch (failure: BackupExportStore.Failure) {
+            failure
+        }
+
+        assertEquals("INVALID_REVISION_GRAPH", failure.code)
+        val snapshotDirectory = File(app.noBackupFilesDir, "clockrove-backup-snapshots")
+        assertFalse(
+            snapshotDirectory.listFiles().orEmpty().any { it.name.contains("-graph.sqlite") },
+        )
+    }
+
+    @Test
     fun schema16ExportPreservesGpsDeletionCoverageAndCoordinateFreeCausalHistory() {
         val beforeStart = repository.snapshot().version
         assertNull(repository.execute(TimerRepository.Command(

@@ -430,9 +430,8 @@ Future<int> _processRssKiB() async {
   final status = await File('/proc/self/status').readAsLines();
   final line = status.firstWhere(
     (entry) => entry.startsWith('VmRSS:'),
-    orElse: () => throw const FormatException(
-      'Android did not report process RSS.',
-    ),
+    orElse: () =>
+        throw const FormatException('Android did not report process RSS.'),
   );
   final match = RegExp(r'^VmRSS:\s+(\d+)\s+kB$').firstMatch(line);
   if (match == null) {

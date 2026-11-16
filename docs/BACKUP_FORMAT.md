@@ -74,12 +74,14 @@ validate and measure, once to emit row records, and once to emit media. Each
 pass holds at most one bounded native page. Preflight retains only a bounded
 set of blob IDs (at most 10,000) for uniqueness and incremental row digests; it
 does not build per-revision Dart maps. The native snapshot checks revision
-heads, entity ownership, and parent references in SQLite. It does not traverse
-the local graph for cycles: `RevisionStore` creates a fresh revision ID and
-links only to already-existing parents, while restore validates its selected
-union graph before writing. Those are the only native revision writers, so
-normal application writes preserve acyclicity. Authenticated archive decode
-still validates the complete untrusted revision graph.
+heads, entity ownership, and parent references in SQLite. It copies parent
+edges to a private SQLite validation file capped at 256 MiB (four times the
+archive ceiling), builds pending-node state directly from the source database,
+and runs a batched Kahn traversal there. The scratch file is removed after
+success or failure. `RevisionStore` also creates fresh revision IDs and links
+only to already-existing parents, while restore validates its selected union
+graph before writing. Authenticated archive decode still validates the
+complete untrusted revision graph.
 
 ## Limits and lifecycle
 

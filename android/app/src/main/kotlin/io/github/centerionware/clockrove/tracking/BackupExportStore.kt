@@ -262,6 +262,7 @@ internal class BackupExportStore(
         val secret = ByteArray(32).also(random::nextBytes)
         val rowsFile = File(directory, FILE_PREFIX + id + "-rows.bin")
         val mediaFile = File(directory, FILE_PREFIX + id + "-media.bin")
+        val graphFile = File(directory, FILE_PREFIX + id + "-graph.sqlite")
         try {
             if (!rowsFile.createNewFile() || !mediaFile.createNewFile()) {
                 secret.fill(0)
@@ -280,7 +281,7 @@ internal class BackupExportStore(
         try {
             db.beginTransactionNonExclusive()
             transactionStarted = true
-            validateRevisionReferences(db)
+            validateRevisionReferences(db, graphFile)
             val capturedAt = wallClock()
             val version = stateVersion(db)
             val openSessions = scalarLong(db, "SELECT COUNT(*) FROM sessions WHERE end_ms IS NULL")
@@ -766,6 +767,10 @@ internal class BackupExportStore(
         listOf(
             File(directory, FILE_PREFIX + id + "-rows.bin"),
             File(directory, FILE_PREFIX + id + "-media.bin"),
+            File(directory, FILE_PREFIX + id + "-graph.sqlite"),
+            File(directory, FILE_PREFIX + id + "-graph.sqlite-journal"),
+            File(directory, FILE_PREFIX + id + "-graph.sqlite-wal"),
+            File(directory, FILE_PREFIX + id + "-graph.sqlite-shm"),
         ).forEach { file ->
             if (file.exists()) {
                 val deleted = try { deleteFile(file) } catch (_: Exception) { false }
@@ -872,45 +877,23 @@ internal class BackupExportStore(
 
     private fun stateVersion(db: SQLiteDatabase): Long = scalarLong(db, "SELECT version FROM state WHERE id=1")
 
-    private fun validateRevisionReferences(db: SQLiteDatabase) {
-        val invalidHeads = scalarLong(
-            db,
-            "SELECT COUNT(*) FROM entity_heads h LEFT JOIN entity_revisions r " +
-                "ON r.id=h.revision_id WHERE r.id IS NULL OR h.kind!=r.kind OR h.entity_id!=r.entity_id",
-        )
-        val invalidParents = scalarLong(
-            db,
-            "SELECT COUNT(*) FROM revision_parents p " +
-                "LEFT JOIN entity_revisions r ON r.id=p.revision_id " +
-                "LEFT JOIN entity_revisions parent ON parent.id=p.parent_id " +
-                "WHERE r.id IS NULL OR parent.id IS NULL OR p.revision_id=p.parent_id",
-        )
-        val invalidAncestry = scalarLong(
-            db,
-            "SELECT COUNT(*) FROM revision_parents p " +
-                "JOIN entity_revisions child ON child.id=p.revision_id " +
-                "JOIN entity_revisions parent ON parent.id=p.parent_id " +
-                "WHERE NOT ((child.kind=parent.kind AND child.entity_id=parent.entity_id) OR " +
-                "(child.kind='location' AND child.deleted=1 AND child.origin='GPS_RANGE_DELETE' " +
-                "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " +
-                "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id)))",
-        )
-        val missingHeads = scalarLong(
-            db,
-            "SELECT COUNT(*) FROM entity_revisions r WHERE NOT EXISTS(" +
-                "SELECT 1 FROM entity_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id)",
-        )
-        if (invalidHeads != 0L ||
-            invalidParents != 0L ||
-            invalidAncestry != 0L ||
-            missingHeads != 0L
-        ) {
+    private fun validateRevisionReferences(db: SQLiteDatabase, graphFile: File) {
+        try {
+            RevisionGraphValidator.validateReferences(db)
+            RevisionGraphValidator.validateSnapshotAcyclicity(
+                db,
+                graphFile,
+                revisionTable = "entity_revisions",
+                parentTable = "revision_parents",
+                maxRows = MAX_RECORDS,
+            )
+        } catch (_: RevisionGraphValidator.InvalidGraph) {
             throw Failure("INVALID_REVISION_GRAPH", "The local revision graph is invalid.")
+        } catch (_: RevisionGraphValidator.CycleDetected) {
+            throw Failure("INVALID_REVISION_GRAPH", "The local revision graph is invalid.")
+        } catch (_: RevisionGraphValidator.LimitExceeded) {
+            throw Failure("SNAPSHOT_LIMIT_EXCEEDED", "The revision graph exceeds the export limit.")
         }
-        // RevisionStore creates a fresh UUID for each node and only links to
-        // existing parents. Restore validates the selected union before
-        // writing. These are the only revision writers, so normal app writes
-        // preserve acyclicity without retaining per-node metadata in Dart.
     }
 
     private fun scalarLong(db: SQLiteDatabase, sql: String): Long = db.rawQuery(sql, null).use {
