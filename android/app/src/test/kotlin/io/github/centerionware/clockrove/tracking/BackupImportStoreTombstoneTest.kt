@@ -464,9 +464,11 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             cursor = page.nextCursor
             if (page.done) break
         } while (true)
-        val commentDeletion = requireNotNull(conflicts.singleOrNull { it["kind"] == "BACKUP_COMMENT_DELETION" })
-        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), commentDeletion["allowedChoices"])
-        assertEquals("KEEP_LOCAL", commentDeletion["defaultChoice"])
+        val commentDeletionConflict = requireNotNull(
+            conflicts.singleOrNull { it["kind"] == "BACKUP_COMMENT_DELETION" },
+        )
+        assertEquals(listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION"), commentDeletionConflict["allowedChoices"])
+        assertEquals("KEEP_LOCAL", commentDeletionConflict["defaultChoice"])
         val deletionHeads = conflicts.filter { it["kind"] == "BACKUP_ENTITY_DELETION" }
         assertEquals(2, deletionHeads.size)
         assertTrue(deletionHeads.all {
