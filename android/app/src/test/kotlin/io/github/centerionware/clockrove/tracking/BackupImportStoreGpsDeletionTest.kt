@@ -228,7 +228,9 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
         )
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
-        val tombstone = requireNotNull(findConflict(started.importId, preview, "GPS_TOMBSTONE"))
+        val tombstone = requireNotNull(findConflict(started.importId, preview, "GPS_TOMBSTONE")) {
+            "conflicts=${conflictDebug(readAllConflicts(started.importId, preview))}"
+        }
         assertEquals("PRESERVE_LOCAL_DELETION", tombstone["defaultChoice"])
         assertEquals(listOf("PRESERVE_LOCAL_DELETION"), tombstone["allowedChoices"])
         assertFalse(tombstone["resolved"] as Boolean)
@@ -242,15 +244,26 @@ class BackupImportStoreGpsDeletionTest : BackupImportStoreTestBase() {
                 "GPS_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
                 else -> "KEEP_LOCAL"
             }
-            assertTrue((conflict["allowedChoices"] as List<*>).contains(choice))
-            importStore.resolveConflict(
-                database,
-                started.importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                choice,
+            assertTrue(
+                "${conflict["kind"]}/${conflict["table"]} missing $choice; " +
+                    "allowed=${conflict["allowedChoices"]}",
+                (conflict["allowedChoices"] as List<*>).contains(choice),
             )
+            try {
+                importStore.resolveConflict(
+                    database,
+                    started.importId,
+                    preview.previewToken,
+                    preview.localStateVersion,
+                    conflict["conflictId"] as String,
+                    choice,
+                )
+            } catch (failure: BackupImportStore.Failure) {
+                fail(
+                    "Resolving ${conflict["kind"]}/${conflict["table"]} as $choice failed: " +
+                        "${failure.message}; allowed=${conflict["allowedChoices"]}",
+                )
+            }
         }
 
         val versionBeforeApply = repository.snapshot().version

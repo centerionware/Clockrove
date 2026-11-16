@@ -457,10 +457,16 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
             .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
             .map { it["table"] }
             .toSet()
-        assertTrue(blockedTables.containsAll(setOf("work_sites", "kanban_cards", "sessions")))
-        assertTrue(blockedTables.containsAll(setOf("automation_policies", "job_money", "job_tax_rates")))
-        assertTrue(conflicts.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
-            .all { it["allowedChoices"] == listOf("PRESERVE_LOCAL_DELETION") })
+        assertTrue("blocked=$blockedTables", blockedTables.containsAll(setOf("work_sites", "kanban_cards", "sessions")))
+        assertTrue(
+            "blocked=$blockedTables",
+            blockedTables.containsAll(setOf("automation_policies", "job_money", "job_tax_rates")),
+        )
+        assertTrue(
+            "conflicts=${conflictDebug(conflicts)}",
+            conflicts.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+                .all { it["allowedChoices"] == listOf("PRESERVE_LOCAL_DELETION") },
+        )
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }

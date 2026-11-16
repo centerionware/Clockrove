@@ -462,11 +462,20 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         table: String,
         entityId: String,
         entityKind: String? = null,
-    ): Map<String, Any?> = conflicts.single { value ->
-        val primaryKey = value["primaryKey"] as? List<*>
-        value["kind"] == kind && value["table"] == table &&
-            (primaryKey?.lastOrNull()?.toString() == entityId) &&
-            (entityKind == null || primaryKey?.firstOrNull()?.toString() == entityKind)
+    ): Map<String, Any?> {
+        val matches = conflicts.filter { value ->
+            val primaryKey = value["primaryKey"] as? List<*>
+            value["kind"] == kind && value["table"] == table &&
+                (primaryKey?.lastOrNull()?.toString() == entityId) &&
+                (entityKind == null || primaryKey?.firstOrNull()?.toString() == entityKind)
+        }
+        if (matches.size != 1) {
+            fail(
+                "Expected one $kind/$table/$entityId but found ${matches.size}; " +
+                    "conflicts=${conflictDebug(conflicts)}",
+            )
+        }
+        return matches.single()
     }
 
     private fun conflictById(conflicts: List<Map<String, Any?>>, id: String): Map<String, Any?> =

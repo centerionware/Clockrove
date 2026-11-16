@@ -127,7 +127,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         val tombstoneConflict = requireNotNull(conflicts.singleOrNull { conflict ->
             conflict["kind"] == "ENTITY_DELETION_TOMBSTONE" && conflict["table"] == "kanban_cards" &&
                 (conflict["primaryKey"] as List<*>).singleOrNull() == cardId
-        })
+        }) { "Missing kanban_cards tombstone; conflicts=${conflictDebug(conflicts)}" }
         assertEquals("kanban_cards", tombstoneConflict["table"])
         assertEquals(listOf("PRESERVE_LOCAL_DELETION"), tombstoneConflict["allowedChoices"])
         assertEquals("PRESERVE_LOCAL_DELETION", tombstoneConflict["defaultChoice"])
@@ -229,7 +229,10 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             }
             .map { (it["primaryKey"] as List<*>).single() }
             .toSet()
-        assertTrue(deletedEntityIds.containsAll(setOf(commentId, commentImageId, standaloneImageId)))
+        assertTrue(
+            "deleted=$deletedEntityIds conflicts=${conflictDebug(conflicts)}",
+            deletedEntityIds.containsAll(setOf(commentId, commentImageId, standaloneImageId)),
+        )
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }
@@ -301,10 +304,12 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             "work_sites" to siteId,
             "kanban_columns" to columnId,
         ).forEach { (table, entityId) ->
-            val conflict = conflicts.single { item ->
+            val conflict = conflicts.singleOrNull { item ->
                 item["kind"] == "ENTITY_DELETION_TOMBSTONE" && item["table"] == table &&
                     (item["primaryKey"] as List<*>).singleOrNull() == entityId
-            }
+            } ?: throw AssertionError(
+                "Missing $table tombstone for $entityId; conflicts=${conflictDebug(conflicts)}",
+            )
             assertEquals(listOf("PRESERVE_LOCAL_DELETION"), conflict["allowedChoices"])
             assertEquals("PRESERVE_LOCAL_DELETION", conflict["defaultChoice"])
         }
@@ -312,7 +317,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             val headConflict = requireNotNull(conflicts.singleOrNull { item ->
                 item["table"] == "entity_heads" &&
                     (item["primaryKey"] as? List<*>)?.getOrNull(1)?.toString() == entityId
-            })
+            }) { "Missing head tombstone for $entityId; conflicts=${conflictDebug(conflicts)}" }
             assertEquals(listOf("PRESERVE_LOCAL_DELETION"), headConflict["allowedChoices"])
             assertEquals("PRESERVE_LOCAL_DELETION", headConflict["defaultChoice"])
         }

@@ -522,7 +522,10 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
         val coverageConflict = findConflict(started.importId, preview, "GPS_DELETION_COVERAGE")
-        assertNotNull(coverageConflict)
+        assertNotNull(
+            "conflicts=${conflictDebug(readAllConflicts(started.importId, preview))}",
+            coverageConflict,
+        )
         val conflict = requireNotNull(coverageConflict)
         assertEquals("PRESERVE_DELETION", conflict["defaultChoice"])
         assertEquals(listOf("PRESERVE_DELETION"), conflict["allowedChoices"])
@@ -538,7 +541,9 @@ class BackupImportStoreAggregateConflictTest : BackupImportStoreTestBase() {
             conflict["conflictId"] as String,
             "PRESERVE_DELETION",
         )
-        val headConflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS"))
+        val headConflict = requireNotNull(findConflict(started.importId, preview, "EXISTING_RECORD_DIFFERS")) {
+            "conflicts=${conflictDebug(readAllConflicts(started.importId, preview))}"
+        }
         importStore.resolveConflict(
             database,
             started.importId,

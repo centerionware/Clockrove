@@ -562,15 +562,26 @@ abstract class BackupImportStoreTestBase {
         return sessionId to measuredAt
     }
 
-    internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? {
+    internal fun readAllConflicts(
+        importId: String,
+        preview: BackupImportStore.Preview,
+    ): List<Map<String, Any?>> {
         var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
         while (true) {
             val page = importStore.readConflictPage(database, importId, preview.previewToken, cursor, null)
-            page.conflicts.firstOrNull { it["kind"] == kind }?.let { return it }
-            if (page.done) return null
+            conflicts.addAll(page.conflicts)
+            if (page.done) return conflicts
             cursor = page.nextCursor
         }
     }
+
+    internal fun conflictDebug(conflicts: List<Map<String, Any?>>): String = conflicts.joinToString(" | ") {
+        "${it["kind"]}/${it["table"]}/${it["primaryKey"]} choices=${it["allowedChoices"]}"
+    }
+
+    internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? =
+        readAllConflicts(importId, preview).firstOrNull { it["kind"] == kind }
 
     internal fun resolveSafeConflictChoices(
         importId: String,
@@ -593,15 +604,26 @@ abstract class BackupImportStoreTestBase {
                 ?: choices.firstOrNull { it == "KEEP_LOCAL" }
                 ?: choices.firstOrNull { it == "OMIT_BACKUP_RECORD" }
                 ?: choices.firstOrNull()
-            assertNotNull("No explicit safe choice for ${conflict["kind"]} / ${conflict["table"]}", choice)
-            importStore.resolveConflict(
-                database,
-                importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                requireNotNull(choice),
+            assertNotNull(
+                "No explicit safe choice for ${conflict["kind"]} / ${conflict["table"]}; " +
+                    "allowed=$choices",
+                choice,
             )
+            try {
+                importStore.resolveConflict(
+                    database,
+                    importId,
+                    preview.previewToken,
+                    preview.localStateVersion,
+                    conflict["conflictId"] as String,
+                    requireNotNull(choice),
+                )
+            } catch (failure: BackupImportStore.Failure) {
+                fail(
+                    "Resolving ${conflict["kind"]}/${conflict["table"]} as $choice failed: " +
+                        "${failure.message}; allowed=$choices",
+                )
+            }
         }
     }
 
