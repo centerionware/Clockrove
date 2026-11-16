@@ -248,7 +248,7 @@ clockrove_recover_and_verify_install() {
 clockrove_flutter_test_has_started() {
   local log_file="$1"
   local line
-  local allowed_loading='^[0-9]{2}:[0-9]{2}[[:space:]][+]0:[[:space:]]loading[[:space:]]+([^[:space:]]*/)?integration_test/backup_crypto_benchmark_test\.dart$'
+  local allowed_loading='^[0-9]{2}:[0-9]{2}[[:space:]][+]0:[[:space:]]loading[[:space:]]+([^[:space:]]*/)?integration_test/(backup_crypto_benchmark|backup_restore_memory_benchmark)_test\.dart$'
   local reporter_progress='^[0-9]{2}:[0-9]{2}[[:space:]][+][0-9]+([[:space:]]+[~][0-9]+)?([[:space:]]+-[0-9]+)?:'
 
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -312,7 +312,7 @@ clockrove_run_flutter_integration_test() {
       ! grep -Fq 'No tests ran.' "$attempt_log" ||
       ! grep -Fq 'Error: ADB exited with exit code -15' "$attempt_log" ||
       clockrove_flutter_test_has_started "$attempt_log" ||
-      grep -Fq 'BACKUP_CRYPTO_BENCHMARK ' "$attempt_log"; then
+      grep -Eq '(BACKUP_CRYPTO_BENCHMARK|RESTORE_MEMORY_BENCHMARK) ' "$attempt_log"; then
       return "$status"
     fi
 

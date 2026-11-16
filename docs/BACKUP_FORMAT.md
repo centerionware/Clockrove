@@ -24,15 +24,20 @@ read-only info response is only a capability/current-state estimate; a later
 write can change it before the snapshot begins.
 
 archiveFormatVersion is independent of the Android SQLite schemaVersion.
-Format version 1 currently supports SQLite schema version 17. Schema 16 added
+The format-1 decoder recognizes SQLite schema versions 1 through 17 and checks
+each row against the tables available in its declared schema. Native restore
+currently stages only archives whose schema exactly matches the local database,
+so historical archives can be recognized and authenticated but are not
+migrated into schema 17 by the restore path. Schema 16 added
 portable GPS deletion-range coverage; the range bounds and coordinate-free
 revisions allow restored histories to retain GPS deletions. Schema 17 seeds
 revision heads for existing live task comments and images and records future
 comment/image deletions in the existing revision graph. Revision payloads do
-not contain image bytes. The schema gate rejects older schema-16 archives so
-both devices must use schema 17 before exchanging backups. A future schema
-must update the explicit native allowlist and the archive adapter before export
-is enabled for that schema. Unknown schemas fail closed.
+not contain image bytes. The exact-schema restore gate therefore rejects
+schema-16 archives on schema-17 devices until a coordinated migration policy
+preserves the revision graph. A future schema must update the explicit native
+allowlist and the archive adapter before export is enabled for that schema.
+Unknown schemas fail closed.
 
 ## Row and media records
 
@@ -71,9 +76,14 @@ comments or media to fit the limit.
 ## Limits and lifecycle
 
 - One active snapshot per process; concurrent starts fail with SNAPSHOT_BUSY.
-- Native detached staging input budget: 60 MiB, including framed UTF-8 row
-  records and media. This does not guarantee that the Dart archive encoding
-  will fit the final limit.
+- Native export snapshot input has a separate bounded budget, including framed
+  UTF-8 row records and media. This does not guarantee that the Dart archive
+  encoding will fit the final limit.
+- Native import permits up to 72 MiB of normalized rows and media. JSON row
+  envelopes add bounded staging overhead over the archive's compact record
+  encoding, so this accommodates an authenticated archive at the full 64 MiB
+  limit. The detached import database remains limited to 96 MiB and total
+  private staging files remain limited to 128 MiB.
 - Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
 - Maximum 500,000 records and 10,000 media objects.
 - Maximum encoded row size: 128 KiB.
@@ -251,11 +261,14 @@ file-open, authentication, preview and apply validation.
   trailing bytes and unsupported inner schemas.
 - Verify cancel/failure cleanup for both passes, no preview/apply before full
   authentication, local-version changes before commit, and atomic rollback.
-- On GitHub Actions, run maximum-size end-to-end export and restore on API 24 and
-  API 35. Record peak `VmHWM` before/after; incremental peak RSS must stay at or
-  below 64 MiB on each API. Also assert that no Dart buffer grows with total
-  archive size, report elapsed time, and verify no private staging remains after
-  success, cancellation, corruption or process restart.
+- On GitHub Actions, run exact 64 MiB (`67,108,864` plaintext bytes) end-to-end
+  export and restore on API 24 and API 35. Record current `VmRSS` every 20 ms
+  through full export/encryption and restore apply/cleanup, plus baseline and
+  final `VmHWM` for each phase; incremental peak RSS must stay at or below
+  65,536 KiB on each API. Record elapsed time and prove that no Dart buffer
+  grows with total archive size. Verify private-stage cleanup after success,
+  cancellation, end-of-envelope corruption, and process restart. Settings
+  import/export stays withheld until exact-head CI passes.
 - Keep the Settings export/restore route withheld until these exact-head checks
   pass. No VM build, test, format or analyzer run is permitted.
 

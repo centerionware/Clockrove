@@ -314,7 +314,7 @@ internal fun BackupImportStore.appendPageCore(
             Math.addExact(total, blob.sizeBytes)
         }
         val newRawBytes = Math.addExact(handle.rawBytes, Math.addExact(pageRowBytes, pageMediaBytes))
-        if (newRawBytes > BackupExportStore.MAX_SNAPSHOT_BYTES ||
+        if (newRawBytes > BackupImportStore.MAX_IMPORT_RAW_BYTES ||
             handle.mediaCount + pageMediaCount > handle.expected.mediaCount ||
             handle.allocatedMediaBytes + pageMediaBytes > handle.expected.mediaBytes) {
             throw StageWriterFailure("SNAPSHOT_LIMIT_EXCEEDED", "The backup exceeds supported staging limits.")

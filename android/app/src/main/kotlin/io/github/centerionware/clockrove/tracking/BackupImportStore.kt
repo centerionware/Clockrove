@@ -200,6 +200,10 @@ internal class BackupImportStore(
         const val MAX_CONFLICT_PAGE_BYTES = 256 * 1024
         internal const val MIN_CONFLICT_PAGE_BYTES = 1024
         internal const val STORAGE_CHUNK_BYTES = 32 * 1024
+        // Import's JSON-normalized rows are slightly larger than their
+        // authenticated archive encoding. Keep enough headroom for a full
+        // 64 MiB archive while keeping this import budget separate from export.
+        internal const val MAX_IMPORT_RAW_BYTES = 72L * 1024L * 1024L
         internal const val MAX_STAGE_DATABASE_BYTES = 96L * 1024L * 1024L
         internal const val MAX_STAGE_PHYSICAL_BYTES = 128L * 1024L * 1024L
         internal const val REVISION_VALIDATION_BATCH_SIZE = 256

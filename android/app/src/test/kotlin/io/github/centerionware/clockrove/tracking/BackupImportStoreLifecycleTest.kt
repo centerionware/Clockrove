@@ -20,6 +20,28 @@ import org.robolectric.annotation.Config
 @Config(sdk = [24])
 class BackupImportStoreLifecycleTest : BackupImportStoreTestBase() {
     @Test
+    fun storeStartupRemovesAbandonedPrivateImportFiles() {
+        val directory = File(app.noBackupFilesDir, "clockrove-backup-imports")
+        assertTrue(directory.mkdirs() || directory.isDirectory)
+        val id = UUID.randomUUID().toString()
+        listOf(
+            "clockrove-import-$id.db",
+            "clockrove-import-$id.db-wal",
+            "clockrove-import-$id.db-shm",
+            "clockrove-import-$id.db-journal",
+            "clockrove-import-$id-media.bin",
+        ).forEach { name -> File(directory, name).writeBytes(byteArrayOf(1, 2, 3)) }
+
+        val restartedStore = BackupImportStore(
+            app,
+            catalogProvider = exportStore::importCatalog,
+        )
+
+        assertTrue(directory.listFiles().orEmpty().none { it.name.startsWith("clockrove-import-") })
+        restartedStore.closeAll()
+    }
+
+    @Test
     fun failedExpirySchedulingDoesNotLeaveAStaleActiveImport() {
         val failedScheduler = BackupScheduler { _, _ ->
             throw IllegalStateException("synthetic scheduler failure")

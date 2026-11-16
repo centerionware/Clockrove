@@ -45,6 +45,8 @@ clockrove_validation_apk="$RUNNER_TEMP/clockrove-validation-app.apk"
 clockrove_validation_test_apk="$RUNNER_TEMP/clockrove-validation-tests.apk"
 cp "$GITHUB_WORKSPACE/build/app/outputs/flutter-apk/app-debug.apk" "$clockrove_validation_apk"
 cp "$GITHUB_WORKSPACE/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$clockrove_validation_test_apk"
+clockrove_restore_fixture="$RUNNER_TEMP/clockrove-restore-64mib.clockrove"
+(cd "$GITHUB_WORKSPACE" && dart run tool/create_restore_memory_fixture.dart "$clockrove_restore_fixture")
 for clockrove_api in 24 35; do
   if [[ "$clockrove_api" == 24 ]]; then
     clockrove_revision=8
@@ -106,6 +108,33 @@ for clockrove_api in 24 35; do
     cat "$clockrove_benchmark_log"
     exit "$clockrove_benchmark_status"
   fi
+  # Install a private package sandbox before copying the host-generated
+  # encrypted fixture into app cache. The integration-test app then measures
+  # restore without constructing the 64 MiB payload in its Dart heap.
+  clockrove_install_apk "$clockrove_api" app "$clockrove_validation_apk"
+  adb -s emulator-5554 push "$clockrove_restore_fixture" /data/local/tmp/clockrove-restore-64mib.clockrove
+  adb -s emulator-5554 shell run-as io.github.centerionware.clockrove cp \
+    /data/local/tmp/clockrove-restore-64mib.clockrove \
+    cache/clockrove_restore_fixture.clockrove
+  clockrove_restore_log="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/backup-restore-memory-benchmark.txt"
+  if clockrove_run_flutter_integration_test "$clockrove_api" backup-restore-memory-benchmark \
+    'RESTORE_MEMORY_BENCHMARK archive_bytes=67108864 envelope_bytes=67134601 record_count=601 samples=[0-9]+ max_parser_buffer_bytes=[0-9]+ elapsed_ms=[0-9]+ sample_period_ms=20 baseline_rss_kib=[0-9]+ baseline_hwm_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+ after_hwm_kib=[0-9]+ peak_delta_hwm_kib=[0-9]+' \
+    -- flutter test --no-pub integration_test/backup_restore_memory_benchmark_test.dart \
+    -d emulator-5554 --reporter expanded > "$clockrove_restore_log" 2>&1; then
+    cat "$clockrove_restore_log"
+    grep -Eq 'RESTORE_MEMORY_BENCHMARK archive_bytes=67108864 envelope_bytes=67134601 record_count=601 samples=[0-9]+ max_parser_buffer_bytes=[0-9]+ elapsed_ms=[0-9]+ sample_period_ms=20 baseline_rss_kib=[0-9]+ baseline_hwm_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+ after_hwm_kib=[0-9]+ peak_delta_hwm_kib=[0-9]+' \
+      "$clockrove_restore_log"
+    grep -Eq 'RESTORE_MEMORY_BENCHMARK_COMPLETE archive_bytes=67108864 envelope_bytes=67134601 samples=[0-9]+ elapsed_ms=[0-9]+ baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+ baseline_hwm_kib=[0-9]+ after_hwm_kib=[0-9]+ peak_delta_hwm_kib=[0-9]+' \
+      "$clockrove_restore_log"
+  else
+    clockrove_restore_status=$?
+    cat "$clockrove_restore_log"
+    exit "$clockrove_restore_status"
+  fi
+  timeout --kill-after=5s 15s adb -s emulator-5554 shell run-as io.github.centerionware.clockrove sh -c \
+    'if [ -d no_backup/clockrove-backup-imports ]; then ! find no_backup/clockrove-backup-imports -type f -name "clockrove-import-*" | grep -q .; fi'
+  adb -s emulator-5554 shell pm clear io.github.centerionware.clockrove | grep -F Success
+  adb -s emulator-5554 shell rm -f /data/local/tmp/clockrove-restore-64mib.clockrove
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
