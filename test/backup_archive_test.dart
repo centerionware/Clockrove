@@ -209,7 +209,7 @@ void main() {
       );
 
       final futureSchema = Uint8List.fromList(encoded);
-      ByteData.sublistView(futureSchema).setUint32(12, 17, Endian.big);
+      ByteData.sublistView(futureSchema).setUint32(12, 18, Endian.big);
       await expectLater(
         BackupArchiveCodec.decode(futureSchema),
         throwsA(isA<FormatException>()),
