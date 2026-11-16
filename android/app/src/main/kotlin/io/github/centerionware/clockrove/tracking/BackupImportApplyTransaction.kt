@@ -235,9 +235,9 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                         if (localContent.deleted != 1L || backupContent.deleted != 0L ||
                                             localContent.jobId != backupContent.jobId ||
                                             localTombstoneChoiceForHead(db, handle, values) != "PRESERVE_LOCAL_DELETION" ||
-                                            !BackupImportDeletionResolution.canPreserveLocalDeletion(
+                                            (!BackupImportDeletionResolution.canPreserveLocalDeletion(
                                                 this, db, handle, kind, entityId, localRevision, backupRevision,
-                                            )) {
+                                            ) && !BackupImportDeletionResolution.localJobDeleted(db, kind, entityId))) {
                                             throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
                                         }
                                     }
@@ -419,6 +419,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                         ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
                                     val plan = plannedDeletionResolutions[divergentMergeKey(kind, entityId)]
                                         ?: throw ApplyFailure("PREVIEW_STALE", "A backup deletion changed after preview.")
+                                    var resolutionChanged = true
                                     when (plan.choice) {
                                         "APPLY_BACKUP_DELETION" -> BackupImportDeletionResolution.applyBackupDeletion(
                                             this, db, handle, plan.kind, plan.entityId,
@@ -431,12 +432,13 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                                             this, db, handle, plan.kind, plan.entityId,
                                             plan.localRevision, plan.backupRevision,
                                         )
-                                        "PRESERVE_LOCAL_DELETION" -> BackupImportDeletionResolution.applyPreserveLocalDeletion(
-                                            this, db, handle, plan.kind, plan.entityId,
-                                            plan.localRevision, plan.backupRevision,
-                                        )
+                                        "PRESERVE_LOCAL_DELETION" -> resolutionChanged =
+                                            BackupImportDeletionResolution.applyPreserveLocalDeletion(
+                                                this, db, handle, plan.kind, plan.entityId,
+                                                plan.localRevision, plan.backupRevision,
+                                            )
                                     }
-                                    changed++
+                                    if (resolutionChanged) changed++
                                     continue
                                 }
                                 if (selectedChoice in divergentHeadMergeChoices - "MERGE_IDENTICAL_CONTENT") {

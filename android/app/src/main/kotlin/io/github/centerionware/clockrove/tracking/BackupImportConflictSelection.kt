@@ -246,9 +246,12 @@ internal fun BackupImportStore.choiceForConflictIntent(allowed: JSONArray, inten
         if ((0 until allowed.length()).any { allowed.optString(it) == "MERGE_IDENTICAL_CONTENT" }) {
             return "MERGE_IDENTICAL_CONTENT"
         }
+        val localPreserve = setOf("LOCAL_ONLY", "LOCAL_CONTENT_PRESERVE", "LOCAL_DELETION_PRESERVE")
         return preferred.firstOrNull { candidate ->
-            (conflictChoiceIntent(candidate) == intent ||
-                (intent == "LOCAL_MERGE" && conflictChoiceIntent(candidate) == "LOCAL_ONLY")) &&
+            val candidateIntent = conflictChoiceIntent(candidate)
+            (candidateIntent == intent ||
+                (intent == "LOCAL_MERGE" && candidateIntent == "LOCAL_ONLY") ||
+                (intent in localPreserve && candidateIntent in localPreserve)) &&
                 (0 until allowed.length()).any { allowed.optString(it) == candidate }
         }
     }

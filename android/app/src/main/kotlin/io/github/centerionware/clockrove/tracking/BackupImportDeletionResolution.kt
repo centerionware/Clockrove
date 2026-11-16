@@ -372,15 +372,17 @@ internal object BackupImportDeletionResolution {
         entityId: String,
         expectedLocalRevision: String,
         backupRevision: String,
-    ) {
+    ): Boolean {
         if (!canPreserveLocalDeletion(
                 store, db, handle, kind, entityId, expectedLocalRevision, backupRevision,
             ) && !localJobDeleted(db, kind, entityId)) staleDeletion()
         val local = store.revisionContent(db, "entity_revisions", expectedLocalRevision) ?: staleDeletion()
+        if (store.isRevisionAncestor(db, "revision_parents", backupRevision, expectedLocalRevision)) return false
         recordMergedHead(
             store, db, kind, entityId, local.jobId, local.payload, deleted = true,
             expectedLocalRevision, backupRevision,
         )
+        return true
     }
 
     private fun recordMergedHead(

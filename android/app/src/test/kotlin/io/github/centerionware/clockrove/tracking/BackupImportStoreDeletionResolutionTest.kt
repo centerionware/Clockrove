@@ -201,11 +201,11 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
             "notRestored=${conflictDebug(notRestored)}",
             notRestored.isEmpty(),
         )
-        val restoredAttachmentDependencies = afterRestoreSelection.filter {
-            it["kind"] == "DEPENDENT_ON_CONFLICT" && it["table"] == "task_attachments"
+        val restoredAttachments = afterRestoreSelection.filter {
+            it["kind"] == "ENTITY_DELETION_TOMBSTONE" && it["table"] == "task_attachments"
         }
-        assertTrue(restoredAttachmentDependencies.isNotEmpty())
-        assertTrue(restoredAttachmentDependencies.all {
+        assertTrue(restoredAttachments.isNotEmpty())
+        assertTrue(restoredAttachments.all {
             it["resolved"] == true && it["selectedChoice"] == "RESTORE_BACKUP_CONTENT"
         })
         assertEquals(false, conflictById(afterRestoreSelection, cardConflict["conflictId"] as String)["resolved"])
@@ -279,11 +279,11 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
             "notPreserved=${conflictDebug(notPreserved)}",
             notPreserved.isEmpty(),
         )
-        val preservedAttachmentDependencies = afterDeleteChoice.filter {
-            it["kind"] == "DEPENDENT_ON_CONFLICT" && it["table"] == "task_attachments"
+        val preservedAttachments = afterDeleteChoice.filter {
+            it["kind"] == "ENTITY_DELETION_TOMBSTONE" && it["table"] == "task_attachments"
         }
-        assertTrue(preservedAttachmentDependencies.isNotEmpty())
-        assertTrue(preservedAttachmentDependencies.all {
+        assertTrue(preservedAttachments.isNotEmpty())
+        assertTrue(preservedAttachments.all {
             it["resolved"] == true && it["selectedChoice"] == "PRESERVE_LOCAL_DELETION"
         })
         assertEquals(false, conflictById(afterDeleteChoice, cardConflict["conflictId"] as String)["resolved"])
