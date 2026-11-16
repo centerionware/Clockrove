@@ -501,21 +501,6 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         })
     }
 
-    private fun assertMergedLiveParents(
-        kind: String,
-        entityId: String,
-        localTombstone: String,
-        backupLive: String,
-    ) {
-        val revisionId = currentHead(kind, entityId)
-        val revision = database.rawQuery(
-            "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
-        ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
-        assertEquals(0L, revision.first)
-        assertEquals("BACKUP_MERGE", revision.second)
-        assertEquals(setOf(localTombstone, backupLive), parentIds(revisionId))
-    }
-
     private fun assertMergedPreservedTombstoneParents(
         kind: String,
         entityId: String,

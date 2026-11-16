@@ -728,6 +728,28 @@ abstract class BackupImportStoreTestBase {
             mapOf("importId" to importId, "firstOrdinal" to ordinal, "records" to rows),
         )).position()
 
+    internal fun assertMergedLiveParents(
+        kind: String,
+        entityId: String,
+        localTombstone: String,
+        backupLive: String,
+    ) {
+        val revisionId = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val revision = database.rawQuery(
+            "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
+        ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
+        assertEquals(0L, revision.first)
+        assertEquals("BACKUP_MERGE", revision.second)
+        val parents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
+            arrayOf(revisionId),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertEquals(setOf(localTombstone, backupLive), parents)
+    }
+
     internal fun assertFailure(code: String, action: () -> Unit) {
         try {
             action()
