@@ -158,6 +158,7 @@ void main() {
 
     expect(applyCalls, 1);
     expect(routeResult, isNull);
+    await _scrollRestoreToTop(tester);
     expect(
       find.text(
         'No records were restored because this preview is no longer current.',
@@ -172,6 +173,7 @@ void main() {
       find.textContaining('This preview cannot be applied again.'),
       findsOneWidget,
     );
+    await _scrollRestoreUntilVisible(tester, applyButton);
     expect(tester.widget<FilledButton>(applyButton).onPressed, isNull);
 
     await _scrollRestoreUntilVisible(
@@ -183,6 +185,17 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });
+}
+
+Future<void> _scrollRestoreToTop(WidgetTester tester) async {
+  final scrollable = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  await tester.drag(scrollable, const Offset(0, 4000));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _scrollRestoreUntilVisible(
