@@ -378,11 +378,10 @@ internal object BackupImportDeletionResolution {
             ) && !localJobDeleted(db, kind, entityId)) staleDeletion()
         val local = store.revisionContent(db, "entity_revisions", expectedLocalRevision) ?: staleDeletion()
         if (localJobDeleted(db, kind, entityId)) return false
-        if (store.isRevisionAncestor(db, "revision_parents", backupRevision, expectedLocalRevision)) return false
-        recordMergedHead(
-            store, db, kind, entityId, local.jobId, local.payload, deleted = true,
-            expectedLocalRevision, backupRevision,
-        )
+        // Record the review even when the backup live head is already an ancestor of the
+        // local tombstone. The merged head is what tells the next preview this deletion was
+        // resolved; leaving the plain local tombstone would raise the conflict again.
+        mergeDeletionParents(store, db, kind, entityId, expectedLocalRevision, backupRevision, local)
         return true
     }
 

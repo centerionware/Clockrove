@@ -372,6 +372,7 @@ internal fun BackupImportStore.applyRowsWithinTransaction(
                             val values = jsonValue(rowJson.getJSONObject("values")) as? Map<String, Any?>
                                 ?: throw ApplyFailure("STORAGE_UNAVAILABLE", "A staged backup row is invalid.")
                             if (isOmittedBackupGraphRow(table, values, omittedBackupGraph, ordinal)) continue
+                            if (rowBelongsToLocallyDeletedJob(db, handle, table, values)) continue
                             if (table == "task_comment_events" && values["action"] == "DELETED") {
                                 val commentId = values["comment_id"]?.toString()
                                 if (commentId != null && BackupImportDeletionResolution.alreadyMergedCommentDeletion(

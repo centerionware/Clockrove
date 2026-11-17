@@ -71,45 +71,6 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
                 "WHERE h.kind='card' AND h.entity_id=? AND r.deleted=1",
             arrayOf(cardId),
         ).use { assertTrue(it.moveToFirst()); it.getString(0) }
-        val fencedEntities = listOf(
-            "card" to cardId,
-            "card_money" to cardId,
-            "task_quantity" to cardId,
-            "task_comment" to commentId,
-            "task_attachment" to attachmentId,
-        )
-        fun revisionFenceSnapshot(): Triple<List<List<String?>>, List<List<String?>>, List<List<String?>>> {
-            val identityFilter = fencedEntities.joinToString(" OR ") { "(kind=? AND entity_id=?)" }
-            val identityArgs = fencedEntities.flatMap { listOf(it.first, it.second) }.toTypedArray()
-            val revisions = database.rawQuery(
-                "SELECT id,kind,entity_id,job_id,payload,deleted,changed_ms,origin " +
-                    "FROM entity_revisions WHERE $identityFilter ORDER BY kind,entity_id,id",
-                identityArgs,
-            ).use { rows -> buildList {
-                while (rows.moveToNext()) add((0 until rows.columnCount).map { index ->
-                    if (rows.isNull(index)) null else rows.getString(index)
-                })
-            } }
-            val revisionIds = revisions.map { requireNotNull(it.first()) }
-            val graphArgs = revisionIds.toTypedArray()
-            val graphFilter = revisionIds.joinToString(",") { "?" }
-            val parents = if (revisionIds.isEmpty()) emptyList() else database.rawQuery(
-                "SELECT revision_id,parent_id FROM revision_parents " +
-                    "WHERE revision_id IN ($graphFilter) OR parent_id IN ($graphFilter) " +
-                    "ORDER BY revision_id,parent_id",
-                graphArgs + graphArgs,
-            ).use { rows -> buildList {
-                while (rows.moveToNext()) add(listOf(rows.getString(0), rows.getString(1)))
-            } }
-            val heads = database.rawQuery(
-                "SELECT kind,entity_id,revision_id FROM entity_heads WHERE $identityFilter ORDER BY kind,entity_id",
-                identityArgs,
-            ).use { rows -> buildList {
-                while (rows.moveToNext()) add(listOf(rows.getString(0), rows.getString(1), rows.getString(2)))
-            } }
-            return Triple(revisions, parents, heads)
-        }
-        val localRevisionFence = revisionFenceSnapshot()
 
         val started = stageSnapshot(source)
         assertTrue(exportStore.close(source.snapshotId))
@@ -146,19 +107,27 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         resolveSafeConflictChoices(started.importId, preview, conflicts)
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
-        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(deletedVersion + 1L, repository.snapshot().version)
         assertEquals(0L, number("SELECT COUNT(*) FROM kanban_cards WHERE id='$cardId'"))
-        assertEquals(deletedHead, database.rawQuery(
-            "SELECT revision_id FROM entity_heads WHERE kind='card' AND entity_id=?",
+        val mergedCardHead = database.rawQuery(
+            "SELECT h.revision_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='card' AND h.entity_id=? AND r.deleted=1",
             arrayOf(cardId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        assertEquals("BACKUP_MERGE", database.rawQuery(
+            "SELECT origin FROM entity_revisions WHERE id=?", arrayOf(mergedCardHead),
         ).use { assertTrue(it.moveToFirst()); it.getString(0) })
+        val cardParents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=?", arrayOf(mergedCardHead),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertTrue(cardParents.contains(deletedHead))
+        assertEquals(2, cardParents.size)
         assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM task_comment_events WHERE task_id='$cardId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM task_attachments WHERE id='$attachmentId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM task_quantities WHERE card_id='$cardId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM card_money WHERE id='$cardId'"))
         assertEquals(1L, number("SELECT COUNT(*) FROM task_templates WHERE id='$templateId'"))
-        assertEquals(localRevisionFence, revisionFenceSnapshot())
         assertFalse(importStore.close(started.importId))
     }
 
@@ -240,7 +209,7 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
         resolveSafeConflictChoices(started.importId, preview, conflicts)
         importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
 
-        assertEquals(deletedVersion, repository.snapshot().version)
+        assertEquals(deletedVersion + 1L, repository.snapshot().version)
         assertEquals(0L, number("SELECT COUNT(*) FROM task_comments WHERE id='$commentId'"))
         assertEquals(0L, number("SELECT COUNT(*) FROM task_attachments WHERE id IN('$commentImageId','$standaloneImageId')"))
         assertEquals(3L, number(

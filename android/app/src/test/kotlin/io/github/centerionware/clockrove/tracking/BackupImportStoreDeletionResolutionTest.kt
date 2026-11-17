@@ -482,8 +482,8 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val matches = conflicts.filter { value ->
             val primaryKey = value["primaryKey"] as? List<*>
             value["kind"] == kind && value["table"] == table &&
-                (primaryKey?.lastOrNull()?.toString() == entityId) &&
-                (entityKind == null || primaryKey?.firstOrNull()?.toString() == entityKind)
+                (primaryKey.lastOrNull()?.toString() == entityId) &&
+                (entityKind == null || primaryKey.firstOrNull()?.toString() == entityKind)
         }
         if (matches.size != 1) {
             fail(
@@ -536,9 +536,12 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val revision = database.rawQuery(
             "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
         ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
-        assertEquals("$kind/$entityId head=$revisionId", localTombstone, revisionId)
         assertEquals("$kind/$entityId head=$revisionId", 1L, revision.first)
-        assertTrue("$kind/$entityId head=$revisionId", backupLive in parentIds(revisionId))
+        assertEquals("$kind/$entityId head=$revisionId", "BACKUP_MERGE", revision.second)
+        val parents = parentIds(revisionId)
+        assertTrue("$kind/$entityId head=$revisionId", localTombstone in parents)
+        assertTrue("$kind/$entityId head=$revisionId", backupLive in parents)
+        assertEquals("$kind/$entityId head=$revisionId", 2, parents.size)
     }
 
     private fun parentIds(revisionId: String): Set<String> = database.rawQuery(

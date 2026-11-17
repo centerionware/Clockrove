@@ -176,7 +176,8 @@ internal fun BackupImportStore.omittedBackupGraph(localDb: SQLiteDatabase, handl
                         "${values.optString("kind")}:${values.optString("entity_id")}" in protectedDeletionEntities
                     "revision_parents" -> values.optString("revision_id") in protectedRevisionIds ||
                         values.optString("parent_id") in protectedRevisionIds
-                    else -> false
+                    else -> revisionEntityDataKey(table, jsonObjectValues(values))
+                        ?.let(protectedDeletionEntities::contains) == true
                 }
                 if (!protected) omittedRowOrdinals.add(ordinal)
             }
@@ -418,6 +419,83 @@ internal fun BackupImportStore.hasJobDeletionTombstone(db: SQLiteDatabase, jobId
         return db.rawQuery("SELECT 1 FROM job_deletions WHERE id=? LIMIT 1", arrayOf(jobId))
             .use { it.moveToFirst() }
     }
+
+/**
+ * True when a staged backup row describes state owned by a job this database purged.
+ * The purge is the newer local decision, so those rows are omitted rather than applied.
+ */
+internal fun BackupImportStore.rowBelongsToLocallyDeletedJob(
+        localDb: SQLiteDatabase,
+        handle: OmittedGraphHandle,
+        table: String,
+        values: Map<String, Any?>,
+    ): Boolean {
+        val jobId = values["job_id"]?.toString()?.takeIf(String::isNotEmpty)
+            ?: rowOwnerJobId(localDb, handle, table, values)
+            ?: return false
+        return hasJobDeletionTombstone(localDb, jobId)
+    }
+
+private fun BackupImportStore.rowOwnerJobId(
+        localDb: SQLiteDatabase,
+        handle: OmittedGraphHandle,
+        table: String,
+        values: Map<String, Any?>,
+    ): String? = when (table) {
+        "jobs", "job_deletions" -> values["id"]?.toString()
+        "entity_heads" -> revisionOwnerJobId(localDb, handle, values["revision_id"]?.toString())
+        "revision_parents" -> revisionOwnerJobId(localDb, handle, values["revision_id"]?.toString())
+            ?: revisionOwnerJobId(localDb, handle, values["parent_id"]?.toString())
+        "task_comments", "task_comment_events", "task_attachments" ->
+            stagedOrLocalJobId(localDb, handle, "kanban_cards", values["task_id"]?.toString())
+        "task_quantities" ->
+            stagedOrLocalJobId(localDb, handle, "kanban_cards", values["card_id"]?.toString())
+        "card_money" -> stagedOrLocalJobId(localDb, handle, "kanban_cards", values["id"]?.toString())
+        "location_points", "pending_departure", "finalized_departures", "geofence_conflicts" ->
+            stagedOrLocalJobId(localDb, handle, "sessions", values["session_id"]?.toString())
+        else -> null
+    }
+
+private fun BackupImportStore.revisionOwnerJobId(
+        localDb: SQLiteDatabase,
+        handle: OmittedGraphHandle,
+        revisionId: String?,
+    ): String? {
+        if (revisionId == null) return null
+        handle.database.rawQuery(
+            "SELECT job_id FROM validation_revisions WHERE id=?",
+            arrayOf(revisionId),
+        ).use { rows -> if (rows.moveToFirst() && !rows.isNull(0)) return rows.getString(0) }
+        return localDb.rawQuery(
+            "SELECT job_id FROM entity_revisions WHERE id=?",
+            arrayOf(revisionId),
+        ).use { rows -> if (rows.moveToFirst() && !rows.isNull(0)) rows.getString(0) else null }
+    }
+
+private fun BackupImportStore.stagedOrLocalJobId(
+        localDb: SQLiteDatabase,
+        handle: OmittedGraphHandle,
+        table: String,
+        id: String?,
+    ): String? {
+        if (id == null) return null
+        handle.database.rawQuery(
+            "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
+            arrayOf(table, jsonArray(listOf(id))),
+        ).use { rows ->
+            if (rows.moveToFirst()) {
+                val jobId = JSONObject(rows.getString(0)).getJSONObject("values").optString("job_id")
+                if (jobId.isNotEmpty()) return jobId
+            }
+        }
+        return localDb.rawQuery("SELECT job_id FROM $table WHERE id=?", arrayOf(id)).use { rows ->
+            if (rows.moveToFirst() && !rows.isNull(0)) rows.getString(0) else null
+        }
+    }
+
+private fun jsonObjectValues(values: JSONObject): Map<String, Any?> = buildMap {
+    values.keys().forEach { key -> put(key, if (values.isNull(key)) null else values.get(key)) }
+}
 
 internal fun BackupImportStore.hasLocalEntityDeletionTombstone(db: SQLiteDatabase, kind: String, entityId: String): Boolean =
         db.rawQuery(
