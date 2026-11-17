@@ -104,6 +104,10 @@ internal object GeofenceStore {
             db.execSQL("UPDATE work_sites SET name=?,latitude=?,longitude=?,radius=?,enabled=? WHERE id=?",
                 arrayOf<Any?>(site.name, site.latitude, site.longitude, site.radiusMeters, if (site.enabled) 1 else 0, site.id))
         }
+        RevisionStore.snapshotRows(
+            db, "work_sites", "site", BusinessSchema.siteColumns, now,
+            jobColumn = "job_id", where = "id=?", args = arrayOf(site.id),
+        )
         if (previous == null || previous.copy(name = site.name, registrationKey = "") != site.copy(registrationKey = "")) {
             invalidate(db, site.jobId, now)
         }
@@ -130,6 +134,10 @@ internal object GeofenceStore {
     fun removeSite(db: SQLiteDatabase, siteId: String, now: Long): String? {
         val site = sites(db).firstOrNull { it.id == siteId } ?: return "SITE_UNAVAILABLE"
         db.execSQL("DELETE FROM work_sites WHERE id=?", arrayOf(siteId))
+        RevisionStore.record(
+            db, "site", siteId, site.jobId,
+            mapOf("id" to siteId, "job_id" to site.jobId), now, deleted = true,
+        )
         invalidate(db, site.jobId, now)
         return null
     }

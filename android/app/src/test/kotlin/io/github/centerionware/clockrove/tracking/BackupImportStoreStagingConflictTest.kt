@@ -117,6 +117,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
         transferRows(source.snapshotId, started.importId)
         val preview = importStore.finish(database, started.importId)
         assertTrue(preview.conflictCount > 0)
+        assertTrue(preview.changedCount > 0L)
         assertFalse(preview.applyReady)
         val page = importStore.readConflictPage(
             database, started.importId, preview.previewToken, null, 1024,
@@ -220,6 +221,7 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
 
         val preview = importStore.finish(database, started.importId)
         assertEquals(1L, preview.conflictCount)
+        assertEquals(0L, preview.timeOverlapCount)
         assertFalse(preview.applyReady)
         val conflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
         assertEquals("local-quote", conflict["localIdentifier"])
@@ -455,10 +457,16 @@ class BackupImportStoreStagingConflictTest : BackupImportStoreTestBase() {
             .filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
             .map { it["table"] }
             .toSet()
-        assertTrue(blockedTables.containsAll(setOf("work_sites", "kanban_cards", "sessions")))
-        assertTrue(blockedTables.containsAll(setOf("automation_policies", "job_money", "job_tax_rates")))
-        assertTrue(conflicts.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
-            .all { it["allowedChoices"] == listOf("PRESERVE_LOCAL_DELETION") })
+        assertTrue("blocked=$blockedTables", blockedTables.containsAll(setOf("work_sites", "kanban_cards", "sessions")))
+        assertTrue(
+            "blocked=$blockedTables",
+            blockedTables.containsAll(setOf("automation_policies", "job_money", "job_tax_rates")),
+        )
+        assertTrue(
+            "conflicts=${conflictDebug(conflicts)}",
+            conflicts.filter { it["kind"] == "ENTITY_DELETION_TOMBSTONE" }
+                .all { it["allowedChoices"] == listOf("PRESERVE_LOCAL_DELETION") },
+        )
         assertFailure("UNRESOLVED_CONFLICTS") {
             importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
         }

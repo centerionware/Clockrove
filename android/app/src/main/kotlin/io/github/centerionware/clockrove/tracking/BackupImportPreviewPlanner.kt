@@ -76,6 +76,8 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
         val localVersion: Long
         val localOpenSessions: Long
         var added = 0L
+        var changed = 0L
+        var deleted = 0L
         var unchanged = 0L
         var openSessions = 0L
         var conflictOrdinal = 0L
@@ -118,7 +120,13 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         val row = JSONObject(rows.getString(3))
                         @Suppress("UNCHECKED_CAST")
                         val values = jsonValue(row.getJSONObject("values")) as Map<String, Any?>
+                        if (table == "location_deletion_ranges" || table == "job_deletions" ||
+                            (table == "task_comment_events" && values["action"] == "DELETED") ||
+                            (table == "entity_revisions" && values["deleted"] in setOf(1, 1L, true))) {
+                            deleted++
+                        }
                         if (table == "job_deletions" && hasLocalJob(db, values["id"]?.toString())) {
+                            changed++
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "ACTIVE_JOB_DELETION",
                                 listOf("KEEP_LOCAL"), null,
@@ -131,9 +139,23 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         if (table == "task_comment_events" && values["action"] == "DELETED") {
                             val commentId = values["comment_id"]?.toString()
                             if (commentId != null && localIdentifierExists(db, "task_comments", commentId)) {
+                                if (BackupImportDeletionResolution.alreadyMergedCommentDeletion(
+                                        this, db, handle, commentId,
+                                    )) {
+                                    unchanged++
+                                    continue
+                                }
+                                changed++
+                                val choices = if (BackupImportDeletionResolution.canApplyDeletion(
+                                        db, "task_comment", commentId,
+                                    )) {
+                                    listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
+                                } else {
+                                    emptyList()
+                                }
                                 conflictOrdinal = addConflict(
                                     handle, conflictOrdinal, ordinal, table, keyJson, "BACKUP_COMMENT_DELETION",
-                                    listOf("KEEP_LOCAL"), "KEEP_LOCAL",
+                                    choices, "KEEP_LOCAL".takeIf { choices.isNotEmpty() },
                                     localIdentifier = commentId,
                                     localSummary = mapOf("identifier" to "Live local comment"),
                                     backupSummary = safeSummary(values),
@@ -144,6 +166,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         if (table == "entity_heads" &&
                             activeJobDeletionChoiceForHead(db, handle, values) != null) continue
                         if (table == "jobs" && hasJobDeletionTombstone(db, values["id"]?.toString())) {
+                            changed++
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "JOB_DELETION_TOMBSTONE",
                                 listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
@@ -157,9 +180,32 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                         val tombstoneId = tombstoneRow?.let { values[it.entityIdColumn]?.toString() }
                         if (tombstoneRow != null && tombstoneId != null &&
                             hasLocalEntityDeletionTombstone(db, tombstoneRow.kind, tombstoneId)) {
+                            val backupHead = BackupImportDeletionResolution.stagedHeadRevision(
+                                handle, tombstoneRow.kind, tombstoneId,
+                            )
+                            if (backupHead != null && BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                )) {
+                                unchanged++
+                                continue
+                            }
+                            changed++
+                            val canPreserveDeletion = backupHead != null && (
+                                BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
+                                    this, db, handle, tombstoneRow.kind, tombstoneId, backupHead,
+                                ) || BackupImportDeletionResolution.localJobDeleted(
+                                    db, tombstoneRow.kind, tombstoneId,
+                                )
+                            )
+                            val choices = buildList {
+                                if (canPreserveDeletion) add("PRESERVE_LOCAL_DELETION")
+                                if (BackupImportDeletionResolution.restorableTables.contains(table)) {
+                                    add("RESTORE_BACKUP_CONTENT")
+                                }
+                            }
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "ENTITY_DELETION_TOMBSTONE",
-                                listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
+                                choices, "PRESERVE_LOCAL_DELETION".takeIf { canPreserveDeletion },
                                 localIdentifier = tombstoneId,
                                 localSummary = mapOf("identifier" to "Deleted local entity"),
                                 backupSummary = safeSummary(values),
@@ -264,124 +310,169 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                             }
                             val coordinatedDivergentEntity = !same && table in revisionDataKinds.keys &&
                                 divergentEntityDataForRow(db, handle, table, values) != null
+                            if (table == "entity_heads" && values["kind"] != null &&
+                                values["entity_id"] != null && values["revision_id"] != null &&
+                                BackupImportDeletionResolution.alreadyMergedDeletionResolution(
+                                    this, db, handle, values.getValue("kind").toString(),
+                                    values.getValue("entity_id").toString(), values.getValue("revision_id").toString(),
+                                )) {
+                                unchanged++
+                                continue
+                            }
                             if (same) {
                                 unchanged++
-                            } else if (coordinatedDivergentEntity) {
-                                // The associated entity-head choice controls this row atomically.
-                            } else if (table == "entity_heads" && canAutoAdvanceHead(
+                            } else {
+                                changed++
+                                if (coordinatedDivergentEntity) {
+                                    // The associated entity-head choice controls this row atomically.
+                                } else if (table == "entity_heads" && canAutoAdvanceHead(
                                     db, handle, values, local,
                                 )) {
-                                handle.database.insertOrThrow(
-                                    "preview_head_advances",
-                                    null,
-                                    ContentValues().apply {
-                                        put("row_ordinal", ordinal)
-                                        put("kind", values.getValue("kind").toString())
-                                        put("entity_id", values.getValue("entity_id").toString())
-                                        put("expected_local_revision", local.values.getValue("revision_id").toString())
-                                        put("backup_revision", values.getValue("revision_id").toString())
-                                    },
-                                )
-                                added++
-                            } else {
-                                val immutable = table in immutableTables
-                                val revisionRelationship = if (table == "entity_heads") {
-                                    revisionHeadRelationship(
-                                        db,
-                                        handle,
-                                        local.values.getValue("revision_id").toString(),
-                                        values.getValue("revision_id").toString(),
+                                    handle.database.insertOrThrow(
+                                        "preview_head_advances",
+                                        null,
+                                        ContentValues().apply {
+                                            put("row_ordinal", ordinal)
+                                            put("kind", values.getValue("kind").toString())
+                                            put("entity_id", values.getValue("entity_id").toString())
+                                            put("expected_local_revision", local.values.getValue("revision_id").toString())
+                                            put("backup_revision", values.getValue("revision_id").toString())
+                                        },
                                     )
                                 } else {
-                                    null
-                                }
-                                val incomingRevision = if (table == "entity_heads") {
-                                    values["revision_id"]?.toString()?.let {
-                                        revisionContent(handle.database, "validation_revisions", it)
-                                    }
-                                } else {
-                                    null
-                                }
-                                val currentRevision = if (table == "entity_heads") {
-                                    local.values["revision_id"]?.toString()?.let {
-                                        revisionContent(db, "entity_revisions", it)
-                                    }
-                                } else {
-                                    null
-                                }
-                                val backupDeletionAgainstLive = table == "entity_heads" &&
-                                    incomingRevision?.deleted == 1L && currentRevision?.deleted == 0L
-                                val mergeableDivergentHead = table == "entity_heads" &&
-                                    revisionRelationship == "DIVERGENT" &&
-                                    canMergeDivergentHead(db, handle, values, local)
-                                val selectableDivergentHead = table == "entity_heads" &&
-                                    revisionRelationship == "DIVERGENT" &&
-                                    divergentEntityDataForHead(db, handle, values, local) != null
-                                val gpsRangeHeadChoice = table == "entity_heads" &&
-                                    values["kind"] == "location_deletion_range" &&
-                                    revisionRelationship == "DIVERGENT" &&
-                                    hasStagedGpsRangeCoverageConflict(
-                                        db, handle, values.getValue("entity_id").toString(),
-                                    )
-                                val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
-                                    values["kind"] == "location" &&
-                                    hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
-                                val localEntityDeletionCanBePreserved = if (table == "entity_heads") {
-                                    val kind = values["kind"]?.toString()
-                                    val entityId = values["entity_id"]?.toString()
-                                    kind != null && entityId != null &&
-                                        revisionTombstoneRows.values.any { it.kind == kind } &&
-                                        hasLocalEntityDeletionTombstone(db, kind, entityId)
-                                } else {
-                                    false
-                                }
-                                val unsupportedDivergentHead = table == "entity_heads" &&
-                                    revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
-                                    !selectableDivergentHead &&
-                                    !gpsRangeHeadChoice &&
-                                    !localEntityDeletionCanBePreserved &&
-                                    !localGpsTombstoneCanBePreserved
-                                val choices = when {
-                                    backupDeletionAgainstLive -> listOf("KEEP_LOCAL")
-                                    localEntityDeletionCanBePreserved -> listOf("PRESERVE_LOCAL_DELETION")
-                                    gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
-                                    immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
-                                    mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
-                                    selectableDivergentHead -> divergentHeadChoices(
-                                        values["kind"]?.toString().orEmpty(),
-                                    )
-                                    // Do not expose a one-sided choice when this kind has no
-                                    // validated adapter to preserve both divergent histories.
-                                    unsupportedDivergentHead -> emptyList()
-                                    table in mergeOnlyTables -> listOf("KEEP_LOCAL")
-                                    else -> listOf("KEEP_LOCAL")
-                                }
-                                conflictOrdinal = addConflict(
-                                    handle, conflictOrdinal, ordinal, table, keyJson,
-                                    when {
-                                        backupDeletionAgainstLive -> "BACKUP_ENTITY_DELETION"
-                                        localEntityDeletionCanBePreserved -> "ENTITY_DELETION_TOMBSTONE"
-                                        gpsRangeHeadChoice -> "GPS_DELETION_RANGE_HEAD"
-                                        immutable -> "IMMUTABLE_RECORD_DIFFERS"
-                                        else -> "EXISTING_RECORD_DIFFERS"
-                                    },
-                                    choices,
-                                    when {
-                                        backupDeletionAgainstLive -> "KEEP_LOCAL"
-                                        localEntityDeletionCanBePreserved -> "PRESERVE_LOCAL_DELETION"
-                                        gpsRangeHeadChoice -> null
-                                        unsupportedDivergentHead -> null
-                                        selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
-                                        else -> "KEEP_LOCAL"
-                                    },
-                                    localSummary = if (localEntityDeletionCanBePreserved) {
-                                        mapOf("identifier" to "Deleted local entity")
+                                    val immutable = table in immutableTables
+                                    val revisionRelationship = if (table == "entity_heads") {
+                                        revisionHeadRelationship(
+                                            db,
+                                            handle,
+                                            local.values.getValue("revision_id").toString(),
+                                            values.getValue("revision_id").toString(),
+                                        )
                                     } else {
-                                        safeSummary(local.values)
-                                    },
-                                    backupSummary = safeSummary(values),
-                                    revisionRelationship = revisionRelationship,
-                                )
+                                        null
+                                    }
+                                    val incomingRevision = if (table == "entity_heads") {
+                                        values["revision_id"]?.toString()?.let {
+                                            revisionContent(handle.database, "validation_revisions", it)
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                    val currentRevision = if (table == "entity_heads") {
+                                        local.values["revision_id"]?.toString()?.let {
+                                            revisionContent(db, "entity_revisions", it)
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                    val backupDeletionAgainstLive = table == "entity_heads" &&
+                                        incomingRevision?.deleted == 1L && currentRevision?.deleted == 0L
+                                    val backupDeletionCanBeApplied = backupDeletionAgainstLive &&
+                                        BackupImportDeletionResolution.canApplyDeletion(
+                                            db,
+                                            values["kind"]?.toString().orEmpty(),
+                                            values["entity_id"]?.toString().orEmpty(),
+                                        )
+                                    val backupDeletionCanBePreserved = backupDeletionAgainstLive &&
+                                        values["kind"] != null && values["entity_id"] != null &&
+                                        local.values["revision_id"] != null && values["revision_id"] != null &&
+                                        BackupImportDeletionResolution.canPreserveLocalContent(
+                                            this, db, handle, values.getValue("kind").toString(),
+                                            values.getValue("entity_id").toString(),
+                                            local.values.getValue("revision_id").toString(),
+                                            values.getValue("revision_id").toString(),
+                                        )
+                                    val mergeableDivergentHead = table == "entity_heads" &&
+                                        revisionRelationship == "DIVERGENT" &&
+                                        canMergeDivergentHead(db, handle, values, local)
+                                    val selectableDivergentHead = table == "entity_heads" &&
+                                        revisionRelationship == "DIVERGENT" &&
+                                        divergentEntityDataForHead(db, handle, values, local) != null
+                                    val gpsRangeHeadChoice = table == "entity_heads" &&
+                                        values["kind"] == "location_deletion_range" &&
+                                        revisionRelationship == "DIVERGENT" &&
+                                        hasStagedGpsRangeCoverageConflict(
+                                            db, handle, values.getValue("entity_id").toString(),
+                                        )
+                                    val localGpsTombstoneCanBePreserved = table == "entity_heads" &&
+                                        values["kind"] == "location" &&
+                                        hasLocalLocationTombstone(db, values.getValue("entity_id").toString())
+                                    val localEntityDeletionExists = if (table == "entity_heads") {
+                                        val kind = values["kind"]?.toString()
+                                        val entityId = values["entity_id"]?.toString()
+                                        kind != null && entityId != null &&
+                                            revisionTombstoneRows.values.any { it.kind == kind } &&
+                                            hasLocalEntityDeletionTombstone(db, kind, entityId)
+                                    } else {
+                                        false
+                                    }
+                                    val localEntityDeletionCanBePreserved = localEntityDeletionExists &&
+                                        values["kind"] != null && values["entity_id"] != null &&
+                                        values["revision_id"] != null && (
+                                            BackupImportDeletionResolution.canPreserveCurrentLocalDeletion(
+                                                this, db, handle, values.getValue("kind").toString(),
+                                                values.getValue("entity_id").toString(),
+                                                values.getValue("revision_id").toString(),
+                                            ) || BackupImportDeletionResolution.localJobDeleted(
+                                                db, values.getValue("kind").toString(),
+                                                values.getValue("entity_id").toString(),
+                                            )
+                                        )
+                                    val localEntityDeletionCanBeRestored = localEntityDeletionExists &&
+                                        values["kind"]?.toString().orEmpty() in
+                                            BackupImportDeletionResolution.deletableKinds
+                                    val unsupportedDivergentHead = table == "entity_heads" &&
+                                        revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
+                                        !selectableDivergentHead && !gpsRangeHeadChoice &&
+                                        !localEntityDeletionCanBePreserved && !localGpsTombstoneCanBePreserved
+                                    val choices = when {
+                                        backupDeletionAgainstLive -> buildList {
+                                            if (backupDeletionCanBePreserved) add("PRESERVE_LOCAL_CONTENT")
+                                            if (backupDeletionCanBeApplied) add("APPLY_BACKUP_DELETION")
+                                        }
+                                        localEntityDeletionExists -> buildList {
+                                            if (localEntityDeletionCanBePreserved) add("PRESERVE_LOCAL_DELETION")
+                                            if (localEntityDeletionCanBeRestored) add("RESTORE_BACKUP_CONTENT")
+                                        }
+                                        gpsRangeHeadChoice -> listOf("KEEP_LOCAL", "APPLY_BACKUP_DELETION")
+                                        immutable -> listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD")
+                                        mergeableDivergentHead -> listOf("KEEP_LOCAL", "MERGE_IDENTICAL_CONTENT")
+                                        selectableDivergentHead -> divergentHeadChoices(
+                                            values["kind"]?.toString().orEmpty(),
+                                        )
+                                        // Unsupported kinds have no safe one-sided deletion choice.
+                                        unsupportedDivergentHead -> emptyList()
+                                        table in mergeOnlyTables -> listOf("KEEP_LOCAL")
+                                        else -> listOf("KEEP_LOCAL")
+                                    }
+                                    conflictOrdinal = addConflict(
+                                        handle, conflictOrdinal, ordinal, table, keyJson,
+                                        when {
+                                            backupDeletionAgainstLive -> "BACKUP_ENTITY_DELETION"
+                                            localEntityDeletionExists -> "ENTITY_DELETION_TOMBSTONE"
+                                            gpsRangeHeadChoice -> "GPS_DELETION_RANGE_HEAD"
+                                            immutable -> "IMMUTABLE_RECORD_DIFFERS"
+                                            else -> "EXISTING_RECORD_DIFFERS"
+                                        },
+                                        choices,
+                                        when {
+                                            backupDeletionAgainstLive -> "PRESERVE_LOCAL_CONTENT".takeIf {
+                                                backupDeletionCanBePreserved
+                                            }
+                                            localEntityDeletionCanBePreserved -> "PRESERVE_LOCAL_DELETION"
+                                            gpsRangeHeadChoice || unsupportedDivergentHead -> null
+                                            selectableDivergentHead -> "MERGE_KEEP_LOCAL_CONTENT"
+                                            else -> "KEEP_LOCAL"
+                                        },
+                                        localSummary = if (localEntityDeletionCanBePreserved) {
+                                            mapOf("identifier" to "Deleted local entity")
+                                        } else {
+                                            safeSummary(local.values)
+                                        },
+                                        backupSummary = safeSummary(values),
+                                        revisionRelationship = revisionRelationship,
+                                    )
+                                }
                             }
                             continue
                         }
@@ -411,13 +502,25 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
             db.endTransaction()
         }
         val token = previewToken(handle, localVersion, conflictOrdinal)
+        val unresolvedReferenceCount = countConflictsOfKind(handle, "DEPENDENT_ON_CONFLICT")
+        val timeOverlapCount = countConflictsOfKind(handle, "SESSION_OVERLAP")
         return PreviewPlannerPreview(
             handle.id, token, handle.expected.schemaVersion, localVersion,
             handle.recordCount, handle.mediaCount, handle.expected.mediaBytes,
             handle.rawBytes - handle.expected.mediaBytes,
-            added, unchanged, conflictOrdinal, openSessions, localOpenSessions,
+            added, changed, deleted, unchanged, unresolvedReferenceCount, timeOverlapCount,
+            conflictOrdinal, openSessions, localOpenSessions,
             applyReady = conflictOrdinal == 0L && openSessions == 0L && localOpenSessions == 0L,
         )
+    }
+
+internal fun BackupImportStore.countConflictsOfKind(handle: PreviewPlannerHandle, kind: String): Long =
+    handle.database.rawQuery("SELECT conflict_json FROM import_conflicts ORDER BY ordinal", null).use { rows ->
+        var count = 0L
+        while (rows.moveToNext()) {
+            if (JSONObject(rows.getString(0)).optString("kind") == kind) count++
+        }
+        count
     }
 
 internal fun BackupImportStore.findLocalRow(
@@ -603,7 +706,10 @@ internal fun BackupImportStore.addConflict(
         revisionRelationship: String? = null,
     ): Long {
         val conflictId = conflictId(handle, rowOrdinal, table, keyJson, reason)
-        val aggregateKeys = aggregateKeysForStagedRow(handle, rowOrdinal, table)
+    val rowAggregateKeys = aggregateKeysForStagedRow(handle, rowOrdinal, table)
+    val aggregateKeys = if (isCommentDeletionResolution(handle, rowOrdinal, table, reason)) {
+        rowAggregateKeys.filterNot { it.startsWith("card-fields:") }
+    } else rowAggregateKeys
         val conflict = JSONObject()
             .put("conflictId", conflictId)
             .put("kind", reason)
@@ -625,6 +731,28 @@ internal fun BackupImportStore.addConflict(
         })
         return ordinal + 1
     }
+
+private fun BackupImportStore.isCommentDeletionResolution(
+    handle: PreviewPlannerHandle,
+    rowOrdinal: Long,
+    table: String,
+    reason: String,
+): Boolean {
+    val isolatedHead = table == "entity_heads" && reason in setOf(
+        "BACKUP_ENTITY_DELETION", "ENTITY_DELETION_TOMBSTONE",
+    ) && handle.database.rawQuery(
+        "SELECT row_json FROM import_rows WHERE ordinal=?",
+        arrayOf(rowOrdinal.toString()),
+    ).use { rows ->
+        if (!rows.moveToFirst()) false else {
+            val values = JSONObject(rows.getString(0)).getJSONObject("values")
+            values.optString("kind") in BackupImportDeletionResolution.deletableKinds
+        }
+    }
+    return (reason == "BACKUP_COMMENT_DELETION" && table == "task_comment_events") ||
+        (reason == "ENTITY_DELETION_TOMBSTONE" &&
+            table in BackupImportDeletionResolution.restorableTables) || isolatedHead
+}
 
 internal fun BackupImportStore.addDependentReferenceConflicts(
         localDb: SQLiteDatabase,
@@ -739,6 +867,39 @@ internal fun BackupImportStore.addDependentReferenceConflicts(
                                 attachAggregateGroupKey(handle, rowOrdinal, groupKey)
                             }
                         }
+                        val commentId = values["comment_id"]?.toString()
+                        val dependsOnCommentDeletion = table == "task_attachments" && commentId != null &&
+                            blockedParentGroups.keys.any { parentOrdinal ->
+                                staged.rawQuery(
+                                    "SELECT r.table_name,r.row_json,c.conflict_json FROM import_rows r " +
+                                        "JOIN import_conflicts c ON c.row_ordinal=r.ordinal WHERE r.ordinal=?",
+                                    arrayOf(parentOrdinal.toString()),
+                                ).use { parentRows ->
+                                    while (parentRows.moveToNext()) {
+                                        if (parentRows.getString(0) != "task_comments") continue
+                                        val parentValues = JSONObject(parentRows.getString(1)).getJSONObject("values")
+                                        val parentConflict = JSONObject(parentRows.getString(2))
+                                        if (parentValues.optString("id") == commentId &&
+                                            parentConflict.optString("kind") == "ENTITY_DELETION_TOMBSTONE") {
+                                            return@use true
+                                        }
+                                    }
+                                    false
+                                }
+                            }
+                        val childKind = revisionDataKinds[table]
+                        val childId = if (childKind == null) null else
+                            revisionEntityIdForDataRow(table, values)
+                        val childDeletionIsLocal = childKind != null && childId != null &&
+                            revisionTombstoneRows.values.any { it.kind == childKind } &&
+                            hasLocalEntityDeletionTombstone(localDb, childKind, childId)
+                        val dependentChoices = when {
+                            dependsOnCommentDeletion && childDeletionIsLocal -> listOf(
+                                "PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT",
+                            )
+                            dependsOnCommentDeletion -> listOf("OMIT_BACKUP_RECORD", "RESTORE_BACKUP_CONTENT")
+                            else -> listOf("OMIT_BACKUP_RECORD")
+                        }
                         nextConflictOrdinal = addConflict(
                             handle,
                             nextConflictOrdinal,
@@ -746,7 +907,7 @@ internal fun BackupImportStore.addDependentReferenceConflicts(
                             table,
                             keyJson,
                             "DEPENDENT_ON_CONFLICT",
-                            listOf("OMIT_BACKUP_RECORD"),
+                            dependentChoices,
                             null,
                             localSummary = mapOf("identifier" to "A referenced backup record requires a choice"),
                             backupSummary = safeSummary(values),

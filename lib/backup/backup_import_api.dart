@@ -322,7 +322,11 @@ final class BackupImportPreview {
     required this.mediaBytes,
     required this.stagedRecordBytes,
     required this.addedCount,
+    this.changedCount = 0,
+    this.deletedCount = 0,
     required this.unchangedCount,
+    this.unresolvedReferenceCount = 0,
+    this.timeOverlapCount = 0,
     required this.conflictCount,
     required this.openSessionCount,
     required this.localOpenSessionCount,
@@ -337,8 +341,24 @@ final class BackupImportPreview {
   final int mediaCount;
   final int mediaBytes;
   final int stagedRecordBytes;
+
+  /// Incoming rows absent locally; summary counts can overlap one another.
   final int addedCount;
+
+  /// Incoming rows whose local counterpart differs or has an unresolved change.
+  final int changedCount;
+
+  /// Incoming tombstone/deletion marker rows, including historical revisions.
+  final int deletedCount;
+
+  /// Incoming rows whose current local record matches; may overlap deletedCount.
   final int unchangedCount;
+
+  /// Initial dependent-reference conflicts, before the user resolves choices.
+  final int unresolvedReferenceCount;
+
+  /// Initial session-overlap conflicts, before the user resolves choices.
+  final int timeOverlapCount;
   final int conflictCount;
   final int openSessionCount;
   final int localOpenSessionCount;
@@ -355,7 +375,11 @@ final class BackupImportPreview {
       mediaBytes: _integer(map, 'mediaBytes'),
       stagedRecordBytes: _integer(map, 'stagedRecordBytes'),
       addedCount: _integer(map, 'addedCount'),
+      changedCount: _integer(map, 'changedCount'),
+      deletedCount: _integer(map, 'deletedCount'),
       unchangedCount: _integer(map, 'unchangedCount'),
+      unresolvedReferenceCount: _integer(map, 'unresolvedReferenceCount'),
+      timeOverlapCount: _integer(map, 'timeOverlapCount'),
       conflictCount: _integer(map, 'conflictCount'),
       openSessionCount: _integer(map, 'openSessionCount'),
       localOpenSessionCount: _integer(map, 'localOpenSessionCount'),
@@ -375,12 +399,20 @@ final class BackupImportPreview {
         preview.stagedRecordBytes >
             maxBackupImportStagedBytes - preview.mediaBytes ||
         preview.addedCount < 0 ||
+        preview.addedCount > preview.recordCount ||
+        preview.changedCount < 0 ||
+        preview.changedCount > preview.recordCount ||
+        preview.deletedCount < 0 ||
+        preview.deletedCount > preview.recordCount ||
         preview.unchangedCount < 0 ||
+        preview.unchangedCount > preview.recordCount ||
+        preview.unresolvedReferenceCount < 0 ||
+        preview.unresolvedReferenceCount > preview.recordCount ||
+        preview.timeOverlapCount < 0 ||
+        preview.timeOverlapCount > preview.recordCount ||
         preview.conflictCount < 0 ||
         preview.openSessionCount < 0 ||
-        preview.localOpenSessionCount < 0 ||
-        preview.addedCount + preview.unchangedCount + preview.conflictCount !=
-            preview.recordCount) {
+        preview.localOpenSessionCount < 0) {
       throw const FormatException('The backup import preview is invalid.');
     }
     return preview;
@@ -456,15 +488,9 @@ final class BackupImportConflict {
             (defaultChoice != null ||
                 conflict.resolved ||
                 conflict.selectedChoice != null)) ||
-        (choices.isNotEmpty &&
-            ((defaultChoice == null &&
-                    !(conflict.kind == 'DEPENDENT_ON_CONFLICT' &&
-                        choices.length == 1 &&
-                        choices.single == 'OMIT_BACKUP_RECORD' &&
-                        !conflict.resolved &&
-                        conflict.selectedChoice == null)) ||
-                (defaultChoice != null && !choices.contains(defaultChoice)))) ||
-        (conflict.resolved && !choices.contains(conflict.selectedChoice))) {
+        (defaultChoice != null && !choices.contains(defaultChoice)) ||
+        (conflict.resolved && !choices.contains(conflict.selectedChoice)) ||
+        (!conflict.resolved && conflict.selectedChoice != null)) {
       throw const FormatException('A backup conflict response is invalid.');
     }
     return conflict;

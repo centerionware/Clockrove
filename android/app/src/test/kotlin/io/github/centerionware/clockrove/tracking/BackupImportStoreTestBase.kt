@@ -55,6 +55,7 @@ abstract class BackupImportStoreTestBase {
             null,
             SQLiteDatabase.OPEN_READWRITE,
         )
+        database.setForeignKeyConstraintsEnabled(true)
         exportStore = BackupExportStore(app, wallClock = { now })
         importStore = BackupImportStore(app, catalogProvider = exportStore::importCatalog)
     }
@@ -561,15 +562,27 @@ abstract class BackupImportStoreTestBase {
         return sessionId to measuredAt
     }
 
-    internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? {
+    internal fun readAllConflicts(
+        importId: String,
+        preview: BackupImportStore.Preview,
+    ): List<Map<String, Any?>> {
         var cursor: String? = null
+        val conflicts = mutableListOf<Map<String, Any?>>()
         while (true) {
             val page = importStore.readConflictPage(database, importId, preview.previewToken, cursor, null)
-            page.conflicts.firstOrNull { it["kind"] == kind }?.let { return it }
-            if (page.done) return null
+            conflicts.addAll(page.conflicts)
+            if (page.done) return conflicts
             cursor = page.nextCursor
         }
     }
+
+    internal fun conflictDebug(conflicts: List<Map<String, Any?>>): String = conflicts.joinToString(" | ") {
+        "${it["kind"]}/${it["table"]}/${it["primaryKey"]} choices=${it["allowedChoices"]} " +
+            "selected=${it["selectedChoice"]}"
+    }
+
+    internal fun findConflict(importId: String, preview: BackupImportStore.Preview, kind: String): Map<String, Any?>? =
+        readAllConflicts(importId, preview).firstOrNull { it["kind"] == kind }
 
     internal fun resolveSafeConflictChoices(
         importId: String,
@@ -581,7 +594,8 @@ abstract class BackupImportStoreTestBase {
             val choices = conflict["allowedChoices"] as? List<String> ?: emptyList()
             val preferred = when (conflict["kind"]) {
                 "JOB_DELETION_TOMBSTONE", "ENTITY_DELETION_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
-                "ACTIVE_JOB_DELETION", "BACKUP_ENTITY_DELETION" -> "KEEP_LOCAL"
+                "ACTIVE_JOB_DELETION" -> "KEEP_LOCAL"
+                "BACKUP_ENTITY_DELETION" -> "PRESERVE_LOCAL_CONTENT"
                 "GPS_TOMBSTONE" -> "PRESERVE_LOCAL_DELETION"
                 "GPS_DELETION_COVERAGE" -> "PRESERVE_DELETION"
                 "DEPENDENT_ON_CONFLICT" -> "OMIT_BACKUP_RECORD"
@@ -591,15 +605,26 @@ abstract class BackupImportStoreTestBase {
                 ?: choices.firstOrNull { it == "KEEP_LOCAL" }
                 ?: choices.firstOrNull { it == "OMIT_BACKUP_RECORD" }
                 ?: choices.firstOrNull()
-            assertNotNull("No explicit safe choice for ${conflict["kind"]} / ${conflict["table"]}", choice)
-            importStore.resolveConflict(
-                database,
-                importId,
-                preview.previewToken,
-                preview.localStateVersion,
-                conflict["conflictId"] as String,
-                requireNotNull(choice),
+            assertNotNull(
+                "No explicit safe choice for ${conflict["kind"]} / ${conflict["table"]}; " +
+                    "allowed=$choices",
+                choice,
             )
+            try {
+                importStore.resolveConflict(
+                    database,
+                    importId,
+                    preview.previewToken,
+                    preview.localStateVersion,
+                    conflict["conflictId"] as String,
+                    requireNotNull(choice),
+                )
+            } catch (failure: BackupImportStore.Failure) {
+                fail(
+                    "Resolving ${conflict["kind"]}/${conflict["table"]} as $choice failed: " +
+                        "${failure.message}; allowed=$choices",
+                )
+            }
         }
     }
 
@@ -725,6 +750,28 @@ abstract class BackupImportStoreTestBase {
             "appendBackupImportPage",
             mapOf("importId" to importId, "firstOrdinal" to ordinal, "records" to rows),
         )).position()
+
+    internal fun assertMergedLiveParents(
+        kind: String,
+        entityId: String,
+        localTombstone: String,
+        backupLive: String,
+    ) {
+        val revisionId = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
+            arrayOf(kind, entityId),
+        ).use { assertTrue(it.moveToFirst()); it.getString(0) }
+        val revision = database.rawQuery(
+            "SELECT deleted,origin FROM entity_revisions WHERE id=?", arrayOf(revisionId),
+        ).use { assertTrue(it.moveToFirst()); it.getLong(0) to it.getString(1) }
+        val parents = database.rawQuery(
+            "SELECT parent_id FROM revision_parents WHERE revision_id=? ORDER BY parent_id",
+            arrayOf(revisionId),
+        ).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(0)) } }
+        assertEquals("$kind/$entityId head=$revisionId parents=$parents", 0L, revision.first)
+        assertEquals("$kind/$entityId head=$revisionId parents=$parents", "BACKUP_MERGE", revision.second)
+        assertEquals("$kind/$entityId head=$revisionId", setOf(localTombstone, backupLive), parents)
+    }
 
     internal fun assertFailure(code: String, action: () -> Unit) {
         try {

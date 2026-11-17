@@ -194,6 +194,7 @@ class BackupImportStoreRevisionValidationTest : BackupImportStoreTestBase() {
         ))
         val preview = importStore.finish(database, started.importId)
         assertEquals(2L, preview.conflictCount)
+        assertEquals(1L, preview.unresolvedReferenceCount)
         val invoiceConflict = requireNotNull(findConflict(started.importId, preview, "UNIQUE_VALUE_IN_USE"))
         val dependentConflict = requireNotNull(findConflict(started.importId, preview, "DEPENDENT_ON_CONFLICT"))
         assertEquals(listOf("OMIT_BACKUP_RECORD"), dependentConflict["allowedChoices"])
