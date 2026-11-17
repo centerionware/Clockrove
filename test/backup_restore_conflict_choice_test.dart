@@ -46,7 +46,6 @@ void main() {
     'restore choice with null default is selected after page refresh',
     (tester) async {
       final semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       var pageReads = 0;
       var resolvedChoice = <String, Object?>{};
       messenger.setMockMethodCallHandler(importChannel, (call) async {
@@ -181,6 +180,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
+      semantics.dispose();
     },
   );
 }

@@ -148,7 +148,12 @@ void main() {
     await _scrollRestoreUntilVisible(tester, applyButton);
     await tester.tap(applyButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Apply reviewed merge'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Apply reviewed merge'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(applyCalls, 1);

@@ -488,10 +488,7 @@ void main() {
       );
       await tester.tap(find.text('Omit this backup record'));
       await tester.pumpAndSettle();
-      await _scrollRestoreUntilVisible(
-        tester,
-        find.text('Reference conflicts in backup'),
-      );
+      await _scrollRestoreToTop(tester);
       expect(countInRow('Reference conflicts in backup', '1'), findsOneWidget);
       expect(
         countInRow('Time overlap conflicts in backup', '1'),
@@ -504,10 +501,7 @@ void main() {
       );
       await tester.tap(find.text('Omit this backup session'));
       await tester.pumpAndSettle();
-      await _scrollRestoreUntilVisible(
-        tester,
-        find.text('Time overlap conflicts in backup'),
-      );
+      await _scrollRestoreToTop(tester);
       expect(countInRow('Reference conflicts in backup', '1'), findsOneWidget);
       expect(
         countInRow('Time overlap conflicts in backup', '1'),
@@ -550,6 +544,7 @@ void main() {
       find.byKey(const ValueKey('restore-password')),
       'long-enough-password',
     );
+    importCalls.clear();
     await tester.tap(find.byKey(const ValueKey('restore-preview')));
     await tester.pumpAndSettle();
 
@@ -871,6 +866,17 @@ void main() {
       expect(closedDocuments, ['opaque-document-1', 'opaque-document-2']);
     },
   );
+}
+
+Future<void> _scrollRestoreToTop(WidgetTester tester) async {
+  final scrollable = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  await tester.drag(scrollable, const Offset(0, 4000));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _scrollRestoreUntilVisible(
