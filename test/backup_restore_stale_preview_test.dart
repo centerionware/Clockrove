@@ -145,8 +145,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final applyButton = find.byKey(const ValueKey('restore-apply'));
-    await tester.ensureVisible(applyButton);
-    await tester.pumpAndSettle();
+    await _scrollRestoreUntilVisible(tester, applyButton);
     await tester.tap(applyButton);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Apply reviewed merge'));
@@ -170,7 +169,8 @@ void main() {
     );
     expect(tester.widget<FilledButton>(applyButton).onPressed, isNull);
 
-    await tester.ensureVisible(
+    await _scrollRestoreUntilVisible(
+      tester,
       find.byKey(const ValueKey('restore-discard-preview')),
     );
     await tester.tap(find.byKey(const ValueKey('restore-discard-preview')));
@@ -178,4 +178,28 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });
+}
+
+Future<void> _scrollRestoreUntilVisible(
+  WidgetTester tester,
+  Finder target,
+) async {
+  final scrollable = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  for (var attempt = 0; attempt < 40; attempt++) {
+    if (target.evaluate().isNotEmpty) {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      return;
+    }
+    await tester.drag(scrollable, const Offset(0, -250));
+    await tester.pumpAndSettle();
+  }
+  expect(target, findsOneWidget);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
 }

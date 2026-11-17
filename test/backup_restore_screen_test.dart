@@ -488,8 +488,10 @@ void main() {
       );
       await tester.tap(find.text('Omit this backup record'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Reference conflicts in backup'));
-      await tester.pumpAndSettle();
+      await _scrollRestoreUntilVisible(
+        tester,
+        find.text('Reference conflicts in backup'),
+      );
       expect(countInRow('Reference conflicts in backup', '1'), findsOneWidget);
       expect(
         countInRow('Time overlap conflicts in backup', '1'),
@@ -502,8 +504,10 @@ void main() {
       );
       await tester.tap(find.text('Omit this backup session'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Time overlap conflicts in backup'));
-      await tester.pumpAndSettle();
+      await _scrollRestoreUntilVisible(
+        tester,
+        find.text('Time overlap conflicts in backup'),
+      );
       expect(countInRow('Reference conflicts in backup', '1'), findsOneWidget);
       expect(
         countInRow('Time overlap conflicts in backup', '1'),

@@ -152,8 +152,7 @@ void main() {
 
       const restoreLabel = 'Restore the content in this backup';
       final restoreOption = find.text(restoreLabel);
-      await tester.ensureVisible(restoreOption);
-      await tester.pumpAndSettle();
+      await _scrollRestoreUntilVisible(tester, restoreOption);
       final tile = find.ancestor(
         of: restoreOption,
         matching: find.byType(RadioListTile<String>),
@@ -174,7 +173,8 @@ void main() {
         CheckedState.isTrue,
       );
 
-      await tester.ensureVisible(
+      await _scrollRestoreUntilVisible(
+        tester,
         find.byKey(const ValueKey('restore-discard-preview')),
       );
       await tester.tap(find.byKey(const ValueKey('restore-discard-preview')));
@@ -183,4 +183,28 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+}
+
+Future<void> _scrollRestoreUntilVisible(
+  WidgetTester tester,
+  Finder target,
+) async {
+  final scrollable = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  for (var attempt = 0; attempt < 40; attempt++) {
+    if (target.evaluate().isNotEmpty) {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      return;
+    }
+    await tester.drag(scrollable, const Offset(0, -250));
+    await tester.pumpAndSettle();
+  }
+  expect(target, findsOneWidget);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
 }
