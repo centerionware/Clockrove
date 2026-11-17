@@ -169,6 +169,10 @@ void main() {
       find.textContaining('Discard this preview and select the backup again'),
       findsOneWidget,
     );
+    await _scrollRestoreUntilVisible(
+      tester,
+      find.textContaining('This preview cannot be applied again.'),
+    );
     expect(
       find.textContaining('This preview cannot be applied again.'),
       findsOneWidget,
