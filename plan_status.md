@@ -39,6 +39,16 @@ M7.6 before moving from internal to closed testing. Owner-device and upgrade
 checks remain separate launch-readiness work under M8.2. iOS and future service
 remain deferred.
 
+M7.3's Settings restore route and screen are rebased onto merged `main` and
+pass exact-head validation. Rebased head `e8dcf8f` / Validate run
+[44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208)
+passed formatting, Analyze, the Flutter behavior suite (285 passed, 14 skipped),
+Android and release builds, 823 native tests with zero failures, and 38 actual
+Android tests on each of API 24 and 35 with zero failures. This validates the
+source only: itemized add/change/deletion review, a close-time choice for
+imported open sessions, a real SAF provider journey, and on-device restore
+acceptance remain open. Details: [restore UI evidence](docs/plan/evidence/m73-restore-ui.md).
+
 PR #70 fixed the invoice PDF action visibility failure. Exact head
 `58ca416dfe8c3b82fff8d58898db9ca7acc86a26` passed Validate run
 [43798809470, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43798809470/attempts/2),

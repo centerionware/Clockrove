@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
+import 'package:clockrove/backup/backup_file_api.dart';
 import 'package:clockrove/backup/backup_import_api.dart';
 
 final class BackupRestoreImportResult {
@@ -46,10 +45,14 @@ final class BackupRestoreImporter {
   final BackupImportApi _api;
 
   Future<BackupRestoreImportResult> decryptAndPreview({
-    required File encryptedEnvelope,
+    required BackupEncryptedSource encryptedEnvelope,
     required String password,
     BackupCryptoCancellationToken? cancellationToken,
   }) async {
+    if (encryptedEnvelope.totalBytes < 1 ||
+        encryptedEnvelope.totalBytes > maxEncryptedBackupBytes) {
+      throw const FormatException('The encrypted backup size is unsupported.');
+    }
     // The native stage's identity includes the archive digest. Authenticate a
     // first bounded pass to learn that digest without retaining plaintext, then
     // authenticate and stream a second pass into native staging.

@@ -3,12 +3,14 @@ package io.github.centerionware.clockrove.tracking
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.UUID
 
 /** Native prototype boundary. Callers share this instance; Flutter never writes SQL. */
 class TimerRepository internal constructor(context: Context,
     internal val eventDigest: (String) -> String = GeofenceEventDigest::digest,
     internal val wallClock: () -> Long = System::currentTimeMillis) {
+    private val appContext = context.applicationContext
     internal val helper = TimerDatabase(context.applicationContext, wallClock)
     private val backupExportStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         BackupExportStore(context.applicationContext, wallClock)
@@ -141,7 +143,10 @@ class TimerRepository internal constructor(context: Context,
         val applied = backupImportStore.apply(
             helper.writableDatabase, importId, previewToken, expectedLocalStateVersion,
         )
-        if (applied.stateVersion != expectedLocalStateVersion) publishVersion(applied.stateVersion)
+        if (applied.stateVersion != expectedLocalStateVersion) {
+            publishVersion(applied.stateVersion)
+            try { TimerWidget.refreshAll(appContext) } catch (_: Exception) { }
+        }
         return applied
     }
 
