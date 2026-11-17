@@ -381,6 +381,57 @@ void main() {
     expect(conflict.resolved, isFalse);
   });
 
+  test('accepts unresolved actionable conflicts without a default', () {
+    final activeJobDeletion = BackupImportConflict.fromMap({
+      'conflictId': 'active-job-deletion',
+      'kind': 'ACTIVE_JOB_DELETION',
+      'table': 'job_deletions',
+      'primaryKey': ['job-1'],
+      'localIdentifier': 'job-1',
+      'localSummary': {'identifier': 'Live local job'},
+      'backupSummary': <String, Object?>{},
+      'allowedChoices': ['KEEP_LOCAL'],
+      'defaultChoice': null,
+      'resolved': false,
+      'selectedChoice': null,
+    });
+    final gpsDeletion = BackupImportConflict.fromMap({
+      'conflictId': 'gps-deletion-coverage',
+      'kind': 'GPS_DELETION_COVERAGE',
+      'table': 'location_deletion_ranges',
+      'primaryKey': ['range-1'],
+      'localIdentifier': null,
+      'localSummary': {'identifier': 'Unproven local GPS points are covered'},
+      'backupSummary': <String, Object?>{},
+      'allowedChoices': ['KEEP_LOCAL', 'APPLY_BACKUP_DELETION'],
+      'defaultChoice': null,
+      'resolved': false,
+      'selectedChoice': null,
+    });
+    final dependent = BackupImportConflict.fromMap({
+      'conflictId': 'dependent-record',
+      'kind': 'DEPENDENT_ON_CONFLICT',
+      'table': 'invoice_time_claims',
+      'primaryKey': ['claim-1'],
+      'localIdentifier': null,
+      'localSummary': {
+        'identifier': 'A referenced backup record requires a choice',
+      },
+      'backupSummary': <String, Object?>{},
+      'allowedChoices': ['OMIT_BACKUP_RECORD'],
+      'defaultChoice': null,
+      'resolved': false,
+      'selectedChoice': null,
+    });
+
+    expect(activeJobDeletion.allowedChoices, ['KEEP_LOCAL']);
+    expect(activeJobDeletion.defaultChoice, isNull);
+    expect(gpsDeletion.allowedChoices, ['KEEP_LOCAL', 'APPLY_BACKUP_DELETION']);
+    expect(gpsDeletion.defaultChoice, isNull);
+    expect(dependent.allowedChoices, ['OMIT_BACKUP_RECORD']);
+    expect(dependent.defaultChoice, isNull);
+  });
+
   test(
     'accepts unresolved actionable conflicts with a null default choice',
     () {
@@ -402,6 +453,57 @@ void main() {
       expect(conflict.resolved, isFalse);
     },
   );
+
+  test('rejects defaults and selections outside an actionable conflict', () {
+    expect(
+      () => BackupImportConflict.fromMap({
+        'conflictId': 'ordinary-conflict',
+        'kind': 'EXISTING_RECORD_DIFFERS',
+        'table': 'customers',
+        'primaryKey': ['customer-1'],
+        'localIdentifier': null,
+        'localSummary': <String, Object?>{},
+        'backupSummary': <String, Object?>{},
+        'allowedChoices': ['KEEP_LOCAL'],
+        'defaultChoice': 'OMIT_BACKUP_RECORD',
+        'resolved': false,
+        'selectedChoice': null,
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => BackupImportConflict.fromMap({
+        'conflictId': 'invalid-selection',
+        'kind': 'ACTIVE_JOB_DELETION',
+        'table': 'job_deletions',
+        'primaryKey': ['job-1'],
+        'localIdentifier': 'job-1',
+        'localSummary': <String, Object?>{},
+        'backupSummary': <String, Object?>{},
+        'allowedChoices': ['KEEP_LOCAL'],
+        'defaultChoice': null,
+        'resolved': false,
+        'selectedChoice': 'OMIT_BACKUP_RECORD',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => BackupImportConflict.fromMap({
+        'conflictId': 'unresolved-selection',
+        'kind': 'ACTIVE_JOB_DELETION',
+        'table': 'job_deletions',
+        'primaryKey': ['job-1'],
+        'localIdentifier': 'job-1',
+        'localSummary': <String, Object?>{},
+        'backupSummary': <String, Object?>{},
+        'allowedChoices': ['KEEP_LOCAL'],
+        'defaultChoice': null,
+        'resolved': false,
+        'selectedChoice': 'KEEP_LOCAL',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
 
   test(
     'preserves blocking conflicts without offering an unsafe resolution',

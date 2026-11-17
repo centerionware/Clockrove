@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:clockrove/backup/backup_crypto_v2.dart';
+import 'package:clockrove/backup/backup_file_api.dart';
 import 'package:clockrove/backup/backup_import_api.dart';
 import 'package:clockrove/backup/backup_restore_importer.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
@@ -528,7 +529,7 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
     late final int restorePeakRssKiB;
     try {
       imported = await BackupRestoreImporter().decryptAndPreview(
-        encryptedEnvelope: envelopeFile,
+        encryptedEnvelope: _FileEncryptedSource(envelopeFile),
         password: 'synthetic-streamed-restore-passphrase',
       );
       restorePeakRssKiB = await restoreRss.stop();
@@ -820,6 +821,18 @@ final class _RestorePreviewMetrics {
   final bool nativeHandleOpenAtPreview;
   final bool nativeHandleClosed;
   final int restorePeakDeltaRssKiB;
+}
+
+final class _FileEncryptedSource implements BackupEncryptedSource {
+  const _FileEncryptedSource(this.file);
+
+  final File file;
+
+  @override
+  int get totalBytes => file.lengthSync();
+
+  @override
+  Stream<List<int>> openRead() => file.openRead();
 }
 
 final class _FileTransactionalSink implements BackupTransactionalByteSink {
