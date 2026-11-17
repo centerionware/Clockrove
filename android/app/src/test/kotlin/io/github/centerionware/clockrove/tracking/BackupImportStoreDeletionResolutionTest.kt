@@ -482,8 +482,8 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val matches = conflicts.filter { value ->
             val primaryKey = value["primaryKey"] as? List<*>
             value["kind"] == kind && value["table"] == table &&
-                (primaryKey.lastOrNull()?.toString() == entityId) &&
-                (entityKind == null || primaryKey.firstOrNull()?.toString() == entityKind)
+                (primaryKey.orEmpty().lastOrNull()?.toString() == entityId) &&
+                (entityKind == null || primaryKey.orEmpty().firstOrNull()?.toString() == entityKind)
         }
         if (matches.size != 1) {
             fail(
