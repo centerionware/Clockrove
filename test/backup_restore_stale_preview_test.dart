@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_file_api.dart';
@@ -69,47 +67,46 @@ void main() {
       }
     });
 
-    BackupRestorePreviewRunner previewBackup =
-        ({
-          required BackupEncryptedSource encryptedEnvelope,
-          required String password,
-          BackupCryptoCancellationToken? cancellationToken,
-        }) async {
-          expect(password, 'long-enough-password');
-          await encryptedEnvelope.openRead().drain<void>();
-          return BackupRestoreImportResult(
-            preview: const BackupImportPreview(
-              importId: 'stale-preview-import',
-              previewToken: 'stale-preview-token',
-              schemaVersion: currentBackupImportSchemaVersion,
-              localStateVersion: 12,
-              recordCount: 0,
-              mediaCount: 0,
-              mediaBytes: 0,
-              stagedRecordBytes: 0,
-              addedCount: 0,
-              changedCount: 0,
-              deletedCount: 0,
-              unchangedCount: 0,
-              unresolvedReferenceCount: 0,
-              timeOverlapCount: 0,
-              conflictCount: 0,
-              openSessionCount: 0,
-              localOpenSessionCount: 0,
-              applyReady: false,
-            ),
-            metrics: BackupArchiveReadMetrics(
-              recordCount: 0,
-              mediaCount: 0,
-              recordBytes: 0,
-              mediaBytes: 0,
-              archiveBytes: 0,
-              archiveSha256: List<int>.filled(32, 0),
-            ),
-            stagedRecordBytes: 0,
-            api: BackupImportApi(channel: importChannel),
-          );
-        };
+    Future<BackupRestoreImportResult> previewBackup({
+      required BackupEncryptedSource encryptedEnvelope,
+      required String password,
+      BackupCryptoCancellationToken? cancellationToken,
+    }) async {
+      expect(password, 'long-enough-password');
+      await encryptedEnvelope.openRead().drain<void>();
+      return BackupRestoreImportResult(
+        preview: const BackupImportPreview(
+          importId: 'stale-preview-import',
+          previewToken: 'stale-preview-token',
+          schemaVersion: currentBackupImportSchemaVersion,
+          localStateVersion: 12,
+          recordCount: 0,
+          mediaCount: 0,
+          mediaBytes: 0,
+          stagedRecordBytes: 0,
+          addedCount: 0,
+          changedCount: 0,
+          deletedCount: 0,
+          unchangedCount: 0,
+          unresolvedReferenceCount: 0,
+          timeOverlapCount: 0,
+          conflictCount: 0,
+          openSessionCount: 0,
+          localOpenSessionCount: 0,
+          applyReady: false,
+        ),
+        metrics: BackupArchiveReadMetrics(
+          recordCount: 0,
+          mediaCount: 0,
+          recordBytes: 0,
+          mediaBytes: 0,
+          archiveBytes: 0,
+          archiveSha256: List<int>.filled(32, 0),
+        ),
+        stagedRecordBytes: 0,
+        api: BackupImportApi(channel: importChannel),
+      );
+    }
 
     bool? routeResult;
     await tester.pumpWidget(
