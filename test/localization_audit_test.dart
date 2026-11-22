@@ -22,12 +22,13 @@ void example(String name) {
     ]);
   });
 
-  test('invoice and payment screens keep static copy in the catalogs', () {
+  test('invoice, payment, and quote invoice screens use catalog copy', () {
     const screens = {
       'invoice_detail_screen',
       'invoice_history_screen',
       'invoice_lifecycle_editor',
       'payment_editor',
+      'quote_invoice_screen',
     };
     const identifiers = {
       'balance-',
@@ -44,6 +45,14 @@ void example(String name) {
       'invoice-payment-command',
       'invoice-payment-note',
       'invoice-payment-submit',
+      'invoice-job/',
+      'invoice-task/',
+      'invoice-time/',
+      'quote-invoice-first',
+      'quote-invoice-last',
+      'quote-invoice-zone',
+      'quote-invoice-note',
+      'quote-invoice/',
     };
     for (final screen in screens) {
       final path = 'lib/business/$screen.dart';

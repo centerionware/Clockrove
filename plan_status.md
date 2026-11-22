@@ -181,7 +181,9 @@ and handoff failures now also use the catalogs. Quote and invoice editors,
 generated PDFs, and app-generated email text remain in localization scope.
 Quote draft line types, currency, optional links and line-add actions are
 catalog-backed. Actual-work invoice preparation now localizes its title,
-review actions, and current-tax and current-price override labels.
+review actions, current-tax and current-price override labels, validation and
+load failures, task summaries, revision heading, and elapsed-time units across
+the registered catalogs. The invoice source-audit test now includes this form.
 Native quote and invoice historical notices, historical email subject
 prefixes, attachment labels, and share chooser titles now use localized
 Android resources. Stored PDFs and saved email template expansions are
@@ -241,7 +243,8 @@ removed-job, price and tax comparisons are also localized.
 The correction editor also localizes voiding and reason-privacy guidance,
 replacement-line validation and edited line basis prefixes. The Flutter
 source audit test checks for new hardcoded copy in invoice detail, invoice
-history, payment, and correction screens. Native-provided labels and other
+history, payment, correction, and quote-to-invoice screens. Native-provided
+labels and other
 Flutter screens still need coverage. The new test awaits GitHub Actions.
 Other command
 rejections, payment event

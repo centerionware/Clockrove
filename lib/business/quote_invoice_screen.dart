@@ -11,8 +11,32 @@ import 'quote_api.dart';
 import 'quote_invoice_api.dart';
 import 'quote_scope_api.dart';
 import 'quote_scope_screen.dart';
-import 'report_screen.dart' show reportDuration;
 import 'tax_rate.dart';
+
+String _quoteInvoiceDuration(BuildContext context, String millis) {
+  final value = BigInt.parse(millis);
+  final hour = BigInt.from(3600000);
+  final minute = BigInt.from(60000);
+  final hours = value ~/ hour;
+  final minutes = value.remainder(hour) ~/ minute;
+  final remaining = value.remainder(minute);
+  final wholeSeconds = remaining ~/ BigInt.from(1000);
+  final fraction = remaining
+      .remainder(BigInt.from(1000))
+      .toString()
+      .padLeft(3, '0')
+      .replaceFirst(RegExp(r'0+$'), '');
+  final seconds = '$wholeSeconds${fraction.isEmpty ? '' : '.$fraction'}';
+  return AppMessage.quoteInvoiceDurationFormat.format(context, {
+    'hours': hours.toString(),
+    'minutes': minutes.toString(),
+    'seconds': remaining == BigInt.zero
+        ? ''
+        : AppMessage.quoteInvoiceDurationSeconds.format(context, {
+            'seconds': seconds,
+          }),
+  });
+}
 
 AppMessage quoteInvoiceProblem(String? code) => switch (code) {
   'QUOTE_INVOICE_MAPPING_REQUIRED' => AppMessage.quoteInvoiceMappingRequired,
@@ -188,12 +212,12 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         last = _last.text.trim(),
         zone = _zone.text.trim();
     if (!_date(first) || !_date(last) || first.compareTo(last) > 0) {
-      throw const FormatException(
-        'Enter valid dates as YYYY-MM-DD with the end on or after the start.',
-      );
+      throw FormatException(AppMessage.quoteInvoiceDateRangeInvalid.of(context));
     }
     if (_job == null || zone.isEmpty || zone.length > 100) {
-      throw const FormatException('Choose a mapped job and a report timezone.');
+      throw FormatException(
+        AppMessage.quoteInvoiceJobTimezoneRequired.of(context),
+      );
     }
     return QuoteInvoiceRequest(
       quoteId: widget.quoteId,
@@ -234,7 +258,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       if (mounted) {
         setState(() {
           _readFailed = true;
-          _message = 'Available work could not be read. Your selections and note are kept. Load available work before reviewing.';
+          _message = AppMessage.quoteInvoiceAvailableWorkReadFailed.of(context);
         });
       }
     } finally {
@@ -282,7 +306,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         setState(() {
           _reading = false;
           _readFailed = true;
-          _message = 'The updated scope could not be read. Reopen scope review and try again; your invoice draft is kept.';
+          _message = AppMessage.quoteInvoiceScopeReadFailed.of(context);
         });
       }
     }
@@ -290,38 +314,34 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
 
   QuoteInvoiceChoices _choices() {
     if (!_ready) {
-      throw const FormatException(
-        'Load available work before reviewing this invoice.',
+      throw FormatException(
+        AppMessage.quoteInvoiceLoadBeforeReview.of(context),
       );
     }
     if (_context!.historical && !_historical) {
-      throw const FormatException(
-        'Acknowledge the historical accepted revision.',
+      throw FormatException(
+        AppMessage.quoteInvoiceAcknowledgeHistory.of(context),
       );
     }
     if (_missingSelections) {
-      throw const FormatException(
-        'Some selected sources changed or were invoiced. Clear unavailable selections and review what remains.',
-      );
+      throw FormatException(AppMessage.quoteInvoiceSourcesStale.of(context));
     }
     if (_tasks.isEmpty && _times.isEmpty) {
-      throw const FormatException(
-        'Select actual work to include in this invoice.',
-      );
+      throw FormatException(AppMessage.quoteInvoiceSelectActualWork.of(context));
     }
     if (_context!.mode == 'HOURLY' && !_timeAllocation) {
-      throw const FormatException(
-        'Confirm that the selected real job time belongs to this quote.',
+      throw FormatException(
+        AppMessage.quoteInvoiceConfirmTimeBelongs.of(context),
       );
     }
     if (_currentPrices && !_currentAvailable) {
-      throw const FormatException(
-        'Current prices are missing. Choose accepted prices or update the job/task prices.',
+      throw FormatException(
+        AppMessage.quoteInvoiceCurrentPriceRequired.of(context),
       );
     }
     if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
-      throw const FormatException(
-        'Private review notes can be up to 2000 characters.',
+      throw FormatException(
+        AppMessage.quoteInvoicePrivateNoteTooLong.of(context),
       );
     }
     return QuoteInvoiceChoices(
@@ -355,7 +375,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       if (result.version != data.version) {
         setState(() {
           _dirty = true;
-          _message = 'Data changed. Load available work, review its latest values, and confirm again. Your selections and note are kept.';
+          _message = AppMessage.quoteInvoiceDataChanged.of(context);
         });
         return;
       }
@@ -369,8 +389,8 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
           result.taxUnits == null ||
           result.digits != data.digits ||
           result.currency != data.currency) {
-        throw const FormatException(
-          'The calculated invoice could not be verified. Load available work and review again.',
+        throw FormatException(
+          AppMessage.quoteInvoiceCalculationUnverified.of(context),
         );
       }
       setState(() => _reading = false);
@@ -399,7 +419,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ))
                   Text(AppMessage.quoteInvoiceReviewTaskLine.format(context, {'title': task.title, 'quantity': taskQuantity(task.actualQuantity), 'currency': data.currency, 'amount': money(choices.currentPrices ? task.currentPrice : task.acceptedPrice, data.digits)})),
                 for (final time in choices.times)
-                  Text(AppMessage.quoteInvoiceReviewTimeLine.format(context, {'title': time.label, 'duration': reportDuration(time.durationMillis)})),
+                  Text(AppMessage.quoteInvoiceReviewTimeLine.format(context, {'title': time.label, 'duration': _quoteInvoiceDuration(context, time.durationMillis)})),
                 const SizedBox(height: 12),
                 Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceSubtotal.of(context), 'amount': '${data.currency} ${money(result.subtotal, data.digits)}'})),
                 Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceTax.of(context), 'amount': '${data.currency} ${money(result.tax, data.digits)}'})),
@@ -437,7 +457,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       if (mounted) {
         setState(() {
           _readFailed = true;
-          _message = 'Invoice calculation could not be read. Your draft is kept. Load available work and review again.';
+          _message = AppMessage.quoteInvoiceCalculationReadFailed.of(context);
         });
       }
     } finally {
@@ -490,12 +510,13 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
             ),
             children: [
               Text(
-                '${_scope.issued.number} · Revision ${widget.revision}',
+                AppMessage.quoteInvoiceRevisionRef.format(context, {
+                  'number': _scope.issued.number,
+                  'revision': widget.revision.toString(),
+                }),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              const Text(
-                'Choose completed tasks or finalized time. Estimates do not create worked hours, task completion or payment.',
-              ),
+              Text(AppMessage.quoteInvoiceChooseActualWork.of(context)),
               if (_reading) const LinearProgressIndicator(),
               if (_message != null)
                 Text(
@@ -663,23 +684,30 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                           }),
                   ),
                 Text(
-                  'Actual work',
+                  AppMessage.quoteInvoiceActualWorkTitle.of(context),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 Text(AppMessage.quoteInvoiceActualWorkRules.of(context)),
                 if (data.mode == 'HOURLY') ...[
                   Text(AppMessage.quoteInvoiceEstimatedRate.format(context, {'hours': taskQuantity(data.estimatedHours), 'currency': data.currency, 'rate': money(data.acceptedRate, data.digits)})),
                   Text(AppMessage.quoteInvoiceCurrentRate.format(context, {'currency': data.currency, 'rate': data.currentRate == null ? AppMessage.quoteInvoiceRateUnset.of(context) : money(data.currentRate, data.digits)})),
-                  Text(AppMessage.quoteInvoiceSelectedDuration.format(context, {'duration': reportDuration(data.times.where((time) => _times.contains(time.key)).fold(BigInt.zero, (sum, time) => sum + BigInt.parse(time.durationMillis)).toString())})),
+                  Text(AppMessage.quoteInvoiceSelectedDuration.format(context, {'duration': _quoteInvoiceDuration(context, data.times.where((time) => _times.contains(time.key)).fold(BigInt.zero, (sum, time) => sum + BigInt.parse(time.durationMillis)).toString())})),
                 ],
                 for (final task in data.tasks)
                   CheckboxListTile(
                     key: ValueKey('invoice-task/${task.id}'),
                     contentPadding: EdgeInsets.zero,
                     title: Text(task.title),
-                    subtitle: Text(
-                      'Actual ${taskQuantity(task.actualQuantity)} · Estimated ${taskQuantity(task.estimatedQuantity)}\nAccepted ${data.currency} ${money(task.acceptedPrice, data.digits)} each · Current ${task.currentPrice == null ? 'unset' : money(task.currentPrice, data.digits)}\nCompleted ${task.completedLabel}',
-                    ),
+                    subtitle: Text(AppMessage.quoteInvoiceTaskDetails.format(context, {
+                      'actual': taskQuantity(task.actualQuantity),
+                      'estimated': taskQuantity(task.estimatedQuantity),
+                      'currency': data.currency,
+                      'accepted': money(task.acceptedPrice, data.digits),
+                      'current': task.currentPrice == null
+                          ? AppMessage.quoteInvoiceRateUnset.of(context)
+                          : money(task.currentPrice, data.digits),
+                      'completed': task.completedLabel,
+                    })),
                     value: _tasks.contains(task.id),
                     onChanged: !_ready
                         ? null
@@ -697,7 +725,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                     key: ValueKey('invoice-time/${time.key}'),
                     contentPadding: EdgeInsets.zero,
                     title: Text(time.label),
-                    subtitle: Text(reportDuration(time.durationMillis)),
+                    subtitle: Text(_quoteInvoiceDuration(context, time.durationMillis)),
                     value: _times.contains(time.key),
                     onChanged: !_ready
                         ? null
@@ -731,9 +759,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 if (data.mode == 'HOURLY')
                   CheckboxListTile(
                     value: _timeAllocation,
-                    title: const Text(
-                      'The selected actual job time belongs to this quote',
-                    ),
+                    title: Text(AppMessage.quoteInvoiceActualTimeBelongs.of(context)),
                     onChanged: !_enabled
                         ? null
                         : (value) => setState(() {
