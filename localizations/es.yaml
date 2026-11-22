@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Elige una copia de Clockrove e introduce su contraseñ
 restoreLocalTimerBlocking: "Hay un temporizador activo en este dispositivo. Detenlo, descarta la vista previa y crea otra antes de restaurar. La transacción también rechaza un temporizador local abierto."
 restorePreviewAlreadyStale: "Esta vista previa no se puede volver a aplicar. Descártala y selecciona la copia para crear otra vista previa con los datos actuales."
 restoreDeletionCountNote: "El total cuenta las marcas de eliminación de la copia, no todos los registros afectados."
+restoreCancelled: "Vista previa cancelada. No se cambiaron registros locales."
+restoreCleanupFailed: "No se pudieron eliminar los datos temporales de restauración. Cierra y vuelve a abrir Clockrove antes de reintentar."
+restoreFailed: "No se pudo procesar la copia. Comprueba el archivo seleccionado y vuelve a intentarlo."
+restoreUnlockFailed: "No se pudo desbloquear la copia. Comprueba la contraseña y el archivo."
+restoreAllConflictsReviewed: "Se revisaron todas las páginas de conflictos. Al aplicar, se comprueba la versión local y se guardan todas las opciones en una transacción."

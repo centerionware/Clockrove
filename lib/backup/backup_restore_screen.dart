@@ -42,9 +42,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _pageIndex = 0;
   int _furthestReviewedPage = -1;
   BackupCryptoCancellationToken? _cancellationToken;
-  String? _error;
+  AppMessage? _error;
   AppMessage? _message;
-  AppMessage? _restoreError;
   AppMessage? _passwordError;
   bool _busy = false;
   bool _passwordVisible = false;
@@ -97,7 +96,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
       _message = null;
     });
     BackupEncryptedDocument? selected;
@@ -179,7 +177,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
       _message = AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
@@ -250,7 +247,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
     });
     try {
       final page = await restore.api.readConflicts(
@@ -288,7 +284,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
     });
     try {
       await restore.api.resolveConflict(
@@ -375,7 +370,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
       _message = AppMessage.restoreApplying;
     });
     try {
@@ -397,7 +391,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           if (_requiresFreshPreview(error)) {
             _previewNeedsRefresh = true;
-            _restoreError = AppMessage.restorePreviewStale;
+            _error = AppMessage.restorePreviewStale;
             _message = AppMessage.restoreReviewAgain;
           } else {
             _error = _safeError(error);
@@ -415,7 +409,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _restoreError = null;
     });
     try {
       if (restore != null) await restore.close();
@@ -538,10 +531,10 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       key: const ValueKey('restore-message'),
                     ),
                   ],
-                  if (_error != null || _restoreError != null) ...[
+                  if (_error case final error?) ...[
                     const SizedBox(height: 12),
                     Text(
-                      _restoreError?.of(context) ?? _error!,
+                      error.of(context),
                       key: const ValueKey('restore-error'),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
@@ -609,9 +602,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 sliver: SliverList.list(
                   children: [
                     if (_page != null && _page!.done && _allConflictsReviewed)
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.fact_check_outlined,
-                        text: 'All conflict pages have been reviewed. Applying sends the choices to the native repository, which checks the local version and commits atomically.',
+                        text: AppMessage.restoreAllConflictsReviewed.of(context),
                       ),
                     if (_page != null && !_page!.done)
                       FilledButton.tonalIcon(
@@ -970,17 +963,13 @@ String _scalarText(BuildContext context, Object? value) {
   return '—';
 }
 
-String _safeError(Object error) {
-  if (error is BackupCryptoV2CancelledException) {
-    return 'Preview cancelled. No local records were changed.';
-  }
-  if (error is FormatException) return error.message.toString();
-  if (error is BackupRestoreImportCleanupException ||
-      error is BackupCryptoV2CleanupException) {
-    return 'Restore staging could not be cleaned up. Close Clockrove and reopen it before trying again.';
-  }
-  return 'The backup could not be processed. Check the selected file and try again.';
-}
+AppMessage _safeError(Object error) => switch (error) {
+  BackupCryptoV2CancelledException() => AppMessage.restoreCancelled,
+  BackupUnlockException() => AppMessage.restoreUnlockFailed,
+  BackupRestoreImportCleanupException() ||
+  BackupCryptoV2CleanupException() => AppMessage.restoreCleanupFailed,
+  _ => AppMessage.restoreFailed,
+};
 
 bool _requiresFreshPreview(Object error) =>
     error is PlatformException &&

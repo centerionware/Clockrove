@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Chọn bản sao lưu Clockrove và nhập mật khẩ
 restoreLocalTimerBlocking: "Bộ đếm giờ đang chạy trên thiết bị này. Hãy dừng bộ đếm, bỏ bản xem trước và tạo bản mới trước khi khôi phục. Giao dịch cũng từ chối khi bộ đếm giờ trên thiết bị còn mở."
 restorePreviewAlreadyStale: "Không thể áp dụng lại bản xem trước này. Hãy bỏ bản xem trước rồi chọn bản sao lưu để tạo bản xem trước của dữ liệu hiện tại."
 restoreDeletionCountNote: "Số dấu đánh dấu xóa là số dấu trong bản sao lưu, không phải mọi bản ghi bị ảnh hưởng."
+restoreCancelled: "Đã hủy bản xem trước. Không có bản ghi trên thiết bị nào bị thay đổi."
+restoreCleanupFailed: "Không thể dọn dữ liệu khôi phục tạm thời. Đóng rồi mở lại Clockrove trước khi thử lại."
+restoreFailed: "Không thể xử lý bản sao lưu. Kiểm tra tệp đã chọn rồi thử lại."
+restoreUnlockFailed: "Không thể mở khóa bản sao lưu. Hãy kiểm tra mật khẩu và tệp."
+restoreAllConflictsReviewed: "Đã xem tất cả các trang xung đột. Khi áp dụng, ứng dụng kiểm tra phiên bản trên thiết bị và lưu mọi lựa chọn trong một giao dịch."

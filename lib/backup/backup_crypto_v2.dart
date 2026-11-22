@@ -375,9 +375,7 @@ abstract final class BackupCryptoV2 {
         await _discardOrThrow(privateArchive, error);
       }
       if (error is _BackupEnvelopeInvalid) {
-        throw const FormatException(
-          'The backup could not be unlocked. Check the password and file.',
-        );
+        throw const BackupUnlockException();
       }
       Error.throwWithStackTrace(error, stackTrace);
     } finally {
@@ -663,6 +661,12 @@ final class _CancellableReadFailure implements _CancellableReadOutcome {
 
 final class _CancellableReadCancelled implements _CancellableReadOutcome {
   const _CancellableReadCancelled();
+}
+
+/// Authentication failed without revealing whether the password or file caused it.
+final class BackupUnlockException extends FormatException {
+  const BackupUnlockException()
+    : super('The backup could not be unlocked. Check the password and file.');
 }
 
 final class _BackupEnvelopeInvalid implements Exception {

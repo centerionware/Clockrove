@@ -169,3 +169,8 @@ restoreChooseAndProtect: "選擇 Clockrove 備份並輸入密碼。檔案會讀�
 restoreLocalTimerBlocking: "這部裝置上仍有計時器執行。請先停止計時器、捨棄此預覽，再建立新預覽後還原。如果本機計時器仍在執行，還原交易也會被拒絕。"
 restorePreviewAlreadyStale: "無法再次套用此預覽。請捨棄預覽，再選擇備份以建立目前資料的新預覽。"
 restoreDeletionCountNote: "此數量僅計算備份中的刪除標記，並非受影響的所有記錄。"
+restoreCancelled: "已取消預覽。未變更任何本機記錄。"
+restoreCleanupFailed: "無法清理還原暫存資料。請關閉並重新開啟 Clockrove 後再試一次。"
+restoreFailed: "無法處理備份。請檢查所選檔案後再試一次。"
+restoreUnlockFailed: "無法解鎖備份。請檢查密碼和檔案。"
+restoreAllConflictsReviewed: "已審查所有衝突頁面。套用時會檢查本機版本，並在一個交易中儲存所有選擇。"

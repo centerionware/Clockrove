@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Clockroveのバックアップを選び、パスワー
 restoreLocalTimerBlocking: "この端末でタイマーが動作中です。復元する前に停止し、このプレビューを破棄して新しいプレビューを作成してください。端末のタイマーが動作中の場合、復元処理も拒否されます。"
 restorePreviewAlreadyStale: "このプレビューは再適用できません。破棄してバックアップを選び直し、現在のデータのプレビューを作成してください。"
 restoreDeletionCountNote: "削除マーカーの件数はバックアップ内の削除記録の数で、影響を受ける全記録の数ではありません。"
+restoreCancelled: "プレビューをキャンセルしました。端末上の記録は変更されていません。"
+restoreCleanupFailed: "復元の一時データを削除できませんでした。再試行する前にClockroveを終了して開き直してください。"
+restoreFailed: "バックアップを処理できませんでした。選択したファイルを確認して再試行してください。"
+restoreUnlockFailed: "バックアップを解除できませんでした。パスワードとファイルを確認してください。"
+restoreAllConflictsReviewed: "すべての競合ページを確認しました。適用時に端末上のバージョンを確認し、すべての選択を1つのトランザクションで保存します。"

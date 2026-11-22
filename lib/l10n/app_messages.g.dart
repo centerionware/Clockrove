@@ -173,7 +173,12 @@ enum AppMessage {
   restoreChooseAndProtect("Choose a Clockrove backup and enter its password. The file is read into private encrypted staging; the password is never saved. Clockrove cannot recover it."),
   restoreLocalTimerBlocking("A timer is running on this device. Stop it, discard this preview, and create a fresh preview before restoring. The native transaction also rejects an open local timer."),
   restorePreviewAlreadyStale("This preview cannot be applied again. Discard it and select the backup to create a fresh preview of current data."),
-  restoreDeletionCountNote("Deletion markers count backup tombstones, not every record they affect.");
+  restoreDeletionCountNote("Deletion markers count backup tombstones, not every record they affect."),
+  restoreCancelled("Preview cancelled. No local records were changed."),
+  restoreCleanupFailed("Restore staging could not be cleaned up. Close Clockrove and reopen it before trying again."),
+  restoreFailed("The backup could not be processed. Check the selected file and try again."),
+  restoreUnlockFailed("The backup could not be unlocked. Check the password and file."),
+  restoreAllConflictsReviewed("All conflict pages have been reviewed. Applying sends the choices to the native repository, which checks the local version and commits atomically.");
 
   const AppMessage(this.english);
   final String english;

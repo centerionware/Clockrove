@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Bir Clockrove yedeği seçip parolasını girin. Dosya
 restoreLocalTimerBlocking: "Bu cihazda bir zamanlayıcı çalışıyor. Geri yüklemeden önce zamanlayıcıyı durdurun, önizlemeyi kapatın ve yeni bir önizleme oluşturun. Yerel zamanlayıcı açıkken işlem de reddedilir."
 restorePreviewAlreadyStale: "Bu önizleme yeniden uygulanamaz. Önizlemeyi kapatın ve güncel verilerin önizlemesini oluşturmak için yedeği seçin."
 restoreDeletionCountNote: "Silme sayısı, yedekteki silme işaretlerini sayar. Etkilenen her kayıt sayılmaz."
+restoreCancelled: "Önizleme iptal edildi. Yerel kayıtlar değiştirilmedi."
+restoreCleanupFailed: "Geçici geri yükleme verileri temizlenemedi. Tekrar denemeden önce Clockrove’u kapatıp açın."
+restoreFailed: "Yedek işlenemedi. Seçilen dosyayı kontrol edip tekrar deneyin."
+restoreUnlockFailed: "Yedeğin kilidi açılamadı. Parolayı ve dosyayı kontrol edin."
+restoreAllConflictsReviewed: "Tüm çakışma sayfaları incelendi. Uygulama sırasında yerel sürüm kontrol edilir ve tüm seçimler tek işlemde kaydedilir."

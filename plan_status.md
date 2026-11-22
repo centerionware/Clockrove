@@ -118,6 +118,10 @@ comparison headings, and boolean values also use the catalogs. Native record
 field labels and remaining review copy and error paths are still open.
 Restore password validation, staging instructions, timer and stale-preview
 warnings, and the deletion-count explanation now use the catalogs.
+The restore screen now maps cancellation, unlock failure, cleanup failure,
+and other errors to catalog keys. Low-level format errors use a general
+localized message, while an unlock failure still prompts users to check the
+password and file.
 Export phase labels, cancellation controls, and encrypted-byte progress now
 use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
 catalog keys. Export instructions, password validation, and dynamic summary

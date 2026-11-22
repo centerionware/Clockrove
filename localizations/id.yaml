@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Pilih cadangan Clockrove dan masukkan kata sandinya. F
 restoreLocalTimerBlocking: "Pencatat waktu sedang berjalan di perangkat ini. Hentikan, buang pratinjau, lalu buat pratinjau baru sebelum memulihkan. Transaksi juga menolak pencatat waktu lokal yang masih terbuka."
 restorePreviewAlreadyStale: "Pratinjau ini tidak dapat diterapkan lagi. Buang dan pilih cadangan untuk membuat pratinjau data terkini."
 restoreDeletionCountNote: "Jumlah ini menghitung penanda penghapusan dalam cadangan, bukan setiap catatan yang terdampak."
+restoreCancelled: "Pratinjau dibatalkan. Tidak ada catatan lokal yang diubah."
+restoreCleanupFailed: "Data pemulihan sementara tidak dapat dibersihkan. Tutup dan buka kembali Clockrove sebelum mencoba lagi."
+restoreFailed: "Cadangan tidak dapat diproses. Periksa file yang dipilih dan coba lagi."
+restoreUnlockFailed: "Cadangan tidak dapat dibuka. Periksa kata sandi dan file."
+restoreAllConflictsReviewed: "Semua halaman konflik telah ditinjau. Saat diterapkan, versi lokal diperiksa dan semua pilihan disimpan dalam satu transaksi."

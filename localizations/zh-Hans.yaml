@@ -169,3 +169,8 @@ restoreChooseAndProtect: "选择 Clockrove 备份并输入密码。文件将读�
 restoreLocalTimerBlocking: "此设备上仍有计时器运行。请先停止计时器、放弃此预览，再创建新预览后恢复。如果本地计时器仍在运行，恢复事务也会被拒绝。"
 restorePreviewAlreadyStale: "无法再次应用此预览。请将其放弃，然后选择备份以创建当前数据的新预览。"
 restoreDeletionCountNote: "此数量仅统计备份中的删除标记，并非受影响的所有记录。"
+restoreCancelled: "已取消预览。未更改任何本地记录。"
+restoreCleanupFailed: "无法清理恢复临时数据。请关闭并重新打开 Clockrove 后再试。"
+restoreFailed: "无法处理备份。请检查所选文件后重试。"
+restoreUnlockFailed: "无法解锁备份。请检查密码和文件。"
+restoreAllConflictsReviewed: "已审核所有冲突页面。应用时会检查本地版本，并在一个事务中保存所有选择。"

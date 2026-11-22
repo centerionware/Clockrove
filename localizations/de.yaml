@@ -169,3 +169,8 @@ restoreChooseAndProtect: "Wähle eine Clockrove-Sicherung und gib ihr Passwort e
 restoreLocalTimerBlocking: "Auf diesem Gerät läuft ein Timer. Stoppe ihn, verwirf die Vorschau und erstelle vor der Wiederherstellung eine neue Vorschau. Mit einem aktiven lokalen Timer wird die Transaktion abgelehnt."
 restorePreviewAlreadyStale: "Diese Vorschau lässt sich nicht erneut anwenden. Verwirf sie und wähle die Sicherung für eine neue Vorschau der aktuellen Daten."
 restoreDeletionCountNote: "Die Anzahl der Löschmarkierungen bezieht sich auf die Markierungen in der Sicherung, nicht auf alle betroffenen Datensätze."
+restoreCancelled: "Vorschau abgebrochen. Lokale Datensätze wurden nicht geändert."
+restoreCleanupFailed: "Die temporären Wiederherstellungsdaten konnten nicht entfernt werden. Schließe und öffne Clockrove vor einem neuen Versuch."
+restoreFailed: "Die Sicherung konnte nicht verarbeitet werden. Prüfe die ausgewählte Datei und versuche es erneut."
+restoreUnlockFailed: "Die Sicherung konnte nicht entsperrt werden. Prüfe Passwort und Datei."
+restoreAllConflictsReviewed: "Alle Konfliktseiten wurden geprüft. Beim Anwenden wird die lokale Version geprüft und die Auswahl in einer Transaktion gespeichert."
