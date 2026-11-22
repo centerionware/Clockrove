@@ -12,7 +12,8 @@ enum HelpTopic {
     'Location and site automation',
     'Open a job’s settings to add a work site and enable automation. '
         'Allow precise location and, where Android requires it, background '
-        'location. Check the site monitoring status if a transition is missed. '
+        'location. If an arrival is missed, check that the site is enabled '
+        'and use Refresh site monitoring or Retry site monitoring if shown. '
         'Once monitoring is ready, leave the site and return for a new arrival. '
         'You can clock in or out manually while troubleshooting.',
   ),
