@@ -167,7 +167,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             Text(data.jobName, style: Theme.of(context).textTheme.titleLarge),
             if (data.customer.isNotEmpty) Text(data.customer),
             if (data.jobDeleted)
-              const Text('Job deleted · financial records retained'),
+              Text(AppMessage.invoiceDeletedJobRetained.of(context)),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
@@ -277,7 +277,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             ),
             const SizedBox(height: 8),
             Text(
-              voided ? 'This invoice is void. No payment is due on it.' : 'Prepare the current balance and open an email draft with its PDF attached.',
+              voided
+                  ? AppMessage.invoiceVoidNotice.of(context)
+                  : AppMessage.invoiceCurrentCopyHelp.of(context),
             ),
             if (voided) ...[
               OutlinedButton.icon(
@@ -296,10 +298,14 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 ),
               if (data.cancellation != null)
                 ExpansionTile(
-                  title: const Text('Cancellation history'),
+                  title: Text(AppMessage.invoiceCancellationHistory.of(context)),
                   children: [
                     Text(data.cancellation!.createdLabel),
-                    Text('Internal reason: ${data.cancellation!.reason}'),
+                    Text(
+                      AppMessage.invoiceCancellationReason.format(context, {
+                        'reason': data.cancellation!.reason,
+                      }),
+                    ),
                   ],
                 ),
             ],
@@ -311,26 +317,28 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 child: Text(AppMessage.openOriginalInvoice.of(context)),
               ),
             if (data.accountingEmail.isEmpty)
-              const Text(
-                'No accounting copy address is configured. Add a company or accounts receivable email in Settings.',
+              Text(
+                AppMessage.invoiceMissingAccountingEmail.of(context),
               )
             else
               Text(
                 data.accountingEmail.toLowerCase() ==
                         data.customerEmail.toLowerCase()
-                    ? 'The accounting address is already the customer recipient.'
-                    : 'Email copies CC ${data.accountingEmail}.',
+                    ? AppMessage.invoiceAccountingEmailMatches.of(context)
+                    : AppMessage.invoiceAccountingEmailCc.format(context, {
+                        'email': data.accountingEmail,
+                      }),
               ),
             if (widget.refreshFailed)
-              const Text(
-                'Refresh failed. Saved details are shown; refresh before making changes.',
+              Text(
+                AppMessage.invoiceDetailsRefreshFailed.of(context),
               ),
             if (data.legacy) ...[
               const SizedBox(height: 20),
               Text(
                 data.jobDeleted
-                    ? 'Historical work links are unavailable for this deleted job.'
-                    : 'Billed work on this historical invoice needs review.',
+                    ? AppMessage.invoiceHistoricalSourcesUnavailable.of(context)
+                    : AppMessage.invoiceBilledWorkReview.of(context),
               ),
               if (!data.jobDeleted)
                 TextButton.icon(

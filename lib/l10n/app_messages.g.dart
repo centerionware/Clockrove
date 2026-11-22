@@ -493,7 +493,16 @@ enum AppMessage {
   openReplacementInvoice("Open replacement invoice"),
   openOriginalInvoice("Open original invoice"),
   invoicePaymentHistory("Payment history"),
-  invoiceSavedCopies("Saved copies");
+  invoiceSavedCopies("Saved copies"),
+  invoiceVoidNotice("This invoice is void. No payment is due on it."),
+  invoiceCurrentCopyHelp("Prepare the current balance and open an email draft with its PDF attached."),
+  invoiceCancellationHistory("Cancellation history"),
+  invoiceCancellationReason("Internal reason: {reason}"),
+  invoiceMissingAccountingEmail("No accounting copy address is configured. Add a company or accounts receivable email in Settings."),
+  invoiceAccountingEmailMatches("The accounting address is already the customer recipient."),
+  invoiceAccountingEmailCc("Email copies CC {email}."),
+  invoiceDetailsRefreshFailed("Refresh failed. Saved details are shown; refresh before making changes."),
+  invoiceDeletedJobRetained("Job deleted · financial records retained");
 
   const AppMessage(this.english);
   final String english;
