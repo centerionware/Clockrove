@@ -18,7 +18,11 @@ Statuses describe evidence, not intent.
   failed in the Android resolver when the visible **Just once** button could
   not be activated through accessibility. The instrumentation test now taps
   the enabled button by its on-screen bounds and waits for DocumentsUI.
-  GitHub Actions validation of the fix is pending.
+  [Validation on `5640595`](https://github.com/centerionware/Clockrove/actions/runs/45062942453)
+  passed API 24 authenticated streaming preview and fixture export, then failed
+  when the system picker could not activate Download. The follow-up uses a
+  dedicated shared-storage fixture folder and screen taps for system controls.
+  Both APIs still need passing picker and committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

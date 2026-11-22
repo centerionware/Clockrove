@@ -45,8 +45,8 @@ class BackupPickerDeviceTest {
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
         openPicker()
-        if (findLabel(FIXTURE) == null) openSharedDownloadDirectory()
-        click(FIXTURE)
+        if (findLabel(FIXTURE) == null) openSharedFixtureDirectory()
+        clickPickerLabel(FIXTURE)
         waitFor("encrypted document staged") { findLabel("Selected encrypted file", prefix = true) }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
@@ -90,20 +90,23 @@ class BackupPickerDeviceTest {
         assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
     }
 
-    private fun openSharedDownloadDirectory() {
+    private fun openSharedFixtureDirectory() {
         showPickerRoots()
         val device = sharedStorageRoot() ?: run {
             val window = requireNotNull(automation.rootInActiveWindow)
             val bounds = Rect().also(window::getBoundsInScreen)
             // Tapping the dimmed pane closes the roots drawer without exiting Documents.
             runShellInput("tap ${bounds.right - 8} ${bounds.centerY()}")
-            click("More options")
-            click("Show internal storage")
+            clickPickerLabel("More options")
+            clickPickerLabel("Show internal storage")
             showPickerRoots()
             waitFor("shared storage root", ::sharedStorageRoot)
         }
-        clickNode(device)
-        click("Download")
+        tapPickerNode(device)
+        waitFor("closed document roots") {
+            automation.rootInActiveWindow?.takeIf { findLabel("Open from") == null }
+        }
+        clickPickerLabel(FIXTURE_DIRECTORY)
     }
 
     private fun showPickerRoots() {
@@ -111,7 +114,7 @@ class BackupPickerDeviceTest {
         val roots = waitFor("document roots") {
             findLabel("Show roots") ?: findLabel("Open navigation drawer")
         }
-        clickNode(roots)
+        tapPickerNode(roots)
         waitFor("open document roots") { findLabel("Open from") }
     }
 
@@ -135,7 +138,7 @@ class BackupPickerDeviceTest {
             }
         }
         if (picker.packageName?.toString() == "android" && findLabel("Documents") != null) {
-            click("Documents")
+            clickPickerLabel("Documents")
         }
         var confirmedResolver = false
         waitFor("Android document picker") {
@@ -145,8 +148,7 @@ class BackupPickerDeviceTest {
                 if (once != null) {
                     val bounds = Rect().also(once::getBoundsInScreen)
                     if (!bounds.isEmpty) {
-                        // The resolver can expose a visible button without an accessibility click action.
-                        runShellInput("tap ${bounds.centerX()} ${bounds.centerY()}")
+                        tapPickerNode(once)
                         confirmedResolver = true
                     }
                 }
@@ -191,13 +193,25 @@ class BackupPickerDeviceTest {
         clickNode(node)
     }
 
+    private fun clickPickerLabel(label: String) {
+        val node = waitFor(label) { findLabel(label)?.takeIf { it.isEnabled } }
+        tapPickerNode(node)
+    }
+
+    private fun tapPickerNode(node: AccessibilityNodeInfo) {
+        // Documents and the resolver can display rows without exposing ACTION_CLICK.
+        val bounds = Rect().also(node::getBoundsInScreen)
+        if (bounds.isEmpty) failWithScreenshot("No tap bounds for ${node.text ?: node.contentDescription}")
+        runShellInput("tap ${bounds.centerX()} ${bounds.centerY()}")
+    }
+
     private fun clickNode(node: AccessibilityNodeInfo) {
         var target: AccessibilityNodeInfo? = node
         while (target != null) {
             if (target.isClickable && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
             target = target.parent
         }
-        throw AssertionError("Could not activate ${node.text ?: node.contentDescription}")
+        failWithScreenshot("Could not activate ${node.text ?: node.contentDescription}")
     }
 
     private fun <T : Any> waitFor(label: String, find: () -> T?): T {
@@ -206,6 +220,10 @@ class BackupPickerDeviceTest {
             find()?.let { return it }
             SystemClock.sleep(100)
         }
+        failWithScreenshot("Android did not expose $label")
+    }
+
+    private fun failWithScreenshot(message: String): Nothing {
         val activePackage = automation.rootInActiveWindow?.packageName
         try {
             val capture = File(instrumentation.targetContext.getExternalFilesDir(null), "backup-picker-failure.png")
@@ -219,11 +237,12 @@ class BackupPickerDeviceTest {
         } catch (_: Exception) {
             // Keep the original failure even if the runner cannot save a screenshot.
         }
-        throw AssertionError("Android did not expose $label (active package: $activePackage)")
+        throw AssertionError("$message (active package: $activePackage)")
     }
 
     companion object {
         private val DOCUMENT_PICKER_PACKAGES = setOf("com.android.documentsui", "com.google.android.documentsui")
+        private const val FIXTURE_DIRECTORY = "Clockrove-CI-Backup"
         private const val FIXTURE = "clockrove-picker-fixture.clockrove"
         private const val PASSWORD = "synthetic-document-fixture-password"
     }

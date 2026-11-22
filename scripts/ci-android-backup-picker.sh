@@ -8,6 +8,9 @@ api="${1:?Android API required}"
 app_apk="${2:?Validation APK required}"
 test_apk="${3:?Instrumentation APK required}"
 package=io.github.centerionware.clockrove
+# Use a distinct folder in primary shared storage, separate from the Downloads provider.
+shared_directory=/sdcard/Clockrove-CI-Backup
+shared_fixture="$shared_directory/clockrove-picker-fixture.clockrove"
 results="$GITHUB_WORKSPACE/build/device-test-results/api-$api"
 mkdir -p "$results"
 fixture_log="$results/backup-picker-fixture.txt"
@@ -29,8 +32,8 @@ fixture_path="${fixture_marker#CLOCKROVE_DOCUMENT_FIXTURE path=}"
 [[ -n "$fixture_path" ]]
 timeout 30 adb -s emulator-5554 exec-out run-as "$package" cat "$fixture_path" > "$fixture_file"
 [[ -s "$fixture_file" && "$(wc -c < "$fixture_file")" -le 1048576 ]]
-timeout 30 adb -s emulator-5554 shell mkdir -p /sdcard/Download
-timeout 30 adb -s emulator-5554 push "$fixture_file" /sdcard/Download/clockrove-picker-fixture.clockrove
+timeout 30 adb -s emulator-5554 shell mkdir -p "$shared_directory"
+timeout 30 adb -s emulator-5554 push "$fixture_file" "$shared_fixture"
 for picker in com.android.documentsui com.google.android.documentsui; do
   timeout 30 adb -s emulator-5554 shell pm enable --user 0 "$picker" >/dev/null 2>&1 || true
 done
@@ -58,4 +61,5 @@ assert case.attrib["name"] == "documentPickerRestoresIntoAnIndependentDatabase",
 PY_DEVICE
 # Leave a fresh app database and remove only the synthetic shared file.
 clear_fixture_app
-timeout 30 adb -s emulator-5554 shell rm -f /sdcard/Download/clockrove-picker-fixture.clockrove
+timeout 30 adb -s emulator-5554 shell rm -f "$shared_fixture"
+timeout 30 adb -s emulator-5554 shell rmdir "$shared_directory"
