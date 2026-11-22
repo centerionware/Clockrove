@@ -218,7 +218,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Create an encrypted backup or restore one onto this device. Review conflicts before the native repository applies a restore.',
+          'Save an encrypted copy of your records. When you restore a backup, review the proposed changes before applying them.',
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
