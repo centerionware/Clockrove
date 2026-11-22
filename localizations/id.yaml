@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Disimpan di catatan Anda dan tidak disertakan dalam PD
 paymentReversalReceiptHelp: "Kuitansi asli tetap tersimpan dalam riwayat. Catat alasan koreksi entri ini."
 paymentReceivedHelp: "Catat pembayaran yang telah Anda terima."
 paymentConfirmReceiptHelp: "Konfirmasi menyimpan entri ini dan membuka kuitansinya."
+paymentBalanceRefreshFailed: "Saldo gagal dimuat ulang. Draf Anda tetap tersimpan. Muat ulang sebelum menyimpan."
+paymentBalanceChanged: "Saldo atau pembayaran ini berubah. Tinjau tagihan terbaru sebelum melanjutkan."

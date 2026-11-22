@@ -538,7 +538,9 @@ enum AppMessage {
   paymentInternalNoteHelp("Kept in your records; omitted from customer PDFs."),
   paymentReversalReceiptHelp("Its original receipt remains in history. Record the reason for correcting this entry."),
   paymentReceivedHelp("Record a payment you have received."),
-  paymentConfirmReceiptHelp("Confirmation saves this entry and opens its receipt.");
+  paymentConfirmReceiptHelp("Confirmation saves this entry and opens its receipt."),
+  paymentBalanceRefreshFailed("Balance refresh failed. Your draft is kept. Refresh before saving."),
+  paymentBalanceChanged("This balance or payment changed. Review the latest invoice before continuing.");
 
   const AppMessage(this.english);
   final String english;

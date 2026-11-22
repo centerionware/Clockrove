@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "내부 기록에 저장되며 고객용 PDF에는 포�
 paymentReversalReceiptHelp: "원본 영수증은 내역에 남습니다. 이 기록을 정정하는 이유를 입력하세요."
 paymentReceivedHelp: "받은 결제를 기록하세요."
 paymentConfirmReceiptHelp: "확인하면 이 항목이 저장되고 영수증이 열립니다."
+paymentBalanceRefreshFailed: "잔액을 새로고침하지 못했습니다. 초안은 유지됩니다. 저장하기 전에 새로고침하세요."
+paymentBalanceChanged: "잔액 또는 결제 내역이 변경되었습니다. 계속하기 전에 최신 청구서를 확인하세요."

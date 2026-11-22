@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "内部記録に保存され、顧客向けPDFには表
 paymentReversalReceiptHelp: "元の領収書は履歴に残ります。この記録を訂正する理由を入力してください。"
 paymentReceivedHelp: "受け取った支払いを記録します。"
 paymentConfirmReceiptHelp: "確定するとこの記録が保存され、領収書が開きます。"
+paymentBalanceRefreshFailed: "残額を更新できませんでした。下書きは保持されています。保存する前に更新してください。"
+paymentBalanceChanged: "残額または支払いが変更されました。続行する前に最新の請求書を確認してください。"

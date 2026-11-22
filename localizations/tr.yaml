@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Kayıtlarınızda saklanır ve müşteri PDF’lerine 
 paymentReversalReceiptHelp: "Asıl makbuz geçmişte saklanır. Bu kaydı düzeltme nedeninizi yazın."
 paymentReceivedHelp: "Aldığınız bir ödemeyi kaydedin."
 paymentConfirmReceiptHelp: "Onayladığınızda kayıt saklanır ve makbuz açılır."
+paymentBalanceRefreshFailed: "Bakiye yenilenemedi. Taslağınız saklandı. Kaydetmeden önce yenileyin."
+paymentBalanceChanged: "Bu bakiye veya ödeme değişti. Devam etmeden önce güncel faturayı inceleyin."

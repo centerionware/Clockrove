@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Se guarda en tus registros y se excluye del PDF del cl
 paymentReversalReceiptHelp: "El recibo original se conserva en el historial. Indica el motivo de esta corrección."
 paymentReceivedHelp: "Registra un pago que hayas recibido."
 paymentConfirmReceiptHelp: "Al confirmar, se guarda el registro y se abre el recibo."
+paymentBalanceRefreshFailed: "No se pudo actualizar el saldo. Se conserva tu borrador. Actualiza antes de guardar."
+paymentBalanceChanged: "El saldo o el pago ha cambiado. Revisa la factura más reciente antes de continuar."

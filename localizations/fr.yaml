@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Conservée dans vos dossiers et exclue des PDF destin�
 paymentReversalReceiptHelp: "Le reçu original reste dans l’historique. Indiquez le motif de cette correction."
 paymentReceivedHelp: "Enregistrez un paiement que vous avez reçu."
 paymentConfirmReceiptHelp: "La confirmation enregistre cette opération et ouvre son reçu."
+paymentBalanceRefreshFailed: "Le solde n’a pas pu être actualisé. Votre brouillon est conservé. Actualisez avant d’enregistrer."
+paymentBalanceChanged: "Le solde ou le paiement a changé. Consultez la facture la plus récente avant de continuer."

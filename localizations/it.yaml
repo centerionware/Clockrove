@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Resta nei tuoi registri ed è esclusa dai PDF per i cl
 paymentReversalReceiptHelp: "La ricevuta originale rimane nella cronologia. Indica il motivo della correzione."
 paymentReceivedHelp: "Registra un pagamento ricevuto."
 paymentConfirmReceiptHelp: "La conferma salva la registrazione e apre la ricevuta."
+paymentBalanceRefreshFailed: "Aggiornamento del saldo non riuscito. La bozza è conservata. Aggiorna prima di salvare."
+paymentBalanceChanged: "Il saldo o il pagamento è cambiato. Controlla la fattura più recente prima di continuare."

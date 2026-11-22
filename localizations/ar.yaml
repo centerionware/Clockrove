@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "تُحفظ في سجلاتك وتُستبعد من م�
 paymentReversalReceiptHelp: "يبقى الإيصال الأصلي في السجل. سجّل سبب تصحيح هذا القيد."
 paymentReceivedHelp: "سجّل دفعة استلمتها."
 paymentConfirmReceiptHelp: "يؤدي التأكيد إلى حفظ هذا القيد وفتح إيصال الدفع."
+paymentBalanceRefreshFailed: "تعذر تحديث الرصيد. تم الاحتفاظ بمسودتك. حدّث الرصيد قبل الحفظ."
+paymentBalanceChanged: "تغيّر الرصيد أو الدفعة. راجع أحدث فاتورة قبل المتابعة."

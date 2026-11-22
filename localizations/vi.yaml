@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Được giữ trong hồ sơ của bạn và không x
 paymentReversalReceiptHelp: "Biên nhận gốc vẫn được lưu trong lịch sử. Hãy ghi lý do điều chỉnh mục này."
 paymentReceivedHelp: "Ghi nhận khoản thanh toán bạn đã nhận."
 paymentConfirmReceiptHelp: "Khi xác nhận, mục này được lưu và biên nhận sẽ mở."
+paymentBalanceRefreshFailed: "Không thể làm mới số dư. Bản nháp vẫn được giữ. Hãy làm mới trước khi lưu."
+paymentBalanceChanged: "Số dư hoặc khoản thanh toán đã thay đổi. Hãy xem hóa đơn mới nhất trước khi tiếp tục."

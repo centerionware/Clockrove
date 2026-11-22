@@ -426,13 +426,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             Text(AppMessage.paymentConfirmReceiptHelp.of(context)),
             const SizedBox(height: 12),
             if (widget.refreshFailed)
-              const Text(
-                'Balance refresh failed. Your draft is kept. Refresh before saving.',
-              ),
+              Text(AppMessage.paymentBalanceRefreshFailed.of(context)),
             if (!available)
-              const Text(
-                'This balance or payment changed. Review the latest invoice before continuing.',
-              ),
+              Text(AppMessage.paymentBalanceChanged.of(context)),
             KeyedSubtree(
               key: const ValueKey('invoice-payment-submit'),
               child: _correction

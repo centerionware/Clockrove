@@ -215,8 +215,8 @@ receipt labels, and balance and collected-tax summaries. The payment
 editor uses localized titles, amount, method and reference labels, date
 controls, confirmation actions, and timezone and internal-note guidance.
 The editor also localizes the balance summary, receipt confirmation, and
-guidance for recording or reversing payments. Other editor notices and
-errors remain open.
+guidance for recording or reversing payments. Stale balances and failed
+refresh notices come from the catalogs. Editor validation errors remain open.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

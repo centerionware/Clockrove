@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "আপনার রেকর্ডে থাকবে�
 paymentReversalReceiptHelp: "মূল রসিদ ইতিহাসে থাকবে। এই এন্ট্রি সংশোধনের কারণ লিখুন।"
 paymentReceivedHelp: "আপনি যে পেমেন্ট পেয়েছেন তা রেকর্ড করুন।"
 paymentConfirmReceiptHelp: "নিশ্চিত করলে এই এন্ট্রি সংরক্ষিত হবে এবং রসিদ খুলবে।"
+paymentBalanceRefreshFailed: "বকেয়া রিফ্রেশ করা যায়নি। আপনার খসড়া রাখা হয়েছে। সংরক্ষণের আগে রিফ্রেশ করুন।"
+paymentBalanceChanged: "বকেয়া বা পেমেন্ট বদলেছে। চালিয়ে যাওয়ার আগে সর্বশেষ চালান দেখুন।"

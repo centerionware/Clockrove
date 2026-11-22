@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "保存在您的记录中，不会出现在发给客户
 paymentReversalReceiptHelp: "原始收据仍会保留在历史记录中。请记录更正此条目的原因。"
 paymentReceivedHelp: "记录您收到的付款。"
 paymentConfirmReceiptHelp: "确认后会保存此条目并打开收据。"
+paymentBalanceRefreshFailed: "余额刷新失败。草稿已保留。请先刷新再保存。"
+paymentBalanceChanged: "余额或付款已更改。请查看最新发票后再继续。"

@@ -534,3 +534,5 @@ paymentInternalNoteHelp: "Bleibt in Ihren Unterlagen und erscheint nicht in Kund
 paymentReversalReceiptHelp: "Der ursprüngliche Beleg bleibt im Verlauf erhalten. Geben Sie den Grund für diese Korrektur an."
 paymentReceivedHelp: "Erfassen Sie eine erhaltene Zahlung."
 paymentConfirmReceiptHelp: "Beim Bestätigen wird der Eintrag gespeichert und der Beleg geöffnet."
+paymentBalanceRefreshFailed: "Der Saldo konnte nicht aktualisiert werden. Ihr Entwurf bleibt erhalten. Aktualisieren Sie vor dem Speichern."
+paymentBalanceChanged: "Der Saldo oder die Zahlung hat sich geändert. Prüfen Sie die aktuelle Rechnung, bevor Sie fortfahren."
