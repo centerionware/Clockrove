@@ -116,6 +116,8 @@ catalogs. The restore preview totals use translated labels, locale-formatted
 record counts, and a translated media-size template. Conflict titles,
 comparison headings, and boolean values also use the catalogs. Native record
 field labels and remaining review copy and error paths are still open.
+Restore password validation, staging instructions, timer and stale-preview
+warnings, and the deletion-count explanation now use the catalogs.
 Export phase labels, cancellation controls, and encrypted-byte progress now
 use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
 catalog keys. Export instructions, password validation, and dynamic summary

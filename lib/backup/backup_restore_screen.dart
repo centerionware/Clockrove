@@ -45,7 +45,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   String? _error;
   AppMessage? _message;
   AppMessage? _restoreError;
-  String? _passwordError;
+  AppMessage? _passwordError;
   bool _busy = false;
   bool _passwordVisible = false;
   bool _applied = false;
@@ -163,9 +163,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final byteLength = utf8.encode(_password.text).length;
     setState(() {
       _passwordError = byteLength < 12
-          ? 'Enter the backup password (at least 12 UTF-8 bytes).'
+          ? AppMessage.restorePasswordShort
           : byteLength > 1024
-          ? 'The password is longer than the supported limit.'
+          ? AppMessage.restorePasswordLong
           : null;
     });
     return _passwordError == null;
@@ -459,9 +459,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
               sliver: SliverList.list(
                 children: [
-                  const Text(
-                    'Choose a Clockrove backup and enter its password. The file is read into private encrypted staging; the password is never saved. Clockrove cannot recover it.',
-                  ),
+                  Text(AppMessage.restoreChooseAndProtect.of(context)),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     key: const ValueKey('restore-choose-backup'),
@@ -496,7 +494,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       enableSuggestions: false,
                       decoration: InputDecoration(
                         labelText: AppMessage.backupPassword.of(context),
-                        errorText: _passwordError,
+                        errorText: _passwordError?.of(context),
                         suffixIcon: IconButton(
                           tooltip: _passwordVisible
                               ? AppMessage.hidePassword.of(context)
@@ -562,18 +560,18 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     ],
                     if (preview.localOpenSessionCount > 0) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.pause_circle_outline,
                         isError: true,
-                        text: 'A timer is running on this device. Stop it, discard this preview, and create a fresh preview before restoring. The native transaction also rejects an open local timer.',
+                        text: AppMessage.restoreLocalTimerBlocking.of(context),
                       ),
                     ],
                     if (_previewNeedsRefresh) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.refresh,
                         isError: true,
-                        text: 'This preview cannot be applied again. Discard it and select the backup to create a fresh preview of current data.',
+                        text: AppMessage.restorePreviewAlreadyStale.of(context),
                       ),
                     ],
                     if (_page != null && _page!.conflicts.isNotEmpty) ...[
@@ -706,11 +704,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             label: AppMessage.restoreOverlapConflicts,
             count: preview.timeOverlapCount,
           ),
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text(
-              'Deletion markers count backup tombstones, not every record they affect.',
-            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(AppMessage.restoreDeletionCountNote.of(context)),
           ),
           _CountLine(
             label: AppMessage.restoreMediaFiles,

@@ -167,7 +167,13 @@ enum AppMessage {
   restoreSkippedDependency("Record depends on a skipped item"),
   restoreTableConflict("{table} conflict"),
   yes("Yes"),
-  no("No");
+  no("No"),
+  restorePasswordShort("Enter the backup password (at least 12 UTF-8 bytes)."),
+  restorePasswordLong("The password is longer than the supported limit."),
+  restoreChooseAndProtect("Choose a Clockrove backup and enter its password. The file is read into private encrypted staging; the password is never saved. Clockrove cannot recover it."),
+  restoreLocalTimerBlocking("A timer is running on this device. Stop it, discard this preview, and create a fresh preview before restoring. The native transaction also rejects an open local timer."),
+  restorePreviewAlreadyStale("This preview cannot be applied again. Discard it and select the backup to create a fresh preview of current data."),
+  restoreDeletionCountNote("Deletion markers count backup tombstones, not every record they affect.");
 
   const AppMessage(this.english);
   final String english;
