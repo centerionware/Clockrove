@@ -22,7 +22,11 @@ Statuses describe evidence, not intent.
   passed API 24 authenticated streaming preview and fixture export, then failed
   when the system picker could not activate Download. The follow-up uses a
   dedicated shared-storage fixture folder and screen taps for system controls.
-  Both APIs still need passing picker and committed-merge evidence.
+  [Validation on `5e97816`](https://github.com/centerionware/Clockrove/actions/runs/45065306259)
+  passed the API 24 crypto benchmark, then failed clearing Clockrove before
+  picker fixture export. The benchmark uninstalls its APK, so the picker setup
+  now installs the validation APK before clearing the database. Both APIs still
+  need passing picker and committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

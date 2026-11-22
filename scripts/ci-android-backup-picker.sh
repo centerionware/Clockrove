@@ -17,9 +17,16 @@ fixture_log="$results/backup-picker-fixture.txt"
 fixture_file="$(mktemp "$RUNNER_TEMP/clockrove-picker.XXXXXX")"
 trap 'rm -f "$fixture_file"' EXIT
 clear_fixture_app() {
-  timeout 30 adb -s emulator-5554 shell pm clear "$package" | grep -Fx Success
+  local result
+  if ! result="$(timeout 30 adb -s emulator-5554 shell pm clear "$package" 2>&1)" ||
+    [[ "${result//$'\r'/}" != Success ]]; then
+    printf 'Could not clear %s on API %s: %s\n' "$package" "$api" "$result" >&2
+    return 1
+  fi
 }
 
+# Flutter's preceding crypto benchmark uninstalls its APK after completion.
+clockrove_install_apk "$api" app "$app_apk"
 clear_fixture_app
 clockrove_run_flutter_integration_test "$api" backup-picker-fixture \
   'CLOCKROVE_DOCUMENT_FIXTURE path=/[^[:space:]]+/clockrove-picker-fixture\.clockrove' \
