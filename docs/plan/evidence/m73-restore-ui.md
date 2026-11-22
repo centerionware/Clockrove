@@ -138,3 +138,9 @@ starting the backup picker test. The system picker and merge are still pending.
 confirmed that the shell cannot disable the fixture activity by component.
 The test now handles the visible Android resolver and explicitly selects
 Documents when necessary. It still requires the system picker to open.
+
+[Actions 45028456600](https://github.com/centerionware/Clockrove/actions/runs/45028456600)
+reached Documents on API 24, then Android rejected Back from the app-scoped
+instrumentation API because Documents belongs to another package. The test
+now sends Back through the same UI automation channel used by the other
+Android device tests. Cancellation and the committed restore remain pending.

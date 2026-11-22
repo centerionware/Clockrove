@@ -38,7 +38,7 @@ class BackupPickerDeviceTest {
         click("Settings")
         click("Restore encrypted backup", scroll = true)
         openPicker()
-        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        pressBack()
         waitFor("picker cancellation") { findLabel("File selection cancelled.") }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
@@ -59,7 +59,7 @@ class BackupPickerDeviceTest {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, PASSWORD)
         }))
         if (automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
-            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            pressBack()
         }
         click("Authenticate and preview", scroll = true)
         val apply = waitFor("authenticated restore preview") {
@@ -90,6 +90,11 @@ class BackupPickerDeviceTest {
         assertEquals(150.0, imported.sites.single().radiusMeters, 0.0)
         assertTrue("Imported automation should start disabled", !imported.settings.enabled)
         assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
+    }
+
+    private fun pressBack() {
+        assertTrue(automation.injectInputEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK), true))
+        assertTrue(automation.injectInputEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK), true))
     }
 
     private fun openPicker() {
