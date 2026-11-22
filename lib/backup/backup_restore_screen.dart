@@ -43,7 +43,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _furthestReviewedPage = -1;
   BackupCryptoCancellationToken? _cancellationToken;
   String? _error;
-  String? _message;
+  AppMessage? _message;
+  AppMessage? _restoreError;
   String? _passwordError;
   bool _busy = false;
   bool _passwordVisible = false;
@@ -96,6 +97,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _restoreError = null;
       _message = null;
     });
     BackupEncryptedDocument? selected;
@@ -112,8 +114,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       if (selected == null) {
         setState(() {
           _message = previousRestore == null
-              ? 'File selection cancelled.'
-              : 'File selection cancelled. The existing preview is still open.';
+              ? AppMessage.restoreFileCancelled
+              : AppMessage.restoreFileCancelledWithPreview;
         });
         return;
       }
@@ -141,7 +143,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ..add(null);
         _pageIndex = 0;
         _furthestReviewedPage = -1;
-        _message = 'Encrypted backup selected. Enter its password to preview.';
+        _message = AppMessage.restoreFileSelected;
       });
     } on Object catch (error) {
       if (selected != null && !identical(selected, _document)) {
@@ -177,7 +179,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _message = 'Authenticating and checking the encrypted backup…';
+      _restoreError = null;
+      _message = AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
     try {
@@ -196,7 +199,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ..add(null);
           _pageIndex = 0;
           _furthestReviewedPage = -1;
-          _message = 'Backup authenticated. Review its contents and choices.';
+          _message = AppMessage.restoreAuthenticated;
         });
       } else {
         await restore.close();
@@ -234,7 +237,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _cancellationToken?.cancel();
     if (mounted) {
       setState(() {
-        _message = 'Cancelling preview. No local records have been changed.';
+        _message = AppMessage.restoreCancelling;
       });
     }
   }
@@ -247,6 +250,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _restoreError = null;
     });
     try {
       final page = await restore.api.readConflicts(
@@ -284,6 +288,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _restoreError = null;
     });
     try {
       await restore.api.resolveConflict(
@@ -370,7 +375,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _message = 'Applying the reviewed merge…';
+      _restoreError = null;
+      _message = AppMessage.restoreApplying;
     });
     try {
       await restore.api.apply(
@@ -391,11 +397,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           if (_requiresFreshPreview(error)) {
             _previewNeedsRefresh = true;
-            _error = 'No records were restored because this preview is no longer current.';
-            _message = 'Discard this preview and select the backup again to review current data before restoring.';
+            _restoreError = AppMessage.restorePreviewStale;
+            _message = AppMessage.restoreReviewAgain;
           } else {
             _error = _safeError(error);
-            _message = 'The merge could not be confirmed. Check current records before retrying.';
+            _message = AppMessage.restoreMergeUnconfirmed;
           }
         });
       }
@@ -409,6 +415,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _restoreError = null;
     });
     try {
       if (restore != null) await restore.close();
@@ -421,7 +428,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         _page = null;
         _previewNeedsRefresh = false;
         _password.clear();
-        _message = 'Preview discarded. No local records were changed.';
+        _message = AppMessage.restorePreviewDiscarded;
         _pageCursors
           ..clear()
           ..add(null);
@@ -528,12 +535,15 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   ],
                   if (_message != null) ...[
                     const SizedBox(height: 12),
-                    Text(_message!, key: const ValueKey('restore-message')),
+                    Text(
+                      _message!.of(context),
+                      key: const ValueKey('restore-message'),
+                    ),
                   ],
-                  if (_error != null) ...[
+                  if (_error != null || _restoreError != null) ...[
                     const SizedBox(height: 12),
                     Text(
-                      _error!,
+                      _restoreError?.of(context) ?? _error!,
                       key: const ValueKey('restore-error'),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,

@@ -107,7 +107,9 @@ now resolve from the Flutter catalogs. The dialog scrolls to accommodate
 long translations, and displayed status notices follow locale changes.
 Backup export and restore now resolve password fields, picker actions, and
 the reviewed-merge confirmation controls from every shipped Flutter catalog.
-Backup review details, errors, and progress copy still require migration.
+Restore progress, picker cancellation, and stale-preview messages also use
+catalog keys. Remaining backup review details, error paths, and export
+progress still require migration.
 Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 
