@@ -110,7 +110,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         selected = await showDialog<HistoryTimeChoice>(
           context: context,
           builder: (context) => SimpleDialog(
-            title: const Text('Choose the UTC offset'),
+            title: Text(AppMessage.chooseUtcOffset.of(context)),
             children: [
               for (final choice in choices)
                 SimpleDialogOption(
@@ -382,8 +382,8 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               maxLength: 120,
               autocorrect: false,
               decoration: InputDecoration(
-                labelText: 'Timezone',
-                helperText: 'For example UTC or America/New_York',
+                labelText: AppMessage.timezoneField.of(context),
+                helperText: AppMessage.timezoneFieldHelp.of(context),
                 errorText: _timeError,
                 errorMaxLines: 4,
               ),
@@ -410,10 +410,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                 maxLength: 4000,
                 decoration: InputDecoration(
                   labelText: _correction
-                      ? 'Reason for correction'
-                      : 'Internal note (optional)',
-                  helperText:
-                      'Kept in your records; omitted from customer PDFs.',
+                      ? AppMessage.paymentCorrectionReason.of(context)
+                      : AppMessage.paymentInternalNote.of(context),
+                  helperText: AppMessage.paymentInternalNoteHelp.of(context),
                   helperMaxLines: 2,
                   errorText: _noteError,
                 ),

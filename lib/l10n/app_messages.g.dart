@@ -529,7 +529,13 @@ enum AppMessage {
   paymentCorrectionEffective("Correction effective"),
   paymentReceivedOn("Received on"),
   changePaymentDateTime("Change payment date and time"),
-  confirmPaymentDateTime("Confirm date and time");
+  confirmPaymentDateTime("Confirm date and time"),
+  chooseUtcOffset("Choose the UTC offset"),
+  timezoneField("Timezone"),
+  timezoneFieldHelp("For example UTC or America/New_York"),
+  paymentCorrectionReason("Reason for correction"),
+  paymentInternalNote("Internal note (optional)"),
+  paymentInternalNoteHelp("Kept in your records; omitted from customer PDFs.");
 
   const AppMessage(this.english);
   final String english;
