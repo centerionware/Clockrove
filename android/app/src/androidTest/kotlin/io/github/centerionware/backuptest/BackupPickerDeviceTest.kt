@@ -68,6 +68,8 @@ class BackupPickerDeviceTest {
         }
         assertTrue(apply.isVisibleToUser)
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
+        // Independent installs create different revision roots for app settings.
+        click("Keep the version on this device", scroll = true)
         click("Apply reviewed merge", scroll = true)
         waitFor("restore confirmation") { findLabel("Apply this backup?") }
         click("Apply reviewed merge")
