@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../help/help_screen.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
@@ -123,7 +124,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Continue'),
+            child: Text(AppMessage.continueLabel.of(context)),
           ),
         ],
       ),
@@ -320,7 +321,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),

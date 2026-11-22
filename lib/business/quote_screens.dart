@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'quote_api.dart';
 import 'quote_detail_screen.dart';
@@ -85,7 +86,7 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Quotes'),
+      title: Text(AppMessage.quotes.of(context)),
       actions: [
         PopupMenuButton<String>(
           tooltip: 'Filter quotes',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../business/business_api.dart';
 import '../../business/business_command.dart';
 import '../../business/report_screen.dart';
@@ -306,7 +307,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
           actions: [
             TextButton(
               onPressed: pending ? null : () => Navigator.pop(dialog),
-              child: const Text('Cancel'),
+              child: Text(AppMessage.cancel.of(dialog)),
             ),
             Theme(
               data: Theme.of(context).copyWith(

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../l10n/app_localizations.dart';
 import 'automation_api.dart';
 import 'site_map_picker.dart';
 
@@ -121,7 +122,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Continue'),
+            child: Text(AppMessage.continueLabel.of(context)),
           ),
         ],
       ),
@@ -199,7 +200,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -375,7 +376,7 @@ class _DepartureGraceDialogState extends State<DepartureGraceDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(AppMessage.cancel.of(context)),
       ),
       TextButton(
         onPressed: () {

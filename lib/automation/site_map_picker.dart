@@ -132,7 +132,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-            child: const Text('Map settings could not be loaded. Retry.'),
+            child: Text(AppMessage.mapSettingsRetry.of(context)),
           ),
         ),
       );
@@ -180,7 +180,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 TextButton.icon(
                                   onPressed: _openExternalMap,
                                   icon: const Icon(Icons.open_in_new),
-                                  label: const Text('Open map'),
+                                  label: Text(AppMessage.openMap.of(context)),
                                 ),
                             ],
                           ),
@@ -279,7 +279,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                       child: Column(
                         children: [
                           IconButton.filledTonal(
-                            tooltip: 'Zoom in',
+                            tooltip: AppMessage.zoomIn.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom + 1)
@@ -290,7 +290,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                           ),
                           const SizedBox(height: 8),
                           IconButton.filledTonal(
-                            tooltip: 'Zoom out',
+                            tooltip: AppMessage.zoomOut.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom - 1)

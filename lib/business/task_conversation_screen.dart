@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 
@@ -121,7 +122,7 @@ class _TaskConversationScreenState
               TextButton(
                 onPressed: () =>
                     Navigator.pop(dialogContext, _PhotoReviewResult.cancelled),
-                child: const Text('Cancel'),
+                child: Text(AppMessage.cancel.of(dialogContext)),
               ),
               if (camera)
                 TextButton.icon(
@@ -246,7 +247,7 @@ class _TaskConversationScreenState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
+          child: Text(AppMessage.cancel.of(dialogContext)),
         ),
         BusinessCommand(
           label: 'Remove photo',
@@ -276,7 +277,7 @@ class _TaskConversationScreenState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
+          child: Text(AppMessage.cancel.of(dialogContext)),
         ),
         BusinessCommand(
           label: 'Delete comment',

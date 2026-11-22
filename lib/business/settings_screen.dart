@@ -551,7 +551,7 @@ class CustomersScreen extends ConsumerWidget {
   const CustomersScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Customers')),
+    appBar: AppBar(title: Text(AppMessage.customers.of(context))),
     floatingActionButton: FloatingActionButton.extended(
       elevation: 0,
       focusElevation: 0,

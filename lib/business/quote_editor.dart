@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'quote_api.dart';
@@ -249,7 +250,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(sheetContext),
-                    child: const Text('Cancel'),
+                    child: Text(AppMessage.cancel.of(context)),
                   ),
                 ],
               ),
@@ -391,7 +392,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppMessage.cancel.of(context)),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),

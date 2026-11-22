@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/app_localizations.dart';
 import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
@@ -190,7 +191,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-            child: const Text('Map settings could not be loaded. Retry.'),
+            child: Text(AppMessage.mapSettingsRetry.of(context)),
           ),
         ),
       );
@@ -343,7 +344,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       child: Column(
                         children: [
                           IconButton(
-                            tooltip: 'Zoom in',
+                            tooltip: AppMessage.zoomIn.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom + 1).clamp(2, 19),
@@ -351,7 +352,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                             icon: const Icon(Icons.add),
                           ),
                           IconButton(
-                            tooltip: 'Zoom out',
+                            tooltip: AppMessage.zoomOut.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom - 1).clamp(2, 19),

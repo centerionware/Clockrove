@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_providers.dart';
 import 'business_api.dart';
 import 'business_command.dart';
@@ -400,7 +401,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(dialog)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialog, true),

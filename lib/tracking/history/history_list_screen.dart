@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../business/business_api.dart';
 import '../../business/business_command.dart';
 import '../../business/report_screen.dart';
@@ -431,7 +432,7 @@ class _GpsRangeDeletionDialogState
         actions: [
           TextButton(
             onPressed: _pending ? null : () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           Theme(
             data: Theme.of(context).copyWith(

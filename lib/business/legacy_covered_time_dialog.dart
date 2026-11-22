@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/history_api.dart';
 import 'legacy_invoice_api.dart';
 
@@ -276,7 +277,7 @@ class _LegacyCoveredTimeDialogState
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(AppMessage.cancel.of(context)),
       ),
       FilledButton(
         onPressed:

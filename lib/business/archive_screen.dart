@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'job_screen.dart';
@@ -11,7 +12,7 @@ class ArchiveScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(
-      title: const Text('Archived jobs'),
+      title: Text(AppMessage.archivedJobs.of(context)),
       actions: [
         IconButton(
           tooltip: 'Refresh archive eligibility',
