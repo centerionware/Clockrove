@@ -219,7 +219,9 @@ guidance for recording or reversing payments. Stale balances and failed
 refresh notices come from the catalogs. Payment submit validation localizes
 positive amounts, balance limits, date confirmation and correction reasons.
 The payment editor also localizes currency precision, timezone resolution
-errors, and the reversal amount.
+errors, and the reversal amount. The invoice correction editor localizes
+its title, retry and refresh controls, reason label, review action, and
+final void and replacement buttons.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

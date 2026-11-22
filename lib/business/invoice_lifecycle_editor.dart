@@ -30,16 +30,16 @@ class InvoiceLifecycleEditor extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Invoice correction')),
+        appBar: AppBar(title: Text(AppMessage.invoiceCorrectionTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Invoice correction')),
+        appBar: AppBar(title: Text(AppMessage.invoiceCorrectionTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () =>
                 ref.invalidate(invoiceLifecycleProvider(invoiceId)),
-            child: const Text('Retry invoice correction'),
+            child: Text(AppMessage.retryInvoiceCorrection.of(context)),
           ),
         ),
       ),
@@ -321,10 +321,15 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.replace ? 'Void & replace' : 'Void invoice'),
+          title: Text(
+            (widget.replace
+                    ? AppMessage.voidAndReplaceInvoice
+                    : AppMessage.voidInvoice)
+                .of(context),
+          ),
           actions: [
             IconButton(
-              tooltip: 'Refresh correction details',
+              tooltip: AppMessage.refreshInvoiceCorrection.of(context),
               onPressed: _pending
                   ? null
                   : () => ref.invalidate(
@@ -553,8 +558,10 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   minLines: 2,
                   maxLines: 4,
                   maxLength: 4000,
-                  decoration: const InputDecoration(
-                    labelText: 'Internal correction reason',
+                  decoration: InputDecoration(
+                    labelText: AppMessage.invoiceInternalCorrectionReason.of(
+                      context,
+                    ),
                   ),
                   onChanged: _changed,
                   validator: (value) => (value?.trim().length ?? 0) < 10
@@ -569,7 +576,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
               if (_message != null) Text(_message!),
               OutlinedButton(
                 onPressed: eligible ? () => _review(preview) : null,
-                child: const Text('Review correction'),
+                child: Text(AppMessage.reviewInvoiceCorrection.of(context)),
               ),
               if (_confirmed)
                 const Text(
@@ -587,8 +594,8 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                 child: BusinessCommand(
                   key: const ValueKey('invoice-lifecycle-command'),
                   label: widget.replace
-                      ? 'Issue replacement invoice'
-                      : 'Confirm void',
+                      ? AppMessage.issueReplacementInvoice.of(context)
+                      : AppMessage.confirmInvoiceVoid.of(context),
                   enabled: eligible && _confirmed,
                   onPendingChanged: (value) {
                     if (mounted) setState(() => _pending = value);
