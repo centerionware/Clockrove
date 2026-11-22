@@ -378,24 +378,27 @@ class _JobFormState extends ConsumerState<_JobForm> {
         const SizedBox(height: 8),
         DropdownButtonFormField<bool?>(
           initialValue: _locationRecordingOverride,
-          decoration: const InputDecoration(
-            labelText: 'Work location recording',
-            helperText: 'Record actual locations only while this job is clocked in. Turning it off keeps saved history.',
+          decoration: InputDecoration(
+            labelText: AppMessage.workLocationRecording.of(context),
+            helperText: AppMessage.jobLocationRecordingHelp.of(context),
           ),
           items: [
             DropdownMenuItem<bool?>(
               value: null,
               child: Text(
-                'Use global default (${widget.business.settings.defaultLocationRecording ? 'on' : 'off'})',
+                (widget.business.settings.defaultLocationRecording
+                        ? AppMessage.useGlobalLocationOn
+                        : AppMessage.useGlobalLocationOff)
+                    .of(context),
               ),
             ),
-            const DropdownMenuItem<bool?>(
+            DropdownMenuItem<bool?>(
               value: true,
-              child: Text('On for this job'),
+              child: Text(AppMessage.locationOnForJob.of(context)),
             ),
-            const DropdownMenuItem<bool?>(
+            DropdownMenuItem<bool?>(
               value: false,
-              child: Text('Off for this job'),
+              child: Text(AppMessage.locationOffForJob.of(context)),
             ),
           ],
           onChanged: data?.archived == false
@@ -622,7 +625,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                   ),
                 ),
           icon: const Icon(Icons.location_on_outlined),
-          label: const Text('Worksites & automation'),
+          label: Text(AppMessage.worksitesAutomation.of(context)),
         ),
       ],
     );

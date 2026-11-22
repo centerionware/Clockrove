@@ -340,7 +340,17 @@ enum AppMessage {
   validationReceivablesEmail("Enter one email address, or leave blank to use the company email."),
   validationTaskFee("Enter a valid amount in {currency}, or enter 0 to disable the minimum."),
   validationJobName("Enter a job name."),
-  saveJobSettings("Save job settings");
+  saveJobSettings("Save job settings"),
+  recordWorkLocations("Record work locations"),
+  locationRecordingDefaultHelp("Default on. Samples target about every 10 minutes while clocked in; delivery varies. Turning this off stops future samples and keeps saved history. Each job can override it."),
+  mapProviderSettings("Map provider settings"),
+  workLocationRecording("Work location recording"),
+  jobLocationRecordingHelp("Record actual locations only while this job is clocked in. Turning it off keeps saved history."),
+  useGlobalLocationOn("Use global default (on)"),
+  useGlobalLocationOff("Use global default (off)"),
+  locationOnForJob("On for this job"),
+  locationOffForJob("Off for this job"),
+  worksitesAutomation("Worksites & automation");
 
   const AppMessage(this.english);
   final String english;

@@ -362,9 +362,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Record work locations'),
-          subtitle: const Text(
-            'Default on. Samples target about every 10 minutes while clocked in; delivery varies. Turning this off stops future samples and keeps saved history. Each job can override it.',
+          title: Text(AppMessage.recordWorkLocations.of(context)),
+          subtitle: Text(
+            AppMessage.locationRecordingDefaultHelp.of(context),
           ),
           value: _defaultLocationRecording,
           onChanged: (value) =>
@@ -381,7 +381,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               ),
             ),
             icon: const Icon(Icons.map_outlined),
-            label: const Text('Map provider settings'),
+            label: Text(AppMessage.mapProviderSettings.of(context)),
           ),
         ),
         const SizedBox(height: 20),

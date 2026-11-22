@@ -165,6 +165,8 @@ descriptions and fields remain open. Tax, minimum hours, minimum task fee,
 and receivables email validation now show translated feedback in Settings
 and job preferences where applicable. Quote tax validation shares the same
 messages.
+Global and per-job location recording now use the catalogs for options,
+privacy explanations, and map provider and worksite navigation labels.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.
