@@ -121,3 +121,9 @@ emulator's Downloads directory. [Actions 45021006125](https://github.com/centeri
 is the first run of that correction. Keep the picker journey open until
 its results confirm cancellation, authentication, conflict resolution, and
 committed state from a data-changing merge on both API levels.
+
+Run `45021006125` transferred the 8,438-byte fixture and reached API 24
+instrumentation. The screenshot shows the running app and its overflow
+menu, but Android did not expose the tooltip as a discoverable menu label.
+The follow-up gives the menu icon an explicit accessibility label. The picker
+and merge assertions were not reached.

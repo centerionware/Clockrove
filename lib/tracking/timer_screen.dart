@@ -189,6 +189,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
         actions: [
           PopupMenuButton<String>(
             tooltip: 'App settings and customers',
+            icon: const Icon(
+              Icons.more_vert,
+              semanticLabel: 'App settings and customers',
+            ),
             onSelected: (value) => Navigator.push(
               context,
               MaterialPageRoute<void>(
