@@ -33,6 +33,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17.0.17+10'
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle.kts
+            android/gradle/wrapper/gradle-wrapper.properties
+            pubspec.lock
+            .github/workflows/validate.yml
       - name: Install verified Flutter SDK
         shell: bash
         run: |
