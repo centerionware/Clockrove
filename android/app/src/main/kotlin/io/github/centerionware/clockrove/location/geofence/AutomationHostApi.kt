@@ -18,7 +18,9 @@ import io.github.centerionware.clockrove.tracking.TimerRepository
 /** Settings commands carry expected versions and never accept a caller-selected event origin. */
 class AutomationHostApi internal constructor(private val activity: Activity, messenger: BinaryMessenger,
     private val repository: TimerRepository = TimerRepository.get(activity),
-    private val reconcileMonitoring: () -> Unit = { GeofenceRuntime.resume(activity.applicationContext) },
+    private val reconcileMonitoring: (Boolean) -> Unit = { force ->
+        GeofenceRuntime.resume(activity.applicationContext, recovery = force)
+    },
     private val positionProvider: SitePositionProvider = FusedSitePositionProvider(activity.applicationContext),
     private val visible: () -> Boolean) {
     private val channel = MethodChannel(messenger, "clockrove/automation/v1")
@@ -45,7 +47,7 @@ class AutomationHostApi internal constructor(private val activity: Activity, mes
             if (call.method == "retryMonitoring") {
                 if (!visible()) result.error("FOREGROUND_REQUIRED", "Open Clockrove to retry site monitoring", null)
                 else if (pending != null || position.busy) result.error("REQUEST_PENDING", "A location request is pending", null)
-                else try { reconcileMonitoring(); result.success(null) }
+                else try { reconcileMonitoring(true); result.success(null) }
                 catch (_: RuntimeException) { result.error("REGISTRATION_UNAVAILABLE", "Site monitoring could not be retried", null) }
                 return@setMethodCallHandler
             }
@@ -127,7 +129,7 @@ class AutomationHostApi internal constructor(private val activity: Activity, mes
         pending = null
         if (detached) return true
         result?.success(permissions())
-        reconcileMonitoring()
+        reconcileMonitoring(false)
         return true
     }
     private fun precise() = activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
