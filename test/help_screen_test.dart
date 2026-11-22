@@ -98,9 +98,8 @@ Future<void> _savePreview(
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       final directory = Directory('build/ui-preview')
         ..createSync(recursive: true);
-      await File('${directory.path}/$name.png').writeAsBytes(
-        bytes!.buffer.asUint8List(),
-      );
+      await File('${directory.path}/$name.png')
+          .writeAsBytes(bytes!.buffer.asUint8List());
     } finally {
       image.dispose();
     }
