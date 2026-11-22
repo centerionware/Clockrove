@@ -120,7 +120,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, update) => AlertDialog(
-          title: const Text('Report jobs'),
+          title: Text(AppMessage.reportJobs.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
@@ -131,7 +131,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? Text(AppMessage.archived.of(context)) : null,
+                      subtitle: job.archived
+                          ? Text(AppMessage.archived.of(context))
+                          : null,
                       value: selected.contains(job.id),
                       onChanged: (v) => update(() {
                         if (v == true) {
@@ -150,7 +152,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply filters'),
+              child: Text(AppMessage.reportApplyFilters.of(context)),
             ),
           ],
         ),
@@ -200,10 +202,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
     final selection = _selection;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Work report'),
+        title: Text(AppMessage.workReport.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh report',
+            tooltip: AppMessage.refreshReport.of(context),
             onPressed: () {
               _load();
               if (selection != null) {
@@ -221,7 +223,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                   : TextButton(onPressed: _load, child: Text(_error!)),
             )
           : selection.jobs.isEmpty
-          ? const Center(child: Text('Create a job to view reports.'))
+          ? Center(child: Text(AppMessage.reportCreateJob.of(context)))
           : ref
                 .watch(reportProvider(selection))
                 .when(
@@ -239,11 +241,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           ),
                           TextButton(
                             onPressed: _range,
-                            child: const Text('Change dates'),
+                            child: Text(AppMessage.reportChangeDates.of(context)),
                           ),
                           TextButton(
                             onPressed: _jobs,
-                            child: const Text('Choose jobs'),
+                            child: Text(AppMessage.reportChooseJobs.of(context)),
                           ),
                           FilledButton(
                             onPressed: () =>

@@ -99,7 +99,7 @@ class _BusinessFinancialReportScreenState
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, updateDialog) => AlertDialog(
-          title: const Text('Report jobs'),
+          title: Text(AppMessage.reportJobs.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
@@ -114,7 +114,9 @@ class _BusinessFinancialReportScreenState
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? Text(AppMessage.archived.of(context)) : null,
+                      subtitle: job.archived
+                          ? Text(AppMessage.archived.of(context))
+                          : null,
                       value: selected.contains(job.id),
                       onChanged: (value) => updateDialog(() {
                         if (value == true) {
@@ -165,7 +167,7 @@ class _BusinessFinancialReportScreenState
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, updateDialog) => AlertDialog(
-          title: const Text('Report customers'),
+          title: Text(AppMessage.reportCustomers.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
@@ -201,7 +203,7 @@ class _BusinessFinancialReportScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialog, <String>[]),
-              child: const Text('All customers'),
+              child: Text(AppMessage.reportAllCustomers.of(context)),
             ),
             FilledButton(
               onPressed: selected.isEmpty
@@ -267,10 +269,10 @@ class _BusinessFinancialReportScreenState
     final selection = _selection;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Business report'),
+        title: Text(AppMessage.businessReport.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh business report',
+            tooltip: AppMessage.refreshBusinessReport.of(context),
             onPressed: selection == null
                 ? _loadContext
                 : () => ref.invalidate(businessReportProvider(selection)),
@@ -284,7 +286,7 @@ class _BusinessFinancialReportScreenState
                   ? const CircularProgressIndicator()
                   : TextButton(
                       onPressed: _loadContext,
-                      child: const Text('Retry report filters'),
+                      child: Text(AppMessage.retryReportFilters.of(context)),
                     ),
             )
           : ref
@@ -413,12 +415,12 @@ class _BusinessFinancialReportScreenState
             OutlinedButton.icon(
               onPressed: _exporting ? null : () => _export(report, pdf: false),
               icon: const Icon(Icons.table_view_outlined),
-              label: const Text('Export CSV'),
+              label: Text(AppMessage.reportExportCsv.of(context)),
             ),
             OutlinedButton.icon(
               onPressed: _exporting ? null : () => _export(report, pdf: true),
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('Export PDF'),
+              label: Text(AppMessage.reportExportPdf.of(context)),
             ),
           ],
         ),
