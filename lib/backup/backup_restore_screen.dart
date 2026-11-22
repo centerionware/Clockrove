@@ -200,12 +200,19 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         await restore.close();
       }
     } on Object catch (error) {
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _message = null;
+        });
+      }
     } finally {
-      try {
-        await document.close();
-      } on Object {
-        // Keep the handle so dispose or a later picker action can retry cleanup.
+      if (restore != null || !mounted) {
+        try {
+          await document.close();
+        } on Object {
+          // Keep the handle so dispose or a later picker action can retry cleanup.
+        }
       }
       if (identical(_document, document) && document.isClosed && mounted) {
         setState(() => _document = null);

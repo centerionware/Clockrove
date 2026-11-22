@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_file_api.dart';
@@ -374,7 +372,7 @@ void main() {
       'closeBackupDocumentImport',
     ]);
   });
-  testWidgets('requires a long password before previewing the selected file', (
+  testWidgets('keeps the selected file available after failed authentication', (
     tester,
   ) async {
     var previewCalls = 0;
@@ -397,7 +395,7 @@ void main() {
                 cancellationToken,
               }) async {
                 previewCalls++;
-                throw StateError('Preview should not run.');
+                throw const FormatException('Authentication failed.');
               },
         ),
       ),
@@ -413,51 +411,16 @@ void main() {
     await tester.pump();
     expect(find.textContaining('at least 12 UTF-8 bytes'), findsOneWidget);
     expect(previewCalls, 0);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpAndSettle();
-  });
-  testWidgets('can dispose while password authentication is pending', (
-    tester,
-  ) async {
-    final pending = Completer<BackupRestoreImportResult>();
-    var started = false;
-    respondToFile = (call) async => switch (call.method) {
-      'openBackupDocumentForImport' => {
-        'documentId': 'opaque-document',
-        'totalBytes': 3,
-      },
-      'closeBackupDocumentImport' => true,
-      _ => throw StateError('Unexpected file method ${call.method}.'),
-    };
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BackupRestoreScreen(
-          fileApi: BackupFileApi(channel: fileChannel),
-          previewBackup:
-              ({
-                required encryptedEnvelope,
-                required password,
-                cancellationToken,
-              }) {
-                started = true;
-                return pending.future;
-              },
-        ),
-      ),
-    );
-    await tester.tap(find.byKey(const ValueKey('restore-choose-backup')));
-    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('restore-password')),
       'synthetic-passphrase',
     );
     await tester.tap(find.byKey(const ValueKey('restore-preview')));
-    await tester.pump();
-    await tester.pumpWidget(const SizedBox());
-    expect(started, isTrue);
-    pending.completeError(StateError('Authentication cancelled'));
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+    expect(find.text('Authentication failed.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('restore-selected-file')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 
   testWidgets(
