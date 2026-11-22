@@ -367,7 +367,17 @@ enum AppMessage {
   optionalAuthValue("Authentication value (optional)"),
   removeSavedAuth("Remove saved authentication value"),
   saveMapSettings("Save map settings"),
-  resetToOpenStreetMap("Reset to OpenStreetMap");
+  resetToOpenStreetMap("Reset to OpenStreetMap"),
+  mapSaveFailed("Map settings could not be saved. Check the values and try again."),
+  mapResetFailed("Map settings could not be reset. Try again or reopen Settings."),
+  mapResetWarning("This removes the custom tile settings and saved authentication value from this device."),
+  mapProviderPrivacy("OpenStreetMap works without an account or key. Tile providers receive the areas you view. Use a provider that allows your usage and keep its required attribution visible."),
+  mapTileTokens("Use {z}, {x}, and {y}. Do not put keys in the URL."),
+  mapAuthHeaderExamples("For example Authorization or X-API-Key."),
+  mapKeepCredential("A credential is saved. Leave blank to keep it, or enter a replacement."),
+  mapBearerHelp("For bearer authentication, enter Bearer followed by the token."),
+  mapCredentialPrivacy("The authentication value is encrypted with Android Keystore and is not included in backups. Use a header-based credential; keys in tile URLs can leak through caches and logs."),
+  mapCredentialsAndroidOnly("Custom provider credentials are currently supported on Android only.");
 
   const AppMessage(this.english);
   final String english;

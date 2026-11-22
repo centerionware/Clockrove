@@ -101,7 +101,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _message = 'Map settings could not be saved. Check the values and try again.',
+          () => _message = AppMessage.mapSaveFailed.of(context),
         );
       }
     } finally {
@@ -114,9 +114,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(AppMessage.useOpenStreetMap.of(dialog)),
-        content: const Text(
-          'This removes the custom tile settings and saved authentication value from this device.',
-        ),
+        content: Text(AppMessage.mapResetWarning.of(dialog)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
@@ -141,8 +139,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _message =
-              'Map settings could not be reset. Try again or reopen Settings.',
+          () => _message = AppMessage.mapResetFailed.of(context),
         );
       }
     } finally {
@@ -161,9 +158,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'OpenStreetMap works without an account or key. Tile providers receive the areas you view. Use a provider that allows your usage and keep its required attribution visible.',
-        ),
+        Text(AppMessage.mapProviderPrivacy.of(context)),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           key: const ValueKey('map-provider-choice'),
@@ -204,7 +199,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             enableSuggestions: false,
             decoration: InputDecoration(
               labelText: AppMessage.tileUrlTemplate.of(context),
-              helperText: 'Use {z}, {x}, and {y}. Do not put keys in the URL.',
+              helperText: AppMessage.mapTileTokens.of(context),
               helperMaxLines: 2,
             ),
             maxLength: 2048,
@@ -235,7 +230,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             enableSuggestions: false,
             decoration: InputDecoration(
               labelText: AppMessage.authHeaderName.of(context),
-              helperText: 'For example Authorization or X-API-Key.',
+              helperText: AppMessage.mapAuthHeaderExamples.of(context),
             ),
             maxLength: 64,
           ),
@@ -255,8 +250,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             decoration: InputDecoration(
               labelText: AppMessage.optionalAuthValue.of(context),
               helperText: widget.initial.hasCredential && !_forgetCredential
-                  ? 'A credential is saved. Leave blank to keep it, or enter a replacement.'
-                  : 'For bearer authentication, enter Bearer followed by the token.',
+                  ? AppMessage.mapKeepCredential.of(context)
+                  : AppMessage.mapBearerHelp.of(context),
               helperMaxLines: 2,
             ),
             maxLength: 4096,
@@ -273,20 +268,20 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
                     },
               title: Text(AppMessage.removeSavedAuth.of(context)),
             ),
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Text(
-                'The authentication value is encrypted with Android Keystore and is not included in backups. Use a header-based credential; keys in tile URLs can leak through caches and logs.',
+                AppMessage.mapCredentialPrivacy.of(context),
               ),
             ),
           ),
         ],
         if (!android)
-          const Padding(
-            padding: EdgeInsets.only(top: 12),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
             child: Text(
-              'Custom provider credentials are currently supported on Android only.',
+              AppMessage.mapCredentialsAndroidOnly.of(context),
             ),
           ),
         const SizedBox(height: 16),
