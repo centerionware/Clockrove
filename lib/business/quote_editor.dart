@@ -51,14 +51,14 @@ class _QuoteEditorState extends ConsumerState<QuoteEditor> {
         return _QuoteForm(quoteId: _id, initial: snapshot.data!);
       }
       return Scaffold(
-        appBar: AppBar(title: const Text('Quote draft')),
+        appBar: AppBar(title: Text(AppMessage.quoteDraft.of(context))),
         body: Center(
           child: snapshot.hasError
               ? TextButton(
                   onPressed: () => setState(() {
                     _data = _load();
                   }),
-                  child: const Text('Retry quote draft'),
+                  child: Text(AppMessage.retryQuoteDraft.of(context)),
                 )
               : const CircularProgressIndicator(),
         ),
@@ -536,10 +536,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           ),
           DropdownButtonFormField<String>(
             initialValue: line.kind,
-            decoration: const InputDecoration(labelText: 'Line type'),
-            items: const [
-              DropdownMenuItem(value: 'ITEM', child: Text('Fixed-price item')),
-              DropdownMenuItem(value: 'HOURS', child: Text('Estimated hours')),
+            decoration: InputDecoration(labelText: AppMessage.lineType.of(context)),
+            items: [
+              DropdownMenuItem(
+                value: 'ITEM',
+                child: Text(AppMessage.fixedPriceItem.of(context)),
+              ),
+              DropdownMenuItem(
+                value: 'HOURS',
+                child: Text(AppMessage.estimatedHours.of(context)),
+              ),
             ],
             onChanged: !_enabled
                 ? null
@@ -558,7 +564,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           ),
           _text(
             line.quantity,
-            line.kind == 'HOURS' ? 'Estimated hours' : 'Quantity',
+            line.kind == 'HOURS' ? AppMessage.estimatedHours.of(context) : 'Quantity',
             32,
             decimal: true,
             validator: (value) {
@@ -630,7 +636,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Quote draft'),
+          title: Text(AppMessage.quoteDraft.of(context)),
           actions: [
             IconButton(
               tooltip: 'Refresh quote draft data',
@@ -675,13 +681,13 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 key: ValueKey('customer/$_customer/$_reading'),
                 initialValue: _customer,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Customer (optional)',
+                decoration: InputDecoration(
+                  labelText: AppMessage.optionalCustomer.of(context),
                 ),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                     value: null,
-                    child: Text('No customer selected'),
+                    child: Text(AppMessage.noCustomer.of(context)),
                   ),
                   if (_customer != null &&
                       !customers.any((customer) => customer.id == _customer))
@@ -715,20 +721,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   ),
                 ),
                 icon: const Icon(Icons.people_outline),
-                label: const Text('Manage customers'),
+                label: Text(AppMessage.manageCustomers.of(context)),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: ValueKey('job/$_job/$_reading'),
                 initialValue: _job,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Linked job (optional)',
+                decoration: InputDecoration(
+                  labelText: AppMessage.optionalLinkedJob.of(context),
                 ),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                     value: null,
-                    child: Text('No linked job'),
+                    child: Text(AppMessage.noLinkedJob.of(context)),
                   ),
                   if (_job != null && !jobs.any((job) => job.id == _job))
                     DropdownMenuItem(
@@ -753,7 +759,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               DropdownButtonFormField<String>(
                 key: ValueKey('currency/$_currency'),
                 initialValue: _currency,
-                decoration: const InputDecoration(labelText: 'Quote currency'),
+                decoration: InputDecoration(labelText: AppMessage.quoteCurrency.of(context)),
                 items: _currencies.keys
                     .map(
                       (currency) => DropdownMenuItem(
@@ -784,14 +790,14 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                         () => _lines.add(_LineFields(null, _digits)),
                       ),
                 icon: const Icon(Icons.add),
-                label: const Text('Add quote line'),
+                label: Text(AppMessage.addQuoteLine.of(context)),
               ),
               OutlinedButton.icon(
                 onPressed: !_enabled || _lines.length >= 2000
                     ? null
                     : _addTaskTemplate,
                 icon: const Icon(Icons.playlist_add),
-                label: const Text('Add line from task template'),
+                label: Text(AppMessage.addLineFromTemplate.of(context)),
               ),
               const SizedBox(height: 20),
               _text(

@@ -79,7 +79,7 @@ class _QuoteInvoiceScreenState extends ConsumerState<QuoteInvoiceScreen> {
         );
       }
       return Scaffold(
-        appBar: AppBar(title: const Text('Invoice actual work')),
+        appBar: AppBar(title: Text(AppMessage.invoiceActualWork.of(context))),
         body: Center(
           child: snapshot.hasError
               ? TextButton(
@@ -385,7 +385,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Prepare this invoice?'),
+          title: Text(AppMessage.prepareInvoiceQuestion.of(context)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -497,7 +497,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Invoice actual work'),
+          title: Text(AppMessage.invoiceActualWork.of(context)),
           actions: [
             IconButton(
               tooltip: 'Reload available quote work',
@@ -536,7 +536,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
               OutlinedButton.icon(
                 onPressed: _enabled ? _plan : null,
                 icon: const Icon(Icons.playlist_add_check),
-                label: const Text('Review accepted scope'),
+                label: Text(AppMessage.reviewAcceptedScope.of(context)),
               ),
               const SizedBox(height: 12),
               Text('Mapped job', style: Theme.of(context).textTheme.titleSmall),
@@ -662,7 +662,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   'Accepted tax ${taxPercent(accepted.draft.taxUnits)}% · Current job tax ${taxPercent(data.currentTax)}%',
                 ),
                 SwitchListTile(
-                  title: const Text('Use current job tax instead'),
+                  title: Text(AppMessage.useCurrentJobTax.of(context)),
                   value: _currentTax,
                   onChanged: !_enabled
                       ? null
@@ -672,7 +672,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                         }),
                 ),
                 SwitchListTile(
-                  title: const Text('Use current prices instead'),
+                  title: Text(AppMessage.useCurrentPrices.of(context)),
                   subtitle: Text(
                     _currentAvailable
                         ? 'Off keeps accepted unit/hourly prices.'
@@ -828,13 +828,13 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
               ),
               OutlinedButton(
                 onPressed: _ready && _context!.legacy.isEmpty ? _review : null,
-                child: const Text('Review actual-work invoice'),
+                child: Text(AppMessage.reviewActualWorkInvoice.of(context)),
               ),
               BusinessCommand(
                 key: ValueKey(
                   'quote-invoice/${widget.quoteId}/${widget.revision}',
                 ),
-                label: 'Prepare reviewed invoice',
+                label: AppMessage.prepareReviewedInvoice.of(context),
                 enabled: _ready && _reviewed != null,
                 onPendingChanged: (value) => setState(() {
                   _pending = value;

@@ -179,6 +179,9 @@ page navigation controls, along with invoice copy titles and quote image
 accessibility labels. Their save and cancel outcomes, email draft prompts,
 and handoff failures now also use the catalogs. Quote and invoice editors,
 generated PDFs, and app-generated email text remain in localization scope.
+Quote draft line types, currency, optional links and line-add actions are
+catalog-backed. Actual-work invoice preparation now localizes its title,
+review actions, and current-tax and current-price override labels.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.
