@@ -17,11 +17,9 @@ import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
   final calls = <TimerIntent>[];
-  TimerSnapshot value = const TimerSnapshot(
-    1,
-    [JobSummary('job', 'Studio renovation')],
-    null,
-  );
+  TimerSnapshot value = const TimerSnapshot(1, [
+    JobSummary('job', 'Studio renovation'),
+  ], null);
   @override
   Stream<int> get committedVersions => const Stream.empty();
 
@@ -165,29 +163,25 @@ void main() {
       expect(api.sites, isEmpty);
     },
   );
-  testWidgets(
-    'saving a current location offers an explicit clock-in command',
-    (tester) async {
-      final api = _configured();
-      final timer = _Timer();
-      await _show(tester, api, timerApi: timer);
-      // Open and save after taking the one-shot setup fix.
-      await _saveSiteFromCurrentLocation(tester);
-      expect(api.positionRequests, 1);
-      expect(find.text('Clock in at this site now?'), findsOneWidget);
-      expect(timer.calls, isEmpty);
-      expect(
-        find.textContaining('a fresh entry'),
-        findsOneWidget,
-      );
-      await tester.tap(find.text('Clock in now'));
-      await tester.pumpAndSettle();
-      expect(timer.calls, hasLength(1));
-      expect(timer.calls.single.action, TimerAction.start);
-      expect(timer.calls.single.jobId, 'job');
-      expect(find.text('Clocked in to Studio renovation.'), findsOneWidget);
-    },
-  );
+  testWidgets('saving a current location offers an explicit clock-in command', (
+    tester,
+  ) async {
+    final api = _configured();
+    final timer = _Timer();
+    await _show(tester, api, timerApi: timer);
+    // Open and save after taking the one-shot setup fix.
+    await _saveSiteFromCurrentLocation(tester);
+    expect(api.positionRequests, 1);
+    expect(find.text('Clock in at this site now?'), findsOneWidget);
+    expect(timer.calls, isEmpty);
+    expect(find.textContaining('a fresh entry'), findsOneWidget);
+    await tester.tap(find.text('Clock in now'));
+    await tester.pumpAndSettle();
+    expect(timer.calls, hasLength(1));
+    expect(timer.calls.single.action, TimerAction.start);
+    expect(timer.calls.single.jobId, 'job');
+    expect(find.text('Clocked in to Studio renovation.'), findsOneWidget);
+  });
   testWidgets('declining the in-place clock-in offer leaves work stopped', (
     tester,
   ) async {

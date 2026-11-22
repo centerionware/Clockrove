@@ -221,8 +221,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice =
-              'The current timer could not be checked. Use the Timer screen to clock in manually.',
+          () => _notice = 'The current timer could not be checked. Use the Timer screen to clock in manually.',
         );
       }
       return;
@@ -262,8 +261,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final actions = ref.read(timerActionsProvider);
     if (actions.working || actions.hasPending) {
       setState(
-        () => _notice =
-            'Another timer action is still being confirmed. Check the Timer screen before starting work.',
+        () => _notice = 'Another timer action is still being confirmed. Check the Timer screen before starting work.',
       );
       return;
     }
@@ -274,13 +272,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final outcome = ref.read(timerActionsProvider);
     if (outcome.pending != null || outcome.pendingJob != null) {
       setState(
-        () => _notice =
-            'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
+        () => _notice = 'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
       );
     } else if (outcome.conflict != null) {
       setState(
-        () => _notice =
-            'Work changed before clock-in completed. Refresh the Timer screen and try again.',
+        () => _notice = 'Work changed before clock-in completed. Refresh the Timer screen and try again.',
       );
     } else {
       setState(() => _notice = 'Clocked in to ${widget.jobName}.');
