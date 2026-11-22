@@ -127,3 +127,9 @@ instrumentation. The screenshot shows the running app and its overflow
 menu, but Android did not expose the tooltip as a discoverable menu label.
 The follow-up gives the menu icon an explicit accessibility label. The picker
 and merge assertions were not reached.
+
+[Actions 45022991467](https://github.com/centerionware/Clockrove/actions/runs/45022991467)
+reached Restore encrypted backup on API 24. Its screenshot shows the Android
+resolver presenting both Documents and the task-photo test fixture. The
+follow-up disables that fixture activity on the disposable emulator before
+starting the backup picker test. The system picker and merge are still pending.
