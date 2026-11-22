@@ -100,3 +100,12 @@ that replay inserts zero rows, preserves the state version and attachment
 identities and sizes, and retires the preview handle. Actions evidence for the
 apply extension is pending. A data-changing restore via the system picker
 remains open.
+
+Actions [45013742618](https://github.com/centerionware/Clockrove/actions/runs/45013742618)
+passed on `d87f5a7`, the first commit that calls native apply in the near-limit
+benchmark. API 24 and 35 authenticated and previewed 67,087,784 archive bytes,
+then applied the same data with zero new rows and no state-version change.
+Both preserved attachment IDs and sizes and retired the preview handle.
+Preview-only RSS increases were 34,496 and 20,580 KiB, respectively. The
+benchmark stops RSS sampling before apply. This evidence does not cover the
+later system-picker journey or a data-changing merge.
