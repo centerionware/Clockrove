@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'invoice_detail_screen.dart';
 import 'report_api.dart';
@@ -113,7 +114,7 @@ class _BusinessFinancialReportScreenState
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? const Text('Archived') : null,
+                      subtitle: job.archived ? Text(AppMessage.archived.of(context)) : null,
                       value: selected.contains(job.id),
                       onChanged: (value) => updateDialog(() {
                         if (value == true) {
@@ -130,13 +131,13 @@ class _BusinessFinancialReportScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialog, <String>[]),
-              child: const Text('All jobs'),
+              child: Text(AppMessage.allJobs.of(context)),
             ),
             FilledButton(
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply'),
+              child: Text(AppMessage.apply.of(context)),
             ),
           ],
         ),
@@ -182,7 +183,7 @@ class _BusinessFinancialReportScreenState
                       contentPadding: EdgeInsets.zero,
                       title: Text(customer.name),
                       subtitle: customer.archived
-                          ? const Text('Archived')
+                          ? Text(AppMessage.archived.of(context))
                           : null,
                       value: selected.contains(customer.id),
                       onChanged: (value) => updateDialog(() {
@@ -206,7 +207,7 @@ class _BusinessFinancialReportScreenState
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply'),
+              child: Text(AppMessage.apply.of(context)),
             ),
           ],
         ),
@@ -305,7 +306,7 @@ class _BusinessFinancialReportScreenState
                             onPressed: () => ref.invalidate(
                               businessReportProvider(selection),
                             ),
-                            child: const Text('Retry report'),
+                            child: Text(AppMessage.retryReport.of(context)),
                           ),
                         ],
                       ),

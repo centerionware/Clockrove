@@ -142,6 +142,8 @@ instructions, save actions and recovery text across all current locales.
 Shared business-command retry, unknown outcome, stale state, missing widget,
 and other common failures are now catalog-backed. Feature-specific conflict
 messages and validation errors still need migration.
+Sixteen additional shared action, report, review, and archive labels are
+translated across the 17 current catalogs and used in 15 Flutter files.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

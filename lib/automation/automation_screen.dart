@@ -120,7 +120,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
           HelpButton(topic: HelpTopic.automation, enabled: !_busy),
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+            child: Text(AppMessage.notNow.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -325,7 +325,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Keep recorded times'),
+            child: Text(AppMessage.keepRecordedTimes.of(context)),
           ),
         ],
       ),
@@ -509,7 +509,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _locked ? null : () => _accept(value),
-                      child: const Text('Keep recorded times'),
+                      child: Text(AppMessage.keepRecordedTimes.of(context)),
                     ),
                   ]),
                   const SizedBox(height: 16),

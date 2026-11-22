@@ -84,7 +84,7 @@ class ArchiveScreen extends ConsumerWidget {
                                   .error,
                             ),
                             icon: const Icon(Icons.delete_forever_outlined),
-                            label: const Text('Permanently delete job'),
+                            label: Text(AppMessage.permanentlyDeleteJob.of(context)),
                             onPressed: () => showDialog<void>(
                               context: context,
                               barrierDismissible: false,

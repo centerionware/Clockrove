@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
@@ -334,7 +335,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         )
                       : null,
                   icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Review billed work'),
+                  label: Text(AppMessage.reviewBilledWork.of(context)),
                 ),
             ],
             const SizedBox(height: 28),

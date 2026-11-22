@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_detail_screen.dart';
@@ -441,7 +442,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Keep editing'),
+              child: Text(AppMessage.keepEditing.of(context)),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),

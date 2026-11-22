@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../automation/automation_screen.dart';
 import 'business_api.dart';
 import 'business_command.dart';
@@ -527,7 +528,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
         if (data?.archived == false)
           OutlinedButton.icon(
             icon: const Icon(Icons.archive_outlined),
-            label: const Text('Archive job'),
+            label: Text(AppMessage.archiveJob.of(context)),
             onPressed: () => showDialog<void>(
               context: context,
               barrierDismissible: false,
@@ -538,7 +539,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 ),
                 actions: [
                   BusinessCommand(
-                    label: 'Archive job',
+                    label: AppMessage.archiveJob.of(context),
                     create: () {
                       final id = newBusinessId();
                       final version = data!.version;
@@ -576,7 +577,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
               icon: const Icon(Icons.delete_forever_outlined),
-              label: const Text('Permanently delete job'),
+              label: Text(AppMessage.permanentlyDeleteJob.of(context)),
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 final container = ProviderScope.containerOf(

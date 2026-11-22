@@ -122,13 +122,13 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     final settingsState = ref.watch(mapProviderSettingsProvider);
     if (settingsState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Choose site centre')),
+        appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (settingsState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Choose site centre')),
+        appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
@@ -141,7 +141,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     final tiles = _tilesFor(mapSettings);
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose site centre')),
+      appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => Column(

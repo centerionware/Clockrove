@@ -504,7 +504,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           onChanged: _templateChanged,
         ),
         BusinessCommand(
-          label: 'Save settings',
+          label: AppMessage.saveSettings.of(context),
           enabled: current != null && !_logoBusy,
           create: () {
             _validateDraft();

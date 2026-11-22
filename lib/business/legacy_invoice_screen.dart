@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
@@ -17,11 +18,11 @@ class LegacyInvoiceScreen extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Review billed work')),
+        appBar: AppBar(title: Text(AppMessage.reviewBilledWork.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Review billed work')),
+        appBar: AppBar(title: Text(AppMessage.reviewBilledWork.of(context))),
         body: Center(
           child: FilledButton(
             onPressed: () =>
@@ -161,7 +162,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Review billed work'),
+          title: Text(AppMessage.reviewBilledWork.of(context)),
           actions: [
             IconButton(
               tooltip: 'Refresh source records',
@@ -454,7 +455,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       )
                     : FilledButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Done'),
+                        child: Text(AppMessage.done.of(context)),
                       ),
               ),
             ),

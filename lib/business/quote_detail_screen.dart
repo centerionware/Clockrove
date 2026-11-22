@@ -232,11 +232,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
+            child: Text(AppMessage.keepEditing.of(context)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm review'),
+            child: Text(AppMessage.confirmReview.of(context)),
           ),
         ],
       ),
@@ -285,7 +285,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm review'),
+            child: Text(AppMessage.confirmReview.of(context)),
           ),
         ],
       ),
@@ -370,7 +370,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(AppMessage.close.of(context)),
           ),
         ],
       ),

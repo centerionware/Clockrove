@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'actual_cost_screen.dart';
 import 'business_financial_report_screen.dart';
@@ -130,7 +131,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? const Text('Archived') : null,
+                      subtitle: job.archived ? Text(AppMessage.archived.of(context)) : null,
                       value: selected.contains(job.id),
                       onChanged: (v) => update(() {
                         if (v == true) {
@@ -247,7 +248,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           FilledButton(
                             onPressed: () =>
                                 ref.invalidate(reportProvider(selection)),
-                            child: const Text('Retry report'),
+                            child: Text(AppMessage.retryReport.of(context)),
                           ),
                         ],
                       ),

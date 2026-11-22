@@ -118,7 +118,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+            child: Text(AppMessage.notNow.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -204,7 +204,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove site'),
+            child: Text(AppMessage.removeSite.of(context)),
           ),
         ],
       ),
@@ -325,7 +325,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                 if (widget.site != null)
                   TextButton(
                     onPressed: _locating ? null : _remove,
-                    child: const Text('Remove site'),
+                    child: Text(AppMessage.removeSite.of(context)),
                   ),
               ],
             ),
@@ -384,7 +384,7 @@ class _DepartureGraceDialogState extends State<DepartureGraceDialog> {
             Navigator.pop(context, int.parse(_input.text.trim()));
           }
         },
-        child: const Text('Save'),
+        child: Text(AppMessage.save.of(context)),
       ),
     ],
   );

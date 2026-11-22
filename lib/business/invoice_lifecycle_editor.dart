@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_lifecycle_api.dart';
@@ -254,11 +255,11 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
+            child: Text(AppMessage.keepEditing.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm review'),
+            child: Text(AppMessage.confirmReview.of(context)),
           ),
         ],
       ),

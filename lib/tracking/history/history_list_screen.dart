@@ -393,7 +393,7 @@ class _GpsRangeDeletionDialogState
                       contentPadding: EdgeInsets.zero,
                       value: null,
                       enabled: !_loading && !_pending,
-                      title: const Text('All jobs'),
+                      title: Text(AppMessage.allJobs.of(context)),
                     ),
                   ],
                 ),
