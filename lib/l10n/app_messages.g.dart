@@ -535,7 +535,10 @@ enum AppMessage {
   timezoneFieldHelp("For example UTC or America/New_York"),
   paymentCorrectionReason("Reason for correction"),
   paymentInternalNote("Internal note (optional)"),
-  paymentInternalNoteHelp("Kept in your records; omitted from customer PDFs.");
+  paymentInternalNoteHelp("Kept in your records; omitted from customer PDFs."),
+  paymentReversalReceiptHelp("Its original receipt remains in history. Record the reason for correcting this entry."),
+  paymentReceivedHelp("Record a payment you have received."),
+  paymentConfirmReceiptHelp("Confirmation saves this entry and opens its receipt.");
 
   const AppMessage(this.english);
   final String english;

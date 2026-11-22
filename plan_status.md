@@ -214,7 +214,9 @@ Payment history and saved copies localize empty states, reversal and
 receipt labels, and balance and collected-tax summaries. The payment
 editor uses localized titles, amount, method and reference labels, date
 controls, confirmation actions, and timezone and internal-note guidance.
-Other editor guidance and errors remain open.
+The editor also localizes the balance summary, receipt confirmation, and
+guidance for recording or reversing payments. Other editor notices and
+errors remain open.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

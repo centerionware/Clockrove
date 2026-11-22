@@ -315,7 +315,10 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             Text(data.number, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Balance due: ${data.currency} ${money(data.due, data.digits)}',
+              AppMessage.invoiceBalanceDueWithAmount.format(context, {
+                'currency': data.currency,
+                'amount': money(data.due, data.digits),
+              }),
             ),
             const SizedBox(height: 24),
             if (_correction) ...[
@@ -324,11 +327,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Its original receipt remains in history. Record the reason for correcting this entry.',
-              ),
+              Text(AppMessage.paymentReversalReceiptHelp.of(context)),
             ] else ...[
-              const Text('Record a payment you have received.'),
+              Text(AppMessage.paymentReceivedHelp.of(context)),
               const SizedBox(height: 16),
               Semantics(
                 identifier: 'invoice-payment-amount',
@@ -422,7 +423,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Confirmation saves this entry and opens its receipt.'),
+            Text(AppMessage.paymentConfirmReceiptHelp.of(context)),
             const SizedBox(height: 12),
             if (widget.refreshFailed)
               const Text(
