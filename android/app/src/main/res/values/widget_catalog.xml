@@ -51,4 +51,15 @@
     <string name="pdf_from">"FROM"</string>
     <string name="pdf_page_footer">"Page %1$s · %2$s"</string>
     <string name="pdf_issued">"Issued %1$s UTC"</string>
+    <string name="pdf_description">"DESCRIPTION"</string>
+    <string name="pdf_amount_heading">"AMOUNT (%1$s)"</string>
+    <string name="pdf_amount_row">"Amount (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Subtotal"</string>
+    <string name="pdf_invoice_subtotal">"Invoice subtotal"</string>
+    <string name="pdf_tax_rate">"Tax (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Invoice tax (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"ESTIMATED TOTAL"</string>
+    <string name="pdf_total">"TOTAL"</string>
+    <string name="pdf_original_invoice_total">"ORIGINAL INVOICE TOTAL"</string>
+    <string name="pdf_invoice_total">"INVOICE TOTAL"</string>
 </resources>

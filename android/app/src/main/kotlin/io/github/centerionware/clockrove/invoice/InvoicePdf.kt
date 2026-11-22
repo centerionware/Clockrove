@@ -273,8 +273,8 @@ internal object InvoicePdf {
         fun tableHeader() {
             ensure(36f)
             if (modern) canvas.drawRoundRect(RectF(margin, y, width - margin, y + 27), 4f, 4f, Paint().apply { color = Color.rgb(232, 244, 238) })
-            canvas.drawText("DESCRIPTION", margin + 8, y + 18, paint(9f, true))
-            val amount = "AMOUNT (${data.currency})"
+            canvas.drawText(strings.getString(R.string.pdf_description), margin + 8, y + 18, paint(9f, true))
+            val amount = strings.getString(R.string.pdf_amount_heading, data.currency)
             canvas.drawText(amount, width - margin - 8 - paint(9f, true).measureText(amount), y + 18, paint(9f, true))
             y += 36
         }
@@ -289,7 +289,7 @@ internal object InvoicePdf {
             text(if (compact) value.detail.replace("\n", " · ") else value.detail, 9f, available = if (compact) (width - margin * 2).toInt() else 352)
             if (value.amount.isNotBlank() && !fitsColumn) {
                 // Exact values must never overlap descriptions or disappear off-page.
-                text("Amount (${data.currency}) ${value.amount}", 11f, true)
+                text(strings.getString(R.string.pdf_amount_row, data.currency, value.amount), 11f, true)
             }
             space(if (compact) 2f else if (classic) 4f else 8f)
             canvas.drawLine(margin, y, width - margin, y, Paint().apply { color = Color.rgb(222, 228, 224); strokeWidth = .5f })
@@ -299,25 +299,41 @@ internal object InvoicePdf {
             if (data.subtotal != null && data.taxRateUnits != null && data.taxAmount != null) {
                 ensure(145f)
                 space(8f)
-                financialRow(if (data.statement == null) "Subtotal" else "Invoice subtotal", requireNotNull(data.subtotal))
-                financialRow("${if (data.statement == null) "Tax" else "Invoice tax"} (${TaxRate.format(data.taxRateUnits)}%)", requireNotNull(data.taxAmount))
+                val subtotalLabel = if (data.statement == null) R.string.pdf_subtotal else R.string.pdf_invoice_subtotal
+                val taxLabel = if (data.statement == null) R.string.pdf_tax_rate else R.string.pdf_invoice_tax_rate
+                financialRow(strings.getString(subtotalLabel), requireNotNull(data.subtotal))
+                financialRow(
+                    strings.getString(taxLabel, TaxRate.format(data.taxRateUnits)),
+                    requireNotNull(data.taxAmount),
+                )
             }
             val value = "${data.currency} ${data.total}"
-            if (paint(9f, true).measureText(value) > 345) {
+            val label = strings.getString(when {
+                quote -> R.string.pdf_estimated_total
+                data.statement == null -> R.string.pdf_total
+                else -> R.string.pdf_invoice_total
+            })
+            val amountWidth = minOf(345f, width - margin * 2 - 36f - paint(12f, true).measureText(label))
+            if (paint(9f, true).measureText(value) > amountWidth) {
                 // A bounded font cannot fit every arbitrary-precision total on one
                 // line. Reuse the paginating paragraph flow without dropping digits.
                 ensure(90f); space(12f)
                 canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-                space(12f); text(if (quote) "ESTIMATED TOTAL" else if (data.statement == null) "TOTAL" else "ORIGINAL INVOICE TOTAL", 12f, true); text(value, 12f, true); space(12f)
+                val stackedLabel = if (quote || data.statement == null) label
+                    else strings.getString(R.string.pdf_original_invoice_total)
+                space(12f)
+                text(stackedLabel, 12f, true)
+                text(value, 12f, true)
+                space(12f)
                 return
             }
             ensure(90f); space(12f)
             val box = RectF(margin, y, width - margin, y + 55)
             if (modern) canvas.drawRoundRect(box, 8f, 8f, Paint().apply { color = Color.rgb(232, 244, 238) })
             else canvas.drawLine(margin, y, width - margin, y, paint(1f).apply { strokeWidth = if (classic) 2f else 1f })
-            canvas.drawText(if (quote) "ESTIMATED TOTAL" else if (data.statement == null) "TOTAL" else "INVOICE TOTAL", margin + 12, y + 33, paint(12f, true))
+            canvas.drawText(label, margin + 12, y + 33, paint(12f, true))
             var size = 21f
-            while (paint(size, true).measureText(value) > 345 && size > 9) size -= 1
+            while (paint(size, true).measureText(value) > amountWidth && size > 9) size -= 1
             val amount = paint(size, true)
             canvas.drawText(value, width - margin - 12 - amount.measureText(value), y + 34, amount)
             y += 68

@@ -51,4 +51,15 @@
     <string name="pdf_from">"差出人"</string>
     <string name="pdf_page_footer">"%1$sページ · %2$s"</string>
     <string name="pdf_issued">"発行日：%1$s UTC"</string>
+    <string name="pdf_description">"説明"</string>
+    <string name="pdf_amount_heading">"金額（%1$s）"</string>
+    <string name="pdf_amount_row">"金額（%1$s）%2$s"</string>
+    <string name="pdf_subtotal">"小計"</string>
+    <string name="pdf_invoice_subtotal">"請求書の小計"</string>
+    <string name="pdf_tax_rate">"税（%1$s%%）"</string>
+    <string name="pdf_invoice_tax_rate">"請求書の税（%1$s%%）"</string>
+    <string name="pdf_estimated_total">"見積合計"</string>
+    <string name="pdf_total">"合計"</string>
+    <string name="pdf_original_invoice_total">"元の請求書の合計"</string>
+    <string name="pdf_invoice_total">"請求書の合計"</string>
 </resources>

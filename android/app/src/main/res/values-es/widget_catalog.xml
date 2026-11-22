@@ -51,4 +51,15 @@
     <string name="pdf_from">"DE"</string>
     <string name="pdf_page_footer">"Página %1$s · %2$s"</string>
     <string name="pdf_issued">"Emisión: %1$s UTC"</string>
+    <string name="pdf_description">"DESCRIPCIÓN"</string>
+    <string name="pdf_amount_heading">"IMPORTE (%1$s)"</string>
+    <string name="pdf_amount_row">"Importe (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Subtotal"</string>
+    <string name="pdf_invoice_subtotal">"Subtotal de la factura"</string>
+    <string name="pdf_tax_rate">"Impuesto (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Impuesto de la factura (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"TOTAL ESTIMADO"</string>
+    <string name="pdf_total">"TOTAL"</string>
+    <string name="pdf_original_invoice_total">"TOTAL DE LA FACTURA ORIGINAL"</string>
+    <string name="pdf_invoice_total">"TOTAL DE LA FACTURA"</string>
 </resources>

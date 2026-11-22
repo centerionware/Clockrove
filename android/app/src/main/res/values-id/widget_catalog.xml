@@ -51,4 +51,15 @@
     <string name="pdf_from">"DARI"</string>
     <string name="pdf_page_footer">"Halaman %1$s · %2$s"</string>
     <string name="pdf_issued">"Diterbitkan %1$s UTC"</string>
+    <string name="pdf_description">"DESKRIPSI"</string>
+    <string name="pdf_amount_heading">"JUMLAH (%1$s)"</string>
+    <string name="pdf_amount_row">"Jumlah (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Subtotal"</string>
+    <string name="pdf_invoice_subtotal">"Subtotal faktur"</string>
+    <string name="pdf_tax_rate">"Pajak (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Pajak faktur (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"TOTAL PERKIRAAN"</string>
+    <string name="pdf_total">"TOTAL"</string>
+    <string name="pdf_original_invoice_total">"TOTAL FAKTUR ASLI"</string>
+    <string name="pdf_invoice_total">"TOTAL FAKTUR"</string>
 </resources>

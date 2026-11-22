@@ -51,4 +51,15 @@
     <string name="pdf_from">"발행자"</string>
     <string name="pdf_page_footer">"%1$s페이지 · %2$s"</string>
     <string name="pdf_issued">"발행일 %1$s UTC"</string>
+    <string name="pdf_description">"설명"</string>
+    <string name="pdf_amount_heading">"금액(%1$s)"</string>
+    <string name="pdf_amount_row">"금액(%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"소계"</string>
+    <string name="pdf_invoice_subtotal">"청구서 소계"</string>
+    <string name="pdf_tax_rate">"세금(%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"청구서 세금(%1$s%%)"</string>
+    <string name="pdf_estimated_total">"예상 합계"</string>
+    <string name="pdf_total">"합계"</string>
+    <string name="pdf_original_invoice_total">"원본 청구서 합계"</string>
+    <string name="pdf_invoice_total">"청구서 합계"</string>
 </resources>

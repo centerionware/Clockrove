@@ -51,4 +51,15 @@
     <string name="pdf_from">"প্রেরক"</string>
     <string name="pdf_page_footer">"পৃষ্ঠা %1$s · %2$s"</string>
     <string name="pdf_issued">"ইস্যু %1$s UTC"</string>
+    <string name="pdf_description">"বিবরণ"</string>
+    <string name="pdf_amount_heading">"পরিমাণ (%1$s)"</string>
+    <string name="pdf_amount_row">"পরিমাণ (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"উপমোট"</string>
+    <string name="pdf_invoice_subtotal">"চালানের উপমোট"</string>
+    <string name="pdf_tax_rate">"কর (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"চালানের কর (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"আনুমানিক মোট"</string>
+    <string name="pdf_total">"মোট"</string>
+    <string name="pdf_original_invoice_total">"মূল চালানের মোট"</string>
+    <string name="pdf_invoice_total">"চালানের মোট"</string>
 </resources>

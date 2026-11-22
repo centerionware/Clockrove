@@ -51,4 +51,15 @@
     <string name="pdf_from">"प्रेषक"</string>
     <string name="pdf_page_footer">"पेज %1$s · %2$s"</string>
     <string name="pdf_issued">"जारी %1$s UTC"</string>
+    <string name="pdf_description">"विवरण"</string>
+    <string name="pdf_amount_heading">"रकम (%1$s)"</string>
+    <string name="pdf_amount_row">"रकम (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"उप-योग"</string>
+    <string name="pdf_invoice_subtotal">"चालान का उप-योग"</string>
+    <string name="pdf_tax_rate">"कर (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"चालान का कर (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"अनुमानित कुल"</string>
+    <string name="pdf_total">"कुल"</string>
+    <string name="pdf_original_invoice_total">"मूल चालान का कुल"</string>
+    <string name="pdf_invoice_total">"चालान का कुल"</string>
 </resources>

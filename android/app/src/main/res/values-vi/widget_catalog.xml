@@ -51,4 +51,15 @@
     <string name="pdf_from">"TỪ"</string>
     <string name="pdf_page_footer">"Trang %1$s · %2$s"</string>
     <string name="pdf_issued">"Phát hành %1$s UTC"</string>
+    <string name="pdf_description">"MÔ TẢ"</string>
+    <string name="pdf_amount_heading">"SỐ TIỀN (%1$s)"</string>
+    <string name="pdf_amount_row">"Số tiền (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Tạm tính"</string>
+    <string name="pdf_invoice_subtotal">"Tạm tính hóa đơn"</string>
+    <string name="pdf_tax_rate">"Thuế (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Thuế trên hóa đơn (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"TỔNG ƯỚC TÍNH"</string>
+    <string name="pdf_total">"TỔNG CỘNG"</string>
+    <string name="pdf_original_invoice_total">"TỔNG HÓA ĐƠN GỐC"</string>
+    <string name="pdf_invoice_total">"TỔNG HÓA ĐƠN"</string>
 </resources>

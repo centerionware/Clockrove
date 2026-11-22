@@ -51,4 +51,15 @@
     <string name="pdf_from">"VON"</string>
     <string name="pdf_page_footer">"Seite %1$s · %2$s"</string>
     <string name="pdf_issued">"Ausgestellt %1$s UTC"</string>
+    <string name="pdf_description">"BESCHREIBUNG"</string>
+    <string name="pdf_amount_heading">"BETRAG (%1$s)"</string>
+    <string name="pdf_amount_row">"Betrag (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Zwischensumme"</string>
+    <string name="pdf_invoice_subtotal">"Rechnungszwischensumme"</string>
+    <string name="pdf_tax_rate">"Steuer (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Rechnungssteuer (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"GESCHÄTZTE SUMME"</string>
+    <string name="pdf_total">"SUMME"</string>
+    <string name="pdf_original_invoice_total">"URSPRÜNGLICHE RECHNUNGSSUMME"</string>
+    <string name="pdf_invoice_total">"RECHNUNGSSUMME"</string>
 </resources>

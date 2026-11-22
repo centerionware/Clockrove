@@ -51,4 +51,15 @@
     <string name="pdf_from">"发件方"</string>
     <string name="pdf_page_footer">"第 %1$s 页 · %2$s"</string>
     <string name="pdf_issued">"开具日期：%1$s UTC"</string>
+    <string name="pdf_description">"说明"</string>
+    <string name="pdf_amount_heading">"金额（%1$s）"</string>
+    <string name="pdf_amount_row">"金额（%1$s）%2$s"</string>
+    <string name="pdf_subtotal">"小计"</string>
+    <string name="pdf_invoice_subtotal">"发票小计"</string>
+    <string name="pdf_tax_rate">"税费（%1$s%%）"</string>
+    <string name="pdf_invoice_tax_rate">"发票税费（%1$s%%）"</string>
+    <string name="pdf_estimated_total">"预计合计"</string>
+    <string name="pdf_total">"合计"</string>
+    <string name="pdf_original_invoice_total">"原发票合计"</string>
+    <string name="pdf_invoice_total">"发票合计"</string>
 </resources>

@@ -51,4 +51,15 @@
     <string name="pdf_from">"من"</string>
     <string name="pdf_page_footer">"الصفحة %1$s · %2$s"</string>
     <string name="pdf_issued">"تاريخ الإصدار %1$s UTC"</string>
+    <string name="pdf_description">"الوصف"</string>
+    <string name="pdf_amount_heading">"المبلغ (%1$s)"</string>
+    <string name="pdf_amount_row">"المبلغ (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"المجموع الفرعي"</string>
+    <string name="pdf_invoice_subtotal">"المجموع الفرعي للفاتورة"</string>
+    <string name="pdf_tax_rate">"الضريبة (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"ضريبة الفاتورة (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"الإجمالي المقدّر"</string>
+    <string name="pdf_total">"الإجمالي"</string>
+    <string name="pdf_original_invoice_total">"إجمالي الفاتورة الأصلية"</string>
+    <string name="pdf_invoice_total">"إجمالي الفاتورة"</string>
 </resources>

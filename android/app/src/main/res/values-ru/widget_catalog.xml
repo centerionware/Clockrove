@@ -51,4 +51,15 @@
     <string name="pdf_from">"ОТПРАВИТЕЛЬ"</string>
     <string name="pdf_page_footer">"Страница %1$s · %2$s"</string>
     <string name="pdf_issued">"Выставлено %1$s UTC"</string>
+    <string name="pdf_description">"ОПИСАНИЕ"</string>
+    <string name="pdf_amount_heading">"СУММА (%1$s)"</string>
+    <string name="pdf_amount_row">"Сумма (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Промежуточный итог"</string>
+    <string name="pdf_invoice_subtotal">"Промежуточный итог счёта"</string>
+    <string name="pdf_tax_rate">"Налог (%1$s%%)"</string>
+    <string name="pdf_invoice_tax_rate">"Налог по счёту (%1$s%%)"</string>
+    <string name="pdf_estimated_total">"ПРИБЛИЗИТЕЛЬНЫЙ ИТОГ"</string>
+    <string name="pdf_total">"ИТОГО"</string>
+    <string name="pdf_original_invoice_total">"ИТОГ ИСХОДНОГО СЧЁТА"</string>
+    <string name="pdf_invoice_total">"ИТОГ СЧЁТА"</string>
 </resources>

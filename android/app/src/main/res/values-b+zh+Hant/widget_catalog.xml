@@ -51,4 +51,15 @@
     <string name="pdf_from">"寄件方"</string>
     <string name="pdf_page_footer">"第 %1$s 頁 · %2$s"</string>
     <string name="pdf_issued">"開立日期：%1$s UTC"</string>
+    <string name="pdf_description">"說明"</string>
+    <string name="pdf_amount_heading">"金額（%1$s）"</string>
+    <string name="pdf_amount_row">"金額（%1$s）%2$s"</string>
+    <string name="pdf_subtotal">"小計"</string>
+    <string name="pdf_invoice_subtotal">"發票小計"</string>
+    <string name="pdf_tax_rate">"稅費（%1$s%%）"</string>
+    <string name="pdf_invoice_tax_rate">"發票稅費（%1$s%%）"</string>
+    <string name="pdf_estimated_total">"預估總計"</string>
+    <string name="pdf_total">"總計"</string>
+    <string name="pdf_original_invoice_total">"原發票總計"</string>
+    <string name="pdf_invoice_total">"發票總計"</string>
 </resources>

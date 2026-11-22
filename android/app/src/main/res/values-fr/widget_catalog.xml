@@ -51,4 +51,15 @@
     <string name="pdf_from">"DE"</string>
     <string name="pdf_page_footer">"Page %1$s · %2$s"</string>
     <string name="pdf_issued">"Émis le %1$s UTC"</string>
+    <string name="pdf_description">"DESCRIPTION"</string>
+    <string name="pdf_amount_heading">"MONTANT (%1$s)"</string>
+    <string name="pdf_amount_row">"Montant (%1$s) %2$s"</string>
+    <string name="pdf_subtotal">"Sous-total"</string>
+    <string name="pdf_invoice_subtotal">"Sous-total de la facture"</string>
+    <string name="pdf_tax_rate">"Taxe (%1$s %%)"</string>
+    <string name="pdf_invoice_tax_rate">"Taxe de la facture (%1$s %%)"</string>
+    <string name="pdf_estimated_total">"TOTAL ESTIMÉ"</string>
+    <string name="pdf_total">"TOTAL"</string>
+    <string name="pdf_original_invoice_total">"TOTAL DE LA FACTURE ORIGINALE"</string>
+    <string name="pdf_invoice_total">"TOTAL DE LA FACTURE"</string>
 </resources>
