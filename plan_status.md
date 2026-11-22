@@ -96,6 +96,9 @@ from the Android catalogs. Other native copy still needs migration.
 reported 294 Flutter tests passed, 2 failed, and 14 skipped. The two Settings
 tests now scroll to the hourly rate field before using it, since adding the
 language picker moved the field below the initial viewport.
+Native widget contents and newly rendered notifications now also use the
+saved language override. A native regression checks Spanish format arguments
+and resetting the override on API 24 and 35. Validation is pending.
 Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 

@@ -10,6 +10,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.tasks.CancellationTokenSource
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.concurrent.Executors
@@ -34,7 +35,7 @@ class WorkLocationService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) {
             manager.createNotificationChannel(NotificationChannel(CHANNEL,
-                getString(R.string.tracking_channel), NotificationManager.IMPORTANCE_LOW))
+                localizedContext(this).getString(R.string.tracking_channel), NotificationManager.IMPORTANCE_LOW))
         }
         try {
             val notification = notification(null)
@@ -140,12 +141,13 @@ class WorkLocationService : Service() {
     }
 
     private fun notification(state: TimerRepository.Snapshot?): Notification {
+        val strings = localizedContext(this)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)
             else Notification.Builder(this)
-        builder.setSmallIcon(R.drawable.ic_tracking).setContentTitle(state?.running?.jobName ?: getString(R.string.tracking_channel))
-            .setContentText(getString(R.string.tracking_target)).setContentIntent(open)
+        builder.setSmallIcon(R.drawable.ic_tracking).setContentTitle(state?.running?.jobName ?: strings.getString(R.string.tracking_channel))
+            .setContentText(strings.getString(R.string.tracking_target)).setContentIntent(open)
             .setOngoing(true).setOnlyAlertOnce(true).setCategory(Notification.CATEGORY_SERVICE)
         if (state != null) {
             val intent = Intent(this, NotificationStopReceiver::class.java)
@@ -153,7 +155,7 @@ class WorkLocationService : Service() {
                 .putExtra("version", state.version)
             val stop = PendingIntent.getBroadcast(this, 1, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            builder.addAction(Notification.Action.Builder(null, getString(R.string.widget_stop), stop).build())
+            builder.addAction(Notification.Action.Builder(null, strings.getString(R.string.widget_stop), stop).build())
         }
         return builder.build()
     }

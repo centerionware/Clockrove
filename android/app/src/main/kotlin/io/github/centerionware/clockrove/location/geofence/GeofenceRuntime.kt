@@ -12,6 +12,7 @@ import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.location.WorkLocationService
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import io.github.centerionware.clockrove.widget.TimerWidget
@@ -100,14 +101,15 @@ internal object GeofenceRuntime {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (!manager.areNotificationsEnabled()) return
         try {
+            val strings = localizedContext(context)
             if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, context.getString(R.string.automation_channel), NotificationManager.IMPORTANCE_DEFAULT))
+                NotificationChannel(CHANNEL, strings.getString(R.string.automation_channel), NotificationManager.IMPORTANCE_DEFAULT))
             val open = PendingIntent.getActivity(context, CHOICES, Intent(context, MainActivity::class.java),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL) else Notification.Builder(context)
             manager.notify(CHOICES, builder.setSmallIcon(R.drawable.ic_tracking)
-                .setContentTitle(context.getString(R.string.automation_choose_title))
-                .setContentText(context.getString(R.string.automation_choose_description))
+                .setContentTitle(strings.getString(R.string.automation_choose_title))
+                .setContentText(strings.getString(R.string.automation_choose_description))
                 .setContentIntent(open).setAutoCancel(true).build())
         } catch (_: RuntimeException) { /* Notification denial never changes the timer. */ }
     }

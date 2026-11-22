@@ -34,5 +34,6 @@ Android resource copy lives in `android/<language-tag>.yaml` within this directo
 Use flat YAML maps with JSON-style double-quoted values and Android positional
 format arguments such as `%1$s`. Run `python3 tool/android_catalog.py` to
 regenerate checked-in Android resources. Actions checks locale and key parity,
-format arguments, and whether the generated XML matches the catalogs. Installed
-widgets currently follow the Android resource locale.
+format arguments, and whether the generated XML matches the catalogs. Widget contents and newly rendered tracking and geofence notifications honor
+the saved Settings override. Android launcher and widget picker metadata
+follow the system resource locale.
