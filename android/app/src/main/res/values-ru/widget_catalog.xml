@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Задачи Clockrove"</string>
     <string name="widget_filter_description">"Фильтр задач и настройки виджета"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Архивная смета: %1$s, редакция %2$s. Текущая выпущенная редакция — %3$s. Эта смета не является счётом или требованием оплаты."</string>
+    <string name="historical_invoice_void_notice">"Архивная копия: счёт %1$s аннулирован. Не оплачивайте его."</string>
+    <string name="historical_invoice_replacement_notice">"Заменён счётом %1$s. Актуальный остаток указан в новом счёте."</string>
+    <string name="historical_invoice_balance_cancelled">"Неоплаченный остаток отменён."</string>
+    <string name="historical_invoice_records_retained">"Исходный документ и история платежей сохранены."</string>
+    <string name="historical_email_subject">"Архивная копия · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF счёта"</string>
+    <string name="quote_pdf_attachment">"PDF сметы"</string>
+    <string name="share_invoice">"Поделиться счётом"</string>
+    <string name="share_quote">"Поделиться сметой"</string>
 </resources>

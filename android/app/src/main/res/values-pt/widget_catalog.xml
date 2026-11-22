@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Tarefas Clockrove"</string>
     <string name="widget_filter_description">"Filtro de tarefas e definições do widget"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Orçamento histórico: %1$s, revisão %2$s. A revisão emitida atual é %3$s. Este orçamento não é uma fatura nem um pedido de pagamento."</string>
+    <string name="historical_invoice_void_notice">"Cópia histórica: %1$s está anulada. Não pague esta fatura."</string>
+    <string name="historical_invoice_replacement_notice">"Substituída por %1$s. Consulte a fatura de substituição para verificar o saldo atual."</string>
+    <string name="historical_invoice_balance_cancelled">"O saldo por pagar foi cancelado."</string>
+    <string name="historical_invoice_records_retained">"O documento original e o histórico de pagamentos são mantidos."</string>
+    <string name="historical_email_subject">"Cópia histórica · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF da fatura"</string>
+    <string name="quote_pdf_attachment">"PDF do orçamento"</string>
+    <string name="share_invoice">"Partilhar fatura"</string>
+    <string name="share_quote">"Partilhar orçamento"</string>
 </resources>

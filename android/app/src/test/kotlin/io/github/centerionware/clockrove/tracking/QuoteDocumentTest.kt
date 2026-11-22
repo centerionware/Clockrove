@@ -68,7 +68,7 @@ class QuoteDocumentTest {
         assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
         assertNull(repository.quoteDocument("quote", 2).pdf)
         assertArrayEquals(bytes, repository.quoteDocument("quote", 1).pdf)
-        assertTrue(InvoiceDocuments.historicalNotice(repository, cached)!!.contains("current issued revision is 2"))
+        assertTrue(InvoiceDocuments.historicalNotice(app, repository, cached)!!.contains("current issued revision is 2"))
     }
     @Test fun revisedQuoteRetainsCustomTemplatesWithAnExplicitEstimatePrefix() {
         assertNull(repository.saveBusinessSettings("templates", version, repository.businessSnapshot().settings.copy(

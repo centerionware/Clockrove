@@ -93,7 +93,7 @@ class QuotePdfDeviceTest {
             assertNull(repository.issueQuote("quote-reissue-$token", version, id, true).conflict)
             render(id, 2, "clockrove-quote-revision-$token", listOf("411.00", "30.83", "441.83"))
             assertArrayEquals(original.pdf, repository.quoteDocument(id, 1).pdf)
-            assertTrue(InvoiceDocuments.historicalNotice(repository, original)!!.contains("current issued revision is 2"))
+            assertTrue(InvoiceDocuments.historicalNotice(app, repository, original)!!.contains("current issued revision is 2"))
             val wide = "9".repeat(1000)
             assertNull(repository.saveQuote("quote-wide-save-$token", version, draft.copy(lines = listOf(draft.lines.first().copy(quantity = "10000", unitPrice = wide)))).conflict)
             assertNull(repository.issueQuote("quote-wide-issue-$token", version, id, true).conflict)

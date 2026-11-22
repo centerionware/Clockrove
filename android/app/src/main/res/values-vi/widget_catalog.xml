@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Nhiệm vụ Clockrove"</string>
     <string name="widget_filter_description">"Bộ lọc nhiệm vụ và cài đặt tiện ích"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Báo giá lịch sử: %1$s, bản sửa đổi %2$s. Bản phát hành hiện tại là %3$s. Đây là báo giá, không phải hóa đơn hay yêu cầu thanh toán."</string>
+    <string name="historical_invoice_void_notice">"Bản sao lịch sử: %1$s đã bị hủy. Không thanh toán hóa đơn này."</string>
+    <string name="historical_invoice_replacement_notice">"Đã thay bằng %1$s. Xem hóa đơn thay thế để biết số dư hiện tại."</string>
+    <string name="historical_invoice_balance_cancelled">"Số dư chưa thanh toán đã bị hủy."</string>
+    <string name="historical_invoice_records_retained">"Tài liệu gốc và lịch sử thanh toán vẫn được lưu."</string>
+    <string name="historical_email_subject">"Bản sao lịch sử · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF hóa đơn"</string>
+    <string name="quote_pdf_attachment">"PDF báo giá"</string>
+    <string name="share_invoice">"Chia sẻ hóa đơn"</string>
+    <string name="share_quote">"Chia sẻ báo giá"</string>
 </resources>

@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.BusinessStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.TaxRate
@@ -47,21 +49,33 @@ internal object InvoiceDocuments {
         val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(statement.created))
         return "${record.number}-${record.documentKind.lowercase(java.util.Locale.ROOT)}-$date-${record.copyId.takeLast(8)}.pdf"
     }
-    fun historicalNotice(repository: TimerRepository, record: InvoiceStore.Record): String? {
+    fun historicalNotice(context: Context, repository: TimerRepository, record: InvoiceStore.Record): String? {
+        val strings = localizedContext(context)
         if (record.quoteRevision != null) {
             val latest = repository.quote(record.id).latest ?: return null
-            return if (latest.revision == record.quoteRevision) null else "Historical quote: ${record.number} revision ${record.quoteRevision}. The current issued revision is ${latest.revision}. This estimate is not an invoice or payment request."
+            return if (latest.revision == record.quoteRevision) null else strings.getString(
+                R.string.historical_quote_notice,
+                record.number,
+                record.quoteRevision.toString(),
+                latest.revision.toString(),
+            )
         }
         if (record.documentKind == "VOID") return null
         val state = repository.invoiceVoidContext(record.id) ?: return null
-        return "Historical copy: ${record.number} is VOID. Do not pay this invoice." +
-            (state.replacementNumber?.let { " Replaced by $it; consult the replacement for its current balance." } ?: " Its unpaid balance was cancelled.") +
-            " The original document and payment history remain retained."
+        return listOf(
+            strings.getString(R.string.historical_invoice_void_notice, record.number),
+            state.replacementNumber?.let {
+                strings.getString(R.string.historical_invoice_replacement_notice, it)
+            } ?: strings.getString(R.string.historical_invoice_balance_cancelled),
+            strings.getString(R.string.historical_invoice_records_retained),
+        ).joinToString(" ")
     }
     fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings, notice: String? = null): Intent {
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         require(BusinessStore.validEmail(snapshot.email)) { "INVALID_RECIPIENT" }
-        val subject = if (notice == null) snapshot.subject else "Historical copy · ${snapshot.subject}"
+        val strings = localizedContext(context)
+        val subject = if (notice == null) snapshot.subject
+            else strings.getString(R.string.historical_email_subject, snapshot.subject)
         val body = if (notice == null) snapshot.body else "$notice\n\n${snapshot.body}"
         require(subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size <= 100_000) { "EMAIL_TOO_LARGE" }
         require(subject.none { it == '\r' || it == '\n' }) { "INVALID_SUBJECT" }
@@ -76,14 +90,19 @@ internal object InvoiceDocuments {
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
             putExtra(Intent.EXTRA_STREAM, uri)
-            clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri)
+            clipData = ClipData.newRawUri(attachmentLabel(context, record), uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
     fun share(context: Context, record: InvoiceStore.Record, notice: String? = null): Intent {
         val uri = uri(context, record)
-        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(attachmentLabel(context, record), uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
+    private fun attachmentLabel(context: Context, record: InvoiceStore.Record): String =
+        localizedContext(context).getString(
+            if (record.quoteRevision == null) R.string.invoice_pdf_attachment else R.string.quote_pdf_attachment,
+        )
+
     fun preview(context: Context, record: InvoiceStore.Record, index: Int): Map<String, Any> {
         return preview(context, requireNotNull(record.pdf), index)
     }

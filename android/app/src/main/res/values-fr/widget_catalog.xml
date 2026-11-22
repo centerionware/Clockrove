@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Tâches Clockrove"</string>
     <string name="widget_filter_description">"Filtre des tâches et paramètres du widget"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Devis historique : %1$s, révision %2$s. La révision émise actuelle est %3$s. Ce devis ne constitue ni une facture ni une demande de paiement."</string>
+    <string name="historical_invoice_void_notice">"Copie historique : %1$s est annulée. Ne payez pas cette facture."</string>
+    <string name="historical_invoice_replacement_notice">"Remplacée par %1$s. Consultez la facture de remplacement pour connaître son solde actuel."</string>
+    <string name="historical_invoice_balance_cancelled">"Son solde impayé a été annulé."</string>
+    <string name="historical_invoice_records_retained">"Le document original et l’historique des paiements sont conservés."</string>
+    <string name="historical_email_subject">"Copie historique · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF de facture"</string>
+    <string name="quote_pdf_attachment">"PDF de devis"</string>
+    <string name="share_invoice">"Partager la facture"</string>
+    <string name="share_quote">"Partager le devis"</string>
 </resources>

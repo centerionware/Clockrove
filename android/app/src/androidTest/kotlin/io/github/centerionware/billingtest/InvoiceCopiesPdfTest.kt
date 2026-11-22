@@ -272,7 +272,7 @@ class InvoiceCopiesPdfTest {
                     "12000", line.quantityUnits, "12000") }
                 assertNull(repository.replaceInvoice("copy-pdf-replace-$token", version, InvoiceLifecycleStore.ReplacementDraft(id, replacementId, edits,
                     100000, "PRIVATE REPLACEMENT REASON", "UTC", true)).conflict)
-                val historicalNotice = requireNotNull(InvoiceDocuments.historicalNotice(repository, original))
+                val historicalNotice = requireNotNull(InvoiceDocuments.historicalNotice(app, repository, original))
                 val historicalEmail = InvoiceDocuments.email(app, original, repository.businessSnapshot().settings, historicalNotice)
                 assertTrue(historicalEmail.getStringExtra(android.content.Intent.EXTRA_TEXT)!!.startsWith(historicalNotice))
                 assertTrue(historicalNotice.contains("Do not pay this invoice"))

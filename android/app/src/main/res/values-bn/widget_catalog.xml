@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Clockrove কাজ"</string>
     <string name="widget_filter_description">"কাজের ফিল্টার ও উইজেট সেটিংস"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"পুরোনো মূল্যপ্রস্তাব: %1$s, সংস্করণ %2$s। বর্তমান ইস্যু করা সংস্করণ %3$s। এটি চালান বা পেমেন্টের অনুরোধ নয়।"</string>
+    <string name="historical_invoice_void_notice">"পুরোনো কপি: %1$s বাতিল। এই চালান পরিশোধ করবেন না।"</string>
+    <string name="historical_invoice_replacement_notice">"%1$s দিয়ে প্রতিস্থাপিত। বর্তমান বকেয়ার জন্য নতুন চালান দেখুন।"</string>
+    <string name="historical_invoice_balance_cancelled">"অপরিশোধিত বকেয়া বাতিল করা হয়েছে।"</string>
+    <string name="historical_invoice_records_retained">"মূল নথি ও পেমেন্টের ইতিহাস রাখা হয়েছে।"</string>
+    <string name="historical_email_subject">"পুরোনো কপি · %1$s"</string>
+    <string name="invoice_pdf_attachment">"চালানের PDF"</string>
+    <string name="quote_pdf_attachment">"মূল্যপ্রস্তাবের PDF"</string>
+    <string name="share_invoice">"চালান শেয়ার করুন"</string>
+    <string name="share_quote">"মূল্যপ্রস্তাব শেয়ার করুন"</string>
 </resources>

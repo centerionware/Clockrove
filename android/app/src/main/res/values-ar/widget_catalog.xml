@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"مهام Clockrove"</string>
     <string name="widget_filter_description">"تصفية المهام وإعدادات الأداة"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"عرض سعر سابق: %1$s، الإصدار %2$s. الإصدار الصادر الحالي هو %3$s. هذا التقدير ليس فاتورة أو طلب دفع."</string>
+    <string name="historical_invoice_void_notice">"نسخة سابقة: الفاتورة %1$s ملغاة. لا تدفع هذه الفاتورة."</string>
+    <string name="historical_invoice_replacement_notice">"استُبدلت بـ %1$s. راجع البديل لمعرفة رصيده الحالي."</string>
+    <string name="historical_invoice_balance_cancelled">"أُلغي رصيدها غير المدفوع."</string>
+    <string name="historical_invoice_records_retained">"يبقى المستند الأصلي وسجل المدفوعات محفوظين."</string>
+    <string name="historical_email_subject">"نسخة سابقة · %1$s"</string>
+    <string name="invoice_pdf_attachment">"فاتورة PDF"</string>
+    <string name="quote_pdf_attachment">"عرض سعر PDF"</string>
+    <string name="share_invoice">"مشاركة الفاتورة"</string>
+    <string name="share_quote">"مشاركة عرض السعر"</string>
 </resources>

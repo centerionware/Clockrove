@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Clockrove görevler"</string>
     <string name="widget_filter_description">"Görev filtresi ve widget ayarları"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Geçmiş teklif: %1$s, sürüm %2$s. Geçerli düzenlenmiş sürüm %3$s. Bu tahmin fatura veya ödeme talebi değildir."</string>
+    <string name="historical_invoice_void_notice">"Geçmiş kopya: %1$s iptal edildi. Bu faturayı ödemeyin."</string>
+    <string name="historical_invoice_replacement_notice">"Yerine %1$s düzenlendi. Güncel bakiye için yeni faturaya bakın."</string>
+    <string name="historical_invoice_balance_cancelled">"Ödenmemiş bakiye iptal edildi."</string>
+    <string name="historical_invoice_records_retained">"Asıl belge ve ödeme geçmişi korunur."</string>
+    <string name="historical_email_subject">"Geçmiş kopya · %1$s"</string>
+    <string name="invoice_pdf_attachment">"Fatura PDF’si"</string>
+    <string name="quote_pdf_attachment">"Teklif PDF’si"</string>
+    <string name="share_invoice">"Faturayı paylaş"</string>
+    <string name="share_quote">"Teklifi paylaş"</string>
 </resources>

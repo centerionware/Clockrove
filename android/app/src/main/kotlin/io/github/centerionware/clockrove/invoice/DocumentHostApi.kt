@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Handler
@@ -61,7 +63,7 @@ internal class DocumentHostApi(
                         val index = requireNotNull(call.argument<Int>("page"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
                         val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
-                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(repository, record)))
+                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(activity, repository, record)))
                     }
                     "saveReport" -> {
                         val selection = io.github.centerionware.clockrove.tracking.ReportStore.Selection(requireNotNull(call.argument<String>("firstDate")), requireNotNull(call.argument<String>("lastDate")), requireNotNull(call.argument<String>("timezone")), requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) })
@@ -137,8 +139,15 @@ internal class DocumentHostApi(
                         val id = requireNotNull(call.argument<String>(if (call.method.endsWith("Quote")) "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
                         val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
-                        val notice = InvoiceDocuments.historicalNotice(repository, record)
-                        val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), if (quote) "Share quote" else "Share invoice")
+                        val notice = InvoiceDocuments.historicalNotice(activity, repository, record)
+                        val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") {
+                            InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice)
+                        } else {
+                            val title = localizedContext(activity).getString(
+                                if (quote) R.string.share_quote else R.string.share_invoice,
+                            )
+                            Intent.createChooser(InvoiceDocuments.share(activity, record, notice), title)
+                        }
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }

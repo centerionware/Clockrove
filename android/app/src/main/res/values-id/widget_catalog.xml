@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Tugas Clockrove"</string>
     <string name="widget_filter_description">"Filter tugas dan setelan widget"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Penawaran historis: %1$s revisi %2$s. Revisi yang saat ini diterbitkan adalah %3$s. Perkiraan ini bukan faktur atau permintaan pembayaran."</string>
+    <string name="historical_invoice_void_notice">"Salinan historis: %1$s telah dibatalkan. Jangan bayar faktur ini."</string>
+    <string name="historical_invoice_replacement_notice">"Diganti oleh %1$s. Lihat faktur pengganti untuk saldo saat ini."</string>
+    <string name="historical_invoice_balance_cancelled">"Saldo yang belum dibayar dibatalkan."</string>
+    <string name="historical_invoice_records_retained">"Dokumen asli dan riwayat pembayaran tetap disimpan."</string>
+    <string name="historical_email_subject">"Salinan historis · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF faktur"</string>
+    <string name="quote_pdf_attachment">"PDF penawaran"</string>
+    <string name="share_invoice">"Bagikan faktur"</string>
+    <string name="share_quote">"Bagikan penawaran"</string>
 </resources>

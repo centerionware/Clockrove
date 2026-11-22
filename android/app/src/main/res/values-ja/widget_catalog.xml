@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Clockrove タスク"</string>
     <string name="widget_filter_description">"タスクフィルターとウィジェット設定"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"過去の見積書：%1$s、改訂版%2$s。現在の発行版は%3$sです。この見積書は請求書や支払い請求ではありません。"</string>
+    <string name="historical_invoice_void_notice">"過去の控え：%1$sは無効です。この請求書には支払わないでください。"</string>
+    <string name="historical_invoice_replacement_notice">"%1$sに差し替えられました。現在の残高は差し替え後の請求書を確認してください。"</string>
+    <string name="historical_invoice_balance_cancelled">"未払い残高は取り消されました。"</string>
+    <string name="historical_invoice_records_retained">"元の書類と支払い履歴は保持されます。"</string>
+    <string name="historical_email_subject">"過去の控え · %1$s"</string>
+    <string name="invoice_pdf_attachment">"請求書PDF"</string>
+    <string name="quote_pdf_attachment">"見積書PDF"</string>
+    <string name="share_invoice">"請求書を共有"</string>
+    <string name="share_quote">"見積書を共有"</string>
 </resources>

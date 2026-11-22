@@ -182,6 +182,10 @@ generated PDFs, and app-generated email text remain in localization scope.
 Quote draft line types, currency, optional links and line-add actions are
 catalog-backed. Actual-work invoice preparation now localizes its title,
 review actions, and current-tax and current-price override labels.
+Native quote and invoice historical notices, historical email subject
+prefixes, attachment labels, and share chooser titles now use localized
+Android resources. Stored PDFs and saved email template expansions are
+preserved. PDF body labels and default email template generation remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

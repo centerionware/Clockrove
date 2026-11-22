@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Clockrove 任務"</string>
     <string name="widget_filter_description">"任務篩選與小工具設定"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"歷史報價單：%1$s，修訂版 %2$s。目前已發出修訂版為 %3$s。此報價單並非發票或付款請求。"</string>
+    <string name="historical_invoice_void_notice">"歷史副本：%1$s 已作廢。請勿支付此發票。"</string>
+    <string name="historical_invoice_replacement_notice">"已由 %1$s 取代。請查看替代發票的目前餘額。"</string>
+    <string name="historical_invoice_balance_cancelled">"未付餘額已取消。"</string>
+    <string name="historical_invoice_records_retained">"原始文件和付款紀錄仍會保留。"</string>
+    <string name="historical_email_subject">"歷史副本 · %1$s"</string>
+    <string name="invoice_pdf_attachment">"發票 PDF"</string>
+    <string name="quote_pdf_attachment">"報價單 PDF"</string>
+    <string name="share_invoice">"分享發票"</string>
+    <string name="share_quote">"分享報價單"</string>
 </resources>

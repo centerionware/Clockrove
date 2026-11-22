@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Clockrove Tasks"</string>
     <string name="widget_filter_description">"Task filter and widget settings"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Historical quote: %1$s revision %2$s. The current issued revision is %3$s. This estimate is not an invoice or payment request."</string>
+    <string name="historical_invoice_void_notice">"Historical copy: %1$s is VOID. Do not pay this invoice."</string>
+    <string name="historical_invoice_replacement_notice">"Replaced by %1$s; consult the replacement for its current balance."</string>
+    <string name="historical_invoice_balance_cancelled">"Its unpaid balance was cancelled."</string>
+    <string name="historical_invoice_records_retained">"The original document and payment history remain retained."</string>
+    <string name="historical_email_subject">"Historical copy · %1$s"</string>
+    <string name="invoice_pdf_attachment">"Invoice PDF"</string>
+    <string name="quote_pdf_attachment">"Quote PDF"</string>
+    <string name="share_invoice">"Share invoice"</string>
+    <string name="share_quote">"Share quote"</string>
 </resources>

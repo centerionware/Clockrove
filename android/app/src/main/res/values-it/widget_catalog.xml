@@ -30,4 +30,14 @@
     <string name="widget_tasks_label">"Attività Clockrove"</string>
     <string name="widget_filter_description">"Filtro delle attività e impostazioni del widget"</string>
     <string name="app_name">"Clockrove"</string>
+    <string name="historical_quote_notice">"Preventivo storico: %1$s, revisione %2$s. La revisione emessa attuale è la %3$s. Il preventivo non è una fattura né una richiesta di pagamento."</string>
+    <string name="historical_invoice_void_notice">"Copia storica: %1$s è annullata. Non pagare questa fattura."</string>
+    <string name="historical_invoice_replacement_notice">"Sostituita da %1$s. Consulta la fattura sostitutiva per il saldo attuale."</string>
+    <string name="historical_invoice_balance_cancelled">"Il saldo non pagato è stato annullato."</string>
+    <string name="historical_invoice_records_retained">"Il documento originale e la cronologia dei pagamenti restano conservati."</string>
+    <string name="historical_email_subject">"Copia storica · %1$s"</string>
+    <string name="invoice_pdf_attachment">"PDF fattura"</string>
+    <string name="quote_pdf_attachment">"PDF preventivo"</string>
+    <string name="share_invoice">"Condividi fattura"</string>
+    <string name="share_quote">"Condividi preventivo"</string>
 </resources>

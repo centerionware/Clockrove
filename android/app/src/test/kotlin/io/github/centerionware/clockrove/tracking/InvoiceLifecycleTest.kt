@@ -126,9 +126,9 @@ class InvoiceLifecycleTest {
     @Test fun historicalEmailAndShareWarnAboutVoidWithoutRewritingOriginalOrLeakingPrivateReason() {
         payment()
         val original = repository.invoice("invoice")
-        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, original))
+        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(app, repository, original))
         assertNull(repository.replaceInvoice("replace", version, replacement()).conflict)
-        val notice = requireNotNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, original))
+        val notice = requireNotNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(app, repository, original))
         assertTrue(notice.contains("INV-1000 is VOID")); assertTrue(notice.contains("INV-1001")); assertTrue(notice.contains("Do not pay"))
         val mail = io.github.centerionware.clockrove.invoice.InvoiceDocuments.email(app, original, repository.businessSnapshot().settings, notice)
         assertTrue(mail.getStringExtra(android.content.Intent.EXTRA_SUBJECT)!!.startsWith("Historical copy"))
@@ -137,7 +137,7 @@ class InvoiceLifecycleTest {
         val share = io.github.centerionware.clockrove.invoice.InvoiceDocuments.share(app, original, notice)
         assertEquals(notice, share.getStringExtra(android.content.Intent.EXTRA_TEXT))
         assertEquals(original.payload, repository.invoice("invoice").payload)
-        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(repository, repository.invoiceCopy("void-invoice")))
+        assertNull(io.github.centerionware.clockrove.invoice.InvoiceDocuments.historicalNotice(app, repository, repository.invoiceCopy("void-invoice")))
     }
     @Test fun replacementChainsAndCorrectionsKeepOriginalReceiptAndCurrentCredit() {
         payment()
