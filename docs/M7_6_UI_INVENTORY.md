@@ -28,7 +28,7 @@ synthetic data in artifacts.
 | Board task and template actions | lib/business/board/board_view.dart; lib/business/board/reusable_task_library_screen.dart | Opens task conversation, task/column editors, or the reusable task library. |
 | Job settings | lib/business/job_settings_screen.dart | Opens job billing/location/customer options, worksite editor/map picker, and AutomationScreen. |
 | Work history | lib/tracking/history/history_list_screen.dart; lib/tracking/history_screen.dart is a compatibility export | Opens entry editor, audit/revisions, work map, and GPS range deletion. |
-| Global Settings | lib/business/settings_screen.dart | Opens invoice-style preview and MapProviderSettingsScreen. Customer management is also available here. |
+| Global Settings | lib/business/settings_screen.dart | Opens invoice-style preview, map provider settings, encrypted backup export and restore, and offline Help. Customer management is also available here. |
 | Quote list/detail | lib/business/quote_screens.dart; lib/business/quote_detail_screen.dart | Opens editor, document, accepted-scope planning, actual-work invoicing, and QuoteRelatedInvoicesScreen. |
 | Invoice history/detail | lib/business/invoice_history_screen.dart; lib/business/invoice_detail_screen.dart | Opens original PDF, saved copies, review/correction, payments, and receipt actions. |
 | Android permission and system handoffs | AndroidManifest.xml and android/app/src/main/kotlin/io/github/centerionware/clockrove/ | Cover location, notifications, camera/photo, document/share and external-map return, denial, cancellation, and retry. |
@@ -73,19 +73,19 @@ their presence does not establish M7.6 evidence.
 | Q4 | Invoice actual work from accepted quote — `lib/business/quote_invoice_screen.dart` | Select eligible completed work; choose current vs quoted customer/tax/prices where offered; review exact work, prices and tax; create invoice and link quote revision. | No available work, changed quote/job source, deleted job, no selected work, validation/commit failure; confirm invoice only after explicit review. | Bill selected actual work once, compare current-vs-quoted options, cancellation and committed invoice/coverage link. References: `test/quote_invoice_screen_test.dart`, `test/quote_invoice_api_test.dart`. |
 | AR1 | Archived jobs — `lib/business/archive_screen.dart`, `lib/business/job_deletion_dialog.dart` | Open archived board, restore job, inspect permanent-delete eligibility. | No archived jobs, load/retry, job becomes ineligible; permanent delete only after 30 continuous archived days, destructive confirmation explains removed history/GPS/board and retained invoice/customer/template records. | Restore and reopen; ineligible/eligible states; deletion cancel/confirm and native retained/deleted record assertions. |
 
-## Backup contract surfaces not reachable in the current source baseline
+## Backup and Help routes
 
-M7.2 export code is present but the BackupExportScreen is not reachable from
-the current menu/routes; its full-path memory gate remains. M7.3 restore UI and
-transactional apply are not integrated. These are upstream dependencies, not
-M7.6 implementation work to duplicate. Refresh this section after those
-branches are integrated.
+Settings now routes to the encrypted export and restore screens after PR #74.
+PR #78 adds searchable offline Help and contextual links. This route inventory
+records implementation and reference checks. The M7.6 device and screenshot
+evidence remains open.
 
-| ID | Contract surface and source status | Empty/error/permission/destructive cases | Evidence slots to fill after implementation |
+| ID | Route/screen and source | States and options to review | Evidence to capture |
 | --- | --- | --- | --- |
-| B1 | Encrypted backup export — lib/backup/backup_export_screen.dart exists but is not reachable from the current app routes/menu; M7.2 export remains withheld pending full-path memory evidence. | Fresh database, attachments, size limits, cancel export, password/lost-password explanation; exclude credentials, map cache, widget binding, and live automation registration. | After M7.2 completion, capture the reachable export flow and verify encrypted archive contents/exclusions on API 24/current API. |
-| B2 | Restore verification and merge preview — no user-facing restore screen/route in source SHA 025cc10; M7.3 work remains upstream. | Wrong password, tampering, excessive parameters, incompatible version, duplicate/conflicting records, open-session choice; cancel without writes. | After M7.3 completion, verify authentication before parse/write, explicit conflict preview, and unchanged database on cancel. |
-| B3 | Transactional merge confirmation and completion — no user-facing restore route/apply flow in source SHA 025cc10; M7.3 work remains upstream. | Transaction failure/retry, ancestry/tombstones, conflict choices, duplicate IDs; never start a timer or enable geofences. | After M7.3 completion, verify commit/reopen integrity, rollback, native history/revisions, and no running session or automation registration. |
+| B1 | Settings → Export encrypted backup — `lib/backup/backup_export_screen.dart` | Empty and populated databases, attachment limits, password, password loss, cancellation and provider error. | Open export, choose a destination, and verify an authenticated archive and excluded local credentials, caches and registrations. |
+| B2 | Settings → Restore encrypted backup — `lib/backup/backup_restore_screen.dart` | Android picker cancellation, wrong password retry, tampering, incompatible version, preview, conflict choices, open-session omission and a running local timer. | Verify authentication before merge, visible review and unchanged destination data before confirmation. Record picker, preview and choice states separately. |
+| B3 | Apply reviewed merge — `lib/backup/backup_restore_screen.dart` and native backup bridge | Cancel confirmation, stale preview, transaction failure, duplicate import and successful merge. | Verify native records after reopening and replay, no running timer, and imported automation disabled. PR #79 covers near-limit replay and a data-changing picker journey. |
+| H1 | Settings → Help and contextual Help — `lib/help/help_screen.dart` | Search, no matches, direct topic navigation, offline reading, installed app version, and policy/support links when approved. | Exercise each entry point, keyboard navigation, TalkBack and large text. Capture the index, empty search and topic screens. Flutter behavior passed on the contextual-link commit in [Actions 45015072277](https://github.com/centerionware/Clockrove/actions/runs/45015072277). |
 | GPS1 | Delete GPS history independently of timesheets — lib/tracking/history/history_list_screen.dart, lib/tracking/history_api.dart, android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/GpsDeletionStore.kt, TimerRepository.kt, and BusinessHostApi.kt. Device case: GpsRangeDeletionDeviceTest.cancelThenConfirmRemovesOnlyGpsAndPersistsTombstonesOnDevice. | Both picker modes; empty range still records coverage; timezone boundaries; open sessions; job/all-job scope; stale preview/unknown result; cancel/confirm; history/report/map refresh. | On API 24/current Play API, capture cancel and confirm; assert preview/scope, only points in the measured half-open range are deleted, coordinate-free tombstones persist, report/map refresh, and timesheet interval is unchanged. M7.6 captures remain required. |
 
 ## Permission, privacy and destructive-action cross-check
