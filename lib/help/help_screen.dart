@@ -102,3 +102,28 @@ class HelpTopicScreen extends StatelessWidget {
     ),
   );
 }
+
+class HelpButton extends StatelessWidget {
+  const HelpButton({super.key, this.topic, this.enabled = true});
+
+  final HelpTopic? topic;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = topic;
+    return IconButton(
+      tooltip: selected == null ? 'Help' : 'Help with ${selected.title}',
+      icon: const Icon(Icons.help_outline),
+      onPressed: enabled
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => selected == null
+                    ? const HelpScreen()
+                    : HelpTopicScreen(topic: selected),
+              ),
+            )
+          : null,
+    );
+  }
+}

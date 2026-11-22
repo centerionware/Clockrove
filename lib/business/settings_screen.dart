@@ -22,15 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(
       title: const Text('Settings'),
-      actions: [
-        IconButton(
-          tooltip: 'Help',
-          icon: const Icon(Icons.help_outline),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const HelpScreen()),
-          ),
-        ),
-      ],
+      actions: const [HelpButton()],
     ),
     body: ref
         .watch(businessSettingsProvider)
