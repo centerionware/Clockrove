@@ -224,12 +224,22 @@ class BackupPickerDeviceTest {
     }
 
     private fun showPickerRoots() {
-        if (findLabel("Open from") != null) return
-        val roots = waitFor("document roots") {
-            findLabel("Show roots") ?: findLabel("Open navigation drawer")
+        var nextActivation = 0L
+        var triedAccessibility = false
+        waitFor("open document roots") {
+            findLabel("Open from")?.let { return@waitFor it }
+            if (SystemClock.uptimeMillis() >= nextActivation) {
+                val navigation = findLabel("Show roots") ?: findLabel("Open navigation drawer")
+                if (navigation?.isEnabled == true) {
+                    if (triedAccessibility || !performAccessibilityClick(navigation)) {
+                        touchNode(navigation)
+                    }
+                    triedAccessibility = true
+                    nextActivation = SystemClock.uptimeMillis() + 1_000
+                }
+            }
+            null
         }
-        tapPickerNode(roots)
-        waitFor("open document roots") { findLabel("Open from") }
     }
 
     private fun sharedStorageRoot(): AccessibilityNodeInfo? =

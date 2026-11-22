@@ -54,7 +54,11 @@ Statuses describe evidence, not intent.
   again in [Actions 45077308191](https://github.com/centerionware/Clockrove/actions/runs/45077308191).
   Its API 35 Settings screenshot and activity logs showed the tax-field tap
   hit Android Home. The test now prefers semantic focus and clips fallback
-  touches to the app content area. Full validation remains pending.
+  touches to the app content area. [Actions 45079558909](https://github.com/centerionware/Clockrove/actions/runs/45079558909)
+  passed the API 24 picker and native suite. On API 35 the Documents drawer
+  stayed closed after the first menu tap. The test now confirms the drawer
+  opened and uses finger input if accessibility activation does not open it.
+  Full validation remains pending.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
