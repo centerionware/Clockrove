@@ -348,7 +348,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           'Clockrove will merge the reviewed records in one database transaction. '
           'If validation fails, the transaction is rolled back. '
           '${preview.openSessionCount > 0 ? 'Open/provisional sessions in the backup will be omitted; no end time will be invented and no timer will start. ' : ''}'
-          'Automation stays off, and map credentials and device registrations are not imported.',
+          'Imported site automation starts disabled. Map credentials and '
+          'Android geofence registrations are excluded from the backup.',
         ),
         actions: [
           TextButton(
