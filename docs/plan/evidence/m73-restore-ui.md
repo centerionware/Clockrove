@@ -156,3 +156,9 @@ reached the visible cancellation state and reopened the picker. On the second
 launch, Android remembered Documents as the last choice and showed a different
 resolver layout. The follow-up recognizes both layouts and continues with the
 system Documents picker. Authentication and apply remain unverified.
+
+[Actions 45034436817, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/45034436817/attempts/2)
+reopened Documents and reached its roots without a resolver failure. The API
+24 Downloads provider did not expose the fixture copied by ADB. The test
+now navigates to the actual shared-storage Download directory via Documents,
+which lists files directly. The restore has yet to apply on device.

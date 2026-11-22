@@ -3,6 +3,7 @@ package io.github.centerionware.backuptest
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -43,11 +44,7 @@ class BackupPickerDeviceTest {
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
         openPicker()
-        if (findLabel(FIXTURE) == null) {
-            val roots = findLabel("Show roots") ?: findLabel("Open navigation drawer")
-            if (roots != null) clickNode(roots)
-            click("Downloads")
-        }
+        if (findLabel(FIXTURE) == null) openSharedDownloadDirectory()
         click(FIXTURE)
         waitFor("encrypted document staged") { findLabel("Selected encrypted file", prefix = true) }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
@@ -91,6 +88,31 @@ class BackupPickerDeviceTest {
         assertTrue("Imported automation should start disabled", !imported.settings.enabled)
         assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
     }
+
+    private fun openSharedDownloadDirectory() {
+        showPickerRoots()
+        val device = sharedStorageRoot() ?: run {
+            pressBack()
+            click("More options")
+            click("Show internal storage")
+            showPickerRoots()
+            waitFor("shared storage root", ::sharedStorageRoot)
+        }
+        clickNode(device)
+        click("Download")
+    }
+
+    private fun showPickerRoots() {
+        if (findLabel("Open from") != null) return
+        val roots = waitFor("document roots") {
+            findLabel("Show roots") ?: findLabel("Open navigation drawer")
+        }
+        clickNode(roots)
+        waitFor("open document roots") { findLabel("Open from") }
+    }
+
+    private fun sharedStorageRoot(): AccessibilityNodeInfo? =
+        findLabel(Build.MODEL) ?: findLabel("Internal storage")
 
     private fun pressBack() {
         val shellOutput = automation.executeShellCommand("input keyevent KEYCODE_BACK")
