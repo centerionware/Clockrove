@@ -533,9 +533,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
               context: context,
               barrierDismissible: false,
               builder: (dialog) => AlertDialog(
-                title: const Text('Archive this job?'),
-                content: const Text(
-                  'Clock out first. History and automation preferences are kept. You can restore the job; permanent deletion requires 30 continuous days archived.',
+                title: Text(AppMessage.confirmArchiveJob.of(dialog)),
+                content: Text(
+                  AppMessage.archiveJobWarning.of(dialog),
                 ),
                 actions: [
                   BusinessCommand(
@@ -558,7 +558,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         if (data?.archived == true)
           BusinessCommand(
-            label: 'Restore job',
+            label: AppMessage.restoreJob.of(context),
             create: () {
               final id = newBusinessId();
               final api = ref.read(lifecycleApiProvider);

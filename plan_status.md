@@ -155,6 +155,8 @@ Work report task prices, hourly rate breakdowns, rounding guidance, and
 billed quantities also use catalog entries and placeholders.
 Work and financial report export success, cancellation, and save failures
 now resolve through the 17 current catalogs.
+Job archive, restore, and permanent deletion now use catalog-backed labels
+and warnings. The deletion dialogs share the detailed retention notice.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

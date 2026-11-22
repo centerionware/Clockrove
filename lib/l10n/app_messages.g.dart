@@ -292,7 +292,20 @@ enum AppMessage {
   reportExportCancelled("Export cancelled."),
   reportWorkExportFailed("Export could not be saved. Refresh the report and try again."),
   reportPdfExportFailed("Could not save the PDF. Try a shorter period or export CSV, then refresh and try again."),
-  reportCsvExportFailed("Could not save the CSV. Refresh and try again.");
+  reportCsvExportFailed("Could not save the CSV. Refresh and try again."),
+  archiveRefresh("Refresh archive eligibility"),
+  archiveRetry("Retry archived jobs"),
+  archiveExplanation("Archived jobs keep their history. Restore a job to clock in and use its automation again. Permanent deletion becomes available after 30 continuous days archived."),
+  archiveEmpty("No archived jobs."),
+  archiveCanDelete("Eligible for permanent deletion"),
+  archiveCannotDelete("History retained · deletion is not yet available"),
+  restoreJob("Restore job"),
+  confirmDeleteJob("Permanently delete {job}?"),
+  deleteJobWarning("This cannot be undone. Work history, GPS and the board will be deleted. Issued invoices, payments, receipts and billing history are kept, along with reusable task templates and customers. Copies you already exported remain outside Clockrove."),
+  deletePermanently("Delete permanently"),
+  keepJob("Keep job"),
+  confirmArchiveJob("Archive this job?"),
+  archiveJobWarning("Clock out first. History and automation preferences are kept. You can restore the job; permanent deletion requires 30 continuous days archived.");
 
   const AppMessage(this.english);
   final String english;
