@@ -570,3 +570,8 @@ invoiceReplacementTotal: "প্রতিস্থাপন চালানে�
 invoiceCredit: "জমা"
 invoiceExistingPaymentCredit: "বিদ্যমান পেমেন্টের জমা"
 invoiceAmountLine: "{label}: {amount}"
+invoiceAddUnbilledWork: "চালান না করা কাজ যোগ করুন"
+invoiceRemoveAddedWork: "যোগ করা কাজ সরান"
+invoiceRetryAddedWork: "যোগ করা কাজ আবার লোড করুন"
+invoiceReviewReservations: "কাজের বরাদ্দ পর্যালোচনা করুন"
+invoiceReleaseReservation: "এই বরাদ্দ ছেড়ে দিন"

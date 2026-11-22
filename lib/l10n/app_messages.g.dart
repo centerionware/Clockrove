@@ -574,7 +574,12 @@ enum AppMessage {
   invoiceReplacementTotal("Replacement total"),
   invoiceCredit("Credit"),
   invoiceExistingPaymentCredit("Existing payment credit"),
-  invoiceAmountLine("{label}: {amount}");
+  invoiceAmountLine("{label}: {amount}"),
+  invoiceAddUnbilledWork("Add unbilled work"),
+  invoiceRemoveAddedWork("Remove added work"),
+  invoiceRetryAddedWork("Retry added work"),
+  invoiceReviewReservations("Review work reservations"),
+  invoiceReleaseReservation("Release this reservation");
 
   const AppMessage(this.english);
   final String english;

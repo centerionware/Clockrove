@@ -570,3 +570,8 @@ invoiceReplacementTotal: "प्रतिस्थापन चालान क�
 invoiceCredit: "क्रेडिट"
 invoiceExistingPaymentCredit: "मौजूदा भुगतान क्रेडिट"
 invoiceAmountLine: "{label}: {amount}"
+invoiceAddUnbilledWork: "बिना बिल वाला काम जोड़ें"
+invoiceRemoveAddedWork: "जोड़ा गया काम हटाएँ"
+invoiceRetryAddedWork: "जोड़ा गया काम फिर लोड करें"
+invoiceReviewReservations: "कार्य आरक्षण की समीक्षा करें"
+invoiceReleaseReservation: "यह आरक्षण मुक्त करें"

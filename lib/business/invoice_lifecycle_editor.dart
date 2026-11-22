@@ -457,7 +457,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   OutlinedButton.icon(
                     onPressed: _pending ? null : _chooseWork,
                     icon: const Icon(Icons.playlist_add),
-                    label: const Text('Add unbilled work'),
+                    label: Text(AppMessage.invoiceAddUnbilledWork.of(context)),
                   ),
                 if (_added != null) ...[
                   Text(
@@ -470,7 +470,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             _added = null;
                             _confirmed = false;
                           }),
-                    child: const Text('Remove added work'),
+                    child: Text(AppMessage.invoiceRemoveAddedWork.of(context)),
                   ),
                   if (previewResult!.isLoading) const LinearProgressIndicator(),
                   if (previewResult.hasError)
@@ -480,7 +480,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           : () => ref.invalidate(
                               invoiceBillingPreviewProvider(_added!),
                             ),
-                      child: const Text('Retry added work'),
+                      child: Text(AppMessage.invoiceRetryAddedWork.of(context)),
                     ),
                   if (preview != null) ...[
                     if (preview.problem != null)
@@ -519,7 +519,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                     'Historical tax is unknown. Choose the replacement tax explicitly.',
                   ),
                 ExpansionTile(
-                  title: const Text('Review work reservations'),
+                  title: Text(AppMessage.invoiceReviewReservations.of(context)),
                   children: [
                     const Text(
                       'Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links.',
@@ -528,7 +528,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       CheckboxListTile(
                         value: _released.contains(claim.id),
                         title: Text(claim.label),
-                        subtitle: const Text('Release this reservation'),
+                        subtitle: Text(AppMessage.invoiceReleaseReservation.of(context)),
                         onChanged: _pending
                             ? null
                             : (value) => setState(() {
