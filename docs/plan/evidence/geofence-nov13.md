@@ -40,3 +40,13 @@ That result predates the cold-start change and the 15 m upgrade regression.
 The cold-start source regression needs
 [Actions 45015265507](https://github.com/centerionware/Clockrove/actions/runs/45015265507)
 and the owner-device check.
+
+### Mirror-backed native test results
+
+[Actions 45018944228](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
+passed the native suite on `5844e61`. The uploaded JUnit XML contains 752
+tests with zero failures, errors or skips. It includes the cold-start
+callback and GPS opt-out regressions on both configured SDKs and the schema
+upgrade with a saved 15 m site. The job proceeded to Android device
+instrumentation. This still requires actual callback delivery verification
+at the affected site on a physical phone.
