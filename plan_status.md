@@ -39,15 +39,16 @@ M7.6 before moving from internal to closed testing. Owner-device and upgrade
 checks remain separate launch-readiness work under M8.2. iOS and future service
 remain deferred.
 
-M7.3's Settings restore route and screen are rebased onto merged `main` and
-pass exact-head validation. Rebased head `e8dcf8f` / Validate run
-[44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208)
-passed formatting, Analyze, the Flutter behavior suite (285 passed, 14 skipped),
-Android and release builds, 823 native tests with zero failures, and 38 actual
-Android tests on each of API 24 and 35 with zero failures. This validates the
-source only: itemized add/change/deletion review, a close-time choice for
-imported open sessions, a real SAF provider journey, and on-device restore
-acceptance remain open. Details: [restore UI evidence](docs/plan/evidence/m73-restore-ui.md).
+M7.3's Settings restore route passed its original Flutter and Android checks
+in [Actions 44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208).
+[PR #74](https://github.com/centerionware/Clockrove/pull/74) passed exact-head
+[Actions 44031580892](https://github.com/centerionware/Clockrove/actions/runs/44031580892)
+and merged as `cd2f0a6`. Settings includes encrypted export and restore. The
+restore preview provides aggregate counts, conflict details and explicit omission
+of open imported sessions. Near-limit archive replay passed on API 24 and API 35
+in [Actions 45013742618](https://github.com/centerionware/Clockrove/actions/runs/45013742618).
+The system picker and data-changing merge still need passing evidence on both API
+levels. See [restore validation history](docs/plan/evidence/m73-restore-ui.md).
 
 PR #70 fixed the invoice PDF action visibility failure. Exact head
 `58ca416dfe8c3b82fff8d58898db9ca7acc86a26` passed Validate run
