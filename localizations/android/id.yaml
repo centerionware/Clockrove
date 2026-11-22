@@ -78,3 +78,6 @@ quote_email_body: "Halo %1$s,\n\nPenawaran %2$s terlampir.\nPerkiraan total: %3$
 quote_email_estimate_notice: "PENAWARAN — perkiraan, bukan tagihan."
 quote_email_custom_subject: "Penawaran · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "Tagihan {invoice_number} — {job_name}"
+invoice_email_default_body: "Halo {customer_name},\n\nTagihan {invoice_number} terlampir.\nJumlah: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "Pengganti %1$s\nKredit saat diterbitkan: %2$s %3$s\nSaldo terutang saat diterbitkan: %4$s %3$s"

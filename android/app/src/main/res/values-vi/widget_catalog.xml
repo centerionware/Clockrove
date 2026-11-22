@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"BÁO GIÁ — giá ước tính, không phải hóa đơn."</string>
     <string name="quote_email_custom_subject">"Báo giá · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"Hóa đơn {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"Xin chào {customer_name},\n\nHóa đơn {invoice_number} được đính kèm.\nSố tiền: {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"Thay thế %1$s\nKhoản ghi có khi phát hành: %2$s %3$s\nSố dư phải trả khi phát hành: %4$s %3$s"</string>
 </resources>

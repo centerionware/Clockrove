@@ -195,8 +195,13 @@ The PDF renderer reserves width for translated total labels before drawing
 exact amounts. New quote revisions use the effective app language for
 default email subjects and bodies, quote references, and the estimate notice
 added to custom emails. Existing issued revisions keep their saved email
-text. Invoice email templates, payment event descriptions stored in
-snapshots, and rendered PDF locale and right-to-left verification remain open.
+text. New ordinary, quote-linked, and replacement invoice snapshots use
+localized default email templates. Replacement emails also translate the
+credit and balance notice. The stored default values still identify default
+templates, and custom templates use their saved text. Catalog generation
+checks named email placeholders across Android locales. Settings template
+field defaults, payment event descriptions stored in snapshots, and rendered
+PDF locale and right-to-left verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"DEVIS — estimation, pas une facture."</string>
     <string name="quote_email_custom_subject">"Devis · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"Facture {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"Bonjour {customer_name},\n\nVous trouverez la facture {invoice_number} en pièce jointe.\nMontant : {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"Remplace %1$s\nCrédit à l’émission : %2$s %3$s\nSolde dû à l’émission : %4$s %3$s"</string>
 </resources>

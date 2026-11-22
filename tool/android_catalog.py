@@ -41,7 +41,7 @@ def main():
         if messages.keys() != english.keys():
             parser.error(f"{source}: catalog keys differ from English")
         for key, value in messages.items():
-            arguments = r"%[1-9][0-9]*\$s"
+            arguments = r"%[1-9][0-9]*\$s|\{[a-z_]+\}"
             if sorted(re.findall(arguments, value)) != sorted(re.findall(arguments, english[key])):
                 parser.error(f"{source}: format arguments differ for {key}")
         qualifier = f"b+{tag.replace('-', '+')}" if "-" in tag else tag

@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"此文件为估价单，并非发票。"</string>
     <string name="quote_email_custom_subject">"报价单 · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"发票 {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"{customer_name}，您好：\n\n请查收随附的发票 {invoice_number}。\n金额：{amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"替代 %1$s\n开具时的抵扣额：%2$s %3$s\n开具时的应付余额：%4$s %3$s"</string>
 </resources>

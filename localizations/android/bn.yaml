@@ -78,3 +78,6 @@ quote_email_body: "নমস্কার %1$s,\n\nমূল্যপ্রস্
 quote_email_estimate_notice: "মূল্যপ্রস্তাব — আনুমানিক হিসাব, চালান নয়।"
 quote_email_custom_subject: "মূল্যপ্রস্তাব · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "চালান {invoice_number} — {job_name}"
+invoice_email_default_body: "নমস্কার {customer_name},\n\nচালান {invoice_number} সংযুক্ত আছে।\nপরিমাণ: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "%1$s-এর প্রতিস্থাপন\nইস্যুর সময় জমা: %2$s %3$s\nইস্যুর সময় বকেয়া: %4$s %3$s"

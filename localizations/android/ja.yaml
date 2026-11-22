@@ -78,3 +78,6 @@ quote_email_body: "%1$s 様\n\n見積書（%2$s）を添付いたします。\n�
 quote_email_estimate_notice: "この書類は見積書です。請求書ではありません。"
 quote_email_custom_subject: "見積書 · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "請求書 {invoice_number} — {job_name}"
+invoice_email_default_body: "{customer_name} 様\n\n請求書 {invoice_number} を添付いたします。\n金額：{amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "%1$s の差し替え\n発行時の充当額：%2$s %3$s\n発行時の支払残額：%4$s %3$s"

@@ -78,3 +78,6 @@ quote_email_body: "Hello %1$s,\n\nPlease find quote %2$s attached.\nEstimated to
 quote_email_estimate_notice: "QUOTE — estimate, not an invoice."
 quote_email_custom_subject: "Quote · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "Invoice {invoice_number} — {job_name}"
+invoice_email_default_body: "Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "Replacement of %1$s\nCredit at issue: %2$s %3$s\nBalance due at issue: %4$s %3$s"

@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"ANGEBOT — Kostenvoranschlag, keine Rechnung."</string>
     <string name="quote_email_custom_subject">"Angebot · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"Rechnung {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"Guten Tag {customer_name},\n\nim Anhang finden Sie die Rechnung {invoice_number}.\nBetrag: {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"Ersatz für %1$s\nGuthaben bei Ausstellung: %2$s %3$s\nOffener Betrag bei Ausstellung: %4$s %3$s"</string>
 </resources>

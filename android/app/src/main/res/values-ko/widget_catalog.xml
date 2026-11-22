@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"견적서입니다. 청구서가 아닙니다."</string>
     <string name="quote_email_custom_subject">"견적서 · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"청구서 {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"{customer_name} 님, 안녕하세요.\n\n청구서 {invoice_number}을 첨부합니다.\n금액: {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"%1$s 대체\n발행 시 적용된 크레딧: %2$s %3$s\n발행 시 미결제 잔액: %4$s %3$s"</string>
 </resources>

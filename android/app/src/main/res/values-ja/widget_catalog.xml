@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"この書類は見積書です。請求書ではありません。"</string>
     <string name="quote_email_custom_subject">"見積書 · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"請求書 {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"{customer_name} 様\n\n請求書 {invoice_number} を添付いたします。\n金額：{amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"%1$s の差し替え\n発行時の充当額：%2$s %3$s\n発行時の支払残額：%4$s %3$s"</string>
 </resources>

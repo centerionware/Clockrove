@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -80,14 +81,14 @@ internal object InvoiceStore {
         if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
         return null
     }
-    fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long): String? {
+    fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long, strings: Context): String? {
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         val preview = InvoiceCoverageStore.preview(db, ReportStore.read(db, selection))
-        return prepareReviewed(db, id, preview, at)
+        return prepareReviewed(db, id, preview, at, strings)
     }
     /** Quote caller supplies a native revalidated report, never client amounts. */
-    fun prepareReviewed(db: SQLiteDatabase, id: String, preview: InvoiceCoverageStore.Preview, at: Long,
+    fun prepareReviewed(db: SQLiteDatabase, id: String, preview: InvoiceCoverageStore.Preview, at: Long, strings: Context,
         agreement: QuoteInvoiceReviewStore.Reviewed? = null): String? {
         val selection = preview.report.selection
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
@@ -125,7 +126,8 @@ internal object InvoiceStore {
                 if (total.minimumTaskAdjustmentMinor.signum() > 0) "Minimum task-rate fee adjustment ${amount(total.minimumTaskAdjustmentMinor, digits)} ${total.currency}" else null,
                 "currency amount rounded half up to ${digits} decimal places").joinToString(" · "),
             company.invoiceHeader, company.invoiceFooter, formatted, email,
-            InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
+            InvoiceEmailTemplate.renderDefaultAware(strings, company, values, true),
+            InvoiceEmailTemplate.renderDefaultAware(strings, company, values, false), lines,
             subtotal, taxUnits, amount(tax, digits), billingPolicy = JSONObject(mapOf(
                 "mode" to total.mode, "hourlyMode" to total.policyHourlyMode, "minimumHours" to total.policyMinimumHours,
                 "minimumTaskFeeMinor" to total.policyTaskMinimumMinor?.toString(), "exactDurationMillis" to total.durationMillis.toString(),

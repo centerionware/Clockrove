@@ -687,7 +687,9 @@ class TimerRepository internal constructor(context: Context,
         QuoteInvoiceCalculation(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.review(helper.readableDatabase, request, choices))
     @Synchronized
     internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft): Outcome =
-        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) { QuoteInvoiceStore.prepare(it, value, wallClock()) }
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) {
+            QuoteInvoiceStore.prepare(it, value, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun quoteInvoices(id: String, before: Pair<Long, String>? = null, limit: Int = 20): List<QuoteInvoiceStore.Summary> = QuoteInvoiceStore.links(helper.readableDatabase, id, before, limit)
     @Synchronized
@@ -704,14 +706,16 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
-            InvoiceStore.prepare(it, invoiceId, selection, wallClock())
+            InvoiceStore.prepare(it, invoiceId, selection, wallClock(), localizedContext(appContext))
         }
     @Synchronized
     internal fun voidInvoice(id: String, version: Long, value: InvoiceLifecycleStore.VoidDraft): Outcome =
         boardChange(id, version, "INVOICE_VOID", value.values()) { InvoiceLifecycleStore.void(it, value, wallClock()) }
     @Synchronized
     internal fun replaceInvoice(id: String, version: Long, value: InvoiceLifecycleStore.ReplacementDraft): Outcome =
-        boardChange(id, version, "INVOICE_REPLACE", value.values()) { InvoiceLifecycleStore.replace(it, value, wallClock()) }
+        boardChange(id, version, "INVOICE_REPLACE", value.values()) {
+            InvoiceLifecycleStore.replace(it, value, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun invoicePayments(invoiceId: String): Pair<Long, InvoicePaymentStore.Snapshot> =
         readSnapshot(helper.readableDatabase).version to InvoicePaymentStore.read(helper.readableDatabase, invoiceId)

@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.util.Currency
 import java.math.BigInteger
 
@@ -191,6 +193,14 @@ internal object InvoiceEmailTemplate {
     }
     fun valid(value: String, subject: Boolean): Boolean = value.length <= (if (subject) 500 else 20000) &&
         !value.contains('\u0000') && (!subject || !value.any { it.isISOControl() }) && tokens(value) != null
+    fun renderDefaultAware(strings: Context, settings: BusinessStore.Settings, values: Map<String, String>, subject: Boolean): String {
+        val defaults = BusinessStore.Settings(settings.currency)
+        val saved = if (subject) settings.emailSubject else settings.emailBody
+        val default = if (subject) defaults.emailSubject else defaults.emailBody
+        val resource = if (subject) R.string.invoice_email_default_subject else R.string.invoice_email_default_body
+        return expand(if (saved == default) strings.getString(resource) else saved, values, subject)
+    }
+
     fun expand(value: String, values: Map<String, String>, subject: Boolean): String {
         require(valid(value, subject)) { "INVALID_EMAIL_TEMPLATE" }
         val result = StringBuilder()

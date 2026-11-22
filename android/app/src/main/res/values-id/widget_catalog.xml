@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"PENAWARAN — perkiraan, bukan tagihan."</string>
     <string name="quote_email_custom_subject">"Penawaran · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"Tagihan {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"Halo {customer_name},\n\nTagihan {invoice_number} terlampir.\nJumlah: {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"Pengganti %1$s\nKredit saat diterbitkan: %2$s %3$s\nSaldo terutang saat diterbitkan: %4$s %3$s"</string>
 </resources>

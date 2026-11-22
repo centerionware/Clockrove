@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import java.util.TimeZone
 import org.json.JSONArray
@@ -70,7 +72,7 @@ internal object InvoiceLifecycleStore {
         InvoiceCopyStore.retainVoid(db, before, null, at)
         return null
     }
-    fun replace(db: SQLiteDatabase, value: ReplacementDraft, at: Long): String? {
+    fun replace(db: SQLiteDatabase, value: ReplacementDraft, at: Long, strings: Context): String? {
         invalid(value.invoiceId, value.reason, value.timezone, value.confirmed, at)?.let { return it }
         if (!token.matches(value.replacementId) || value.replacementId == value.invoiceId) return "INVALID_REPLACEMENT"
         if (db.rawQuery("SELECT 1 FROM invoices WHERE id=?", arrayOf(value.replacementId)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
@@ -140,10 +142,12 @@ internal object InvoiceLifecycleStore {
                 "taskMinimumAdjustmentMinor" to policy.minimumTaskAdjustmentMinor.toString()) })).toString()
         val tokens = mapOf("company_name" to source.company, "customer_name" to source.customer, "job_name" to source.job,
             "invoice_number" to number, "amount" to formatted, "currency" to source.currency)
+        val notice = strings.getString(R.string.invoice_email_replacement_notice, source.number,
+            InvoiceStore.amount(balance.paid, source.digits), source.currency, InvoiceStore.amount(balance.due, source.digits))
         val replacement = source.copy(number = number, created = at, lines = edited,
             subtotal = InvoiceStore.amount(subtotal, source.digits), taxRateUnits = value.taxUnits, taxAmount = InvoiceStore.amount(tax, source.digits), total = formatted,
-            subject = InvoiceEmailTemplate.expand(company.emailSubject, tokens, true), body = InvoiceEmailTemplate.expand(company.emailBody, tokens, false) +
-                "\n\nReplacement of ${source.number}\nCredit at issue: ${InvoiceStore.amount(balance.paid, source.digits)} ${source.currency}\nBalance due at issue: ${InvoiceStore.amount(balance.due, source.digits)} ${source.currency}",
+            subject = InvoiceEmailTemplate.renderDefaultAware(strings, company, tokens, true),
+            body = InvoiceEmailTemplate.renderDefaultAware(strings, company, tokens, false) + "\n\n" + notice,
             basis = "Replacement of ${source.number} · reviewed line amounts · tax rounded half up",
             statement = InvoiceStore.Statement("REPLACEMENT", balance.status, at, InvoiceStore.amount(balance.paid, source.digits), InvoiceStore.amount(balance.due, source.digits),
                 listOf(InvoiceStore.Line("Credit from ${source.number}", "Existing payments transferred; no new cash received.", InvoiceStore.amount(balance.paid, source.digits))), "Replaces ${source.number}"),

@@ -78,3 +78,6 @@ quote_email_body: "مرحبًا %1$s،\n\nعرض السعر %2$s مرفق.\nال
 quote_email_estimate_notice: "عرض سعر تقديري وليس فاتورة."
 quote_email_custom_subject: "عرض السعر · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "الفاتورة {invoice_number} — {job_name}"
+invoice_email_default_body: "مرحبًا {customer_name}،\n\nالفاتورة {invoice_number} مرفقة.\nالمبلغ: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "بديل عن %1$s\nالرصيد الدائن عند الإصدار: %2$s %3$s\nالرصيد المستحق عند الإصدار: %4$s %3$s"

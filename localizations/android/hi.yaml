@@ -78,3 +78,6 @@ quote_email_body: "नमस्ते %1$s,\n\nकोटेशन %2$s संल
 quote_email_estimate_notice: "कोटेशन — अनुमान, चालान नहीं।"
 quote_email_custom_subject: "कोटेशन · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "चालान {invoice_number} — {job_name}"
+invoice_email_default_body: "नमस्ते {customer_name},\n\nचालान {invoice_number} संलग्न है।\nराशि: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "%1$s के बदले जारी\nजारी करते समय क्रेडिट: %2$s %3$s\nजारी करते समय बकाया: %4$s %3$s"

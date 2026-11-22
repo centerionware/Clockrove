@@ -81,4 +81,7 @@
     <string name="quote_email_estimate_notice">"СМЕТА — предварительный расчёт, не счёт."</string>
     <string name="quote_email_custom_subject">"Смета · %1$s"</string>
     <string name="quote_email_default_subject">"%1$s — %2$s"</string>
+    <string name="invoice_email_default_subject">"Счёт {invoice_number} — {job_name}"</string>
+    <string name="invoice_email_default_body">"Здравствуйте, {customer_name}!\n\nВо вложении счёт {invoice_number}.\nСумма: {amount} {currency}\n\n{company_name}"</string>
+    <string name="invoice_email_replacement_notice">"Взамен %1$s\nЗачтено при выставлении: %2$s %3$s\nОстаток к оплате при выставлении: %4$s %3$s"</string>
 </resources>

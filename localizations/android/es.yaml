@@ -78,3 +78,6 @@ quote_email_body: "Hola, %1$s:\n\nAdjuntamos el presupuesto %2$s.\nTotal estimad
 quote_email_estimate_notice: "PRESUPUESTO — estimación, no es una factura."
 quote_email_custom_subject: "Presupuesto · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "Factura {invoice_number} — {job_name}"
+invoice_email_default_body: "Hola, {customer_name}:\n\nAdjuntamos la factura {invoice_number}.\nImporte: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "Sustituye a %1$s\nCrédito al emitir: %2$s %3$s\nSaldo pendiente al emitir: %4$s %3$s"

@@ -78,3 +78,6 @@ quote_email_body: "%1$s，您好：\n\n請查收隨附的報價單（%2$s）。\
 quote_email_estimate_notice: "此文件為估價單，並非發票。"
 quote_email_custom_subject: "報價單 · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "發票 {invoice_number} — {job_name}"
+invoice_email_default_body: "{customer_name}，您好：\n\n請查收隨附的發票 {invoice_number}。\n金額：{amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "取代 %1$s\n開立時的折抵金額：%2$s %3$s\n開立時的應付餘額：%4$s %3$s"

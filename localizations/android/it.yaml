@@ -78,3 +78,6 @@ quote_email_body: "Gentile %1$s,\n\nin allegato trova il preventivo %2$s.\nTotal
 quote_email_estimate_notice: "PREVENTIVO — stima, non è una fattura."
 quote_email_custom_subject: "Preventivo · %1$s"
 quote_email_default_subject: "%1$s — %2$s"
+invoice_email_default_subject: "Fattura {invoice_number} — {job_name}"
+invoice_email_default_body: "Gentile {customer_name},\n\nin allegato trova la fattura {invoice_number}.\nImporto: {amount} {currency}\n\n{company_name}"
+invoice_email_replacement_notice: "Sostituisce %1$s\nCredito all’emissione: %2$s %3$s\nSaldo dovuto all’emissione: %4$s %3$s"
