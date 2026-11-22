@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'invoice_detail_screen.dart';
 import 'payment_api.dart';
@@ -82,9 +83,12 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                       if (invoice.customer.isNotEmpty) invoice.customer,
                       '${invoice.currency} ${invoice.total}',
                       if (invoice.status != null)
-                        invoicePaymentStatus(invoice.status!),
+                        invoicePaymentStatus(invoice.status!).of(context),
                       if (invoice.due != null)
-                        'Balance due ${invoice.currency} ${money(invoice.due, invoice.digits)}',
+                        AppMessage.invoiceBalanceDueWithAmount.format(context, {
+                          'currency': invoice.currency,
+                          'amount': money(invoice.due, invoice.digits),
+                        }),
                       if (invoice.createdLabel.isNotEmpty)
                         'Issued ${invoice.createdLabel}',
                       if (invoice.legacy)

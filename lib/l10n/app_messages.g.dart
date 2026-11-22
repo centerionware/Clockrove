@@ -458,7 +458,18 @@ enum AppMessage {
   commandInvalidEmailSubject("The email subject template is invalid. Open Settings and correct its placeholders or line breaks."),
   commandInvalidEmailBody("The email body template is invalid. Open Settings and correct its placeholders."),
   commandInvalidSettings("Check company email, amounts and email template placeholders. Subjects cannot contain line breaks."),
-  commandInvoiceUnavailable("This invoice is unavailable. Refresh the invoice list.");
+  commandInvoiceUnavailable("This invoice is unavailable. Refresh the invoice list."),
+  invoiceStatusUnpaid("Unpaid"),
+  invoiceStatusPartial("Partially paid"),
+  invoiceStatusPaid("Paid"),
+  invoiceStatusNothingDue("Nothing due"),
+  invoiceStatusVoid("Voided"),
+  invoiceTotal("Invoice total"),
+  invoicePaidToDate("Paid to date"),
+  invoiceCreditTransferred("Credit transferred"),
+  invoiceCancelledBalance("Cancelled unpaid balance"),
+  invoiceBalanceDue("Balance due"),
+  invoiceBalanceDueWithAmount("Balance due {currency} {amount}");
 
   const AppMessage(this.english);
   final String english;

@@ -205,7 +205,9 @@ localized default templates and their field labels. Unedited defaults are
 saved in the existing storage format. Template instructions and local field
 validation now use catalog messages, including the literal template tokens.
 Native email template and Settings rejections and the unavailable-invoice
-message use catalog strings. Other command rejections, payment event
+message use catalog strings. Invoice details and history resolve payment
+statuses and balance labels from the Flutter catalogs. Other command
+rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left
 verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML

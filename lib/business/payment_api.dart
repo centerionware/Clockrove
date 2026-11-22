@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 
@@ -277,11 +278,11 @@ final invoicePaymentsProvider = FutureProvider.family<InvoicePayments, String>((
   return ref.watch(paymentApiProvider).read(id);
 });
 
-String invoicePaymentStatus(String status) => switch (status) {
-  'UNPAID' => 'Unpaid',
-  'PARTIALLY_PAID' => 'Partially paid',
-  'PAID' => 'Paid',
-  'NOTHING_DUE' => 'Nothing due',
-  'VOID' => 'Voided',
-  _ => 'Needs review',
+AppMessage invoicePaymentStatus(String status) => switch (status) {
+  'UNPAID' => AppMessage.invoiceStatusUnpaid,
+  'PARTIALLY_PAID' => AppMessage.invoiceStatusPartial,
+  'PAID' => AppMessage.invoiceStatusPaid,
+  'NOTHING_DUE' => AppMessage.invoiceStatusNothingDue,
+  'VOID' => AppMessage.invoiceStatusVoid,
+  _ => AppMessage.reportNeedsReview,
 };

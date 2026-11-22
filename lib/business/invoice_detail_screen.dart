@@ -171,7 +171,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
-              child: Chip(label: Text(invoicePaymentStatus(data.status))),
+              child: Chip(
+                label: Text(invoicePaymentStatus(data.status).of(context)),
+              ),
             ),
             const SizedBox(height: 12),
             Card(
@@ -180,17 +182,24 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _amount('Invoice total', data.total),
+                    _amount(AppMessage.invoiceTotal.of(context), data.total),
                     if (data.cancellation == null)
-                      _amount('Paid to date', data.paid)
+                      _amount(AppMessage.invoicePaidToDate.of(context), data.paid)
                     else ...[
-                      _amount('Credit transferred', data.cancellation!.credit),
                       _amount(
-                        'Cancelled unpaid balance',
+                        AppMessage.invoiceCreditTransferred.of(context),
+                        data.cancellation!.credit,
+                      ),
+                      _amount(
+                        AppMessage.invoiceCancelledBalance.of(context),
                         data.cancellation!.cancelled,
                       ),
                     ],
-                    _amount('Balance due', data.due, prominent: true),
+                    _amount(
+                      AppMessage.invoiceBalanceDue.of(context),
+                      data.due,
+                      prominent: true,
+                    ),
                     if (data.collectedTax != null)
                       Text(
                         'Collected tax included: ${data.currency} ${money(data.collectedTax, data.digits)}',
@@ -434,7 +443,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   _ => 'Balance copy',
                 }),
                 subtitle: Text(
-                  '${copy.createdLabel}\n${copy.kind == 'VOID' ? 'Credit transferred' : 'Paid'} ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
+                  '${copy.createdLabel}\n${copy.kind == 'VOID' ? AppMessage.invoiceCreditTransferred.of(context) : 'Paid'} ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: eligible ? () => _open(copy.id) : null,
