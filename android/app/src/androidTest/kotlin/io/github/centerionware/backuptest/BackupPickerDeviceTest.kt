@@ -79,6 +79,11 @@ class BackupPickerDeviceTest {
         assertEquals(2, result.jobs.size)
         assertEquals("Synthetic restore source", result.jobs.single { it.id == "ci-document-source" }.name)
         assertNull(result.running)
+        val entry = repository.sessionHistory("ci-document-source").page.entries.single()
+        assertEquals("ci-document-session", entry.id)
+        assertEquals(1735689600000L, entry.start)
+        assertEquals(1735693200000L, entry.end)
+        assertEquals("Etc/UTC", entry.timezone)
     }
 
     private fun findLabel(label: String, prefix: Boolean = false): AccessibilityNodeInfo? = findNode { node ->

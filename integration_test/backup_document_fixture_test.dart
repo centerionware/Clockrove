@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
 import 'package:clockrove/business/business_api.dart';
+import 'package:clockrove/tracking/history_api.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -28,6 +29,20 @@ void main() {
         name: _jobName,
       );
       expect(created.committed, isTrue);
+
+      final entry = await HistoryApi().create(
+        newBusinessId(),
+        created.version,
+        const HistoryDraft(
+          sessionId: 'ci-document-session',
+          jobId: _jobId,
+          start: 1735689600000,
+          end: 1735693200000,
+          timezone: 'Etc/UTC',
+          offsetSeconds: 0,
+        ),
+      );
+      expect(entry.committed, isTrue);
 
       final backup = await BackupSnapshotExporter().exportStream();
       final file = File(
