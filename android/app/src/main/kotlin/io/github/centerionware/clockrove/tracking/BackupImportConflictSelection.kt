@@ -379,7 +379,7 @@ internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, ch
             (table in revisionTombstoneRows || table == "entity_heads") &&
                 (choice == "PRESERVE_LOCAL_DELETION" ||
                     (choice == "RESTORE_BACKUP_CONTENT" &&
-                        (table == "entity_heads" || table in BackupImportDeletionResolution.commentGraphTables)))
+                        (table == "entity_heads" || table in BackupImportDeletionResolution.restorableTables)))
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
             choice in setOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION")
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" &&
