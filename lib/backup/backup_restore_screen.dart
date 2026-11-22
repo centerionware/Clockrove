@@ -54,10 +54,20 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _password.clear();
     _password.dispose();
     final document = _document;
-    if (document != null) unawaited(document.close());
+    if (document != null) unawaited(_closeAfterDispose(document.close));
     final restore = _restore;
-    if (restore != null && !_applied) unawaited(restore.close());
+    if (restore != null && !_applied) {
+      unawaited(_closeAfterDispose(restore.close));
+    }
     super.dispose();
+  }
+
+  Future<void> _closeAfterDispose(Future<Object?> Function() close) async {
+    try {
+      await close();
+    } on Object {
+      // The native stage expires and is removed by lifecycle cleanup.
+    }
   }
 
   bool get _pageChoicesResolved =>
@@ -112,6 +122,10 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           await selected.close();
           rethrow;
         }
+      }
+      if (!mounted) {
+        await selected.close();
+        return;
       }
       setState(() {
         _document = selected;
@@ -196,9 +210,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       if (identical(_document, document) && document.isClosed && mounted) {
         setState(() => _document = null);
       }
-      _password.clear();
       _cancellationToken = null;
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        _password.clear();
+        setState(() => _busy = false);
+      }
     }
     if (restore != null && mounted && identical(_restore, restore)) {
       await _loadConflictPage(0);
