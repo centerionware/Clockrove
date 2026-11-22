@@ -15,10 +15,13 @@ Statuses describe evidence, not intent.
   current location while already there resets entry detection and waits for a
   confirmed exit and fresh entry; the current flow did not offer a direct
   clock-in. Follow-up UI, Help and test changes are in
-  [PR #83](https://github.com/centerionware/Clockrove/pull/83); its first
-  Actions run found only formatting differences, now corrected from the
-  workflow artifact. Exact-head Actions and another physical arrival check
-  remain pending.
+  [PR #83](https://github.com/centerionware/Clockrove/pull/83). Its first
+  Actions run found formatting differences, corrected from the workflow
+  artifact. Rebased run
+  [45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
+  passed formatting, then Analyze stopped on one null-aware collection lint;
+  that source correction is pushed and a fresh exact-head run is pending.
+  Another physical arrival check remains open.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
   are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)

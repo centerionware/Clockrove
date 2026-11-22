@@ -365,7 +365,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     return [
       '${site.radius.toStringAsFixed(0)} m radius',
       site.enabled ? 'Enabled' : 'Disabled',
-      if (warning != null) warning,
+      ?warning,
     ].join(' · ');
   }
 

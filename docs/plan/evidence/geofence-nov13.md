@@ -47,8 +47,12 @@ The follow-up source adds an explicit confirmation after saving a current
 location with auto-start enabled, routes acceptance through the serialized
 manual timer command, warns about enabled sites under 100 m, and expands the
 in-app Help explanation. Flutter coverage is added for accept, timer-command
-identity, the small-radius warning and Help copy. Exact-head Actions and
-owner-device arrival delivery remain pending; no native geofence behavior is
+identity, the small-radius warning and Help copy. After the first run's
+formatting correction, rebased exact-head run
+[45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
+passed formatting but Analyze stopped on a null-aware collection lint in the
+radius warning. That source correction is pushed; fresh exact-head Actions and
+owner-device arrival delivery remain pending. No native geofence behavior is
 claimed as fixed by this UI change.
 
 ### Cold-start callback investigation
