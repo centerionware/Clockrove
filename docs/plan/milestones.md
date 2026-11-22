@@ -199,12 +199,26 @@ entering closed testing.
 - **Closed-testing gate:** do not move the app from internal to closed testing
   until all launch features and this full E2E/UI acceptance pass. Internal
   iterations may continue while implementation and validation are underway.
+- Add an offline Help flow in Settings, with links from the relevant screens.
+  Cover first use, location permission and geofence recovery, backup and restore,
+  data controls, and support. Include app-version information. Verify navigation,
+  offline use, large text and TalkBack in the M7.6 inventory.
+- Include versioned Terms of Use, Privacy Policy and Data Usage Policy in Help.
+  Keep the bundled text and public site in sync. Review actual app and map-provider
+  data flows before publishing the policies and completing Play disclosures.
 - Reuse this complete inventory for the final public-release gate below; the
   static Cloudflare Pages documentation site remains a full public-release task.
 
 ### Milestone 8 — release readiness and automatic Android delivery
 
 - Finish accessibility/theme/error states, privacy/support docs, store assets and disclosures, and contributor onboarding.
+- Before closed testing, publish the reviewed privacy policy at a stable
+  public URL on the Cloudflare Pages site, link it from the app and Play
+  listing, and complete the Play Data safety declaration for the signed
+  candidate. Keep the approved Terms of Use, Data Usage Policy, and support
+  contact available from in-app Help and the site. Use the
+  [Play Data safety review](../policies/PLAY_DATA_SAFETY_REVIEW.md) to reconcile
+  disclosures with device evidence.
 - Complete the physical-device matrix, dependency/license review, release build and upgrade migration tests.
 - Configure protected publishing workflows and Fastlane using owner-supplied credentials. Demonstrate internal delivery before production.
 - Complete applicable closed testing/production eligibility. Publish paid release from a validated version tag, subject to store review.

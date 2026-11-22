@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 import io.github.centerionware.clockrove.tracking.TimerHostApi
 import io.github.centerionware.clockrove.tracking.BackupHostApi
 import io.github.centerionware.clockrove.location.TrackingHostApi
@@ -15,6 +16,7 @@ open class MainActivity : FlutterActivity() {
     private var backupFileApi: io.github.centerionware.clockrove.backup.BackupDocumentHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
     private var mapProviderApi: io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi? = null
+    private var helpApi: MethodChannel? = null
     private var debugApi: io.flutter.plugin.common.MethodChannel? = null
     private var visible = false
 
@@ -35,6 +37,17 @@ open class MainActivity : FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        helpApi = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "clockrove/help/v1").also { api ->
+            api.setMethodCallHandler { call, result ->
+                if (call.method != "appVersion") {
+                    result.notImplemented()
+                } else {
+                    @Suppress("DEPRECATION")
+                    val installed = packageManager.getPackageInfo(packageName, 0)
+                    result.success(installed.versionName)
+                }
+            }
+        }
         if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             debugApi = io.flutter.plugin.common.MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "clockrove/debug/v1").also { api ->
                 api.setMethodCallHandler { call, result ->
@@ -67,6 +80,8 @@ open class MainActivity : FlutterActivity() {
         automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        helpApi?.setMethodCallHandler(null)
+        helpApi = null
         debugApi?.setMethodCallHandler(null)
         debugApi = null
         backupFileApi?.detach()
