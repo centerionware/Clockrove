@@ -57,6 +57,37 @@ void main() {
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
   });
 
+  testWidgets('keeps Help readable and scrollable at large text sizes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(2),
+          ),
+          child: child!,
+        ),
+        home: const HelpScreen(),
+      ),
+    );
+
+    final topic = find.text(HelpTopic.locationHistory.title);
+    await tester.scrollUntilVisible(
+      topic,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(topic);
+    await tester.pumpAndSettle();
+    expect(find.text(HelpTopic.locationHistory.content), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows the installed build version from Android', (tester) async {
     const channel = MethodChannel('clockrove/help/v1');
     final messenger =
