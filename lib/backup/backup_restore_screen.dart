@@ -773,7 +773,7 @@ final class _ConflictCard extends StatelessWidget {
                         contentPadding: EdgeInsets.zero,
                         value: choice,
                         enabled: enabled,
-                        title: Text(_choiceLabel(choice)),
+                        title: Text(_choiceLabel(context, choice)),
                       ),
                   ],
                 ),
@@ -902,24 +902,24 @@ final class _NoticeCard extends StatelessWidget {
   }
 }
 
-String _choiceLabel(String choice) => switch (choice) {
-  'KEEP_LOCAL' => 'Keep the version on this device',
-  'MERGE_KEEP_LOCAL_CONTENT' =>
-    'Keep local content and preserve both revision parents',
-  'MERGE_USE_BACKUP_CONTENT' =>
-    'Use backup content and preserve both revision parents',
-  'MERGE_IDENTICAL_CONTENT' =>
-    'Keep identical content and merge revision history',
-  'OMIT_BACKUP_RECORD' => 'Omit this backup record',
-  'OMIT_OPEN_SESSION' => 'Omit this open session',
-  'OMIT_BACKUP_SESSION' => 'Omit this backup session',
-  'PRESERVE_DELETION' =>
-    'Keep the local deletion; omit the covered backup point',
-  'PRESERVE_LOCAL_DELETION' => 'Keep the local deletion',
-  'APPLY_BACKUP_DELETION' => 'Apply the deletion recorded in the backup',
-  'RESTORE_BACKUP_CONTENT' => 'Restore the content in this backup',
-  _ => _humanize(choice),
-};
+String _choiceLabel(BuildContext context, String choice) {
+  final message = switch (choice) {
+    'KEEP_LOCAL' => AppMessage.restoreKeepLocal,
+    'MERGE_KEEP_LOCAL_CONTENT' => AppMessage.restoreMergeLocal,
+    'MERGE_USE_BACKUP_CONTENT' => AppMessage.restoreMergeBackup,
+    'MERGE_IDENTICAL_CONTENT' => AppMessage.restoreMergeIdentical,
+    'OMIT_BACKUP_RECORD' => AppMessage.restoreOmitRecord,
+    'OMIT_OPEN_SESSION' => AppMessage.restoreOmitOpenSession,
+    'OMIT_BACKUP_SESSION' => AppMessage.restoreOmitBackupSession,
+    'PRESERVE_DELETION' => AppMessage.restorePreserveGpsDeletion,
+    'PRESERVE_LOCAL_DELETION' => AppMessage.restorePreserveLocalDeletion,
+    'APPLY_BACKUP_DELETION' => AppMessage.restoreApplyBackupDeletion,
+    'RESTORE_BACKUP_CONTENT' => AppMessage.restoreUseBackupContent,
+    _ => null,
+  };
+  return message?.of(context) ??
+      AppMessage.restoreUnrecognizedChoice.format(context, {'code': choice});
+}
 
 String _conflictTitle(BackupImportConflict conflict) {
   if (conflict.kind == 'OPEN_SESSION') return 'Open session in backup';
