@@ -47,6 +47,7 @@ and the owner-device check.
 passed the native suite on `5844e61`. The uploaded JUnit XML contains 752
 tests with zero failures, errors or skips. It includes the cold-start
 callback and GPS opt-out regressions on both configured SDKs and the schema
-upgrade with a saved 15 m site. The job proceeded to Android device
-instrumentation. This still requires actual callback delivery verification
-at the affected site on a physical phone.
+upgrade with a saved 15 m site. The run also passed 30 Android instrumentation
+cases on each of API 24 and 35. The emulator results cover repository behavior
+and Android integration. Callback delivery at the affected 15 m site still
+requires verification on the owner's phone.
