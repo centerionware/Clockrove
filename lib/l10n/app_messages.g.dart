@@ -517,7 +517,19 @@ enum AppMessage {
   invoiceCopyPaid("Paid"),
   invoiceCopyDue("Due"),
   invoiceCopyBalanceSummary("{paidLabel} {paid} · {dueLabel} {due} {currency}"),
-  invoiceCollectedTaxIncluded("Collected tax included: {currency} {amount}");
+  invoiceCollectedTaxIncluded("Collected tax included: {currency} {amount}"),
+  paymentTitle("Payment"),
+  retryInvoiceBalance("Retry invoice balance"),
+  refreshInvoiceBalance("Refresh invoice balance"),
+  confirmPaymentReversal("Confirm reversal"),
+  confirmPayment("Confirm payment"),
+  paymentAmountField("Payment amount ({currency})"),
+  paymentMethodField("Payment method (optional)"),
+  paymentReferenceField("Reference (optional)"),
+  paymentCorrectionEffective("Correction effective"),
+  paymentReceivedOn("Received on"),
+  changePaymentDateTime("Change payment date and time"),
+  confirmPaymentDateTime("Confirm date and time");
 
   const AppMessage(this.english);
   final String english;

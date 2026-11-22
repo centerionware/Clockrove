@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/history_api.dart';
 import 'business_api.dart';
 import 'business_command.dart';
@@ -24,15 +25,15 @@ class InvoicePaymentEditor extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
+        appBar: AppBar(title: Text(AppMessage.paymentTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
+        appBar: AppBar(title: Text(AppMessage.paymentTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(invoicePaymentsProvider(invoiceId)),
-            child: const Text('Retry invoice balance'),
+            child: Text(AppMessage.retryInvoiceBalance.of(context)),
           ),
         ),
       ),
@@ -200,7 +201,10 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         '${localizations.formatMediumDate(calendar)} · ${localizations.formatTimeOfDay(TimeOfDay(hour: calendar.hour, minute: calendar.minute))}';
     final command = BusinessCommand(
       key: const ValueKey('invoice-payment-command'),
-      label: _correction ? 'Confirm reversal' : 'Confirm payment',
+      label: (_correction
+              ? AppMessage.confirmPaymentReversal
+              : AppMessage.confirmPayment)
+          .of(context),
       enabled: !_locked && !widget.refreshFailed && available,
       onPendingChanged: (value) {
         if (mounted) setState(() => _pending = value);
@@ -284,14 +288,14 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         appBar: AppBar(
           title: Text(
             _correction
-                ? 'Correct payment'
+                ? AppMessage.correctInvoicePayment.of(context)
                 : widget.settle
-                ? 'Mark paid'
-                : 'Record payment',
+                ? AppMessage.markInvoicePaid.of(context)
+                : AppMessage.recordInvoicePayment.of(context),
           ),
           actions: [
             IconButton(
-              tooltip: 'Refresh invoice balance',
+              tooltip: AppMessage.refreshInvoiceBalance.of(context),
               onPressed: _pending
                   ? null
                   : () =>
@@ -339,7 +343,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   autocorrect: false,
                   enableSuggestions: false,
                   decoration: InputDecoration(
-                    labelText: 'Payment amount (${data.currency})',
+                    labelText: AppMessage.paymentAmountField.format(context, {
+                      'currency': data.currency,
+                    }),
                     errorText: _amountError,
                     errorMaxLines: 4,
                   ),
@@ -350,17 +356,22 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   },
                 ),
               ),
-              _field(_method, 'Payment method (optional)', 80),
-              _field(_reference, 'Reference (optional)', 240),
+              _field(_method, AppMessage.paymentMethodField.of(context), 80),
+              _field(_reference, AppMessage.paymentReferenceField.of(context), 240),
             ],
             const SizedBox(height: 20),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(_correction ? 'Correction effective' : 'Received on'),
+              title: Text(
+                (_correction
+                        ? AppMessage.paymentCorrectionEffective
+                        : AppMessage.paymentReceivedOn)
+                    .of(context),
+              ),
               subtitle: Text(dateLabel),
               trailing: IconButton(
-                tooltip: 'Change payment date and time',
+                tooltip: AppMessage.changePaymentDateTime.of(context),
                 onPressed: _locked ? null : _pick,
                 icon: const Icon(Icons.edit_calendar_outlined),
               ),
@@ -385,7 +396,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               TextButton.icon(
                 onPressed: _locked ? null : () => _resolve(_local),
                 icon: const Icon(Icons.check),
-                label: const Text('Confirm date and time'),
+                label: Text(AppMessage.confirmPaymentDateTime.of(context)),
               ),
             if (_resolving) const LinearProgressIndicator(),
             const SizedBox(height: 20),
