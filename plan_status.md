@@ -33,8 +33,10 @@ Statuses describe evidence, not intent.
   storage menu item. [Validation on `dac46b8`](https://github.com/centerionware/Clockrove/actions/runs/45068063907)
   reached the primary storage root on API 24. The failure capture showed the
   fixture directory still visible in the grid after the attempted tap. The
-  test now targets document title rows and waits for each navigation result
-  before continuing. Both APIs still need passing committed-merge evidence.
+  test targets title rows with explicit finger events and waits for each
+  navigation result. Android 7 shell taps leave the tool type unknown, while
+  DocumentsUI's row handler requires a finger or stylus. Both APIs still need
+  passing committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

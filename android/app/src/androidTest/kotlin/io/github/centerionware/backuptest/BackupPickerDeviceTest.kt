@@ -8,6 +8,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -143,12 +145,44 @@ class BackupPickerDeviceTest {
             findDestination()?.let { return@waitFor it }
             if (attempts < 3 && SystemClock.uptimeMillis() >= nextTap) {
                 findDocumentTitle(label)?.let { title ->
-                    tapPickerNode(title)
+                    touchDocumentTitle(title)
                     attempts++
                     nextTap = SystemClock.uptimeMillis() + 1_000
                 }
             }
             null
+        }
+    }
+
+    private fun touchDocumentTitle(title: AccessibilityNodeInfo) {
+        val bounds = Rect().also(title::getBoundsInScreen)
+        if (bounds.isEmpty) failWithScreenshot("No touch bounds for ${title.text}")
+
+        // On API 24, shell input tap leaves the tool type unknown. DocumentsUI's
+        // directory grid and list require the tool type to identify a finger tap.
+        val pointer = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        }
+        val coordinates = MotionEvent.PointerCoords().apply {
+            x = bounds.exactCenterX()
+            y = bounds.exactCenterY()
+            pressure = 1f
+            size = 1f
+        }
+        val downTime = SystemClock.uptimeMillis()
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(
+                downTime, SystemClock.uptimeMillis(), action, 1, arrayOf(pointer),
+                arrayOf(coordinates), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+            )
+            try {
+                if (!automation.injectInputEvent(event, true)) {
+                    failWithScreenshot("Documents did not receive touch action $action for ${title.text}")
+                }
+            } finally {
+                event.recycle()
+            }
         }
     }
 
