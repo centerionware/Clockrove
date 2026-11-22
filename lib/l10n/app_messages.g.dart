@@ -582,7 +582,13 @@ enum AppMessage {
   invoiceReleaseReservation("Release this reservation"),
   invoiceReplacementTax("Replacement tax (%)"),
   invoiceHistoricalTaxUnknown("Historical tax is unknown. Choose the replacement tax explicitly."),
-  invoiceReservationHelp("Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links.");
+  invoiceReservationHelp("Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links."),
+  invoiceLineTimeNoCharge("Time detail · no separate charge"),
+  invoiceLineDescription("Line description"),
+  invoiceLineQuantity("Quantity"),
+  invoiceLineAmount("Line amount ({currency})"),
+  invoiceLineUnitPrice("Unit price ({currency})"),
+  invoiceLinePrintedDetails("Line details (printed)");
 
   const AppMessage(this.english);
   final String english;

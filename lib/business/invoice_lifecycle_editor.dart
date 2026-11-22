@@ -409,7 +409,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             value: line.included,
                             title: Text(line.original.title),
                             subtitle: line.original.amount == null
-                                ? const Text('Time detail · no separate charge')
+                                ? Text(
+                                    AppMessage.invoiceLineTimeNoCharge.of(context),
+                                  )
                                 : null,
                             onChanged: _pending
                                 ? null
@@ -420,11 +422,14 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           ),
                           if (line.included &&
                               line.original.amount != null) ...[
-                            _field(line.title, 'Line description'),
+                            _field(
+                              line.title,
+                              AppMessage.invoiceLineDescription.of(context),
+                            ),
                             if (line.original.quantity != null)
                               _field(
                                 line.quantity,
-                                'Quantity',
+                                AppMessage.invoiceLineQuantity.of(context),
                                 numeric: true,
                                 max: 32,
                                 identifier:
@@ -432,9 +437,12 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                               ),
                             _field(
                               line.price,
-                              line.original.quantity == null
-                                  ? 'Line amount (${_invoice.currency})'
-                                  : 'Unit price (${_invoice.currency})',
+                              (line.original.quantity == null
+                                      ? AppMessage.invoiceLineAmount
+                                      : AppMessage.invoiceLineUnitPrice)
+                                  .format(context, {
+                                    'currency': _invoice.currency,
+                                  }),
                               numeric: true,
                               max: 4101,
                               identifier:
@@ -442,7 +450,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             ),
                             _field(
                               line.detail,
-                              'Line details (printed)',
+                              AppMessage.invoiceLinePrintedDetails.of(context),
                               max: 12000,
                               lines: 2,
                             ),
