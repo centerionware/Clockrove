@@ -1,0 +1,17 @@
+// Flutter's included build owns its plugin repositories independently of the app.
+gradle.beforeSettings { settings ->
+    def flutterRoot = System.getenv('FLUTTER_ROOT')
+    if (flutterRoot == null ||
+            settings.settingsDir.canonicalFile !=
+            new File(flutterRoot, 'packages/flutter_tools/gradle').canonicalFile) {
+        return
+    }
+    settings.pluginManagement.repositories {
+        mavenCentral {
+            content {
+                includeGroup('org.jetbrains.kotlin')
+            }
+        }
+        gradlePluginPortal()
+    }
+}
