@@ -108,7 +108,7 @@ class BackupPickerDeviceTest {
 
     private fun openSharedFixtureDirectory() {
         showPickerRoots()
-        val device = sharedStorageRoot() ?: run {
+        if (sharedStorageRoot() == null) {
             val window = requireNotNull(automation.rootInActiveWindow)
             val bounds = Rect().also(window::getBoundsInScreen)
             // Tapping the dimmed pane closes the roots drawer without exiting Documents.
@@ -125,10 +125,8 @@ class BackupPickerDeviceTest {
             }
             if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
             showPickerRoots()
-            waitFor("shared storage root", ::sharedStorageRoot)
         }
-        tapPickerNode(device)
-        waitForClosedPickerRoots()
+        selectSharedStorageRoot()
         // List rows expose a title separate from the selection icon.
         val listView = findLabel("List view") ?: findLabel("View as list")
         if (listView != null) {
@@ -138,6 +136,22 @@ class BackupPickerDeviceTest {
         openDocumentRow(FIXTURE_DIRECTORY, "backup fixture in the opened directory") {
             findDocumentTitle(FIXTURE)
         }
+    }
+
+    private fun selectSharedStorageRoot() {
+        automation.waitForIdle(250, 5_000)
+        var nextTap = 0L
+        waitFor("shared storage directory after selecting its root") {
+            findDocumentTitle(FIXTURE_DIRECTORY)?.let { return@waitFor it }
+            if (SystemClock.uptimeMillis() >= nextTap && findLabel("Open from") != null) {
+                sharedStorageRoot()?.let { root ->
+                    if (!performAccessibilityClick(root)) touchNode(root)
+                    nextTap = SystemClock.uptimeMillis() + 1_000
+                }
+            }
+            null
+        }
+        waitForClosedPickerRoots()
     }
 
     private fun findDocumentTitle(label: String): AccessibilityNodeInfo? = findNode { node ->

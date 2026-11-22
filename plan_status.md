@@ -39,7 +39,10 @@ Statuses describe evidence, not intent.
   passed cancellation and staged the selected archive on API 24. Its failure
   capture showed an empty password field after Android acknowledged the text
   action. The journey now focuses the field and verifies masked text after
-  typing through Android input. Both APIs still need committed-merge evidence.
+  typing through Android input. A later [API 24 run](https://github.com/centerionware/Clockrove/actions/runs/45071323428)
+  showed the device root still visible after the drawer tap. The test now
+  waits for the root to settle and confirms it opened the fixture directory
+  listing. Both APIs still need committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
