@@ -17,12 +17,34 @@ release candidate and selected tile provider before publication.
 
 Map tile URLs, provider errors and credentials must not be written to logs or
 diagnostics. Custom credentials are sent in headers, not URL parameters;
-provider credentials and tile caches must remain excluded from reports and the
-planned encrypted user backup. The backup is not implemented on the source
-baseline used for this inventory. Map requests reveal viewed areas even when
+provider credentials and tile caches are excluded from reports and encrypted
+user backups. Map requests reveal viewed areas even when
 the app does not send stored location history. OSM is best-effort; map failure
 must not block manual timekeeping, reports or exports. No analytics or remote
 crash reporting is part of the launch contract.
+
+## Backup, file selection and sharing
+
+The merged restore and export paths use Android's system document picker.
+Users choose where to open or save a file, including a cloud provider if they
+select one. A user backup includes work records, retained work locations,
+site coordinates and business documents and attachments stored in Clockrove.
+It excludes map credentials, tile cache, device geofence registrations and
+Keystore keys. The backup is encrypted before export. See the
+[backup format and portable data inventory](BACKUP_FORMAT.md) for details.
+
+During restore, Clockrove copies selected ciphertext to private app storage
+and authenticates it before presenting a merge preview. The preview uses
+private native staging. Imported site automation is disabled. Android
+automatic app backup is disabled in the manifest. Users control copies saved
+outside Clockrove, including backups and CSV/PDF exports. Changes or deletions
+inside the app do not remove existing external copies.
+
+Invoice and quote sharing grants the selected Android app read access to the
+specific PDF. The receiving app handles any onward delivery. The support and
+data usage pages should explain these user-directed transfers separately from
+automatic tile requests. Verify release-candidate export contents and sharing
+behavior before publishing the policy and store disclosure.
 
 ## Device acceptance checklist
 
