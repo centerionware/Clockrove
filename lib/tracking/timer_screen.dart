@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../l10n/app_strings.dart';
 import 'timer_api.dart';
 import 'timer_providers.dart';
@@ -105,7 +106,9 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Text(
-                  running == null ? AppStrings.idle : AppStrings.running,
+                  running == null
+                      ? AppMessage.idle.of(context)
+                      : AppMessage.running.of(context),
                   style: TextStyle(
                     color: colors.primary,
                     fontWeight: FontWeight.w600,
@@ -117,7 +120,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
             if (running == null) ...[
               Icon(Icons.timelapse_rounded, size: 52, color: colors.primary),
               const SizedBox(height: 16),
-              const Text(AppStrings.chooseJob, textAlign: TextAlign.center),
+              Text(
+                AppMessage.chooseJob.of(context),
+                textAlign: TextAlign.center,
+              ),
             ] else ...[
               Text(
                 running.jobName,
@@ -125,7 +131,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               ),
               const SizedBox(height: 20),
               Text(
-                AppStrings.elapsed,
+                AppMessage.elapsed.of(context),
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 4),
@@ -142,12 +148,12 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                     : () => ref
                           .read(timerActionsProvider.notifier)
                           .submit(state, TimerAction.stop),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.stop_rounded, size: 20),
-                    SizedBox(width: 8),
-                    Text(AppStrings.clockOut),
+                    const Icon(Icons.stop_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    Text(AppMessage.clockOut.of(context)),
                   ],
                 ),
               ),
@@ -188,10 +194,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
         ),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'App settings and customers',
-            icon: const Icon(
+            tooltip: AppMessage.settingsMenu.of(context),
+            icon: Icon(
               Icons.more_vert,
-              semanticLabel: 'App settings and customers',
+              semanticLabel: AppMessage.settingsMenu.of(context),
             ),
             onSelected: (value) => Navigator.push(
               context,
@@ -207,11 +213,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                 },
               ),
             ),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'settings', child: Text('Settings')),
-              PopupMenuItem(value: 'customers', child: Text('Customers')),
-              PopupMenuItem(value: 'reports', child: Text('Reports')),
+            itemBuilder: (_) => [
               PopupMenuItem(
+                value: 'settings',
+                child: Text(AppMessage.settings.of(context)),
+              ),
+              const PopupMenuItem(value: 'customers', child: Text('Customers')),
+              const PopupMenuItem(value: 'reports', child: Text('Reports')),
+              const PopupMenuItem(
                 value: 'business_reports',
                 child: Row(
                   children: [
@@ -221,9 +230,9 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   ],
                 ),
               ),
-              PopupMenuItem(value: 'invoices', child: Text('Invoices')),
-              PopupMenuItem(value: 'quotes', child: Text('Quotes')),
-              PopupMenuItem(value: 'archive', child: Text('Archived jobs')),
+              const PopupMenuItem(value: 'invoices', child: Text('Invoices')),
+              const PopupMenuItem(value: 'quotes', child: Text('Quotes')),
+              const PopupMenuItem(value: 'archive', child: Text('Archived jobs')),
             ],
           ),
           IconButton(
@@ -256,7 +265,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                 children: [
                   Text(
-                    AppStrings.workday,
+                    AppMessage.workday.of(context),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 4),
@@ -309,7 +318,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                     ),
                   const SizedBox(height: 28),
                   Text(
-                    AppStrings.jobs,
+                    AppMessage.jobs.of(context),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
@@ -353,10 +362,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                                         ),
                               child: Text(
                                 state.running?.jobId == job.id
-                                    ? AppStrings.running
+                                    ? AppMessage.running.of(context)
                                     : state.running == null
-                                    ? AppStrings.clockIn
-                                    : AppStrings.switchJob,
+                                    ? AppMessage.clockIn.of(context)
+                                    : AppMessage.switchJob.of(context),
                               ),
                             ),
                           ),

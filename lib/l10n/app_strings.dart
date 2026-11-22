@@ -1,7 +1,6 @@
 /// English copy centralized for later localization.
 abstract final class AppStrings {
   static const appName = 'Clockrove';
-  static const workday = 'Your workday';
   static const workLocationMap = 'Recorded location';
   static const viewLocationMap = 'View on map';
   static const recordedLocation = 'Last recorded work location';
@@ -12,9 +11,6 @@ abstract final class AppStrings {
   static const mapUnavailable =
       'Map tiles are unavailable. Your recorded location is still available.';
   static const linkUnavailable = 'Could not open the link.';
-  static const running = 'Clocked in';
-  static const chooseJob = 'Choose a job below to start your workday.';
-  static const elapsed = 'Elapsed this session';
   static const checkDeviceTime = 'Check device time';
   static const locationTitle = 'Work location';
   static const lastSample = 'Last sample';
@@ -45,18 +41,13 @@ abstract final class AppStrings {
       'Approximate location permission; accuracy is limited.';
   static const prototype =
       'Development build: location tracking is unavailable.';
-  static const idle = 'Not clocked in';
   static const started = 'Started';
-  static const jobs = 'Jobs';
   static const newJob = 'New job';
   static const jobName = 'Job name';
   static const cancel = 'Cancel';
   static const create = 'Create';
   static const refresh = 'Refresh timer';
   static const retry = 'Retry same action';
-  static const clockIn = 'Clock in';
-  static const clockOut = 'Clock out';
-  static const switchJob = 'Switch job';
   static const storageUnavailable = 'Timer unavailable. Tap to try again.';
   static const uncertain =
       'The action may have completed. Retry to confirm its result.';

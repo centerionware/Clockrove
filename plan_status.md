@@ -75,6 +75,13 @@ Statuses describe evidence, not intent.
   passed. Android Help journey results, policy approval and publication,
   the whole-app UI and device coverage gate, and closed testing remain open.
 
+**App localization is in progress.** The first slice adds offline YAML catalogs
+for 17 locales and a device-default or explicit language choice in Settings.
+The catalogs cover language selection and selected Settings and timer labels.
+Catalog completeness and locale preference tests are prepared for GitHub Actions.
+Remaining Flutter screens, Help, notifications, widgets, and generated document
+copy are still pending. See [translation instructions](localizations/README.md).
+
 The report below preserves earlier evidence and milestone history.
 
 **M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run

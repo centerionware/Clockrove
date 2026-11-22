@@ -209,6 +209,19 @@ entering closed testing.
 - Reuse this complete inventory for the final public-release gate below; the
   static Cloudflare Pages documentation site remains a full public-release task.
 
+### App localization — release readiness
+
+- Bundle offline catalogs as `localizations/<language-tag>.yaml`. Default to
+  device language preferences, fall back to English, and persist a manual
+  language override until the user returns to the device default.
+- Migrate all static user-facing copy, including accessibility labels, errors,
+  Help, native notifications, widgets, and built-in document text. Preserve
+  user-authored content and stable data identifiers. Use placeholder and plural
+  rules for dynamic copy and localized formatting for displayed values.
+- Accept only after catalog parity, device-language changes, override
+  persistence and reset, right-to-left layouts, and native surfaces are verified
+  in GitHub Actions and on the release device matrix.
+
 ### Milestone 8 — release readiness and automatic Android delivery
 
 - Finish accessibility/theme/error states, privacy/support docs, store assets and disclosures, and contributor onboarding.

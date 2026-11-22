@@ -11,6 +11,8 @@ import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/language_setting.dart';
 import '../maps/map_provider_settings_screen.dart';
 import '../backup/backup_export_screen.dart';
 import '../backup/backup_restore_screen.dart';
@@ -21,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(
-      title: const Text('Settings'),
+      title: Text(AppMessage.settings.of(context)),
       actions: const [HelpButton()],
     ),
     body: ref
@@ -32,7 +34,7 @@ class SettingsScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: FilledButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry settings'),
+              child: Text(AppMessage.retrySettings.of(context)),
             ),
           ),
           data: (data) => _CompanyForm(initial: data.settings),
@@ -213,7 +215,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       padding: const EdgeInsets.all(24),
       children: [
         Text(
-          'Backup and restore',
+          AppMessage.backupAndRestore.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
@@ -227,7 +229,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             MaterialPageRoute<void>(builder: (_) => const BackupExportScreen()),
           ),
           icon: const Icon(Icons.backup_outlined),
-          label: const Text('Export encrypted backup'),
+          label: Text(AppMessage.exportBackup.of(context)),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
@@ -245,8 +247,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             }
           },
           icon: const Icon(Icons.restore),
-          label: const Text('Restore encrypted backup'),
+          label: Text(AppMessage.restoreBackup.of(context)),
         ),
+        const SizedBox(height: 24),
+        const LanguageSetting(),
         const SizedBox(height: 24),
         Text('Billing defaults', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),

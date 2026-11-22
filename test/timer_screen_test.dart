@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:clockrove/l10n/app_strings.dart';
 import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
@@ -125,12 +126,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.idle), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockIn), 200);
+    expect(find.text(AppMessage.idle.english), findsOneWidget);
+    await tester.scrollUntilVisible(find.text(AppMessage.clockIn.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockIn));
+    await tester.tap(find.text(AppMessage.clockIn.english));
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.clockOut), findsOneWidget);
+    expect(find.text(AppMessage.clockOut.english), findsOneWidget);
     await tester.scrollUntilVisible(find.text(AppStrings.enableLocation), 200);
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.enableLocation));
@@ -145,12 +146,12 @@ void main() {
     await tester.tap(find.text(AppStrings.continueLabel));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
     await tester.pumpAndSettle();
     expect(
       tester
           .widget<FilledButton>(
-            find.widgetWithText(FilledButton, AppStrings.clockOut),
+            find.widgetWithText(FilledButton, AppMessage.clockOut.english),
           )
           .onPressed,
       isNotNull,
@@ -171,11 +172,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(api.running!.jobId, api.jobs.last.id);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockOut));
+    await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.idle), findsOneWidget);
+    expect(find.text(AppMessage.idle.english), findsOneWidget);
     expect(api.intents, [
       TimerAction.start,
       TimerAction.switchJob,
@@ -229,9 +230,9 @@ void main() {
     expect(api.intents, isEmpty);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockOut));
+    await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
     expect(api.running, isNull);
     expect(api.intents, [TimerAction.stop]);

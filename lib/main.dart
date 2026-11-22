@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'l10n/app_localizations.dart';
 import 'l10n/app_strings.dart';
+import 'l10n/language_preference.dart';
 import 'app_theme.dart';
 import 'tracking/timer_screen.dart';
 import 'business/job_screen.dart';
@@ -32,11 +35,18 @@ void main() {
   runApp(const ProviderScope(child: ClockroveApp()));
 }
 
-class ClockroveApp extends StatelessWidget {
+class ClockroveApp extends ConsumerWidget {
   const ClockroveApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
+    locale: appLanguages[ref.watch(languagePreferenceProvider).value]?.$1,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localeListResolutionCallback: AppLocalizations.resolveDeviceLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      ...GlobalMaterialLocalizations.delegates,
+    ],
     debugShowCheckedModeBanner: false,
     title: AppStrings.appName,
     theme: ClockroveTheme.light(),
