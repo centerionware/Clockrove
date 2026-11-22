@@ -469,7 +469,16 @@ enum AppMessage {
   invoiceCreditTransferred("Credit transferred"),
   invoiceCancelledBalance("Cancelled unpaid balance"),
   invoiceBalanceDue("Balance due"),
-  invoiceBalanceDueWithAmount("Balance due {currency} {amount}");
+  invoiceBalanceDueWithAmount("Balance due {currency} {amount}"),
+  jobInvoices("Job invoices"),
+  refreshInvoices("Refresh invoices"),
+  retryInvoices("Retry invoices"),
+  noInvoices("No invoices yet. Create one from a job report."),
+  noJobInvoices("No invoices prepared for this job."),
+  invoiceDeletedJob("{job} · job deleted"),
+  invoiceIssuedOn("Issued {date}"),
+  invoiceHistoricalSourcesUnavailable("Historical source records unavailable"),
+  invoiceBilledWorkReview("Billed work needs review");
 
   const AppMessage(this.english);
   final String english;
