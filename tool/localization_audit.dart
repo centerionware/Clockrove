@@ -49,6 +49,7 @@ void main(List<String> arguments) {
   final resourceRoot = 'android/app/src/main/res';
   final defaultKeys = _resourceKeys('$resourceRoot/values');
   for (final yaml in _files('localizations', '.yaml')) {
+    if (yaml.parent.path != 'localizations') continue;
     final tag = yaml.uri.pathSegments.last.replaceFirst('.yaml', '');
     if (tag == 'en') continue;
     final qualifier = tag.contains('-') ? 'b+${tag.replaceAll('-', '+')}' : tag;

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget indisponible · ouvrir l’application"</string>
+    <string name="widget_due_job">"Bientôt à échéance · %1$s"</string>
+    <string name="widget_configure_unavailable">"Chantier indisponible · configurer"</string>
+    <string name="widget_due_all">"Bientôt à échéance · tous les chantiers"</string>
+    <string name="widget_change_settings">"%1$s. Modifier les paramètres du widget"</string>
+    <string name="widget_choose_active_job">"Choisissez un chantier actif dans les paramètres du widget"</string>
+    <string name="widget_no_due_tasks">"Aucune tâche à échéance dans les 7 prochains jours"</string>
+    <string name="widget_choose_unavailable">"Chantier indisponible · choisir"</string>
+    <string name="widget_clock_in_job">"Pointer l’arrivée sur %1$s"</string>
+    <string name="widget_tasks_unavailable">"Tâches indisponibles. Ouvrez Clockrove pour réessayer."</string>
+    <string name="widget_overdue">"En retard · %1$s"</string>
+    <string name="widget_today">"Aujourd’hui"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Ouvrir le tableau du chantier"</string>
+</resources>

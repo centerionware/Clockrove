@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget indisponível · abra a aplicação"</string>
+    <string name="widget_due_job">"Prazo próximo · %1$s"</string>
+    <string name="widget_configure_unavailable">"Trabalho indisponível · configurar"</string>
+    <string name="widget_due_all">"Prazo próximo · todos os trabalhos"</string>
+    <string name="widget_change_settings">"%1$s. Alterar as definições do widget"</string>
+    <string name="widget_choose_active_job">"Escolha um trabalho ativo nas definições do widget"</string>
+    <string name="widget_no_due_tasks">"Não há tarefas com prazo nos próximos 7 dias"</string>
+    <string name="widget_choose_unavailable">"Trabalho indisponível · escolher"</string>
+    <string name="widget_clock_in_job">"Registar entrada em %1$s"</string>
+    <string name="widget_tasks_unavailable">"Tarefas indisponíveis. Abra o Clockrove para tentar novamente."</string>
+    <string name="widget_overdue">"Em atraso · %1$s"</string>
+    <string name="widget_today">"Hoje"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Abrir o quadro do trabalho"</string>
+</resources>

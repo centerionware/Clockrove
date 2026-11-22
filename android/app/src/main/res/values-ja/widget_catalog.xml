@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"ウィジェットを利用できません · アプリを開く"</string>
+    <string name="widget_due_job">"期限間近 · %1$s"</string>
+    <string name="widget_configure_unavailable">"仕事を利用できません · 設定する"</string>
+    <string name="widget_due_all">"期限間近 · すべての仕事"</string>
+    <string name="widget_change_settings">"%1$s。ウィジェット設定を変更"</string>
+    <string name="widget_choose_active_job">"ウィジェット設定で現在有効な仕事を選んでください"</string>
+    <string name="widget_no_due_tasks">"今後7日以内に期限を迎えるタスクはありません"</string>
+    <string name="widget_choose_unavailable">"仕事を利用できません · 選択する"</string>
+    <string name="widget_clock_in_job">"%1$sの勤務を開始"</string>
+    <string name="widget_tasks_unavailable">"タスクを利用できません。Clockroveを開いて再試行してください。"</string>
+    <string name="widget_overdue">"期限超過 · %1$s"</string>
+    <string name="widget_today">"今日"</string>
+    <string name="widget_task_open_board">"%1$s、%2$s、%3$s。仕事のボードを開く"</string>
+</resources>

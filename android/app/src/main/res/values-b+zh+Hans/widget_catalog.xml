@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"小组件不可用 · 打开应用"</string>
+    <string name="widget_due_job">"即将到期 · %1$s"</string>
+    <string name="widget_configure_unavailable">"工作项目不可用 · 配置小组件"</string>
+    <string name="widget_due_all">"即将到期 · 所有工作项目"</string>
+    <string name="widget_change_settings">"%1$s。更改小组件设置"</string>
+    <string name="widget_choose_active_job">"在小组件设置中选择有效的工作项目"</string>
+    <string name="widget_no_due_tasks">"未来 7 天内没有到期任务"</string>
+    <string name="widget_choose_unavailable">"工作项目不可用 · 选择工作项目"</string>
+    <string name="widget_clock_in_job">"开始为 %1$s 计时"</string>
+    <string name="widget_tasks_unavailable">"任务不可用。打开 Clockrove 后重试。"</string>
+    <string name="widget_overdue">"已逾期 · %1$s"</string>
+    <string name="widget_today">"今天"</string>
+    <string name="widget_task_open_board">"%1$s，%2$s，%3$s。打开工作项目看板"</string>
+</resources>

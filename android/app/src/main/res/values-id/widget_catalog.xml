@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget tidak tersedia · buka aplikasi"</string>
+    <string name="widget_due_job">"Segera jatuh tempo · %1$s"</string>
+    <string name="widget_configure_unavailable">"Pekerjaan tidak tersedia · atur widget"</string>
+    <string name="widget_due_all">"Segera jatuh tempo · semua pekerjaan"</string>
+    <string name="widget_change_settings">"%1$s. Ubah setelan widget"</string>
+    <string name="widget_choose_active_job">"Pilih pekerjaan aktif di setelan widget"</string>
+    <string name="widget_no_due_tasks">"Tidak ada tugas yang jatuh tempo dalam 7 hari ke depan"</string>
+    <string name="widget_choose_unavailable">"Pekerjaan tidak tersedia · pilih pekerjaan"</string>
+    <string name="widget_clock_in_job">"Mulai mencatat waktu untuk %1$s"</string>
+    <string name="widget_tasks_unavailable">"Tugas tidak tersedia. Buka Clockrove untuk mencoba lagi."</string>
+    <string name="widget_overdue">"Lewat tenggat · %1$s"</string>
+    <string name="widget_today">"Hari ini"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Buka papan pekerjaan"</string>
+</resources>

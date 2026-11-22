@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"小工具無法使用 · 開啟應用程式"</string>
+    <string name="widget_due_job">"即將到期 · %1$s"</string>
+    <string name="widget_configure_unavailable">"工作項目無法使用 · 設定小工具"</string>
+    <string name="widget_due_all">"即將到期 · 所有工作項目"</string>
+    <string name="widget_change_settings">"%1$s。變更小工具設定"</string>
+    <string name="widget_choose_active_job">"在小工具設定中選擇有效的工作項目"</string>
+    <string name="widget_no_due_tasks">"未來 7 天內沒有到期任務"</string>
+    <string name="widget_choose_unavailable">"工作項目無法使用 · 選擇工作項目"</string>
+    <string name="widget_clock_in_job">"開始為 %1$s 計時"</string>
+    <string name="widget_tasks_unavailable">"任務無法使用。開啟 Clockrove 後再試一次。"</string>
+    <string name="widget_overdue">"已逾期 · %1$s"</string>
+    <string name="widget_today">"今天"</string>
+    <string name="widget_task_open_board">"%1$s，%2$s，%3$s。開啟工作項目看板"</string>
+</resources>

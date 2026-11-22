@@ -87,7 +87,11 @@ migration, with strict mode available for a full-coverage check. Initial
 completed the audit and stopped at the formatting gate before behavior tests.
 The exported formatter corrections were reviewed and incorporated where they
 apply to the current source.
-Remaining Flutter screens, Help, notifications, widgets, and generated document
+The Android widget runtime now uses 13 generated catalog entries for its job
+and task labels, error messages, and accessibility descriptions across the
+same 17 locales. GitHub Actions verification is pending. Widget picker metadata
+and earlier native resources still need translations.
+Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 
 The report below preserves earlier evidence and milestone history.

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget unavailable · open app"</string>
+    <string name="widget_due_job">"Due soon · %1$s"</string>
+    <string name="widget_configure_unavailable">"Job unavailable · configure"</string>
+    <string name="widget_due_all">"Due soon · all jobs"</string>
+    <string name="widget_change_settings">"%1$s. Change widget settings"</string>
+    <string name="widget_choose_active_job">"Choose an active job in widget settings"</string>
+    <string name="widget_no_due_tasks">"No tasks due in the next 7 days"</string>
+    <string name="widget_choose_unavailable">"Job unavailable · choose"</string>
+    <string name="widget_clock_in_job">"Clock in to %1$s"</string>
+    <string name="widget_tasks_unavailable">"Tasks unavailable. Open Clockrove to retry."</string>
+    <string name="widget_overdue">"Overdue · %1$s"</string>
+    <string name="widget_today">"Today"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Open job board"</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Виджет недоступен · откройте приложение"</string>
+    <string name="widget_due_job">"Скоро срок · %1$s"</string>
+    <string name="widget_configure_unavailable">"Работа недоступна · настроить виджет"</string>
+    <string name="widget_due_all">"Скоро срок · все работы"</string>
+    <string name="widget_change_settings">"%1$s. Изменить настройки виджета"</string>
+    <string name="widget_choose_active_job">"Выберите активную работу в настройках виджета"</string>
+    <string name="widget_no_due_tasks">"Нет задач со сроком в ближайшие 7 дней"</string>
+    <string name="widget_choose_unavailable">"Работа недоступна · выбрать работу"</string>
+    <string name="widget_clock_in_job">"Начать учёт времени для «%1$s»"</string>
+    <string name="widget_tasks_unavailable">"Задачи недоступны. Откройте Clockrove и повторите попытку."</string>
+    <string name="widget_overdue">"Просрочено · %1$s"</string>
+    <string name="widget_today">"Сегодня"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Открыть доску работы"</string>
+</resources>

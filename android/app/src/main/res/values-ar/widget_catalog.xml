@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"الأداة غير متاحة · افتح التطبيق"</string>
+    <string name="widget_due_job">"مستحقة قريبًا · %1$s"</string>
+    <string name="widget_configure_unavailable">"العمل غير متاح · اضبط الأداة"</string>
+    <string name="widget_due_all">"مستحقة قريبًا · جميع الأعمال"</string>
+    <string name="widget_change_settings">"%1$s. غيّر إعدادات الأداة"</string>
+    <string name="widget_choose_active_job">"اختر عملاً نشطًا في إعدادات الأداة"</string>
+    <string name="widget_no_due_tasks">"لا توجد مهام مستحقة خلال الأيام السبعة القادمة"</string>
+    <string name="widget_choose_unavailable">"العمل غير متاح · اختر عملاً"</string>
+    <string name="widget_clock_in_job">"ابدأ تسجيل العمل في %1$s"</string>
+    <string name="widget_tasks_unavailable">"المهام غير متاحة. افتح Clockrove لإعادة المحاولة."</string>
+    <string name="widget_overdue">"متأخرة · %1$s"</string>
+    <string name="widget_today">"اليوم"</string>
+    <string name="widget_task_open_board">"%1$s، %2$s، %3$s. افتح لوحة العمل"</string>
+</resources>

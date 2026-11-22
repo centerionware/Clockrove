@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget non disponibile · apri l’app"</string>
+    <string name="widget_due_job">"In scadenza · %1$s"</string>
+    <string name="widget_configure_unavailable">"Lavoro non disponibile · configura"</string>
+    <string name="widget_due_all">"In scadenza · tutti i lavori"</string>
+    <string name="widget_change_settings">"%1$s. Modifica le impostazioni del widget"</string>
+    <string name="widget_choose_active_job">"Scegli un lavoro attivo nelle impostazioni del widget"</string>
+    <string name="widget_no_due_tasks">"Nessuna attività in scadenza nei prossimi 7 giorni"</string>
+    <string name="widget_choose_unavailable">"Lavoro non disponibile · scegli"</string>
+    <string name="widget_clock_in_job">"Timbra l’entrata per %1$s"</string>
+    <string name="widget_tasks_unavailable">"Attività non disponibili. Apri Clockrove per riprovare."</string>
+    <string name="widget_overdue">"Scaduta · %1$s"</string>
+    <string name="widget_today">"Oggi"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Apri la bacheca del lavoro"</string>
+</resources>

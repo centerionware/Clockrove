@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Widget kullanılamıyor · uygulamayı açın"</string>
+    <string name="widget_due_job">"Yaklaşan görevler · %1$s"</string>
+    <string name="widget_configure_unavailable">"İş kullanılamıyor · widget’ı yapılandırın"</string>
+    <string name="widget_due_all">"Yaklaşan görevler · tüm işler"</string>
+    <string name="widget_change_settings">"%1$s. Widget ayarlarını değiştir"</string>
+    <string name="widget_choose_active_job">"Widget ayarlarından etkin bir iş seçin"</string>
+    <string name="widget_no_due_tasks">"Önümüzdeki 7 gün içinde son tarihi olan görev yok"</string>
+    <string name="widget_choose_unavailable">"İş kullanılamıyor · başka iş seçin"</string>
+    <string name="widget_clock_in_job">"%1$s için süre kaydını başlat"</string>
+    <string name="widget_tasks_unavailable">"Görevler kullanılamıyor. Tekrar denemek için Clockrove’u açın."</string>
+    <string name="widget_overdue">"Gecikmiş · %1$s"</string>
+    <string name="widget_today">"Bugün"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. İş panosunu aç"</string>
+</resources>

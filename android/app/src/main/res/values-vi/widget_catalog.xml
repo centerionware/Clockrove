@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from localizations/android by tool/android_catalog.py. -->
+<resources>
+    <string name="widget_unavailable">"Không dùng được tiện ích · mở ứng dụng"</string>
+    <string name="widget_due_job">"Sắp đến hạn · %1$s"</string>
+    <string name="widget_configure_unavailable">"Không dùng được công việc · thiết lập tiện ích"</string>
+    <string name="widget_due_all">"Sắp đến hạn · tất cả công việc"</string>
+    <string name="widget_change_settings">"%1$s. Đổi cài đặt tiện ích"</string>
+    <string name="widget_choose_active_job">"Chọn một công việc đang hoạt động trong cài đặt tiện ích"</string>
+    <string name="widget_no_due_tasks">"Không có nhiệm vụ nào đến hạn trong 7 ngày tới"</string>
+    <string name="widget_choose_unavailable">"Không dùng được công việc · chọn công việc khác"</string>
+    <string name="widget_clock_in_job">"Bắt đầu ghi giờ cho %1$s"</string>
+    <string name="widget_tasks_unavailable">"Không tải được nhiệm vụ. Mở Clockrove để thử lại."</string>
+    <string name="widget_overdue">"Quá hạn · %1$s"</string>
+    <string name="widget_today">"Hôm nay"</string>
+    <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Mở bảng công việc"</string>
+</resources>

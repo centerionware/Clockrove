@@ -46,13 +46,20 @@ class WidgetTasksService : RemoteViewsService() {
         override fun getViewAt(position: Int): RemoteViews? {
             val data = rows
             val views = RemoteViews(packageName, R.layout.widget_task_row)
-            if (data.failed) { views.setTextViewText(R.id.widget_task_title, "Tasks unavailable. Open Clockrove to retry."); return views }
+            if (data.failed) {
+                views.setTextViewText(R.id.widget_task_title, getString(R.string.widget_tasks_unavailable))
+                return views
+            }
             val item = data.items.getOrNull(position) ?: return null
-            val date = if (item.due < data.today) "Overdue · ${item.due}" else if (item.due == data.today) "Today" else item.due
+            val date = when {
+                item.due < data.today -> getString(R.string.widget_overdue, item.due)
+                item.due == data.today -> getString(R.string.widget_today)
+                else -> item.due
+            }
             views.setTextViewText(R.id.widget_task_title, item.title)
             views.setTextViewText(R.id.widget_task_detail, if (data.filtered) date else "${item.jobName} · $date")
             views.setTextColor(R.id.widget_task_detail, if (item.due < data.today) 0xFFFFB4AB.toInt() else 0xFFCBD5E1.toInt())
-            views.setContentDescription(R.id.widget_task_row, "${item.title}, ${item.jobName}, $date. Open job board")
+            views.setContentDescription(R.id.widget_task_row, getString(R.string.widget_task_open_board, item.title, item.jobName, date))
             views.setOnClickFillInIntent(R.id.widget_task_row, Intent().putExtra("jobId", item.jobId).putExtra("taskId", item.id))
             return views
         }
