@@ -107,7 +107,7 @@ class _LineFields {
     kind,
     parseTaskQuantity(quantity.text),
     parseMoney(price.text, digits) ??
-        (throw const FormatException('Enter a unit price for each line.')),
+        (throw QuoteValidationException(AppMessage.quoteUnitPriceInvalid)),
   );
 }
 
@@ -172,18 +172,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Choose a task template',
+                    AppMessage.quoteChooseTaskTemplate.of(context),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const Text(
-                    'The quote line is a separate copy. You can edit it without changing the saved task.',
-                  ),
+                  Text(AppMessage.quoteTemplateSeparateCopy.of(context)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: search,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       prefixIcon: Icon(Icons.search),
-                      labelText: 'Search saved tasks',
+                      labelText: AppMessage.quoteSearchSavedTasks.of(context),
                     ),
                     onChanged: (value) => updateSheet(() {
                       results = ref.read(businessApiProvider).templates(value);
@@ -202,7 +200,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                     .read(businessApiProvider)
                                     .templates(search.text);
                               }),
-                              child: const Text('Retry task templates'),
+                              child: Text(AppMessage.quoteRetryTaskTemplates.of(context)),
                             ),
                           );
                         }
@@ -213,10 +211,8 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                         }
                         final templates = snapshot.data!;
                         if (templates.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'No saved tasks match. Add a quote line or create a task first.',
-                            ),
+                          return Center(
+                            child: Text(AppMessage.quoteNoTaskTemplates.of(context)),
                           );
                         }
                         return ListView.builder(
@@ -228,17 +224,22 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               title: Text(template.title),
                               subtitle: Text(
                                 [
-                                  template.source ?? 'Saved task',
+                                  template.source ?? AppMessage.quoteSavedTask.of(context),
                                   template.chargeType == 'SUPPLIES'
-                                      ? 'Supplies'
+                                      ? AppMessage.quoteChargeSupplies.of(context)
                                       : template.chargeType == 'LABOR'
-                                      ? 'Labor'
-                                      : 'Unclassified',
-                                  'Quantity ${taskQuantity(template.quantityUnits)}',
+                                      ? AppMessage.quoteChargeLabor.of(context)
+                                      : AppMessage.quoteChargeUnclassified.of(context),
+                                  AppMessage.quoteTemplateQuantity.format(context, {
+                                    'quantity': taskQuantity(template.quantityUnits),
+                                  }),
                                   if (template.priceMinor == null)
-                                    'Unit price not set'
+                                    AppMessage.quoteTemplatePriceUnset.of(context)
                                   else
-                                    '${template.currency} ${money(template.priceMinor, _currencies[template.currency] ?? _digits)} each',
+                                    AppMessage.quoteTemplateEach.format(context, {
+                                      'currency': template.currency,
+                                      'amount': money(template.priceMinor, _currencies[template.currency] ?? _digits),
+                                    }),
                                 ].join(' · '),
                               ),
                               onTap: () =>
@@ -272,8 +273,11 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     setState(() {
       _lines.add(line);
       _notice = template.currency == _currency || template.priceMinor == null
-          ? 'Added as an editable quote line.'
-          : 'Added the task details. Its price uses ${template.currency}; enter a unit price in $_currency.';
+          ? AppMessage.quoteTemplateAddedEditable.of(context)
+          : AppMessage.quoteTemplateAddedCurrencyNotice.format(context, {
+              'currency': template.currency,
+              'quote_currency': _currency,
+            });
     });
   }
 
@@ -315,10 +319,12 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   String? _bounded(String? text, int limit, {bool mandatory = false}) {
     final value = text ?? '';
     if (mandatory && value.trim().isEmpty) {
-      return 'Enter a value.';
+      return AppMessage.quoteRequiredValue.of(context);
     }
     if (value.length > limit || value.contains('\u0000')) {
-      return 'Use up to $limit characters without null characters.';
+      return AppMessage.quoteFieldCharacterLimit.format(context, {
+        'limit': limit.toString(),
+      });
     }
     return null;
   }
@@ -334,7 +340,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         date == null ||
         '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}' !=
             value) {
-      return 'Enter a real calendar date as YYYY-MM-DD, or leave blank.';
+      return AppMessage.quoteInvalidCalendarDate.of(context);
     }
     return null;
   }
@@ -386,10 +392,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       final keep = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Review refreshed quote data'),
-          content: Text(
-            'Latest issued revision: ${current.latest?.revision ?? 'none'}.\nCurrent saved draft: ${current.draft?.title ?? 'none'}.\n\nYour entered values will be kept. Saving will replace the editable draft. Issued revisions remain unchanged.',
-          ),
+          title: Text(AppMessage.quoteReviewRefreshTitle.of(context)),
+          content: Text(AppMessage.quoteRefreshReviewContent.format(context, {
+            'revision': AppMessage.quoteRevisionValue.format(context, {
+              'revision': current.latest?.revision.toString() ??
+                  AppMessage.quoteNoneValue.of(context),
+            }),
+            'draft': AppMessage.quoteDraftTitleValue.format(context, {
+              'title': current.draft?.title ?? AppMessage.quoteNoneValue.of(context),
+            }),
+          })),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -397,7 +409,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Keep my draft and refresh'),
+              child: Text(AppMessage.quoteKeepDraftRefresh.of(context)),
             ),
           ],
         ),
@@ -407,15 +419,13 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           _version = current.version;
           _data = _EditorData(current, business, jobs, digits);
           _digits = digits;
-          _notice =
-              'Current data refreshed. Review your kept draft before saving.';
+          _notice = AppMessage.quoteRefreshDraftSuccess.of(context);
         });
       }
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice =
-              'Refresh failed. Your draft is kept. Try again before saving.',
+          () => _notice = AppMessage.quoteRefreshDraftFailed.of(context),
         );
       }
     } finally {
@@ -434,8 +444,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     for (final line in _lines) {
       line.price.clear();
     }
-    _notice =
-        'Currency changed. Unit prices were cleared; enter the agreed prices in $currency.';
+    _notice = AppMessage.quoteCurrencyChanged.format(context, {
+      'currency': currency,
+    });
   }
 
   Future<void> _linkJob(String? id) async {
@@ -464,12 +475,12 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             line.price.text = money(job.effectiveRate, job.digits);
           }
         }
-        _notice = 'Job currency, customer and effective tax were copied. Review every estimated quantity and unit price.';
+        _notice = AppMessage.quoteLinkJobCopied.of(context);
       });
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'The job could not be read. Your previous selection and draft are kept.',
+          () => _notice = AppMessage.quoteLinkJobFailed.of(context),
         );
       }
     } finally {
@@ -516,12 +527,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             children: [
               Expanded(
                 child: Text(
-                  'Line ${index + 1}',
+                  AppMessage.quoteLineLabel.format(context, {
+                    'number': (index + 1).toString(),
+                  }),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               IconButton(
-                tooltip: 'Remove quote line ${index + 1}',
+                tooltip: AppMessage.quoteRemoveLine.format(context, {
+                  'number': (index + 1).toString(),
+                }),
                 onPressed: !_enabled || _lines.length == 1
                     ? null
                     : () {
@@ -558,13 +573,15 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           const SizedBox(height: 16),
           _text(
             line.title,
-            'Description',
+            AppMessage.quoteLineDescription.of(context),
             500,
             validator: (value) => _bounded(value, 500, mandatory: true),
           ),
           _text(
             line.quantity,
-            line.kind == 'HOURS' ? AppMessage.estimatedHours.of(context) : 'Quantity',
+            line.kind == 'HOURS'
+                ? AppMessage.estimatedHours.of(context)
+                : AppMessage.quoteQuantity.of(context),
             32,
             decimal: true,
             validator: (value) {
@@ -572,26 +589,36 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 parseTaskQuantity(value ?? '');
                 return null;
               } on FormatException catch (error) {
-                return error.message;
+                return AppMessage.quoteQuantityInvalid.of(context);
               }
             },
           ),
           _text(
             line.price,
-            'Unit price ($_currency${line.kind == 'HOURS' ? '/hour' : ''})',
+            AppMessage.quoteUnitPriceField.format(context, {
+              'currency': _currency,
+              'hour_suffix': line.kind == 'HOURS'
+                  ? AppMessage.quotePerHourSuffix.of(context)
+                  : '',
+            }),
             4101,
             decimal: true,
             validator: (value) {
               try {
                 return parseMoney(value ?? '', _digits) == null
-                    ? 'Enter a unit price.'
+                    ? AppMessage.quoteUnitPriceInvalid.of(context)
                     : null;
-              } on FormatException catch (error) {
-                return error.message;
+              } on FormatException {
+                return AppMessage.quoteUnitPriceInvalid.of(context);
               }
             },
           ),
-          _text(line.detail, 'Line details (printed)', 12000, lines: 3),
+          _text(
+            line.detail,
+            AppMessage.quoteLineDetails.of(context),
+            12000,
+            lines: 3,
+          ),
         ],
       ),
     ),
@@ -608,11 +635,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Subtotal  $_currency ${money(value.subtotal, _digits)}'),
-              Text('Tax  $_currency ${money(value.tax, _digits)}'),
+              Text(AppMessage.invoiceAmountLine.format(context, {
+                'label': AppMessage.invoiceSubtotal.of(context),
+                'amount': '$_currency ${money(value.subtotal, _digits)}',
+              })),
+              Text(AppMessage.invoiceAmountLine.format(context, {
+                'label': AppMessage.invoiceTax.of(context),
+                'amount': '$_currency ${money(value.tax, _digits)}',
+              })),
               const SizedBox(height: 8),
               Text(
-                'Estimated total  $_currency ${money(value.total, _digits)}',
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.quoteEstimatedTotalLabel.of(context),
+                  'amount': '$_currency ${money(value.total, _digits)}',
+                }),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ],
@@ -637,7 +673,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           title: Text(AppMessage.quoteDraft.of(context)),
           actions: [
             IconButton(
-              tooltip: 'Refresh quote draft data',
+              tooltip: AppMessage.quoteDetailRefresh.of(context),
               onPressed: _enabled ? _refresh : null,
               icon: const Icon(Icons.refresh),
             ),
@@ -655,13 +691,13 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             children: [
               Text(
                 _data.quote.latest == null
-                    ? 'Prepare an estimate'
-                    : 'Revise ${_data.quote.latest!.number}',
+                    ? AppMessage.quotePrepareEstimate.of(context)
+                    : AppMessage.quoteReviseNumber.format(context, {
+                        'number': _data.quote.latest!.number,
+                      }),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              const Text(
-                'Saving keeps an editable draft. A quote number is allocated only when you issue it. Estimates never record worked hours, completed tasks or payments.',
-              ),
+              Text(AppMessage.quoteDraftSavingGuidance.of(context)),
               const SizedBox(height: 20),
               if (_reading) const LinearProgressIndicator(),
               if (_notice != null)
@@ -671,7 +707,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 ),
               _text(
                 _title,
-                'Quote title',
+                AppMessage.quoteTitleLabel.of(context),
                 240,
                 validator: (value) => _bounded(value, 240, mandatory: true),
               ),
@@ -691,9 +727,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                       !customers.any((customer) => customer.id == _customer))
                     DropdownMenuItem(
                       value: _customer,
-                      child: const Text(
-                        'Customer unavailable · choose another',
-                      ),
+                      child: Text(AppMessage.quoteCustomerUnavailable.of(context)),
                     ),
                   for (final customer in customers.where(
                     (customer) =>
@@ -737,22 +771,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   if (_job != null && !jobs.any((job) => job.id == _job))
                     DropdownMenuItem(
                       value: _job,
-                      child: const Text('Deleted job · unlink to revise'),
+                      child: Text(AppMessage.quoteDeletedJobUnlink.of(context)),
                     ),
                   for (final job in jobs)
                     DropdownMenuItem(
                       value: job.id,
                       child: Text(
-                        '${job.name}${job.archived ? ' · archived' : ''}',
+                        '${job.name}${job.archived ? ' · ${AppMessage.archived.of(context)}' : ''}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],
                 onChanged: !_enabled ? null : _linkJob,
               ),
-              const Text(
-                'Linking a job copies its currency, customer and tax. A different currency clears unit prices for review.',
-              ),
+              Text(AppMessage.quoteLinkJobPriceGuidance.of(context)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: ValueKey('currency/$_currency'),
@@ -800,7 +832,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               const SizedBox(height: 20),
               _text(
                 _tax,
-                'Tax percentage',
+                AppMessage.quoteTaxPercentage.of(context),
                 32,
                 decimal: true,
                 validator: (value) =>
@@ -810,26 +842,36 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               const SizedBox(height: 20),
               _text(
                 _until,
-                'Valid until (YYYY-MM-DD, optional)',
+                AppMessage.quoteValidUntilOptional.of(context),
                 10,
                 validator: _date,
               ),
-              _text(_terms, 'Terms (printed, optional)', 20000, lines: 4),
-              _text(_notes, 'Quote notes (printed, optional)', 20000, lines: 4),
+              _text(
+                _terms,
+                AppMessage.quotePrintedTermsOptional.of(context),
+                20000,
+                lines: 4,
+              ),
+              _text(
+                _notes,
+                AppMessage.quotePrintedNotesOptional.of(context),
+                20000,
+                lines: 4,
+              ),
               BusinessCommand(
                 key: ValueKey('save-quote/${widget.quoteId}'),
-                label: 'Save quote draft',
+                label: AppMessage.quoteSaveDraft.of(context),
                 enabled: _enabled,
                 onPendingChanged: (value) => setState(() => _pending = value),
                 create: () {
                   final valid = _form.currentState!.validate();
-                  final draft = _capture();
-                  quoteTotals(draft.lines, draft.taxUnits);
                   if (!valid) {
-                    throw const FormatException(
-                      'Review the highlighted quote fields. Your draft is kept.',
+                    throw FormatException(
+                      AppMessage.quoteReviewHighlightedFields.of(context),
                     );
                   }
+                  final draft = _capture();
+                  quoteTotals(draft.lines, draft.taxUnits);
                   final id = newBusinessId(),
                       version = _version,
                       api = ref.read(quoteApiProvider);

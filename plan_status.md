@@ -177,8 +177,9 @@ privacy and unavailable-map notices now use the Flutter catalogs.
 Quote and invoice document screens now localize their save, share, email and
 page navigation controls, along with invoice copy titles and quote image
 accessibility labels. Their save and cancel outcomes, email draft prompts,
-and handoff failures now also use the catalogs. Quote and invoice editors,
-generated PDFs, and app-generated email text remain in localization scope.
+and handoff failures now also use the catalogs. Quote scope planning, remaining
+document copy, generated PDFs, and app-generated email text remain in
+localization scope.
 Quote draft line types, currency, optional links and line-add actions are
 catalog-backed. Actual-work invoice preparation now localizes its title,
 review actions, current-tax and current-price override labels, validation and
@@ -246,11 +247,13 @@ screen as well.
 Quote issue and acceptance review, quote revision details and history, and
 calculation validation now use localized catalog messages. Invoice style names
 shown in quote previews are translated with the registered locale catalogs.
+Quote draft editing now localizes task-template search and selection, pricing,
+currency and job guidance, field validation, refresh review, and save feedback.
 The correction editor also localizes voiding and reason-privacy guidance,
 replacement-line validation and edited line basis prefixes. The Flutter
 source audit test checks for new hardcoded copy in invoice detail, invoice
-history, payment, correction, quote-to-invoice, quote-list, and quote-detail
-screens. Native-provided
+history, payment, correction, quote-to-invoice, quote-list, quote-detail, and
+quote-draft screens. Native-provided
 labels and other
 Flutter screens still need coverage. The new test awaits GitHub Actions.
 Other command

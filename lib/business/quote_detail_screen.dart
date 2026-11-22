@@ -309,7 +309,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     }
     if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       setState(
-        () => _noteError = AppMessage.quoteInvoicePrivateNoteTooLong.of(context),
+        () => _noteError = AppMessage.quoteFieldCharacterLimit.format(context, {
+          'limit': '2000',
+        }),
       );
       return;
     }
@@ -671,10 +673,10 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _decision,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: AppMessage.quoteDecisionLabel.of(context),
                           ),
-                          items: const [
+                          items: [
                             DropdownMenuItem(
                               value: 'ACCEPTED',
                               child: Text(AppMessage.quoteStatusAccepted.of(context)),

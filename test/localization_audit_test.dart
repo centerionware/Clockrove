@@ -31,6 +31,7 @@ void example(String name) {
       'quote_invoice_screen',
       'quote_screens',
       'quote_detail_screen',
+      'quote_editor',
     };
     const identifiers = {
       'balance-',
@@ -60,6 +61,11 @@ void example(String name) {
       'quote-decision-card/',
       'quote-decision-note',
       'decision/',
+      'quote-editor-',
+      'customer/',
+      'job/',
+      'currency/',
+      'save-quote/',
     };
     for (final screen in screens) {
       final path = 'lib/business/$screen.dart';
@@ -68,7 +74,9 @@ void example(String name) {
       final candidates = auditDart(path, source).where(
         (finding) =>
             !lines[finding.line - 1].startsWith('import ') &&
-            !identifiers.contains(finding.text.trim()),
+            !identifiers.any(
+              (identifier) => finding.text.trim().startsWith(identifier),
+            ),
       );
       expect(candidates, isEmpty, reason: path);
     }
