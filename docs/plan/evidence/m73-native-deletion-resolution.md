@@ -17,3 +17,21 @@ Exact-head Validate run `43963902817` on `4e2419b` executed 741 native tests and
 Exact-head Validate run `44012769802` on `c9f04ec` succeeded. The native unit-test report artifact contains 741 tests with 0 failures and 0 skips, covering the three repaired cases plus the preserved-deletion no-op and replay expectations. The same run passed the Android build, the real Android PDF generation and invoice-viewer checks on API 24 and 35, and the locked release-tooling/version-policy checks. The listed residual deletion-kind matrix is still required; no source behavior or M7.3 completion is claimed from these tests alone.
 
 This does not complete M7.3. The Settings/SAF restore route, Dart import/apply coordinator, user-facing review flow, and end-to-end restore acceptance remain outstanding. M7.6 and owner-device acceptance also remain separate gates.
+
+## Customer deletion and restoration follow-up
+
+The customer conflicts now offer both sides when applying the backup side is
+safe. Taking a backup deletion uses the normal customer reference checks.
+Restoring live backup content requires an explicit choice and retains the
+local tombstone and the backup revision as parents. Other entity families
+retain their existing choices.
+
+[Actions 45025217802](https://github.com/centerionware/Clockrove/actions/runs/45025217802)
+found that replay reopened a resolved customer deletion and the validator
+rejected the newly advertised restore choice. The following commit recognizes
+merged tombstone ancestry and aligns the selection validator with the preview.
+[Actions 45026504990](https://github.com/centerionware/Clockrove/actions/runs/45026504990)
+passed 749 native cases with zero failures, errors, or skips. The artifact
+contains `applyingBackupCustomerDeletionUsesBusinessRulesAndKeepsAncestry`
+and `restoringCustomerFromBackupPreservesTheLocalDeletionInAncestry`.
+Android system-picker acceptance is tracked separately in the restore UI evidence.
