@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/app_theme.dart';
+import 'package:clockrove/backup/backup_export_screen.dart';
 import 'package:clockrove/business/job_settings_screen.dart';
 import 'package:clockrove/business/settings_api.dart';
 import 'package:clockrove/business/logo_controls.dart';
@@ -182,6 +183,28 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('Settings opens the encrypted backup export screen', (
+    tester,
+  ) async {
+    await _show(tester, _SettingsApi(), const SettingsScreen());
+    await _reveal(tester, 'Export encrypted backup');
+    await tester.tap(find.byKey(const ValueKey('settings-export-backup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BackupExportScreen), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.descendant(
+          of: find.byType(BackupExportScreen),
+          matching: find.byType(AppBar),
+        ),
+        matching: find.text('Create encrypted backup'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('invoice style preview uses the selected style and sample data', (
     tester,
   ) async {
