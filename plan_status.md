@@ -14,6 +14,11 @@ Statuses describe evidence, not intent.
   passed exact-head checks and was merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
   verified near-limit replay on API 24 and 35. Its system-picker flow still
   needs passing evidence for a data-changing merge on both API levels.
+  [Validation on `d393395`](https://github.com/centerionware/Clockrove/actions/runs/45039652393/attempts/1)
+  failed in the Android resolver when the visible **Just once** button could
+  not be activated through accessibility. The instrumentation test now taps
+  the enabled button by its on-screen bounds and waits for DocumentsUI.
+  GitHub Actions validation of the fix is pending.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

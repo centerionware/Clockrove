@@ -137,13 +137,21 @@ class BackupPickerDeviceTest {
         if (picker.packageName?.toString() == "android" && findLabel("Documents") != null) {
             click("Documents")
         }
+        var confirmedResolver = false
         waitFor("Android document picker") {
-            if (automation.rootInActiveWindow?.packageName?.toString() == "android") {
-                findLabel("Just once", ignoreCase = true)?.takeIf { it.isEnabled }?.let(::clickNode)
+            val root = automation.rootInActiveWindow
+            if (!confirmedResolver && root?.packageName?.toString() == "android") {
+                val once = findLabel("Just once", ignoreCase = true)?.takeIf { it.isEnabled }
+                if (once != null) {
+                    val bounds = Rect().also(once::getBoundsInScreen)
+                    if (!bounds.isEmpty) {
+                        // The resolver can expose a visible button without an accessibility click action.
+                        runShellInput("tap ${bounds.centerX()} ${bounds.centerY()}")
+                        confirmedResolver = true
+                    }
+                }
             }
-            automation.rootInActiveWindow?.takeIf {
-                it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES
-            }
+            root?.takeIf { it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES }
         }
     }
 
