@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF del presupuesto"</string>
     <string name="share_invoice">"Compartir factura"</string>
     <string name="share_quote">"Compartir presupuesto"</string>
+    <string name="pdf_quote_title">"PRESUPUESTO"</string>
+    <string name="pdf_invoice_title">"FACTURA"</string>
+    <string name="pdf_invoice_title_sentence">"Factura"</string>
+    <string name="pdf_receipt_title">"RECIBO"</string>
+    <string name="pdf_payment_update_title">"ACTUALIZACIÓN DE PAGO"</string>
+    <string name="pdf_void_invoice_title">"FACTURA ANULADA"</string>
+    <string name="pdf_prepared_for">"PREPARADO PARA"</string>
+    <string name="pdf_bill_to">"FACTURAR A"</string>
+    <string name="pdf_from">"DE"</string>
+    <string name="pdf_page_footer">"Página %1$s · %2$s"</string>
+    <string name="pdf_issued">"Emisión: %1$s UTC"</string>
 </resources>

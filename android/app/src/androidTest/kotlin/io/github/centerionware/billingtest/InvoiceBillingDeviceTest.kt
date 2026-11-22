@@ -377,7 +377,7 @@ class InvoiceBillingDeviceTest {
             "Synthetic Tile Company", "company@example.test", "Synthetic customer", "customer@example.test",
             jobName, "Original released invoice", "Completed billable tasks · fixed prices", "", "", "100.00",
             "customer@example.test", "Invoice INV-1000", "Synthetic original invoice", listOf(InvoiceStore.Line("Previously installed tile", "Completed work", "100.00")))
-        val originalPdf = InvoicePdf.generate(original)
+        val originalPdf = InvoicePdf.generate(app, original)
         val originalPayload = JSONObject(original.encode()).apply {
             remove("subtotal"); remove("taxRateUnits"); remove("taxAmount")
             getJSONArray("lines").getJSONObject(0).apply { remove("quantityUnits"); remove("unitPriceMinor") }

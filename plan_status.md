@@ -185,7 +185,11 @@ review actions, and current-tax and current-price override labels.
 Native quote and invoice historical notices, historical email subject
 prefixes, attachment labels, and share chooser titles now use localized
 Android resources. Stored PDFs and saved email template expansions are
-preserved. PDF body labels and default email template generation remain open.
+preserved. New quote and invoice PDFs and the Settings sample use localized
+document titles, party labels, issue dates and page footers. Already cached
+PDF bytes are reused. For a document whose PDF has yet to be cached, the
+first render uses the device's current effective app language. Remaining PDF
+body labels, locale verification, and default email templates remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

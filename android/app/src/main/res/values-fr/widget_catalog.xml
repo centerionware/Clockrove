@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF de devis"</string>
     <string name="share_invoice">"Partager la facture"</string>
     <string name="share_quote">"Partager le devis"</string>
+    <string name="pdf_quote_title">"DEVIS"</string>
+    <string name="pdf_invoice_title">"FACTURE"</string>
+    <string name="pdf_invoice_title_sentence">"Facture"</string>
+    <string name="pdf_receipt_title">"REÇU"</string>
+    <string name="pdf_payment_update_title">"MISE À JOUR DU PAIEMENT"</string>
+    <string name="pdf_void_invoice_title">"FACTURE ANNULÉE"</string>
+    <string name="pdf_prepared_for">"PRÉPARÉ POUR"</string>
+    <string name="pdf_bill_to">"FACTURÉ À"</string>
+    <string name="pdf_from">"DE"</string>
+    <string name="pdf_page_footer">"Page %1$s · %2$s"</string>
+    <string name="pdf_issued">"Émis le %1$s UTC"</string>
 </resources>

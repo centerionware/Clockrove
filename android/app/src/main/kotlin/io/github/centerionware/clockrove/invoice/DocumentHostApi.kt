@@ -41,7 +41,7 @@ internal class DocumentHostApi(
                         val currency = requireNotNull(call.argument<String>("currency"))
                         val digits = requireNotNull(call.argument<Int>("digits"))
                         val page = requireNotNull(call.argument<Int>("page"))
-                        val pdf = InvoiceDocuments.settingsPreview(style, currency, digits, call.argument<ByteArray>("logo"))
+                        val pdf = InvoiceDocuments.settingsPreview(activity, style, currency, digits, call.argument<ByteArray>("logo"))
                         result.success(InvoiceDocuments.preview(activity, pdf, page))
                     }
                     "pickLogo" -> main.post {
@@ -62,7 +62,7 @@ internal class DocumentHostApi(
                         val id = requireNotNull(call.argument<String>(if (call.method == "quotePreview") "quoteId" else "invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
                         result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(activity, repository, record)))
                     }
                     "saveReport" -> {
@@ -122,7 +122,7 @@ internal class DocumentHostApi(
                     "saveInvoice", "saveQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
@@ -138,7 +138,7 @@ internal class DocumentHostApi(
                     "emailInvoice", "shareInvoice", "emailQuote", "shareQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method.endsWith("Quote")) "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
                         val notice = InvoiceDocuments.historicalNotice(activity, repository, record)
                         val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") {
                             InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice)

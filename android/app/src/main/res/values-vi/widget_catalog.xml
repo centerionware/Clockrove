@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF báo giá"</string>
     <string name="share_invoice">"Chia sẻ hóa đơn"</string>
     <string name="share_quote">"Chia sẻ báo giá"</string>
+    <string name="pdf_quote_title">"BÁO GIÁ"</string>
+    <string name="pdf_invoice_title">"HÓA ĐƠN"</string>
+    <string name="pdf_invoice_title_sentence">"Hóa đơn"</string>
+    <string name="pdf_receipt_title">"BIÊN NHẬN"</string>
+    <string name="pdf_payment_update_title">"CẬP NHẬT THANH TOÁN"</string>
+    <string name="pdf_void_invoice_title">"HÓA ĐƠN ĐÃ HỦY"</string>
+    <string name="pdf_prepared_for">"CHUẨN BỊ CHO"</string>
+    <string name="pdf_bill_to">"TÍNH PHÍ CHO"</string>
+    <string name="pdf_from">"TỪ"</string>
+    <string name="pdf_page_footer">"Trang %1$s · %2$s"</string>
+    <string name="pdf_issued">"Phát hành %1$s UTC"</string>
 </resources>

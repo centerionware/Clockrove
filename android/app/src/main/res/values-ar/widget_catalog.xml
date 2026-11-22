@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"عرض سعر PDF"</string>
     <string name="share_invoice">"مشاركة الفاتورة"</string>
     <string name="share_quote">"مشاركة عرض السعر"</string>
+    <string name="pdf_quote_title">"عرض سعر"</string>
+    <string name="pdf_invoice_title">"فاتورة"</string>
+    <string name="pdf_invoice_title_sentence">"فاتورة"</string>
+    <string name="pdf_receipt_title">"إيصال"</string>
+    <string name="pdf_payment_update_title">"تحديث الدفعة"</string>
+    <string name="pdf_void_invoice_title">"فاتورة ملغاة"</string>
+    <string name="pdf_prepared_for">"أُعدّ لـ"</string>
+    <string name="pdf_bill_to">"الفاتورة إلى"</string>
+    <string name="pdf_from">"من"</string>
+    <string name="pdf_page_footer">"الصفحة %1$s · %2$s"</string>
+    <string name="pdf_issued">"تاريخ الإصدار %1$s UTC"</string>
 </resources>

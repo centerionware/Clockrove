@@ -25,7 +25,7 @@ class QuotePdfDeviceTest {
     private val repository get() = TimerRepository.get(app)
     private val version get() = repository.snapshot().version
     private fun render(id: String, revision: Int, name: String, expected: List<String>): InvoiceStore.Record {
-        val record = InvoiceDocuments.ensureQuote(repository, id, revision)
+        val record = InvoiceDocuments.ensureQuote(app, repository, id, revision)
         val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
         File(directory, "$name.pdf").writeBytes(requireNotNull(record.pdf))
         val file = File.createTempFile("quote-real-", ".pdf", app.cacheDir)

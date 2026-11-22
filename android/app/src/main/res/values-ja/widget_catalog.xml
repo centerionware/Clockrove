@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"見積書PDF"</string>
     <string name="share_invoice">"請求書を共有"</string>
     <string name="share_quote">"見積書を共有"</string>
+    <string name="pdf_quote_title">"見積書"</string>
+    <string name="pdf_invoice_title">"請求書"</string>
+    <string name="pdf_invoice_title_sentence">"請求書"</string>
+    <string name="pdf_receipt_title">"領収書"</string>
+    <string name="pdf_payment_update_title">"支払いの更新"</string>
+    <string name="pdf_void_invoice_title">"無効な請求書"</string>
+    <string name="pdf_prepared_for">"宛先"</string>
+    <string name="pdf_bill_to">"請求先"</string>
+    <string name="pdf_from">"差出人"</string>
+    <string name="pdf_page_footer">"%1$sページ · %2$s"</string>
+    <string name="pdf_issued">"発行日：%1$s UTC"</string>
 </resources>

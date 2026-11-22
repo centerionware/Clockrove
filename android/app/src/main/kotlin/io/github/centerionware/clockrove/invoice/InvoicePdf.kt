@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.invoice
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -14,6 +15,8 @@ import android.text.SpannableString
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.style.StyleSpan
+import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.ImageLimits
 import io.github.centerionware.clockrove.tracking.TaxRate
@@ -21,7 +24,7 @@ import java.io.ByteArrayOutputStream
 
 /** Three native, paginated layouts. Render on a worker, outside repository writes. */
 internal object InvoicePdf {
-    fun generate(snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE"): ByteArray {
+    fun generate(context: Context, snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE"): ByteArray {
         require(documentKind in setOf("INVOICE", "QUOTE"))
         val logo = logoBytes?.let {
             require(it.size <= ImageLimits.NORMALIZED_BYTES) { "INVALID_LOGO" }
@@ -33,14 +36,17 @@ internal object InvoicePdf {
         try {
             val document = PdfDocument()
             try {
-                val flow = Flow(document, snapshot, logo, documentKind == "QUOTE")
+                val strings = localizedContext(context)
+                val flow = Flow(document, snapshot, logo, documentKind == "QUOTE", strings)
                 flow.start()
                 snapshot.statement?.let {
                     flow.text("Payment state recorded ${io.github.centerionware.clockrove.tracking.ReportCsv.instant(it.created, "UTC")}", 9f)
                     flow.text("Copy reference: ${it.reference}", 8f)
                     flow.space(8f)
                 }
-                flow.parties(snapshot, if (documentKind == "QUOTE") "PREPARED FOR" else "BILL TO")
+                flow.parties(snapshot, strings.getString(
+                    if (documentKind == "QUOTE") R.string.pdf_prepared_for else R.string.pdf_bill_to,
+                ))
                 flow.text(snapshot.job, 18f, bold = true)
                 flow.text(snapshot.period, 10f)
                 flow.text(snapshot.basis, 9f)
@@ -71,7 +77,13 @@ internal object InvoicePdf {
             } finally { document.close() }
         } finally { logo?.recycle() }
     }
-    private class Flow(val document: PdfDocument, val data: InvoiceStore.Snapshot, val logo: Bitmap?, val quote: Boolean) {
+    private class Flow(
+        val document: PdfDocument,
+        val data: InvoiceStore.Snapshot,
+        val logo: Bitmap?,
+        val quote: Boolean,
+        val strings: Context,
+    ) {
         private data class PartyParagraph(val value: String, val size: Float, val bold: Boolean = false)
         private class PartyColumn(val paragraphs: List<PartyParagraph>) {
             var paragraphIndex = 0
@@ -91,24 +103,43 @@ internal object InvoicePdf {
             textSize = size; this.color = color
             typeface = Typeface.create(if (classic) "serif" else "sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
         }
+        private fun titlePaint(value: String, size: Float, color: Int = ink, centered: Boolean = false): TextPaint {
+            val title = paint(size, true, color)
+            val logoSpace = if (logo == null) 0f else if (centered) 190f else 95f
+            val available = width - 2 * margin - logoSpace
+            val measured = title.measureText(value)
+            if (measured > available) title.textScaleX = available / measured
+            return title
+        }
+
         fun start() {
             pageNumber++
             check(pageNumber <= 200) { "INVOICE_TOO_LARGE" }
             page = document.startPage(PdfDocument.PageInfo.Builder(width, height, pageNumber).create())
             canvas.drawColor(if (classic) Color.rgb(253, 252, 248) else Color.WHITE)
-            val heading = if (quote) "QUOTE" else when (data.statement?.kind) { "RECEIPT" -> "RECEIPT"; "CORRECTION" -> "PAYMENT UPDATE"; "VOID" -> "VOID INVOICE"; else -> "INVOICE" }
+            val heading = strings.getString(
+                if (quote) R.string.pdf_quote_title else when (data.statement?.kind) {
+                    "RECEIPT" -> R.string.pdf_receipt_title
+                    "CORRECTION" -> R.string.pdf_payment_update_title
+                    "VOID" -> R.string.pdf_void_invoice_title
+                    else -> R.string.pdf_invoice_title
+                },
+            )
             if (modern) {
                 canvas.drawRect(0f, 0f, width.toFloat(), 84f, Paint().apply { color = ink })
-                canvas.drawText(heading, margin, 43f, paint(25f, true, Color.WHITE))
+                canvas.drawText(heading, margin, 43f, titlePaint(heading, 25f, Color.WHITE))
                 canvas.drawText(data.number, margin, 65f, paint(10f, false, Color.WHITE))
             } else if (classic) {
-                val title = paint(28f, true)
+                val title = titlePaint(heading, 28f, centered = true)
                 canvas.drawText(heading, (width - title.measureText(heading)) / 2, 43f, title)
                 canvas.drawText(data.number, margin, 73f, paint(10f))
                 canvas.drawLine(margin, 83f, width - margin, 83f, paint(1f).apply { strokeWidth = 1.5f })
                 canvas.drawLine(margin, 87f, width - margin, 87f, paint(1f).apply { strokeWidth = .5f })
             } else {
-                canvas.drawText(if (data.statement == null && !quote) "Invoice" else heading, margin, 46f, paint(28f, true))
+                val title = if (data.statement == null && !quote) {
+                    strings.getString(R.string.pdf_invoice_title_sentence)
+                } else heading
+                canvas.drawText(title, margin, 46f, titlePaint(title, 28f))
                 canvas.drawText(data.number, margin, 69f, paint(10f))
                 canvas.drawLine(margin, 84f, width - margin, 84f, paint(1f).apply { strokeWidth = .7f })
             }
@@ -123,7 +154,7 @@ internal object InvoicePdf {
                 canvas.drawRoundRect(box, 4f, 4f, Paint().apply { color = Color.WHITE })
                 canvas.drawBitmap(it, null, RectF(box.centerX() - w / 2, box.centerY() - h / 2, box.centerX() + w / 2, box.centerY() + h / 2), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
             }
-            canvas.drawText("Page $pageNumber · ${data.number}", margin, 820f, paint(8f, color = Color.DKGRAY))
+            canvas.drawText(strings.getString(R.string.pdf_page_footer, pageNumber.toString(), data.number), margin, 820f, paint(8f, color = Color.DKGRAY))
             y = 110f
         }
         fun finish() { page?.let { document.finishPage(it) }; page = null }
@@ -135,9 +166,10 @@ internal object InvoicePdf {
 
         /** Keep customer and company details side by side without allowing either to take over the page. */
         fun parties(snapshot: InvoiceStore.Snapshot, customerHeading: String) {
-            val issued = "Issued " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+            val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
                 .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                .format(java.util.Date(snapshot.created)) + " UTC"
+                .format(java.util.Date(snapshot.created))
+            val issued = strings.getString(R.string.pdf_issued, date)
             val customer = mutableListOf<PartyParagraph>()
             if (snapshot.customer.isNotBlank() || snapshot.customerContact.isNotBlank()) {
                 customer += PartyParagraph(customerHeading, 9f, true)
@@ -146,7 +178,7 @@ internal object InvoicePdf {
             }
             val company = mutableListOf<PartyParagraph>()
             if (snapshot.company.isNotBlank()) {
-                company += PartyParagraph("FROM", 9f, true)
+                company += PartyParagraph(strings.getString(R.string.pdf_from), 9f, true)
                 company += PartyParagraph(snapshot.company, 18f, true)
             }
             if (snapshot.companyContact.isNotBlank()) company += PartyParagraph(snapshot.companyContact, 10f)

@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF preventivo"</string>
     <string name="share_invoice">"Condividi fattura"</string>
     <string name="share_quote">"Condividi preventivo"</string>
+    <string name="pdf_quote_title">"PREVENTIVO"</string>
+    <string name="pdf_invoice_title">"FATTURA"</string>
+    <string name="pdf_invoice_title_sentence">"Fattura"</string>
+    <string name="pdf_receipt_title">"RICEVUTA"</string>
+    <string name="pdf_payment_update_title">"AGGIORNAMENTO PAGAMENTO"</string>
+    <string name="pdf_void_invoice_title">"FATTURA ANNULLATA"</string>
+    <string name="pdf_prepared_for">"PREPARATO PER"</string>
+    <string name="pdf_bill_to">"FATTURARE A"</string>
+    <string name="pdf_from">"DA"</string>
+    <string name="pdf_page_footer">"Pagina %1$s · %2$s"</string>
+    <string name="pdf_issued">"Emesso il %1$s UTC"</string>
 </resources>

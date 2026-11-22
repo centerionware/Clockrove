@@ -80,7 +80,7 @@ class InvoiceHandoffTest {
         val copy = repository.invoiceCopy("receipt-payment")
         val bytes = "%PDF-synthetic-receipt-provider-fixture".toByteArray()
         assertTrue(repository.cacheInvoiceCopyPdf("receipt-payment", copy.payload, bytes))
-        val ready = InvoiceDocuments.ensure(repository, "invoice", "receipt-payment")
+        val ready = InvoiceDocuments.ensure(context, repository, "invoice", "receipt-payment")
         val uri = InvoiceDocuments.uri(context, ready)
         assertEquals(listOf("copies", "receipt-payment"), uri.pathSegments)
         ParcelFileDescriptor.AutoCloseInputStream(provider.openFile(uri, "r")).use { assertArrayEquals(bytes, it.readBytes()) }
@@ -92,7 +92,7 @@ class InvoiceHandoffTest {
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Original total:"))
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Balance due:"))
         assertTrue(InvoiceDocuments.filename(ready).startsWith("INV-1000-receipt-"))
-        try { InvoiceDocuments.ensure(repository, "other-invoice", "receipt-payment"); fail("Wrong invoice copy accepted") } catch (_: IllegalArgumentException) { }
+        try { InvoiceDocuments.ensure(context, repository, "other-invoice", "receipt-payment"); fail("Wrong invoice copy accepted") } catch (_: IllegalArgumentException) { }
         assertArrayEquals(synthetic, repository.invoice("invoice").pdf)
     }
     @Test fun recipientAndSubjectInjectionAreRejectedBeforeOpeningAnyApplication() {

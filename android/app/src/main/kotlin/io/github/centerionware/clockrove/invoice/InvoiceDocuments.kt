@@ -24,18 +24,18 @@ import java.util.TimeZone
 
 internal object InvoiceDocuments {
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
-    fun ensure(repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
+    fun ensure(context: Context, repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
         fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
         val before = read()
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo)
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo)
         if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
         return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
-    fun ensureQuote(repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
+    fun ensureQuote(context: Context, repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
         val before = repository.quoteDocument(id, revision)
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
         repository.cacheQuotePdf(id, revision, before.payload, bytes)
         return repository.quoteDocument(id, revision).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
     }
@@ -126,7 +126,7 @@ internal object InvoiceDocuments {
     }
 
     /** Real native sample document for Settings; it consumes no invoice number and writes no records. */
-    fun settingsPreview(style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
+    fun settingsPreview(context: Context, style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
         require(style in setOf("MINIMAL", "CLASSIC", "MODERN"))
         val currencyDigits = Currency.getInstance(currency).defaultFractionDigits
         require(digits == currencyDigits && digits in 0..3)
@@ -155,6 +155,6 @@ internal object InvoiceDocuments {
             subtotal = InvoiceStore.amount(subtotal, digits), taxRateUnits = 75000,
             taxAmount = InvoiceStore.amount(tax, digits),
         )
-        return InvoicePdf.generate(snapshot, logoBytes)
+        return InvoicePdf.generate(context, snapshot, logoBytes)
     }
 }

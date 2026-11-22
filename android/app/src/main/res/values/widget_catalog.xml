@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"Quote PDF"</string>
     <string name="share_invoice">"Share invoice"</string>
     <string name="share_quote">"Share quote"</string>
+    <string name="pdf_quote_title">"QUOTE"</string>
+    <string name="pdf_invoice_title">"INVOICE"</string>
+    <string name="pdf_invoice_title_sentence">"Invoice"</string>
+    <string name="pdf_receipt_title">"RECEIPT"</string>
+    <string name="pdf_payment_update_title">"PAYMENT UPDATE"</string>
+    <string name="pdf_void_invoice_title">"VOID INVOICE"</string>
+    <string name="pdf_prepared_for">"PREPARED FOR"</string>
+    <string name="pdf_bill_to">"BILL TO"</string>
+    <string name="pdf_from">"FROM"</string>
+    <string name="pdf_page_footer">"Page %1$s · %2$s"</string>
+    <string name="pdf_issued">"Issued %1$s UTC"</string>
 </resources>

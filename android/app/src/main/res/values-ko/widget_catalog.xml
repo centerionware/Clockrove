@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"견적서 PDF"</string>
     <string name="share_invoice">"청구서 공유"</string>
     <string name="share_quote">"견적서 공유"</string>
+    <string name="pdf_quote_title">"견적서"</string>
+    <string name="pdf_invoice_title">"청구서"</string>
+    <string name="pdf_invoice_title_sentence">"청구서"</string>
+    <string name="pdf_receipt_title">"영수증"</string>
+    <string name="pdf_payment_update_title">"결제 업데이트"</string>
+    <string name="pdf_void_invoice_title">"무효 청구서"</string>
+    <string name="pdf_prepared_for">"작성 대상"</string>
+    <string name="pdf_bill_to">"청구 대상"</string>
+    <string name="pdf_from">"발행자"</string>
+    <string name="pdf_page_footer">"%1$s페이지 · %2$s"</string>
+    <string name="pdf_issued">"발행일 %1$s UTC"</string>
 </resources>

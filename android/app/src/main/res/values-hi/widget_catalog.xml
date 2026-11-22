@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"मूल्य प्रस्ताव की PDF"</string>
     <string name="share_invoice">"चालान शेयर करें"</string>
     <string name="share_quote">"मूल्य प्रस्ताव शेयर करें"</string>
+    <string name="pdf_quote_title">"मूल्य प्रस्ताव"</string>
+    <string name="pdf_invoice_title">"चालान"</string>
+    <string name="pdf_invoice_title_sentence">"चालान"</string>
+    <string name="pdf_receipt_title">"रसीद"</string>
+    <string name="pdf_payment_update_title">"भुगतान अपडेट"</string>
+    <string name="pdf_void_invoice_title">"रद्द चालान"</string>
+    <string name="pdf_prepared_for">"इनके लिए तैयार"</string>
+    <string name="pdf_bill_to">"इन्हें बिल करें"</string>
+    <string name="pdf_from">"प्रेषक"</string>
+    <string name="pdf_page_footer">"पेज %1$s · %2$s"</string>
+    <string name="pdf_issued">"जारी %1$s UTC"</string>
 </resources>

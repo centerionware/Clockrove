@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"মূল্যপ্রস্তাবের PDF"</string>
     <string name="share_invoice">"চালান শেয়ার করুন"</string>
     <string name="share_quote">"মূল্যপ্রস্তাব শেয়ার করুন"</string>
+    <string name="pdf_quote_title">"মূল্যপ্রস্তাব"</string>
+    <string name="pdf_invoice_title">"চালান"</string>
+    <string name="pdf_invoice_title_sentence">"চালান"</string>
+    <string name="pdf_receipt_title">"রসিদ"</string>
+    <string name="pdf_payment_update_title">"পেমেন্টের হালনাগাদ"</string>
+    <string name="pdf_void_invoice_title">"বাতিল চালান"</string>
+    <string name="pdf_prepared_for">"যাঁর জন্য প্রস্তুত"</string>
+    <string name="pdf_bill_to">"যাঁর কাছে বিল"</string>
+    <string name="pdf_from">"প্রেরক"</string>
+    <string name="pdf_page_footer">"পৃষ্ঠা %1$s · %2$s"</string>
+    <string name="pdf_issued">"ইস্যু %1$s UTC"</string>
 </resources>

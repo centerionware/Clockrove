@@ -260,7 +260,7 @@ class QuoteBillingDeviceTest {
         assertEquals(0, count("sessions")); assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims")); assertEquals(0, count("invoice_payments"))
     }
     private fun document(repository: TimerRepository, id: String, name: String) {
-        val record = InvoiceDocuments.ensure(repository, id)
+        val record = InvoiceDocuments.ensure(app, repository, id)
         val bytes = requireNotNull(record.pdf)
         val file = File(captures, "$name.pdf").apply { writeBytes(bytes) }
         val extracted = StringBuilder()

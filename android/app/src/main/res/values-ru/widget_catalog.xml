@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF сметы"</string>
     <string name="share_invoice">"Поделиться счётом"</string>
     <string name="share_quote">"Поделиться сметой"</string>
+    <string name="pdf_quote_title">"СМЕТА"</string>
+    <string name="pdf_invoice_title">"СЧЁТ"</string>
+    <string name="pdf_invoice_title_sentence">"Счёт"</string>
+    <string name="pdf_receipt_title">"КВИТАНЦИЯ"</string>
+    <string name="pdf_payment_update_title">"ОБНОВЛЕНИЕ ПЛАТЕЖА"</string>
+    <string name="pdf_void_invoice_title">"АННУЛИРОВАННЫЙ СЧЁТ"</string>
+    <string name="pdf_prepared_for">"ПОДГОТОВЛЕНО ДЛЯ"</string>
+    <string name="pdf_bill_to">"ПОЛУЧАТЕЛЬ СЧЁТА"</string>
+    <string name="pdf_from">"ОТПРАВИТЕЛЬ"</string>
+    <string name="pdf_page_footer">"Страница %1$s · %2$s"</string>
+    <string name="pdf_issued">"Выставлено %1$s UTC"</string>
 </resources>

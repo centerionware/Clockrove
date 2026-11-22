@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"PDF penawaran"</string>
     <string name="share_invoice">"Bagikan faktur"</string>
     <string name="share_quote">"Bagikan penawaran"</string>
+    <string name="pdf_quote_title">"PENAWARAN"</string>
+    <string name="pdf_invoice_title">"FAKTUR"</string>
+    <string name="pdf_invoice_title_sentence">"Faktur"</string>
+    <string name="pdf_receipt_title">"KUITANSI"</string>
+    <string name="pdf_payment_update_title">"PEMBARUAN PEMBAYARAN"</string>
+    <string name="pdf_void_invoice_title">"FAKTUR DIBATALKAN"</string>
+    <string name="pdf_prepared_for">"DISIAPKAN UNTUK"</string>
+    <string name="pdf_bill_to">"TAGIHAN KEPADA"</string>
+    <string name="pdf_from">"DARI"</string>
+    <string name="pdf_page_footer">"Halaman %1$s · %2$s"</string>
+    <string name="pdf_issued">"Diterbitkan %1$s UTC"</string>
 </resources>

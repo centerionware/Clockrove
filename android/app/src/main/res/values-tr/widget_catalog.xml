@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"Teklif PDF’si"</string>
     <string name="share_invoice">"Faturayı paylaş"</string>
     <string name="share_quote">"Teklifi paylaş"</string>
+    <string name="pdf_quote_title">"TEKLİF"</string>
+    <string name="pdf_invoice_title">"FATURA"</string>
+    <string name="pdf_invoice_title_sentence">"Fatura"</string>
+    <string name="pdf_receipt_title">"MAKBUZ"</string>
+    <string name="pdf_payment_update_title">"ÖDEME GÜNCELLEMESİ"</string>
+    <string name="pdf_void_invoice_title">"İPTAL EDİLEN FATURA"</string>
+    <string name="pdf_prepared_for">"HAZIRLANAN KİŞİ"</string>
+    <string name="pdf_bill_to">"FATURA ALICISI"</string>
+    <string name="pdf_from">"GÖNDEREN"</string>
+    <string name="pdf_page_footer">"Sayfa %1$s · %2$s"</string>
+    <string name="pdf_issued">"Düzenleme: %1$s UTC"</string>
 </resources>

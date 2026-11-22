@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"报价单 PDF"</string>
     <string name="share_invoice">"分享发票"</string>
     <string name="share_quote">"分享报价单"</string>
+    <string name="pdf_quote_title">"报价单"</string>
+    <string name="pdf_invoice_title">"发票"</string>
+    <string name="pdf_invoice_title_sentence">"发票"</string>
+    <string name="pdf_receipt_title">"收据"</string>
+    <string name="pdf_payment_update_title">"付款更新"</string>
+    <string name="pdf_void_invoice_title">"已作废发票"</string>
+    <string name="pdf_prepared_for">"报价对象"</string>
+    <string name="pdf_bill_to">"账单收件人"</string>
+    <string name="pdf_from">"发件方"</string>
+    <string name="pdf_page_footer">"第 %1$s 页 · %2$s"</string>
+    <string name="pdf_issued">"开具日期：%1$s UTC"</string>
 </resources>

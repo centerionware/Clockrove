@@ -40,4 +40,15 @@
     <string name="quote_pdf_attachment">"Angebots-PDF"</string>
     <string name="share_invoice">"Rechnung teilen"</string>
     <string name="share_quote">"Angebot teilen"</string>
+    <string name="pdf_quote_title">"ANGEBOT"</string>
+    <string name="pdf_invoice_title">"RECHNUNG"</string>
+    <string name="pdf_invoice_title_sentence">"Rechnung"</string>
+    <string name="pdf_receipt_title">"BELEG"</string>
+    <string name="pdf_payment_update_title">"ZAHLUNGSAKTUALISIERUNG"</string>
+    <string name="pdf_void_invoice_title">"STORNIERTE RECHNUNG"</string>
+    <string name="pdf_prepared_for">"ERSTELLT FÜR"</string>
+    <string name="pdf_bill_to">"RECHNUNG AN"</string>
+    <string name="pdf_from">"VON"</string>
+    <string name="pdf_page_footer">"Seite %1$s · %2$s"</string>
+    <string name="pdf_issued">"Ausgestellt %1$s UTC"</string>
 </resources>

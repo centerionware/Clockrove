@@ -34,7 +34,7 @@ class InvoicePdfTest {
     }
     private fun exactMoneyPdf(snapshot: InvoiceStore.Snapshot, name: String, expected: List<String>) {
         val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
-        val bytes = InvoicePdf.generate(snapshot, logo())
+        val bytes = InvoicePdf.generate(InstrumentationRegistry.getInstrumentation().targetContext, snapshot, logo())
         File(root, "$name.pdf").writeBytes(bytes)
         inspect(bytes) { renderer ->
             val text = StringBuilder()
@@ -87,7 +87,7 @@ class InvoicePdfTest {
     @Test fun allThreeStylesProduceActualReadablePdfPagesWithLogoAndEqualTotals() {
         val images = mutableListOf<Int>()
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
-            val snapshot = fixture(style); val bytes = InvoicePdf.generate(snapshot, logo())
+            val snapshot = fixture(style); val bytes = InvoicePdf.generate(InstrumentationRegistry.getInstrumentation().targetContext, snapshot, logo())
             val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
             root.mkdirs(); File(root, "clockrove-invoice-${style.lowercase()}.pdf").writeBytes(bytes)
             inspect(bytes) { renderer ->
@@ -118,7 +118,7 @@ class InvoicePdfTest {
     }
     @Test fun blankOptionalFieldsKeepTheActualTotalOnTheFinalPage() {
         val data = fixture("MODERN", 20).copy(company = "", companyContact = "", customer = "", customerContact = "", header = "", footer = "")
-        inspect(InvoicePdf.generate(data)) { renderer ->
+        inspect(InvoicePdf.generate(InstrumentationRegistry.getInstrumentation().targetContext, data)) { renderer ->
             renderer.openPage(renderer.pageCount - 1).use { page ->
                 if (android.os.Build.VERSION.SDK_INT >= 35) assertTrue(PdfTextApi35.read(page).contains("TOTAL"))
             }
@@ -127,7 +127,7 @@ class InvoicePdfTest {
     @Test fun longRowsHeadersAndFootersPaginateIntoRealPdfPages() {
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
             val data = fixture(style, 130).copy(header = "Long optional header. ".repeat(400), footer = "Long optional footer. ".repeat(400))
-            val bytes = InvoicePdf.generate(data)
+            val bytes = InvoicePdf.generate(InstrumentationRegistry.getInstrumentation().targetContext, data)
             val root = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "invoice-previews")
             root.mkdirs()
             File(root, "clockrove-invoice-${style.lowercase()}-multipage.pdf").writeBytes(bytes)
