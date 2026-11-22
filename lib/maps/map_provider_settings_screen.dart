@@ -47,8 +47,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
   final _secret = TextEditingController();
   bool _forgetCredential = false;
   bool _busy = false;
-  String? _message;
-  String? _validationError;
+  AppMessage? _message;
+  AppMessage? _validationError;
 
   @override
   void dispose() {
@@ -96,12 +96,12 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
           );
       ref.invalidate(mapProviderSettingsProvider);
       if (mounted) Navigator.pop(context);
-    } on FormatException catch (e) {
-      if (mounted) setState(() => _message = e.message);
+    } on MapProviderInputException catch (error) {
+      if (mounted) setState(() => _validationError = error.key);
     } catch (_) {
       if (mounted) {
         setState(
-          () => _message = AppMessage.mapSaveFailed.of(context),
+          () => _message = AppMessage.mapSaveFailed,
         );
       }
     } finally {
@@ -139,7 +139,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _message = AppMessage.mapResetFailed.of(context),
+          () => _message = AppMessage.mapResetFailed,
         );
       }
     } finally {
@@ -287,12 +287,12 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
         const SizedBox(height: 16),
         if (_validationError != null)
           Text(
-            _validationError!,
+            _validationError!.of(context),
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         if (_message != null)
           Text(
-            _message!,
+            _message!.of(context),
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         const SizedBox(height: 16),

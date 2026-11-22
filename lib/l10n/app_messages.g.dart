@@ -377,7 +377,16 @@ enum AppMessage {
   mapKeepCredential("A credential is saved. Leave blank to keep it, or enter a replacement."),
   mapBearerHelp("For bearer authentication, enter Bearer followed by the token."),
   mapCredentialPrivacy("The authentication value is encrypted with Android Keystore and is not included in backups. Use a header-based credential; keys in tile URLs can leak through caches and logs."),
-  mapCredentialsAndroidOnly("Custom provider credentials are currently supported on Android only.");
+  mapCredentialsAndroidOnly("Custom provider credentials are currently supported on Android only."),
+  mapUnsupportedProvider("Choose a supported map provider."),
+  mapMissingTileTokens("Enter an HTTPS tile URL with {z}, {x}, and {y} placeholders."),
+  mapUnsupportedTileTokens("Only {z}, {x}, and {y} URL placeholders are supported."),
+  mapUnsafeTileUrl("Use a valid HTTPS tile URL without embedded credentials."),
+  mapUrlCredentials("Keep credentials out of the tile URL. Use the encrypted header field."),
+  mapMissingAttribution("Enter the map provider attribution exactly as they require it."),
+  mapInvalidAttributionLink("Enter a valid HTTPS attribution link, or leave it blank."),
+  mapInvalidAuthHeader("Use a valid authentication header name, such as Authorization or X-API-Key."),
+  mapInvalidAuthValue("The authentication value is too long or contains a line break.");
 
   const AppMessage(this.english);
   final String english;
