@@ -26,6 +26,14 @@ Read `app_plan.md` before implementing or changing behavior. It is the product-c
 - No analytics, server, account system, task timers, or recurring billing at launch.
 - Backup merge is previewed and transactional, resolves conflicts explicitly, and never starts timers or silently enables geofences.
 
+## Localization
+
+Every string Clockrove presents to users must come from the localization catalog. This includes labels, accessibility descriptions, tooltips, errors, empty states, Help, notifications, widgets, and app-generated document and email text. Use catalog keys for complete messages, with named placeholders and plural forms where needed. Keep user-entered text and stored identifiers intact.
+
+- Flutter catalogs live at `localizations/<language-tag>.yaml`. Give each message a stable key and look it up through the localization API. Keep native resource keys and translations aligned with the same catalog for Android surfaces. Settings follows the phone language by default and honors a saved language override.
+- When you add, change, or remove visible copy, please update the English catalog and every supported translation in the same change. A short translator note helps when a label is ambiguous or space is limited. If you touch a screen with hard-coded copy, move the affected strings into the catalog as part of the change.
+- Review the localization audit and catalog-parity results in GitHub Actions. Verify the messages on the changed surfaces, including accessibility and error states. Record any remaining migration work in the plan and keep full-coverage acceptance open until it is verified.
+
 ## Public repository and release boundaries
 
 - Intended repository: `centerionware/Clockrove`, public. Intended application ID: `io.github.centerionware.clockrove`.
