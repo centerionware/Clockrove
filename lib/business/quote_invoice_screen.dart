@@ -526,9 +526,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               if (_jobs.isEmpty)
-                const Text(
-                  'Plan and link the accepted scope to a job before invoicing its actual work.',
-                ),
+                Text(AppMessage.quoteInvoicePlanAcceptedScope.of(context)),
               OutlinedButton.icon(
                 onPressed: _enabled ? _plan : null,
                 icon: const Icon(Icons.playlist_add_check),
@@ -610,9 +608,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: Text(AppMessage.loadQuoteAvailableWork.of(context)),
               ),
               if (_dirty && data != null)
-                const Text(
-                  'The job, dates or timezone changed. Load available work before reviewing.',
-                ),
+                Text(AppMessage.quoteInvoiceChangedReload.of(context)),
               if (data?.problem != null)
                 Text(
                   quoteInvoiceProblem(data!.problem).of(context),
@@ -625,9 +621,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 if (data.archived)
-                  const Text(
-                    'Archived job · historical performed work remains invoiceable',
-                  ),
+                  Text(AppMessage.quoteInvoiceArchivedJob.of(context)),
                 Text(
                   'Accepted customer: ${accepted.customer.isEmpty ? 'Not specified' : accepted.customer}',
                 ),
@@ -642,10 +636,8 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ),
                 Text(data.currentContact),
                 SwitchListTile(
-                  title: const Text('Bill the current job customer instead'),
-                  subtitle: const Text(
-                    'Off keeps the accepted customer and contact snapshot.',
-                  ),
+                  title: Text(AppMessage.quoteInvoiceBillCurrentParty.of(context)),
+                  subtitle: Text(AppMessage.quoteInvoiceKeepAcceptedParty.of(context)),
                   value: _currentParty,
                   onChanged: !_enabled
                       ? null
@@ -699,9 +691,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   'Actual work',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const Text(
-                  'Only completed billable tasks linked to this revision, or finalized time for its hourly job, can be selected. Unmapped and incomplete tasks are not included.',
-                ),
+                Text(AppMessage.quoteInvoiceActualWorkRules.of(context)),
                 if (data.mode == 'HOURLY') ...[
                   Text(
                     'Estimated ${taskQuantity(data.estimatedHours)} hours · Agreed rate ${data.currency} ${money(data.acceptedRate, data.digits)}/hour',
@@ -752,9 +742,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                           }),
                   ),
                 if (data.tasks.isEmpty && data.times.isEmpty)
-                  const Text(
-                    'No eligible actual work in these dates. No invoice will be created from the estimate.',
-                  ),
+                  Text(AppMessage.quoteInvoiceNoEligibleActualWork.of(context)),
                 if (_missingSelections)
                   OutlinedButton(
                     onPressed: !_enabled
@@ -769,7 +757,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                             );
                             _changed();
                           }),
-                    child: const Text('Clear unavailable selections'),
+                    child: Text(AppMessage.quoteInvoiceClearUnavailable.of(context)),
                   ),
                 if (data.mode == 'HOURLY')
                   CheckboxListTile(
@@ -815,9 +803,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   maxLines: 5,
                   maxLength: 2000,
                   maxLengthEnforcement: MaxLengthEnforcement.none,
-                  decoration: const InputDecoration(
-                    labelText: 'Private invoice review note',
-                    helperText: 'Optional. The selected work and prices are reviewed separately.',
+                  decoration: InputDecoration(
+                    labelText: AppMessage.quoteInvoicePrivateNote.of(context),
+                    helperText: AppMessage.quoteInvoicePrivateNoteHelp.of(context),
                   ),
                   onChanged: (_) => setState(_changed),
                 ),

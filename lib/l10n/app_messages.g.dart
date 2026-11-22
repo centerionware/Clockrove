@@ -639,7 +639,21 @@ enum AppMessage {
   dateIsoHint("YYYY-MM-DD"),
   ianaTimezoneHint("IANA timezone"),
   loadQuoteAvailableWork("Load available work"),
-  quoteInvoiceReviewBeforePrepare("Review this invoice before preparing it.");
+  quoteInvoiceReviewBeforePrepare("Review this invoice before preparing it."),
+  quoteInvoiceChooseActualWork("Choose completed tasks or finalized time. Estimates do not create worked hours, task completion or payment."),
+  quoteInvoicePlanAcceptedScope("Plan and link the accepted scope to a job before invoicing its actual work."),
+  quoteInvoiceChangedReload("The job, dates or timezone changed. Load available work before reviewing."),
+  quoteInvoiceArchivedJob("Archived job · historical performed work remains invoiceable"),
+  quoteInvoiceBillCurrentParty("Bill the current job customer instead"),
+  quoteInvoiceKeepAcceptedParty("Off keeps the accepted customer and contact snapshot."),
+  quoteInvoiceHistoricalReviewed("I reviewed this historical accepted revision"),
+  quoteInvoiceActualWorkTitle("Actual work"),
+  quoteInvoiceActualWorkRules("Only completed billable tasks linked to this revision, or finalized time for its hourly job, can be selected. Unmapped and incomplete tasks are not included."),
+  quoteInvoiceNoEligibleActualWork("No eligible actual work in these dates. No invoice will be created from the estimate."),
+  quoteInvoiceClearUnavailable("Clear unavailable selections"),
+  quoteInvoiceActualTimeBelongs("The selected actual job time belongs to this quote"),
+  quoteInvoicePrivateNote("Private invoice review note"),
+  quoteInvoicePrivateNoteHelp("Optional. The selected work and prices are reviewed separately.");
 
   const AppMessage(this.english);
   final String english;

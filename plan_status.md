@@ -234,8 +234,9 @@ balance, unavailable correction, and retained invoice details notices.
 Added-work previews use localized preparation errors and exclusion notices.
 The quote-linked invoice list localizes navigation, revision provenance,
 empty states and loading errors. Quote to invoice setup and validation errors
-now use catalog messages for all registered locales. Job, date, timezone,
-refresh, and confirmation controls in the form also use localized messages.
+now use catalog messages for all registered locales. Job, date, timezone, refresh, and confirmation controls in the form also use
+localized messages. Scope, actual work, customer carryover, historical review,
+and private note guidance now use the catalogs too.
 The correction editor also localizes voiding and reason-privacy guidance,
 replacement-line validation and edited line basis prefixes. The Flutter
 source audit test checks for new hardcoded copy in invoice detail, invoice
