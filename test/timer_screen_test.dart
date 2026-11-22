@@ -138,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
     expect(find.text(AppStrings.locationPurpose), findsOneWidget);
-    await tester.tap(find.text(AppStrings.cancel));
+    await tester.tap(find.text(AppMessage.cancel.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
     await tester.tap(find.text(AppStrings.enableLocation));
@@ -146,7 +146,10 @@ void main() {
     await tester.tap(find.text(AppStrings.continueLabel));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
-    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
     expect(
       tester
@@ -156,15 +159,15 @@ void main() {
           .onPressed,
       isNotNull,
     );
-    await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.newJob.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.newJob));
+    await tester.tap(find.text(AppMessage.newJob.english));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Synthetic second');
-    await tester.tap(find.text(AppStrings.create));
+    await tester.tap(find.text(AppMessage.create.english));
     await tester.pumpAndSettle();
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
-    expect((tiles.last.title! as Text).data, AppStrings.newJob);
+    expect((tiles.last.title! as Text).data, AppMessage.newJob.english);
     final second = find.widgetWithText(ListTile, 'Synthetic second');
     await tester.ensureVisible(second);
     await tester.tap(
@@ -172,7 +175,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(api.running!.jobId, api.jobs.last.id);
-    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
@@ -230,7 +236,10 @@ void main() {
     expect(api.intents, isEmpty);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppMessage.clockOut.english), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
@@ -367,10 +376,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.newJob.english), 200);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text(AppStrings.newJob), findsOneWidget);
+    expect(find.text(AppMessage.newJob.english), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

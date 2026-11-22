@@ -77,10 +77,16 @@ Statuses describe evidence, not intent.
 
 **App localization is in progress.** The first slice adds offline YAML catalogs
 for 17 locales and a device-default or explicit language choice in Settings.
-The catalogs cover language selection and selected Settings and timer labels.
+The catalogs cover 36 messages across language selection, selected Settings
+labels, the timekeeping dashboard and its navigation. Tests check placeholder
+parity for messages containing dynamic values.
 Catalog parity, locale preference tests, and a Flutter/Android source audit are
 prepared for GitHub Actions. The audit reports remaining candidates during
-migration, with strict mode available for a full-coverage check.
+migration, with strict mode available for a full-coverage check. Initial
+[Actions validation](https://github.com/centerionware/Clockrove/actions/runs/45065644235)
+completed the audit and stopped at the formatting gate before behavior tests.
+The exported formatter corrections were reviewed and incorporated where they
+apply to the current source.
 Remaining Flutter screens, Help, notifications, widgets, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 

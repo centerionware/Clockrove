@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../l10n/app_strings.dart';
 import '../maps/work_location_map.dart';
 import 'tracking_api.dart';
@@ -24,7 +25,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(AppStrings.cancel),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),

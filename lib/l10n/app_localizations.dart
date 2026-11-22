@@ -47,15 +47,47 @@ enum AppMessage {
   chooseJob('Choose a job below to start your workday.'),
   elapsed('Elapsed this session'),
   exportBackup('Export encrypted backup'),
-  restoreBackup('Restore encrypted backup');
+  restoreBackup('Restore encrypted backup'),
+  newJob('New job'),
+  jobName('Job name'),
+  cancel('Cancel'),
+  create('Create'),
+  started('Started {time}'),
+  refresh('Refresh timer'),
+  storageUnavailable('Timer unavailable. Tap to try again.'),
+  uncertain('The action may have completed. Retry to confirm its result.'),
+  retry('Retry same action'),
+  jobCreateFailed(
+    'Job was not created. Check its name, refresh the list and try again.',
+  ),
+  commandConflict(
+    'The action could not be applied. Review the current timer and try again.',
+  ),
+  customers('Customers'),
+  reports('Reports'),
+  taxFinances('Tax & finances'),
+  invoices('Invoices'),
+  quotes('Quotes'),
+  archivedJobs('Archived jobs'),
+  checkDeviceTime('Check device time');
 
   const AppMessage(this.english);
   final String english;
 
+  static final placeholder = RegExp(r'\{([a-zA-Z][a-zA-Z0-9]*)\}');
+
   String of(BuildContext context) =>
-      Localizations.of<AppLocalizations>(context, AppLocalizations)
-          ?.messages[name] ??
+      Localizations.of<AppLocalizations>(
+        context,
+        AppLocalizations,
+      )?.messages[name] ??
       english;
+
+  String format(BuildContext context, Map<String, String> arguments) =>
+      of(context).replaceAllMapped(
+        placeholder,
+        (match) => arguments[match[1]] ?? (throw ArgumentError(match[0])),
+      );
 }
 
 class AppLocalizations {
@@ -88,7 +120,8 @@ class AppLocalizations {
   }
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -96,8 +129,9 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
       appLanguages.containsKey(locale.toLanguageTag());
 
   @override
-  Future<AppLocalizations> load(Locale locale) async =>
-      AppLocalizations(await AppLocalizations.loadCatalog(locale.toLanguageTag()));
+  Future<AppLocalizations> load(Locale locale) async => AppLocalizations(
+    await AppLocalizations.loadCatalog(locale.toLanguageTag()),
+  );
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

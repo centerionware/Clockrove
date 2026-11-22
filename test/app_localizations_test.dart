@@ -10,23 +10,30 @@ void main() {
 
   test('each shipped catalog covers every migrated message', () async {
     final keys = AppMessage.values.map((message) => message.name).toSet();
+    Iterable<String?> placeholders(String text) =>
+        AppMessage.placeholder.allMatches(text).map((match) => match[1]);
     for (final tag in appLanguages.keys) {
       final catalog = await AppLocalizations.loadCatalog(tag);
       expect(catalog.keys.toSet(), keys, reason: tag);
       expect(catalog.values, everyElement(isNotEmpty), reason: tag);
-      if (tag == 'en') {
-        for (final message in AppMessage.values) {
-          expect(catalog[message.name], message.english);
-        }
+      for (final message in AppMessage.values) {
+        final translated = catalog[message.name]!;
+        expect(
+          placeholders(translated),
+          unorderedEquals(placeholders(message.english)),
+          reason: '$tag:${message.name}',
+        );
+        if (tag == 'en') expect(translated, message.english);
       }
     }
   });
 
   test('resolves supported device preferences and Chinese script variants', () {
-    Locale resolve(List<Locale> locales) => AppLocalizations.resolveDeviceLocales(
-      locales,
-      AppLocalizations.supportedLocales,
-    );
+    Locale resolve(List<Locale> locales) =>
+        AppLocalizations.resolveDeviceLocales(
+          locales,
+          AppLocalizations.supportedLocales,
+        );
 
     expect(resolve([const Locale('es', 'MX')]), const Locale('es'));
     expect(resolve([const Locale('zh', 'TW')]), appLanguages['zh-Hant']!.$1);
@@ -53,7 +60,9 @@ void main() {
           throw MissingPluginException();
       }
     });
-    addTearDown(() => messenger.setMockMethodCallHandler(languageChannel, null));
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(languageChannel, null),
+    );
 
     final first = ProviderContainer();
     addTearDown(first.dispose);

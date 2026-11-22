@@ -53,12 +53,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(AppStrings.newJob),
+        title: Text(AppMessage.newJob.of(context)),
         content: TextField(
           onChanged: (value) => enteredName = value,
           autofocus: true,
           maxLength: 240,
-          decoration: const InputDecoration(labelText: AppStrings.jobName),
+          decoration: InputDecoration(
+            labelText: AppMessage.jobName.of(context),
+          ),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) Navigator.pop(context, value.trim());
@@ -67,14 +69,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(AppStrings.cancel),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () {
               final value = enteredName.trim();
               if (value.isNotEmpty) Navigator.pop(context, value);
             },
-            child: const Text(AppStrings.create),
+            child: Text(AppMessage.create.of(context)),
           ),
         ],
       ),
@@ -138,7 +140,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               ElapsedDisplay(startUtc: running.startUtc),
               const SizedBox(height: 8),
               Text(
-                '${AppStrings.started} ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(running.startUtc.toLocal()))}',
+                AppMessage.started.format(context, {
+                  'time': MaterialLocalizations.of(context).formatTimeOfDay(
+                    TimeOfDay.fromDateTime(running.startUtc.toLocal()),
+                  ),
+                }),
                 style: TextStyle(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: 24),
@@ -218,25 +224,40 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                 value: 'settings',
                 child: Text(AppMessage.settings.of(context)),
               ),
-              const PopupMenuItem(value: 'customers', child: Text('Customers')),
-              const PopupMenuItem(value: 'reports', child: Text('Reports')),
-              const PopupMenuItem(
+              PopupMenuItem(
+                value: 'customers',
+                child: Text(AppMessage.customers.of(context)),
+              ),
+              PopupMenuItem(
+                value: 'reports',
+                child: Text(AppMessage.reports.of(context)),
+              ),
+              PopupMenuItem(
                 value: 'business_reports',
                 child: Row(
                   children: [
-                    Icon(Icons.assessment_outlined),
-                    SizedBox(width: 12),
-                    Text('Tax & finances'),
+                    const Icon(Icons.assessment_outlined),
+                    const SizedBox(width: 12),
+                    Text(AppMessage.taxFinances.of(context)),
                   ],
                 ),
               ),
-              const PopupMenuItem(value: 'invoices', child: Text('Invoices')),
-              const PopupMenuItem(value: 'quotes', child: Text('Quotes')),
-              const PopupMenuItem(value: 'archive', child: Text('Archived jobs')),
+              PopupMenuItem(
+                value: 'invoices',
+                child: Text(AppMessage.invoices.of(context)),
+              ),
+              PopupMenuItem(
+                value: 'quotes',
+                child: Text(AppMessage.quotes.of(context)),
+              ),
+              PopupMenuItem(
+                value: 'archive',
+                child: Text(AppMessage.archivedJobs.of(context)),
+              ),
             ],
           ),
           IconButton(
-            tooltip: AppStrings.refresh,
+            tooltip: AppMessage.refresh.of(context),
             onPressed: () {
               ref.invalidate(timerSnapshotProvider);
               ref.invalidate(trackingStatusProvider);
@@ -257,7 +278,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                   padding: const EdgeInsets.all(24),
                   child: TextButton(
                     onPressed: () => ref.invalidate(timerSnapshotProvider),
-                    child: const Text(AppStrings.storageUnavailable),
+                    child: Text(AppMessage.storageUnavailable.of(context)),
                   ),
                 ),
               ),
@@ -295,12 +316,12 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(AppStrings.uncertain),
+                              Text(AppMessage.uncertain.of(context)),
                               TextButton(
                                 onPressed: () => ref
                                     .read(timerActionsProvider.notifier)
                                     .retry(),
-                                child: const Text(AppStrings.retry),
+                                child: Text(AppMessage.retry.of(context)),
                               ),
                             ],
                           ),
@@ -312,8 +333,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
                         actions.conflict == 'JOB_CREATE_FAILED'
-                            ? AppStrings.jobCreateFailed
-                            : AppStrings.commandConflict,
+                            ? AppMessage.jobCreateFailed.of(context)
+                            : AppMessage.commandConflict.of(context),
                       ),
                     ),
                   const SizedBox(height: 28),
@@ -381,7 +402,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
                             color: colors.primary,
                           ),
                           title: Text(
-                            AppStrings.newJob,
+                            AppMessage.newJob.of(context),
                             style: TextStyle(
                               color: colors.primary,
                               fontWeight: FontWeight.w600,

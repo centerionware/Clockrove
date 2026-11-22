@@ -11,7 +11,6 @@ abstract final class AppStrings {
   static const mapUnavailable =
       'Map tiles are unavailable. Your recorded location is still available.';
   static const linkUnavailable = 'Could not open the link.';
-  static const checkDeviceTime = 'Check device time';
   static const locationTitle = 'Work location';
   static const lastSample = 'Last sample';
   static const accuracy = 'accuracy';
@@ -41,18 +40,4 @@ abstract final class AppStrings {
       'Approximate location permission; accuracy is limited.';
   static const prototype =
       'Development build: location tracking is unavailable.';
-  static const started = 'Started';
-  static const newJob = 'New job';
-  static const jobName = 'Job name';
-  static const cancel = 'Cancel';
-  static const create = 'Create';
-  static const refresh = 'Refresh timer';
-  static const retry = 'Retry same action';
-  static const storageUnavailable = 'Timer unavailable. Tap to try again.';
-  static const uncertain =
-      'The action may have completed. Retry to confirm its result.';
-  static const commandConflict =
-      'The action could not be applied. Review the current timer and try again.';
-  static const jobCreateFailed =
-      'Job was not created. Check its name, refresh the list and try again.';
 }

@@ -1,4 +1,4 @@
-import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:clockrove/tracking/elapsed_display.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,7 +22,15 @@ void main() {
     );
     expect(
       elapsedLabel(start, start.subtract(const Duration(milliseconds: 1))),
-      AppStrings.checkDeviceTime,
+      AppMessage.checkDeviceTime.english,
+    );
+    expect(
+      elapsedLabel(
+        start,
+        start.subtract(const Duration(milliseconds: 1)),
+        clockError: 'Prüfe die Gerätezeit',
+      ),
+      'Prüfe die Gerätezeit',
     );
   });
 }
