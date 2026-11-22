@@ -158,7 +158,16 @@ enum AppMessage {
   restoreOverlapConflicts("Time overlap conflicts in backup"),
   restoreMediaFiles("Media files"),
   restoreMediaData("Media data"),
-  restoreMebibytes("{size} MiB");
+  restoreMebibytes("{size} MiB"),
+  restoreOnDevice("On this device"),
+  restoreInBackup("In backup"),
+  restoreOpenSessionConflict("Open session in backup"),
+  restoreOverlappingInterval("Overlapping work interval"),
+  restoreDeletedGps("Deleted GPS history"),
+  restoreSkippedDependency("Record depends on a skipped item"),
+  restoreTableConflict("{table} conflict"),
+  yes("Yes"),
+  no("No");
 
   const AppMessage(this.english);
   final String english;

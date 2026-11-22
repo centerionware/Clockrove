@@ -113,8 +113,9 @@ Restore conflict choices now use the same catalogs and preserve their
 native choice codes. Unknown codes get a translated display label. Restore
 confirmation, conflict pagination, and review instructions also use the
 catalogs. The restore preview totals use translated labels, locale-formatted
-record counts, and a translated media-size template. Remaining review copy
-and error paths are open.
+record counts, and a translated media-size template. Conflict titles,
+comparison headings, and boolean values also use the catalogs. Native record
+field labels and remaining review copy and error paths are still open.
 Export phase labels, cancellation controls, and encrypted-byte progress now
 use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
 catalog keys. Export instructions, password validation, and dynamic summary

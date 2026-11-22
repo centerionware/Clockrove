@@ -755,7 +755,7 @@ final class _ConflictCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _conflictTitle(conflict),
+              _conflictTitle(context, conflict),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
@@ -817,9 +817,9 @@ final class _SummaryPair extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      _SummaryColumn(title: 'On this device', values: local),
+      _SummaryColumn(title: AppMessage.restoreOnDevice, values: local),
       const SizedBox(height: 8),
-      _SummaryColumn(title: 'In backup', values: backup),
+      _SummaryColumn(title: AppMessage.restoreInBackup, values: backup),
     ],
   );
 }
@@ -827,7 +827,7 @@ final class _SummaryPair extends StatelessWidget {
 final class _SummaryColumn extends StatelessWidget {
   const _SummaryColumn({required this.title, required this.values});
 
-  final String title;
+  final AppMessage title;
   final Map<String, Object?> values;
 
   @override
@@ -841,9 +841,14 @@ final class _SummaryColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            title.of(context),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           for (final entry in values.entries)
-            Text('${_humanize(entry.key)}: ${_scalarText(entry.value)}'),
+            Text(
+              '${_humanize(entry.key)}: ${_scalarText(context, entry.value)}',
+            ),
         ],
       ),
     ),
@@ -939,14 +944,18 @@ String _choiceLabel(BuildContext context, String choice) {
       AppMessage.restoreUnrecognizedChoice.format(context, {'code': choice});
 }
 
-String _conflictTitle(BackupImportConflict conflict) {
-  if (conflict.kind == 'OPEN_SESSION') return 'Open session in backup';
-  if (conflict.kind == 'SESSION_OVERLAP') return 'Overlapping work interval';
-  if (conflict.kind == 'GPS_DELETION_COVERAGE') return 'Deleted GPS history';
-  if (conflict.kind == 'DEPENDENT_ON_CONFLICT') {
-    return 'Record depends on a skipped item';
-  }
-  return '${_humanize(conflict.table)} conflict';
+String _conflictTitle(BuildContext context, BackupImportConflict conflict) {
+  final message = switch (conflict.kind) {
+    'OPEN_SESSION' => AppMessage.restoreOpenSessionConflict,
+    'SESSION_OVERLAP' => AppMessage.restoreOverlappingInterval,
+    'GPS_DELETION_COVERAGE' => AppMessage.restoreDeletedGps,
+    'DEPENDENT_ON_CONFLICT' => AppMessage.restoreSkippedDependency,
+    _ => null,
+  };
+  return message?.of(context) ??
+      AppMessage.restoreTableConflict.format(context, {
+        'table': _humanize(conflict.table),
+      });
 }
 
 String _humanize(String value) => value
@@ -956,9 +965,11 @@ String _humanize(String value) => value
     .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
     .join(' ');
 
-String _scalarText(Object? value) {
+String _scalarText(BuildContext context, Object? value) {
   if (value == null) return '—';
-  if (value is bool) return value ? 'Yes' : 'No';
+  if (value is bool) {
+    return (value ? AppMessage.yes : AppMessage.no).of(context);
+  }
   if (value is num || value is String) return '$value';
   return '—';
 }
