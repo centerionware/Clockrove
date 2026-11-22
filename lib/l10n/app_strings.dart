@@ -1,19 +1,7 @@
 /// English copy centralized for later localization.
 abstract final class AppStrings {
   static const appName = 'Clockrove';
-  static const workLocationMap = 'Recorded location';
-  static const viewLocationMap = 'View on map';
-  static const recordedLocation = 'Last recorded work location';
-  static const zoomIn = 'Zoom in';
-  static const zoomOut = 'Zoom out';
-  static const mapPrivacy =
-      'Map requests share the viewed area with OpenStreetMap.';
-  static const mapUnavailable =
-      'Map tiles are unavailable. Your recorded location is still available.';
-  static const linkUnavailable = 'Could not open the link.';
   static const locationTitle = 'Work location';
-  static const lastSample = 'Last sample';
-  static const accuracy = 'accuracy';
   static const locationPurpose =
       'Record location only while clocked in, targeting a sample about every ten '
       'minutes. Accuracy and delivery vary. Manual timekeeping works without '

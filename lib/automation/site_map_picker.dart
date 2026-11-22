@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../l10n/app_strings.dart';
+import '../l10n/app_localizations.dart';
 import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
@@ -158,7 +158,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                       const Text(
                         'Tap the map to choose the centre of your work site.',
                       ),
-                      const Text(AppStrings.mapPrivacy),
+                      Text(AppMessage.mapPrivacy.of(context)),
                       Text(
                         'Radius: ${widget.radius.toStringAsFixed(widget.radius < 10 ? 1 : 0)} m. Accuracy and arrival/departure delivery can vary.',
                       ),

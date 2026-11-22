@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:clockrove/app_theme.dart';
-import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter/material.dart';
@@ -124,13 +124,13 @@ void main() {
           expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
           expect(find.text('80 m accuracy'), findsOneWidget);
           expect(
-            find.bySemanticsLabel(AppStrings.recordedLocation),
+            find.bySemanticsLabel(AppMessage.recordedLocation.english),
             findsOneWidget,
           );
           final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
           expect(map.mapController!.camera.center.latitude, 51.5);
           expect(map.mapController!.camera.zoom, 15);
-          await tester.tap(find.byTooltip(AppStrings.zoomIn));
+          await tester.tap(find.byTooltip(AppMessage.zoomIn.english));
           await tester.pumpAndSettle();
           expect(map.mapController!.camera.zoom, 16);
           expect(tester.takeException(), isNull);
@@ -191,11 +191,11 @@ void main() {
         tester
             .getRect(find.byType(FlutterMap))
             .contains(
-              tester.getRect(find.byTooltip(AppStrings.zoomOut)).bottomRight,
+              tester.getRect(find.byTooltip(AppMessage.zoomOut.english)).bottomRight,
             ),
         isTrue,
       );
-      await tester.tap(find.byTooltip(AppStrings.zoomOut));
+      await tester.tap(find.byTooltip(AppMessage.zoomOut.english));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -246,7 +246,7 @@ void main() {
         );
       });
       await tester.pumpAndSettle();
-      expect(find.text(AppStrings.mapUnavailable), findsOneWidget);
+      expect(find.text(AppMessage.mapUnavailable.english), findsOneWidget);
       expect(find.text('Open map'), findsOneWidget);
       expect(find.text('51.500000, -0.100000'), findsOneWidget);
       expect(find.text('© OpenStreetMap contributors'), findsOneWidget);

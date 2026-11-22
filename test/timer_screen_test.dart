@@ -219,9 +219,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.viewLocationMap), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.viewLocationMap.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.viewLocationMap));
+    await tester.tap(find.text(AppMessage.viewLocationMap.english));
     await tester.pumpAndSettle();
     await tester.runAsync(
       () => precacheImage(
@@ -231,7 +231,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.mapUnavailable), findsOneWidget);
+    expect(find.text(AppMessage.mapUnavailable.english), findsOneWidget);
     expect(api.running!.id, 'map-outage-session');
     expect(api.intents, isEmpty);
     await tester.pageBack();

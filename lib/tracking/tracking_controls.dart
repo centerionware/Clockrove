@@ -74,6 +74,24 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
     };
   }
 
+  String _sampleLabel(
+    BuildContext context,
+    DateTime observation,
+    double? meters,
+  ) {
+    final local = observation.toLocal();
+    final material = MaterialLocalizations.of(context);
+    final sample = AppMessage.lastLocationSample.format(context, {
+      'date': material.formatShortDate(local),
+      'time': material.formatTimeOfDay(TimeOfDay.fromDateTime(local)),
+    });
+    if (meters == null) return sample;
+    final accuracy = AppMessage.locationAccuracy.format(context, {
+      'meters': meters.toStringAsFixed(0),
+    });
+    return '$sample · $accuracy';
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(trackingStatusProvider);
@@ -107,13 +125,15 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_description(value)),
-                  if (value.lastObservationUtc != null)
+                  if (value.lastObservationUtc case final observation?)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        '${AppStrings.lastSample} ${MaterialLocalizations.of(context).formatShortDate(value.lastObservationUtc!.toLocal())} '
-                        '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(value.lastObservationUtc!.toLocal()))}'
-                        '${value.lastAccuracyMeters == null ? "" : " · ${value.lastAccuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}"}',
+                        _sampleLabel(
+                          context,
+                          observation,
+                          value.lastAccuracyMeters,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -130,7 +150,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                         ),
                       ),
                       icon: const Icon(Icons.map_outlined),
-                      label: const Text(AppStrings.viewLocationMap),
+                      label: Text(AppMessage.viewLocationMap.of(context)),
                     ),
                   if (value.permission == 'approximate')
                     const Text(AppStrings.locationApproximate),

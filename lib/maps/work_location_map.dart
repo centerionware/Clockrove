@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../l10n/app_strings.dart';
+import '../l10n/app_localizations.dart';
 import 'map_provider_settings.dart';
 import 'tile_backoff_client.dart';
 
@@ -62,10 +62,10 @@ class WorkMapTileStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final label = failed
-        ? AppStrings.mapUnavailable
+        ? AppMessage.mapUnavailable.of(context)
         : loading
-        ? 'Loading map tiles…'
-        : 'Map tiles loaded';
+        ? AppMessage.mapTilesLoading.of(context)
+        : AppMessage.mapTilesLoaded.of(context);
     return Card(
       color: failed ? colors.errorContainer : colors.surface,
       child: Padding(
@@ -90,7 +90,7 @@ class WorkMapTileStatus extends StatelessWidget {
             TextButton.icon(
               onPressed: onOpenMap,
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Open map'),
+              label: Text(AppMessage.openMap.of(context)),
             ),
           ],
         ),
@@ -184,7 +184,9 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(AppStrings.linkUnavailable)));
+      ).showSnackBar(
+        SnackBar(content: Text(AppMessage.linkUnavailable.of(context))),
+      );
     }
   }
 
@@ -212,7 +214,9 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(AppStrings.linkUnavailable)));
+      ).showSnackBar(
+        SnackBar(content: Text(AppMessage.linkUnavailable.of(context))),
+      );
     }
   }
 
@@ -221,17 +225,17 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     final settingsState = ref.watch(mapProviderSettingsProvider);
     if (settingsState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
+        appBar: AppBar(title: Text(AppMessage.workLocationMap.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (settingsState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
+        appBar: AppBar(title: Text(AppMessage.workLocationMap.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-            child: const Text('Map settings could not be loaded. Retry.'),
+            child: Text(AppMessage.mapSettingsRetry.of(context)),
           ),
         ),
       );
@@ -243,7 +247,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
     final colors = Theme.of(context).colorScheme;
     final measured = widget.measuredUtc.toLocal();
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.workLocationMap)),
+      appBar: AppBar(title: Text(AppMessage.workLocationMap.of(context))),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => Column(
@@ -263,9 +267,14 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${AppStrings.lastSample} '
-                              '${MaterialLocalizations.of(context).formatShortDate(measured)} '
-                              '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(measured))}',
+                              AppMessage.lastLocationSample.format(context, {
+                                'date': MaterialLocalizations.of(context)
+                                    .formatShortDate(measured),
+                                'time': MaterialLocalizations.of(context)
+                                    .formatTimeOfDay(
+                                      TimeOfDay.fromDateTime(measured),
+                                    ),
+                              }),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Text(
@@ -274,10 +283,13 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                             ),
                             if (widget.accuracyMeters != null)
                               Text(
-                                '${widget.accuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}',
+                                AppMessage.locationAccuracy.format(context, {
+                                  'meters': widget.accuracyMeters!
+                                      .toStringAsFixed(0),
+                                }),
                               ),
                             const SizedBox(height: 6),
-                            const Text(AppStrings.mapPrivacy),
+                            Text(AppMessage.mapPrivacy.of(context)),
                           ],
                         ),
                       ),
@@ -334,7 +346,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                               width: 48,
                               height: 48,
                               child: Semantics(
-                                label: AppStrings.recordedLocation,
+                                label: AppMessage.recordedLocation.of(context),
                                 child: const DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -372,7 +384,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton.filledTonal(
-                            tooltip: AppStrings.zoomIn,
+                            tooltip: AppMessage.zoomIn.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom + 1)
@@ -383,7 +395,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
                           ),
                           const SizedBox(width: 8, height: 8),
                           IconButton.filledTonal(
-                            tooltip: AppStrings.zoomOut,
+                            tooltip: AppMessage.zoomOut.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom - 1)
