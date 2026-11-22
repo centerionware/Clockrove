@@ -541,7 +541,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 key: ValueKey('invoice-job/$_job'),
                 initialValue: _job,
                 isExpanded: true,
-                decoration: InputDecoration(hintText: AppMessage.chooseJob.of(context)),
+                decoration: InputDecoration(hintText: AppMessage.quoteInvoiceChooseJob.of(context)),
                 items: [
                   for (final id in jobIds)
                     DropdownMenuItem(
