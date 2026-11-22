@@ -1,6 +1,7 @@
 package io.github.centerionware.clockrove.tracking
 
 import android.content.Context
+import io.github.centerionware.clockrove.widget.TimerWidget
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -12,6 +13,7 @@ internal class BackupHostApi(
     messenger: BinaryMessenger,
     private val repository: TimerRepository = TimerRepository.get(context.applicationContext),
 ) {
+    private val appContext = context.applicationContext
     private val channel = MethodChannel(
         messenger,
         "clockrove/backup/v1",
@@ -23,7 +25,12 @@ internal class BackupHostApi(
         channel.setMethodCallHandler { call, result ->
             try {
                 val response = dispatch(call)
-                if (response == null) result.notImplemented() else result.success(response)
+                if (response == null) result.notImplemented() else {
+                    if (call.method == "applyBackupImport") {
+                        try { TimerWidget.refreshAll(appContext) } catch (_: Exception) { }
+                    }
+                    result.success(response)
+                }
             } catch (failure: BackupExportStore.Failure) {
                 result.error(failure.code, failure.message, null)
             } catch (failure: BackupImportStore.Failure) {
