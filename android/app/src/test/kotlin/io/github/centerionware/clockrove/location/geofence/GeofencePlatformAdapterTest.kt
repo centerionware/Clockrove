@@ -66,6 +66,19 @@ class GeofencePlatformAdapterTest {
         return session
     }
 
+    @Test fun gpsOptOutKeepsAutomaticStartAndDepartureWithoutStartingRecording() {
+        configure()
+        val settings = repository.jobDetail(job).job.settings.copy(locationRecordingOverride = false)
+        assertNull(repository.saveJobSettings("disable-recording", repository.snapshot().version, settings).conflict)
+
+        val session = startAndDepart()
+
+        assertEquals(job, repository.snapshot().running!!.jobId)
+        assertTrue(starts.isEmpty())
+        assertTrue(repository.locationPoints(session).isEmpty())
+        assertEquals(session, repository.schedulableDeparture()?.sessionId)
+    }
+
     @Test fun defaultIdleNeverContactsPlayServicesOrRequestsPermission() {
         registry.reconcile()
         assertTrue(calls.isEmpty())

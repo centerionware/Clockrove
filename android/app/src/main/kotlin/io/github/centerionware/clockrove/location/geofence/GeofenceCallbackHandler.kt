@@ -24,8 +24,11 @@ internal class GeofenceCallbackHandler(
         val outcome = repository.geofenceEvent(id, keys, presence, observed, received)
         if (outcome.replayed) return
         val current = repository.snapshot()
-        if (outcome.startedSessionId != null && current.running?.id == outcome.startedSessionId && permitted())
-            startLocation(outcome.startedSessionId)
-        else if (outcome.choices.isNotEmpty() && current.running == null) showChoices()
+        val running = current.running
+        if (running != null && running.id == outcome.startedSessionId && permitted()) {
+            if (repository.locationRecordingEnabled(running.jobId)) startLocation(running.id)
+        } else if (outcome.choices.isNotEmpty() && running == null) {
+            showChoices()
+        }
     }
 }
