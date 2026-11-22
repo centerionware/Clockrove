@@ -131,7 +131,9 @@ GitHub Actions validation, per owner instruction.
 Shared dialog actions, screen titles, map retry text, and zoom tooltips now
 reuse existing catalogs at 25 points across 14 Flutter screens.
 The in-app Help title, search, empty state, version label, tooltips, and all
-eight topic titles are translated. Help article bodies still need migration.
+eight topic titles are translated. The timekeeping, backup and location
+history articles now have translations across all current catalogs and Help
+search uses their localized bodies. Five Help articles remain.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

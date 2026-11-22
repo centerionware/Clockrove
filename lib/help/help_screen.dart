@@ -6,13 +6,12 @@ import '../l10n/app_localizations.dart';
 enum HelpTopic {
   timekeeping(
     AppMessage.helpTimekeeping,
-    'Create a job, then start its timer from the work screen. Stop the timer '
-        'when you finish. Use job work history to add a missed entry or '
-        'correct the time. The manual timer works without location access.',
+    translatedBody: AppMessage.helpTimekeepingBody,
   ),
   automation(
     AppMessage.helpAutomation,
-    'Open a job’s settings to add a work site and enable automation. '
+    fallbackBody:
+        'Open a job’s settings to add a work site and enable automation. '
         'Allow precise location and, where Android requires it, background '
         'location. If clock-in on arrival is enabled and you save a site with '
         'Use current location, Clockrove offers to start work now. Saving a '
@@ -25,51 +24,56 @@ enum HelpTopic {
   ),
   backups(
     AppMessage.helpBackups,
-    'In Settings, choose Export encrypted backup and save the file somewhere '
-        'you can access later. Keep the password separately. To restore, stop '
-        'your timer, choose Restore encrypted backup, and enter the password. '
-        'Review the proposed merge and resolve any conflicts before applying.',
+    translatedBody: AppMessage.helpBackupsBody,
   ),
   boards(
     AppMessage.helpBoards,
-    'Open a job to see its board. Add a task to a column, then use its move '
+    fallbackBody:
+        'Open a job to see its board. Add a task to a column, then use its move '
         'action as work progresses. Reuse a task from the library to start a '
         'new card. Archive a finished job to remove it from active lists '
         'while keeping its history.',
   ),
   reports(
     AppMessage.helpReports,
-    'Choose Reports from the main menu for work across jobs, or open Job '
+    fallbackBody:
+        'Choose Reports from the main menu for work across jobs, or open Job '
         'report from a board. Choose the date range and jobs before reviewing '
         'totals. Export CSV to save the selected report to your chosen '
         'destination. Review the date range before sharing it.',
   ),
   billing(
     AppMessage.helpBilling,
-    'Open Quotes from the main menu to prepare and review a quote. After '
+    fallbackBody:
+        'Open Quotes from the main menu to prepare and review a quote. After '
         'it is accepted, review which work belongs on the job. Check the '
         'customer, prices and covered work before preparing an invoice. '
         'Open Invoices to view the saved PDF and record payments.',
   ),
   widgets(
     AppMessage.helpWidgets,
-    'Open the Android launcher’s widget picker and add a Clockrove widget. '
+    fallbackBody:
+        'Open the Android launcher’s widget picker and add a Clockrove widget. '
         'Choose a default job or choose a job at clock-in. While work is '
         'running, the timer widget shows the actual active job and can stop it. '
         'Task and combined widgets show upcoming work for their configuration.',
   ),
   locationHistory(
     AppMessage.helpLocationHistory,
-    'Work location recording controls whether Clockrove saves locations '
-        'during a session. Site automation has its own setting. Use the '
-        'location history deletion control to remove saved GPS points from '
-        'the app. Copies you already exported remain at their destination.',
+    translatedBody: AppMessage.helpLocationHistoryBody,
   );
 
-  const HelpTopic(this.title, this.content);
+  const HelpTopic(this.title, {String? fallbackBody, AppMessage? translatedBody})
+    : _fallbackBody = fallbackBody,
+      _translatedBody = translatedBody;
 
   final AppMessage title;
-  final String content;
+  final String? _fallbackBody;
+  final AppMessage? _translatedBody;
+
+  String get content => _translatedBody?.english ?? _fallbackBody!;
+  String body(BuildContext context) =>
+      _translatedBody?.of(context) ?? _fallbackBody!;
 }
 
 class HelpScreen extends StatefulWidget {
@@ -100,7 +104,7 @@ class _HelpScreenState extends State<HelpScreen> {
     final topics = HelpTopic.values.where(
       (topic) =>
           topic.title.of(context).toLowerCase().contains(_query) ||
-          topic.content.toLowerCase().contains(_query),
+          topic.body(context).toLowerCase().contains(_query),
     );
     return Scaffold(
       appBar: AppBar(title: Text(AppMessage.help.of(context))),
@@ -164,7 +168,7 @@ class HelpTopicScreen extends StatelessWidget {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 12),
-        Text(topic.content, style: Theme.of(context).textTheme.bodyLarge),
+        Text(topic.body(context), style: Theme.of(context).textTheme.bodyLarge),
       ],
     ),
   );

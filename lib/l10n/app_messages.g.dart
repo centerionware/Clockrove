@@ -191,7 +191,10 @@ enum AppMessage {
   helpReports("Run reports and export CSV"),
   helpBilling("Prepare quotes and invoices"),
   helpWidgets("Use the Android home-screen widget"),
-  helpLocationHistory("Control saved location history");
+  helpLocationHistory("Control saved location history"),
+  helpTimekeepingBody("Create a job, then start its timer from the work screen. Stop the timer when you finish. Use job work history to add a missed entry or correct the time. The manual timer works without location access."),
+  helpBackupsBody("In Settings, choose Export encrypted backup and save the file somewhere you can access later. Keep the password separately. To restore, stop your timer, choose Restore encrypted backup, and enter the password. Review the proposed merge and resolve any conflicts before applying."),
+  helpLocationHistoryBody("Work location recording controls whether Clockrove saves locations during a session. Site automation has its own setting. Use the location history deletion control to remove saved GPS points from the app. Copies you already exported remain at their destination.");
 
   const AppMessage(this.english);
   final String english;
