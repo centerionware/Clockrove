@@ -21,3 +21,22 @@ explain or resolve that case. Keep the 15 m site in the upgrade reproduction
 and add a separate 150 m site as a comparison. Record the app version before
 and after upgrade, the monitoring status, and whether a fresh exit/re-entry
 is delivered. No affected-device transition log is available yet.
+
+### Cold-start callback investigation
+
+Source tracing found that a callback can launch the app process after its
+location timestamp has already been recorded by Android. Repository
+initialization previously reset persisted work-site membership and advanced
+the fact timestamp before the callback was processed. The pending-departure
+review guard is still applied on cold start when a departure already exists.
+An ordinary cold start without a pending departure preserves membership so a
+valid delayed callback can still be evaluated against the saved state.
+Boot and device-clock recovery continue to invalidate uncertain facts.
+
+The original radius and GPS opt-out commit `43577cd` logged 741 native cases
+with zero failures, errors or skips in
+[Actions 45013523588](https://github.com/centerionware/Clockrove/actions/runs/45013523588).
+That result predates the cold-start change and the 15 m upgrade regression.
+The cold-start source regression needs
+[Actions 45015265507](https://github.com/centerionware/Clockrove/actions/runs/45015265507)
+and the owner-device check.
