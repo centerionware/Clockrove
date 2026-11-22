@@ -606,7 +606,16 @@ enum AppMessage {
   invoiceQuantityPriceBasis("Quantity and unit price"),
   invoiceAdjustedAmountBasis("Adjusted amount. Original basis:"),
   invoiceRefreshAddedWork("Refresh and review the added work before issuing a replacement."),
-  invoiceReplacementNeedsWork("Include a charged line or actual unbilled work.");
+  invoiceReplacementNeedsWork("Include a charged line or actual unbilled work."),
+  quoteRelatedInvoices("Related invoices"),
+  refreshQuoteInvoices("Refresh quote invoices"),
+  olderQuoteInvoices("Load older quote invoices"),
+  retryQuoteInvoices("Retry quote invoices"),
+  quoteRelatedInvoiceHelp("Original invoices and their replacements retain the accepted quote revision they came from. Open an invoice for current payment status, corrections and receipts."),
+  quoteRelatedInvoiceEmpty("No invoices from this quote yet. Prepare one from its eligible actual work."),
+  quoteRelatedInvoiceRevision("Quote revision {revision}"),
+  quoteRelatedInvoiceReplacement("Replacement with retained original quote provenance"),
+  quoteRelatedInvoiceReadFailed("Invoice history could not be read. Retained results are shown; retry to load current history.");
 
   const AppMessage(this.english);
   final String english;

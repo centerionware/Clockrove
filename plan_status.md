@@ -232,6 +232,8 @@ historical tax and work reservation guidance. Replacement invoice line
 fields and the no-separate-charge note use catalog strings, as do stale
 balance, unavailable correction, and retained invoice details notices.
 Added-work previews use localized preparation errors and exclusion notices.
+The quote-linked invoice list localizes navigation, revision provenance,
+empty states and loading errors.
 The correction editor also localizes voiding and reason-privacy guidance,
 replacement-line validation and edited line basis prefixes. The Flutter
 source audit test checks for new hardcoded copy in invoice detail, invoice
