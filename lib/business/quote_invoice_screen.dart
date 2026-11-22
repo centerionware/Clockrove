@@ -82,7 +82,7 @@ class _QuoteInvoiceScreenState extends ConsumerState<QuoteInvoiceScreen> {
                   onPressed: () => setState(() {
                     _setup = _load();
                   }),
-                  child: const Text('Retry invoice setup'),
+                  child: Text(AppMessage.retryQuoteInvoiceSetup.of(context)),
                 )
               : const CircularProgressIndicator(),
         ),
@@ -442,7 +442,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirm invoice review'),
+              child: Text(AppMessage.confirmQuoteInvoiceReview.of(context)),
             ),
           ],
         ),
@@ -496,7 +496,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
           title: Text(AppMessage.invoiceActualWork.of(context)),
           actions: [
             IconButton(
-              tooltip: 'Reload available quote work',
+              tooltip: AppMessage.reloadQuoteWork.of(context),
               onPressed: _enabled && _job != null ? _load : null,
               icon: const Icon(Icons.refresh),
             ),
@@ -541,7 +541,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 key: ValueKey('invoice-job/$_job'),
                 initialValue: _job,
                 isExpanded: true,
-                decoration: const InputDecoration(hintText: 'Choose a job'),
+                decoration: InputDecoration(hintText: AppMessage.chooseJob.of(context)),
                 items: [
                   for (final id in jobIds)
                     DropdownMenuItem(
@@ -561,7 +561,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
               ),
               const SizedBox(height: 12),
               Text(
-                'First date (YYYY-MM-DD)',
+                AppMessage.quoteInvoiceFirstDate.of(context),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -570,13 +570,13 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _first,
                   enabled: _enabled,
-                  decoration: const InputDecoration(hintText: 'YYYY-MM-DD'),
+                  decoration: InputDecoration(hintText: AppMessage.dateIsoHint.of(context)),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                'Last date (YYYY-MM-DD)',
+                AppMessage.quoteInvoiceLastDate.of(context),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -585,13 +585,13 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _last,
                   enabled: _enabled,
-                  decoration: const InputDecoration(hintText: 'YYYY-MM-DD'),
+                  decoration: InputDecoration(hintText: AppMessage.dateIsoHint.of(context)),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                'Report timezone',
+                AppMessage.quoteInvoiceTimezone.of(context),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -600,14 +600,14 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _zone,
                   enabled: _enabled,
-                  decoration: const InputDecoration(hintText: 'IANA timezone'),
+                  decoration: InputDecoration(hintText: AppMessage.ianaTimezoneHint.of(context)),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _enabled && _job != null ? _load : null,
-                child: const Text('Load available work'),
+                child: Text(AppMessage.loadQuoteAvailableWork.of(context)),
               ),
               if (_dirty && data != null)
                 const Text(
@@ -842,7 +842,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   final reviewed = _reviewed;
                   if (reviewed == null || !_ready) {
                     throw const FormatException(
-                      'Review this invoice before preparing it.',
+                      AppMessage.quoteInvoiceReviewBeforePrepare.of(context),
                     );
                   }
                   final api = ref.read(quoteInvoiceApiProvider),
