@@ -386,7 +386,15 @@ enum AppMessage {
   mapMissingAttribution("Enter the map provider attribution exactly as they require it."),
   mapInvalidAttributionLink("Enter a valid HTTPS attribution link, or leave it blank."),
   mapInvalidAuthHeader("Use a valid authentication header name, such as Authorization or X-API-Key."),
-  mapInvalidAuthValue("The authentication value is too long or contains a line break.");
+  mapInvalidAuthValue("The authentication value is too long or contains a line break."),
+  mapNoExternalApp("No map app or browser could be opened."),
+  mapAttributionLinkFailed("The map attribution link could not be opened."),
+  reportLocationHistory("Report location history"),
+  reportMapNoSamples("No recorded location samples in this report."),
+  reportMapTimezone("Report timezone: {timezone}"),
+  reportMapSampleLines("Lines connect measured samples within a session, with gaps over 30 minutes left open. They are not verified routes. Map requests share the viewed area with the tile provider."),
+  reportMapOutsideRange("Some samples are outside the map coordinate range. They remain in the list and CSV."),
+  mapGoogleSdkNote("Google Maps SDK uses an app-configured Android key. This screen accepts runtime credentials for compatible HTTPS raster providers, not Google SDK keys.");
 
   const AppMessage(this.english);
   final String english;

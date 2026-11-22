@@ -89,8 +89,8 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The map attribution link could not be opened.'),
+        SnackBar(
+          content: Text(AppMessage.mapAttributionLinkFailed.of(context)),
         ),
       );
     }

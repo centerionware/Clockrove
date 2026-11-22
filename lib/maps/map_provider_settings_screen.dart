@@ -313,9 +313,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
           label: Text(AppMessage.resetToOpenStreetMap.of(context)),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Google Maps SDK uses an app-configured Android key. This screen accepts runtime credentials for compatible HTTPS raster providers, not Google SDK keys.',
-        ),
+        Text(AppMessage.mapGoogleSdkNote.of(context)),
       ],
     );
   }

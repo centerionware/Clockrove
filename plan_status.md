@@ -172,7 +172,8 @@ actions now use the catalogs. Credential guidance, privacy notices, and
 general save/reset failures are translated. The URL guidance preserves its
 three literal tile tokens. The map provider input validator now returns
 catalog keys for its specific URL, attribution, and credential errors.
-The remaining Google Maps SDK guidance is still English.
+The Google Maps SDK note, report map location history, timezone, accuracy,
+privacy and unavailable-map notices now use the Flutter catalogs.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.
