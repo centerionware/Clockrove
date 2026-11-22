@@ -212,6 +212,13 @@ entering closed testing.
 ### Milestone 8 — release readiness and automatic Android delivery
 
 - Finish accessibility/theme/error states, privacy/support docs, store assets and disclosures, and contributor onboarding.
+- Before closed testing, publish the reviewed privacy policy at a stable
+  public URL on the Cloudflare Pages site, link it from the app and Play
+  listing, and complete the Play Data safety declaration for the signed
+  candidate. Keep the approved Terms of Use, Data Usage Policy, and support
+  contact available from in-app Help and the site. Use the
+  [Play Data safety review](../policies/PLAY_DATA_SAFETY_REVIEW.md) to reconcile
+  disclosures with device evidence.
 - Complete the physical-device matrix, dependency/license review, release build and upgrade migration tests.
 - Configure protected publishing workflows and Fastlane using owner-supplied credentials. Demonstrate internal delivery before production.
 - Complete applicable closed testing/production eligibility. Publish paid release from a validated version tag, subject to store review.
