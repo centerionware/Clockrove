@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Không thể hoàn tác trực tiếp thao tác này. H
 invoiceReviewConfirmed: "Đã xác nhận xem lại. Hãy xác nhận bên dưới để lưu điều chỉnh."
 invoiceRefreshCorrectionFirst: "Trước tiên hãy làm mới và xem lại điều chỉnh này."
 invoiceReviewCorrectionReason: "Xem lại lý do điều chỉnh."
+invoiceReplacementReviewAmounts: "Tổng hóa đơn thay thế: {total}\nKhoản ghi có hiện tại: {credit}\nSố dư còn lại: {due}"
+invoiceReplacementReviewClaims: "Số mục công việc được giải phóng: {count}. Các mục còn lại chuyển sang hóa đơn thay thế. Khoản thanh toán giữ mã gốc và không ghi nhận khoản thu mới."
+invoiceVoidReviewSummary: "Hủy {number} và số dư chưa trả {due}. Các mục công việc sẽ được giải phóng để lập hóa đơn lại."

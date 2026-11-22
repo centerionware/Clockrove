@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Esta acción no se puede deshacer directamente. Se cons
 invoiceReviewConfirmed: "Revisión confirmada. Confirma abajo para guardar la corrección."
 invoiceRefreshCorrectionFirst: "Primero actualiza y revisa esta corrección."
 invoiceReviewCorrectionReason: "Revisa el motivo de la corrección."
+invoiceReplacementReviewAmounts: "Total de la factura sustitutiva: {total}\nCrédito existente: {credit}\nSaldo pendiente: {due}"
+invoiceReplacementReviewClaims: "Reservas de trabajo que se liberarán: {count}. Las demás pasan a la factura sustitutiva. Los pagos conservan sus identificadores y no se registra ningún cobro nuevo."
+invoiceVoidReviewSummary: "Anula {number} y su saldo impagado de {due}. Se liberarán sus reservas de trabajo para volver a facturarlas."

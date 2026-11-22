@@ -561,3 +561,6 @@ invoiceReviewPermanent: "此操作无法直接撤销。原始发票及其历史�
 invoiceReviewConfirmed: "复核已确认。请在下方确认以保存更正。"
 invoiceRefreshCorrectionFirst: "请先刷新并复核此更正。"
 invoiceReviewCorrectionReason: "请复核更正原因。"
+invoiceReplacementReviewAmounts: "替换发票总额：{total}\n现有抵扣额：{credit}\n剩余应付：{due}"
+invoiceReplacementReviewClaims: "将释放的工作预留：{count}。其余预留将转入替换发票。付款保留原有标识，不记录新的收款。"
+invoiceVoidReviewSummary: "作废 {number} 及其未付余额 {due}。该发票预留的工作将被释放，以便再次开票。"

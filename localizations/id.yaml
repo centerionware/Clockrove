@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Tindakan ini tidak dapat diurungkan langsung. Tagihan a
 invoiceReviewConfirmed: "Peninjauan dikonfirmasi. Konfirmasi di bawah untuk menyimpan koreksi."
 invoiceRefreshCorrectionFirst: "Muat ulang dan tinjau koreksi ini terlebih dahulu."
 invoiceReviewCorrectionReason: "Periksa alasan koreksi."
+invoiceReplacementReviewAmounts: "Total tagihan pengganti: {total}\nKredit yang ada: {credit}\nSisa saldo: {due}"
+invoiceReplacementReviewClaims: "Pencadangan pekerjaan yang akan dilepas: {count}. Sisanya dipindahkan ke tagihan pengganti. Pembayaran tetap memakai identitas aslinya dan tidak ada kas baru yang dicatat."
+invoiceVoidReviewSummary: "Batalkan {number} beserta saldo belum dibayar sebesar {due}. Pekerjaannya dilepas agar dapat ditagihkan lagi."

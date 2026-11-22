@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Cette action ne peut pas être annulée directement. La
 invoiceReviewConfirmed: "Vérification confirmée. Confirmez ci-dessous pour enregistrer la correction."
 invoiceRefreshCorrectionFirst: "Actualisez et vérifiez d’abord cette correction."
 invoiceReviewCorrectionReason: "Vérifiez le motif de la correction."
+invoiceReplacementReviewAmounts: "Total de la facture de remplacement : {total}\nCrédit existant : {credit}\nSolde restant : {due}"
+invoiceReplacementReviewClaims: "Réservations de travail à libérer : {count}. Les autres sont transférées à la facture de remplacement. Les paiements gardent leurs identifiants d’origine et aucun nouvel encaissement n’est enregistré."
+invoiceVoidReviewSummary: "Annulez {number} et son solde impayé de {due}. Ses réservations de travail seront libérées pour une nouvelle facturation."

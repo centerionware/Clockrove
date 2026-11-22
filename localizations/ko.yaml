@@ -561,3 +561,6 @@ invoiceReviewPermanent: "이 작업은 직접 되돌릴 수 없습니다. 원본
 invoiceReviewConfirmed: "검토가 확인되었습니다. 아래에서 확인하여 정정을 저장하세요."
 invoiceRefreshCorrectionFirst: "먼저 새로고침하고 이 정정을 검토하세요."
 invoiceReviewCorrectionReason: "정정 사유를 검토하세요."
+invoiceReplacementReviewAmounts: "대체 청구서 합계: {total}\n기존 크레딧: {credit}\n남은 잔액: {due}"
+invoiceReplacementReviewClaims: "해제할 작업 예약: {count}건. 나머지 예약은 대체 청구서로 이동합니다. 기존 결제 식별자는 유지되며 새 수납은 기록되지 않습니다."
+invoiceVoidReviewSummary: "{number}과 미결제 잔액 {due}을 취소합니다. 다시 청구할 수 있도록 작업 예약을 해제합니다."

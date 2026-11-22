@@ -561,3 +561,6 @@ invoiceReviewPermanent: "এই পরিবর্তন সরাসরি প�
 invoiceReviewConfirmed: "পর্যালোচনা নিশ্চিত হয়েছে। সংশোধনটি সংরক্ষণ করতে নিচে নিশ্চিত করুন।"
 invoiceRefreshCorrectionFirst: "আগে রিফ্রেশ করে সংশোধনটি পর্যালোচনা করুন।"
 invoiceReviewCorrectionReason: "সংশোধনের কারণ যাচাই করুন।"
+invoiceReplacementReviewAmounts: "প্রতিস্থাপন চালানের মোট: {total}\nবিদ্যমান জমা: {credit}\nঅবশিষ্ট বকেয়া: {due}"
+invoiceReplacementReviewClaims: "যে কাজের বরাদ্দ ছাড়া হবে: {count}। অন্য সব বরাদ্দ প্রতিস্থাপন চালানে যাবে। পেমেন্টের মূল পরিচয় থাকবে এবং নতুন নগদ লেনদেন রেকর্ড হবে না।"
+invoiceVoidReviewSummary: "{number} এবং তার {due} বকেয়া বাতিল করুন। কাজের বরাদ্দ ছেড়ে দেওয়া হবে যাতে আবার চালান করা যায়।"

@@ -561,3 +561,6 @@ invoiceReviewPermanent: "لا يمكن التراجع عن هذا الإجراء
 invoiceReviewConfirmed: "تم تأكيد المراجعة. أكّد أدناه لحفظ التصحيح."
 invoiceRefreshCorrectionFirst: "حدّث هذا التصحيح وراجعه أولاً."
 invoiceReviewCorrectionReason: "راجع سبب التصحيح."
+invoiceReplacementReviewAmounts: "إجمالي الفاتورة البديلة: {total}\nالرصيد الدائن الحالي: {credit}\nالرصيد المتبقي: {due}"
+invoiceReplacementReviewClaims: "حجوزات العمل المطلوب تحريرها: {count}. تُنقل بقية الحجوزات إلى الفاتورة البديلة. تحتفظ الدفعات بمعرّفاتها الأصلية ولا يُسجّل أي مبلغ نقدي جديد."
+invoiceVoidReviewSummary: "ألغِ {number} ورصيدها غير المدفوع البالغ {due}. ستُحرّر حجوزات العمل لتصبح قابلة للفوترة مجددًا."

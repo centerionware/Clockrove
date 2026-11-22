@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Dieser Vorgang lässt sich nicht direkt rückgängig ma
 invoiceReviewConfirmed: "Prüfung bestätigt. Bestätigen Sie unten, um die Korrektur zu speichern."
 invoiceRefreshCorrectionFirst: "Aktualisieren und prüfen Sie zuerst diese Korrektur."
 invoiceReviewCorrectionReason: "Prüfen Sie den Korrekturgrund."
+invoiceReplacementReviewAmounts: "Gesamtbetrag der Ersatzrechnung: {total}\nVorhandenes Guthaben: {credit}\nOffener Betrag: {due}"
+invoiceReplacementReviewClaims: "Freizugebende Arbeitsreservierungen: {count}. Alle übrigen Reservierungen gehen auf die Ersatzrechnung über. Zahlungen behalten ihre ursprüngliche Kennung. Es wird kein neuer Geldeingang erfasst."
+invoiceVoidReviewSummary: "Stornieren Sie {number} und den offenen Betrag von {due}. Die reservierten Arbeiten werden zur erneuten Abrechnung freigegeben."

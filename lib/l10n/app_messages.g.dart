@@ -565,7 +565,10 @@ enum AppMessage {
   invoiceReviewPermanent("This cannot be undone in place. The original invoice and its history remain saved."),
   invoiceReviewConfirmed("Review confirmed. Confirm below to save this correction."),
   invoiceRefreshCorrectionFirst("Refresh and review this correction first."),
-  invoiceReviewCorrectionReason("Review the correction reason.");
+  invoiceReviewCorrectionReason("Review the correction reason."),
+  invoiceReplacementReviewAmounts("Replacement total: {total}\nExisting credit: {credit}\nRemaining balance: {due}"),
+  invoiceReplacementReviewClaims("Work reservations to release: {count}. All other reservations move to the replacement. Payments retain their original identity; no new cash is recorded."),
+  invoiceVoidReviewSummary("Cancel {number} and its {due} unpaid balance. Its work reservations will be released for billing again.");
 
   const AppMessage(this.english);
   final String english;

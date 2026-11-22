@@ -561,3 +561,6 @@ invoiceReviewPermanent: "Это действие нельзя отменить �
 invoiceReviewConfirmed: "Проверка подтверждена. Подтвердите ниже, чтобы сохранить исправление."
 invoiceRefreshCorrectionFirst: "Сначала обновите данные и проверьте исправление."
 invoiceReviewCorrectionReason: "Проверьте причину исправления."
+invoiceReplacementReviewAmounts: "Итого по заменяющему счёту: {total}\nРанее зачтённая сумма: {credit}\nОстаток к оплате: {due}"
+invoiceReplacementReviewClaims: "Резервов работ к снятию: {count}. Остальные переносятся в заменяющий счёт. Идентификаторы платежей сохраняются, новые поступления не регистрируются."
+invoiceVoidReviewSummary: "Аннулируйте {number} и неоплаченный остаток {due}. Зарезервированные работы освободятся для повторного выставления счёта."

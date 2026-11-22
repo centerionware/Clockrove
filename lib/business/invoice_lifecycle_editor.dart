@@ -227,12 +227,22 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
           );
         }
         final totals = _totals(preview);
-        summary =
-            'Replacement total: ${_amount(totals.total)}\nExisting credit: ${_amount(totals.credit)}\nRemaining balance: ${_amount(totals.due)}\n\n'
-            '${_released.length} work reservations will be released. All other reservations move to the replacement. Payments retain their original identity; no new cash is recorded.';
+        summary = [
+          AppMessage.invoiceReplacementReviewAmounts.format(context, {
+            'total': _amount(totals.total),
+            'credit': _amount(totals.credit),
+            'due': _amount(totals.due),
+          }),
+          AppMessage.invoiceReplacementReviewClaims.format(context, {
+            'count': MaterialLocalizations.of(context)
+                .formatDecimal(_released.length),
+          }),
+        ].join('\n\n');
       } else {
-        summary =
-            'Cancel ${_invoice.number} and its ${_amount(_invoice.due)} unpaid balance. Its work reservations will be released for billing again.';
+        summary = AppMessage.invoiceVoidReviewSummary.format(context, {
+          'number': _invoice.number,
+          'due': _amount(_invoice.due),
+        });
       }
     } on FormatException catch (error) {
       setState(() => _message = error.message);
