@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Подтвердите дату, время и часо
 paymentConfirmHighlightedDate: "Подтвердите выделенные дату и время."
 paymentCorrectionMinLength: "Опишите причину исправления как минимум 10 символами."
 paymentExplainCorrection: "Укажите, почему этот платёж нужно исправить."
+paymentSkippedTime: "Такого времени в этом часовом поясе нет. Выберите другое время."
+paymentChooseOffset: "Перед сохранением выберите нужное смещение относительно UTC."
+paymentCheckTimezone: "Проверьте часовой пояс и подтвердите дату и время ещё раз."
+paymentAmountFormat: "Введите сумму, используя не более {digits} знаков после запятой."
+paymentReverseAmount: "Сторнируйте записанный платёж на {currency} {amount}."

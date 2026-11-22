@@ -542,3 +542,8 @@ paymentConfirmFullDate: "सहेजने से पहले तारीख,
 paymentConfirmHighlightedDate: "चिह्नित तारीख और समय की पुष्टि करें।"
 paymentCorrectionMinLength: "कम से कम 10 वर्णों में सुधार का कारण लिखें।"
 paymentExplainCorrection: "बताएँ कि इस भुगतान को सुधारने की ज़रूरत क्यों है।"
+paymentSkippedTime: "यह समय उस समय क्षेत्र में नहीं आता। दूसरा समय चुनें।"
+paymentChooseOffset: "सहेजने से पहले सही UTC ऑफ़सेट चुनें।"
+paymentCheckTimezone: "समय क्षेत्र जाँचें, फिर तारीख और समय की पुष्टि करें।"
+paymentAmountFormat: "अधिकतम {digits} दशमलव स्थानों वाली राशि दर्ज करें।"
+paymentReverseAmount: "दर्ज किया गया {currency} {amount} का भुगतान उलटें।"

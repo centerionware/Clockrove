@@ -218,7 +218,8 @@ The editor also localizes the balance summary, receipt confirmation, and
 guidance for recording or reversing payments. Stale balances and failed
 refresh notices come from the catalogs. Payment submit validation localizes
 positive amounts, balance limits, date confirmation and correction reasons.
-Parser and date resolution errors remain open.
+The payment editor also localizes currency precision, timezone resolution
+errors, and the reversal amount.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

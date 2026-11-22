@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Konfirmasikan tanggal, waktu, dan zona waktu sebelum me
 paymentConfirmHighlightedDate: "Konfirmasikan tanggal dan waktu yang disorot."
 paymentCorrectionMinLength: "Jelaskan koreksi dengan minimal 10 karakter."
 paymentExplainCorrection: "Jelaskan mengapa pembayaran ini perlu dikoreksi."
+paymentSkippedTime: "Waktu ini dilewati di zona waktu tersebut. Pilih waktu lain."
+paymentChooseOffset: "Pilih selisih UTC yang dimaksud sebelum menyimpan."
+paymentCheckTimezone: "Periksa zona waktu, lalu konfirmasi lagi tanggal dan waktu."
+paymentAmountFormat: "Masukkan jumlah dengan hingga {digits} angka desimal."
+paymentReverseAmount: "Balik pembayaran tercatat sebesar {currency} {amount}."

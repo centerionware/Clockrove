@@ -542,3 +542,8 @@ paymentConfirmFullDate: "সংরক্ষণের আগে তারিখ, 
 paymentConfirmHighlightedDate: "চিহ্নিত তারিখ ও সময় নিশ্চিত করুন।"
 paymentCorrectionMinLength: "অন্তত ১০টি অক্ষরে সংশোধনের কারণ লিখুন।"
 paymentExplainCorrection: "এই পেমেন্ট সংশোধনের কারণ লিখুন।"
+paymentSkippedTime: "এই সময়টি ওই সময় অঞ্চলে নেই। অন্য সময় বেছে নিন।"
+paymentChooseOffset: "সংরক্ষণের আগে সঠিক UTC অফসেট বেছে নিন।"
+paymentCheckTimezone: "সময় অঞ্চল যাচাই করে আবার তারিখ ও সময় নিশ্চিত করুন।"
+paymentAmountFormat: "সর্বোচ্চ {digits} দশমিক ঘরসহ পরিমাণ লিখুন।"
+paymentReverseAmount: "রেকর্ড করা {currency} {amount} পেমেন্টটি ফিরিয়ে নিন।"

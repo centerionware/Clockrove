@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Kaydetmeden önce tarihi, saati ve saat dilimini onayla
 paymentConfirmHighlightedDate: "Vurgulanan tarih ve saati onaylayın."
 paymentCorrectionMinLength: "Düzeltmeyi en az 10 karakterle açıklayın."
 paymentExplainCorrection: "Bu ödemenin neden düzeltilmesi gerektiğini açıklayın."
+paymentSkippedTime: "Bu saat, seçilen saat diliminde atlanıyor. Başka bir saat seçin."
+paymentChooseOffset: "Kaydetmeden önce doğru UTC saat farkını seçin."
+paymentCheckTimezone: "Saat dilimini kontrol edip tarih ve saati yeniden onaylayın."
+paymentAmountFormat: "En fazla {digits} ondalık basamak içeren bir tutar girin."
+paymentReverseAmount: "Kaydedilen {currency} {amount} tutarındaki ödemeyi ters kaydedin."

@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Bestätigen Sie Datum, Uhrzeit und Zeitzone vor dem Spe
 paymentConfirmHighlightedDate: "Bestätigen Sie das markierte Datum und die Uhrzeit."
 paymentCorrectionMinLength: "Begründen Sie die Korrektur mit mindestens 10 Zeichen."
 paymentExplainCorrection: "Erklären Sie, warum diese Zahlung korrigiert werden muss."
+paymentSkippedTime: "Diese Uhrzeit existiert in der Zeitzone nicht. Wählen Sie eine andere Uhrzeit."
+paymentChooseOffset: "Wählen Sie vor dem Speichern die gewünschte UTC-Abweichung."
+paymentCheckTimezone: "Prüfen Sie die Zeitzone und bestätigen Sie Datum und Uhrzeit erneut."
+paymentAmountFormat: "Geben Sie einen Betrag mit bis zu {digits} Nachkommastellen ein."
+paymentReverseAmount: "Buchen Sie die erfasste Zahlung über {currency} {amount} zurück."

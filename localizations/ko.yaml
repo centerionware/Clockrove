@@ -542,3 +542,8 @@ paymentConfirmFullDate: "저장하기 전에 날짜, 시간, 시간대를 확인
 paymentConfirmHighlightedDate: "강조 표시된 날짜와 시간을 확인하세요."
 paymentCorrectionMinLength: "정정 사유를 10자 이상 입력하세요."
 paymentExplainCorrection: "이 결제를 정정해야 하는 이유를 설명하세요."
+paymentSkippedTime: "이 시간대에는 해당 시간이 없습니다. 다른 시간을 선택하세요."
+paymentChooseOffset: "저장하기 전에 알맞은 UTC 오프셋을 선택하세요."
+paymentCheckTimezone: "시간대를 확인한 뒤 날짜와 시간을 다시 확인하세요."
+paymentAmountFormat: "소수점 이하 {digits}자리까지 입력하세요."
+paymentReverseAmount: "기록된 결제 {currency} {amount}을 취소합니다."

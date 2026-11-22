@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Confirma la fecha, la hora y la zona horaria antes de g
 paymentConfirmHighlightedDate: "Confirma la fecha y la hora resaltadas."
 paymentCorrectionMinLength: "Explica la corrección con al menos 10 caracteres."
 paymentExplainCorrection: "Explica por qué hay que corregir este pago."
+paymentSkippedTime: "Esta hora no existe en esa zona horaria. Elige otra hora."
+paymentChooseOffset: "Elige la diferencia respecto a UTC antes de guardar."
+paymentCheckTimezone: "Comprueba la zona horaria y vuelve a confirmar la fecha y la hora."
+paymentAmountFormat: "Introduce un importe con hasta {digits} decimales."
+paymentReverseAmount: "Revierte el pago registrado de {currency} {amount}."

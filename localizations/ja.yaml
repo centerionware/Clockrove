@@ -542,3 +542,8 @@ paymentConfirmFullDate: "保存前に日付、時刻、タイムゾーンを確�
 paymentConfirmHighlightedDate: "強調表示された日時を確定してください。"
 paymentCorrectionMinLength: "訂正理由を10文字以上で入力してください。"
 paymentExplainCorrection: "この支払いを訂正する理由を入力してください。"
+paymentSkippedTime: "このタイムゾーンには指定の時刻がありません。別の時刻を選択してください。"
+paymentChooseOffset: "保存前に該当するUTCからの時差を選択してください。"
+paymentCheckTimezone: "タイムゾーンを確認し、日時を再度確定してください。"
+paymentAmountFormat: "小数点以下{digits}桁以内で金額を入力してください。"
+paymentReverseAmount: "記録済みの支払い（{currency} {amount}）を取り消します。"

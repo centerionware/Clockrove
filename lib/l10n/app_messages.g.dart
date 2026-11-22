@@ -546,7 +546,12 @@ enum AppMessage {
   paymentConfirmFullDate("Confirm the date, time and timezone before saving."),
   paymentConfirmHighlightedDate("Confirm the highlighted date and time."),
   paymentCorrectionMinLength("Add at least 10 characters explaining the correction."),
-  paymentExplainCorrection("Explain why this payment needs correction.");
+  paymentExplainCorrection("Explain why this payment needs correction."),
+  paymentSkippedTime("This time is skipped in that timezone. Choose another time."),
+  paymentChooseOffset("Choose the intended UTC offset before saving."),
+  paymentCheckTimezone("Check the timezone, then confirm the date and time again."),
+  paymentAmountFormat("Enter an amount with up to {digits} decimal places."),
+  paymentReverseAmount("Reverse the recorded payment of {currency} {amount}.");
 
   const AppMessage(this.english);
   final String english;

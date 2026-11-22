@@ -125,16 +125,16 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
       setState(() {
         _received = selected;
         _timeError = choices.isEmpty
-            ? 'This time is skipped in that timezone. Choose another time.'
+            ? AppMessage.paymentSkippedTime.of(context)
             : selected == null
-            ? 'Choose the intended UTC offset before saving.'
+            ? AppMessage.paymentChooseOffset.of(context)
             : null;
       });
     } catch (_) {
       if (mounted) {
         setState(
           () => _timeError =
-              'Check the timezone, then confirm the date and time again.',
+              AppMessage.paymentCheckTimezone.of(context),
         );
       }
     } finally {
@@ -213,7 +213,16 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         String? minor;
         if (!_correction) {
           try {
-            minor = parsePaymentMoney(_amount.text, data.digits);
+            try {
+              minor = parsePaymentMoney(_amount.text, data.digits);
+            } on FormatException {
+              throw FormatException(
+                AppMessage.paymentAmountFormat.format(context, {
+                  'digits': MaterialLocalizations.of(context)
+                      .formatDecimal(data.digits),
+                }),
+              );
+            }
             if (minor == null || BigInt.parse(minor) <= BigInt.zero) {
               throw FormatException(
                 AppMessage.paymentPositiveAmount.of(context),
@@ -327,7 +336,10 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             const SizedBox(height: 24),
             if (_correction) ...[
               Text(
-                'Reverse the recorded payment of ${data.currency} ${money(widget.reversal!.amount, data.digits)}.',
+                AppMessage.paymentReverseAmount.format(context, {
+                  'currency': data.currency,
+                  'amount': money(widget.reversal!.amount, data.digits),
+                }),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),

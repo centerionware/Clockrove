@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Xác nhận ngày, giờ và múi giờ trước khi l�
 paymentConfirmHighlightedDate: "Xác nhận ngày và giờ được đánh dấu."
 paymentCorrectionMinLength: "Nhập ít nhất 10 ký tự giải thích lý do điều chỉnh."
 paymentExplainCorrection: "Giải thích vì sao cần điều chỉnh khoản thanh toán này."
+paymentSkippedTime: "Thời điểm này không tồn tại trong múi giờ đã chọn. Hãy chọn giờ khác."
+paymentChooseOffset: "Chọn độ lệch UTC mong muốn trước khi lưu."
+paymentCheckTimezone: "Kiểm tra múi giờ rồi xác nhận lại ngày và giờ."
+paymentAmountFormat: "Nhập số tiền có tối đa {digits} chữ số thập phân."
+paymentReverseAmount: "Đảo khoản thanh toán {currency} {amount} đã ghi nhận."

@@ -542,3 +542,8 @@ paymentConfirmFullDate: "Confirme a data, a hora e o fuso horário antes de salv
 paymentConfirmHighlightedDate: "Confirme a data e a hora destacadas."
 paymentCorrectionMinLength: "Explique a correção com pelo menos 10 caracteres."
 paymentExplainCorrection: "Explique por que esse pagamento precisa ser corrigido."
+paymentSkippedTime: "Esse horário não existe nesse fuso horário. Escolha outro horário."
+paymentChooseOffset: "Escolha a diferença em relação ao UTC antes de salvar."
+paymentCheckTimezone: "Confira o fuso horário e confirme novamente a data e a hora."
+paymentAmountFormat: "Digite um valor com até {digits} casas decimais."
+paymentReverseAmount: "Estorne o pagamento registrado de {currency} {amount}."

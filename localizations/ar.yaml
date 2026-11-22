@@ -542,3 +542,8 @@ paymentConfirmFullDate: "أكّد التاريخ والوقت والمنطقة �
 paymentConfirmHighlightedDate: "أكّد التاريخ والوقت المميزين."
 paymentCorrectionMinLength: "اشرح التصحيح في 10 أحرف على الأقل."
 paymentExplainCorrection: "اشرح سبب تصحيح هذه الدفعة."
+paymentSkippedTime: "هذا الوقت غير موجود في تلك المنطقة الزمنية. اختر وقتًا آخر."
+paymentChooseOffset: "اختر فرق التوقيت الصحيح عن UTC قبل الحفظ."
+paymentCheckTimezone: "تحقق من المنطقة الزمنية ثم أكّد التاريخ والوقت مرة أخرى."
+paymentAmountFormat: "أدخل مبلغًا بما لا يزيد عن {digits} منازل عشرية."
+paymentReverseAmount: "اعكس الدفعة المسجلة بقيمة {currency} {amount}."
