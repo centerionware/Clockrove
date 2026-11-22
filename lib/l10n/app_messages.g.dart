@@ -197,7 +197,9 @@ enum AppMessage {
   helpLocationHistoryBody("Work location recording controls whether Clockrove saves locations during a session. Site automation has its own setting. Use the location history deletion control to remove saved GPS points from the app. Copies you already exported remain at their destination."),
   helpBoardsBody("Open a job to see its board. Add a task to a column, then use its move action as work progresses. Reuse a task from the library to start a new card. Archive a finished job to remove it from active lists while keeping its history."),
   helpReportsBody("Choose Reports from the main menu for work across jobs, or open Job report from a board. Choose the date range and jobs before reviewing totals. Export CSV to save the selected report to your chosen destination. Review the date range before sharing it."),
-  helpBillingBody("Open Quotes from the main menu to prepare and review a quote. After it is accepted, review which work belongs on the job. Check the customer, prices and covered work before preparing an invoice. Open Invoices to view the saved PDF and record payments.");
+  helpBillingBody("Open Quotes from the main menu to prepare and review a quote. After it is accepted, review which work belongs on the job. Check the customer, prices and covered work before preparing an invoice. Open Invoices to view the saved PDF and record payments."),
+  helpAutomationBody("Open a job’s settings to add a work site and enable automation. Allow precise location and, where Android requires it, background location. If an arrival is missed, check that the site is enabled and use Refresh site monitoring or Retry site monitoring if shown. Once monitoring is ready, leave the site and return for a new arrival. You can clock in or out manually while troubleshooting."),
+  helpWidgetsBody("Open the Android launcher’s widget picker and add a Clockrove widget. Choose a default job or choose a job at clock-in. While work is running, the timer widget shows the actual active job and can stop it. Task and combined widgets show upcoming work for their configuration.");
 
   const AppMessage(this.english);
   final String english;

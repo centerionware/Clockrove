@@ -134,7 +134,9 @@ The in-app Help title, search, empty state, version label, tooltips, and all
 eight topic titles are translated. The timekeeping, backup and location
 history articles now have translations across all current catalogs and Help
 search uses their localized bodies. Job board, reporting, and billing Help
-articles now also use the catalogs. Automation and widget Help remain.
+articles now also use the catalogs. The automation and Android widget
+articles complete the eight-topic Help catalog migration for the current 17
+locales. Device verification is deferred to the final Actions run.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

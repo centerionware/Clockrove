@@ -6,62 +6,44 @@ import '../l10n/app_localizations.dart';
 enum HelpTopic {
   timekeeping(
     AppMessage.helpTimekeeping,
-    translatedBody: AppMessage.helpTimekeepingBody,
+    AppMessage.helpTimekeepingBody,
   ),
   automation(
     AppMessage.helpAutomation,
-    fallbackBody:
-        'Open a job’s settings to add a work site and enable automation. '
-        'Allow precise location and, where Android requires it, background '
-        'location. If clock-in on arrival is enabled and you save a site with '
-        'Use current location, Clockrove offers to start work now. Saving a '
-        'changed site resets arrival detection and waits for a confirmed exit '
-        'and fresh entry. Android recommends a 100–150 m radius; smaller '
-        'radii can miss arrivals. If an arrival is missed, check that the site '
-        'is enabled and use Refresh site monitoring or Retry site monitoring '
-        'if shown. '
-        'You can clock in or out manually while troubleshooting.',
+    AppMessage.helpAutomationBody,
   ),
   backups(
     AppMessage.helpBackups,
-    translatedBody: AppMessage.helpBackupsBody,
+    AppMessage.helpBackupsBody,
   ),
   boards(
     AppMessage.helpBoards,
-    translatedBody: AppMessage.helpBoardsBody,
+    AppMessage.helpBoardsBody,
   ),
   reports(
     AppMessage.helpReports,
-    translatedBody: AppMessage.helpReportsBody,
+    AppMessage.helpReportsBody,
   ),
   billing(
     AppMessage.helpBilling,
-    translatedBody: AppMessage.helpBillingBody,
+    AppMessage.helpBillingBody,
   ),
   widgets(
     AppMessage.helpWidgets,
-    fallbackBody:
-        'Open the Android launcher’s widget picker and add a Clockrove widget. '
-        'Choose a default job or choose a job at clock-in. While work is '
-        'running, the timer widget shows the actual active job and can stop it. '
-        'Task and combined widgets show upcoming work for their configuration.',
+    AppMessage.helpWidgetsBody,
   ),
   locationHistory(
     AppMessage.helpLocationHistory,
-    translatedBody: AppMessage.helpLocationHistoryBody,
+    AppMessage.helpLocationHistoryBody,
   );
 
-  const HelpTopic(this.title, {String? fallbackBody, AppMessage? translatedBody})
-    : _fallbackBody = fallbackBody,
-      _translatedBody = translatedBody;
+  const HelpTopic(this.title, this.bodyMessage);
 
   final AppMessage title;
-  final String? _fallbackBody;
-  final AppMessage? _translatedBody;
+  final AppMessage bodyMessage;
 
-  String get content => _translatedBody?.english ?? _fallbackBody!;
-  String body(BuildContext context) =>
-      _translatedBody?.of(context) ?? _fallbackBody!;
+  String get content => bodyMessage.english;
+  String body(BuildContext context) => bodyMessage.of(context);
 }
 
 class HelpScreen extends StatefulWidget {
