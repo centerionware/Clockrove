@@ -486,15 +486,19 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                     ),
                   if (preview != null) ...[
                     if (preview.problem != null)
-                      Text(switch (preview.problem) {
-                        'NO_BILLABLE_ITEMS' =>
-                          'No unbilled work remains in those dates.',
-                        'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on older invoices before adding new work.',
-                        'HOURLY_RATE_REQUIRED' => 'Set an hourly rate for the added work in job settings.',
-                        'TASK_PRICES_REQUIRED' =>
-                          'Set a unit price on every added task.',
-                        _ => 'The added work could not be prepared. Review the job report and date range.',
-                      }),
+                      Text(
+                        (switch (preview.problem) {
+                          'NO_BILLABLE_ITEMS' =>
+                            AppMessage.invoiceAddedNoWork,
+                          'LEGACY_INVOICE_REVIEW_REQUIRED' =>
+                            AppMessage.invoiceAddedReviewOlder,
+                          'HOURLY_RATE_REQUIRED' =>
+                            AppMessage.invoiceAddedHourlyRate,
+                          'TASK_PRICES_REQUIRED' =>
+                            AppMessage.invoiceAddedTaskPrices,
+                          _ => AppMessage.invoiceAddedPrepareFailed,
+                        }).of(context),
+                      ),
                     for (final line in preview.lines)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -503,9 +507,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                         trailing: Text(line.amount),
                       ),
                     if (preview.excluded.isNotEmpty)
-                      const Text(
-                        'Previously invoiced work is excluded from these additions.',
-                      ),
+                      Text(AppMessage.invoiceAddedExcludesBilled.of(context)),
                   ],
                 ],
                 const SizedBox(height: 16),
