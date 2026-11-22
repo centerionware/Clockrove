@@ -133,3 +133,8 @@ reached Restore encrypted backup on API 24. Its screenshot shows the Android
 resolver presenting both Documents and the task-photo test fixture. The
 follow-up disables that fixture activity on the disposable emulator before
 starting the backup picker test. The system picker and merge are still pending.
+
+[Actions 45026504990](https://github.com/centerionware/Clockrove/actions/runs/45026504990)
+confirmed that the shell cannot disable the fixture activity by component.
+The test now handles the visible Android resolver and explicitly selects
+Documents when necessary. It still requires the system picker to open.

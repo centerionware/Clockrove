@@ -37,11 +37,6 @@ done
 
 clockrove_install_apk "$api" app "$app_apk"
 clockrove_install_apk "$api" instrumentation "$test_apk"
-# The earlier task-media journey registers an image picker in the test APK.
-# A wildcard document intent also matches that fixture on API 24.
-timeout 30 adb -s emulator-5554 shell pm disable --user 0 \
-  "$package.test/io.github.centerionware.quotetest.TaskPhotoGalleryActivity" \
-  | grep -F 'new state: disabled'
 clear_fixture_app
 timeout 180 adb -s emulator-5554 shell am instrument -w -r \
   -e class io.github.centerionware.backuptest.BackupPickerDeviceTest \

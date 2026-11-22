@@ -94,17 +94,31 @@ class BackupPickerDeviceTest {
 
     private fun openPicker() {
         click("Choose encrypted backup")
-        waitFor("Android document picker") {
+        val picker = waitFor("Android document picker or resolver") {
             automation.rootInActiveWindow?.takeIf {
-                it.packageName?.toString() in setOf("com.android.documentsui", "com.google.android.documentsui")
+                it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES ||
+                    (it.packageName?.toString() == "android" && findLabel("Documents") != null)
+            }
+        }
+        if (picker.packageName?.toString() == "android") click("Documents")
+        waitFor("Android document picker") {
+            if (automation.rootInActiveWindow?.packageName?.toString() == "android") {
+                findLabel("Just once", ignoreCase = true)?.takeIf { it.isEnabled }?.let(::clickNode)
+            }
+            automation.rootInActiveWindow?.takeIf {
+                it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES
             }
         }
     }
 
-    private fun findLabel(label: String, prefix: Boolean = false): AccessibilityNodeInfo? = findNode { node ->
+    private fun findLabel(
+        label: String,
+        prefix: Boolean = false,
+        ignoreCase: Boolean = false,
+    ): AccessibilityNodeInfo? = findNode { node ->
         node.isVisibleToUser && listOf(node.text, node.contentDescription).any { value ->
             val text = value?.lineSequence()?.firstOrNull()?.trim()
-            text == label || (prefix && text?.startsWith(label) == true)
+            text.equals(label, ignoreCase = ignoreCase) || (prefix && text?.startsWith(label) == true)
         }
     }
 
@@ -165,6 +179,7 @@ class BackupPickerDeviceTest {
     }
 
     companion object {
+        private val DOCUMENT_PICKER_PACKAGES = setOf("com.android.documentsui", "com.google.android.documentsui")
         private const val FIXTURE = "clockrove-picker-fixture.clockrove"
         private const val PASSWORD = "synthetic-document-fixture-password"
     }
