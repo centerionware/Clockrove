@@ -568,7 +568,13 @@ enum AppMessage {
   invoiceReviewCorrectionReason("Review the correction reason."),
   invoiceReplacementReviewAmounts("Replacement total: {total}\nExisting credit: {credit}\nRemaining balance: {due}"),
   invoiceReplacementReviewClaims("Work reservations to release: {count}. All other reservations move to the replacement. Payments retain their original identity; no new cash is recorded."),
-  invoiceVoidReviewSummary("Cancel {number} and its {due} unpaid balance. Its work reservations will be released for billing again.");
+  invoiceVoidReviewSummary("Cancel {number} and its {due} unpaid balance. Its work reservations will be released for billing again."),
+  invoiceSubtotal("Subtotal"),
+  invoiceTax("Tax"),
+  invoiceReplacementTotal("Replacement total"),
+  invoiceCredit("Credit"),
+  invoiceExistingPaymentCredit("Existing payment credit"),
+  invoiceAmountLine("{label}: {amount}");
 
   const AppMessage(this.english);
   final String english;

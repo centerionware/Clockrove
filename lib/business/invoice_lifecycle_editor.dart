@@ -213,6 +213,12 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
     });
   }
 
+  String _amountLine(AppMessage label, String amount) =>
+      AppMessage.invoiceAmountLine.format(context, {
+        'label': label.of(context),
+        'amount': _amount(amount),
+      });
+
   Future<void> _review(InvoiceBillingPreview? preview) async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_form.currentState!.validate()) return;
@@ -366,7 +372,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
               ),
               Text('${_invoice.jobName} · ${_invoice.customer}'),
               const SizedBox(height: 12),
-              Text('Existing payment credit: ${_amount(_invoice.paid)}'),
+              Text(_amountLine(AppMessage.invoiceExistingPaymentCredit, _invoice.paid)),
               const SizedBox(height: 12),
               if (!_allowed)
                 const Text(
@@ -543,12 +549,12 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text('Subtotal: ${_amount(totals.subtotal)}'),
-                          Text('Tax: ${_amount(totals.tax)}'),
-                          Text('Replacement total: ${_amount(totals.total)}'),
-                          Text('Credit: ${_amount(totals.credit)}'),
+                          Text(_amountLine(AppMessage.invoiceSubtotal, totals.subtotal)),
+                          Text(_amountLine(AppMessage.invoiceTax, totals.tax)),
+                          Text(_amountLine(AppMessage.invoiceReplacementTotal, totals.total)),
+                          Text(_amountLine(AppMessage.invoiceCredit, totals.credit)),
                           Text(
-                            'Balance due: ${_amount(totals.due)}',
+                            _amountLine(AppMessage.invoiceBalanceDue, totals.due),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
