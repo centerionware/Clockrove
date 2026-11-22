@@ -1,7 +1,11 @@
 allprojects {
     repositories {
         google()
-        mavenCentral()
+        mavenCentral {
+            if (System.getenv("GITHUB_ACTIONS") == "true") {
+                setUrl("https://maven-central.storage-download.googleapis.com/maven2")
+            }
+        }
     }
 }
 

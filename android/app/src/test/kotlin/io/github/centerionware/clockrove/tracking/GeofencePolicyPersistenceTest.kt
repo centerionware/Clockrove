@@ -347,6 +347,28 @@ class GeofencePolicyPersistenceTest {
         } finally { pool.shutdownNow() }
     }
 
+    @Test fun schemaTenUpgradePreservesSmallSiteAndQualifiedArrival() {
+        assertNull(saveSite(GeofenceStore.Site("site", job, "Synthetic small site", 10.0, 20.0, 15.0)).conflict)
+        assertNull(settings(GeofenceStore.Settings(job, true, true)).conflict)
+        event("pre-upgrade-exit", OUTSIDE, 2000, "site")
+        val original = repository.sitesToRegister().single()
+        repository.close()
+
+        val app = RuntimeEnvironment.getApplication()
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            db.execSQL("DROP TABLE job_invoice_billing_policy")
+            db.execSQL("DROP TABLE invoice_billing_defaults")
+            db.execSQL("DROP TABLE actual_costs")
+            db.execSQL("DROP TABLE location_deletion_ranges")
+            db.version = 10
+        }
+        repository = TimerRepository(app, eventDigest = ::fixtureDigest) { clock }
+
+        assertEquals(original, repository.sitesToRegister().single())
+        assertNotNull(event("post-upgrade-entry", INSIDE, 3000, "site").startedSessionId)
+        assertEquals(job, repository.snapshot().running!!.jobId)
+    }
+
     @Test fun schemaThreeUpgradePreservesPendingAndPointsAndFailedUpgradeRollsBack() {
         repository.close()
         val app = RuntimeEnvironment.getApplication()
