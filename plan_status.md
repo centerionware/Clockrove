@@ -227,7 +227,8 @@ reason validation use catalog messages. The confirmation summary localizes
 replacement totals, credits, remaining balance, reservation counts and
 reservation transfer, and unpaid invoice cancellation. The editor’s
 on-screen financial labels and controls for added work and reservation
-review also use the catalogs.
+review also use the catalogs, including the replacement tax field and
+historical tax and work reservation guidance.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

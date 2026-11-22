@@ -579,7 +579,10 @@ enum AppMessage {
   invoiceRemoveAddedWork("Remove added work"),
   invoiceRetryAddedWork("Retry added work"),
   invoiceReviewReservations("Review work reservations"),
-  invoiceReleaseReservation("Release this reservation");
+  invoiceReleaseReservation("Release this reservation"),
+  invoiceReplacementTax("Replacement tax (%)"),
+  invoiceHistoricalTaxUnknown("Historical tax is unknown. Choose the replacement tax explicitly."),
+  invoiceReservationHelp("Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links.");
 
   const AppMessage(this.english);
   final String english;

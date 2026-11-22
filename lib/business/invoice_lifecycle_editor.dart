@@ -509,21 +509,17 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                 const SizedBox(height: 16),
                 _field(
                   _tax,
-                  'Replacement tax (%)',
+                  AppMessage.invoiceReplacementTax.of(context),
                   numeric: true,
                   max: 32,
                   identifier: 'invoice-correction-tax',
                 ),
                 if (widget.data.taxUnits == null)
-                  const Text(
-                    'Historical tax is unknown. Choose the replacement tax explicitly.',
-                  ),
+                  Text(AppMessage.invoiceHistoricalTaxUnknown.of(context)),
                 ExpansionTile(
                   title: Text(AppMessage.invoiceReviewReservations.of(context)),
                   children: [
-                    const Text(
-                      'Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links.',
-                    ),
+                    Text(AppMessage.invoiceReservationHelp.of(context)),
                     for (final claim in widget.data.claims)
                       CheckboxListTile(
                         value: _released.contains(claim.id),
