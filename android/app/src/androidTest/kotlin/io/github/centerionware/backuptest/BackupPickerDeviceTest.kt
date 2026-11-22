@@ -3,6 +3,7 @@ package io.github.centerionware.backuptest
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
@@ -92,7 +93,10 @@ class BackupPickerDeviceTest {
     private fun openSharedDownloadDirectory() {
         showPickerRoots()
         val device = sharedStorageRoot() ?: run {
-            pressBack()
+            val window = requireNotNull(automation.rootInActiveWindow)
+            val bounds = Rect().also(window::getBoundsInScreen)
+            // Tapping the dimmed pane closes the roots drawer without exiting Documents.
+            runShellInput("tap ${bounds.right - 8} ${bounds.centerY()}")
             click("More options")
             click("Show internal storage")
             showPickerRoots()
@@ -114,8 +118,10 @@ class BackupPickerDeviceTest {
     private fun sharedStorageRoot(): AccessibilityNodeInfo? =
         findLabel(Build.MODEL) ?: findLabel("Internal storage")
 
-    private fun pressBack() {
-        val shellOutput = automation.executeShellCommand("input keyevent KEYCODE_BACK")
+    private fun pressBack() = runShellInput("keyevent KEYCODE_BACK")
+
+    private fun runShellInput(arguments: String) {
+        val shellOutput = automation.executeShellCommand("input $arguments")
         ParcelFileDescriptor.AutoCloseInputStream(shellOutput).bufferedReader().use { it.readText() }
     }
 

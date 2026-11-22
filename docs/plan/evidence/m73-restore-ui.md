@@ -162,3 +162,8 @@ reopened Documents and reached its roots without a resolver failure. The API
 24 Downloads provider did not expose the fixture copied by ADB. The test
 now navigates to the actual shared-storage Download directory via Documents,
 which lists files directly. The restore has yet to apply on device.
+
+[Actions 45037826639](https://github.com/centerionware/Clockrove/actions/runs/45037826639)
+showed that Back exits API 24 Documents from its roots drawer. The test now
+closes the drawer through the visible dimmed pane before opening the storage
+options. Back is still exercised separately as a deliberate cancellation.
