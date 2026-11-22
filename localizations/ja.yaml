@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "請求書を確認できません。作業を更
 retryQuoteInvoiceSetup: "請求書の設定を再読み込み"
 confirmQuoteInvoiceReview: "請求書の確認を確定"
 reloadQuoteWork: "見積書の利用可能な作業を更新"
-chooseJob: "作業を選択"
+quoteInvoiceChooseJob: "作業を選択"
 quoteInvoiceFirstDate: "開始日（YYYY-MM-DD）"
 quoteInvoiceLastDate: "終了日（YYYY-MM-DD）"
 quoteInvoiceTimezone: "レポートのタイムゾーン"

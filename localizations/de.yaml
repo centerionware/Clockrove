@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Diese Rechnungsprüfung ist nicht verfügbar. Ak
 retryQuoteInvoiceSetup: "Rechnungseinrichtung erneut laden"
 confirmQuoteInvoiceReview: "Rechnungsprüfung bestätigen"
 reloadQuoteWork: "Verfügbare Angebotsarbeit aktualisieren"
-chooseJob: "Auftrag auswählen"
+quoteInvoiceChooseJob: "Auftrag auswählen"
 quoteInvoiceFirstDate: "Erstes Datum (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Letztes Datum (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Berichtszeitzone"

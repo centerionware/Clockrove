@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "This invoice review is unavailable. Refresh the 
 retryQuoteInvoiceSetup: "Retry invoice setup"
 confirmQuoteInvoiceReview: "Confirm invoice review"
 reloadQuoteWork: "Reload available quote work"
-chooseJob: "Choose a job"
+quoteInvoiceChooseJob: "Choose a job"
 quoteInvoiceFirstDate: "First date (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Last date (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Report timezone"

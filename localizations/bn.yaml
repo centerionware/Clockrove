@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "চালান পর্যালোচনা �
 retryQuoteInvoiceSetup: "চালানের সেটআপ আবার লোড করুন"
 confirmQuoteInvoiceReview: "চালানের পর্যালোচনা নিশ্চিত করুন"
 reloadQuoteWork: "মূল্যপ্রস্তাবের উপলভ্য কাজ রিফ্রেশ করুন"
-chooseJob: "একটি কাজ বেছে নিন"
+quoteInvoiceChooseJob: "একটি কাজ বেছে নিন"
 quoteInvoiceFirstDate: "শুরুর তারিখ (YYYY-MM-DD)"
 quoteInvoiceLastDate: "শেষের তারিখ (YYYY-MM-DD)"
 quoteInvoiceTimezone: "প্রতিবেদনের সময় অঞ্চল"

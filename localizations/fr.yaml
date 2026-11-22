@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Cette vérification de facture est indisponible.
 retryQuoteInvoiceSetup: "Réessayer de charger la configuration"
 confirmQuoteInvoiceReview: "Confirmer la vérification de la facture"
 reloadQuoteWork: "Actualiser le travail disponible du devis"
-chooseJob: "Choisir un chantier"
+quoteInvoiceChooseJob: "Choisir un chantier"
 quoteInvoiceFirstDate: "Première date (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Dernière date (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Fuseau horaire du rapport"

@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "مراجعة هذه الفاتورة غير مت
 retryQuoteInvoiceSetup: "إعادة تحميل إعداد الفاتورة"
 confirmQuoteInvoiceReview: "تأكيد مراجعة الفاتورة"
 reloadQuoteWork: "تحديث العمل المتاح لعرض السعر"
-chooseJob: "اختر مهمة"
+quoteInvoiceChooseJob: "اختر مهمة"
 quoteInvoiceFirstDate: "تاريخ البدء (YYYY-MM-DD)"
 quoteInvoiceLastDate: "تاريخ الانتهاء (YYYY-MM-DD)"
 quoteInvoiceTimezone: "المنطقة الزمنية للتقرير"

@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Esta revisão de fatura está indisponível. Atu
 retryQuoteInvoiceSetup: "Tentar carregar a configuração novamente"
 confirmQuoteInvoiceReview: "Confirmar revisão da fatura"
 reloadQuoteWork: "Atualizar trabalho disponível do orçamento"
-chooseJob: "Escolha um trabalho"
+quoteInvoiceChooseJob: "Escolha um trabalho"
 quoteInvoiceFirstDate: "Primeira data (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Última data (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Fuso horário do relatório"

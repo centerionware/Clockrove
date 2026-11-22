@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Peninjauan tagihan ini tidak tersedia. Muat ulan
 retryQuoteInvoiceSetup: "Coba muat ulang penyiapan tagihan"
 confirmQuoteInvoiceReview: "Konfirmasi peninjauan tagihan"
 reloadQuoteWork: "Muat ulang pekerjaan penawaran yang tersedia"
-chooseJob: "Pilih pekerjaan"
+quoteInvoiceChooseJob: "Pilih pekerjaan"
 quoteInvoiceFirstDate: "Tanggal pertama (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Tanggal terakhir (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Zona waktu laporan"

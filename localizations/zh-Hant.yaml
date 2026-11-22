@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "此發票複核無法使用。請重新整理工
 retryQuoteInvoiceSetup: "重試載入發票設定"
 confirmQuoteInvoiceReview: "確認發票複核"
 reloadQuoteWork: "重新整理報價單的可用工作"
-chooseJob: "選擇工作"
+quoteInvoiceChooseJob: "選擇工作"
 quoteInvoiceFirstDate: "開始日期（YYYY-MM-DD）"
 quoteInvoiceLastDate: "結束日期（YYYY-MM-DD）"
 quoteInvoiceTimezone: "報告時區"

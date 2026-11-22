@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "이 청구서 검토를 사용할 수 없습니�
 retryQuoteInvoiceSetup: "청구서 설정 다시 불러오기"
 confirmQuoteInvoiceReview: "청구서 검토 확인"
 reloadQuoteWork: "견적의 사용 가능한 작업 새로고침"
-chooseJob: "작업 선택"
+quoteInvoiceChooseJob: "작업 선택"
 quoteInvoiceFirstDate: "시작 날짜 (YYYY-MM-DD)"
 quoteInvoiceLastDate: "종료 날짜 (YYYY-MM-DD)"
 quoteInvoiceTimezone: "보고서 시간대"

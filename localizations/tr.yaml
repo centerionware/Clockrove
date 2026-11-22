@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Bu fatura incelemesi kullanılamıyor. İşleri 
 retryQuoteInvoiceSetup: "Fatura kurulumunu yeniden yükle"
 confirmQuoteInvoiceReview: "Fatura incelemesini onayla"
 reloadQuoteWork: "Teklifteki kullanılabilir işleri yenile"
-chooseJob: "Bir iş seçin"
+quoteInvoiceChooseJob: "Bir iş seçin"
 quoteInvoiceFirstDate: "İlk tarih (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Son tarih (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Rapor saat dilimi"

@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "चालान समीक्षा उपल�
 retryQuoteInvoiceSetup: "चालान सेटअप फिर लोड करें"
 confirmQuoteInvoiceReview: "चालान समीक्षा की पुष्टि करें"
 reloadQuoteWork: "कोटेशन का उपलब्ध काम रीफ़्रेश करें"
-chooseJob: "काम चुनें"
+quoteInvoiceChooseJob: "काम चुनें"
 quoteInvoiceFirstDate: "पहली तारीख (YYYY-MM-DD)"
 quoteInvoiceLastDate: "अंतिम तारीख (YYYY-MM-DD)"
 quoteInvoiceTimezone: "रिपोर्ट का समय क्षेत्र"

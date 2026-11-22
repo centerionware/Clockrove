@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Проверка счёта недоступна
 retryQuoteInvoiceSetup: "Повторить загрузку настройки счёта"
 confirmQuoteInvoiceReview: "Подтвердить проверку счёта"
 reloadQuoteWork: "Обновить доступные работы по смете"
-chooseJob: "Выберите работу"
+quoteInvoiceChooseJob: "Выберите работу"
 quoteInvoiceFirstDate: "Начальная дата (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Конечная дата (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Часовой пояс отчёта"

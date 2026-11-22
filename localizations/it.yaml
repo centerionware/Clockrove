@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "La revisione della fattura non è disponibile. A
 retryQuoteInvoiceSetup: "Riprova a caricare la configurazione"
 confirmQuoteInvoiceReview: "Conferma revisione fattura"
 reloadQuoteWork: "Aggiorna il lavoro disponibile del preventivo"
-chooseJob: "Scegli un lavoro"
+quoteInvoiceChooseJob: "Scegli un lavoro"
 quoteInvoiceFirstDate: "Prima data (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Ultima data (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Fuso orario del rapporto"

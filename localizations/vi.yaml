@@ -627,7 +627,7 @@ quoteInvoiceReviewUnavailable: "Không thể xem hóa đơn này. Hãy làm mớ
 retryQuoteInvoiceSetup: "Thử tải lại thiết lập hóa đơn"
 confirmQuoteInvoiceReview: "Xác nhận xem lại hóa đơn"
 reloadQuoteWork: "Làm mới công việc khả dụng từ báo giá"
-chooseJob: "Chọn công việc"
+quoteInvoiceChooseJob: "Chọn công việc"
 quoteInvoiceFirstDate: "Ngày bắt đầu (YYYY-MM-DD)"
 quoteInvoiceLastDate: "Ngày kết thúc (YYYY-MM-DD)"
 quoteInvoiceTimezone: "Múi giờ báo cáo"

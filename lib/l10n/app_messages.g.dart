@@ -628,7 +628,18 @@ enum AppMessage {
   quoteInvoiceCurrencyMismatch("This job’s currency or precision differs from the accepted quote. Review a compatible agreement before invoicing."),
   quoteInvoiceInvalidRange("Review the date range and timezone, then load available work again."),
   quoteInvoiceTooLarge("Select less work or a shorter date range before preparing this invoice."),
-  quoteInvoiceReviewUnavailable("This invoice review is unavailable. Refresh the work and review your selections.");
+  quoteInvoiceReviewUnavailable("This invoice review is unavailable. Refresh the work and review your selections."),
+  retryQuoteInvoiceSetup("Retry invoice setup"),
+  confirmQuoteInvoiceReview("Confirm invoice review"),
+  reloadQuoteWork("Reload available quote work"),
+  quoteInvoiceChooseJob("Choose a job"),
+  quoteInvoiceFirstDate("First date (YYYY-MM-DD)"),
+  quoteInvoiceLastDate("Last date (YYYY-MM-DD)"),
+  quoteInvoiceTimezone("Report timezone"),
+  dateIsoHint("YYYY-MM-DD"),
+  ianaTimezoneHint("IANA timezone"),
+  loadQuoteAvailableWork("Load available work"),
+  quoteInvoiceReviewBeforePrepare("Review this invoice before preparing it.");
 
   const AppMessage(this.english);
   final String english;
