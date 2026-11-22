@@ -91,8 +91,11 @@ The Help version-bridge commit `d4d961c` passed [Actions 45020364892](https://gi
 passed the dedicated installed-app Help journey on API 24 and 35. Both device
 logs show navigation through Settings, the installed version, and search
 leading to the backup guide. Offline device behavior and TalkBack still need
-evidence. That run’s widget previews used placeholder font glyphs. The follow-up
-loads the project’s preview fonts and adds the narrow, large-text case.
+evidence. [Actions 45026680805](https://github.com/centerionware/Clockrove/actions/runs/45026680805)
+passed Flutter behavior, including the 320-by-568 logical-pixel test at 200%
+text size. The Help index and backup guide widget previews were reviewed in
+light and dark themes. All four render with readable text and icons, with
+no clipping in the captured viewport.
 | GPS1 | Delete GPS history independently of timesheets — lib/tracking/history/history_list_screen.dart, lib/tracking/history_api.dart, android/app/src/main/kotlin/io/github/centerionware/clockrove/tracking/GpsDeletionStore.kt, TimerRepository.kt, and BusinessHostApi.kt. Device case: GpsRangeDeletionDeviceTest.cancelThenConfirmRemovesOnlyGpsAndPersistsTombstonesOnDevice. | Both picker modes; empty range still records coverage; timezone boundaries; open sessions; job/all-job scope; stale preview/unknown result; cancel/confirm; history/report/map refresh. | On API 24/current Play API, capture cancel and confirm; assert preview/scope, only points in the measured half-open range are deleted, coordinate-free tombstones persist, report/map refresh, and timesheet interval is unchanged. M7.6 captures remain required. |
 
 ## Permission, privacy and destructive-action cross-check
