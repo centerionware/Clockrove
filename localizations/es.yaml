@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Hay una llave de cierre sin pareja. Usa un marcador
 invoiceEmailUnfinishedPlaceholder: "Hay un marcador incompleto. Añade una llave de cierre."
 invoiceEmailUnknownPlaceholder: "La plantilla contiene un marcador desconocido. Elige uno de los admitidos arriba."
 invoiceEmailFixTemplates: "Corrige las plantillas resaltadas del asunto y el cuerpo antes de guardar. Usa los marcadores admitidos que aparecen arriba."
+commandInvalidEmailSubject: "La plantilla del asunto no es válida. Abre Ajustes y corrige los marcadores o los saltos de línea."
+commandInvalidEmailBody: "La plantilla del cuerpo no es válida. Abre Ajustes y corrige los marcadores."
+commandInvalidSettings: "Revisa el correo de la empresa, los importes y los marcadores de las plantillas. El asunto debe ocupar una sola línea."
+commandInvoiceUnavailable: "Esta factura no está disponible. Actualiza la lista de facturas."

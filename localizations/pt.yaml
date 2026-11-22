@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Há uma chave de fechamento sem par. Use um marcado
 invoiceEmailUnfinishedPlaceholder: "Há um marcador incompleto. Adicione uma chave de fechamento."
 invoiceEmailUnknownPlaceholder: "O modelo contém um marcador desconhecido. Escolha um dos marcadores aceitos acima."
 invoiceEmailFixTemplates: "Corrija os modelos destacados de assunto e corpo antes de salvar. Use os marcadores aceitos acima."
+commandInvalidEmailSubject: "O modelo de assunto do e-mail é inválido. Abra as configurações e corrija os marcadores ou as quebras de linha."
+commandInvalidEmailBody: "O modelo do corpo do e-mail é inválido. Abra as configurações e corrija os marcadores."
+commandInvalidSettings: "Confira o e-mail da empresa, os valores e os marcadores dos modelos. O assunto deve ter uma única linha."
+commandInvoiceUnavailable: "Esta fatura está indisponível. Atualize a lista de faturas."

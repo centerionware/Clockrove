@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Eşleşmeyen bir kapatma ayracı var. {company_name
 invoiceEmailUnfinishedPlaceholder: "Bir yer tutucu tamamlanmamış. Kapatma ayracı ekleyin."
 invoiceEmailUnknownPlaceholder: "Şablon bilinmeyen bir yer tutucu içeriyor. Yukarıda belirtilen desteklenen yer tutuculardan birini seçin."
 invoiceEmailFixTemplates: "Kaydetmeden önce vurgulanan konu ve gövde şablonlarını düzeltin. Yukarıda belirtilen desteklenen yer tutucuları kullanın."
+commandInvalidEmailSubject: "E-posta konu şablonu geçersiz. Ayarları açıp yer tutucuları veya satır sonlarını düzeltin."
+commandInvalidEmailBody: "E-posta gövde şablonu geçersiz. Ayarları açıp yer tutucuları düzeltin."
+commandInvalidSettings: "Şirket e-postasını, tutarları ve e-posta şablonu yer tutucularını kontrol edin. Konu tek satır olmalıdır."
+commandInvoiceUnavailable: "Bu fatura kullanılamıyor. Fatura listesini yenileyin."

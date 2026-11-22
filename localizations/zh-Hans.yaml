@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "有一个不匹配的右花括号。请使用完整
 invoiceEmailUnfinishedPlaceholder: "有一个未写完的占位符。请添加右花括号。"
 invoiceEmailUnknownPlaceholder: "模板包含未知占位符。请选用上面列出的受支持占位符。"
 invoiceEmailFixTemplates: "保存前请修正突出显示的主题和正文模板。请使用上面列出的受支持占位符。"
+commandInvalidEmailSubject: "邮件主题模板无效。请打开设置并修正占位符或换行。"
+commandInvalidEmailBody: "邮件正文模板无效。请打开设置并修正占位符。"
+commandInvalidSettings: "请检查公司邮箱、金额和邮件模板的占位符。主题必须为单行。"
+commandInvoiceUnavailable: "此发票不可用。请刷新发票列表。"

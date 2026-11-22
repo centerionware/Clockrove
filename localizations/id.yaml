@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Ada kurung kurawal penutup tanpa pasangan. Gunakan 
 invoiceEmailUnfinishedPlaceholder: "Ada placeholder yang belum lengkap. Tambahkan kurung kurawal penutup."
 invoiceEmailUnknownPlaceholder: "Templat memuat placeholder yang tidak dikenal. Pilih salah satu placeholder yang didukung di atas."
 invoiceEmailFixTemplates: "Perbaiki templat subjek dan isi yang ditandai sebelum menyimpan. Gunakan placeholder yang didukung di atas."
+commandInvalidEmailSubject: "Templat subjek email tidak valid. Buka Pengaturan dan perbaiki placeholder atau pemisah barisnya."
+commandInvalidEmailBody: "Templat isi email tidak valid. Buka Pengaturan dan perbaiki placeholder-nya."
+commandInvalidSettings: "Periksa email perusahaan, jumlah, dan placeholder templat email. Subjek harus satu baris."
+commandInvoiceUnavailable: "Tagihan ini tidak tersedia. Muat ulang daftar tagihan."

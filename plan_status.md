@@ -204,8 +204,10 @@ Flutter editor templates against the native defaults. Settings displays the
 localized default templates and their field labels. Unedited defaults are
 saved in the existing storage format. Template instructions and local field
 validation now use catalog messages, including the literal template tokens.
-Native command rejection messages, payment event descriptions stored in
-snapshots, and rendered PDF locale and right-to-left verification remain open.
+Native email template and Settings rejections and the unavailable-invoice
+message use catalog strings. Other command rejections, payment event
+descriptions stored in snapshots, and rendered PDF locale and right-to-left
+verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

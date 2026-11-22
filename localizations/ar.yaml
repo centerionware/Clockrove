@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "يتضمن القالب قوس إغلاق بلا م
 invoiceEmailUnfinishedPlaceholder: "يوجد عنصر نائب غير مكتمل. أضف قوس إغلاق."
 invoiceEmailUnknownPlaceholder: "يتضمن القالب عنصرًا نائبًا غير معروف. اختر أحد العناصر المدعومة أعلاه."
 invoiceEmailFixTemplates: "صحّح قالبي الموضوع والنص المميزين قبل الحفظ. استخدم العناصر النائبة المدعومة أعلاه."
+commandInvalidEmailSubject: "قالب موضوع البريد غير صالح. افتح الإعدادات وصحّح العناصر النائبة أو فواصل الأسطر."
+commandInvalidEmailBody: "قالب نص البريد غير صالح. افتح الإعدادات وصحّح العناصر النائبة."
+commandInvalidSettings: "راجع بريد الشركة والمبالغ والعناصر النائبة في قوالب البريد. يجب أن يكون الموضوع في سطر واحد."
+commandInvoiceUnavailable: "هذه الفاتورة غير متاحة. حدّث قائمة الفواتير."

@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "C’è una parentesi graffa di chiusura senza quell
 invoiceEmailUnfinishedPlaceholder: "Un segnaposto è incompleto. Aggiungi una parentesi graffa di chiusura."
 invoiceEmailUnknownPlaceholder: "Il modello contiene un segnaposto sconosciuto. Scegline uno tra quelli indicati sopra."
 invoiceEmailFixTemplates: "Correggi i modelli di oggetto e testo evidenziati prima di salvare. Usa i segnaposto indicati sopra."
+commandInvalidEmailSubject: "Il modello dell’oggetto non è valido. Apri le impostazioni e correggi i segnaposto o le interruzioni di riga."
+commandInvalidEmailBody: "Il modello del testo non è valido. Apri le impostazioni e correggi i segnaposto."
+commandInvalidSettings: "Controlla l’indirizzo e-mail aziendale, gli importi e i segnaposto dei modelli. L’oggetto deve essere su una sola riga."
+commandInvoiceUnavailable: "Questa fattura non è disponibile. Aggiorna l’elenco delle fatture."

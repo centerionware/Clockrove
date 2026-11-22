@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "有一個不相符的右大括號。請使用完整
 invoiceEmailUnfinishedPlaceholder: "有一個未完成的預留位置。請加上右大括號。"
 invoiceEmailUnknownPlaceholder: "範本包含未知的預留位置。請選用上方列出的支援項目。"
 invoiceEmailFixTemplates: "儲存前請修正醒目提示的主旨和內文範本。請使用上方列出的支援項目。"
+commandInvalidEmailSubject: "電子郵件主旨範本無效。請開啟設定並修正預留位置或換行。"
+commandInvalidEmailBody: "電子郵件內文範本無效。請開啟設定並修正預留位置。"
+commandInvalidSettings: "請檢查公司電子郵件、金額和郵件範本的預留位置。主旨必須為單行。"
+commandInvoiceUnavailable: "此發票無法使用。請重新整理發票清單。"

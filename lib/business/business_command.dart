@@ -155,8 +155,7 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_COVERED_TIME' => 'Review covered time boundaries and timezones. Ranges must be positive, non-overlapping and at most 3660 days each.',
     'INVALID_INVOICE_SOURCES' => 'Review the selected tasks and time ranges. Repeated sources are not allowed.',
     'INVOICE_ALREADY_RECONCILED' => 'This invoice’s source coverage was already reviewed. Return to the invoice list and refresh.',
-    'INVOICE_UNAVAILABLE' =>
-      'This invoice is unavailable. Refresh the invoice list.',
+    'INVOICE_UNAVAILABLE' => AppMessage.commandInvoiceUnavailable.of(context),
     'INVALID_LOGO' =>
       'Choose a valid PNG, JPEG or WebP logo within the displayed limits.',
     'LOGO_IMPORT_EXPIRED' =>
@@ -164,8 +163,8 @@ class _BusinessCommandState extends State<BusinessCommand>
     'CUSTOMER_IN_USE' => 'This customer is assigned to a job or invoice. Archive them to keep the contact details.',
     'CUSTOMER_ARCHIVED' =>
       'Choose an active customer or unarchive this customer first.',
-    'INVALID_EMAIL_SUBJECT' => 'The email subject template is invalid. Open Settings and correct its placeholders or line breaks.',
-    'INVALID_EMAIL_BODY' => 'The email body template is invalid. Open Settings and correct its placeholders.',
+    'INVALID_EMAIL_SUBJECT' => AppMessage.commandInvalidEmailSubject.of(context),
+    'INVALID_EMAIL_BODY' => AppMessage.commandInvalidEmailBody.of(context),
     'INVALID_ACCOUNTS_RECEIVABLE_EMAIL' => 'Enter one valid accounts receivable email address in Settings, or leave it blank to use the company email.',
     'INVALID_PAYMENT_AMOUNT' => 'Enter a positive amount within this invoice’s currency precision. Your draft is kept.',
     'INVALID_ACTUAL_COST_AMOUNT' => 'Enter a positive amount using this currency’s decimal places. Your draft is kept.',
@@ -197,7 +196,7 @@ class _BusinessCommandState extends State<BusinessCommand>
     'INVALID_RELEASED_CLAIMS' || 'INVALID_REPLACEMENT_SOURCES' => 'Some work reservations changed. Refresh and review the work to retain or release.',
     'INVALID_INVOICE_VOID' =>
       'Refresh the invoice and review its correction details.',
-    'INVALID_SETTINGS' => 'Check company email, amounts and email template placeholders. Subjects cannot contain line breaks.',
+    'INVALID_SETTINGS' => AppMessage.commandInvalidSettings.of(context),
     'INVALID_CUSTOMER' =>
       'Enter a customer name and a valid email, or leave email blank.',
     'INVALID_JOB' => 'Check the job name, rate and customer email.',

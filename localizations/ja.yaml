@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "対応する開始波括弧がありません。{co
 invoiceEmailUnfinishedPlaceholder: "プレースホルダーが途中で終わっています。閉じ波括弧を追加してください。"
 invoiceEmailUnknownPlaceholder: "不明なプレースホルダーが含まれています。上に示した対応プレースホルダーを使用してください。"
 invoiceEmailFixTemplates: "保存する前に、強調表示された件名と本文のテンプレートを修正してください。上に示した対応プレースホルダーを使用してください。"
+commandInvalidEmailSubject: "メール件名のテンプレートが無効です。設定を開き、プレースホルダーや改行を修正してください。"
+commandInvalidEmailBody: "メール本文のテンプレートが無効です。設定を開き、プレースホルダーを修正してください。"
+commandInvalidSettings: "会社のメールアドレス、金額、メールテンプレートのプレースホルダーを確認してください。件名は1行にしてください。"
+commandInvoiceUnavailable: "この請求書は利用できません。請求書一覧を更新してください。"

@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Une accolade fermante est isolée. Utilisez une var
 invoiceEmailUnfinishedPlaceholder: "Une variable est incomplète. Ajoutez une accolade fermante."
 invoiceEmailUnknownPlaceholder: "Le modèle contient une variable inconnue. Choisissez une variable parmi celles indiquées ci-dessus."
 invoiceEmailFixTemplates: "Corrigez les modèles d’objet et de corps signalés avant d’enregistrer. Utilisez les variables indiquées ci-dessus."
+commandInvalidEmailSubject: "Le modèle d’objet est invalide. Ouvrez les paramètres et corrigez les variables ou les sauts de ligne."
+commandInvalidEmailBody: "Le modèle de corps est invalide. Ouvrez les paramètres et corrigez les variables."
+commandInvalidSettings: "Vérifiez l’adresse e-mail de l’entreprise, les montants et les variables des modèles. L’objet doit tenir sur une seule ligne."
+commandInvoiceUnavailable: "Cette facture est indisponible. Actualisez la liste des factures."

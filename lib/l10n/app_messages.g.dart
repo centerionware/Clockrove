@@ -454,7 +454,11 @@ enum AppMessage {
   invoiceEmailUnmatchedBrace("The template has an unmatched closing brace. Use a complete placeholder such as {company_name}."),
   invoiceEmailUnfinishedPlaceholder("The template has an unfinished placeholder. Add a closing brace."),
   invoiceEmailUnknownPlaceholder("The template has an unknown placeholder. Choose one of the supported placeholders above."),
-  invoiceEmailFixTemplates("Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.");
+  invoiceEmailFixTemplates("Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above."),
+  commandInvalidEmailSubject("The email subject template is invalid. Open Settings and correct its placeholders or line breaks."),
+  commandInvalidEmailBody("The email body template is invalid. Open Settings and correct its placeholders."),
+  commandInvalidSettings("Check company email, amounts and email template placeholders. Subjects cannot contain line breaks."),
+  commandInvoiceUnavailable("This invoice is unavailable. Refresh the invoice list.");
 
   const AppMessage(this.english);
   final String english;

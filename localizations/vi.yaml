@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Có dấu ngoặc nhọn đóng không có dấu m�
 invoiceEmailUnfinishedPlaceholder: "Có trình giữ chỗ chưa hoàn chỉnh. Hãy thêm dấu ngoặc nhọn đóng."
 invoiceEmailUnknownPlaceholder: "Mẫu chứa trình giữ chỗ không xác định. Hãy chọn một trong các mục được hỗ trợ ở trên."
 invoiceEmailFixTemplates: "Hãy sửa mẫu tiêu đề và nội dung được đánh dấu trước khi lưu. Dùng các trình giữ chỗ được hỗ trợ ở trên."
+commandInvalidEmailSubject: "Mẫu tiêu đề email không hợp lệ. Mở Cài đặt và sửa trình giữ chỗ hoặc dấu xuống dòng."
+commandInvalidEmailBody: "Mẫu nội dung email không hợp lệ. Mở Cài đặt và sửa các trình giữ chỗ."
+commandInvalidSettings: "Kiểm tra email công ty, số tiền và trình giữ chỗ trong mẫu email. Tiêu đề phải nằm trên một dòng."
+commandInvoiceUnavailable: "Hóa đơn này không khả dụng. Hãy làm mới danh sách hóa đơn."

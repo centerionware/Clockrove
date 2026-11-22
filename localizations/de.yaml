@@ -450,3 +450,7 @@ invoiceEmailUnmatchedBrace: "Eine schließende Klammer hat kein Gegenstück. Ver
 invoiceEmailUnfinishedPlaceholder: "Ein Platzhalter ist unvollständig. Fügen Sie eine schließende Klammer hinzu."
 invoiceEmailUnknownPlaceholder: "Die Vorlage enthält einen unbekannten Platzhalter. Wählen Sie einen der oben aufgeführten Platzhalter."
 invoiceEmailFixTemplates: "Korrigieren Sie die markierten Vorlagen für Betreff und Text vor dem Speichern. Verwenden Sie die oben aufgeführten Platzhalter."
+commandInvalidEmailSubject: "Die Betreffvorlage ist ungültig. Korrigieren Sie in den Einstellungen die Platzhalter oder Zeilenumbrüche."
+commandInvalidEmailBody: "Die Textvorlage ist ungültig. Korrigieren Sie die Platzhalter in den Einstellungen."
+commandInvalidSettings: "Prüfen Sie die Firmen-E-Mail-Adresse, die Beträge und die Platzhalter der E-Mail-Vorlagen. Der Betreff muss einzeilig sein."
+commandInvoiceUnavailable: "Diese Rechnung ist nicht verfügbar. Aktualisieren Sie die Rechnungsliste."
