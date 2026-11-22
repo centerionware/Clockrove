@@ -42,7 +42,12 @@ Statuses describe evidence, not intent.
   typing through Android input. A later [API 24 run](https://github.com/centerionware/Clockrove/actions/runs/45071323428)
   showed the device root still visible after the drawer tap. The test now
   waits for the root to settle and confirms it opened the fixture directory
-  listing. Both APIs still need committed-merge evidence.
+  listing. [Validation on `ccc007f`](https://github.com/centerionware/Clockrove/actions/runs/45072383275)
+  recorded one passing real picker restore on each API (24 and 35), including
+  the committed merge and imported automation checks. The separate API 35
+  Settings journey failed entering its default tax value. Its test now verifies
+  focus and falls back to keyboard entry if accessibility text entry fails.
+  Full validation remains pending.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

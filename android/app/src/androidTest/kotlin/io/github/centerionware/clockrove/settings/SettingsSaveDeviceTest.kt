@@ -101,15 +101,28 @@ class SettingsSaveDeviceTest {
         hideKeyboard()
         reveal(label, editable = true)
         val field = waitFor(label, editable = true)
-        assertTrue("Could not focus $label", field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-        waitUntil("Editable field did not expose text entry for $label") {
-            find(label, editable = true)?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        if (!field.isFocused) tapControl(field, label)
+        waitUntil("Editable field did not focus for $label") {
+            find(label, editable = true)?.isFocused == true
         }
-        // Set text on the actual Flutter EditText through Android accessibility.
-        // The emulator may not expose its soft-IME window reliably on API 24.
         val editable = waitFor(label, editable = true)
-        assertTrue("Could not enter $label", editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
-            android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }))
+        val setText = editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+            android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })
+        val deadline = SystemClock.uptimeMillis() + 2_000
+        while (setText && SystemClock.uptimeMillis() < deadline &&
+            find(label, editable = true)?.text?.toString() != value) {
+            SystemClock.sleep(100)
+        }
+        if (find(label, editable = true)?.text?.toString() != value) {
+            // The virtual Flutter editor can reject SET_TEXT even after gaining focus.
+            val current = waitFor(label, editable = true)
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_MOVE_END)
+            repeat(current.text?.length ?: 0) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DEL) }
+            waitUntil("Existing value was not cleared for $label", 5000) {
+                find(label, editable = true)?.let { it.isFocused && it.text.isNullOrEmpty() } == true
+            }
+            instrumentation.sendStringSync(value)
+        }
         waitUntil("Entered value was not shown for $label", 5000) {
             find(label, editable = true)?.text?.toString() == value
         }
@@ -129,25 +142,28 @@ class SettingsSaveDeviceTest {
         // same visible control through a touchscreen event before failing.
         val stillCurrent = waitFor(label, checkable = true)
         if (stillCurrent.isChecked != checked) {
-            val bounds = android.graphics.Rect().also(stillCurrent::getBoundsInScreen)
-            assertFalse("$label has no tappable visible bounds", bounds.isEmpty)
-            val x = bounds.exactCenterX()
-            val y = bounds.exactCenterY()
-            val downTime = SystemClock.uptimeMillis()
-            fun inject(action: Int, eventTime: Long): Boolean {
-                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
-                    source = InputDevice.SOURCE_TOUCHSCREEN
-                }
-                return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
-            }
-            assertTrue("Could not tap $label", inject(MotionEvent.ACTION_DOWN, downTime))
-            SystemClock.sleep(60)
-            assertTrue("Could not release $label", inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis()))
+            tapControl(stillCurrent, label)
         }
         if (!waitForSwitchState(label, checked, 5000)) {
             dumpAccessibility("switch-state")
             assertEquals("$label did not change after touch input", checked, find(label, checkable = true)?.isChecked)
         }
+    }
+    private fun tapControl(node: AccessibilityNodeInfo, label: String) {
+        val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
+        assertFalse("$label has no tappable visible bounds", bounds.isEmpty)
+        val x = bounds.exactCenterX()
+        val y = bounds.exactCenterY()
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long): Boolean {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
+            return try { automation.injectInputEvent(event, true) } finally { event.recycle() }
+        }
+        assertTrue("Could not tap $label", inject(MotionEvent.ACTION_DOWN, downTime))
+        SystemClock.sleep(60)
+        assertTrue("Could not release $label", inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis()))
     }
     private fun waitForSwitchState(label: String, checked: Boolean, timeoutMillis: Long): Boolean {
         val deadline = SystemClock.uptimeMillis() + timeoutMillis
