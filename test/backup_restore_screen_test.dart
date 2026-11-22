@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
   const fileChannel = MethodChannel('clockrove/backup-files/v1');
   const importChannel = MethodChannel('clockrove/backup/v1');
   final messenger =
@@ -28,7 +27,6 @@ void main() {
   var referenceConflictResolved = false;
   var overlapConflictResolved = false;
   late Future<Object?> Function(MethodCall call) respondToFile;
-
   setUp(() {
     fileCalls.clear();
     importCalls.clear();
@@ -374,8 +372,7 @@ void main() {
       'closeBackupDocumentImport',
     ]);
   });
-
-  testWidgets('requires a long password before previewing the selected file', (
+  testWidgets('keeps the selected file available after failed authentication', (
     tester,
   ) async {
     var previewCalls = 0;
@@ -398,7 +395,7 @@ void main() {
                 cancellationToken,
               }) async {
                 previewCalls++;
-                throw StateError('Preview should not run.');
+                throw const FormatException('Authentication failed.');
               },
         ),
       ),
@@ -414,6 +411,14 @@ void main() {
     await tester.pump();
     expect(find.textContaining('at least 12 UTF-8 bytes'), findsOneWidget);
     expect(previewCalls, 0);
+    await tester.enterText(
+      find.byKey(const ValueKey('restore-password')),
+      'synthetic-passphrase',
+    );
+    await tester.tap(find.byKey(const ValueKey('restore-preview')));
+    await tester.pumpAndSettle();
+    expect(find.text('Authentication failed.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('restore-selected-file')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });

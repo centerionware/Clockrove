@@ -420,7 +420,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                         )
                                     val localEntityDeletionCanBeRestored = localEntityDeletionExists &&
                                         values["kind"]?.toString().orEmpty() in
-                                            BackupImportDeletionResolution.deletableKinds
+                                            BackupImportDeletionResolution.restorableKinds
                                     val unsupportedDivergentHead = table == "entity_heads" &&
                                         revisionRelationship == "DIVERGENT" && !mergeableDivergentHead &&
                                         !selectableDivergentHead && !gpsRangeHeadChoice &&
@@ -746,12 +746,12 @@ private fun BackupImportStore.isCommentDeletionResolution(
     ).use { rows ->
         if (!rows.moveToFirst()) false else {
             val values = JSONObject(rows.getString(0)).getJSONObject("values")
-            values.optString("kind") in BackupImportDeletionResolution.deletableKinds
+            values.optString("kind") in BackupImportDeletionResolution.commentGraphKinds
         }
     }
     return (reason == "BACKUP_COMMENT_DELETION" && table == "task_comment_events") ||
         (reason == "ENTITY_DELETION_TOMBSTONE" &&
-            table in BackupImportDeletionResolution.restorableTables) || isolatedHead
+            table in BackupImportDeletionResolution.commentGraphTables) || isolatedHead
 }
 
 internal fun BackupImportStore.addDependentReferenceConflicts(

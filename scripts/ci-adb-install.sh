@@ -337,7 +337,7 @@ clockrove_capture_install_timeout_diagnostics() {
 clockrove_flutter_test_has_started() {
   local log_file="$1"
   local line
-  local allowed_loading='^[0-9]{2}:[0-9]{2}[[:space:]][+]0:[[:space:]]loading[[:space:]]+([^[:space:]]*/)?integration_test/(backup_crypto_benchmark|backup_snapshot_memory_benchmark)_test\.dart$'
+  local allowed_loading='^[0-9]{2}:[0-9]{2}[[:space:]][+]0:[[:space:]]loading[[:space:]]+([^[:space:]]*/)?integration_test/(backup_crypto_benchmark|backup_snapshot_memory_benchmark|backup_document_fixture)_test\.dart$'
   local reporter_progress='^[0-9]{2}:[0-9]{2}[[:space:]][+][0-9]+([[:space:]]+[~][0-9]+)?([[:space:]]+-[0-9]+)?:'
 
   while IFS= read -r line || [[ -n "$line" ]]; do

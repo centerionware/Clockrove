@@ -141,6 +141,9 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
+  # Run the picker before other device journeys mutate app and picker state.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
+    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"

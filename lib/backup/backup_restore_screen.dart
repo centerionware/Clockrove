@@ -55,10 +55,20 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _password.clear();
     _password.dispose();
     final document = _document;
-    if (document != null) unawaited(document.close());
+    if (document != null) unawaited(_closeAfterDispose(document.close));
     final restore = _restore;
-    if (restore != null && !_applied) unawaited(restore.close());
+    if (restore != null && !_applied) {
+      unawaited(_closeAfterDispose(restore.close));
+    }
     super.dispose();
+  }
+
+  Future<void> _closeAfterDispose(Future<Object?> Function() close) async {
+    try {
+      await close();
+    } on Object {
+      // The native stage expires and is removed by lifecycle cleanup.
+    }
   }
 
   bool get _pageChoicesResolved =>
@@ -113,6 +123,10 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           await selected.close();
           rethrow;
         }
+      }
+      if (!mounted) {
+        await selected.close();
+        return;
       }
       setState(() {
         _document = selected;
@@ -187,19 +201,28 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         await restore.close();
       }
     } on Object catch (error) {
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _message = null;
+        });
+      }
     } finally {
-      try {
-        await document.close();
-      } on Object {
-        // Keep the handle so dispose or a later picker action can retry cleanup.
+      if (restore != null || !mounted) {
+        try {
+          await document.close();
+        } on Object {
+          // Keep the handle so dispose or a later picker action can retry cleanup.
+        }
       }
       if (identical(_document, document) && document.isClosed && mounted) {
         setState(() => _document = null);
       }
-      _password.clear();
       _cancellationToken = null;
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        _password.clear();
+        setState(() => _busy = false);
+      }
     }
     if (restore != null && mounted && identical(_restore, restore)) {
       await _loadConflictPage(0);
@@ -326,7 +349,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           'Clockrove will merge the reviewed records in one database transaction. '
           'If validation fails, the transaction is rolled back. '
           '${preview.openSessionCount > 0 ? 'Open/provisional sessions in the backup will be omitted; no end time will be invented and no timer will start. ' : ''}'
-          'Automation stays off, and map credentials and device registrations are not imported.',
+          'Imported site automation starts disabled. Map credentials and '
+          'Android geofence registrations are excluded from the backup.',
         ),
         actions: [
           TextButton(

@@ -160,11 +160,11 @@ private fun JSONObject.isCommentDeletionConflict(): Boolean {
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events"
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
             optJSONArray("primaryKey")?.optString(0).orEmpty() in
-                BackupImportDeletionResolution.deletableKinds
-        "ENTITY_DELETION_TOMBSTONE" -> table in BackupImportDeletionResolution.restorableTables ||
+                BackupImportDeletionResolution.commentGraphKinds
+        "ENTITY_DELETION_TOMBSTONE" -> table in BackupImportDeletionResolution.commentGraphTables ||
             (table == "entity_heads" &&
                 optJSONArray("primaryKey")?.optString(0).orEmpty() in
-                    BackupImportDeletionResolution.deletableKinds)
+                    BackupImportDeletionResolution.commentGraphKinds)
         else -> false
     }
 }

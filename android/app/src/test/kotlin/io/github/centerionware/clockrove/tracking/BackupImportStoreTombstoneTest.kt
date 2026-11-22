@@ -279,7 +279,10 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
             } ?: throw AssertionError(
                 "Missing $table tombstone for $entityId; conflicts=${conflictDebug(conflicts)}",
             )
-            assertEquals(listOf("PRESERVE_LOCAL_DELETION"), conflict["allowedChoices"])
+            val choices = if (entityId == customerId) {
+                listOf("PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT")
+            } else listOf("PRESERVE_LOCAL_DELETION")
+            assertEquals(choices, conflict["allowedChoices"])
             assertEquals("PRESERVE_LOCAL_DELETION", conflict["defaultChoice"])
         }
         listOf(customerId, siteId, columnId).forEach { entityId ->
@@ -287,7 +290,10 @@ class BackupImportStoreTombstoneTest : BackupImportStoreTestBase() {
                 item["table"] == "entity_heads" &&
                     (item["primaryKey"] as? List<*>)?.getOrNull(1)?.toString() == entityId
             }) { "Missing head tombstone for $entityId; conflicts=${conflictDebug(conflicts)}" }
-            assertEquals(listOf("PRESERVE_LOCAL_DELETION"), headConflict["allowedChoices"])
+            val choices = if (entityId == customerId) {
+                listOf("PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT")
+            } else listOf("PRESERVE_LOCAL_DELETION")
+            assertEquals(choices, headConflict["allowedChoices"])
             assertEquals("PRESERVE_LOCAL_DELETION", headConflict["defaultChoice"])
         }
         assertFalse(preview.applyReady)
