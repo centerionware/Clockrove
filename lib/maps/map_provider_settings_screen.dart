@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'map_provider_settings.dart';
 
 class MapProviderSettingsScreen extends ConsumerWidget {
@@ -8,7 +9,7 @@ class MapProviderSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Map provider')),
+    appBar: AppBar(title: Text(AppMessage.mapProvider.of(context))),
     body: ref
         .watch(mapProviderSettingsProvider)
         .when(
@@ -17,7 +18,7 @@ class MapProviderSettingsScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: FilledButton.tonal(
               onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-              child: const Text('Retry map settings'),
+              child: Text(AppMessage.retryMapSettings.of(context)),
             ),
           ),
           data: (settings) => _MapProviderForm(initial: settings),
@@ -112,18 +113,18 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Use OpenStreetMap?'),
+        title: Text(AppMessage.useOpenStreetMap.of(dialog)),
         content: const Text(
           'This removes the custom tile settings and saved authentication value from this device.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Keep settings'),
+            child: Text(AppMessage.keepSettings.of(dialog)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Reset map provider'),
+            child: Text(AppMessage.resetMapProvider.of(dialog)),
           ),
         ],
       ),
@@ -155,7 +156,10 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Map tiles', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          AppMessage.mapTiles.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text(
           'OpenStreetMap works without an account or key. Tile providers receive the areas you view. Use a provider that allows your usage and keep its required attribution visible.',
@@ -164,16 +168,18 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
         DropdownButtonFormField<String>(
           key: const ValueKey('map-provider-choice'),
           initialValue: _provider,
-          decoration: const InputDecoration(labelText: 'Tile provider'),
+          decoration: InputDecoration(
+            labelText: AppMessage.tileProvider.of(context),
+          ),
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: 'OSM',
-              child: Text('OpenStreetMap (default)'),
+              child: Text(AppMessage.openStreetMapDefault.of(context)),
             ),
             if (android)
-              const DropdownMenuItem(
+              DropdownMenuItem(
                 value: 'CUSTOM',
-                child: Text('Custom HTTPS tile server'),
+                child: Text(AppMessage.customHttpsTiles.of(context)),
               ),
           ],
           onChanged: _busy
@@ -196,8 +202,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             keyboardType: TextInputType.url,
             autocorrect: false,
             enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'HTTPS tile URL template',
+            decoration: InputDecoration(
+              labelText: AppMessage.tileUrlTemplate.of(context),
               helperText: 'Use {z}, {x}, and {y}. Do not put keys in the URL.',
               helperMaxLines: 2,
             ),
@@ -206,8 +212,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
           TextField(
             key: const ValueKey('map-attribution'),
             controller: _attribution,
-            decoration: const InputDecoration(
-              labelText: 'Required map attribution',
+            decoration: InputDecoration(
+              labelText: AppMessage.requiredMapAttribution.of(context),
             ),
             maxLength: 300,
           ),
@@ -217,8 +223,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             keyboardType: TextInputType.url,
             autocorrect: false,
             enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Attribution link (optional)',
+            decoration: InputDecoration(
+              labelText: AppMessage.optionalAttributionLink.of(context),
             ),
             maxLength: 2048,
           ),
@@ -227,8 +233,8 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
             controller: _header,
             autocorrect: false,
             enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Authentication header name',
+            decoration: InputDecoration(
+              labelText: AppMessage.authHeaderName.of(context),
               helperText: 'For example Authorization or X-API-Key.',
             ),
             maxLength: 64,
@@ -247,7 +253,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
               });
             },
             decoration: InputDecoration(
-              labelText: 'Authentication value (optional)',
+              labelText: AppMessage.optionalAuthValue.of(context),
               helperText: widget.initial.hasCredential && !_forgetCredential
                   ? 'A credential is saved. Leave blank to keep it, or enter a replacement.'
                   : 'For bearer authentication, enter Bearer followed by the token.',
@@ -265,7 +271,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
                       setState(() => _forgetCredential = value ?? false);
                       if (_forgetCredential) _secret.clear();
                     },
-              title: const Text('Remove saved authentication value'),
+              title: Text(AppMessage.removeSavedAuth.of(context)),
             ),
           const Card(
             child: Padding(
@@ -303,13 +309,13 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save_outlined),
-          label: const Text('Save map settings'),
+          label: Text(AppMessage.saveMapSettings.of(context)),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: _busy ? null : _reset,
           icon: const Icon(Icons.restart_alt),
-          label: const Text('Reset to OpenStreetMap'),
+          label: Text(AppMessage.resetToOpenStreetMap.of(context)),
         ),
         const SizedBox(height: 24),
         const Text(

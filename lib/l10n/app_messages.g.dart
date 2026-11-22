@@ -350,7 +350,24 @@ enum AppMessage {
   useGlobalLocationOff("Use global default (off)"),
   locationOnForJob("On for this job"),
   locationOffForJob("Off for this job"),
-  worksitesAutomation("Worksites & automation");
+  worksitesAutomation("Worksites & automation"),
+  mapProvider("Map provider"),
+  retryMapSettings("Retry map settings"),
+  useOpenStreetMap("Use OpenStreetMap?"),
+  keepSettings("Keep settings"),
+  resetMapProvider("Reset map provider"),
+  mapTiles("Map tiles"),
+  tileProvider("Tile provider"),
+  openStreetMapDefault("OpenStreetMap (default)"),
+  customHttpsTiles("Custom HTTPS tile server"),
+  tileUrlTemplate("HTTPS tile URL template"),
+  requiredMapAttribution("Required map attribution"),
+  optionalAttributionLink("Attribution link (optional)"),
+  authHeaderName("Authentication header name"),
+  optionalAuthValue("Authentication value (optional)"),
+  removeSavedAuth("Remove saved authentication value"),
+  saveMapSettings("Save map settings"),
+  resetToOpenStreetMap("Reset to OpenStreetMap");
 
   const AppMessage(this.english);
   final String english;
