@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:clockrove/automation/automation_api.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
 import 'package:clockrove/business/business_api.dart';
@@ -43,6 +44,22 @@ void main() {
         ),
       );
       expect(entry.committed, isTrue);
+
+      const automation = AutomationApi();
+      final site = await automation.saveSite(
+        newAutomationId(),
+        entry.version,
+        _jobId,
+        const WorkSite('ci-document-site', 'Synthetic site', 10, 20, 150, true),
+      );
+      expect(site.committed, isTrue);
+      final policy = await automation.saveSettings(
+        newAutomationId(),
+        site.version,
+        _jobId,
+        const SiteSettings(enabled: true, autoStart: true),
+      );
+      expect(policy.committed, isTrue);
 
       final backup = await BackupSnapshotExporter().exportStream();
       final file = File(

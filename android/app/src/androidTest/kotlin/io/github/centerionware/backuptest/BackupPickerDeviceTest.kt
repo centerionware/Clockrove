@@ -85,6 +85,11 @@ class BackupPickerDeviceTest {
         assertEquals(1735689600000L, entry.start)
         assertEquals(1735693200000L, entry.end)
         assertEquals("Etc/UTC", entry.timezone)
+        val imported = repository.automationSnapshot("ci-document-source")
+        assertEquals("ci-document-site", imported.sites.single().id)
+        assertEquals(150.0, imported.sites.single().radiusMeters, 0.0)
+        assertTrue("Imported automation should start disabled", !imported.settings.enabled)
+        assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
     }
 
     private fun openPicker() {
