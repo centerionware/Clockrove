@@ -240,6 +240,8 @@ done
   # task media that must not affect those product journeys.
   bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
     "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
+    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
