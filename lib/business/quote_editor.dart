@@ -620,9 +620,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         ),
       );
     } on FormatException {
-      return const Text(
-        'Enter valid quantities, unit prices and tax to see the exact estimated total.',
-      );
+      return Text(AppMessage.quoteTotalsPreviewRequired.of(context));
     }
   }
 

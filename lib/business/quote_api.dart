@@ -9,15 +9,6 @@ import '../tracking/timer_providers.dart';
 import 'business_api.dart';
 import 'report_api.dart';
 
-String quoteStatus(String value) => switch (value) {
-  'DRAFT' => 'Draft',
-  'ISSUED' => 'Issued',
-  'ACCEPTED' => 'Accepted locally',
-  'DECLINED' => 'Declined locally',
-  'EXPIRED' => 'Expired',
-  _ => 'Quote',
-};
-
 AppMessage quoteStatusMessage(String value) => switch (value) {
   'DRAFT' => AppMessage.quoteStatusDraft,
   'ISSUED' => AppMessage.quoteStatusIssued,
@@ -26,6 +17,11 @@ AppMessage quoteStatusMessage(String value) => switch (value) {
   'EXPIRED' => AppMessage.quoteStatusExpired,
   _ => AppMessage.quoteStatusGeneric,
 };
+
+class QuoteValidationException extends FormatException {
+  QuoteValidationException(this.messageKey) : super(messageKey.english);
+  final AppMessage messageKey;
+}
 
 class QuoteLine {
   const QuoteLine(
@@ -234,9 +230,7 @@ class QuoteHistoryEntry {
       lines.length > 2000 ||
       taxUnits < 0 ||
       taxUnits > 1000000) {
-    throw const FormatException(
-      'Add a line and enter a tax percentage from 0 to 100.',
-    );
+    throw QuoteValidationException(AppMessage.quoteTotalsLineTaxRequired);
   }
   final moneyPattern = RegExp(r'^(0|[1-9][0-9]{0,1023})$');
   final quantityPattern = RegExp(r'^[1-9][0-9]{0,18}$');
@@ -245,9 +239,7 @@ class QuoteHistoryEntry {
     if (!moneyPattern.hasMatch(line.unitPrice) ||
         !quantityPattern.hasMatch(line.quantity) ||
         BigInt.parse(line.quantity) > BigInt.parse('9223372036854775807')) {
-      throw const FormatException(
-        'Review the quantity and unit price for each line.',
-      );
+      throw QuoteValidationException(AppMessage.quoteTotalsLineValuesInvalid);
     }
     subtotal += BigInt.parse(taskAmount(line.unitPrice, line.quantity)!);
   }
@@ -256,7 +248,7 @@ class QuoteHistoryEntry {
       BigInt.from(1000000);
   final total = subtotal + tax;
   if (total.toString().length > 4096) {
-    throw const FormatException('The quote is too large.');
+    throw QuoteValidationException(AppMessage.quoteTotalsTooLarge);
   }
   return (
     subtotal: subtotal.toString(),

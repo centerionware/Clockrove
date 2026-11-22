@@ -22,15 +22,15 @@ class QuoteDetailScreen extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Quote')),
+        appBar: AppBar(title: Text(AppMessage.quoteDetailTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Quote')),
+        appBar: AppBar(title: Text(AppMessage.quoteDetailTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(quoteProvider(quoteId)),
-            child: const Text('Retry quote details'),
+            child: Text(AppMessage.quoteDetailRetry.of(context)),
           ),
         ),
       ),
@@ -164,14 +164,26 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     if (draft == null || digits == null) {
       return;
     }
-    final total = quoteTotals(draft.lines, draft.taxUnits);
+    late final ({String subtotal, String tax, String total}) total;
+    try {
+      total = quoteTotals(draft.lines, draft.taxUnits);
+    } on QuoteValidationException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.messageKey.of(context))),
+        );
+      }
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
           data.latest == null
-              ? 'Issue this quote?'
-              : 'Issue revision ${data.latest!.revision + 1}?',
+              ? AppMessage.quoteIssueQuestion.of(context)
+              : AppMessage.quoteIssueRevisionQuestion.format(context, {
+                  'revision': (data.latest!.revision + 1).toString(),
+                }),
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -181,51 +193,95 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
               Text(draft.title, style: Theme.of(context).textTheme.titleMedium),
               Text(
                 data.draftCustomer.isEmpty
-                    ? 'No customer selected'
-                    : 'Customer: ${data.draftCustomer}',
+                    ? AppMessage.noCustomer.of(context)
+                    : AppMessage.quoteInvoiceReviewCustomer.format(context, {
+                        'customer': data.draftCustomer,
+                      }),
               ),
               Text(
                 data.draftEmail.isEmpty
-                    ? 'No customer email set; you can enter a recipient in the email app.'
-                    : 'Email: ${data.draftEmail}',
+                    ? AppMessage.quoteIssueEmailMissing.of(context)
+                    : AppMessage.quoteInvoiceReviewEmail.format(context, {
+                        'email': data.draftEmail,
+                      }),
               ),
               Text(
                 data.draftCompany.isEmpty
-                    ? 'Company name is blank in Settings.'
-                    : 'Company: ${data.draftCompany}',
+                    ? AppMessage.quoteIssueCompanyMissing.of(context)
+                    : AppMessage.quoteIssueCompany.format(context, {
+                        'company': data.draftCompany,
+                      }),
               ),
               if (data.draftStyle.isNotEmpty)
-                Text('Document style: ${data.draftStyle.toLowerCase()}'),
+                Text(AppMessage.quoteIssueDocumentStyle.format(context, {
+                  'style': switch (data.draftStyle) {
+                    'CLASSIC' => AppMessage.invoiceStyleClassic.of(context),
+                    'MODERN' => AppMessage.invoiceStyleModern.of(context),
+                    'MINIMAL' => AppMessage.invoiceStyleMinimal.of(context),
+                    _ => AppMessage.invoiceStyle.of(context),
+                  },
+                })),
               if (data.latest != null)
                 Text(
-                  'Quote ${data.latest!.number} keeps its number. Previous revisions and their decisions stay in history.',
+                  AppMessage.quoteIssueRevisionHistory.format(context, {
+                    'number': data.latest!.number,
+                  }),
                 ),
-              const Text(
-                'This freezes the estimate. It does not record acceptance, worked hours, completed tasks, an invoice or a payment.',
-              ),
+              Text(AppMessage.quoteIssueFreezeNotice.of(context)),
               const SizedBox(height: 16),
               for (final line in draft.lines)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    '${line.title}\n${taskQuantity(line.quantity)} ${line.kind == 'HOURS' ? 'estimated hours' : 'units'} × ${draft.currency} ${money(line.unitPrice, digits)}\nLine total ${draft.currency} ${money(taskAmount(line.unitPrice, line.quantity), digits)}',
+                    AppMessage.quoteIssueLineSummary.format(context, {
+                      'title': line.title,
+                      'quantity': taskQuantity(line.quantity),
+                      'unit': line.kind == 'HOURS'
+                          ? AppMessage.estimatedHours.of(context)
+                          : AppMessage.quoteUnitsUnit.of(context),
+                      'currency': draft.currency,
+                      'price': money(line.unitPrice, digits),
+                      'amount': money(
+                        taskAmount(line.unitPrice, line.quantity),
+                        digits,
+                      ),
+                    }),
                   ),
                 ),
               Text(
-                'Subtotal ${draft.currency} ${money(total.subtotal, digits)}',
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.invoiceSubtotal.of(context),
+                  'amount': '${draft.currency} ${money(total.subtotal, digits)}',
+                }),
               ),
-              Text('Tax ${draft.currency} ${money(total.tax, digits)}'),
               Text(
-                'Estimated total ${draft.currency} ${money(total.total, digits)}',
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.invoiceTax.of(context),
+                  'amount': '${draft.currency} ${money(total.tax, digits)}',
+                }),
+              ),
+              Text(
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.quoteEstimatedTotalLabel.of(context),
+                  'amount': '${draft.currency} ${money(total.total, digits)}',
+                }),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               Text(
                 draft.validUntil == null
-                    ? 'No expiry date'
-                    : 'Valid until ${draft.validUntil} (calendar date)',
+                    ? AppMessage.quoteIssueNoExpiry.of(context)
+                    : AppMessage.quoteIssueValidUntil.format(context, {
+                        'date': draft.validUntil!,
+                      }),
               ),
-              if (draft.terms.isNotEmpty) Text('Terms\n${draft.terms}'),
-              if (draft.notes.isNotEmpty) Text('Printed notes\n${draft.notes}'),
+              if (draft.terms.isNotEmpty)
+                Text(AppMessage.quoteIssueTerms.format(context, {
+                  'terms': draft.terms,
+                })),
+              if (draft.notes.isNotEmpty)
+                Text(AppMessage.quoteIssuePrintedNotes.format(context, {
+                  'notes': draft.notes,
+                })),
             ],
           ),
         ),
@@ -253,7 +309,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     }
     if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       setState(
-        () => _noteError = 'Private notes can be up to 2000 characters.',
+        () => _noteError = AppMessage.quoteInvoicePrivateNoteTooLong.of(context),
       );
       return;
     }
@@ -271,11 +327,31 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          '${quoteStatus(review.decision)} · revision ${review.revision}?',
+          AppMessage.quoteDecisionReviewQuestion.format(context, {
+            'decision': quoteStatusMessage(review.decision).of(context),
+            'revision': review.revision.toString(),
+          }),
         ),
         content: SingleChildScrollView(
-          child: Text(
-            '${revision.number} · ${revision.draft.title}\n${revision.draft.currency} ${revision.total}\n\n${revision.draft.validUntil == null ? 'No expiry date set.' : 'Validity date: ${revision.draft.validUntil}.'}${review.note.isEmpty ? '' : '\n\nPrivate note: ${review.note}'}\n\nThis is your explicit local record against this revision. An email draft is not proof of customer acceptance. The record is retained; changed terms require a new issued revision.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${revision.number} · ${revision.draft.title}'),
+              Text('${revision.draft.currency} ${revision.total}'),
+              Text(
+                revision.draft.validUntil == null
+                    ? AppMessage.quoteDecisionNoExpiry.of(context)
+                    : AppMessage.quoteDecisionValidity.format(context, {
+                        'date': revision.draft.validUntil!,
+                      }),
+              ),
+              if (review.note.isNotEmpty)
+                Text(AppMessage.quoteDecisionPrivateNote.format(context, {
+                  'note': review.note,
+                })),
+              Text(AppMessage.quoteDecisionRecordNotice.of(context)),
+            ],
           ),
         ),
         actions: [
@@ -304,14 +380,16 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Revision $revision'),
+        title: Text(
+          AppMessage.quoteRevisionTitle.format(context, {
+            'revision': revision.toString(),
+          }),
+        ),
         content: FutureBuilder<QuoteRevision?>(
           future: future,
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return const Text(
-                'This revision could not be loaded. Close and try again.',
-              );
+              return Text(AppMessage.quoteRevisionReadFailed.of(context));
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const SizedBox(
@@ -321,7 +399,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
             }
             final value = snapshot.data;
             if (value == null) {
-              return const Text('This revision is unavailable.');
+              return Text(AppMessage.quoteRevisionUnavailable.of(context));
             }
             return SingleChildScrollView(
               child: Column(
@@ -332,11 +410,13 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                   Text('${value.draft.currency} ${value.total}'),
                   Text(
                     value.decision == null
-                        ? 'No local decision recorded'
-                        : quoteStatus(value.decision!),
+                        ? AppMessage.quoteNoDecisionRecorded.of(context)
+                        : quoteStatusMessage(value.decision!).of(context),
                   ),
                   if (value.decisionNote?.isNotEmpty == true)
-                    Text('Private local note\n${value.decisionNote}'),
+                    Text(AppMessage.quotePrivateLocalNote.format(context, {
+                      'note': value.decisionNote!,
+                    })),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () {
@@ -344,7 +424,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       _document(value);
                     },
                     icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('Open revision PDF'),
+                    label: Text(AppMessage.quoteOpenRevisionPdf.of(context)),
                   ),
                   if (value.decision == 'ACCEPTED')
                     OutlinedButton(
@@ -352,7 +432,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         Navigator.pop(context);
                         _scope(value);
                       },
-                      child: const Text('Review accepted revision scope'),
+                      child: Text(
+                        AppMessage.reviewAcceptedScope.of(context),
+                      ),
                     ),
                   if (value.decision == 'ACCEPTED')
                     OutlinedButton(
@@ -360,7 +442,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         Navigator.pop(context);
                         _invoiceQuote(value);
                       },
-                      child: const Text('Invoice actual work from revision'),
+                      child: Text(AppMessage.invoiceActualWork.of(context)),
                     ),
                 ],
               ),
@@ -392,10 +474,10 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(latest?.number ?? 'Quote draft'),
+          title: Text(latest?.number ?? AppMessage.quoteDraft.of(context)),
           actions: [
             IconButton(
-              tooltip: 'Refresh quote details',
+              tooltip: AppMessage.quoteDetailRefresh.of(context),
               onPressed: _pending ? null : _refresh,
               icon: const Icon(Icons.refresh),
             ),
@@ -410,10 +492,10 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
           ),
           children: [
             if (draft == null && latest == null)
-              const Text('This quote is unavailable.'),
+              Text(AppMessage.quoteUnavailable.of(context)),
             if (widget.refreshFailed)
               Text(
-                'Refresh failed. Saved information is shown; refresh before changing this quote.',
+                AppMessage.quoteDetailRefreshFailed.of(context),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             if (latest != null) ...[
@@ -422,10 +504,13 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Text(
-                'Revision ${latest.revision} · ${quoteStatus(latest.decision ?? (expired ? 'EXPIRED' : 'ISSUED'))}',
+                '${AppMessage.quoteRelatedInvoiceRevision.format(context, {'revision': latest.revision.toString()})} · ${quoteStatusMessage(latest.decision ?? (expired ? 'EXPIRED' : 'ISSUED')).of(context)}',
               ),
               if (data.today.isNotEmpty)
-                Text('As of ${data.today} · ${data.timezone}'),
+                Text(AppMessage.quoteStatusAsOf.format(context, {
+                  'date': data.today,
+                  'timezone': data.timezone,
+                })),
               if (latest.customer.isNotEmpty) Text(latest.customer),
               Card(
                 child: Padding(
@@ -434,19 +519,23 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Estimated total',
+                        AppMessage.quoteEstimatedTotalLabel.of(context),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
                         '${latest.draft.currency} ${latest.total}',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      Text('Subtotal ${latest.subtotal} · Tax ${latest.tax}'),
+                      Text(
+                        '${AppMessage.invoiceSubtotal.of(context)} ${latest.subtotal} · ${AppMessage.invoiceTax.of(context)} ${latest.tax}',
+                      ),
                       if (latest.draft.validUntil != null)
                         Text(
-                          'Valid until ${latest.draft.validUntil} (calendar date)',
+                          AppMessage.quoteValidUntilCalendar.format(context, {
+                            'date': latest.draft.validUntil!,
+                          }),
                         ),
-                      const Text('Estimate only · no payment due'),
+                      Text(AppMessage.quoteEstimateNoPayment.of(context)),
                     ],
                   ),
                 ),
@@ -454,13 +543,13 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
               FilledButton.icon(
                 onPressed: _pending ? null : () => _document(latest),
                 icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: const Text('Open issued quote'),
+                label: Text(AppMessage.quoteOpenIssuedQuote.of(context)),
               ),
               if (latest.decision == 'ACCEPTED')
                 OutlinedButton.icon(
                   onPressed: _eligible ? () => _scope(latest) : null,
                   icon: const Icon(Icons.playlist_add_check),
-                  label: const Text('Plan accepted scope'),
+                  label: Text(AppMessage.reviewAcceptedScope.of(context)),
                 ),
               if (latest.decision == 'ACCEPTED')
                 FilledButton.tonalIcon(
@@ -468,13 +557,13 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       ? () => _scope(latest, createNewJob: true)
                       : null,
                   icon: const Icon(Icons.add_business_outlined),
-                  label: const Text('Create job from quote'),
+                  label: Text(AppMessage.quoteCreateJob.of(context)),
                 ),
               if (latest.decision == 'ACCEPTED')
                 OutlinedButton.icon(
                   onPressed: _eligible ? () => _invoiceQuote(latest) : null,
                   icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Invoice actual work'),
+                  label: Text(AppMessage.invoiceActualWork.of(context)),
                 ),
               OutlinedButton(
                 onPressed: _pending
@@ -486,7 +575,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                               QuoteRelatedInvoicesScreen(quoteId: widget.id),
                         ),
                       ),
-                child: const Text('Related invoices'),
+                child: Text(AppMessage.quoteRelatedInvoices.of(context)),
               ),
             ],
             const SizedBox(height: 16),
@@ -495,7 +584,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                 onPressed: _eligible ? _edit : null,
                 icon: const Icon(Icons.edit_outlined),
                 label: Text(
-                  draft != null ? 'Edit draft' : 'Create revised draft',
+                  draft != null
+                      ? AppMessage.quoteEditDraft.of(context)
+                      : AppMessage.quoteCreateRevisedDraft.of(context),
                 ),
               ),
             if (draft != null || _pendingKind == 'issue')
@@ -507,16 +598,14 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Editable draft',
+                        AppMessage.quoteEditableDraft.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(
                         draft?.title ??
-                            'Checking the captured issue operation…',
+                            AppMessage.quoteIssuePending.of(context),
                       ),
-                      const Text(
-                        'Review all prices, tax, terms and customer information before issuing. New revisions require their own local decision.',
-                      ),
+                      Text(AppMessage.quoteIssueReviewGuidance.of(context)),
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed:
@@ -525,13 +614,13 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                 data.draftDigits != null
                             ? _reviewIssue
                             : null,
-                        child: const Text('Review quote for issue'),
+                        child: Text(AppMessage.quoteReviewIssue.of(context)),
                       ),
                       BusinessCommand(
                         key: ValueKey('issue/${widget.id}'),
                         label: latest == null
-                            ? 'Issue quote'
-                            : 'Issue next revision',
+                            ? AppMessage.quoteIssueNow.of(context)
+                            : AppMessage.quoteIssueNextRevision.of(context),
                         enabled:
                             _eligible &&
                             draft != null &&
@@ -544,8 +633,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                           if (version == null ||
                               version != data.version ||
                               draft == null) {
-                            throw const FormatException(
-                              'Review the current quote draft before issuing.',
+                            throw FormatException(
+                              AppMessage.quoteReviewDraftBeforeIssue.of(context),
                             );
                           }
                           final id = newBusinessId(),
@@ -568,35 +657,31 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Local acceptance record',
+                        AppMessage.quoteAcceptanceRecordTitle.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       if (latest.decision != null &&
                           _pendingKind != 'decision') ...[
-                        Text(quoteStatus(latest.decision!)),
+                        Text(quoteStatusMessage(latest.decision!).of(context)),
                         if (latest.decisionNote?.isNotEmpty == true)
                           Text(latest.decisionNote!),
-                        const Text(
-                          'This record belongs to this issued revision. Changed terms require a new revision.',
-                        ),
+                        Text(AppMessage.quoteDecisionRetainedNotice.of(context)),
                       ] else ...[
-                        const Text(
-                          'Record the customer’s decision explicitly. This private note is not printed in the issued PDF.',
-                        ),
+                        Text(AppMessage.quoteDecisionPrivacyNotice.of(context)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _decision,
                           decoration: const InputDecoration(
-                            labelText: 'Customer decision',
+                            labelText: AppMessage.quoteDecisionLabel.of(context),
                           ),
                           items: const [
                             DropdownMenuItem(
                               value: 'ACCEPTED',
-                              child: Text('Accepted'),
+                              child: Text(AppMessage.quoteStatusAccepted.of(context)),
                             ),
                             DropdownMenuItem(
                               value: 'DECLINED',
-                              child: Text('Declined'),
+                              child: Text(AppMessage.quoteStatusDeclined.of(context)),
                             ),
                           ],
                           onChanged: !_eligible
@@ -621,8 +706,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                             maxLength: 2000,
                             maxLengthEnforcement: MaxLengthEnforcement.none,
                             decoration: InputDecoration(
-                              labelText: 'Private decision note',
-                              helperText: 'Optional. This note stays private.',
+                              labelText: AppMessage.quotePrivateDecisionLabel.of(context),
+                              helperText: AppMessage.quotePrivateDecisionHelp.of(context),
                               errorText: _noteError,
                             ),
                             onChanged: (_) => setState(() {
@@ -635,11 +720,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                           onPressed: _eligible && latest.decision == null
                               ? _reviewDecision
                               : null,
-                          child: const Text('Review customer decision'),
+                          child: Text(AppMessage.quoteReviewCustomerDecision.of(context)),
                         ),
                         BusinessCommand(
                           key: ValueKey('decision/${widget.id}'),
-                          label: 'Record reviewed decision',
+                          label: AppMessage.quoteRecordReviewedDecision.of(context),
                           enabled:
                               _eligible &&
                               latest.decision == null &&
@@ -652,8 +737,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                             if (review == null ||
                                 review.version != data.version ||
                                 review.revision != latest.revision) {
-                              throw const FormatException(
-                                'Review the current issued revision and decision first.',
+                              throw FormatException(
+                                AppMessage.quoteReviewCurrentDecisionRequired.of(context),
                               );
                             }
                             final id = newBusinessId(),
@@ -678,7 +763,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
             if (latest != null) ...[
               const SizedBox(height: 20),
               Text(
-                'Revision history',
+                AppMessage.quoteRevisionHistoryTitle.of(context),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               FutureBuilder<_HistoryPage>(
@@ -689,7 +774,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       onPressed: () => setState(() {
                         _history = _readHistory();
                       }),
-                      child: const Text('Retry revision history'),
+                      child: Text(AppMessage.quoteRetryRevisionHistory.of(context)),
                     );
                   }
                   final entries =
@@ -700,9 +785,19 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         const LinearProgressIndicator(),
                       for (final entry in entries)
                         ListTile(
-                          title: Text('Revision ${entry.revision}'),
+                          title: Text(AppMessage.quoteRevisionTitle.format(context, {
+                            'revision': entry.revision.toString(),
+                          })),
                           subtitle: Text(
-                            '${entry.decision == null ? 'No decision recorded' : quoteStatus(entry.decision!)}\n${DateTime.fromMillisecondsSinceEpoch(entry.created, isUtc: true).toIso8601String()} UTC',
+                            AppMessage.quoteHistoryEntry.format(context, {
+                              'decision': entry.decision == null
+                                  ? AppMessage.quoteNoDecisionRecorded.of(context)
+                                  : quoteStatusMessage(entry.decision!).of(context),
+                              'timestamp': DateTime.fromMillisecondsSinceEpoch(
+                                entry.created,
+                                isUtc: true,
+                              ).toIso8601String(),
+                            }),
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: _pending
@@ -735,7 +830,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                         }),
                                   );
                                 },
-                          child: const Text('Load older revisions'),
+                          child: Text(AppMessage.quoteLoadOlderRevisions.of(context)),
                         ),
                     ],
                   );

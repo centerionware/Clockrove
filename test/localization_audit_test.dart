@@ -30,6 +30,7 @@ void example(String name) {
       'payment_editor',
       'quote_invoice_screen',
       'quote_screens',
+      'quote_detail_screen',
     };
     const identifiers = {
       'balance-',
@@ -54,6 +55,11 @@ void example(String name) {
       'quote-invoice-zone',
       'quote-invoice-note',
       'quote-invoice/',
+      'quote-issue-card/',
+      'issue/',
+      'quote-decision-card/',
+      'quote-decision-note',
+      'decision/',
     };
     for (final screen in screens) {
       final path = 'lib/business/$screen.dart';
