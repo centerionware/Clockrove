@@ -51,3 +51,10 @@ upgrade with a saved 15 m site. The run also passed 30 Android instrumentation
 cases on each of API 24 and 35. The emulator results cover repository behavior
 and Android integration. Callback delivery at the affected 15 m site still
 requires verification on the owner's phone.
+
+The updated-head [45024861185](https://github.com/centerionware/Clockrove/actions/runs/45024861185)
+and main [45024792204](https://github.com/centerionware/Clockrove/actions/runs/45024792204)
+both stopped before native tests could run. Maven Central returned HTTP 429
+for Robolectric's pinned native runtime JAR. The next attempt applies the
+same alternate Maven Central endpoint to Gradle's dependency resolution on
+GitHub runners as well as Robolectric's runtime resolver.
