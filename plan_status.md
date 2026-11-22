@@ -3,6 +3,24 @@
 Updated 2026-11-16. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
+## November 22 release readiness update
+
+- Geofence regression: [PR #77](https://github.com/centerionware/Clockrove/pull/77)
+  preserves existing 15 m sites and fixes cold-start handling of delayed
+  Android events. Its [validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
+  passed. The PR remains open and the owner’s physical site is unverified.
+- Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
+  passed exact-head checks and was merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
+  verified near-limit replay on API 24 and 35. Its system-picker flow still
+  needs passing evidence for a data-changing merge on both API levels.
+- Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
+  contains offline Help, the static website and draft policy and store copy.
+  [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
+  passed. Android Help journey results, policy approval and publication,
+  the whole-app UI and device coverage gate, and closed testing remain open.
+
+The report below preserves earlier evidence and milestone history.
+
 **M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run
 [43610282595](https://github.com/centerionware/Clockrove/actions/runs/43610282595)
 passed 35 actual Android tests on each of API 24 and 35, including task media,
