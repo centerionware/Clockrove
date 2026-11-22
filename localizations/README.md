@@ -12,8 +12,10 @@ checks that the generated Flutter source matches the English catalog.
 Keep dynamic values such as names or amounts out of translation keys. Preserve
 user-entered text, document identifiers, and stored currency codes as entered.
 
-Register additional locales with their language names in `appLanguages`. Use
-script-specific tags where the written language requires one. The shipped
+Register additional locales with their names as shown to speakers in
+`metadata/languages.yaml`. Add both the Flutter and Android catalogs for the
+same tag and regenerate both sets of resources. Use script or regional tags
+where the written language requires them. The shipped
 catalog test checks every registered locale for missing, extra, or empty keys.
 Run validation in GitHub Actions.
 

@@ -151,6 +151,9 @@ sections now use translated labels and empty states. Remaining dynamic
 report messages still need migration. Margin and cost-count summaries,
 financial activity headings, map sample totals, and exclusion statuses
 now use translated templates.
+Flutter and Android now take the set of registered locales from the same YAML
+registry. Generation checks for missing or extra catalogs on both platforms
+and supports language, script and region tags.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

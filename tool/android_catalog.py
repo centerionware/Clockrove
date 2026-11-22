@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from catalog_source import read_catalog
+from catalog_source import locale_names, read_catalog
 
 CATALOGS = Path("localizations/android")
 RESOURCES = Path("android/app/src/main/res")
@@ -30,7 +30,7 @@ def main():
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     english = read_catalog(CATALOGS / "en.yaml")
-    tags = {path.stem for path in CATALOGS.parent.glob("*.yaml")}
+    tags = set(locale_names())
     actual_tags = {path.stem for path in CATALOGS.glob("*.yaml")}
     if tags != actual_tags:
         parser.error(f"Android catalog tags differ: {sorted(tags ^ actual_tags)}")

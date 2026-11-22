@@ -2,33 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yaml/yaml.dart';
 
+part 'app_languages.g.dart';
 part 'app_messages.g.dart';
-
-const appLanguages = {
-  'en': (Locale('en'), 'English'),
-  'ar': (Locale('ar'), 'العربية'),
-  'bn': (Locale('bn'), 'বাংলা'),
-  'de': (Locale('de'), 'Deutsch'),
-  'es': (Locale('es'), 'Español'),
-  'fr': (Locale('fr'), 'Français'),
-  'hi': (Locale('hi'), 'हिन्दी'),
-  'id': (Locale('id'), 'Bahasa Indonesia'),
-  'it': (Locale('it'), 'Italiano'),
-  'ja': (Locale('ja'), '日本語'),
-  'ko': (Locale('ko'), '한국어'),
-  'pt': (Locale('pt'), 'Português'),
-  'ru': (Locale('ru'), 'Русский'),
-  'tr': (Locale('tr'), 'Türkçe'),
-  'vi': (Locale('vi'), 'Tiếng Việt'),
-  'zh-Hans': (
-    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
-    '简体中文',
-  ),
-  'zh-Hant': (
-    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
-    '繁體中文',
-  ),
-};
 
 extension AppMessageTranslation on AppMessage {
   String of(BuildContext context) =>

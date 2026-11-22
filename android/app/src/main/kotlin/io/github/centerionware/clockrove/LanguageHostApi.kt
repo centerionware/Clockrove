@@ -42,7 +42,7 @@ internal class LanguageHostApi(context: Context, messenger: BinaryMessenger) {
     fun detach() = channel.setMethodCallHandler(null)
 
     private companion object {
-        val LANGUAGE_TAG = Regex("[a-z]{2,3}(?:-[A-Z][a-z]{3})?")
+        val LANGUAGE_TAG = Regex("[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-[A-Z]{2}|-[0-9]{3})?")
     }
 }
 
