@@ -214,6 +214,7 @@ internal object BackupImportDeletionResolution {
         kind: String,
         entityId: String,
     ): Boolean = when (kind) {
+        "customer" -> BusinessStore.customerRemovalConflict(db, entityId) == null
         "task_comment" -> db.rawQuery(
             "SELECT 1 FROM task_comments c JOIN kanban_cards k ON k.id=c.task_id " +
                 "JOIN jobs j ON j.id=k.job_id WHERE c.id=? AND j.archived=0",
@@ -236,7 +237,7 @@ internal object BackupImportDeletionResolution {
         expectedLocalRevision: String,
         backupRevision: String,
     ) {
-        if (kind !in deletableKinds) unsupportedDeletion()
+        if (kind !in deletableKinds && kind != "customer") unsupportedDeletion()
         val localHead = db.rawQuery(
             "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
             arrayOf(kind, entityId),
@@ -265,6 +266,9 @@ internal object BackupImportDeletionResolution {
         val localDeletionHead = currentDeletionHead(store, db, kind, entityId, localHead)
         if (localDeletionHead == expectedLocalRevision) {
             when (kind) {
+                "customer" -> {
+                    if (BusinessStore.removeCustomer(db, entityId, store.wallClock()) != null) staleDeletion()
+                }
                 "task_comment" -> {
                     val comment = db.rawQuery(
                         "SELECT c.task_id,k.job_id FROM task_comments c " +

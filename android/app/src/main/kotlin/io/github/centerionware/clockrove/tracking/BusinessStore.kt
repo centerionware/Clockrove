@@ -113,10 +113,21 @@ internal object BusinessStore {
         RevisionStore.snapshotRows(db, "customers", "customer", customerColumns, at, where = "id=?", args = arrayOf(value.id))
         return null
     }
+    fun customerRemovalConflict(db: SQLiteDatabase, id: String): String? {
+        val exists = db.rawQuery("SELECT 1 FROM customers WHERE id=?", arrayOf(id)).use { it.moveToFirst() }
+        if (!exists) return "CUSTOMER_UNAVAILABLE"
+        val used = db.rawQuery(
+            "SELECT id FROM jobs WHERE customer_id=? UNION ALL " +
+                "SELECT id FROM invoices WHERE customer_id=? UNION ALL " +
+                "SELECT quote_id FROM quote_drafts WHERE customer_id=? UNION ALL " +
+                "SELECT quote_id FROM quote_revisions WHERE customer_id=? LIMIT 1",
+            arrayOf(id, id, id, id),
+        ).use { it.moveToFirst() }
+        return if (used) "CUSTOMER_IN_USE" else null
+    }
+
     fun removeCustomer(db: SQLiteDatabase, id: String, at: Long): String? {
-        if (customers(db).none { it.id == id }) return "CUSTOMER_UNAVAILABLE"
-        val used = db.rawQuery("SELECT id FROM jobs WHERE customer_id=? UNION ALL SELECT id FROM invoices WHERE customer_id=? UNION ALL SELECT quote_id FROM quote_drafts WHERE customer_id=? UNION ALL SELECT quote_id FROM quote_revisions WHERE customer_id=? LIMIT 1", arrayOf(id, id, id, id)).use { it.moveToFirst() }
-        if (used) return "CUSTOMER_IN_USE"
+        customerRemovalConflict(db, id)?.let { return it }
         db.execSQL("DELETE FROM customers WHERE id=?", arrayOf(id))
         db.execSQL("UPDATE entity_revisions SET payload=NULL WHERE kind='customer' AND entity_id=?", arrayOf(id))
         RevisionStore.record(db, "customer", id, null, mapOf("id" to id), at, deleted = true)

@@ -351,7 +351,7 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val preview = importStore.finish(database, started.importId)
         val conflicts = conflictsFor(started.importId, preview)
         val deletion = conflict(conflicts, "BACKUP_ENTITY_DELETION", "entity_heads", customerId, "customer")
-        assertEquals(listOf("PRESERVE_LOCAL_CONTENT"), deletion["allowedChoices"])
+        assertEquals(listOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION"), deletion["allowedChoices"])
         importStore.resolveConflict(
             database, started.importId, preview.previewToken, preview.localStateVersion,
             deletion["conflictId"] as String, "PRESERVE_LOCAL_CONTENT",
@@ -366,6 +366,53 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
         val replay = stageImport(records)
         val replayPreview = importStore.finish(database, replay.importId)
         assertEquals(0L, replayPreview.conflictCount)
+        assertTrue(importStore.close(replay.importId))
+    }
+
+    @Test
+    fun applyingBackupCustomerDeletionUsesBusinessRulesAndKeepsAncestry() {
+        val customerId = "backup-deletion-customer"
+        assertNull(repository.saveCustomer(
+            "backup-deletion-customer-create", repository.snapshot().version,
+            BusinessStore.Customer(customerId, "Synthetic customer"),
+        ).conflict)
+        val localHead = currentHead("customer", customerId)
+        val backupDeletion = "backup-customer-tombstone"
+        val records = listOf(
+            revisionRecord(
+                backupDeletion, "customer", customerId, null, deleted = 1L,
+                payload = JSONObject().put("id", customerId).toString(),
+            ),
+            parentRecord(backupDeletion, localHead),
+            headRecord("customer", customerId, backupDeletion),
+        )
+        database.execSQL("UPDATE jobs SET customer_id=? WHERE id=?", arrayOf(customerId, jobId))
+        val blocked = stageImport(records)
+        val blockedPreview = importStore.finish(database, blocked.importId)
+        val blockedConflict = conflict(
+            conflictsFor(blocked.importId, blockedPreview),
+            "BACKUP_ENTITY_DELETION", "entity_heads", customerId, "customer",
+        )
+        assertEquals(listOf("PRESERVE_LOCAL_CONTENT"), blockedConflict["allowedChoices"])
+        assertTrue(importStore.close(blocked.importId))
+
+        database.execSQL("UPDATE jobs SET customer_id=NULL WHERE id=?", arrayOf(jobId))
+        val started = stageImport(records)
+        val preview = importStore.finish(database, started.importId)
+        val deletion = conflict(
+            conflictsFor(started.importId, preview),
+            "BACKUP_ENTITY_DELETION", "entity_heads", customerId, "customer",
+        )
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            deletion["conflictId"] as String, "APPLY_BACKUP_DELETION",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+        assertEquals(0L, number("SELECT COUNT(*) FROM customers WHERE id='$customerId'"))
+        assertMergedTombstoneParents("customer", customerId, backupDeletion)
+
+        val replay = stageImport(records)
+        assertEquals(0L, importStore.finish(database, replay.importId).conflictCount)
         assertTrue(importStore.close(replay.importId))
     }
 
