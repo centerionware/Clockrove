@@ -111,7 +111,7 @@ void main() {
       await _reveal(tester, 'Save site');
       await tester.tap(find.text('Save site'));
       await tester.pumpAndSettle();
-      expect(api.sites.single.radius, 30);
+      expect(api.sites.single.radius, 150);
       expect(api.settings.enabled, isFalse);
       await _reveal(tester, 'Riverside studio');
       await tester.tap(find.text('Riverside studio'));

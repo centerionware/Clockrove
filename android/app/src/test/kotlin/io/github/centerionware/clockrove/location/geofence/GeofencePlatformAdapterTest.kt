@@ -66,6 +66,19 @@ class GeofencePlatformAdapterTest {
         return session
     }
 
+    @Test fun gpsOptOutKeepsAutomaticStartAndDepartureWithoutStartingRecording() {
+        configure()
+        val settings = repository.jobDetail(job).job.settings.copy(locationRecordingOverride = false)
+        assertNull(repository.saveJobSettings("disable-recording", repository.snapshot().version, settings).conflict)
+
+        val session = startAndDepart()
+
+        assertEquals(job, repository.snapshot().running!!.jobId)
+        assertTrue(starts.isEmpty())
+        assertTrue(repository.locationPoints(session).isEmpty())
+        assertEquals(session, repository.schedulableDeparture()?.sessionId)
+    }
+
     @Test fun defaultIdleNeverContactsPlayServicesOrRequestsPermission() {
         registry.reconcile()
         assertTrue(calls.isEmpty())
@@ -130,6 +143,23 @@ class GeofencePlatformAdapterTest {
         calls[1].second(true)
         assertFalse(cleanupRequired)
         assertEquals(GeofenceRegistrationController.Health.IDLE, registry.health)
+    }
+
+    @Test fun firstCallbackAfterProcessStartKeepsPersistedArming() {
+        configure()
+        event(GeofenceMembership.Presence.OUTSIDE, 2000)
+        cleanupRequired = true
+        clock = 3500
+
+        registry.prepareRecovery()
+        handler.receive(
+            repository.sitesToRegister().map { it.registrationKey }.toSet(),
+            GeofenceMembership.Presence.INSIDE, 3000, 3400,
+        )
+
+        val running = requireNotNull(repository.snapshot().running)
+        assertEquals(job, running.jobId)
+        assertEquals(listOf(running.id), starts)
     }
 
     @Test fun processRecoveryHoldsCandidateBeforeAnyAlarmCanFinalizeIt() {

@@ -68,6 +68,31 @@ departure and an active session, install a newer build signed with the same uplo
 key: verify work/settings remain, uncertain expiry is held, and only previously
 enabled sites are requested again. This requires actual upgrade/device evidence.
 
+### Geofence delivery after Android restarts the app process
+
+Use an installed candidate on the affected device and keep the existing 15 m
+site geometry. Record the installed version, Android version, automation
+settings, permission state, and initial monitoring status. Use a synthetic
+site or keep any real site details out of shared evidence.
+
+1. With no timer running, enable clock-in on arrival, leave the site, and wait
+   for Clockrove to report that it is watching for the next arrival.
+2. Background the app. On a test device with ADB, use
+   `adb shell am kill io.github.centerionware.clockrove` and confirm the
+   process is gone with `adb shell pidof io.github.centerionware.clockrove`.
+   Record an inconclusive attempt if Android keeps the process alive.
+3. Re-enter the site without opening Clockrove. Check the clock-in and saved
+   start time after the transition. Repeat for departure with automatic
+   clock-out enabled and verify the recorded end after the configured grace.
+4. Repeat with a separate 150 m synthetic site if the 15 m site misses an
+   event. Compare monitoring status and delivery for each radius. Use
+   **Refresh site monitoring** once and record whether delivery returns.
+
+Ordinary background process termination and Android force-stop are separate
+scenarios. Force-stop can prevent Android from delivering callbacks until the
+app is opened again. Keep the pending-departure recovery test separate and
+confirm that an uncertain deadline never fabricates a clock-out.
+
 ## Encrypted backup and Android document picker
 
 Use two disposable Clockrove installs on separate test devices or Android

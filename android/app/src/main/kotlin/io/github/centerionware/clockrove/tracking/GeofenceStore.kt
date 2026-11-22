@@ -7,7 +7,7 @@ import java.util.UUID
 /** SQL helpers used only under TimerRepository's serialized transaction boundary. */
 internal object GeofenceStore {
     data class Site(val id: String, val jobId: String, val name: String,
-        val latitude: Double, val longitude: Double, val radiusMeters: Double = 30.0,
+        val latitude: Double, val longitude: Double, val radiusMeters: Double = 150.0,
         val enabled: Boolean = true, val registrationKey: String = "")
     data class Settings(val jobId: String, val enabled: Boolean = false,
         val autoStart: Boolean = false, val automaticDeparture: Boolean = true,
