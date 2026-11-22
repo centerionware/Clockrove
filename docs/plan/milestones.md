@@ -199,6 +199,13 @@ entering closed testing.
 - **Closed-testing gate:** do not move the app from internal to closed testing
   until all launch features and this full E2E/UI acceptance pass. Internal
   iterations may continue while implementation and validation are underway.
+- Add an offline Help flow in Settings, with links from the relevant screens.
+  Cover first use, location permission and geofence recovery, backup and restore,
+  data controls, and support. Include app-version information. Verify navigation,
+  offline use, large text and TalkBack in the M7.6 inventory.
+- Include versioned Terms of Use, Privacy Policy and Data Usage Policy in Help.
+  Keep the bundled text and public site in sync. Review actual app and map-provider
+  data flows before publishing the policies and completing Play disclosures.
 - Reuse this complete inventory for the final public-release gate below; the
   static Cloudflare Pages documentation site remains a full public-release task.
 
