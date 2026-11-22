@@ -62,4 +62,18 @@
     <string name="pdf_total">"SUMME"</string>
     <string name="pdf_original_invoice_total">"URSPRÜNGLICHE RECHNUNGSSUMME"</string>
     <string name="pdf_invoice_total">"RECHNUNGSSUMME"</string>
+    <string name="pdf_payment_recorded">"Zahlungsstand erfasst am %1$s"</string>
+    <string name="pdf_copy_reference">"Kopierreferenz: %1$s"</string>
+    <string name="pdf_credit_transferred">"Übertragenes Guthaben   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Guthaben bei Ausstellung   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Bisher bezahlt   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"OFFENER BETRAG   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"ZAHLUNGEN UND GUTHABEN"</string>
+    <string name="pdf_cancelled_warning">"Diese Rechnung wurde storniert. Bezahle sie nicht."</string>
+    <string name="pdf_saved_payment_note">"Gespeicherter Zahlungsnachweis für %1$s. Salden entsprechen dem Erfassungsdatum."</string>
+    <string name="pdf_status_paid">"BEZAHLT"</string>
+    <string name="pdf_status_unpaid">"UNBEZAHLT"</string>
+    <string name="pdf_status_partial">"TEILWEISE BEZAHLT"</string>
+    <string name="pdf_status_void">"STORNIERT"</string>
+    <string name="pdf_status_nothing_due">"KEIN OFFENER BETRAG"</string>
 </resources>

@@ -62,4 +62,18 @@
     <string name="pdf_total">"TỔNG CỘNG"</string>
     <string name="pdf_original_invoice_total">"TỔNG HÓA ĐƠN GỐC"</string>
     <string name="pdf_invoice_total">"TỔNG HÓA ĐƠN"</string>
+    <string name="pdf_payment_recorded">"Trạng thái thanh toán ghi lúc %1$s"</string>
+    <string name="pdf_copy_reference">"Mã tham chiếu bản sao: %1$s"</string>
+    <string name="pdf_credit_transferred">"Tín dụng đã chuyển   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Tín dụng khi phát hành   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Đã thanh toán đến nay   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"SỐ DƯ PHẢI TRẢ   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"THANH TOÁN VÀ TÍN DỤNG"</string>
+    <string name="pdf_cancelled_warning">"Hóa đơn này đã bị hủy. Không thanh toán hóa đơn này."</string>
+    <string name="pdf_saved_payment_note">"Bản ghi thanh toán đã lưu cho %1$s. Số dư theo ngày đã ghi."</string>
+    <string name="pdf_status_paid">"ĐÃ THANH TOÁN"</string>
+    <string name="pdf_status_unpaid">"CHƯA THANH TOÁN"</string>
+    <string name="pdf_status_partial">"ĐÃ THANH TOÁN MỘT PHẦN"</string>
+    <string name="pdf_status_void">"ĐÃ HỦY"</string>
+    <string name="pdf_status_nothing_due">"KHÔNG CÓ KHOẢN PHẢI TRẢ"</string>
 </resources>

@@ -62,4 +62,18 @@
     <string name="pdf_total">"TOTALE"</string>
     <string name="pdf_original_invoice_total">"TOTALE FATTURA ORIGINALE"</string>
     <string name="pdf_invoice_total">"TOTALE FATTURA"</string>
+    <string name="pdf_payment_recorded">"Stato del pagamento registrato il %1$s"</string>
+    <string name="pdf_copy_reference">"Riferimento copia: %1$s"</string>
+    <string name="pdf_credit_transferred">"Credito trasferito   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Credito all’emissione   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Pagato finora   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"SALDO DOVUTO   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"PAGAMENTI E CREDITI"</string>
+    <string name="pdf_cancelled_warning">"Questa fattura è annullata. Non pagarla."</string>
+    <string name="pdf_saved_payment_note">"Registrazione di pagamento salvata per %1$s. I saldi si riferiscono alla data registrata."</string>
+    <string name="pdf_status_paid">"PAGATA"</string>
+    <string name="pdf_status_unpaid">"NON PAGATA"</string>
+    <string name="pdf_status_partial">"PAGATA IN PARTE"</string>
+    <string name="pdf_status_void">"ANNULLATA"</string>
+    <string name="pdf_status_nothing_due">"NESSUN IMPORTO DOVUTO"</string>
 </resources>

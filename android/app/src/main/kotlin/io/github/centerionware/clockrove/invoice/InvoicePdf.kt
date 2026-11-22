@@ -20,6 +20,7 @@ import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.ImageLimits
 import io.github.centerionware.clockrove.tracking.TaxRate
+import io.github.centerionware.clockrove.tracking.ReportCsv
 import java.io.ByteArrayOutputStream
 
 /** Three native, paginated layouts. Render on a worker, outside repository writes. */
@@ -40,8 +41,8 @@ internal object InvoicePdf {
                 val flow = Flow(document, snapshot, logo, documentKind == "QUOTE", strings)
                 flow.start()
                 snapshot.statement?.let {
-                    flow.text("Payment state recorded ${io.github.centerionware.clockrove.tracking.ReportCsv.instant(it.created, "UTC")}", 9f)
-                    flow.text("Copy reference: ${it.reference}", 8f)
+                    flow.text(strings.getString(R.string.pdf_payment_recorded, ReportCsv.instant(it.created, "UTC")), 9f)
+                    flow.text(strings.getString(R.string.pdf_copy_reference, it.reference), 8f)
                     flow.space(8f)
                 }
                 flow.parties(snapshot, strings.getString(
@@ -59,14 +60,23 @@ internal object InvoicePdf {
                 snapshot.lines.forEach { flow.line(it) }
                 flow.total()
                 snapshot.statement?.let {
-                    flow.text("${if (it.kind == "VOID") "Credit transferred" else if (it.kind == "REPLACEMENT") "Credit at issue" else "Paid to date"}   ${snapshot.currency} ${it.paid}", 12f, bold = true)
-                    flow.text("BALANCE DUE   ${snapshot.currency} ${it.due}", 16f, bold = true)
+                    val paidLabel = when (it.kind) {
+                        "VOID" -> R.string.pdf_credit_transferred
+                        "REPLACEMENT" -> R.string.pdf_credit_at_issue
+                        else -> R.string.pdf_paid_to_date
+                    }
+                    flow.text(strings.getString(paidLabel, snapshot.currency, it.paid), 12f, bold = true)
+                    flow.text(strings.getString(R.string.pdf_balance_due, snapshot.currency, it.due), 16f, bold = true)
                     flow.space(8f)
                     if (it.events.isNotEmpty()) {
-                        if (it.kind == "BALANCE") flow.text("PAYMENTS AND CREDITS", 12f, bold = true)
+                        if (it.kind == "BALANCE") flow.text(strings.getString(R.string.pdf_payments_credits), 12f, bold = true)
                         it.events.forEach { event -> flow.line(event, compact = true) }
                     }
-                    flow.text(if (it.kind == "VOID") "This invoice is cancelled. Do not pay this invoice." else "Saved payment record for ${snapshot.number}. Balances reflect the recorded date.", 9f)
+                    flow.text(if (it.kind == "VOID") {
+                        strings.getString(R.string.pdf_cancelled_warning)
+                    } else {
+                        strings.getString(R.string.pdf_saved_payment_note, snapshot.number)
+                    }, 9f)
                 }
                 if (snapshot.footer.isNotBlank()) {
                     flow.space(20f)
@@ -144,7 +154,19 @@ internal object InvoicePdf {
                 canvas.drawLine(margin, 84f, width - margin, 84f, paint(1f).apply { strokeWidth = .7f })
             }
             data.statement?.let {
-                canvas.drawText(it.status.replace('_', ' '), 260f, if (modern) 65f else if (classic) 73f else 69f, paint(14f, true, if (modern) Color.WHITE else ink))
+                val status = when (it.status) {
+                    "PAID" -> strings.getString(R.string.pdf_status_paid)
+                    "UNPAID" -> strings.getString(R.string.pdf_status_unpaid)
+                    "PARTIALLY_PAID" -> strings.getString(R.string.pdf_status_partial)
+                    "VOID" -> strings.getString(R.string.pdf_status_void)
+                    "NOTHING_DUE" -> strings.getString(R.string.pdf_status_nothing_due)
+                    else -> it.status.replace('_', ' ')
+                }
+                val statusPaint = paint(14f, true, if (modern) Color.WHITE else ink)
+                val available = width - margin - 260f - if (logo == null) 0f else 95f
+                val measured = statusPaint.measureText(status)
+                if (measured > available) statusPaint.textScaleX = available / measured
+                canvas.drawText(status, 260f, if (modern) 65f else if (classic) 73f else 69f, statusPaint)
             }
             logo?.let {
                 val box = RectF(width - margin - 85, 20f, width - margin, 69f)

@@ -62,4 +62,18 @@
     <string name="pdf_total">"कुल"</string>
     <string name="pdf_original_invoice_total">"मूल चालान का कुल"</string>
     <string name="pdf_invoice_total">"चालान का कुल"</string>
+    <string name="pdf_payment_recorded">"भुगतान की स्थिति दर्ज हुई: %1$s"</string>
+    <string name="pdf_copy_reference">"कॉपी का संदर्भ: %1$s"</string>
+    <string name="pdf_credit_transferred">"ट्रांसफ़र किया गया क्रेडिट   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"जारी करते समय क्रेडिट   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"अब तक भुगतान   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"बकाया रकम   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"भुगतान और क्रेडिट"</string>
+    <string name="pdf_cancelled_warning">"यह चालान रद्द है। इसका भुगतान न करें।"</string>
+    <string name="pdf_saved_payment_note">"%1$s का सेव किया गया भुगतान रिकॉर्ड। बकाया दर्ज तारीख के अनुसार है।"</string>
+    <string name="pdf_status_paid">"भुगतान किया गया"</string>
+    <string name="pdf_status_unpaid">"अपरिशोधित"</string>
+    <string name="pdf_status_partial">"आंशिक भुगतान"</string>
+    <string name="pdf_status_void">"रद्द"</string>
+    <string name="pdf_status_nothing_due">"कुछ देय नहीं"</string>
 </resources>

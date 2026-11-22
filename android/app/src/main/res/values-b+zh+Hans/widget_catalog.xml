@@ -62,4 +62,18 @@
     <string name="pdf_total">"合计"</string>
     <string name="pdf_original_invoice_total">"原发票合计"</string>
     <string name="pdf_invoice_total">"发票合计"</string>
+    <string name="pdf_payment_recorded">"付款状态记录于 %1$s"</string>
+    <string name="pdf_copy_reference">"副本参考号：%1$s"</string>
+    <string name="pdf_credit_transferred">"已转移的贷项   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"开具时的贷项   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"累计已付款   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"应付余额   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"付款与贷项"</string>
+    <string name="pdf_cancelled_warning">"此发票已取消。请勿支付。"</string>
+    <string name="pdf_saved_payment_note">"%1$s 的已保存付款记录。余额以记录日期为准。"</string>
+    <string name="pdf_status_paid">"已付款"</string>
+    <string name="pdf_status_unpaid">"未付款"</string>
+    <string name="pdf_status_partial">"已部分付款"</string>
+    <string name="pdf_status_void">"已作废"</string>
+    <string name="pdf_status_nothing_due">"无应付款项"</string>
 </resources>

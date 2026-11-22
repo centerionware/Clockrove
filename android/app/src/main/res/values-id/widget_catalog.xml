@@ -62,4 +62,18 @@
     <string name="pdf_total">"TOTAL"</string>
     <string name="pdf_original_invoice_total">"TOTAL FAKTUR ASLI"</string>
     <string name="pdf_invoice_total">"TOTAL FAKTUR"</string>
+    <string name="pdf_payment_recorded">"Status pembayaran dicatat %1$s"</string>
+    <string name="pdf_copy_reference">"Referensi salinan: %1$s"</string>
+    <string name="pdf_credit_transferred">"Kredit dialihkan   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Kredit saat penerbitan   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Telah dibayar   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"SALDO TERUTANG   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"PEMBAYARAN DAN KREDIT"</string>
+    <string name="pdf_cancelled_warning">"Faktur ini dibatalkan. Jangan bayar faktur ini."</string>
+    <string name="pdf_saved_payment_note">"Catatan pembayaran tersimpan untuk %1$s. Saldo sesuai tanggal pencatatan."</string>
+    <string name="pdf_status_paid">"LUNAS"</string>
+    <string name="pdf_status_unpaid">"BELUM DIBAYAR"</string>
+    <string name="pdf_status_partial">"DIBAYAR SEBAGIAN"</string>
+    <string name="pdf_status_void">"DIBATALKAN"</string>
+    <string name="pdf_status_nothing_due">"TIDAK ADA TAGIHAN"</string>
 </resources>

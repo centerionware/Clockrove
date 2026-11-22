@@ -62,4 +62,18 @@
     <string name="pdf_total">"ИТОГО"</string>
     <string name="pdf_original_invoice_total">"ИТОГ ИСХОДНОГО СЧЁТА"</string>
     <string name="pdf_invoice_total">"ИТОГ СЧЁТА"</string>
+    <string name="pdf_payment_recorded">"Состояние оплаты зафиксировано %1$s"</string>
+    <string name="pdf_copy_reference">"Идентификатор копии: %1$s"</string>
+    <string name="pdf_credit_transferred">"Перенесённый зачёт   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Зачёт при выставлении   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Оплачено на дату записи   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"К ОПЛАТЕ   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"ПЛАТЕЖИ И ЗАЧЁТЫ"</string>
+    <string name="pdf_cancelled_warning">"Счёт аннулирован. Не оплачивайте его."</string>
+    <string name="pdf_saved_payment_note">"Сохранённая запись об оплате %1$s. Остатки указаны на дату записи."</string>
+    <string name="pdf_status_paid">"ОПЛАЧЕН"</string>
+    <string name="pdf_status_unpaid">"НЕ ОПЛАЧЕН"</string>
+    <string name="pdf_status_partial">"ЧАСТИЧНО ОПЛАЧЕН"</string>
+    <string name="pdf_status_void">"АННУЛИРОВАН"</string>
+    <string name="pdf_status_nothing_due">"НЕТ СУММЫ К ОПЛАТЕ"</string>
 </resources>

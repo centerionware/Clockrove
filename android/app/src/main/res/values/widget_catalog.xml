@@ -62,4 +62,18 @@
     <string name="pdf_total">"TOTAL"</string>
     <string name="pdf_original_invoice_total">"ORIGINAL INVOICE TOTAL"</string>
     <string name="pdf_invoice_total">"INVOICE TOTAL"</string>
+    <string name="pdf_payment_recorded">"Payment state recorded %1$s"</string>
+    <string name="pdf_copy_reference">"Copy reference: %1$s"</string>
+    <string name="pdf_credit_transferred">"Credit transferred   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Credit at issue   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Paid to date   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"BALANCE DUE   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"PAYMENTS AND CREDITS"</string>
+    <string name="pdf_cancelled_warning">"This invoice is cancelled. Do not pay this invoice."</string>
+    <string name="pdf_saved_payment_note">"Saved payment record for %1$s. Balances reflect the recorded date."</string>
+    <string name="pdf_status_paid">"PAID"</string>
+    <string name="pdf_status_unpaid">"UNPAID"</string>
+    <string name="pdf_status_partial">"PARTIALLY PAID"</string>
+    <string name="pdf_status_void">"VOID"</string>
+    <string name="pdf_status_nothing_due">"NOTHING DUE"</string>
 </resources>

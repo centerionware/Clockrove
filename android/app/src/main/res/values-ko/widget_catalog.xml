@@ -62,4 +62,18 @@
     <string name="pdf_total">"합계"</string>
     <string name="pdf_original_invoice_total">"원본 청구서 합계"</string>
     <string name="pdf_invoice_total">"청구서 합계"</string>
+    <string name="pdf_payment_recorded">"결제 상태 기록: %1$s"</string>
+    <string name="pdf_copy_reference">"사본 참조: %1$s"</string>
+    <string name="pdf_credit_transferred">"이전된 크레딧   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"발행 시 크레딧   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"지금까지 결제   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"미결제 잔액   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"결제 및 크레딧"</string>
+    <string name="pdf_cancelled_warning">"이 청구서는 취소되었습니다. 결제하지 마세요."</string>
+    <string name="pdf_saved_payment_note">"%1$s의 저장된 결제 기록입니다. 잔액은 기록된 날짜 기준입니다."</string>
+    <string name="pdf_status_paid">"결제 완료"</string>
+    <string name="pdf_status_unpaid">"미결제"</string>
+    <string name="pdf_status_partial">"일부 결제"</string>
+    <string name="pdf_status_void">"무효"</string>
+    <string name="pdf_status_nothing_due">"미결제 금액 없음"</string>
 </resources>

@@ -62,4 +62,18 @@
     <string name="pdf_total">"الإجمالي"</string>
     <string name="pdf_original_invoice_total">"إجمالي الفاتورة الأصلية"</string>
     <string name="pdf_invoice_total">"إجمالي الفاتورة"</string>
+    <string name="pdf_payment_recorded">"سُجلت حالة الدفع في %1$s"</string>
+    <string name="pdf_copy_reference">"مرجع النسخة: %1$s"</string>
+    <string name="pdf_credit_transferred">"الرصيد الدائن المحوّل   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"الرصيد الدائن عند الإصدار   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"المدفوع حتى الآن   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"الرصيد المستحق   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"المدفوعات والأرصدة الدائنة"</string>
+    <string name="pdf_cancelled_warning">"هذه الفاتورة ملغاة. لا تدفعها."</string>
+    <string name="pdf_saved_payment_note">"سجل الدفع المحفوظ لـ %1$s. تعكس الأرصدة تاريخ التسجيل."</string>
+    <string name="pdf_status_paid">"مدفوعة"</string>
+    <string name="pdf_status_unpaid">"غير مدفوعة"</string>
+    <string name="pdf_status_partial">"مدفوعة جزئيًا"</string>
+    <string name="pdf_status_void">"ملغاة"</string>
+    <string name="pdf_status_nothing_due">"لا يوجد مبلغ مستحق"</string>
 </resources>

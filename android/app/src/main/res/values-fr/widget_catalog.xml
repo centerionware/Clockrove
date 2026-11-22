@@ -62,4 +62,18 @@
     <string name="pdf_total">"TOTAL"</string>
     <string name="pdf_original_invoice_total">"TOTAL DE LA FACTURE ORIGINALE"</string>
     <string name="pdf_invoice_total">"TOTAL DE LA FACTURE"</string>
+    <string name="pdf_payment_recorded">"État de paiement enregistré le %1$s"</string>
+    <string name="pdf_copy_reference">"Référence de la copie : %1$s"</string>
+    <string name="pdf_credit_transferred">"Crédit transféré   %1$s %2$s"</string>
+    <string name="pdf_credit_at_issue">"Crédit à l’émission   %1$s %2$s"</string>
+    <string name="pdf_paid_to_date">"Payé à ce jour   %1$s %2$s"</string>
+    <string name="pdf_balance_due">"SOLDE DÛ   %1$s %2$s"</string>
+    <string name="pdf_payments_credits">"PAIEMENTS ET CRÉDITS"</string>
+    <string name="pdf_cancelled_warning">"Cette facture est annulée. Ne la payez pas."</string>
+    <string name="pdf_saved_payment_note">"Paiement enregistré pour %1$s. Les soldes correspondent à la date enregistrée."</string>
+    <string name="pdf_status_paid">"PAYÉE"</string>
+    <string name="pdf_status_unpaid">"IMPAYÉE"</string>
+    <string name="pdf_status_partial">"PARTIELLEMENT PAYÉE"</string>
+    <string name="pdf_status_void">"ANNULÉE"</string>
+    <string name="pdf_status_nothing_due">"AUCUN MONTANT DÛ"</string>
 </resources>
