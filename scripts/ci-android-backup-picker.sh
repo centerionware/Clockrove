@@ -24,7 +24,7 @@ clockrove_run_flutter_integration_test "$api" backup-picker-fixture \
   -- flutter test --no-uninstall --no-pub integration_test/backup_document_fixture_test.dart \
     -d emulator-5554 --reporter expanded > "$fixture_log" 2>&1 || { cat "$fixture_log"; exit 1; }
 cat "$fixture_log"
-fixture_marker="$(grep -Eo 'CLOCKROVE_DOCUMENT_FIXTURE path=/data/(user/0|data)/io\.github\.centerionware\.clockrove/cache/clockrove-picker-fixture\.clockrove' "$fixture_log" | tail -n 1)"
+fixture_marker="$(grep -Eo 'CLOCKROVE_DOCUMENT_FIXTURE path=/data/(user/0|data)/io\.github\.centerionware\.clockrove/(cache|code_cache)/clockrove-picker-fixture\.clockrove' "$fixture_log" | tail -n 1)"
 fixture_path="${fixture_marker#CLOCKROVE_DOCUMENT_FIXTURE path=}"
 [[ -n "$fixture_path" ]]
 timeout 30 adb -s emulator-5554 exec-out run-as "$package" cat "$fixture_path" > "$fixture_file"
