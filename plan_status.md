@@ -110,8 +110,9 @@ the reviewed-merge confirmation controls from every shipped Flutter catalog.
 Restore progress, picker cancellation, and stale-preview messages also use
 catalog keys.
 Restore conflict choices now use the same catalogs and preserve their
-native choice codes. Unknown codes get a translated display label. Remaining backup review details, error paths, and export
-progress still require migration.
+native choice codes. Unknown codes get a translated display label. Restore
+confirmation, conflict pagination, and review instructions also use the
+catalogs. Remaining restore summary details and error paths are open.
 Export phase labels, cancellation controls, and encrypted-byte progress now
 use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
 catalog keys. Export instructions, password validation, and dynamic summary

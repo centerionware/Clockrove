@@ -350,22 +350,22 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(AppMessage.applyBackupQuestion.of(context)),
-        content: Text(
-          'Clockrove will merge the reviewed records in one database transaction. '
-          'If validation fails, the transaction is rolled back. '
-          '${preview.openSessionCount > 0 ? 'Open/provisional sessions in the backup will be omitted; no end time will be invented and no timer will start. ' : ''}'
-          'Imported site automation starts disabled. Map credentials and '
-          'Android geofence registrations are excluded from the backup.',
-        ),
+        scrollable: true,
+        title: Text(AppMessage.applyBackupQuestion.of(dialogContext)),
+        content: Text([
+          AppMessage.restoreMergeTransaction.of(dialogContext),
+          if (preview.openSessionCount > 0)
+            AppMessage.restoreOpenSessionsOmitted.of(dialogContext),
+          AppMessage.restoreDeviceSettingsExcluded.of(dialogContext),
+        ].join(' ')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(AppMessage.cancel.of(context)),
+            child: Text(AppMessage.cancel.of(dialogContext)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(AppMessage.applyReviewedMerge.of(context)),
+            child: Text(AppMessage.applyReviewedMerge.of(dialogContext)),
           ),
         ],
       ),
@@ -579,13 +579,13 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     if (_page != null && _page!.conflicts.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Conflicts · page ${_pageIndex + 1}',
+                        AppMessage.restoreConflictPage.format(context, {
+                          'page': '${_pageIndex + 1}',
+                        }),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Review each proposed choice. You can revisit reviewed pages before applying.',
-                      ),
+                      Text(AppMessage.restoreReviewChoices.of(context)),
                     ],
                   ],
                 ],
@@ -622,7 +622,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : _nextConflictPage,
                         icon: const Icon(Icons.navigate_next),
-                        label: const Text('Continue to next conflict page'),
+                        label: Text(AppMessage.restoreNextConflictPage.of(context)),
                       ),
                     if (_pageIndex > 0)
                       TextButton.icon(
@@ -630,7 +630,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : () => _loadConflictPage(_pageIndex - 1),
                         icon: const Icon(Icons.navigate_before),
-                        label: const Text('Previous conflict page'),
+                        label: Text(AppMessage.restorePreviousConflictPage.of(context)),
                       ),
                     if (restore.preview.localOpenSessionCount == 0 &&
                         _page?.done == true)
@@ -642,10 +642,10 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       ),
                     if (restore.preview.localOpenSessionCount > 0 ||
                         (_page != null && _page!.done && !_pageChoicesResolved))
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          'Resolve every conflict and stop any running local timer to enable apply.',
+                          AppMessage.restoreResolveBeforeApply.of(context),
                         ),
                       ),
                     TextButton.icon(
@@ -753,10 +753,10 @@ final class _ConflictCard extends StatelessWidget {
               ),
             ],
             if (conflict.allowedChoices.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  'This app cannot resolve this conflict. Applying is blocked; discard this preview.',
+                  AppMessage.restoreUnsupportedConflict.of(context),
                 ),
               )
             else ...[
@@ -780,7 +780,7 @@ final class _ConflictCard extends StatelessWidget {
               ),
               if (!conflict.resolved)
                 Text(
-                  'Choose how to handle this item before continuing.',
+                  AppMessage.restoreChooseItem.of(context),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
             ],
