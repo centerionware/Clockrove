@@ -39,9 +39,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: HelpButton(topic: HelpTopic.automation),
-        ),
+        home: Scaffold(body: HelpButton(topic: HelpTopic.automation)),
       ),
     );
 
