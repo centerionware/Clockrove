@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 
 /// Captures one immutable native command for response-loss retries. Keeps its
@@ -30,7 +31,7 @@ class _BusinessCommandState extends State<BusinessCommand>
   @override
   bool get wantKeepAlive => _pending != null;
   bool _busy = false;
-  String? _message;
+  String Function(BuildContext)? _message;
   Future<void> _submit() async {
     if (_busy) return;
     try {
@@ -46,7 +47,9 @@ class _BusinessCommandState extends State<BusinessCommand>
       setState(() {
         _pending = null;
         _busy = false;
-        _message = result.committed ? null : _conflict(result.conflict);
+        _message = result.committed
+            ? null
+            : (context) => _conflict(context, result.conflict);
       });
       updateKeepAlive();
       widget.onPendingChanged?.call(false);
@@ -55,23 +58,23 @@ class _BusinessCommandState extends State<BusinessCommand>
       if (mounted) {
         setState(() {
           _busy = false;
-          _message = e.message;
+          _message = (_) => e.message;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _busy = false;
-          _message = 'The result is unknown. Retry to check the same operation before leaving.';
+          _message = AppMessage.commandResultUnknown.of;
         });
       }
     }
   }
 
-  String _conflict(String? value) => switch (value) {
+  String _conflict(BuildContext context, String? value) => switch (value) {
     'INVALID_MONEY' => 'Enter an exact nonnegative price within the supported length. Your draft is kept.',
-    'INVALID_CURRENCY' => 'Choose a supported currency. Your draft is kept.',
-    'CUSTOMER_UNAVAILABLE' => 'This customer is unavailable. Choose another customer or clear the selection.',
+    'INVALID_CURRENCY' => AppMessage.commandInvalidCurrency.of(context),
+    'CUSTOMER_UNAVAILABLE' => AppMessage.commandCustomerUnavailable.of(context),
     'EMAIL_TOO_LARGE' => 'The expanded email is too long. Shorten the email template or document details.',
     'INVALID_QUOTE_INVOICE' => 'Review the selected actual work, dates and accepted price before confirming the invoice.',
     'INVALID_QUOTE_INVOICE_SOURCES' => 'Select completed tasks for task-rate work or finalized time for hourly work.',
@@ -119,12 +122,12 @@ class _BusinessCommandState extends State<BusinessCommand>
     'TASK_IMAGE_STORAGE_LIMIT' => 'This job has reached its 100 MB task-photo limit. Remove an image before adding another.',
     'TASK_IMAGE_UNAVAILABLE' =>
       'This photo was removed. Refresh the task before continuing.',
-    'STALE_STATE' => 'Data changed. Your draft is kept. Refresh the details, review the latest values and save again.',
+    'STALE_STATE' => AppMessage.commandStaleState.of(context),
     'OVERLAP' => 'This interval overlaps work in this or another job. Adjust the start or end time.',
     'INVALID_BOUNDARY' => 'End must be after start with a valid duration.',
     'INVALID_TIMEZONE' =>
       'Check the timezone and choose the intended UTC offset.',
-    'WIDGET_UNAVAILABLE' => 'This widget was removed. Close setup and add a new widget from your launcher.',
+    'WIDGET_UNAVAILABLE' => AppMessage.commandWidgetUnavailable.of(context),
     'SESSION_UNAVAILABLE' => 'This work entry was removed. Your draft is kept.',
     'STOP_SESSION_BEFORE_EDIT' => 'Clock out before changing this work entry.',
     'CURRENCY_MISMATCH' =>
@@ -199,8 +202,8 @@ class _BusinessCommandState extends State<BusinessCommand>
       'Enter a customer name and a valid email, or leave email blank.',
     'INVALID_JOB' => 'Check the job name, rate and customer email.',
     'JOB_UNAVAILABLE' ||
-    'JOB_ARCHIVED' => 'This job is unavailable for editing.',
-    _ => 'The change could not be applied. Your draft is kept. Refresh the details and try again.',
+    'JOB_ARCHIVED' => AppMessage.commandJobUnavailable.of(context),
+    _ => AppMessage.commandChangeFailed.of(context),
   };
   @override
   Widget build(BuildContext context) {
@@ -215,7 +218,7 @@ class _BusinessCommandState extends State<BusinessCommand>
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
-                _message!,
+                _message!(context),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
@@ -230,7 +233,9 @@ class _BusinessCommandState extends State<BusinessCommand>
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    _pending != null ? 'Retry same operation' : widget.label,
+                    _pending != null
+                        ? AppMessage.commandRetry.of(context)
+                        : widget.label,
                   ),
           ),
         ],

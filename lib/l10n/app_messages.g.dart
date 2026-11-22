@@ -213,7 +213,15 @@ enum AppMessage {
   widgetChooseEachTime("Choose each time"),
   done("Done"),
   widgetSave("Save widget"),
-  widgetFinishRetry("Settings saved. Tap Done to close widget setup.");
+  widgetFinishRetry("Settings saved. Tap Done to close widget setup."),
+  commandResultUnknown("The result is unknown. Retry to check the same operation before leaving."),
+  commandRetry("Retry same operation"),
+  commandChangeFailed("The change could not be applied. Your draft is kept. Refresh the details and try again."),
+  commandStaleState("Data changed. Your draft is kept. Refresh the details, review the latest values and save again."),
+  commandWidgetUnavailable("This widget was removed. Close setup and add a new widget from your launcher."),
+  commandJobUnavailable("This job is unavailable for editing."),
+  commandInvalidCurrency("Choose a supported currency. Your draft is kept."),
+  commandCustomerUnavailable("This customer is unavailable. Choose another customer or clear the selection.");
 
   const AppMessage(this.english);
   final String english;

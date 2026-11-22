@@ -139,7 +139,9 @@ articles complete the eight-topic Help catalog migration for the current 17
 locales. Device verification is deferred to the final Actions run.
 The Flutter widget configuration screen now uses translated picker labels,
 instructions, save actions and recovery text across all current locales.
-Shared business-command feedback still needs migration.
+Shared business-command retry, unknown outcome, stale state, missing widget,
+and other common failures are now catalog-backed. Feature-specific conflict
+messages and validation errors still need migration.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.
