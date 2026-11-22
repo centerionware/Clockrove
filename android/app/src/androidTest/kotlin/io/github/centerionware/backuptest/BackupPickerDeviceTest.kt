@@ -40,7 +40,8 @@ class BackupPickerDeviceTest {
 
         click("App settings and customers")
         click("Settings")
-        click("Restore encrypted backup", scroll = true)
+        waitFor("Settings backup section") { findLabel("Backup and restore") }
+        click("Restore encrypted backup")
         openPicker()
         pressBack()
         waitFor("picker cancellation") { findLabel("File selection cancelled.") }

@@ -47,7 +47,10 @@ Statuses describe evidence, not intent.
   the committed merge and imported automation checks. The separate API 35
   Settings journey failed entering its default tax value. Its test now verifies
   focus and falls back to keyboard entry if accessibility text entry fails.
-  Full validation remains pending.
+  The [next validation](https://github.com/centerionware/Clockrove/actions/runs/45074473731)
+  passed the API 24 picker and native suite. On API 35 the picker test scrolled
+  past the restore button while Settings was opening. It now waits for the top
+  backup section and uses the visible restore button. Full validation remains pending.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
