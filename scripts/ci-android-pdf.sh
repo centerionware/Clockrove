@@ -141,6 +141,9 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
+  # Run the picker before other device journeys mutate app and picker state.
+  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
+    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
@@ -246,8 +249,6 @@ done
     -- flutter test --no-uninstall --no-pub integration_test/help_navigation_test.dart \
       -d emulator-5554 --reporter expanded \
     | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
-    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT

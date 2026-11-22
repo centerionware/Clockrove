@@ -56,3 +56,6 @@ assert all(int(result.attrib[key]) == 0 for key in ("failures", "errors", "skipp
 case = result.find("testcase")
 assert case.attrib["name"] == "documentPickerRestoresIntoAnIndependentDatabase", case.attrib
 PY_DEVICE
+# Leave a fresh app database and remove only the synthetic shared file.
+clear_fixture_app
+timeout 30 adb -s emulator-5554 shell rm -f /sdcard/Download/clockrove-picker-fixture.clockrove
