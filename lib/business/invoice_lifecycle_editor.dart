@@ -77,26 +77,26 @@ class _LineFields {
     quantity.dispose();
   }
 
-  InvoiceEditLine freeze(int digits) {
+  InvoiceEditLine freeze(BuildContext context, int digits) {
     if (original.amount == null) return original;
     if (title.text.trim().isEmpty) {
-      throw const FormatException('Every charged line needs a description.');
+      throw FormatException(AppMessage.invoiceLineDescriptionRequired.of(context));
     }
     final unit = original.quantity != null;
     final priceMinor = unit
         ? parseMoney(price.text, digits)
         : parsePaymentMoney(price.text, digits);
     if (priceMinor == null) {
-      throw const FormatException('Enter a price for every included line.');
+      throw FormatException(AppMessage.invoiceLinePriceRequired.of(context));
     }
     final units = unit ? parseTaskQuantity(quantity.text) : null;
     return InvoiceEditLine(
       original.index,
       title.text.trim(),
       unit
-          ? 'Quantity and unit price\n${detail.text}'
+          ? '${AppMessage.invoiceQuantityPriceBasis.of(context)}\n${detail.text}'
           : priceMinor != original.amount && detail.text == original.detail
-          ? 'Adjusted amount. Original basis:\n${detail.text}'
+          ? '${AppMessage.invoiceAdjustedAmountBasis.of(context)}\n${detail.text}'
           : detail.text,
       unit ? taskAmount(priceMinor, units!) : priceMinor,
       quantity: units,
@@ -166,7 +166,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       '${_invoice.currency} ${money(minor, _invoice.digits)}';
   List<InvoiceEditLine> _freeze() => _lines
       .where((line) => line.included)
-      .map((line) => line.freeze(_invoice.digits))
+      .map((line) => line.freeze(context, _invoice.digits))
       .toList();
   String _addedMinor(InvoiceBillingPreview? preview) {
     if (_added == null) return '0';
@@ -175,9 +175,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
         preview.problem != null ||
         preview.currency != _invoice.currency ||
         preview.subtotal == null) {
-      throw const FormatException(
-        'Refresh and review the added work before issuing a replacement.',
-      );
+      throw FormatException(AppMessage.invoiceRefreshAddedWork.of(context));
     }
     return parsePaymentMoney(preview.subtotal!, _invoice.digits)!;
   }
@@ -228,9 +226,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       if (widget.replace) {
         final lines = _freeze();
         if (!lines.any((line) => line.amount != null) && _added == null) {
-          throw const FormatException(
-            'Include a charged line or actual unbilled work.',
-          );
+          throw FormatException(AppMessage.invoiceReplacementNeedsWork.of(context));
         }
         final totals = _totals(preview);
         summary = [
