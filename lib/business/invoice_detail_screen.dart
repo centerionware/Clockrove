@@ -202,7 +202,10 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                     ),
                     if (data.collectedTax != null)
                       Text(
-                        'Collected tax included: ${data.currency} ${money(data.collectedTax, data.digits)}',
+                        AppMessage.invoiceCollectedTaxIncluded.format(context, {
+                          'currency': data.currency,
+                          'amount': money(data.collectedTax, data.digits),
+                        }),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],
@@ -361,9 +364,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (data.payments.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No payments recorded.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(AppMessage.invoiceNoPayments.of(context)),
               ),
             for (final payment in data.payments)
               Card(
@@ -386,16 +389,21 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                           ].where((v) => v.isNotEmpty).join(' · '),
                         ),
                       if (payment.reversalId != null)
-                        const Text('Reversed · original receipt kept'),
+                        Text(AppMessage.invoicePaymentReversed.of(context)),
                       if (payment.note.isNotEmpty ||
                           payment.reversalNote != null)
                         ExpansionTile(
                           tilePadding: EdgeInsets.zero,
-                          title: const Text('Internal notes'),
+                          title: Text(AppMessage.invoicePaymentNotes.of(context)),
                           children: [
                             if (payment.note.isNotEmpty) Text(payment.note),
                             if (payment.reversalNote != null)
-                              Text('Correction: ${payment.reversalNote}'),
+                              Text(
+                                AppMessage.invoicePaymentCorrectionNote.format(
+                                  context,
+                                  {'note': payment.reversalNote!},
+                                ),
+                              ),
                           ],
                         ),
                       Wrap(
@@ -409,14 +417,14 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                                     payment.originalInvoiceId,
                                   )
                                 : null,
-                            child: const Text('Open receipt'),
+                            child: Text(AppMessage.openPaymentReceipt.of(context)),
                           ),
                           if (payment.allocatedInvoiceId != data.invoiceId)
                             TextButton(
                               onPressed: eligible
                                   ? () => _related(payment.allocatedInvoiceId)
                                   : null,
-                              child: const Text('Open current invoice'),
+                              child: Text(AppMessage.openCurrentInvoice.of(context)),
                             ),
                           if (!voided &&
                               payment.reversalId == null &&
@@ -425,7 +433,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                               onPressed: eligible
                                   ? () => _payment(reversal: payment)
                                   : null,
-                              child: const Text('Correct payment'),
+                              child: Text(AppMessage.correctInvoicePayment.of(context)),
                             ),
                         ],
                       ),
@@ -439,22 +447,34 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (data.copies.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Receipts and balance copies will appear here.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(AppMessage.invoiceNoSavedCopies.of(context)),
               ),
             for (final copy in data.copies)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.description_outlined),
                 title: Text(switch (copy.kind) {
-                  'RECEIPT' => 'Payment receipt',
-                  'CORRECTION' => 'Payment correction',
-                  'VOID' => 'Cancellation copy',
-                  _ => 'Balance copy',
+                  'RECEIPT' => AppMessage.invoicePaymentReceipt.of(context),
+                  'CORRECTION' => AppMessage.invoicePaymentCorrection.of(context),
+                  'VOID' => AppMessage.invoiceCancellationCopy.of(context),
+                  _ => AppMessage.invoiceBalanceCopy.of(context),
                 }),
                 subtitle: Text(
-                  '${copy.createdLabel}\n${copy.kind == 'VOID' ? AppMessage.invoiceCreditTransferred.of(context) : 'Paid'} ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
+                  [
+                    copy.createdLabel,
+                    AppMessage.invoiceCopyBalanceSummary.format(context, {
+                      'paidLabel': (copy.kind == 'VOID'
+                              ? AppMessage.invoiceCreditTransferred
+                              : AppMessage.invoiceCopyPaid)
+                          .of(context),
+                      'paid': money(copy.paid, data.digits),
+                      'dueLabel': AppMessage.invoiceCopyDue.of(context),
+                      'due': money(copy.due, data.digits),
+                      'currency': data.currency,
+                    }),
+                  ].join('\n'),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: eligible ? () => _open(copy.id) : null,

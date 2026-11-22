@@ -502,7 +502,22 @@ enum AppMessage {
   invoiceAccountingEmailMatches("The accounting address is already the customer recipient."),
   invoiceAccountingEmailCc("Email copies CC {email}."),
   invoiceDetailsRefreshFailed("Refresh failed. Saved details are shown; refresh before making changes."),
-  invoiceDeletedJobRetained("Job deleted · financial records retained");
+  invoiceDeletedJobRetained("Job deleted · financial records retained"),
+  invoiceNoPayments("No payments recorded."),
+  invoicePaymentReversed("Reversed · original receipt kept"),
+  invoicePaymentNotes("Internal notes"),
+  invoicePaymentCorrectionNote("Correction: {note}"),
+  openPaymentReceipt("Open receipt"),
+  openCurrentInvoice("Open current invoice"),
+  correctInvoicePayment("Correct payment"),
+  invoiceNoSavedCopies("Receipts and balance copies will appear here."),
+  invoicePaymentReceipt("Payment receipt"),
+  invoicePaymentCorrection("Payment correction"),
+  invoiceBalanceCopy("Balance copy"),
+  invoiceCopyPaid("Paid"),
+  invoiceCopyDue("Due"),
+  invoiceCopyBalanceSummary("{paidLabel} {paid} · {dueLabel} {due} {currency}"),
+  invoiceCollectedTaxIncluded("Collected tax included: {currency} {amount}");
 
   const AppMessage(this.english);
   final String english;

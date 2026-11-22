@@ -210,6 +210,8 @@ statuses and balance labels from the Flutter catalogs. Invoice history also
 localizes its navigation, empty states, and record labels. Invoice details
 also localize payment, correction, and document actions and section titles,
 plus cancellation, accounting copy, deleted-job, and refresh notices.
+Payment history and saved copies localize empty states, reversal and
+receipt labels, and balance and collected-tax summaries.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left
