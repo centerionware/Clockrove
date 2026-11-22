@@ -85,3 +85,18 @@ No build, test, formatter, or analyzer ran on the development VM.
   in-flight method-channel read.
 - End-to-end transactional restore acceptance on a device remains open, as do
   M7.2's near-maximum archive memory gate and M7.6.
+
+### Near-limit restore preview and apply
+
+The merged PR #74 head ran the near-limit preview on API 24 and 35 in
+[Actions 44031580892](https://github.com/centerionware/Clockrove/actions/runs/44031580892).
+Both used a 67,087,784-byte archive with 16 synthetic media files. Peak RSS
+increases were 20,252 KiB and 21,376 KiB, respectively, below the 64 MiB
+preview budget. The benchmark uses an encrypted private file and native
+preview staging. It does not exercise the Android system document picker.
+
+The follow-up extends the same device journey through native apply. It checks
+that replay inserts zero rows, preserves the state version and attachment
+identities and sizes, and retires the preview handle. Actions evidence for the
+apply extension is pending. A data-changing restore via the system picker
+remains open.

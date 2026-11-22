@@ -555,8 +555,28 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
       nativeHandleOpenAtPreview = true;
       expect(imported.metrics.archiveBytes, encrypted.archiveBytes);
       expect(imported.metrics.archiveSha256, encrypted.archiveSha256);
-      nativeHandleClosed = await imported.close();
-      expect(nativeHandleClosed, isTrue);
+      final preview = imported.preview;
+      final applied = await imported.api.apply(
+        importId: preview.importId,
+        previewToken: preview.previewToken,
+        expectedLocalStateVersion: preview.localStateVersion,
+      );
+      expect(applied.insertedCount, 0);
+      expect(applied.stateVersion, preview.localStateVersion);
+      expect(await imported.close(), isFalse);
+      nativeHandleClosed = imported.nativeHandleClosed;
+
+      final restored = await businessApi.taskConversation(jobId, taskId);
+      expect(
+        restored.taskAttachments.map(
+          (attachment) => (attachment.id, attachment.bytes),
+        ),
+        unorderedEquals(
+          conversation.taskAttachments.map(
+            (attachment) => (attachment.id, attachment.bytes),
+          ),
+        ),
+      );
 
       return _RestorePreviewMetrics(
         archiveBytes: imported.metrics.archiveBytes,
