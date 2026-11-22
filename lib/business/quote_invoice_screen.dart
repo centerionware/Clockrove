@@ -387,51 +387,28 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${accepted.number} · Revision ${accepted.revision}'),
+                Text(AppMessage.quoteInvoiceRevisionRef.format(context, {'number': accepted.number, 'revision': accepted.revision.toString()})),
                 Text(data.jobName),
-                Text(
-                  '${request.firstDate} — ${request.lastDate} · ${request.timezone}',
-                ),
-                Text(
-                  'Customer: ${result.customer.isEmpty ? 'Not specified' : result.customer}',
-                ),
-                Text(
-                  'Email: ${result.email.isEmpty ? 'Not set' : result.email}',
-                ),
-                Text(
-                  'Prices: ${choices.currentPrices ? 'current values, explicitly revised' : 'accepted agreement'}',
-                ),
-                Text(
-                  'Tax: ${taxPercent(result.taxUnits!)}% · ${choices.currentTax ? 'current job tax' : 'accepted agreement'}',
-                ),
+                Text(AppMessage.quoteInvoiceDateRange.format(context, {'first': request.firstDate, 'last': request.lastDate, 'timezone': request.timezone})),
+                Text(AppMessage.quoteInvoiceReviewCustomer.format(context, {'customer': result.customer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : result.customer})),
+                Text(AppMessage.quoteInvoiceReviewEmail.format(context, {'email': result.email.isEmpty ? AppMessage.quoteInvoiceEmailNotSet.of(context) : result.email})),
+                Text(AppMessage.quoteInvoiceReviewPricesLabel.format(context, {'basis': (choices.currentPrices ? AppMessage.quoteInvoiceReviewCurrentPrices : AppMessage.quoteInvoiceReviewAcceptedAgreement).of(context)})),
+                Text(AppMessage.quoteInvoiceReviewTax.format(context, {'rate': taxPercent(result.taxUnits!), 'basis': (choices.currentTax ? AppMessage.quoteInvoiceReviewCurrentJobTax : AppMessage.quoteInvoiceReviewAcceptedTaxBasis).of(context)})),
                 for (final task in data.tasks.where(
                   (task) => choices.taskIds.contains(task.id),
                 ))
-                  Text(
-                    '${task.title}\n${taskQuantity(task.actualQuantity)} × ${data.currency} ${money(choices.currentPrices ? task.currentPrice : task.acceptedPrice, data.digits)}',
-                  ),
+                  Text(AppMessage.quoteInvoiceReviewTaskLine.format(context, {'title': task.title, 'quantity': taskQuantity(task.actualQuantity), 'currency': data.currency, 'amount': money(choices.currentPrices ? task.currentPrice : task.acceptedPrice, data.digits)})),
                 for (final time in choices.times)
-                  Text(
-                    '${time.label}\n${reportDuration(time.durationMillis)} actual finalized work',
-                  ),
+                  Text(AppMessage.quoteInvoiceReviewTimeLine.format(context, {'title': time.label, 'duration': reportDuration(time.durationMillis)})),
                 const SizedBox(height: 12),
-                Text(
-                  'Subtotal ${data.currency} ${money(result.subtotal, data.digits)}',
-                ),
-                Text('Tax ${data.currency} ${money(result.tax, data.digits)}'),
-                Text(
-                  'Invoice total ${data.currency} ${money(result.total, data.digits)}',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text(
-                  'Whole quote estimate ${data.currency} ${accepted.total}. This invoice includes only selected actual work; quantities, duration and per-invoice tax can differ.',
-                ),
+                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceSubtotal.of(context), 'amount': '${data.currency} ${money(result.subtotal, data.digits)}'})),
+                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceTax.of(context), 'amount': '${data.currency} ${money(result.tax, data.digits)}'})),
+                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceTotal.of(context), 'amount': '${data.currency} ${money(result.total, data.digits)}'}), style: Theme.of(context).textTheme.titleLarge),
+                Text(AppMessage.quoteInvoiceWholeEstimate.format(context, {'currency': data.currency, 'total': accepted.total})),
                 const SizedBox(height: 12),
                 if (choices.note.isNotEmpty)
-                  Text('Private review note\n${choices.note}'),
-                const Text(
-                  'This allocates the selected actual work to this quote and reserves it against duplicate billing. It creates no additional work or payment. Emailing is a separate action.',
-                ),
+                  Text(AppMessage.quoteInvoicePrivateReviewNote.format(context, {'note': choices.note})),
+                Text(AppMessage.quoteInvoiceAllocationNotice.of(context)),
               ],
             ),
           ),

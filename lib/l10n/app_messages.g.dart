@@ -665,7 +665,23 @@ enum AppMessage {
   quoteInvoiceEstimatedRate("Estimated {hours} hours · Agreed rate {currency} {rate}/hour"),
   quoteInvoiceCurrentRate("Current rate {currency} {rate}/hour"),
   quoteInvoiceSelectedDuration("Selected actual duration: {duration}"),
-  quoteInvoiceAcceptedCustomer("Accepted customer: {customer}");
+  quoteInvoiceAcceptedCustomer("Accepted customer: {customer}"),
+  quoteInvoiceRevisionRef("{number} · Revision {revision}"),
+  quoteInvoiceDateRange("{first} — {last} · {timezone}"),
+  quoteInvoiceReviewCustomer("Customer: {customer}"),
+  quoteInvoiceReviewEmail("Email: {email}"),
+  quoteInvoiceReviewPricesLabel("Prices: {basis}"),
+  quoteInvoiceReviewCurrentPrices("Current values, explicitly revised"),
+  quoteInvoiceReviewAcceptedAgreement("Accepted agreement"),
+  quoteInvoiceReviewTax("Tax: {rate}% · {basis}"),
+  quoteInvoiceReviewCurrentJobTax("Current job tax"),
+  quoteInvoiceReviewAcceptedTaxBasis("Accepted agreement"),
+  quoteInvoiceReviewTaskLine("{title}\n{quantity} × {currency} {amount}"),
+  quoteInvoiceReviewTimeLine("{title}\n{duration} actual finalized work"),
+  quoteInvoiceWholeEstimate("Whole quote estimate {currency} {total}. This invoice includes only selected actual work; quantities, duration and per-invoice tax can differ."),
+  quoteInvoicePrivateReviewNote("Private review note\n{note}"),
+  quoteInvoiceAllocationNotice("This allocates the selected actual work to this quote and reserves it against duplicate billing. It creates no additional work or payment. Emailing is a separate action."),
+  quoteInvoiceEmailNotSet("Not set");
 
   const AppMessage(this.english);
   final String english;
