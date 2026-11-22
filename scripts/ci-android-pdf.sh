@@ -203,6 +203,7 @@ expected = {
     'io.github.centerionware.clockrove.tracking.ReportBoundsDeviceTest': 3,
     'io.github.centerionware.clockrove.tracking.ReportMapDeviceTest': 1,
     'io.github.centerionware.clockrove.tracking.GpsRangeDeletionDeviceTest': 1,
+    'io.github.centerionware.clockrove.tracking.GeofenceReceiptsDeviceTest': 1,
     'io.github.centerionware.clockrove.tracking.SessionTimeDeviceTest': 4,
     'io.github.centerionware.clockrove.settings.SettingsSaveDeviceTest': 4,
     'io.github.centerionware.clockrove.widget.WidgetHostDeviceTest': 4,

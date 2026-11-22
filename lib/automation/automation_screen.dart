@@ -357,10 +357,15 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   if (value.settings.enabled &&
                       value.precise &&
                       value.background &&
-                      !const {'READY', 'REGISTERING'}.contains(value.health))
+                      value.sites.any((site) => site.enabled) &&
+                      value.health != 'REGISTERING')
                     TextButton(
                       onPressed: _locked ? null : _retryMonitoring,
-                      child: const Text('Retry site monitoring'),
+                      child: Text(
+                        value.health == 'READY'
+                            ? 'Refresh site monitoring'
+                            : 'Retry site monitoring',
+                      ),
                     ),
                 ]),
                 const SizedBox(height: 16),

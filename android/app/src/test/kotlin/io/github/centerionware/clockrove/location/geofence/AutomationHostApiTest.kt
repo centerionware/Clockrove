@@ -40,7 +40,10 @@ class AutomationHostApiTest {
         shadowOf(app).denyPermissions(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         repository = TimerRepository(app)
         job = repository.createJob("Synthetic site settings")
-        api = AutomationHostApi(activity, messenger, repository, { permissionChanges++ }) { visible }
+        api = AutomationHostApi(activity, messenger, repository, { force ->
+            if (force) forcedRegistrations++
+            permissionChanges++
+        }) { visible }
     }
     @After fun teardown() { api.detach(); repository.close(); controller.pause().stop().destroy() }
     private fun until(condition: () -> Boolean) {
@@ -147,6 +150,8 @@ class AutomationHostApiTest {
         assertTrue(repository.locationPoints("off-clock").isEmpty())
         assertEquals(2, cancelled)
     }
+    private var forcedRegistrations = 0
+
     @Test fun monitoringRetryRequiresForegroundAndDoesNotStartATimerOrRequestPermission() {
         val before = repository.snapshot()
         visible = false
@@ -157,6 +162,7 @@ class AutomationHostApiTest {
         assertTrue(response.finished)
         assertNull(response.error)
         assertEquals(1, permissionChanges)
+        assertEquals(1, forcedRegistrations)
         assertNull(shadowOf(activity).lastRequestedPermission)
         assertNull(shadowOf(activity).nextStartedService)
         assertEquals(before, repository.snapshot())

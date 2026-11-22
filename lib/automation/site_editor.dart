@@ -41,7 +41,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     text: widget.site?.longitude.toString() ?? '',
   );
   late final _radius = TextEditingController(
-    text: widget.site?.radius.toString() ?? '30',
+    text: widget.site?.radius.toString() ?? '150',
   );
   late bool _enabled = widget.site?.enabled ?? true;
   @override
@@ -90,7 +90,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   radius >= 1.8 &&
                   radius <= 10000
               ? radius
-              : 30,
+              : 150,
         ),
       ),
     );
@@ -231,7 +231,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Use a circular area around the site. A larger radius can help when location accuracy varies.',
+                  'Use a circular area around the site. Use 150 m for more reliable automatic arrival and departure. Smaller radii may miss transitions.',
                 ),
                 const SizedBox(height: 24),
                 TextFormField(

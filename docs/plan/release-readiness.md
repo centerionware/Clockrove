@@ -34,7 +34,7 @@ Use unit/domain tests, native integration tests, widget/UI tests and physical-de
 
 ## 11. Defaults and remaining gates
 
-Implementation defaults in this plan fill gaps without changing the owner's choices: 30 m site radius with a 1.8 m minimum, 0–1,440 minute grace, three initial board columns, no task timers, English initial UI, provider-independent records, current-device report timezone, and no automatic OS backup of sensitive data. Preserve them unless evidence reveals an incompatibility; document any necessary revision before implementing a changed behavior.
+Implementation defaults in this plan fill gaps without changing the owner's choices: 150 m default site radius with a 1.8 m minimum, 0–1,440 minute grace, three initial board columns, no task timers, English initial UI, provider-independent records, current-device report timezone, and no automatic OS backup of sensitive data. Preserve them unless evidence reveals an incompatibility; document any necessary revision before implementing a changed behavior.
 
 Remaining gates are concrete, not assumed complete:
 
