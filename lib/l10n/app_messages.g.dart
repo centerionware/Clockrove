@@ -446,7 +446,15 @@ enum AppMessage {
   invoiceEmailSubjectLabel("Email subject template"),
   invoiceEmailBodyLabel("Email body template"),
   invoiceEmailDefaultSubject("Invoice {invoice_number} — {job_name}"),
-  invoiceEmailDefaultBody("Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}");
+  invoiceEmailDefaultBody("Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}"),
+  invoiceEmailInstructions("Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending."),
+  invoiceEmailTooLong("The template is too long. Shorten it and try again."),
+  invoiceEmailSubjectControl("The subject must be one line without control characters."),
+  invoiceEmailBodyControl("The body contains an unsupported control character."),
+  invoiceEmailUnmatchedBrace("The template has an unmatched closing brace. Use a complete placeholder such as {company_name}."),
+  invoiceEmailUnfinishedPlaceholder("The template has an unfinished placeholder. Add a closing brace."),
+  invoiceEmailUnknownPlaceholder("The template has an unknown placeholder. Choose one of the supported placeholders above."),
+  invoiceEmailFixTemplates("Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.");
 
   const AppMessage(this.english);
   final String english;

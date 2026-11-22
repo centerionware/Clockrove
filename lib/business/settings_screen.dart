@@ -52,9 +52,8 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError,
-      _bodyError,
-      _taxError,
+  AppMessage? _subjectError, _bodyError;
+  String? _taxError,
       _receivablesError,
       _minimumHoursErrorText,
       _minimumTaskFeeError;
@@ -212,9 +211,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       _minimumTaskFeeError = minimumTaskFee;
     });
     if (subject != null || body != null) {
-      throw const FormatException(
-        'Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.',
-      );
+      throw FormatException(AppMessage.invoiceEmailFixTemplates.of(context));
     }
     if (tax != null) throw FormatException(tax);
     if (receivables != null) throw FormatException(receivables);
@@ -533,15 +530,13 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.',
-        ),
+        Text(AppMessage.invoiceEmailInstructions.of(context)),
         const SizedBox(height: 16),
         _field(
           _subject,
           AppMessage.invoiceEmailSubjectLabel.of(context),
           length: 500,
-          error: _subjectError,
+          error: _subjectError?.of(context),
           onChanged: _templateChanged,
         ),
         _field(
@@ -549,7 +544,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           AppMessage.invoiceEmailBodyLabel.of(context),
           lines: 5,
           length: 20000,
-          error: _bodyError,
+          error: _bodyError?.of(context),
           onChanged: _templateChanged,
         ),
         BusinessCommand(

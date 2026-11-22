@@ -202,9 +202,10 @@ templates, and custom templates use their saved text. Catalog generation
 checks named email placeholders across Android locales and matches the
 Flutter editor templates against the native defaults. Settings displays the
 localized default templates and their field labels. Unedited defaults are
-saved in the existing storage format. Settings template instructions and
-validation, payment event descriptions stored in snapshots, and rendered
-PDF locale and right-to-left verification remain open.
+saved in the existing storage format. Template instructions and local field
+validation now use catalog messages, including the literal template tokens.
+Native command rejection messages, payment event descriptions stored in
+snapshots, and rendered PDF locale and right-to-left verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.
