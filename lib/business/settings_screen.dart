@@ -256,7 +256,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _currency,
-          decoration: const InputDecoration(labelText: 'Currency for new jobs'),
+          decoration: InputDecoration(labelText: AppMessage.currencyForNewJobs.of(context)),
           items: [
             for (final c in currencies.keys)
               DropdownMenuItem(value: c, child: Text(c)),
@@ -298,7 +298,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _hourlyBillingMode,
-          decoration: const InputDecoration(labelText: 'Hourly billing rule'),
+          decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
           items: const [
             DropdownMenuItem(
               value: minimumThenExactBilling,
@@ -318,7 +318,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           controller: _minimumHours,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Minimum billable hours',
+            labelText: AppMessage.minimumBillableHours.of(context),
             helperText:
                 '0 disables the minimum. Applied only to hourly invoices.',
             errorText: _minimumHoursErrorText,
@@ -382,7 +382,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             maxLength: 32,
             maxLengthEnforcement: MaxLengthEnforcement.none,
             decoration: InputDecoration(
-              labelText: 'Default tax (%)',
+              labelText: AppMessage.defaultTax.of(context),
               helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',
               helperMaxLines: 3,
               errorText: _taxError,
@@ -401,8 +401,13 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        _field(_name, 'Company name', length: 240),
-        _field(_email, 'Company email', length: 254, email: true),
+        _field(_name, AppMessage.companyName.of(context), length: 240),
+        _field(
+          _email,
+          AppMessage.companyEmail.of(context),
+          length: 254,
+          email: true,
+        ),
         Semantics(
           identifier: 'accounts-receivable-email',
           child: _field(
@@ -428,9 +433,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             'Invoice and receipt emails CC this address, or the company email when blank.',
           ),
         ),
-        _field(_phone, 'Phone', length: 120),
-        _field(_address, 'Address', lines: 2),
-        _field(_website, 'Website', length: 2000),
+        _field(_phone, AppMessage.phone.of(context), length: 120),
+        _field(_address, AppMessage.address.of(context), lines: 2),
+        _field(_website, AppMessage.website.of(context), length: 2000),
         const SizedBox(height: 16),
         Text(
           'Invoice appearance',
@@ -439,7 +444,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _style,
-          decoration: const InputDecoration(labelText: 'Invoice style'),
+          decoration: InputDecoration(labelText: AppMessage.invoiceStyle.of(context)),
           items: const [
             DropdownMenuItem(value: 'MINIMAL', child: Text('Minimal')),
             DropdownMenuItem(value: 'CLASSIC', child: Text('Classic')),
@@ -468,7 +473,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               ),
             ),
             icon: const Icon(Icons.visibility_outlined),
-            label: const Text('Preview invoice'),
+            label: Text(AppMessage.previewInvoice.of(context)),
           ),
         ),
         const SizedBox(height: 20),
@@ -562,7 +567,7 @@ class CustomersScreen extends ConsumerWidget {
         MaterialPageRoute<void>(builder: (_) => const CustomerEditor()),
       ),
       icon: const Icon(Icons.person_add_alt),
-      label: const Text('Customer'),
+      label: Text(AppMessage.customer.of(context)),
     ),
     body: ref
         .watch(businessSettingsProvider)
@@ -572,7 +577,7 @@ class CustomersScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: TextButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry customers'),
+              child: Text(AppMessage.retryCustomers.of(context)),
             ),
           ),
           data: (data) => data.customers.isEmpty

@@ -22,7 +22,7 @@ class JobSettingsScreen extends ConsumerWidget {
     final business = ref.watch(businessSettingsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Job settings'),
+        title: Text(AppMessage.jobSettings.of(context)),
         actions: [
           IconButton(
             tooltip: 'Refresh job details and deletion eligibility',
@@ -37,7 +37,7 @@ class JobSettingsScreen extends ConsumerWidget {
         error: (_, _) => Center(
           child: FilledButton(
             onPressed: () => ref.invalidate(jobPreferencesProvider(jobId)),
-            child: const Text('Retry job settings'),
+            child: Text(AppMessage.retryJobSettings.of(context)),
           ),
         ),
         data: (preferences) => business.when(
@@ -46,7 +46,7 @@ class JobSettingsScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: FilledButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry customers'),
+              child: Text(AppMessage.retryCustomers.of(context)),
             ),
           ),
           data: (data) => _JobForm(initial: preferences, business: data),
@@ -136,7 +136,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
         TextField(
           controller: _name,
           maxLength: 240,
-          decoration: const InputDecoration(labelText: 'Job name'),
+          decoration: InputDecoration(labelText: AppMessage.jobName.of(context)),
           readOnly: data?.archived ?? true,
         ),
         const SizedBox(height: 16),
@@ -277,7 +277,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
         if (!_inheritHourlyMode)
           DropdownButtonFormField<String>(
             initialValue: _hourlyBillingMode,
-            decoration: const InputDecoration(labelText: 'Hourly billing rule'),
+            decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
             items: const [
               DropdownMenuItem(
                 value: minimumThenExactBilling,
@@ -404,7 +404,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
         DropdownButtonFormField<String>(
           initialValue: _customer ?? '',
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Customer'),
+          decoration: InputDecoration(labelText: AppMessage.customer.of(context)),
           items: [
             const DropdownMenuItem(value: '', child: Text('No customer')),
             for (final c in customers.where(
@@ -435,7 +435,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
             MaterialPageRoute<void>(builder: (_) => const CustomersScreen()),
           ),
           icon: const Icon(Icons.people_outline),
-          label: const Text('Manage customers'),
+          label: Text(AppMessage.manageCustomers.of(context)),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
