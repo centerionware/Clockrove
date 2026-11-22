@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:clockrove/l10n/app_localizations.dart';
-import 'package:clockrove/l10n/app_strings.dart';
 import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -132,18 +131,18 @@ void main() {
     await tester.tap(find.text(AppMessage.clockIn.english));
     await tester.pumpAndSettle();
     expect(find.text(AppMessage.clockOut.english), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(AppStrings.enableLocation), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.enableLocation.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.tap(find.text(AppMessage.enableLocation.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
-    expect(find.text(AppStrings.locationPurpose), findsOneWidget);
+    expect(find.text(AppMessage.locationPurpose.english), findsOneWidget);
     await tester.tap(find.text(AppMessage.cancel.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
-    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.tap(find.text(AppMessage.enableLocation.english));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.continueLabel));
+    await tester.tap(find.text(AppMessage.continueLabel.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
     await tester.scrollUntilVisible(
@@ -328,9 +327,9 @@ void main() {
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
-      await tester.scrollUntilVisible(find.text(AppStrings.locationTitle), 200);
+      await tester.scrollUntilVisible(find.text(AppMessage.locationTitle.english), 200);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text(AppStrings.disableLocation));
+      await tester.ensureVisible(find.text(AppMessage.disableLocation.english));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.runAsync(() async {

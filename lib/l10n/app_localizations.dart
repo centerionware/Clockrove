@@ -85,7 +85,35 @@ enum AppMessage {
   openMap('Open map'),
   mapSettingsRetry('Map settings could not be loaded. Retry.'),
   lastLocationSample('Last sample {date} {time}'),
-  locationAccuracy('{meters} m accuracy');
+  locationAccuracy('{meters} m accuracy'),
+  locationTitle('Work location'),
+  locationPurpose(
+    'Record location only while clocked in, targeting a sample about every ten '
+    'minutes. Accuracy and delivery vary. Manual timekeeping works without '
+    'location permission. Background geofence automation is not enabled here.',
+  ),
+  continueLabel('Continue'),
+  enableLocation('Enable work location'),
+  disableLocation('Stop location only'),
+  allowNotifications('Allow notifications'),
+  locationIdle('No location recorded while clocked out.'),
+  locationDenied('Location permission denied. Manual timer still works.'),
+  locationRestricted(
+    'Location unavailable or restricted. Manual timer still works.',
+  ),
+  locationRequesting('Location requested; ten-minute delivery is a target.'),
+  locationStarting('Starting work location…'),
+  locationRecordingDisabled(
+    'Work location recording is turned off in Settings or for this job. The timer is independent.',
+  ),
+  locationUnavailable(
+    'Waiting for location. Missing GPS does not end work.',
+  ),
+  locationStopped('Work location is stopped. The timer is independent.'),
+  locationApproximate(
+    'Approximate location permission; accuracy is limited.',
+  ),
+  appName('Clockrove');
 
   const AppMessage(this.english);
   final String english;

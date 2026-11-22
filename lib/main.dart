@@ -7,7 +7,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'l10n/app_localizations.dart';
-import 'l10n/app_strings.dart';
 import 'l10n/language_preference.dart';
 import 'app_theme.dart';
 import 'tracking/timer_screen.dart';
@@ -48,7 +47,7 @@ class ClockroveApp extends ConsumerWidget {
       ...GlobalMaterialLocalizations.delegates,
     ],
     debugShowCheckedModeBanner: false,
-    title: AppStrings.appName,
+    onGenerateTitle: AppMessage.appName.of,
     theme: ClockroveTheme.light(),
     darkTheme: ClockroveTheme.dark(),
     routes: {'/': (_) => const TimerScreen()},

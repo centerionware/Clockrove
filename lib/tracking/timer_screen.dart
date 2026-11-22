@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
-import '../l10n/app_strings.dart';
 import 'timer_api.dart';
 import 'timer_providers.dart';
 import 'tracking_api.dart';
@@ -195,7 +194,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Text(AppStrings.appName),
+            Text(AppMessage.appName.of(context)),
           ],
         ),
         actions: [
