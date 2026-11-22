@@ -20,15 +20,15 @@ class InvoiceDetailScreen extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Invoice')),
+        appBar: AppBar(title: Text(AppMessage.invoiceDetailTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Invoice')),
+        appBar: AppBar(title: Text(AppMessage.invoiceDetailTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(invoicePaymentsProvider(invoiceId)),
-            child: const Text('Retry invoice details'),
+            child: Text(AppMessage.retryInvoiceDetails.of(context)),
           ),
         ),
       ),
@@ -147,7 +147,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
           title: Text(data.number),
           actions: [
             IconButton(
-              tooltip: 'Refresh invoice details',
+              tooltip: AppMessage.refreshInvoiceDetails.of(context),
               onPressed: _pendingCopy
                   ? null
                   : () =>
@@ -212,12 +212,12 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             TextButton.icon(
               onPressed: eligible ? () => _open() : null,
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('View original PDF'),
+              label: Text(AppMessage.viewOriginalPdf.of(context)),
             ),
             const SizedBox(height: 16),
             if (correctable)
               ExpansionTile(
-                title: const Text('Correct this invoice'),
+                title: Text(AppMessage.correctInvoice.of(context)),
                 children: [
                   if (data.paid == '0')
                     TextButton.icon(
@@ -226,12 +226,12 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         foregroundColor: Theme.of(context).colorScheme.error,
                       ),
                       icon: const Icon(Icons.block_outlined),
-                      label: const Text('Void unpaid invoice'),
+                      label: Text(AppMessage.voidUnpaidInvoice.of(context)),
                     ),
                   TextButton.icon(
                     onPressed: eligible ? () => _correction(true) : null,
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Void & replace'),
+                    label: Text(AppMessage.voidAndReplaceInvoice.of(context)),
                   ),
                 ],
               ),
@@ -244,19 +244,19 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   FilledButton.icon(
                     onPressed: eligible ? () => _payment() : null,
                     icon: const Icon(Icons.add_card_outlined),
-                    label: const Text('Record payment'),
+                    label: Text(AppMessage.recordInvoicePayment.of(context)),
                   ),
                   OutlinedButton.icon(
                     onPressed: eligible ? () => _payment(settle: true) : null,
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Mark paid'),
+                    label: Text(AppMessage.markInvoicePaid.of(context)),
                   ),
                 ],
               ),
             const SizedBox(height: 16),
             BusinessCommand(
               key: const ValueKey('invoice-balance-copy-command'),
-              label: 'Send latest copy',
+              label: AppMessage.sendLatestInvoiceCopy.of(context),
               enabled: eligible && !voided,
               onPendingChanged: (value) {
                 if (mounted) setState(() => _pendingCopy = value);
@@ -285,14 +285,14 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                     ? () => _open('void-${data.invoiceId}', true)
                     : null,
                 icon: const Icon(Icons.description_outlined),
-                label: const Text('Email cancellation copy'),
+                label: Text(AppMessage.emailCancellationCopy.of(context)),
               ),
               if (data.cancellation?.replacementId != null)
                 TextButton(
                   onPressed: eligible
                       ? () => _related(data.cancellation!.replacementId!)
                       : null,
-                  child: const Text('Open replacement invoice'),
+                  child: Text(AppMessage.openReplacementInvoice.of(context)),
                 ),
               if (data.cancellation != null)
                 ExpansionTile(
@@ -308,7 +308,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 onPressed: eligible
                     ? () => _related(data.replacesInvoiceId!)
                     : null,
-                child: const Text('Open original invoice'),
+                child: Text(AppMessage.openOriginalInvoice.of(context)),
               ),
             if (data.accountingEmail.isEmpty)
               const Text(
@@ -349,7 +349,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             ],
             const SizedBox(height: 28),
             Text(
-              'Payment history',
+              AppMessage.invoicePaymentHistory.of(context),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (data.payments.isEmpty)
@@ -426,7 +426,10 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 ),
               ),
             const SizedBox(height: 24),
-            Text('Saved copies', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              AppMessage.invoiceSavedCopies.of(context),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             if (data.copies.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
