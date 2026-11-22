@@ -150,3 +150,9 @@ opened Documents but API 24 did not accept raw key-event injection through
 its test automation connection. The follow-up sends the standard shell Back
 action on the disposable emulator and still waits for Clockrove’s visible
 cancellation state before testing an import.
+
+[Actions 45032596924](https://github.com/centerionware/Clockrove/actions/runs/45032596924)
+reached the visible cancellation state and reopened the picker. On the second
+launch, Android remembered Documents as the last choice and showed a different
+resolver layout. The follow-up recognizes both layouts and continues with the
+system Documents picker. Authentication and apply remain unverified.

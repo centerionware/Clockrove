@@ -102,10 +102,13 @@ class BackupPickerDeviceTest {
         val picker = waitFor("Android document picker or resolver") {
             automation.rootInActiveWindow?.takeIf {
                 it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES ||
-                    (it.packageName?.toString() == "android" && findLabel("Documents") != null)
+                    (it.packageName?.toString() == "android" &&
+                        (findLabel("Documents") != null || findLabel("Complete action using Documents") != null))
             }
         }
-        if (picker.packageName?.toString() == "android") click("Documents")
+        if (picker.packageName?.toString() == "android" && findLabel("Documents") != null) {
+            click("Documents")
+        }
         waitFor("Android document picker") {
             if (automation.rootInActiveWindow?.packageName?.toString() == "android") {
                 findLabel("Just once", ignoreCase = true)?.takeIf { it.isEnabled }?.let(::clickNode)
