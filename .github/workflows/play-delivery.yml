@@ -139,6 +139,12 @@ jobs:
           PLAY_TRACK: ${{ needs.verify.outputs.track }}
         run: |
           bundle exec ruby -r ./fastlane/versioning -e 'base=File.read("pubspec.yaml").match(/^version: (.+)$/)[1].split("+")[0]; name=ENV["PLAY_TRACK"] == "production" ? ClockroveVersioning.production_name(ENV.fetch("RELEASE_TAG")) : ClockroveVersioning.internal_name(base,ENV.fetch("GITHUB_RUN_NUMBER"),ENV.fetch("GITHUB_RUN_ATTEMPT")); File.open(ENV.fetch("GITHUB_OUTPUT"),"a") { |f| f.puts("name=#{name}") }'
+      - name: Configure Kotlin resolution for Flutter Gradle plugins
+        shell: bash
+        run: |
+          init_dir="${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          mkdir -p "$init_dir"
+          cp .github/gradle/flutter-plugin-repositories.init.gradle "$init_dir/"
       - name: Build with permanent upload key
         env:
           CLOCKROVE_UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
