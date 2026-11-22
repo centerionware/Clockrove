@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Lewat tenggat · %1$s"</string>
     <string name="widget_today">"Hari ini"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Buka papan pekerjaan"</string>
+    <string name="widget_description">"Pencatat waktu dengan daftar tugas yang dapat digulir saat widget diperbesar"</string>
+    <string name="timer_widget_description">"Pencatat waktu aktif dengan tombol mulai dan selesai di widget"</string>
+    <string name="tasks_widget_description">"Tugas mendatang dan lewat tenggat. Ketuk tugas untuk membuka papan pekerjaannya."</string>
+    <string name="widget_idle">"Tidak ada pencatat waktu yang aktif"</string>
+    <string name="widget_open">"Buka Clockrove"</string>
+    <string name="widget_stop">"Akhiri pencatatan"</string>
+    <string name="tracking_channel">"Lokasi kerja"</string>
+    <string name="tracking_target">"Lokasi ditargetkan tercatat setiap sepuluh menit. Waktu penerimaan dapat berbeda."</string>
+    <string name="automation_channel">"Otomatisasi berdasarkan lokasi kerja"</string>
+    <string name="automation_choose_title">"Beberapa lokasi kerja cocok"</string>
+    <string name="automation_choose_description">"Buka Clockrove untuk memilih pekerjaan."</string>
+    <string name="widget_combined_label">"Clockrove gabungan"</string>
+    <string name="widget_timer_label">"Pencatat waktu Clockrove"</string>
+    <string name="widget_tasks_label">"Tugas Clockrove"</string>
+    <string name="widget_filter_description">"Filter tugas dan setelan widget"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

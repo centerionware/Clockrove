@@ -14,4 +14,20 @@
     <string name="widget_overdue">"সময় পেরিয়েছে · %1$s"</string>
     <string name="widget_today">"আজ"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s। কাজের বোর্ড খুলুন"</string>
+    <string name="widget_description">"কাজের টাইমার। উইজেট বড় করলে স্ক্রল করা যায় এমন কাজের তালিকা দেখা যায়।"</string>
+    <string name="timer_widget_description">"চলমান কাজের টাইমার এবং উইজেট থেকে সময় গণনা শুরু বা বন্ধ করার নিয়ন্ত্রণ"</string>
+    <string name="tasks_widget_description">"আসন্ন ও মেয়াদ পেরোনো কাজ। কাজের বোর্ড খুলতে সেটিতে ট্যাপ করুন।"</string>
+    <string name="widget_idle">"কোনো টাইমার চলছে না"</string>
+    <string name="widget_open">"Clockrove খুলুন"</string>
+    <string name="widget_stop">"সময় গণনা বন্ধ করুন"</string>
+    <string name="tracking_channel">"কাজের অবস্থান"</string>
+    <string name="tracking_target">"প্রতি দশ মিনিটে অবস্থান নেওয়ার লক্ষ্য থাকে। তথ্য পৌঁছানোর সময় বদলাতে পারে।"</string>
+    <string name="automation_channel">"কাজের স্থানভিত্তিক অটোমেশন"</string>
+    <string name="automation_choose_title">"একাধিক কাজের স্থান মিলে গেছে"</string>
+    <string name="automation_choose_description">"কাজ বেছে নিতে Clockrove খুলুন।"</string>
+    <string name="widget_combined_label">"Clockrove সম্মিলিত"</string>
+    <string name="widget_timer_label">"Clockrove টাইমার"</string>
+    <string name="widget_tasks_label">"Clockrove কাজ"</string>
+    <string name="widget_filter_description">"কাজের ফিল্টার ও উইজেট সেটিংস"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

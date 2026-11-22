@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Überfällig · %1$s"</string>
     <string name="widget_today">"Heute"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Auftragstafel öffnen"</string>
+    <string name="widget_description">"Auftragstimer mit scrollbarer Aufgabenliste in der großen Ansicht"</string>
+    <string name="timer_widget_description">"Laufender Auftragstimer mit Ein- und Ausstempeln im Widget"</string>
+    <string name="tasks_widget_description">"Anstehende und überfällige Aufgaben. Tippe auf eine Aufgabe, um ihre Auftragstafel zu öffnen."</string>
+    <string name="widget_idle">"Kein Timer aktiv"</string>
+    <string name="widget_open">"Clockrove öffnen"</string>
+    <string name="widget_stop">"Ausstempeln"</string>
+    <string name="tracking_channel">"Arbeitsort"</string>
+    <string name="tracking_target">"Der Standort soll alle zehn Minuten erfasst werden. Die Übermittlung kann abweichen."</string>
+    <string name="automation_channel">"Automatisierung nach Arbeitsort"</string>
+    <string name="automation_choose_title">"Mehrere Arbeitsorte passen"</string>
+    <string name="automation_choose_description">"Öffne Clockrove, um einen Auftrag zu wählen."</string>
+    <string name="widget_combined_label">"Clockrove Kombi"</string>
+    <string name="widget_timer_label">"Clockrove Timer"</string>
+    <string name="widget_tasks_label">"Clockrove Aufgaben"</string>
+    <string name="widget_filter_description">"Aufgabenfilter und Widget-Einstellungen"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

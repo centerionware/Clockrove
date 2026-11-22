@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Overdue · %1$s"</string>
     <string name="widget_today">"Today"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Open job board"</string>
+    <string name="widget_description">"Job timer with a scrollable due-task list when resized larger"</string>
+    <string name="timer_widget_description">"Running job timer and native clock-in or clock-out"</string>
+    <string name="tasks_widget_description">"Upcoming and overdue tasks; tap a task to open its job board"</string>
+    <string name="widget_idle">"No timer running"</string>
+    <string name="widget_open">"Open Clockrove"</string>
+    <string name="widget_stop">"Clock out"</string>
+    <string name="tracking_channel">"Work location"</string>
+    <string name="tracking_target">"Location sampling targets ten minutes; delivery may vary."</string>
+    <string name="automation_channel">"Work site automation"</string>
+    <string name="automation_choose_title">"Several work sites match"</string>
+    <string name="automation_choose_description">"Open Clockrove to choose a job."</string>
+    <string name="widget_combined_label">"Clockrove Combined"</string>
+    <string name="widget_timer_label">"Clockrove Timer"</string>
+    <string name="widget_tasks_label">"Clockrove Tasks"</string>
+    <string name="widget_filter_description">"Task filter and widget settings"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

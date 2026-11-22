@@ -14,4 +14,20 @@
     <string name="widget_overdue">"En retard · %1$s"</string>
     <string name="widget_today">"Aujourd’hui"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Ouvrir le tableau du chantier"</string>
+    <string name="widget_description">"Chronomètre de chantier avec liste de tâches défilante dans le widget agrandi"</string>
+    <string name="timer_widget_description">"Chronomètre du chantier en cours avec pointage depuis le widget"</string>
+    <string name="tasks_widget_description">"Tâches à venir et en retard. Touchez une tâche pour ouvrir son tableau."</string>
+    <string name="widget_idle">"Aucun chronomètre actif"</string>
+    <string name="widget_open">"Ouvrir Clockrove"</string>
+    <string name="widget_stop">"Pointer le départ"</string>
+    <string name="tracking_channel">"Lieu de travail"</string>
+    <string name="tracking_target">"Le relevé de position est prévu toutes les dix minutes. Le délai réel peut varier."</string>
+    <string name="automation_channel">"Automatisation par lieu de travail"</string>
+    <string name="automation_choose_title">"Plusieurs lieux de travail correspondent"</string>
+    <string name="automation_choose_description">"Ouvrez Clockrove pour choisir un chantier."</string>
+    <string name="widget_combined_label">"Clockrove combiné"</string>
+    <string name="widget_timer_label">"Chronomètre Clockrove"</string>
+    <string name="widget_tasks_label">"Tâches Clockrove"</string>
+    <string name="widget_filter_description">"Filtre des tâches et paramètres du widget"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

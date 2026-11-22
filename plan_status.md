@@ -89,8 +89,13 @@ The exported formatter corrections were reviewed and incorporated where they
 apply to the current source.
 The Android widget runtime now uses 13 generated catalog entries for its job
 and task labels, error messages, and accessibility descriptions across the
-same 17 locales. GitHub Actions verification is pending. Widget picker metadata
-and earlier native resources still need translations.
+same 17 locales. GitHub Actions verification is pending. Widget picker metadata and the existing
+tracking and geofence notification resource strings are now also generated
+from the Android catalogs. Other native copy still needs migration.
+[Actions run 45066471967](https://github.com/centerionware/Clockrove/actions/runs/45066471967)
+reported 294 Flutter tests passed, 2 failed, and 14 skipped. The two Settings
+tests now scroll to the hourly rate field before using it, since adding the
+language picker moved the field below the initial viewport.
 Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 

@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Quá hạn · %1$s"</string>
     <string name="widget_today">"Hôm nay"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Mở bảng công việc"</string>
+    <string name="widget_description">"Bộ đếm giờ làm có danh sách nhiệm vụ cuộn được khi mở rộng tiện ích"</string>
+    <string name="timer_widget_description">"Bộ đếm giờ của công việc đang làm và nút bắt đầu hoặc kết thúc ghi giờ trên tiện ích"</string>
+    <string name="tasks_widget_description">"Nhiệm vụ sắp đến hạn và quá hạn. Chạm vào nhiệm vụ để mở bảng công việc."</string>
+    <string name="widget_idle">"Không có bộ đếm giờ đang chạy"</string>
+    <string name="widget_open">"Mở Clockrove"</string>
+    <string name="widget_stop">"Kết thúc ghi giờ"</string>
+    <string name="tracking_channel">"Vị trí làm việc"</string>
+    <string name="tracking_target">"Ứng dụng cố gắng ghi vị trí mỗi mười phút. Khoảng thời gian thực tế có thể khác."</string>
+    <string name="automation_channel">"Tự động hóa theo nơi làm việc"</string>
+    <string name="automation_choose_title">"Có nhiều nơi làm việc phù hợp"</string>
+    <string name="automation_choose_description">"Mở Clockrove để chọn công việc."</string>
+    <string name="widget_combined_label">"Clockrove kết hợp"</string>
+    <string name="widget_timer_label">"Bộ đếm giờ Clockrove"</string>
+    <string name="widget_tasks_label">"Nhiệm vụ Clockrove"</string>
+    <string name="widget_filter_description">"Bộ lọc nhiệm vụ và cài đặt tiện ích"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

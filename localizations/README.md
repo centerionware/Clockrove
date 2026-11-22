@@ -30,7 +30,7 @@ prove that all dynamically constructed messages reach a catalog. The
 `strict_localization` workflow input makes findings fail validation. The catalog
 parity test runs on every validation.
 
-Android widget copy lives in `android/<language-tag>.yaml` within this directory.
+Android resource copy lives in `android/<language-tag>.yaml` within this directory.
 Use flat YAML maps with JSON-style double-quoted values and Android positional
 format arguments such as `%1$s`. Run `python3 tool/android_catalog.py` to
 regenerate checked-in Android resources. Actions checks locale and key parity,

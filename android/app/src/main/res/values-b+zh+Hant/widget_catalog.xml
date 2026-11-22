@@ -14,4 +14,20 @@
     <string name="widget_overdue">"已逾期 · %1$s"</string>
     <string name="widget_today">"今天"</string>
     <string name="widget_task_open_board">"%1$s，%2$s，%3$s。開啟工作項目看板"</string>
+    <string name="widget_description">"工作計時器，放大後可捲動查看到期任務"</string>
+    <string name="timer_widget_description">"顯示目前工作計時，並可從小工具開始或結束計時"</string>
+    <string name="tasks_widget_description">"即將到期及已逾期的任務。點選任務可開啟工作項目看板。"</string>
+    <string name="widget_idle">"目前沒有計時"</string>
+    <string name="widget_open">"開啟 Clockrove"</string>
+    <string name="widget_stop">"結束計時"</string>
+    <string name="tracking_channel">"工作位置"</string>
+    <string name="tracking_target">"目標為每十分鐘採集一次位置，實際間隔可能不同。"</string>
+    <string name="automation_channel">"工作地點自動化"</string>
+    <string name="automation_choose_title">"有多個工作地點符合條件"</string>
+    <string name="automation_choose_description">"開啟 Clockrove 選擇工作項目。"</string>
+    <string name="widget_combined_label">"Clockrove 組合"</string>
+    <string name="widget_timer_label">"Clockrove 計時器"</string>
+    <string name="widget_tasks_label">"Clockrove 任務"</string>
+    <string name="widget_filter_description">"任務篩選與小工具設定"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

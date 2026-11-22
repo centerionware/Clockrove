@@ -386,6 +386,7 @@ void main() {
         const SettingsScreen(),
         timer: _Timer(events.stream),
       );
+      await _reveal(tester, 'Default hourly rate (USD)');
       await tester.enterText(
         find.widgetWithText(TextField, 'Default hourly rate (USD)'),
         '123.45',
@@ -469,6 +470,7 @@ void main() {
     (tester) async {
       final api = _SettingsApi();
       await _show(tester, api, const SettingsScreen());
+      await _reveal(tester, 'Default hourly rate (USD)');
       await tester.enterText(
         find.widgetWithText(TextField, 'Default hourly rate (USD)'),
         '1234.56',

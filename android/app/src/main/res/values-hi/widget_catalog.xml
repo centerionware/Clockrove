@@ -14,4 +14,20 @@
     <string name="widget_overdue">"समय सीमा पार · %1$s"</string>
     <string name="widget_today">"आज"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s। काम का बोर्ड खोलें"</string>
+    <string name="widget_description">"काम का टाइमर। विजेट बड़ा करने पर देय कार्यों की स्क्रॉल होने वाली सूची दिखती है।"</string>
+    <string name="timer_widget_description">"चलते काम का टाइमर और विजेट से समय दर्ज करना शुरू या बंद करने के नियंत्रण"</string>
+    <string name="tasks_widget_description">"आगामी और बकाया कार्य। काम का बोर्ड खोलने के लिए किसी कार्य पर टैप करें।"</string>
+    <string name="widget_idle">"कोई टाइमर नहीं चल रहा"</string>
+    <string name="widget_open">"Clockrove खोलें"</string>
+    <string name="widget_stop">"समय दर्ज करना बंद करें"</string>
+    <string name="tracking_channel">"काम करने की जगह"</string>
+    <string name="tracking_target">"हर दस मिनट में स्थान दर्ज करने का लक्ष्य है। वास्तविक अंतराल बदल सकता है।"</string>
+    <string name="automation_channel">"कार्यस्थल के आधार पर ऑटोमेशन"</string>
+    <string name="automation_choose_title">"कई कार्यस्थल मेल खाते हैं"</string>
+    <string name="automation_choose_description">"काम चुनने के लिए Clockrove खोलें।"</string>
+    <string name="widget_combined_label">"Clockrove संयुक्त"</string>
+    <string name="widget_timer_label">"Clockrove टाइमर"</string>
+    <string name="widget_tasks_label">"Clockrove कार्य"</string>
+    <string name="widget_filter_description">"कार्य फ़िल्टर और विजेट की सेटिंग्स"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

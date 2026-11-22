@@ -14,4 +14,20 @@
     <string name="widget_overdue">"期限超過 · %1$s"</string>
     <string name="widget_today">"今日"</string>
     <string name="widget_task_open_board">"%1$s、%2$s、%3$s。仕事のボードを開く"</string>
+    <string name="widget_description">"拡大すると期限のあるタスクをスクロール表示できる勤務タイマー"</string>
+    <string name="timer_widget_description">"勤務中のタイマーとウィジェットからの勤務開始・終了操作"</string>
+    <string name="tasks_widget_description">"期限が近いタスクと期限を過ぎたタスク。タップすると仕事のボードを開きます。"</string>
+    <string name="widget_idle">"実行中のタイマーはありません"</string>
+    <string name="widget_open">"Clockroveを開く"</string>
+    <string name="widget_stop">"勤務を終了"</string>
+    <string name="tracking_channel">"勤務場所"</string>
+    <string name="tracking_target">"位置情報は10分ごとの取得を目安とし、実際の取得間隔は変動します。"</string>
+    <string name="automation_channel">"勤務場所による自動化"</string>
+    <string name="automation_choose_title">"複数の勤務場所が一致しました"</string>
+    <string name="automation_choose_description">"Clockroveを開いて仕事を選んでください。"</string>
+    <string name="widget_combined_label">"Clockrove 統合"</string>
+    <string name="widget_timer_label">"Clockrove タイマー"</string>
+    <string name="widget_tasks_label">"Clockrove タスク"</string>
+    <string name="widget_filter_description">"タスクフィルターとウィジェット設定"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Scaduta · %1$s"</string>
     <string name="widget_today">"Oggi"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Apri la bacheca del lavoro"</string>
+    <string name="widget_description">"Timer di lavoro con elenco scorrevole delle attività quando il widget è ingrandito"</string>
+    <string name="timer_widget_description">"Timer del lavoro in corso con timbratura di entrata e uscita dal widget"</string>
+    <string name="tasks_widget_description">"Attività imminenti e scadute. Tocca un’attività per aprire la bacheca del lavoro."</string>
+    <string name="widget_idle">"Nessun timer attivo"</string>
+    <string name="widget_open">"Apri Clockrove"</string>
+    <string name="widget_stop">"Timbra l’uscita"</string>
+    <string name="tracking_channel">"Posizione di lavoro"</string>
+    <string name="tracking_target">"Il rilevamento della posizione è previsto ogni dieci minuti. L’intervallo effettivo può variare."</string>
+    <string name="automation_channel">"Automazione per luogo di lavoro"</string>
+    <string name="automation_choose_title">"Corrispondono più luoghi di lavoro"</string>
+    <string name="automation_choose_description">"Apri Clockrove per scegliere un lavoro."</string>
+    <string name="widget_combined_label">"Clockrove combinato"</string>
+    <string name="widget_timer_label">"Timer Clockrove"</string>
+    <string name="widget_tasks_label">"Attività Clockrove"</string>
+    <string name="widget_filter_description">"Filtro delle attività e impostazioni del widget"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

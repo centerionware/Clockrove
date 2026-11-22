@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Vencida · %1$s"</string>
     <string name="widget_today">"Hoy"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Abrir el tablero del trabajo"</string>
+    <string name="widget_description">"Temporizador con lista desplazable de tareas pendientes al ampliar el widget"</string>
+    <string name="timer_widget_description">"Temporizador del trabajo en curso, con fichaje de entrada y salida desde el widget"</string>
+    <string name="tasks_widget_description">"Tareas próximas y vencidas. Toca una tarea para abrir su tablero."</string>
+    <string name="widget_idle">"No hay ningún temporizador activo"</string>
+    <string name="widget_open">"Abrir Clockrove"</string>
+    <string name="widget_stop">"Fichar salida"</string>
+    <string name="tracking_channel">"Ubicación de trabajo"</string>
+    <string name="tracking_target">"Se intenta registrar la ubicación cada diez minutos. El intervalo real puede variar."</string>
+    <string name="automation_channel">"Automatización por lugar de trabajo"</string>
+    <string name="automation_choose_title">"Coinciden varios lugares de trabajo"</string>
+    <string name="automation_choose_description">"Abre Clockrove para elegir un trabajo."</string>
+    <string name="widget_combined_label">"Clockrove combinado"</string>
+    <string name="widget_timer_label">"Temporizador de Clockrove"</string>
+    <string name="widget_tasks_label">"Tareas de Clockrove"</string>
+    <string name="widget_filter_description">"Filtro de tareas y ajustes del widget"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

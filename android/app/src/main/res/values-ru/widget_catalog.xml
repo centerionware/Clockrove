@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Просрочено · %1$s"</string>
     <string name="widget_today">"Сегодня"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. Открыть доску работы"</string>
+    <string name="widget_description">"Таймер работы с прокручиваемым списком задач при увеличении виджета"</string>
+    <string name="timer_widget_description">"Таймер текущей работы с запуском и остановкой учёта времени в виджете"</string>
+    <string name="tasks_widget_description">"Предстоящие и просроченные задачи. Нажмите задачу, чтобы открыть доску работы."</string>
+    <string name="widget_idle">"Нет активного таймера"</string>
+    <string name="widget_open">"Открыть Clockrove"</string>
+    <string name="widget_stop">"Завершить учёт времени"</string>
+    <string name="tracking_channel">"Местоположение на работе"</string>
+    <string name="tracking_target">"Местоположение записывается примерно каждые десять минут. Интервал может меняться."</string>
+    <string name="automation_channel">"Автоматизация по месту работы"</string>
+    <string name="automation_choose_title">"Подходят несколько мест работы"</string>
+    <string name="automation_choose_description">"Откройте Clockrove, чтобы выбрать работу."</string>
+    <string name="widget_combined_label">"Clockrove: всё вместе"</string>
+    <string name="widget_timer_label">"Таймер Clockrove"</string>
+    <string name="widget_tasks_label">"Задачи Clockrove"</string>
+    <string name="widget_filter_description">"Фильтр задач и настройки виджета"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

@@ -14,4 +14,20 @@
     <string name="widget_overdue">"Gecikmiş · %1$s"</string>
     <string name="widget_today">"Bugün"</string>
     <string name="widget_task_open_board">"%1$s, %2$s, %3$s. İş panosunu aç"</string>
+    <string name="widget_description">"Büyütüldüğünde kaydırılabilir görev listesi gösteren iş zamanlayıcısı"</string>
+    <string name="timer_widget_description">"Devam eden işin zamanlayıcısı ve widget üzerinden süre kaydını başlatma veya bitirme"</string>
+    <string name="tasks_widget_description">"Yaklaşan ve gecikmiş görevler. İş panosunu açmak için göreve dokunun."</string>
+    <string name="widget_idle">"Çalışan zamanlayıcı yok"</string>
+    <string name="widget_open">"Clockrove’u aç"</string>
+    <string name="widget_stop">"Süre kaydını bitir"</string>
+    <string name="tracking_channel">"Çalışma konumu"</string>
+    <string name="tracking_target">"Konumun on dakikada bir kaydedilmesi hedeflenir. Gerçek aralık değişebilir."</string>
+    <string name="automation_channel">"İş yeri otomasyonu"</string>
+    <string name="automation_choose_title">"Birden çok iş yeri eşleşiyor"</string>
+    <string name="automation_choose_description">"Bir iş seçmek için Clockrove’u açın."</string>
+    <string name="widget_combined_label">"Clockrove birleşik"</string>
+    <string name="widget_timer_label">"Clockrove zamanlayıcı"</string>
+    <string name="widget_tasks_label">"Clockrove görevler"</string>
+    <string name="widget_filter_description">"Görev filtresi ve widget ayarları"</string>
+    <string name="app_name">"Clockrove"</string>
 </resources>

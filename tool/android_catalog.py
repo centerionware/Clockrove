@@ -1,4 +1,4 @@
-"""Generate Android widget resources from the checked-in locale catalogs."""
+"""Generate Android string resources from the checked-in locale catalogs."""
 
 import argparse
 import json
