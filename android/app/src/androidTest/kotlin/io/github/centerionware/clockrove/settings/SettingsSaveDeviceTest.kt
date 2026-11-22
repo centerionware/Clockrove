@@ -1,6 +1,7 @@
 package io.github.centerionware.clockrove.settings
 
 import android.content.Intent
+import android.graphics.Rect
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -100,11 +101,7 @@ class SettingsSaveDeviceTest {
     private fun enterText(label: String, value: String) {
         hideKeyboard()
         reveal(label, editable = true)
-        val field = waitFor(label, editable = true)
-        if (!field.isFocused) tapControl(field, label)
-        waitUntil("Editable field did not focus for $label") {
-            find(label, editable = true)?.isFocused == true
-        }
+        focusEditor(label)
         val editable = waitFor(label, editable = true)
         val setText = editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             android.os.Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) })
@@ -129,6 +126,32 @@ class SettingsSaveDeviceTest {
         hideKeyboard()
         automation.waitForIdle(200, 3000)
     }
+    private fun focusEditor(label: String) {
+        val field = waitFor(label, editable = true)
+        if (field.isFocused) return
+        field.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+
+        var nextTouch = SystemClock.uptimeMillis() + 1_000
+        waitUntil("Editable field did not focus for $label") {
+            val current = find(label, editable = true) ?: return@waitUntil false
+            if (current.isFocused) return@waitUntil true
+            if (SystemClock.uptimeMillis() >= nextTouch) {
+                val window = automation.rootInActiveWindow ?: return@waitUntil false
+                val safe = Rect().also(window::getBoundsInScreen)
+                // Edge-to-edge Flutter can expose an editor partly behind Android navigation.
+                val margin = (64 * instrumentation.targetContext.resources.displayMetrics.density).toInt()
+                safe.inset(0, margin)
+                val fieldBounds = Rect().also(current::getBoundsInScreen)
+                if (fieldBounds.intersect(safe) && fieldBounds.height() >= margin / 2) {
+                    tapControl(fieldBounds, label)
+                } else {
+                    swipeContent(up = fieldBounds.centerY() >= safe.centerY())
+                }
+                nextTouch = SystemClock.uptimeMillis() + 1_000
+            }
+            false
+        }
+    }
     private fun setSwitch(label: String, checked: Boolean) {
         reveal(label, checkable = true)
         val current = waitFor(label, checkable = true)
@@ -142,15 +165,14 @@ class SettingsSaveDeviceTest {
         // same visible control through a touchscreen event before failing.
         val stillCurrent = waitFor(label, checkable = true)
         if (stillCurrent.isChecked != checked) {
-            tapControl(stillCurrent, label)
+            tapControl(Rect().also(stillCurrent::getBoundsInScreen), label)
         }
         if (!waitForSwitchState(label, checked, 5000)) {
             dumpAccessibility("switch-state")
             assertEquals("$label did not change after touch input", checked, find(label, checkable = true)?.isChecked)
         }
     }
-    private fun tapControl(node: AccessibilityNodeInfo, label: String) {
-        val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
+    private fun tapControl(bounds: Rect, label: String) {
         assertFalse("$label has no tappable visible bounds", bounds.isEmpty)
         val x = bounds.exactCenterX()
         val y = bounds.exactCenterY()
