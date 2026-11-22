@@ -97,8 +97,10 @@ jobs:
           path: pubspec.lock
           retention-days: 1
           if-no-files-found: error
-      - name: Check Android localization resources against catalogs
-        run: python3 tool/android_catalog.py --check
+      - name: Check generated localization sources against catalogs
+        run: |
+          python3 tool/flutter_catalog.py --check
+          python3 tool/android_catalog.py --check
       - name: Audit app localization coverage
         env:
           STRICT_LOCALIZATION: ${{ inputs.strict_localization }}

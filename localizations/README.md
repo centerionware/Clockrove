@@ -4,10 +4,11 @@ The app reads UTF-8 YAML catalogs from this directory. Each locale has its
 own file, named by its BCP 47 language tag, such as `es.yaml` or
 `zh-Hant.yaml`. Edit a value to change the translation for that locale.
 
-When migrating a message, give it a stable key in
-`lib/l10n/app_localizations.dart`, add that key to `en.yaml` and every
-shipped catalog, and look it up with `AppMessage.messageName.of(context)`.
-The English enum value is also the fallback for individually mounted screens.
+When migrating a message, add its stable key to `en.yaml` and every shipped
+catalog. Run `python3 tool/flutter_catalog.py` to regenerate the typed Flutter
+keys and English fallback, then look it up with
+`AppMessage.messageName.of(context)`. Edit message values in YAML. Actions
+checks that the generated Flutter source matches the English catalog.
 Keep dynamic values such as names or amounts out of translation keys. Preserve
 user-entered text, document identifiers, and stored currency codes as entered.
 

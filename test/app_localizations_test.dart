@@ -11,7 +11,7 @@ void main() {
   test('each shipped catalog covers every migrated message', () async {
     final keys = AppMessage.values.map((message) => message.name).toSet();
     Iterable<String?> placeholders(String text) =>
-        AppMessage.placeholder.allMatches(text).map((match) => match[1]);
+        AppLocalizations.placeholder.allMatches(text).map((match) => match[1]);
     for (final tag in appLanguages.keys) {
       final catalog = await AppLocalizations.loadCatalog(tag);
       expect(catalog.keys.toSet(), keys, reason: tag);
