@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 enum HelpTopic {
   timekeeping(
@@ -46,6 +47,19 @@ class HelpScreen extends StatefulWidget {
 class _HelpScreenState extends State<HelpScreen> {
   String _query = '';
 
+  late final Future<String?> _appVersion = _readAppVersion();
+
+  Future<String?> _readAppVersion() async {
+    const channel = MethodChannel('clockrove/help/v1');
+    try {
+      return await channel.invokeMethod<String>('appVersion');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final topics = HelpTopic.values.where(
@@ -78,6 +92,15 @@ class _HelpScreenState extends State<HelpScreen> {
                 ),
               ),
             ),
+          FutureBuilder<String?>(
+            future: _appVersion,
+            builder: (context, snapshot) {
+              final version = snapshot.data;
+              return version == null || version.isEmpty
+                  ? const SizedBox.shrink()
+                  : ListTile(title: Text('Clockrove version $version'));
+            },
+          ),
         ],
       ),
     );
