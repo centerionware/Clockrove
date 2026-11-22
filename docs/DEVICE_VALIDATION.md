@@ -67,3 +67,33 @@ request submission must not be shown as registration success. With a pending
 departure and an active session, install a newer build signed with the same upload
 key: verify work/settings remain, uncertain expiry is held, and only previously
 enabled sites are requested again. This requires actual upgrade/device evidence.
+
+## Encrypted backup and Android document picker
+
+Use two disposable Clockrove installs on separate test devices or Android
+profiles. Create a synthetic job, a completed manual time entry, and a task
+with a synthetic image in the source install. Configure an enabled site for
+that job. On the destination, create a
+different job and completed entry in a nonoverlapping interval. Note the
+records on both installs before starting.
+
+1. Export an encrypted backup from Settings through Android's save picker.
+   Transfer the encrypted file to the destination profile. Use a test-only
+   password and keep its value out of captures and logs.
+2. On the destination, open Restore encrypted backup and cancel the Android
+   picker. Confirm destination records are unchanged. Open the picker again and
+   select the transferred file from Downloads. Enter an incorrect password.
+   Confirm an error appears, the selected file remains available, and the
+   destination records are unchanged.
+3. Enter the correct password and review the preview. Cancel the final apply
+   confirmation and verify that no source records appear. Then confirm apply.
+   Reopen the app and verify the source job, time entry and attachment coexist
+   with the original destination job and entry. Verify no timer started and
+   any imported site automation is disabled.
+4. Restore the same file again. Verify there are no duplicate records after
+   reopening. Record Android API level, Clockrove version, document provider,
+   and pass or failure at each step using synthetic data only.
+
+Run the journey on API 24 and 35 through Actions for emulator acceptance.
+Repeat on a physical release-candidate device for the installed-app gate.
+Record the picker journey separately from private-file restore benchmarks.
