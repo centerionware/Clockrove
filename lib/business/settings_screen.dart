@@ -12,6 +12,9 @@ import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
 import '../help/help_screen.dart';
 import '../maps/map_provider_settings_screen.dart';
+import '../backup/backup_export_screen.dart';
+import '../backup/backup_restore_screen.dart';
+import '../tracking/timer_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -217,6 +220,42 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        Text(
+          'Backup and restore',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Create an encrypted backup or restore one onto this device. Review conflicts before the native repository applies a restore.',
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const ValueKey('settings-export-backup'),
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const BackupExportScreen()),
+          ),
+          icon: const Icon(Icons.backup_outlined),
+          label: const Text('Export encrypted backup'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('settings-restore-backup'),
+          onPressed: () async {
+            final applied = await Navigator.of(context).push<bool>(
+              MaterialPageRoute<bool>(
+                builder: (_) => const BackupRestoreScreen(),
+              ),
+            );
+            if (applied == true && mounted) {
+              ref.invalidate(timerVersionsProvider);
+              ref.invalidate(timerSnapshotProvider);
+              ref.invalidate(businessSettingsProvider);
+            }
+          },
+          icon: const Icon(Icons.restore),
+          label: const Text('Restore encrypted backup'),
+        ),
+        const SizedBox(height: 24),
         Text('Billing defaults', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(

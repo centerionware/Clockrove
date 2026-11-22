@@ -104,6 +104,88 @@ void main() {
     );
   });
 
+  test(
+    'opens ciphertext and streams it in bounded repeatable chunks',
+    () async {
+      final payload = List<int>.generate(
+        maxBackupDocumentReadChunkBytes + 3,
+        (i) => i % 251,
+      );
+      final chunkSizes = <int>[];
+      respond = (call) async {
+        switch (call.method) {
+          case 'openBackupDocumentForImport':
+            return {
+              'documentId': 'opaque-document-id',
+              'totalBytes': payload.length,
+            };
+          case 'readBackupDocumentChunk':
+            final args = call.arguments as Map;
+            final offset = args['offset'] as int;
+            final limit = args['maxBytes'] as int;
+            expect(args['documentId'], 'opaque-document-id');
+            expect(limit, lessThanOrEqualTo(maxBackupDocumentReadChunkBytes));
+            chunkSizes.add(limit);
+            return {
+              'offset': offset,
+              'bytes': Uint8List.fromList(
+                payload.sublist(offset, offset + limit),
+              ),
+            };
+          case 'closeBackupDocumentImport':
+            expect((call.arguments as Map)['documentId'], 'opaque-document-id');
+            return true;
+          default:
+            throw StateError('Unexpected method ${call.method}.');
+        }
+      };
+
+      final api = BackupFileApi(channel: channel);
+      final document = await api.openBackupDocumentForImport();
+      expect(document, isNotNull);
+      expect(document!.totalBytes, payload.length);
+      expect(
+        (await document.openRead().expand((chunk) => chunk).toList()),
+        payload,
+      );
+      expect(
+        (await document.openRead().expand((chunk) => chunk).toList()),
+        payload,
+      );
+      expect(chunkSizes, [
+        maxBackupDocumentReadChunkBytes,
+        3,
+        maxBackupDocumentReadChunkBytes,
+        3,
+      ]);
+      expect(await document.close(), isTrue);
+      expect(await document.close(), isFalse);
+      expect(calls.map((call) => call.method), [
+        'openBackupDocumentForImport',
+        'readBackupDocumentChunk',
+        'readBackupDocumentChunk',
+        'readBackupDocumentChunk',
+        'readBackupDocumentChunk',
+        'closeBackupDocumentImport',
+      ]);
+    },
+  );
+
+  test(
+    'rejects an oversized imported encrypted document before reading',
+    () async {
+      respond = (call) async => {
+        'documentId': 'opaque-document-id',
+        'totalBytes': maxEncryptedBackupBytes + 1,
+      };
+      await expectLater(
+        BackupFileApi(channel: channel).openBackupDocumentForImport(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(calls.map((call) => call.method), ['openBackupDocumentForImport']);
+    },
+  );
+
   test('rejects an oversized chunk before calling native code', () async {
     await expectLater(
       BackupFileApi(channel: channel).writeBackupDocumentChunk(
