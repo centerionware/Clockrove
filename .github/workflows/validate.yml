@@ -39,6 +39,7 @@ jobs:
             android/gradle/wrapper/gradle-wrapper.properties
             pubspec.lock
             .github/workflows/validate.yml
+            .github/gradle/flutter-plugin-repositories.init.gradle
       - name: Install verified Flutter SDK
         shell: bash
         run: |
@@ -48,6 +49,12 @@ jobs:
           tar -xf "$RUNNER_TEMP/flutter.tar.xz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
           echo "FLUTTER_ROOT=$RUNNER_TEMP/flutter" >> "$GITHUB_ENV"
+      - name: Configure Kotlin resolution for Flutter Gradle plugins
+        shell: bash
+        run: |
+          init_dir="${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          mkdir -p "$init_dir"
+          cp .github/gradle/flutter-plugin-repositories.init.gradle "$init_dir/"
       - name: Install pinned Android components
         shell: bash
         run: |
