@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
+
 enum HelpTopic {
   timekeeping(
-    'Start and review work',
+    AppMessage.helpTimekeeping,
     'Create a job, then start its timer from the work screen. Stop the timer '
         'when you finish. Use job work history to add a missed entry or '
         'correct the time. The manual timer works without location access.',
   ),
   automation(
-    'Location and site automation',
+    AppMessage.helpAutomation,
     'Open a job’s settings to add a work site and enable automation. '
         'Allow precise location and, where Android requires it, background '
         'location. If clock-in on arrival is enabled and you save a site with '
@@ -22,42 +24,42 @@ enum HelpTopic {
         'You can clock in or out manually while troubleshooting.',
   ),
   backups(
-    'Back up and restore your records',
+    AppMessage.helpBackups,
     'In Settings, choose Export encrypted backup and save the file somewhere '
         'you can access later. Keep the password separately. To restore, stop '
         'your timer, choose Restore encrypted backup, and enter the password. '
         'Review the proposed merge and resolve any conflicts before applying.',
   ),
   boards(
-    'Organize jobs and tasks',
+    AppMessage.helpBoards,
     'Open a job to see its board. Add a task to a column, then use its move '
         'action as work progresses. Reuse a task from the library to start a '
         'new card. Archive a finished job to remove it from active lists '
         'while keeping its history.',
   ),
   reports(
-    'Run reports and export CSV',
+    AppMessage.helpReports,
     'Choose Reports from the main menu for work across jobs, or open Job '
         'report from a board. Choose the date range and jobs before reviewing '
         'totals. Export CSV to save the selected report to your chosen '
         'destination. Review the date range before sharing it.',
   ),
   billing(
-    'Prepare quotes and invoices',
+    AppMessage.helpBilling,
     'Open Quotes from the main menu to prepare and review a quote. After '
         'it is accepted, review which work belongs on the job. Check the '
         'customer, prices and covered work before preparing an invoice. '
         'Open Invoices to view the saved PDF and record payments.',
   ),
   widgets(
-    'Use the Android home-screen widget',
+    AppMessage.helpWidgets,
     'Open the Android launcher’s widget picker and add a Clockrove widget. '
         'Choose a default job or choose a job at clock-in. While work is '
         'running, the timer widget shows the actual active job and can stop it. '
         'Task and combined widgets show upcoming work for their configuration.',
   ),
   locationHistory(
-    'Control saved location history',
+    AppMessage.helpLocationHistory,
     'Work location recording controls whether Clockrove saves locations '
         'during a session. Site automation has its own setting. Use the '
         'location history deletion control to remove saved GPS points from '
@@ -66,7 +68,7 @@ enum HelpTopic {
 
   const HelpTopic(this.title, this.content);
 
-  final String title;
+  final AppMessage title;
   final String content;
 }
 
@@ -97,27 +99,27 @@ class _HelpScreenState extends State<HelpScreen> {
   Widget build(BuildContext context) {
     final topics = HelpTopic.values.where(
       (topic) =>
-          topic.title.toLowerCase().contains(_query) ||
+          topic.title.of(context).toLowerCase().contains(_query) ||
           topic.content.toLowerCase().contains(_query),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Help')),
+      appBar: AppBar(title: Text(AppMessage.help.of(context))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
-            decoration: const InputDecoration(
-              labelText: 'Search help',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              labelText: AppMessage.helpSearch.of(context),
+              prefixIcon: const Icon(Icons.search),
             ),
             onChanged: (value) =>
                 setState(() => _query = value.trim().toLowerCase()),
           ),
           const SizedBox(height: 12),
-          if (topics.isEmpty) const Text('No matching help topics.'),
+          if (topics.isEmpty) Text(AppMessage.helpNoResults.of(context)),
           for (final topic in topics)
             ListTile(
-              title: Text(topic.title),
+              title: Text(topic.title.of(context)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -131,7 +133,13 @@ class _HelpScreenState extends State<HelpScreen> {
               final version = snapshot.data;
               return version == null || version.isEmpty
                   ? const SizedBox.shrink()
-                  : ListTile(title: Text('Clockrove version $version'));
+                  : ListTile(
+                      title: Text(
+                        AppMessage.helpVersion.format(context, {
+                          'version': version,
+                        }),
+                      ),
+                    );
             },
           ),
         ],
@@ -147,11 +155,14 @@ class HelpTopicScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Help')),
+    appBar: AppBar(title: Text(AppMessage.help.of(context))),
     body: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text(topic.title, style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+          topic.title.of(context),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         const SizedBox(height: 12),
         Text(topic.content, style: Theme.of(context).textTheme.bodyLarge),
       ],
@@ -169,7 +180,11 @@ class HelpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = topic;
     return IconButton(
-      tooltip: selected == null ? 'Help' : 'Help with ${selected.title}',
+      tooltip: selected == null
+          ? AppMessage.help.of(context)
+          : AppMessage.helpWith.format(context, {
+              'topic': selected.title.of(context),
+            }),
       icon: const Icon(Icons.help_outline),
       onPressed: enabled
           ? () => Navigator.of(context).push(

@@ -32,7 +32,7 @@ void main() {
     expect(find.text('No matching help topics.'), findsOneWidget);
     await tester.enterText(search, 'proposed merge');
     await tester.pumpAndSettle();
-    await tester.tap(find.text(HelpTopic.backups.title));
+    await tester.tap(find.text(HelpTopic.backups.title.english));
     await tester.pumpAndSettle();
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
     debugPrint('CLOCKROVE_HELP_NAVIGATION version_and_search=true');
