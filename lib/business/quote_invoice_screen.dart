@@ -14,26 +14,22 @@ import 'quote_scope_screen.dart';
 import 'report_screen.dart' show reportDuration;
 import 'tax_rate.dart';
 
-String quoteInvoiceProblem(String? code) => switch (code) {
-  'QUOTE_INVOICE_MAPPING_REQUIRED' => 'Link this job’s scope to the accepted revision before preparing its invoice.',
-  'QUOTE_ACCEPTANCE_REQUIRED' => 'Record explicit local acceptance of this revision before invoicing its work.',
-  'QUOTE_HISTORICAL_REVIEW_REQUIRED' =>
-    'Review and acknowledge this historical accepted revision.',
-  'QUOTE_INVOICE_SOURCES_CHANGED' => 'Selected work changed or was already invoiced. Refresh available work and review the remaining sources.',
-  'NO_BILLABLE_ITEMS' => 'Select completed billable tasks or finalized time that has not already been invoiced.',
-  'LEGACY_INVOICE_REVIEW_REQUIRED' =>
-    'Review the job’s older billed work before preparing another invoice.',
-  'TASK_PRICES_REQUIRED' || 'HOURLY_RATE_REQUIRED' => 'Current prices are missing. Use accepted prices or set current prices before reviewing.',
-  'JOB_UNAVAILABLE' => 'This job was removed. Existing invoices remain in related history; removed work cannot be invoiced again.',
+AppMessage quoteInvoiceProblem(String? code) => switch (code) {
+  'QUOTE_INVOICE_MAPPING_REQUIRED' => AppMessage.quoteInvoiceMappingRequired,
+  'QUOTE_ACCEPTANCE_REQUIRED' => AppMessage.quoteAcceptanceRequired,
+  'QUOTE_HISTORICAL_REVIEW_REQUIRED' => AppMessage.quoteHistoricalReviewRequired,
+  'QUOTE_INVOICE_SOURCES_CHANGED' => AppMessage.quoteInvoiceSourcesChanged,
+  'NO_BILLABLE_ITEMS' => AppMessage.quoteInvoiceNoBillableItems,
+  'LEGACY_INVOICE_REVIEW_REQUIRED' => AppMessage.quoteInvoiceLegacyReview,
+  'TASK_PRICES_REQUIRED' || 'HOURLY_RATE_REQUIRED' => AppMessage.quoteInvoiceCurrentPricesMissing,
+  'JOB_UNAVAILABLE' => AppMessage.quoteInvoiceJobUnavailable,
   'QUOTE_SCOPE_KIND_CHANGED' ||
   'QUOTE_JOB_MODE_MISMATCH' ||
-  'QUOTE_SCOPE_SPLIT_REQUIRED' => 'Review the accepted scope and choose a compatible job for each billing group.',
-  'CURRENCY_MISMATCH' || 'QUOTE_CURRENCY_PRECISION_CHANGED' => 'This job’s currency or precision differs from the accepted quote. Review a compatible agreement before invoicing.',
-  'INVALID_REPORT_RANGE' =>
-    'Review the date range and timezone, then load available work again.',
-  'INVOICE_TOO_LARGE' =>
-    'Select less work or a shorter date range before preparing this invoice.',
-  _ => 'This invoice review is unavailable. Refresh the work and review your selections.',
+  'QUOTE_SCOPE_SPLIT_REQUIRED' => AppMessage.quoteInvoiceScopeMismatch,
+  'CURRENCY_MISMATCH' || 'QUOTE_CURRENCY_PRECISION_CHANGED' => AppMessage.quoteInvoiceCurrencyMismatch,
+  'INVALID_REPORT_RANGE' => AppMessage.quoteInvoiceInvalidRange,
+  'INVOICE_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge,
+  _ => AppMessage.quoteInvoiceReviewUnavailable,
 };
 
 class _Setup {
@@ -364,7 +360,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         return;
       }
       if (result.problem != null) {
-        setState(() => _message = quoteInvoiceProblem(result.problem));
+        setState(() => _message = quoteInvoiceProblem(result.problem).of(context));
         return;
       }
       if (result.total == null ||
@@ -619,7 +615,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ),
               if (data?.problem != null)
                 Text(
-                  quoteInvoiceProblem(data!.problem),
+                  quoteInvoiceProblem(data!.problem).of(context),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               if (data != null && accepted != null) ...[
