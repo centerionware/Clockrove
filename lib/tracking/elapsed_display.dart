@@ -6,7 +6,9 @@ import '../l10n/app_localizations.dart';
 
 String elapsedLabel(DateTime start, DateTime now, {String? clockError}) {
   final seconds = now.difference(start).inSeconds;
-  if (now.isBefore(start)) return clockError ?? AppMessage.checkDeviceTime.english;
+  if (now.isBefore(start)) {
+    return clockError ?? AppMessage.checkDeviceTime.english;
+  }
   final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
   final minutes = (seconds ~/ 60 % 60).toString().padLeft(2, '0');
   final remainder = (seconds % 60).toString().padLeft(2, '0');
