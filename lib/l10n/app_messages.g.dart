@@ -702,7 +702,27 @@ enum AppMessage {
   quoteInvoiceCalculationUnverified("The calculated invoice could not be verified. Load available work and review again."),
   quoteInvoiceCalculationReadFailed("Invoice calculation could not be read. Your draft is kept. Load available work and review again."),
   quoteInvoiceDurationFormat("{hours}h {minutes}m{seconds}"),
-  quoteInvoiceDurationSeconds(" {seconds}s");
+  quoteInvoiceDurationSeconds(" {seconds}s"),
+  quoteStatusDraft("Draft"),
+  quoteStatusIssued("Issued"),
+  quoteStatusAccepted("Accepted locally"),
+  quoteStatusDeclined("Declined locally"),
+  quoteStatusExpired("Expired"),
+  quoteStatusGeneric("Quote"),
+  quoteListLoadFailed("Quotes could not be loaded. Retry to refresh their current status."),
+  quoteFilter("Filter quotes"),
+  quoteFilterAll("All quotes"),
+  quoteRefresh("Refresh quotes"),
+  quoteCreate("New quote"),
+  quoteOverview("Estimates and agreements"),
+  quoteSeparationNotice("Quotes stay separate from worked hours, invoices and payments."),
+  quoteStatusAsOf("Status as of {date} · {timezone}"),
+  quoteRetry("Retry quotes"),
+  quoteEmpty("No quotes in this view. Create an estimate or choose another filter."),
+  quoteUnissuedDraft("Unissued draft"),
+  quoteLatestIssuedRevision("Latest issued revision {revision}"),
+  quoteValidUntil("Valid until {date}"),
+  quoteLoadOlder("Load older quotes");
 
   const AppMessage(this.english);
   final String english;

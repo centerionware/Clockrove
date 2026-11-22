@@ -240,10 +240,13 @@ now use catalog messages for all registered locales. Job, date, timezone, refres
 localized messages. Scope, actual work, customer carryover, historical review,
 and private note guidance now use the catalogs too. Customer carryover,
 removed-job, price and tax comparisons are also localized.
+The quote list now localizes its filters, status labels, empty and error states,
+revision and validity labels, and status date. The source-audit test covers this
+screen as well.
 The correction editor also localizes voiding and reason-privacy guidance,
 replacement-line validation and edited line basis prefixes. The Flutter
 source audit test checks for new hardcoded copy in invoice detail, invoice
-history, payment, correction, and quote-to-invoice screens. Native-provided
+history, payment, correction, quote-to-invoice, and quote-list screens. Native-provided
 labels and other
 Flutter screens still need coverage. The new test awaits GitHub Actions.
 Other command

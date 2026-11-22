@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 import 'business_api.dart';
@@ -15,6 +16,15 @@ String quoteStatus(String value) => switch (value) {
   'DECLINED' => 'Declined locally',
   'EXPIRED' => 'Expired',
   _ => 'Quote',
+};
+
+AppMessage quoteStatusMessage(String value) => switch (value) {
+  'DRAFT' => AppMessage.quoteStatusDraft,
+  'ISSUED' => AppMessage.quoteStatusIssued,
+  'ACCEPTED' => AppMessage.quoteStatusAccepted,
+  'DECLINED' => AppMessage.quoteStatusDeclined,
+  'EXPIRED' => AppMessage.quoteStatusExpired,
+  _ => AppMessage.quoteStatusGeneric,
 };
 
 class QuoteLine {

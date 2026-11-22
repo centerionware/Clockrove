@@ -29,6 +29,7 @@ void example(String name) {
       'invoice_lifecycle_editor',
       'payment_editor',
       'quote_invoice_screen',
+      'quote_screens',
     };
     const identifiers = {
       'balance-',
