@@ -160,11 +160,11 @@ private fun JSONObject.isCommentDeletionConflict(): Boolean {
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events"
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
             optJSONArray("primaryKey")?.optString(0).orEmpty() in
-                BackupImportDeletionResolution.deletableKinds
-        "ENTITY_DELETION_TOMBSTONE" -> table in BackupImportDeletionResolution.restorableTables ||
+                BackupImportDeletionResolution.commentGraphKinds
+        "ENTITY_DELETION_TOMBSTONE" -> table in BackupImportDeletionResolution.commentGraphTables ||
             (table == "entity_heads" &&
                 optJSONArray("primaryKey")?.optString(0).orEmpty() in
-                    BackupImportDeletionResolution.deletableKinds)
+                    BackupImportDeletionResolution.commentGraphKinds)
         else -> false
     }
 }
@@ -379,7 +379,7 @@ internal fun BackupImportStore.isSupportedChoice(kind: String, table: String, ch
             (table in revisionTombstoneRows || table == "entity_heads") &&
                 (choice == "PRESERVE_LOCAL_DELETION" ||
                     (choice == "RESTORE_BACKUP_CONTENT" &&
-                        (table == "entity_heads" || table in BackupImportDeletionResolution.restorableTables)))
+                        (table == "entity_heads" || table in BackupImportDeletionResolution.commentGraphTables)))
         "BACKUP_ENTITY_DELETION" -> table == "entity_heads" &&
             choice in setOf("PRESERVE_LOCAL_CONTENT", "APPLY_BACKUP_DELETION")
         "BACKUP_COMMENT_DELETION" -> table == "task_comment_events" &&

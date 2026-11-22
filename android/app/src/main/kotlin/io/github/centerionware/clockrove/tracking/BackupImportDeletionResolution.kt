@@ -5,8 +5,10 @@ import android.database.sqlite.SQLiteDatabase
 import java.util.UUID
 
 internal object BackupImportDeletionResolution {
-    val restorableTables = setOf("task_comments", "task_attachments")
-    val deletableKinds = setOf("task_comment", "task_attachment")
+    val commentGraphTables = setOf("task_comments", "task_attachments")
+    val commentGraphKinds = setOf("task_comment", "task_attachment")
+    val restorableTables = commentGraphTables + "customers"
+    val restorableKinds = commentGraphKinds + "customer"
 
     data class Planned(
         val kind: String,
@@ -237,7 +239,7 @@ internal object BackupImportDeletionResolution {
         expectedLocalRevision: String,
         backupRevision: String,
     ) {
-        if (kind !in deletableKinds && kind != "customer") unsupportedDeletion()
+        if (kind !in restorableKinds) unsupportedDeletion()
         val localHead = db.rawQuery(
             "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
             arrayOf(kind, entityId),
@@ -315,7 +317,7 @@ internal object BackupImportDeletionResolution {
         entityId: String,
         backupRevision: String,
     ) {
-        if (kind !in deletableKinds) unsupportedDeletion()
+        if (kind !in restorableKinds) unsupportedDeletion()
         val localHead = db.rawQuery(
             "SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?",
             arrayOf(kind, entityId),
@@ -328,13 +330,14 @@ internal object BackupImportDeletionResolution {
             staleDeletion()
         }
         val table = when (kind) {
+            "customer" -> "customers"
             "task_comment" -> "task_comments"
             "task_attachment" -> "task_attachments"
             else -> unsupportedDeletion()
         }
         val spec = handle.catalog[table] ?: staleDeletion()
         val key = when (kind) {
-            "task_comment", "task_attachment" -> mapOf("id" to entityId)
+            "customer", "task_comment", "task_attachment" -> mapOf("id" to entityId)
             else -> unsupportedDeletion()
         }
         val row = store.findLocalRow(db, table, spec, key) ?: staleDeletion()

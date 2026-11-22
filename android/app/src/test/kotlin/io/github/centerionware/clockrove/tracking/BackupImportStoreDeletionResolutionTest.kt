@@ -417,6 +417,39 @@ class BackupImportStoreDeletionResolutionTest : BackupImportStoreTestBase() {
     }
 
     @Test
+    fun restoringCustomerFromBackupPreservesTheLocalDeletionInAncestry() {
+        val customerId = "backup-restore-customer"
+        val name = "Synthetic restored customer"
+        assertNull(repository.saveCustomer(
+            "backup-restore-customer-create", repository.snapshot().version,
+            BusinessStore.Customer(customerId, name),
+        ).conflict)
+        val backupHead = currentHead("customer", customerId)
+        val source = exportStore.start(database)
+        assertNull(repository.removeCustomer(
+            "backup-restore-customer-delete", repository.snapshot().version, customerId,
+        ).conflict)
+        val localTombstone = currentHead("customer", customerId)
+        val started = stageSnapshot(source)
+        assertTrue(exportStore.close(source.snapshotId))
+        val preview = importStore.finish(database, started.importId)
+        val conflict = conflict(
+            conflictsFor(started.importId, preview),
+            "ENTITY_DELETION_TOMBSTONE", "customers", customerId,
+        )
+        assertEquals(listOf("PRESERVE_LOCAL_DELETION", "RESTORE_BACKUP_CONTENT"), conflict["allowedChoices"])
+        importStore.resolveConflict(
+            database, started.importId, preview.previewToken, preview.localStateVersion,
+            conflict["conflictId"] as String, "RESTORE_BACKUP_CONTENT",
+        )
+        importStore.apply(database, started.importId, preview.previewToken, preview.localStateVersion)
+
+        assertEquals(name, BusinessStore.customers(database).single { it.id == customerId }.name)
+        assertMergedLiveParents("customer", customerId, localTombstone, backupHead)
+        assertFalse(importStore.close(started.importId))
+    }
+
+    @Test
     fun immutableQuoteDecisionDeletionHasNoChoicesAndCannotApply() {
         val quoteId = "unsupported-delete-quote"
         assertNull(repository.saveQuote(
