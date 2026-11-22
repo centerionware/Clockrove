@@ -78,7 +78,9 @@ Statuses describe evidence, not intent.
 **App localization is in progress.** The first slice adds offline YAML catalogs
 for 17 locales and a device-default or explicit language choice in Settings.
 The catalogs cover language selection and selected Settings and timer labels.
-Catalog completeness and locale preference tests are prepared for GitHub Actions.
+Catalog parity, locale preference tests, and a Flutter/Android source audit are
+prepared for GitHub Actions. The audit reports remaining candidates during
+migration, with strict mode available for a full-coverage check.
 Remaining Flutter screens, Help, notifications, widgets, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 

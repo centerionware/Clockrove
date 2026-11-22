@@ -21,3 +21,11 @@ is saved on the Android installation. English is the fallback when the device
 has no supported language. The first migration covers language selection and
 some Settings and timekeeping labels. Remaining Flutter screens, Help, native
 notifications and widgets, and generated document labels still need migration.
+
+GitHub Actions uploads a localization audit on each validation. It inventories
+likely untranslated Dart and Kotlin literals, hard-coded Android XML labels,
+and missing Android resource keys for each shipped locale. Review the report
+before moving strings because it also includes technical literals and cannot
+prove that all dynamically constructed messages reach a catalog. The
+`strict_localization` workflow input makes findings fail validation. The catalog
+parity test runs on every validation.

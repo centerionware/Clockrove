@@ -10,6 +10,11 @@ on:
         type: boolean
         default: false
 
+      strict_localization:
+        description: Fail if the audit still finds untranslated copy
+        type: boolean
+        default: false
+
 permissions:
   contents: read
 
@@ -92,14 +97,31 @@ jobs:
           path: pubspec.lock
           retention-days: 1
           if-no-files-found: error
+      - name: Audit app localization coverage
+        env:
+          STRICT_LOCALIZATION: ${{ inputs.strict_localization }}
+        run: |
+          flags=()
+          if [[ "$STRICT_LOCALIZATION" == true ]]; then
+            flags+=(--strict)
+          fi
+          dart run tool/localization_audit.dart "${flags[@]}" > "$RUNNER_TEMP/localization-audit.txt"
+      - name: Export localization findings
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: localization-audit
+          path: ${{ runner.temp }}/localization-audit.txt
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Check formatting
         id: format
         # Collect behavior evidence in the same run; the final gate still fails.
         continue-on-error: true
         run: |
-          dart format lib test integration_test
-          git diff --binary -- lib test integration_test > "$RUNNER_TEMP/format.patch"
-          git diff --exit-code -- lib test integration_test
+          dart format lib test integration_test tool
+          git diff --binary -- lib test integration_test tool > "$RUNNER_TEMP/format.patch"
+          git diff --exit-code -- lib test integration_test tool
       - name: Export formatter correction for source review
         if: always() && steps.format.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
