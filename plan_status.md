@@ -146,7 +146,9 @@ Sixteen additional shared action, report, review, and archive labels are
 translated across the 17 current catalogs and used in 15 Flutter files.
 Work and business reports now use catalog entries for their titles,
 refresh actions, job and customer filters, and business export actions.
-Report totals and other dynamic report text remain open.
+Financial totals and the work report's finalized-time and billable-task
+sections now use translated labels and empty states. Remaining dynamic
+report messages still need migration.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

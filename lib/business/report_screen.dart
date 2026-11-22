@@ -331,7 +331,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 const SizedBox(height: 8),
                                 Text(
                                   total.amount == null
-                                      ? 'Amount not available'
+                                      ? AppMessage.reportAmountUnavailable.of(context)
                                       : '${total.currency} ${money(total.amount, total.digits)}',
                                   style: Theme.of(context)
                                       .textTheme
@@ -454,13 +454,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Finalized time',
+                        AppMessage.reportFinalizedTime.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       if (report.intervals.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Text('No finalized work in this selection.'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            AppMessage.reportNoFinalizedWork.of(context),
+                          ),
                         ),
                       for (final interval in report.intervals)
                         Card(
@@ -482,14 +484,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Completed billable tasks',
+                        AppMessage.reportCompletedBillableTasks.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       if (report.tasks.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
-                            'No completed billable tasks in this selection.',
+                            AppMessage.reportNoBillableTasks.of(context),
                           ),
                         ),
                       for (final task in report.tasks)
