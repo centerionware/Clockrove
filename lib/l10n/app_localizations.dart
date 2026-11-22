@@ -113,7 +113,21 @@ enum AppMessage {
   locationApproximate(
     'Approximate location permission; accuracy is limited.',
   ),
-  appName('Clockrove');
+  appName('Clockrove'),
+  backupPassword('Backup password'),
+  confirmPassword('Confirm password'),
+  hidePassword('Hide password'),
+  showPassword('Show password'),
+  createEncryptedBackup('Create encrypted backup'),
+  chooseEncryptedBackup('Choose encrypted backup'),
+  chooseAnotherBackup('Choose another backup'),
+  chooseDifferentBackup('Choose a different backup'),
+  authenticateAndPreview('Authenticate and preview'),
+  cancelPreview('Cancel preview'),
+  applyBackupQuestion('Apply this backup?'),
+  applyReviewedMerge('Apply reviewed merge'),
+  discardPreview('Discard preview'),
+  selectedEncryptedFile('Selected encrypted file · {size} MiB');
 
   const AppMessage(this.english);
   final String english;

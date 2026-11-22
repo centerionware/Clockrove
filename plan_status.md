@@ -105,6 +105,9 @@ The existing catalog parity check covers their named placeholders.
 The work-location permission dialog, action labels, and tracking statuses
 now resolve from the Flutter catalogs. The dialog scrolls to accommodate
 long translations, and displayed status notices follow locale changes.
+Backup export and restore now resolve password fields, picker actions, and
+the reviewed-merge confirmation controls from every shipped Flutter catalog.
+Backup review details, errors, and progress copy still require migration.
 Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_import_api.dart';
@@ -344,7 +345,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Apply this backup?'),
+        title: Text(AppMessage.applyBackupQuestion.of(context)),
         content: Text(
           'Clockrove will merge the reviewed records in one database transaction. '
           'If validation fails, the transaction is rolled back. '
@@ -355,11 +356,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Apply reviewed merge'),
+            child: Text(AppMessage.applyReviewedMerge.of(context)),
           ),
         ],
       ),
@@ -442,7 +443,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       canPop: !_busy,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Restore encrypted backup'),
+          title: Text(AppMessage.restoreBackup.of(context)),
           actions: [HelpButton(topic: HelpTopic.backups, enabled: !_busy)],
         ),
         body: CustomScrollView(
@@ -461,16 +462,19 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     icon: const Icon(Icons.folder_open),
                     label: Text(
                       restore != null
-                          ? 'Choose another backup'
+                          ? AppMessage.chooseAnotherBackup.of(context)
                           : _document == null
-                          ? 'Choose encrypted backup'
-                          : 'Choose a different backup',
+                          ? AppMessage.chooseEncryptedBackup.of(context)
+                          : AppMessage.chooseDifferentBackup.of(context),
                     ),
                   ),
                   if (_document != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Selected encrypted file · ${(_document!.totalBytes / (1024 * 1024)).toStringAsFixed(1)} MiB',
+                      AppMessage.selectedEncryptedFile.format(context, {
+                        'size': (_document!.totalBytes / (1024 * 1024))
+                            .toStringAsFixed(1),
+                      }),
                       key: const ValueKey('restore-selected-file'),
                     ),
                   ],
@@ -484,12 +488,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       autocorrect: false,
                       enableSuggestions: false,
                       decoration: InputDecoration(
-                        labelText: 'Backup password',
+                        labelText: AppMessage.backupPassword.of(context),
                         errorText: _passwordError,
                         suffixIcon: IconButton(
                           tooltip: _passwordVisible
-                              ? 'Hide password'
-                              : 'Show password',
+                              ? AppMessage.hidePassword.of(context)
+                              : AppMessage.showPassword.of(context),
                           onPressed: () => setState(
                             () => _passwordVisible = !_passwordVisible,
                           ),
@@ -508,7 +512,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                           ? null
                           : _createPreview,
                       icon: const Icon(Icons.preview),
-                      label: const Text('Authenticate and preview'),
+                      label: Text(AppMessage.authenticateAndPreview.of(context)),
                     ),
                   ],
                   if (_busy) ...[
@@ -519,7 +523,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         key: const ValueKey('restore-cancel-preview'),
                         onPressed: _cancelPreview,
                         icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Cancel preview'),
+                        label: Text(AppMessage.cancelPreview.of(context)),
                       ),
                   ],
                   if (_message != null) ...[
@@ -624,7 +628,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         key: const ValueKey('restore-apply'),
                         onPressed: _canApply ? _apply : null,
                         icon: const Icon(Icons.merge_type),
-                        label: const Text('Apply reviewed merge'),
+                        label: Text(AppMessage.applyReviewedMerge.of(context)),
                       ),
                     if (restore.preview.localOpenSessionCount > 0 ||
                         (_page != null && _page!.done && !_pageChoicesResolved))
@@ -638,7 +642,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       key: const ValueKey('restore-discard-preview'),
                       onPressed: _busy ? null : _discardPreview,
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Discard preview'),
+                      label: Text(AppMessage.discardPreview.of(context)),
                     ),
                   ],
                 ),

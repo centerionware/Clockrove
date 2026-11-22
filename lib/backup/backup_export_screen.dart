@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_snapshot_exporter.dart';
@@ -381,7 +382,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     final showProgress = _busy && _phase != _BackupExportPhase.choosing;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create encrypted backup'),
+        title: Text(AppMessage.createEncryptedBackup.of(context)),
         actions: [HelpButton(topic: HelpTopic.backups, enabled: !_busy)],
       ),
       body: ListView(
@@ -432,11 +433,13 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             textInputAction: TextInputAction.next,
             onChanged: (_) => _inputChanged(),
             decoration: InputDecoration(
-              labelText: 'Backup password',
+              labelText: AppMessage.backupPassword.of(context),
               helperText: 'At least 12 UTF-8 bytes; maximum 1,024 bytes.',
               errorText: _passwordError,
               suffixIcon: IconButton(
-                tooltip: _passwordVisible ? 'Hide password' : 'Show password',
+                tooltip: _passwordVisible
+                    ? AppMessage.hidePassword.of(context)
+                    : AppMessage.showPassword.of(context),
                 onPressed: _busy
                     ? null
                     : () =>
@@ -457,7 +460,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             onChanged: (_) => _inputChanged(),
             onSubmitted: (_) => _createBackup(),
             decoration: InputDecoration(
-              labelText: 'Confirm password',
+              labelText: AppMessage.confirmPassword.of(context),
               errorText: _confirmationError,
             ),
           ),
@@ -520,7 +523,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
               key: const ValueKey('create-encrypted-backup'),
               onPressed: _createBackup,
               icon: const Icon(Icons.download_outlined),
-              label: const Text('Create encrypted backup'),
+              label: Text(AppMessage.createEncryptedBackup.of(context)),
             )
           else if (_canCancel)
             OutlinedButton.icon(
