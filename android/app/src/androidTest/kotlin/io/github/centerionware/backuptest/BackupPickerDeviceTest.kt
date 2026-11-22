@@ -2,6 +2,7 @@ package io.github.centerionware.backuptest
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -16,6 +17,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class BackupPickerDeviceTest {
@@ -126,7 +128,20 @@ class BackupPickerDeviceTest {
             find()?.let { return it }
             SystemClock.sleep(100)
         }
-        throw AssertionError("Android did not expose $label")
+        val activePackage = automation.rootInActiveWindow?.packageName
+        try {
+            val capture = File(instrumentation.targetContext.getExternalFilesDir(null), "backup-picker-failure.png")
+            automation.takeScreenshot()?.let { bitmap ->
+                try {
+                    capture.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                } finally {
+                    bitmap.recycle()
+                }
+            }
+        } catch (_: Exception) {
+            // Keep the original failure even if the runner cannot save a screenshot.
+        }
+        throw AssertionError("Android did not expose $label (active package: $activePackage)")
     }
 
     companion object {

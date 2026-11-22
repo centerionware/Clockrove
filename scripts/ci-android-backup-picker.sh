@@ -43,6 +43,8 @@ timeout 180 adb -s emulator-5554 shell am instrument -w -r \
   -e listener io.github.centerionware.clockrove.CiXmlListener \
   "$package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$results/backup-picker-instrumentation.txt"
 timeout 30 adb -s emulator-5554 pull \
+  "/sdcard/Android/data/$package/files/backup-picker-failure.png" "$results/backup-picker-failure.png" 2>/dev/null || true
+timeout 30 adb -s emulator-5554 pull \
   "/sdcard/Android/data/$package/files/clockrove-test-results.xml" "$results/TEST-backup-picker.xml"
 python3 - "$results/TEST-backup-picker.xml" <<'PY_DEVICE'
 import sys
