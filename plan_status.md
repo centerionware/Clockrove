@@ -133,7 +133,8 @@ reuse existing catalogs at 25 points across 14 Flutter screens.
 The in-app Help title, search, empty state, version label, tooltips, and all
 eight topic titles are translated. The timekeeping, backup and location
 history articles now have translations across all current catalogs and Help
-search uses their localized bodies. Five Help articles remain.
+search uses their localized bodies. Job board, reporting, and billing Help
+articles now also use the catalogs. Automation and widget Help remain.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

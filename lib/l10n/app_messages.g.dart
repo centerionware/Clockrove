@@ -194,7 +194,10 @@ enum AppMessage {
   helpLocationHistory("Control saved location history"),
   helpTimekeepingBody("Create a job, then start its timer from the work screen. Stop the timer when you finish. Use job work history to add a missed entry or correct the time. The manual timer works without location access."),
   helpBackupsBody("In Settings, choose Export encrypted backup and save the file somewhere you can access later. Keep the password separately. To restore, stop your timer, choose Restore encrypted backup, and enter the password. Review the proposed merge and resolve any conflicts before applying."),
-  helpLocationHistoryBody("Work location recording controls whether Clockrove saves locations during a session. Site automation has its own setting. Use the location history deletion control to remove saved GPS points from the app. Copies you already exported remain at their destination.");
+  helpLocationHistoryBody("Work location recording controls whether Clockrove saves locations during a session. Site automation has its own setting. Use the location history deletion control to remove saved GPS points from the app. Copies you already exported remain at their destination."),
+  helpBoardsBody("Open a job to see its board. Add a task to a column, then use its move action as work progresses. Reuse a task from the library to start a new card. Archive a finished job to remove it from active lists while keeping its history."),
+  helpReportsBody("Choose Reports from the main menu for work across jobs, or open Job report from a board. Choose the date range and jobs before reviewing totals. Export CSV to save the selected report to your chosen destination. Review the date range before sharing it."),
+  helpBillingBody("Open Quotes from the main menu to prepare and review a quote. After it is accepted, review which work belongs on the job. Check the customer, prices and covered work before preparing an invoice. Open Invoices to view the saved PDF and record payments.");
 
   const AppMessage(this.english);
   final String english;

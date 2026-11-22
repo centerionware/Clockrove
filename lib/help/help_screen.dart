@@ -28,27 +28,15 @@ enum HelpTopic {
   ),
   boards(
     AppMessage.helpBoards,
-    fallbackBody:
-        'Open a job to see its board. Add a task to a column, then use its move '
-        'action as work progresses. Reuse a task from the library to start a '
-        'new card. Archive a finished job to remove it from active lists '
-        'while keeping its history.',
+    translatedBody: AppMessage.helpBoardsBody,
   ),
   reports(
     AppMessage.helpReports,
-    fallbackBody:
-        'Choose Reports from the main menu for work across jobs, or open Job '
-        'report from a board. Choose the date range and jobs before reviewing '
-        'totals. Export CSV to save the selected report to your chosen '
-        'destination. Review the date range before sharing it.',
+    translatedBody: AppMessage.helpReportsBody,
   ),
   billing(
     AppMessage.helpBilling,
-    fallbackBody:
-        'Open Quotes from the main menu to prepare and review a quote. After '
-        'it is accepted, review which work belongs on the job. Check the '
-        'customer, prices and covered work before preparing an invoice. '
-        'Open Invoices to view the saved PDF and record payments.',
+    translatedBody: AppMessage.helpBillingBody,
   ),
   widgets(
     AppMessage.helpWidgets,
