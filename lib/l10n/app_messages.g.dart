@@ -101,7 +101,19 @@ enum AppMessage {
   exportCancelling("Cancelling backup…"),
   exportCancel("Cancel backup"),
   exportPickerCancel("Use Back in the Android file picker to cancel."),
-  exportEncryptedBytes("{transferred} of {total} encrypted bytes");
+  exportEncryptedBytes("{transferred} of {total} encrypted bytes"),
+  exportChooseDestination("Choose where to save the encrypted backup."),
+  exportSaveCancelled("Save cancelled. No complete backup was saved."),
+  exportSaved("Encrypted backup saved."),
+  exportCancelled("Backup cancelled. No complete backup file was saved."),
+  exportCompletionUnknown("The save may have completed. Check the chosen folder before trying again."),
+  exportIncomplete("Could not complete the save. Remove any incomplete file and try again."),
+  exportCreateFailed("Could not create the backup. Your saved work was not changed."),
+  exportCleanupFailed("Could not clean up the backup snapshot. Check the save location before trying again."),
+  exportNoFilePicker("No file picker is available. Install or enable a file manager and try again."),
+  exportPickerBusy("Finish the other open file action, then try again."),
+  exportTooLarge("This backup is too large to save on this device."),
+  exportSaveFailed("Could not save the encrypted backup. Your saved work was not changed.");
 
   const AppMessage(this.english);
   final String english;
