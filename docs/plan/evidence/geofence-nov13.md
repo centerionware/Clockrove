@@ -58,3 +58,9 @@ both stopped before native tests could run. Maven Central returned HTTP 429
 for Robolectric's pinned native runtime JAR. The next attempt applies the
 same alternate Maven Central endpoint to Gradle's dependency resolution on
 GitHub runners as well as Robolectric's runtime resolver.
+
+The geofence fix merged as `abe6f5f`. [Main validation 45028310174](https://github.com/centerionware/Clockrove/actions/runs/45028310174)
+passed. The [internal delivery attempt](https://github.com/centerionware/Clockrove/actions/runs/45031370218)
+stopped before uploading a bundle because its signing job did not install
+CI’s Flutter Gradle repository setup. The follow-up applies the same setup
+to the trusted Play workflow. The signed upload and owner-device check remain open.
