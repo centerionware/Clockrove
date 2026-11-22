@@ -49,6 +49,12 @@ of open imported sessions. Near-limit archive replay passed on API 24 and API 35
 in [Actions 45013742618](https://github.com/centerionware/Clockrove/actions/runs/45013742618).
 The system picker and data-changing merge still need passing evidence on both API
 levels. See [restore validation history](docs/plan/evidence/m73-restore-ui.md).
+[PR #75](https://github.com/centerionware/Clockrove/pull/75) merged comment and
+attachment deletion/restoration and causal local-preservation choices for
+eligible records. Other entity families still need review for applying the
+backup side of divergent deletion safely. A passing system-picker journey
+will verify the tested merge, while those distinct conflict paths retain
+their own acceptance work.
 
 PR #70 fixed the invoice PDF action visibility failure. Exact head
 `58ca416dfe8c3b82fff8d58898db9ca7acc86a26` passed Validate run
