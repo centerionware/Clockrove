@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'report_api.dart';
 
 class InvoiceStylePreviewScreen extends ConsumerStatefulWidget {
@@ -130,7 +131,12 @@ class _InvoiceStylePreviewScreenState
                                 ),
                           icon: const Icon(Icons.chevron_left),
                         ),
-                        Text('Page ${page.index + 1} of ${page.pages}'),
+                        Text(
+                          AppMessage.documentPage.format(context, {
+                            'page': '${page.index + 1}',
+                            'total': '${page.pages}',
+                          }),
+                        ),
                         IconButton(
                           tooltip: 'Next preview page',
                           onPressed:

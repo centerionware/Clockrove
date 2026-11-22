@@ -174,6 +174,10 @@ three literal tile tokens. The map provider input validator now returns
 catalog keys for its specific URL, attribution, and credential errors.
 The Google Maps SDK note, report map location history, timezone, accuracy,
 privacy and unavailable-map notices now use the Flutter catalogs.
+Quote and invoice document screens now localize their save, share, email and
+page navigation controls, along with invoice copy titles and quote image
+accessibility labels. Quote and invoice editors, handoff outcomes, generated
+PDFs, and app-generated email text remain in localization scope.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

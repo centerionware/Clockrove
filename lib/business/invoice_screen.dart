@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import 'report_api.dart';
 import 'invoice_detail_screen.dart';
 
@@ -105,14 +106,14 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
     appBar: AppBar(
       title: Text(
         widget.copyId == null
-            ? 'Prepared invoice'
+            ? AppMessage.invoicePrepared.of(context)
             : widget.copyId!.startsWith('void-')
-            ? 'Cancellation copy'
-            : 'Saved payment copy',
+            ? AppMessage.invoiceCancellationCopy.of(context)
+            : AppMessage.invoicePaymentCopy.of(context),
       ),
       actions: [
         IconButton(
-          tooltip: 'Payments and balance',
+          tooltip: AppMessage.invoicePaymentsBalance.of(context),
           onPressed: _busy
               ? null
               : () => Navigator.push<void>(
@@ -167,19 +168,19 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                         icon: const Icon(Icons.email_outlined),
                         label: Text(
                           _notice != null
-                              ? 'Email historical copy'
+                              ? AppMessage.invoiceEmailHistorical.of(context)
                               : widget.copyId == null
-                              ? 'Email invoice'
-                              : 'Email copy',
+                              ? AppMessage.invoiceEmail.of(context)
+                              : AppMessage.invoiceEmailCopy.of(context),
                         ),
                       ),
                       OutlinedButton.icon(
                         onPressed: _busy ? null : () => _handoff('save'),
                         icon: const Icon(Icons.save_alt),
-                        label: const Text('Save PDF'),
+                        label: Text(AppMessage.documentSavePdf.of(context)),
                       ),
                       IconButton(
-                        tooltip: 'Share PDF',
+                        tooltip: AppMessage.documentSharePdf.of(context),
                         onPressed: _busy ? null : () => _handoff('share'),
                         icon: const Icon(Icons.share_outlined),
                       ),
@@ -225,7 +226,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          tooltip: 'Previous invoice page',
+                          tooltip: AppMessage.invoicePreviousPage.of(context),
                           onPressed:
                               snapshot.connectionState ==
                                       ConnectionState.waiting ||
@@ -236,9 +237,14 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                                 ),
                           icon: const Icon(Icons.chevron_left),
                         ),
-                        Text('Page ${page.index + 1} of ${page.pages}'),
+                        Text(
+                          AppMessage.documentPage.format(context, {
+                            'page': '${page.index + 1}',
+                            'total': '${page.pages}',
+                          }),
+                        ),
                         IconButton(
-                          tooltip: 'Next invoice page',
+                          tooltip: AppMessage.invoiceNextPage.of(context),
                           onPressed:
                               snapshot.connectionState ==
                                       ConnectionState.waiting ||

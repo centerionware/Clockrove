@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'quote_api.dart';
 import 'report_api.dart';
 
@@ -144,15 +145,15 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                           FilledButton.icon(
                             onPressed: _busy ? null : () => _action('email'),
                             icon: const Icon(Icons.mail_outline),
-                            label: const Text('Email quote'),
+                            label: Text(AppMessage.quoteEmail.of(context)),
                           ),
                           OutlinedButton.icon(
                             onPressed: _busy ? null : () => _action('save'),
                             icon: const Icon(Icons.download),
-                            label: const Text('Save PDF'),
+                            label: Text(AppMessage.documentSavePdf.of(context)),
                           ),
                           IconButton(
-                            tooltip: 'Share quote PDF',
+                            tooltip: AppMessage.quoteSharePdf.of(context),
                             onPressed: _busy ? null : () => _action('share'),
                             icon: const Icon(Icons.share_outlined),
                           ),
@@ -172,8 +173,10 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     child: Image.memory(
                       page.png,
                       fit: BoxFit.contain,
-                      semanticLabel:
-                          'Quote page ${page.index + 1} of ${page.pages}',
+                      semanticLabel: AppMessage.quotePage.format(context, {
+                        'page': '${page.index + 1}',
+                        'total': '${page.pages}',
+                      }),
                     ),
                   ),
                 ),
@@ -182,7 +185,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    tooltip: 'Previous quote page',
+                    tooltip: AppMessage.quotePreviousPage.of(context),
                     onPressed: loading || page.index == 0
                         ? null
                         : () => setState(() {
@@ -190,9 +193,14 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                           }),
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  Text('Page ${page.index + 1} of ${page.pages}'),
+                  Text(
+                    AppMessage.documentPage.format(context, {
+                      'page': '${page.index + 1}',
+                      'total': '${page.pages}',
+                    }),
+                  ),
                   IconButton(
-                    tooltip: 'Next quote page',
+                    tooltip: AppMessage.quoteNextPage.of(context),
                     onPressed: loading || page.index + 1 >= page.pages
                         ? null
                         : () => setState(() {
