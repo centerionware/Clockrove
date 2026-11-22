@@ -8,6 +8,7 @@ import 'business_command.dart';
 import 'quote_api.dart';
 import 'report_api.dart';
 import 'settings_api.dart';
+import 'settings_validation_messages.dart';
 import 'settings_screen.dart';
 import 'tax_rate.dart';
 
@@ -798,7 +799,8 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 'Tax percentage',
                 32,
                 decimal: true,
-                validator: (value) => taxPercentError(value ?? ''),
+                validator: (value) =>
+                    settingsTaxInputError(context, value ?? ''),
               ),
               _totals(),
               const SizedBox(height: 20),

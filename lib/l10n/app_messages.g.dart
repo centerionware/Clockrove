@@ -333,7 +333,14 @@ enum AppMessage {
   useDefaultTax("Use default tax rate"),
   useDefaultHourlyRule("Use default hourly billing rule"),
   useDefaultMinimumHours("Use default minimum billable hours"),
-  useDefaultTaskFee("Use default minimum per-task fee");
+  useDefaultTaskFee("Use default minimum per-task fee"),
+  validationTaxFormat("Enter a tax percentage from 0 to 100, with up to four decimal places."),
+  validationTaxBounds("Tax percentage must be between 0 and 100."),
+  validationMinimumHours("Enter 0 or a positive number with up to 6 decimal places."),
+  validationReceivablesEmail("Enter one email address, or leave blank to use the company email."),
+  validationTaskFee("Enter a valid amount in {currency}, or enter 0 to disable the minimum."),
+  validationJobName("Enter a job name."),
+  saveJobSettings("Save job settings");
 
   const AppMessage(this.english);
   final String english;

@@ -11,6 +11,7 @@ import 'settings_screen.dart';
 import 'lifecycle_api.dart';
 import 'job_deletion_dialog.dart';
 import 'tax_rate.dart';
+import 'settings_validation_messages.dart';
 import 'invoice_billing_policy.dart';
 
 class JobSettingsScreen extends ConsumerWidget {
@@ -120,7 +121,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
       parseMoney(_minimumTaskFee.text, digits);
       return null;
     } on FormatException {
-      return 'Enter a valid amount in $currency, or enter 0 to disable the minimum.';
+      return AppMessage.validationTaskFee.format(context, {
+        'currency': currency,
+      });
     }
   }
 
@@ -251,7 +254,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
               ),
               onChanged: (_) {
                 if (_taxError != null) {
-                  setState(() => _taxError = taxPercentError(_tax.text));
+                  setState(() => _taxError = settingsTaxInputError(context, _tax.text));
                 }
               },
             ),
@@ -325,7 +328,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
             onChanged: (_) {
               if (_minimumHoursErrorText != null) {
                 setState(
-                  () => _minimumHoursErrorText = minimumHoursError(
+                  () => _minimumHoursErrorText = settingsHoursInputError(
+                    context,
                     _minimumHours.text,
                   ),
                 );
@@ -472,16 +476,16 @@ class _JobFormState extends ConsumerState<_JobForm> {
         ),
         const SizedBox(height: 24),
         BusinessCommand(
-          label: 'Save job settings',
+          label: AppMessage.saveJobSettings.of(context),
           enabled: data?.archived == false,
           create: () {
             if (_name.text.trim().isEmpty) {
-              throw const FormatException('Enter a job name.');
+              throw FormatException(AppMessage.validationJobName.of(context));
             }
-            final taxError = _inheritTax ? null : taxPercentError(_tax.text);
+            final taxError = _inheritTax ? null : settingsTaxInputError(context, _tax.text);
             final hoursError = _inheritMinimumHours
                 ? null
-                : minimumHoursError(_minimumHours.text);
+                : settingsHoursInputError(context, _minimumHours.text);
             final feeError = _inheritMinimumTaskFee
                 ? null
                 : _taskFeeError(data!.digits, data.currency);

@@ -1,3 +1,8 @@
+final class TaxPercentOutOfRange extends FormatException {
+  const TaxPercentOutOfRange()
+    : super('Tax percentage must be between 0 and 100.');
+}
+
 /// Units are 0.0001 percentage point. Never parse a percentage as a double.
 int parseTaxPercent(String input) {
   final value = input.trim();
@@ -13,7 +18,7 @@ int parseTaxPercent(String input) {
       BigInt.parse(parts[0]) * BigInt.from(10000) +
       BigInt.parse((parts.length == 1 ? '' : parts[1]).padRight(4, '0'));
   if (units > BigInt.from(1000000)) {
-    throw const FormatException('Tax percentage must be between 0 and 100.');
+    throw const TaxPercentOutOfRange();
   }
   return units.toInt();
 }

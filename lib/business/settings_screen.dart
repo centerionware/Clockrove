@@ -8,6 +8,7 @@ import 'settings_api.dart';
 import 'logo_controls.dart';
 import 'email_template.dart';
 import 'tax_rate.dart';
+import 'settings_validation_messages.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
 import '../help/help_screen.dart';
@@ -160,16 +161,18 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       parseMoney(_minimumTaskFee.text, _digits);
       return null;
     } on FormatException {
-      return 'Enter a valid amount in $_currency, or enter 0 to disable the minimum.';
+      return AppMessage.validationTaskFee.format(context, {
+        'currency': _currency,
+      });
     }
   }
 
   void _validateDraft() {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
-    final tax = taxPercentError(_tax.text);
-    final receivables = accountingEmailError(_receivables.text);
-    final minimumHours = minimumHoursError(_minimumHours.text);
+    final tax = settingsTaxInputError(context, _tax.text);
+    final receivables = settingsReceivablesInputError(context, _receivables.text);
+    final minimumHours = settingsHoursInputError(context, _minimumHours.text);
     final minimumTaskFee = _taskFeeError();
     setState(() {
       _subjectError = subject;
@@ -331,7 +334,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           onChanged: (_) {
             if (_minimumHoursErrorText != null) {
               setState(
-                () => _minimumHoursErrorText = minimumHoursError(
+                () => _minimumHoursErrorText = settingsHoursInputError(
+                  context,
                   _minimumHours.text,
                 ),
               );
@@ -397,7 +401,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             ),
             onChanged: (_) {
               if (_taxError != null) {
-                setState(() => _taxError = taxPercentError(_tax.text));
+                setState(() => _taxError = settingsTaxInputError(context, _tax.text));
               }
             },
           ),
@@ -426,7 +430,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             onChanged: (_) {
               if (_receivablesError != null) {
                 setState(
-                  () => _receivablesError = accountingEmailError(
+                  () => _receivablesError = settingsReceivablesInputError(
+                    context,
                     _receivables.text,
                   ),
                 );

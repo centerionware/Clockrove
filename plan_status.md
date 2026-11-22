@@ -161,7 +161,10 @@ Settings and Job settings now use translated company and customer fields,
 currency and tax labels, hourly billing labels, and invoice style controls.
 Billing defaults, hourly policy choices, inherited tax and minimums, and
 currency-labelled job overrides now also use the catalogs. Additional
-descriptions, error states, and settings fields remain open.
+descriptions and fields remain open. Tax, minimum hours, minimum task fee,
+and receivables email validation now show translated feedback in Settings
+and job preferences where applicable. Quote tax validation shares the same
+messages.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.
