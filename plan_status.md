@@ -151,6 +151,8 @@ sections now use translated labels and empty states. Remaining dynamic
 report messages still need migration. Margin and cost-count summaries,
 financial activity headings, map sample totals, and exclusion statuses
 now use translated templates.
+Work report task prices, hourly rate breakdowns, rounding guidance, and
+billed quantities also use catalog entries and placeholders.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

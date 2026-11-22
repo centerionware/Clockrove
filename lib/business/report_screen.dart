@@ -339,20 +339,40 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  total.mode == 'TASK'
-                                      ? 'Completed billable tasks${total.missing > 0 ? ' · ${total.missing} prices missing' : ''}'
-                                      : total.rate == null
-                                      ? 'Hourly rate not set for ${total.currency}'
-                                      : '${reportDuration(total.duration)} × ${total.currency} ${money(total.rate, total.digits)}/hour',
+                                  switch ((total.mode, total.rate)) {
+                                    ('TASK', _) when total.missing > 0 =>
+                                      AppMessage.reportTaskPricesMissing
+                                          .format(context, {
+                                            'count': '${total.missing}',
+                                          }),
+                                    ('TASK', _) => AppMessage
+                                        .reportCompletedBillableTasks
+                                        .of(context),
+                                    (_, null) =>
+                                      AppMessage.reportHourlyRateUnset.format(
+                                        context,
+                                        {'currency': total.currency},
+                                      ),
+                                    (_, final rate) =>
+                                      AppMessage.reportHourlyBreakdown.format(
+                                        context,
+                                        {
+                                          'duration': reportDuration(total.duration),
+                                          'currency': total.currency,
+                                          'rate': money(rate, total.digits),
+                                        },
+                                      ),
+                                  },
                                 ),
                                 if (total.mode == 'TASK')
                                   Text(
-                                    '${reportDuration(total.duration)} recorded · billed by task',
+                                    AppMessage.reportTaskDuration.format(
+                                      context,
+                                      {'duration': reportDuration(total.duration)},
+                                    ),
                                   ),
                                 if (total.mode == 'HOURLY')
-                                  const Text(
-                                    'Rounded once for the selected total, half up to the currency minor unit.',
-                                  ),
+                                  Text(AppMessage.reportRoundingNote.of(context)),
                               ],
                             ),
                           ),
@@ -507,13 +527,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           child: ListTile(
                             title: Text(task.title),
                             subtitle: Text(
-                              '${task.date}\n${report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY' ? 'Hourly job · task price kept separately' : 'Quantity ${taskQuantity(task.quantityUnits)} · included in task billing'}',
+                              [
+                                task.date,
+                                report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY'
+                                    ? AppMessage.reportHourlyTaskPrice.of(context)
+                                    : AppMessage.reportBilledQuantity.format(
+                                        context,
+                                        {'quantity': taskQuantity(task.quantityUnits)},
+                                      ),
+                              ].join('\n'),
                             ),
                             trailing: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 140),
                               child: Text(
                                 task.price == null
-                                    ? 'Price not set'
+                                    ? AppMessage.reportPriceUnset.of(context)
                                     : '${task.currency} ${money(taskAmount(task.price, task.quantityUnits), report.totals.firstWhere((t) => t.jobId == task.jobId).digits)}',
                                 textAlign: TextAlign.end,
                               ),

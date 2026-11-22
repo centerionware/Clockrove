@@ -278,7 +278,15 @@ enum AppMessage {
   reportMapSamples("Map · {count} measured samples"),
   reportExcluded("Excluded from final totals and exports"),
   reportNeedsReview("Needs review"),
-  reportActiveOrProvisional("Active or provisional");
+  reportActiveOrProvisional("Active or provisional"),
+  reportTaskPricesMissing("Completed billable tasks · {count} prices missing"),
+  reportHourlyRateUnset("Hourly rate not set for {currency}"),
+  reportHourlyBreakdown("{duration} × {currency} {rate}/hour"),
+  reportTaskDuration("{duration} recorded · billed by task"),
+  reportRoundingNote("Rounded once for the selected total, half up to the currency minor unit."),
+  reportHourlyTaskPrice("Hourly job · task price kept separately"),
+  reportBilledQuantity("Quantity {quantity} · included in task billing"),
+  reportPriceUnset("Price not set");
 
   const AppMessage(this.english);
   final String english;
