@@ -148,7 +148,9 @@ Work and business reports now use catalog entries for their titles,
 refresh actions, job and customer filters, and business export actions.
 Financial totals and the work report's finalized-time and billable-task
 sections now use translated labels and empty states. Remaining dynamic
-report messages still need migration.
+report messages still need migration. Margin and cost-count summaries,
+financial activity headings, map sample totals, and exclusion statuses
+now use translated templates.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.

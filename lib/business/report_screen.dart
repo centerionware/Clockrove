@@ -428,7 +428,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               ),
                         icon: const Icon(Icons.map_outlined),
                         label: Text(
-                          'Map · ${report.points.length} measured samples',
+                          AppMessage.reportMapSamples.format(context, {
+                            'count': '${report.points.length}',
+                          }),
                         ),
                       ),
                       if (report.excluded.isNotEmpty)
@@ -439,14 +441,20 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Excluded from final totals and exports',
+                                  AppMessage.reportExcluded.of(context),
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium,
                                 ),
                                 for (final item in report.excluded)
                                   Text(
-                                    '${item.label} · ${item.reason == 'NEEDS_REVIEW' ? 'Needs review' : 'Active or provisional'}',
+                                    [
+                                      item.label,
+                                      (item.reason == 'NEEDS_REVIEW'
+                                              ? AppMessage.reportNeedsReview
+                                              : AppMessage.reportActiveOrProvisional)
+                                          .of(context),
+                                    ].join(' · '),
                                   ),
                               ],
                             ),

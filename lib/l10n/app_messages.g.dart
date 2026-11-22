@@ -269,7 +269,16 @@ enum AppMessage {
   reportFinalizedTime("Finalized time"),
   reportNoFinalizedWork("No finalized work in this selection."),
   reportCompletedBillableTasks("Completed billable tasks"),
-  reportNoBillableTasks("No completed billable tasks in this selection.");
+  reportNoBillableTasks("No completed billable tasks in this selection."),
+  reportMarginPair("Gross margin {gross}% · net margin {net}%"),
+  reportCostAttribution("{count} recorded cost entries · {unlinked} without a job"),
+  reportInvoiceActivity("Invoice issue and void activity · {count}"),
+  reportCashEvents("Cash and credit events · {count}"),
+  reportCostEntries("Recorded cost entries · {count}"),
+  reportMapSamples("Map · {count} measured samples"),
+  reportExcluded("Excluded from final totals and exports"),
+  reportNeedsReview("Needs review"),
+  reportActiveOrProvisional("Active or provisional");
 
   const AppMessage(this.english);
   final String english;

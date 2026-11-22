@@ -471,10 +471,16 @@ class _BusinessFinancialReportScreenState
             row(AppMessage.reportNetProfit.of(context), value.netProfit),
             row(AppMessage.reportCashSurplus.of(context), value.cashSurplus),
             Text(
-              'Gross margin ${value.grossMarginPercent ?? '—'}% · net margin ${value.netMarginPercent ?? '—'}%',
+              AppMessage.reportMarginPair.format(context, {
+                'gross': value.grossMarginPercent?.toString() ?? '—',
+                'net': value.netMarginPercent?.toString() ?? '—',
+              }),
             ),
             Text(
-              '${value.costCount} recorded cost entries · ${value.unattributedCostCount} without a job',
+              AppMessage.reportCostAttribution.format(context, {
+                'count': '${value.costCount}',
+                'unlinked': '${value.unattributedCostCount}',
+              }),
             ),
             if (value.legacyInvoiceCount > 0)
               Text(
@@ -491,7 +497,11 @@ class _BusinessFinancialReportScreenState
   }
 
   Widget _invoiceSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Invoice issue and void activity · ${report.invoices.length}'),
+    title: Text(
+      AppMessage.reportInvoiceActivity.format(context, {
+        'count': '${report.invoices.length}',
+      }),
+    ),
     children: [
       for (final row in report.invoices.take(_invoiceLimit))
         ListTile(
@@ -523,7 +533,11 @@ class _BusinessFinancialReportScreenState
   );
 
   Widget _cashSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Cash and credit events · ${report.cash.length}'),
+    title: Text(
+      AppMessage.reportCashEvents.format(context, {
+        'count': '${report.cash.length}',
+      }),
+    ),
     children: [
       for (final row in report.cash.take(_cashLimit))
         ListTile(
@@ -557,7 +571,11 @@ class _BusinessFinancialReportScreenState
   );
 
   Widget _costSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Recorded cost entries · ${report.costs.length}'),
+    title: Text(
+      AppMessage.reportCostEntries.format(context, {
+        'count': '${report.costs.length}',
+      }),
+    ),
     children: [
       for (final row in report.costs.take(_costLimit))
         ListTile(
