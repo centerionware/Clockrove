@@ -1,12 +1,10 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/help/help_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/map_preview.dart';
 
 void main() {
   for (final dark in [false, true]) {
@@ -14,6 +12,7 @@ void main() {
     testWidgets('captures the $theme offline Help index and backup guide', (
       tester,
     ) async {
+      await tester.runAsync(loadMapPreviewFonts);
       tester.view.physicalSize = const Size(420, 920);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -30,12 +29,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await _savePreview(tester, boundary, 'help-index-$theme');
+      await tester.runAsync(
+        () => saveMapPreview(boundary, 'help-index-$theme'),
+      );
 
       await tester.tap(find.text(HelpTopic.backups.title));
       await tester.pumpAndSettle();
       expect(find.text(HelpTopic.backups.content), findsOneWidget);
-      await _savePreview(tester, boundary, 'help-backups-$theme');
+      await tester.runAsync(
+        () => saveMapPreview(boundary, 'help-backups-$theme'),
+      );
     });
   }
 
@@ -82,26 +85,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(HelpTopic.automation.content), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
-  });
-}
-
-Future<void> _savePreview(
-  WidgetTester tester,
-  GlobalKey boundary,
-  String name,
-) async {
-  await tester.runAsync(() async {
-    final render =
-        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    final image = await render.toImage(pixelRatio: 2);
-    try {
-      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      final directory = Directory('build/ui-preview')
-        ..createSync(recursive: true);
-      await File('${directory.path}/$name.png')
-          .writeAsBytes(bytes!.buffer.asUint8List());
-    } finally {
-      image.dispose();
-    }
   });
 }
