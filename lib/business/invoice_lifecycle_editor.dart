@@ -242,14 +242,15 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          widget.replace
-              ? 'Void and replace ${_invoice.number}?'
-              : 'Void ${_invoice.number}?',
+          (widget.replace
+                  ? AppMessage.invoiceReviewReplaceTitle
+                  : AppMessage.invoiceReviewVoidTitle)
+              .format(context, {'number': _invoice.number}),
           style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
         content: SingleChildScrollView(
           child: Text(
-            '$summary\n\nThis cannot be undone in place. The original invoice and its history remain saved.',
+            '$summary\n\n${AppMessage.invoiceReviewPermanent.of(context)}',
           ),
         ),
         actions: [
@@ -565,7 +566,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   ),
                   onChanged: _changed,
                   validator: (value) => (value?.trim().length ?? 0) < 10
-                      ? 'Explain the correction in at least 10 characters.'
+                      ? AppMessage.paymentCorrectionMinLength.of(context)
                       : null,
                 ),
               ),
@@ -579,9 +580,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                 child: Text(AppMessage.reviewInvoiceCorrection.of(context)),
               ),
               if (_confirmed)
-                const Text(
-                  'Review confirmed. Confirm below to save this correction.',
-                ),
+                Text(AppMessage.invoiceReviewConfirmed.of(context)),
               const SizedBox(height: 12),
               FilledButtonTheme(
                 key: const ValueKey('invoice-lifecycle-submit'),
@@ -605,13 +604,13 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                         _stale ||
                         !_allowed ||
                         widget.refreshFailed) {
-                      throw const FormatException(
-                        'Refresh and review this correction first.',
+                      throw FormatException(
+                        AppMessage.invoiceRefreshCorrectionFirst.of(context),
                       );
                     }
                     if (!_form.currentState!.validate()) {
-                      throw const FormatException(
-                        'Review the correction reason.',
+                      throw FormatException(
+                        AppMessage.invoiceReviewCorrectionReason.of(context),
                       );
                     }
                     final api = ref.read(invoiceLifecycleApiProvider),

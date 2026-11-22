@@ -221,7 +221,9 @@ positive amounts, balance limits, date confirmation and correction reasons.
 The payment editor also localizes currency precision, timezone resolution
 errors, and the reversal amount. The invoice correction editor localizes
 its title, retry and refresh controls, reason label, review action, and
-final void and replacement buttons.
+final void and replacement buttons. The review dialog localizes its
+confirmation titles and permanent-action notice. Review and correction
+reason validation use catalog messages.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

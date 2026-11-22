@@ -559,7 +559,13 @@ enum AppMessage {
   invoiceInternalCorrectionReason("Internal correction reason"),
   reviewInvoiceCorrection("Review correction"),
   issueReplacementInvoice("Issue replacement invoice"),
-  confirmInvoiceVoid("Confirm void");
+  confirmInvoiceVoid("Confirm void"),
+  invoiceReviewReplaceTitle("Void and replace {number}?"),
+  invoiceReviewVoidTitle("Void {number}?"),
+  invoiceReviewPermanent("This cannot be undone in place. The original invoice and its history remain saved."),
+  invoiceReviewConfirmed("Review confirmed. Confirm below to save this correction."),
+  invoiceRefreshCorrectionFirst("Refresh and review this correction first."),
+  invoiceReviewCorrectionReason("Review the correction reason.");
 
   const AppMessage(this.english);
   final String english;
