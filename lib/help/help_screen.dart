@@ -23,6 +23,34 @@ enum HelpTopic {
         'your timer, choose Restore encrypted backup, and enter the password. '
         'Review the proposed merge and resolve any conflicts before applying.',
   ),
+  boards(
+    'Organize jobs and tasks',
+    'Open a job to see its board. Add a task to a column, then use its move '
+        'action as work progresses. Reuse a task from the library to start a '
+        'new card. Archive a finished job to remove it from active lists '
+        'while keeping its history.',
+  ),
+  reports(
+    'Run reports and export CSV',
+    'Choose Reports from the main menu for work across jobs, or open Job '
+        'report from a board. Choose the date range and jobs before reviewing '
+        'totals. Export CSV to save the selected report to your chosen '
+        'destination. Review the date range before sharing it.',
+  ),
+  billing(
+    'Prepare quotes and invoices',
+    'Open Quotes from the main menu to prepare and review a quote. After '
+        'it is accepted, review which work belongs on the job. Check the '
+        'customer, prices and covered work before preparing an invoice. '
+        'Open Invoices to view the saved PDF and record payments.',
+  ),
+  widgets(
+    'Use the Android home-screen widget',
+    'Open the Android launcher’s widget picker and add a Clockrove widget. '
+        'Choose a default job or choose a job at clock-in. While work is '
+        'running, the timer widget shows the actual active job and can stop it. '
+        'Task and combined widgets show upcoming work for their configuration.',
+  ),
   locationHistory(
     'Control saved location history',
     'Work location recording controls whether Clockrove saves locations '
