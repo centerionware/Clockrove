@@ -540,7 +540,13 @@ enum AppMessage {
   paymentReceivedHelp("Record a payment you have received."),
   paymentConfirmReceiptHelp("Confirmation saves this entry and opens its receipt."),
   paymentBalanceRefreshFailed("Balance refresh failed. Your draft is kept. Refresh before saving."),
-  paymentBalanceChanged("This balance or payment changed. Review the latest invoice before continuing.");
+  paymentBalanceChanged("This balance or payment changed. Review the latest invoice before continuing."),
+  paymentPositiveAmount("Enter an amount greater than zero."),
+  paymentAboveBalance("This exceeds the current balance. Review the amount or refresh the invoice."),
+  paymentConfirmFullDate("Confirm the date, time and timezone before saving."),
+  paymentConfirmHighlightedDate("Confirm the highlighted date and time."),
+  paymentCorrectionMinLength("Add at least 10 characters explaining the correction."),
+  paymentExplainCorrection("Explain why this payment needs correction.");
 
   const AppMessage(this.english);
   final String english;

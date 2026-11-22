@@ -215,11 +215,13 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
           try {
             minor = parsePaymentMoney(_amount.text, data.digits);
             if (minor == null || BigInt.parse(minor) <= BigInt.zero) {
-              throw const FormatException('Enter an amount greater than zero.');
+              throw FormatException(
+                AppMessage.paymentPositiveAmount.of(context),
+              );
             }
             if (BigInt.parse(minor) > BigInt.parse(data.due)) {
-              throw const FormatException(
-                'This exceeds the current balance. Review the amount or refresh the invoice.',
+              throw FormatException(
+                AppMessage.paymentAboveBalance.of(context),
               );
             }
             setState(() => _amountError = null);
@@ -232,17 +234,19 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         if (received == null) {
           setState(
             () => _timeError =
-                'Confirm the date, time and timezone before saving.',
+                AppMessage.paymentConfirmFullDate.of(context),
           );
-          throw const FormatException('Confirm the highlighted date and time.');
+          throw FormatException(
+            AppMessage.paymentConfirmHighlightedDate.of(context),
+          );
         }
         if (_correction && _note.text.trim().length < 10) {
           setState(
             () => _noteError =
-                'Add at least 10 characters explaining the correction.',
+                AppMessage.paymentCorrectionMinLength.of(context),
           );
-          throw const FormatException(
-            'Explain why this payment needs correction.',
+          throw FormatException(
+            AppMessage.paymentExplainCorrection.of(context),
           );
         }
         final commandId = newBusinessId(),
