@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "حدد سعر الساعة للعمل المضاف في
 invoiceAddedTaskPrices: "حدد سعر الوحدة لكل مهمة مضافة."
 invoiceAddedPrepareFailed: "تعذّر إعداد العمل المضاف. راجع تقرير المهمة والنطاق الزمني."
 invoiceAddedExcludesBilled: "تُستبعد الأعمال التي فُوترت سابقًا من هذه الإضافات."
+invoiceVoidReleaseHelp: "يحرّر الإلغاء عمل هذه الفاتورة لإعادة فوترته. تُحفظ الوثيقة الأصلية ولا يعود تحصيلها ممكنًا."
+invoiceCorrectionPrivacyHelp: "يُحفظ السبب في السجل ولا يُطبع على نسخة العميل."

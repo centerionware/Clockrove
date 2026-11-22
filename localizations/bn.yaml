@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "কাজের সেটিংসে যোগ কর�
 invoiceAddedTaskPrices: "যোগ করা প্রতিটি কাজের একক মূল্য নির্ধারণ করুন।"
 invoiceAddedPrepareFailed: "যোগ করা কাজ প্রস্তুত করা যায়নি। কাজের প্রতিবেদন ও তারিখের পরিসর দেখুন।"
 invoiceAddedExcludesBilled: "আগে চালান করা কাজ এই সংযোজন থেকে বাদ দেওয়া হয়েছে।"
+invoiceVoidReleaseHelp: "বাতিল করলে এই চালানের কাজ আবার বিল করা যাবে। মূল নথি রাখা হবে এবং তার টাকা আর আদায় করা যাবে না।"
+invoiceCorrectionPrivacyHelp: "কারণটি ইতিহাসে রাখা হয় এবং গ্রাহকের কপিতে মুদ্রিত হয় না।"

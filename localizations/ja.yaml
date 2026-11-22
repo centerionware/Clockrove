@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "作業設定で追加作業の時間単価を設定し�
 invoiceAddedTaskPrices: "追加したすべてのタスクに単価を設定してください。"
 invoiceAddedPrepareFailed: "追加作業を準備できませんでした。作業レポートと期間を確認してください。"
 invoiceAddedExcludesBilled: "すでに請求済みの作業は追加対象から除外されます。"
+invoiceVoidReleaseHelp: "取り消すと、この請求書の作業を再請求できるようになります。元の書類は保持され、支払いの対象から外れます。"
+invoiceCorrectionPrivacyHelp: "理由は履歴に保存され、顧客用の控えには印刷されません。"

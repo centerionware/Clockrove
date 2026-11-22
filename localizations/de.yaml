@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "Legen Sie in den Auftragseinstellungen einen Stundensat
 invoiceAddedTaskPrices: "Legen Sie für jede hinzugefügte Aufgabe einen Einzelpreis fest."
 invoiceAddedPrepareFailed: "Die hinzugefügte Arbeit konnte nicht vorbereitet werden. Prüfen Sie den Auftragsbericht und den Zeitraum."
 invoiceAddedExcludesBilled: "Bereits abgerechnete Arbeit wird von diesen Ergänzungen ausgeschlossen."
+invoiceVoidReleaseHelp: "Die Stornierung gibt die Arbeit zur erneuten Abrechnung frei. Das Originaldokument bleibt erhalten und kann nicht mehr eingefordert werden."
+invoiceCorrectionPrivacyHelp: "Der Grund bleibt im Verlauf und erscheint nicht auf der Kundenkopie."

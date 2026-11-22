@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "Đặt mức giá theo giờ cho công việc đã thê
 invoiceAddedTaskPrices: "Đặt đơn giá cho từng tác vụ đã thêm."
 invoiceAddedPrepareFailed: "Không thể chuẩn bị công việc đã thêm. Hãy xem lại báo cáo và khoảng ngày."
 invoiceAddedExcludesBilled: "Công việc đã lập hóa đơn trước đó được loại khỏi phần bổ sung này."
+invoiceVoidReleaseHelp: "Việc hủy giải phóng công việc để lập hóa đơn lại. Chứng từ gốc vẫn được lưu và không còn được thu tiền."
+invoiceCorrectionPrivacyHelp: "Lý do được lưu trong lịch sử và không in trên bản sao của khách hàng."

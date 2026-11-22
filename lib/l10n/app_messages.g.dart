@@ -598,7 +598,9 @@ enum AppMessage {
   invoiceAddedHourlyRate("Set an hourly rate for the added work in job settings."),
   invoiceAddedTaskPrices("Set a unit price on every added task."),
   invoiceAddedPrepareFailed("The added work could not be prepared. Review the job report and date range."),
-  invoiceAddedExcludesBilled("Previously invoiced work is excluded from these additions.");
+  invoiceAddedExcludesBilled("Previously invoiced work is excluded from these additions."),
+  invoiceVoidReleaseHelp("Voiding releases this invoice’s work for billing again. The original document is retained and will no longer be collectible."),
+  invoiceCorrectionPrivacyHelp("The reason is retained in history and is not printed on the customer’s copy.");
 
   const AppMessage(this.english);
   final String english;

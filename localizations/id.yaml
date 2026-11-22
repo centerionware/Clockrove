@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "Tetapkan tarif per jam untuk pekerjaan tambahan di peng
 invoiceAddedTaskPrices: "Tetapkan harga satuan untuk setiap tugas tambahan."
 invoiceAddedPrepareFailed: "Pekerjaan tambahan tidak bisa disiapkan. Tinjau laporan pekerjaan dan rentang tanggal."
 invoiceAddedExcludesBilled: "Pekerjaan yang sudah ditagihkan tidak disertakan dalam penambahan ini."
+invoiceVoidReleaseHelp: "Pembatalan melepas pekerjaan agar dapat ditagihkan lagi. Dokumen asli tetap disimpan dan tidak dapat ditagih lagi."
+invoiceCorrectionPrivacyHelp: "Alasan disimpan dalam riwayat dan tidak dicetak pada salinan pelanggan."

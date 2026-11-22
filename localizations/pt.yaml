@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "Defina uma taxa por hora para o trabalho adicionado nas
 invoiceAddedTaskPrices: "Defina um preço unitário para cada tarefa adicionada."
 invoiceAddedPrepareFailed: "Não foi possível preparar o trabalho adicionado. Revise o relatório e o intervalo de datas."
 invoiceAddedExcludesBilled: "O trabalho já faturado é excluído destas adições."
+invoiceVoidReleaseHelp: "A anulação libera o trabalho para novo faturamento. O documento original é preservado e não poderá mais ser cobrado."
+invoiceCorrectionPrivacyHelp: "O motivo permanece no histórico e não é impresso na cópia do cliente."

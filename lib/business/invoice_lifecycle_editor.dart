@@ -563,9 +563,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   ),
                 if (previewError != null) Text(previewError),
               ] else
-                const Text(
-                  'Voiding releases this invoice’s work for billing again. The original document is retained and will no longer be collectible.',
-                ),
+                Text(AppMessage.invoiceVoidReleaseHelp.of(context)),
               const SizedBox(height: 20),
               Semantics(
                 identifier: 'invoice-correction-reason',
@@ -586,9 +584,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       : null,
                 ),
               ),
-              const Text(
-                'The reason is retained in history and is not printed on the customer’s copy.',
-              ),
+              Text(AppMessage.invoiceCorrectionPrivacyHelp.of(context)),
               const SizedBox(height: 16),
               if (_message != null) Text(_message!),
               OutlinedButton(

@@ -232,6 +232,7 @@ historical tax and work reservation guidance. Replacement invoice line
 fields and the no-separate-charge note use catalog strings, as do stale
 balance, unavailable correction, and retained invoice details notices.
 Added-work previews use localized preparation errors and exclusion notices.
+The correction editor also localizes the voiding and reason-privacy guidance.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

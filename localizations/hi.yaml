@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "काम की सेटिंग्स में ज
 invoiceAddedTaskPrices: "जोड़े गए हर कार्य की इकाई कीमत तय करें।"
 invoiceAddedPrepareFailed: "जोड़ा गया काम तैयार नहीं हो सका। काम की रिपोर्ट और तारीखों की सीमा देखें।"
 invoiceAddedExcludesBilled: "पहले से चालान किया गया काम इन जुड़ावों में शामिल नहीं है।"
+invoiceVoidReleaseHelp: "रद्द करने से इस चालान का काम दोबारा बिल बनाने के लिए मुक्त हो जाता है। मूल दस्तावेज़ सुरक्षित रहेगा और उस पर वसूली नहीं होगी।"
+invoiceCorrectionPrivacyHelp: "कारण इतिहास में रहता है और ग्राहक की प्रति पर नहीं छपता।"

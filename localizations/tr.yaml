@@ -594,3 +594,5 @@ invoiceAddedHourlyRate: "İş ayarlarında eklenen işler için saatlik ücret b
 invoiceAddedTaskPrices: "Eklenen her görev için birim fiyat belirleyin."
 invoiceAddedPrepareFailed: "Eklenen iş hazırlanamadı. İş raporunu ve tarih aralığını inceleyin."
 invoiceAddedExcludesBilled: "Daha önce faturalanan işler bu eklemelere dahil edilmez."
+invoiceVoidReleaseHelp: "İptal işlemi, faturadaki işi yeniden faturalandırmaya açar. Orijinal belge saklanır ve artık tahsil edilemez."
+invoiceCorrectionPrivacyHelp: "Gerekçe geçmişte saklanır ve müşteri kopyasına yazdırılmaz."
