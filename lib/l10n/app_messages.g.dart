@@ -93,7 +93,15 @@ enum AppMessage {
   restorePreviewStale("No records were restored because this preview is no longer current."),
   restoreReviewAgain("Discard this preview and select the backup again to review current data before restoring."),
   restoreMergeUnconfirmed("The merge could not be confirmed. Check current records before retrying."),
-  restorePreviewDiscarded("Preview discarded. No local records were changed.");
+  restorePreviewDiscarded("Preview discarded. No local records were changed."),
+  exportReading("Reading your saved work…"),
+  exportEncrypting("Encrypting and saving backup…"),
+  exportTransferring("Saving encrypted backup…"),
+  exportFinishing("Finishing save…"),
+  exportCancelling("Cancelling backup…"),
+  exportCancel("Cancel backup"),
+  exportPickerCancel("Use Back in the Android file picker to cancel."),
+  exportEncryptedBytes("{transferred} of {total} encrypted bytes");
 
   const AppMessage(this.english);
   final String english;

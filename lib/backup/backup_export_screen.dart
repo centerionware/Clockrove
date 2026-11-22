@@ -79,6 +79,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   String? _passwordError;
   String? _confirmationError;
   String? _message;
+  AppMessage? _progressMessage;
   bool _passwordVisible = false;
   bool _cancelRequested = false;
   bool _busy = false;
@@ -123,6 +124,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   void _setPhase(
     _BackupExportPhase phase, {
     String? message,
+    AppMessage? progressMessage,
     BackupSnapshotProgress? snapshotProgress,
     int? transferredBytes,
     int? expectedBytes,
@@ -133,6 +135,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     setState(() {
       _phase = phase;
       _message = message;
+      _progressMessage = progressMessage;
       if (snapshotProgress != null) _snapshotProgress = snapshotProgress;
       if (transferredBytes != null) _transferredBytes = transferredBytes;
       if (expectedBytes != null) _expectedBytes = expectedBytes;
@@ -147,7 +150,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     _activeCancellationToken?.cancel();
     _setPhase(
       _BackupExportPhase.cancelling,
-      message: 'Cancelling backup…',
+      progressMessage: AppMessage.exportCancelling,
       canCancel: false,
     );
   }
@@ -165,7 +168,10 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     _transferredBytes = 0;
     _expectedBytes = 0;
     _openSessionCount = 0;
-    _setPhase(_BackupExportPhase.reading, message: 'Reading your saved work…');
+    _setPhase(
+      _BackupExportPhase.reading,
+      progressMessage: AppMessage.exportReading,
+    );
 
     BackupSnapshotStreamExport? snapshot;
     BackupCryptoCancellationToken? cancellationToken;
@@ -179,7 +185,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
           if (_cancelRequested || _phase != _BackupExportPhase.reading) return;
           _setPhase(
             _BackupExportPhase.reading,
-            message: 'Reading your saved work…',
+            progressMessage: AppMessage.exportReading,
             snapshotProgress: progress,
           );
         },
@@ -220,9 +226,9 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             commitStarted
                 ? _BackupExportPhase.writing
                 : _BackupExportPhase.encrypting,
-            message: commitStarted
-                ? 'Finishing save…'
-                : 'Encrypting and saving backup…',
+            progressMessage: commitStarted
+                ? AppMessage.exportFinishing
+                : AppMessage.exportEncrypting,
             transferredBytes: transferred,
             expectedBytes: _expectedBytes,
             canCancel: !commitStarted && !_cancelRequested,
@@ -230,14 +236,14 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         },
         onCommitStarted: () => _setPhase(
           _BackupExportPhase.writing,
-          message: 'Finishing save…',
+          progressMessage: AppMessage.exportFinishing,
           canCancel: false,
         ),
         finish: () => _finishWithRetry(documentId!),
       );
       _setPhase(
         _BackupExportPhase.encrypting,
-        message: 'Encrypting and saving backup…',
+        progressMessage: AppMessage.exportEncrypting,
         canCancel: true,
       );
       await _encryptArchive(
@@ -491,18 +497,28 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
                 '${_snapshotProgress!.totalMediaBytes} media bytes',
               ),
             if (_phase == _BackupExportPhase.transferring)
-              Text('$_transferredBytes of $_expectedBytes encrypted bytes'),
+              Text(
+                AppMessage.exportEncryptedBytes.format(context, {
+                  'transferred': '$_transferredBytes',
+                  'total': '$_expectedBytes',
+                }),
+              ),
             if (_phase == _BackupExportPhase.encrypting &&
                 _transferredBytes > 0)
-              Text('$_transferredBytes of $_expectedBytes encrypted bytes'),
+              Text(
+                AppMessage.exportEncryptedBytes.format(context, {
+                  'transferred': '$_transferredBytes',
+                  'total': '$_expectedBytes',
+                }),
+              ),
           ],
           if (_phase == _BackupExportPhase.choosing) ...[
             const SizedBox(height: 20),
             const LinearProgressIndicator(),
             const SizedBox(height: 10),
-            const Text('Use Back in the Android file picker to cancel.'),
+            Text(AppMessage.exportPickerCancel.of(context)),
           ],
-          if (_message case final message?) ...[
+          if ((_progressMessage?.of(context) ?? _message) case final message?) ...[
             const SizedBox(height: 20),
             Semantics(
               liveRegion: true,
@@ -530,7 +546,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
               key: const ValueKey('cancel-backup-export'),
               onPressed: _requestCancel,
               icon: const Icon(Icons.close),
-              label: const Text('Cancel backup'),
+              label: Text(AppMessage.exportCancel.of(context)),
             ),
         ],
       ),
@@ -538,11 +554,11 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   }
 
   String get _phaseMessage => switch (_phase) {
-    _BackupExportPhase.reading => 'Reading your saved work…',
-    _BackupExportPhase.encrypting => 'Encrypting and saving backup…',
-    _BackupExportPhase.transferring => 'Saving encrypted backup…',
-    _BackupExportPhase.writing => 'Finishing save…',
-    _BackupExportPhase.cancelling => 'Cancelling backup…',
+    _BackupExportPhase.reading => AppMessage.exportReading.of(context),
+    _BackupExportPhase.encrypting => AppMessage.exportEncrypting.of(context),
+    _BackupExportPhase.transferring => AppMessage.exportTransferring.of(context),
+    _BackupExportPhase.writing => AppMessage.exportFinishing.of(context),
+    _BackupExportPhase.cancelling => AppMessage.exportCancelling.of(context),
     _ => _message ?? '',
   };
 }

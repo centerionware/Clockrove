@@ -110,6 +110,8 @@ the reviewed-merge confirmation controls from every shipped Flutter catalog.
 Restore progress, picker cancellation, and stale-preview messages also use
 catalog keys. Remaining backup review details, error paths, and export
 progress still require migration.
+Export phase labels, cancellation controls, and encrypted-byte progress now
+use the 17 Flutter catalogs. Additional export copy still needs migration.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.
