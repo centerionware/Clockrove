@@ -10,13 +10,25 @@ import 'email_template.dart';
 import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
+import '../help/help_screen.dart';
 import '../maps/map_provider_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Settings')),
+    appBar: AppBar(
+      title: const Text('Settings'),
+      actions: [
+        IconButton(
+          tooltip: 'Help',
+          icon: const Icon(Icons.help_outline),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HelpScreen()),
+          ),
+        ),
+      ],
+    ),
     body: ref
         .watch(businessSettingsProvider)
         .when(
