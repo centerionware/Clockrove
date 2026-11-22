@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../help/help_screen.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_import_api.dart';
@@ -440,7 +441,10 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Restore encrypted backup')),
+        appBar: AppBar(
+          title: const Text('Restore encrypted backup'),
+          actions: [HelpButton(topic: HelpTopic.backups, enabled: !_busy)],
+        ),
         body: CustomScrollView(
           slivers: [
             SliverPadding(

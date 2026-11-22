@@ -10,6 +10,7 @@ import 'email_template.dart';
 import 'tax_rate.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
+import '../help/help_screen.dart';
 import '../maps/map_provider_settings_screen.dart';
 import '../backup/backup_export_screen.dart';
 import '../backup/backup_restore_screen.dart';
@@ -19,7 +20,10 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Settings')),
+    appBar: AppBar(
+      title: const Text('Settings'),
+      actions: const [HelpButton()],
+    ),
     body: ref
         .watch(businessSettingsProvider)
         .when(
@@ -214,7 +218,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Create an encrypted backup or restore one onto this device. Review conflicts before the native repository applies a restore.',
+          'Save an encrypted copy of your records. When you restore a backup, review the proposed changes before applying them.',
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(

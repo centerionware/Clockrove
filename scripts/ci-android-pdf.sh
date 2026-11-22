@@ -241,6 +241,11 @@ done
   # task media that must not affect those product journeys.
   bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
     "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
+  clockrove_run_flutter_integration_test "$clockrove_api" help-navigation \
+    'CLOCKROVE_HELP_NAVIGATION version_and_search=true' \
+    -- flutter test --no-uninstall --no-pub integration_test/help_navigation_test.dart \
+      -d emulator-5554 --reporter expanded \
+    | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"
   bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
     "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true

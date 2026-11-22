@@ -205,5 +205,13 @@ state and destructive confirmation. Assert persisted and native side effects and
 retain a reviewed screenshot for every screen/state on API 24 and current stable
 Android. Do not move from internal to closed testing until all launch features and
 this full-app E2E/UI acceptance pass. Internal iterations can continue while the
-work is underway. Public Cloudflare Pages documentation remains part of the full
-open-release stage, built from the reviewed synthetic screenshots.
+work is underway.
+
+Before closed testing, confirm the signed internal candidate and record its commit,
+version name, version code, and install and upgrade results. Publish the reviewed
+privacy policy, Terms of Use, Data Usage Policy, and support contact on Cloudflare
+Pages. Make the same approved policies available in offline Help, link the public
+privacy policy from Help and the Play listing, and reconcile the candidate against
+the [Play Data safety review](policies/PLAY_DATA_SAFETY_REVIEW.md). The complete
+public guides and reviewed synthetic screenshots remain part of the full
+open-release gate. See [Milestone 8](plan/milestones.md#milestone-8--release-readiness-and-automatic-android-delivery).

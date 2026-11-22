@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../help/help_screen.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 import 'automation_api.dart';
@@ -106,6 +107,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
           'Choose “${state.backgroundLabel}” in Android settings. You can decline and keep using the manual timer.',
         ),
         actions: [
+          HelpButton(topic: HelpTopic.automation, enabled: !_busy),
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Not now'),
