@@ -35,8 +35,11 @@ Statuses describe evidence, not intent.
   fixture directory still visible in the grid after the attempted tap. The
   test targets title rows with explicit finger events and waits for each
   navigation result. Android 7 shell taps leave the tool type unknown, while
-  DocumentsUI's row handler requires a finger or stylus. Both APIs still need
-  passing committed-merge evidence.
+  DocumentsUI's row handler requires a finger or stylus. [Validation on `74bd9cd`](https://github.com/centerionware/Clockrove/actions/runs/45069638407)
+  passed cancellation and staged the selected archive on API 24. Its failure
+  capture showed an empty password field after Android acknowledged the text
+  action. The journey now focuses the field and verifies masked text after
+  typing through Android input. Both APIs still need committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

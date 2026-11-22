@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
-import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.InputDevice
@@ -54,15 +53,7 @@ class BackupPickerDeviceTest {
         }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
-        val password = waitFor("backup password field") {
-            findNode { it.isVisibleToUser && it.isEditable && it.isPassword }
-        }
-        assertTrue(password.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, PASSWORD)
-        }))
-        if (automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
-            pressBack()
-        }
+        enterBackupPassword()
         click("Authenticate and preview", scroll = true)
         val apply = waitFor("authenticated restore preview") {
             findLabel("Backup authenticated", prefix = true)
@@ -93,6 +84,27 @@ class BackupPickerDeviceTest {
         assertTrue("Imported automation should start disabled", !imported.settings.enabled)
         assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
     }
+
+    private fun enterBackupPassword() {
+        val password = waitFor("backup password field", ::findPasswordField)
+        touchNode(password)
+        waitFor("focused backup password and keyboard") {
+            findPasswordField()?.takeIf { it.isFocused && keyboardVisible() }
+        }
+        // Flutter on API 24 can acknowledge ACTION_SET_TEXT without updating the controller.
+        instrumentation.sendStringSync(PASSWORD)
+        waitFor("entered backup password") {
+            findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
+        }
+        pressBack()
+        waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
+    }
+
+    private fun findPasswordField(): AccessibilityNodeInfo? =
+        findNode { it.isVisibleToUser && it.isEnabled && it.isEditable && it.isPassword }
+
+    private fun keyboardVisible(): Boolean =
+        automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun openSharedFixtureDirectory() {
         showPickerRoots()
@@ -145,7 +157,7 @@ class BackupPickerDeviceTest {
             findDestination()?.let { return@waitFor it }
             if (attempts < 3 && SystemClock.uptimeMillis() >= nextTap) {
                 findDocumentTitle(label)?.let { title ->
-                    touchDocumentTitle(title)
+                    touchNode(title)
                     attempts++
                     nextTap = SystemClock.uptimeMillis() + 1_000
                 }
@@ -154,9 +166,9 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun touchDocumentTitle(title: AccessibilityNodeInfo) {
-        val bounds = Rect().also(title::getBoundsInScreen)
-        if (bounds.isEmpty) failWithScreenshot("No touch bounds for ${title.text}")
+    private fun touchNode(node: AccessibilityNodeInfo) {
+        val bounds = Rect().also(node::getBoundsInScreen)
+        if (bounds.isEmpty) failWithScreenshot("No touch bounds for ${node.text ?: node.contentDescription}")
 
         // On API 24, shell input tap leaves the tool type unknown. DocumentsUI's
         // directory grid and list require the tool type to identify a finger tap.
@@ -178,7 +190,7 @@ class BackupPickerDeviceTest {
             )
             try {
                 if (!automation.injectInputEvent(event, true)) {
-                    failWithScreenshot("Documents did not receive touch action $action for ${title.text}")
+                    failWithScreenshot("Android did not receive touch action $action")
                 }
             } finally {
                 event.recycle()
