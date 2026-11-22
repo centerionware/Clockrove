@@ -146,7 +146,19 @@ enum AppMessage {
   restoreUnsupportedConflict("This app cannot resolve this conflict. Applying is blocked; discard this preview."),
   restoreMergeTransaction("Clockrove will merge the reviewed records in one database transaction. If validation fails, the transaction is rolled back."),
   restoreOpenSessionsOmitted("Open/provisional sessions in the backup will be omitted; no end time will be invented and no timer will start."),
-  restoreDeviceSettingsExcluded("Automation stays off, and map credentials and device registrations are not imported.");
+  restoreDeviceSettingsExcluded("Automation stays off, and map credentials and device registrations are not imported."),
+  restorePreview("Restore preview"),
+  restoreRecordCount("Records in backup"),
+  restoreAdditions("Proposed additions"),
+  restoreChanges("Existing records changed"),
+  restoreDeletionMarkers("Deletion markers"),
+  restoreUnchanged("Unchanged records"),
+  restoreConflicts("Conflicts to review"),
+  restoreReferenceConflicts("Reference conflicts in backup"),
+  restoreOverlapConflicts("Time overlap conflicts in backup"),
+  restoreMediaFiles("Media files"),
+  restoreMediaData("Media data"),
+  restoreMebibytes("{size} MiB");
 
   const AppMessage(this.english);
   final String english;

@@ -670,28 +670,40 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Restore preview',
+            AppMessage.restorePreview.of(context),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
-          _CountLine(label: 'Records in backup', count: preview.recordCount),
-          _CountLine(label: 'Proposed additions', count: preview.addedCount),
           _CountLine(
-            label: 'Existing records changed',
+            label: AppMessage.restoreRecordCount,
+            count: preview.recordCount,
+          ),
+          _CountLine(
+            label: AppMessage.restoreAdditions,
+            count: preview.addedCount,
+          ),
+          _CountLine(
+            label: AppMessage.restoreChanges,
             count: preview.changedCount,
           ),
-          _CountLine(label: 'Deletion markers', count: preview.deletedCount),
-          _CountLine(label: 'Unchanged records', count: preview.unchangedCount),
           _CountLine(
-            label: 'Conflicts to review',
+            label: AppMessage.restoreDeletionMarkers,
+            count: preview.deletedCount,
+          ),
+          _CountLine(
+            label: AppMessage.restoreUnchanged,
+            count: preview.unchangedCount,
+          ),
+          _CountLine(
+            label: AppMessage.restoreConflicts,
             count: preview.conflictCount,
           ),
           _CountLine(
-            label: 'Reference conflicts in backup',
+            label: AppMessage.restoreReferenceConflicts,
             count: preview.unresolvedReferenceCount,
           ),
           _CountLine(
-            label: 'Time overlap conflicts in backup',
+            label: AppMessage.restoreOverlapConflicts,
             count: preview.timeOverlapCount,
           ),
           const Padding(
@@ -700,11 +712,15 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Deletion markers count backup tombstones, not every record they affect.',
             ),
           ),
-          _CountLine(label: 'Media files', count: preview.mediaCount),
           _CountLine(
-            label: 'Media data',
-            value:
-                '${(preview.mediaBytes / (1024 * 1024)).toStringAsFixed(1)} MiB',
+            label: AppMessage.restoreMediaFiles,
+            count: preview.mediaCount,
+          ),
+          _CountLine(
+            label: AppMessage.restoreMediaData,
+            value: AppMessage.restoreMebibytes.format(context, {
+              'size': (preview.mediaBytes / (1024 * 1024)).toStringAsFixed(1),
+            }),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -837,7 +853,7 @@ final class _SummaryColumn extends StatelessWidget {
 final class _CountLine extends StatelessWidget {
   const _CountLine({required this.label, this.count, this.value});
 
-  final String label;
+  final AppMessage label;
   final int? count;
   final String? value;
 
@@ -846,8 +862,10 @@ final class _CountLine extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       children: [
-        Expanded(child: Text(label)),
-        Text(value ?? '${count ?? 0}'),
+        Expanded(child: Text(label.of(context))),
+        Text(
+          value ?? MaterialLocalizations.of(context).formatDecimal(count ?? 0),
+        ),
       ],
     ),
   );
