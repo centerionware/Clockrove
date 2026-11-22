@@ -45,7 +45,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   }
 
   bool _busy = false;
-  String? _message;
+  AppMessage? _message;
   Future<void> _handoff(String kind) async {
     if (_busy) return;
     setState(() {
@@ -54,28 +54,28 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
     });
     try {
       final api = ref.read(reportApiProvider);
-      String message;
+      AppMessage message;
       if (kind == 'email') {
         if (widget.copyId == null) {
           await api.email(widget.invoiceId);
         } else {
           await api.emailCopy(widget.invoiceId, widget.copyId!);
         }
-        message = 'Email composer opened. Review the PDF attachment and press Send in your email app.';
+        message = AppMessage.invoiceEmailOpened;
       } else if (kind == 'share') {
         if (widget.copyId == null) {
           await api.share(widget.invoiceId);
         } else {
           await api.shareCopy(widget.invoiceId, widget.copyId!);
         }
-        message = 'Share dialog opened.';
+        message = AppMessage.documentShareOpened;
       } else {
         message =
             await (widget.copyId == null
                 ? api.save(widget.invoiceId)
                 : api.saveCopy(widget.invoiceId, widget.copyId!))
-            ? 'PDF saved.'
-            : 'Save cancelled. Your prepared invoice is kept.';
+            ? AppMessage.reportPdfSaved
+            : AppMessage.invoiceSaveCancelled;
       }
       if (mounted) {
         setState(() => _message = message);
@@ -84,15 +84,13 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
       if (mounted) {
         setState(
           () => _message = error.code == 'PAYMENT_HISTORY_TOO_LARGE'
-              ? 'This history is too long for one PDF. Open individual saved receipts from the invoice.'
-              : 'The handoff could not be opened. Try Save PDF or Share. Your saved document is kept.',
+              ? AppMessage.paymentHistoryPdfTooLarge
+              : AppMessage.invoiceHandoffFailed,
         );
       }
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _message = 'The handoff could not be opened. Try Save PDF or Share. Your prepared invoice is kept.',
-        );
+        setState(() => _message = AppMessage.invoicePreparedHandoffFailed);
       }
     } finally {
       if (mounted) {
@@ -156,7 +154,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text(_message!),
+                      child: Text(_message!.of(context)),
                     ),
                   const SizedBox(height: 12),
                   Wrap(

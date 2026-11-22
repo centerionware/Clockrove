@@ -25,10 +25,10 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   bool _busy = false;
   Future<InvoicePage> _load(int page) =>
       ref.read(quoteApiProvider).preview(widget.quoteId, widget.revision, page);
-  void _feedback(String message) {
+  void _feedback(AppMessage message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(SnackBar(content: Text(message.of(context))));
   }
 
   Future<void> _action(String action) async {
@@ -41,9 +41,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       if (action == 'email') {
         await api.email(widget.quoteId, widget.revision);
         if (mounted) {
-          _feedback(
-            'Email draft opened. Review the quote and press Send in your email app.',
-          );
+          _feedback(AppMessage.quoteEmailOpened);
         }
       } else if (action == 'share') {
         await api.share(widget.quoteId, widget.revision);
@@ -52,23 +50,22 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
         if (mounted) {
           _feedback(
             saved
-                ? 'Quote PDF saved.'
-                : 'Save cancelled. Your issued quote is retained.',
+                ? AppMessage.quotePdfSaved
+                : AppMessage.quoteSaveCancelled,
           );
         }
       }
     } on PlatformException catch (error) {
       if (mounted) {
         _feedback(
-          error.message ??
-              'The document could not be opened. Try saving the PDF.',
+          error.code == 'NO_DOCUMENT_PICKER'
+              ? AppMessage.exportNoFilePicker
+              : AppMessage.quoteDocumentOpenFailed,
         );
       }
     } catch (_) {
       if (mounted) {
-        _feedback(
-          'The quote could not be shared. Its issued revision is retained.',
-        );
+        _feedback(AppMessage.quoteShareFailed);
       }
     } finally {
       if (mounted) {
