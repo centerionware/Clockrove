@@ -1,0 +1,26 @@
+name: Validate documentation site
+on:
+  pull_request:
+    paths:
+      - 'website/**'
+      - 'scripts/check-documentation-links.py'
+      - '.github/workflows/validate-website.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'scripts/check-documentation-links.py'
+      - '.github/workflows/validate-website.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-documentation-links.py

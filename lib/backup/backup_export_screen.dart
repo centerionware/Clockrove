@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../help/help_screen.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_snapshot_exporter.dart';
@@ -379,7 +380,10 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     final colors = Theme.of(context).colorScheme;
     final showProgress = _busy && _phase != _BackupExportPhase.choosing;
     return Scaffold(
-      appBar: AppBar(title: const Text('Create encrypted backup')),
+      appBar: AppBar(
+        title: const Text('Create encrypted backup'),
+        actions: [HelpButton(topic: HelpTopic.backups, enabled: !_busy)],
+      ),
       body: ListView(
         key: const ValueKey('backup-export-list'),
         padding: const EdgeInsets.all(20),
