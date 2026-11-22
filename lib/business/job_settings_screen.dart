@@ -210,14 +210,16 @@ class _JobFormState extends ConsumerState<_JobForm> {
           readOnly: data?.archived ?? true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Hourly rate override (${widget.initial.currency})',
+            labelText: AppMessage.jobHourlyRateOverride.format(context, {
+              'currency': widget.initial.currency,
+            }),
             helperText: 'Blank uses the global default for the same currency.',
           ),
         ),
         const SizedBox(height: 24),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default tax rate'),
+          title: Text(AppMessage.useDefaultTax.of(context)),
           subtitle: Text(
             '${taxPercent(ref.watch(businessSettingsProvider).value?.settings.defaultTaxUnits ?? widget.business.settings.defaultTaxUnits)}% of the invoice subtotal',
           ),
@@ -256,7 +258,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         const SizedBox(height: 24),
         Text(
-          'Invoice billing rules',
+          AppMessage.invoiceBillingRules.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
@@ -265,7 +267,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default hourly billing rule'),
+          title: Text(AppMessage.useDefaultHourlyRule.of(context)),
           subtitle: Text(
             billingModeLabel(widget.business.settings.hourlyBillingMode),
           ),
@@ -278,14 +280,14 @@ class _JobFormState extends ConsumerState<_JobForm> {
           DropdownButtonFormField<String>(
             initialValue: _hourlyBillingMode,
             decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: minimumThenExactBilling,
-                child: Text('Minimum hours, then exact time'),
+                child: Text(AppMessage.minimumThenExact.of(context)),
               ),
               DropdownMenuItem(
                 value: roundTotalUpBilling,
-                child: Text('Round total time up to the next hour'),
+                child: Text(AppMessage.roundTotalUp.of(context)),
               ),
             ],
             onChanged: data?.archived == false
@@ -298,7 +300,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default minimum billable hours'),
+          title: Text(AppMessage.useDefaultMinimumHours.of(context)),
           subtitle: Text(
             '${widget.business.settings.minimumBillableHours} hours',
           ),
@@ -332,7 +334,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default minimum per-task fee'),
+          title: Text(AppMessage.useDefaultTaskFee.of(context)),
           subtitle: Text(
             widget.business.settings.currency == widget.initial.currency
                 ? '${widget.business.settings.currency} ${money(widget.business.settings.minimumTaskFeeMinor, widget.business.settings.digits)}'
@@ -352,8 +354,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
             readOnly: data?.archived ?? true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText:
-                  'Minimum task-rate invoice fee (${widget.initial.currency})',
+              labelText: AppMessage.jobMinimumTaskFee.format(context, {
+                'currency': widget.initial.currency,
+              }),
               helperText: '0 disables it. This job uses its own currency.',
               errorText: _minimumTaskFeeError,
             ),

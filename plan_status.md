@@ -159,7 +159,9 @@ Job archive, restore, and permanent deletion now use catalog-backed labels
 and warnings. The deletion dialogs share the detailed retention notice.
 Settings and Job settings now use translated company and customer fields,
 currency and tax labels, hourly billing labels, and invoice style controls.
-Additional descriptions, error states, and settings fields remain open.
+Billing defaults, hourly policy choices, inherited tax and minimums, and
+currency-labelled job overrides now also use the catalogs. Additional
+descriptions, error states, and settings fields remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

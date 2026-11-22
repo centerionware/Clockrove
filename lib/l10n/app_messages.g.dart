@@ -321,7 +321,19 @@ enum AppMessage {
   invoiceStyle("Invoice style"),
   previewInvoice("Preview invoice"),
   customer("Customer"),
-  manageCustomers("Manage customers");
+  manageCustomers("Manage customers"),
+  billingDefaults("Billing defaults"),
+  invoiceBillingRules("Invoice billing rules"),
+  minimumThenExact("Minimum hours, then exact time"),
+  roundTotalUp("Round total time up to the next hour"),
+  defaultHourlyRate("Default hourly rate ({currency})"),
+  minimumInvoiceTaskFee("Minimum per-task invoice fee ({currency})"),
+  jobHourlyRateOverride("Hourly rate override ({currency})"),
+  jobMinimumTaskFee("Minimum task-rate invoice fee ({currency})"),
+  useDefaultTax("Use default tax rate"),
+  useDefaultHourlyRule("Use default hourly billing rule"),
+  useDefaultMinimumHours("Use default minimum billable hours"),
+  useDefaultTaskFee("Use default minimum per-task fee");
 
   const AppMessage(this.english);
   final String english;

@@ -252,7 +252,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 24),
         const LanguageSetting(),
         const SizedBox(height: 24),
-        Text('Billing defaults', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          AppMessage.billingDefaults.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _currency,
@@ -282,13 +285,15 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           controller: _rate,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Default hourly rate ($_currency)',
+            labelText: AppMessage.defaultHourlyRate.format(context, {
+              'currency': _currency,
+            }),
             helperText: 'Blank means no rate set. Override this in any job.',
           ),
         ),
         const SizedBox(height: 24),
         Text(
-          'Invoice billing rules',
+          AppMessage.invoiceBillingRules.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
@@ -299,14 +304,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         DropdownButtonFormField<String>(
           initialValue: _hourlyBillingMode,
           decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
-          items: const [
+          items: [
             DropdownMenuItem(
               value: minimumThenExactBilling,
-              child: Text('Minimum hours, then exact time'),
+              child: Text(AppMessage.minimumThenExact.of(context)),
             ),
             DropdownMenuItem(
               value: roundTotalUpBilling,
-              child: Text('Round total time up to the next hour'),
+              child: Text(AppMessage.roundTotalUp.of(context)),
             ),
           ],
           onChanged: (value) {
@@ -338,7 +343,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           controller: _minimumTaskFee,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Minimum per-task invoice fee ($_currency)',
+            labelText: AppMessage.minimumInvoiceTaskFee.format(context, {
+              'currency': _currency,
+            }),
             helperText: '0 disables it. A job in another currency needs its own override.',
             errorText: _minimumTaskFeeError,
           ),
