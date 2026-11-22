@@ -30,7 +30,11 @@ Statuses describe evidence, not intent.
   passed API 24 setup and fixture export. The failure capture showed Documents
   back on Recent with its overflow menu closed. The test now waits for the
   roots drawer to settle and searches Documents' interactive windows for the
-  storage menu item. Both APIs still need passing committed-merge evidence.
+  storage menu item. [Validation on `dac46b8`](https://github.com/centerionware/Clockrove/actions/runs/45068063907)
+  reached the primary storage root on API 24. The failure capture showed the
+  fixture directory still visible in the grid after the attempted tap. The
+  test now targets document title rows and waits for each navigation result
+  before continuing. Both APIs still need passing committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)

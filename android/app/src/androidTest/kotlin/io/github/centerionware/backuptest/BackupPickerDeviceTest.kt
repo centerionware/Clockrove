@@ -46,9 +46,10 @@ class BackupPickerDeviceTest {
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
         openPicker()
-        if (findLabel(FIXTURE) == null) openSharedFixtureDirectory()
-        clickPickerLabel(FIXTURE)
-        waitFor("encrypted document staged") { findLabel("Selected encrypted file", prefix = true) }
+        if (findDocumentTitle(FIXTURE) == null) openSharedFixtureDirectory()
+        openDocumentRow(FIXTURE, "encrypted document staged") {
+            findLabel("Selected encrypted file", prefix = true)
+        }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
         val password = waitFor("backup password field") {
@@ -114,7 +115,41 @@ class BackupPickerDeviceTest {
         }
         tapPickerNode(device)
         waitForClosedPickerRoots()
-        clickPickerLabel(FIXTURE_DIRECTORY)
+        // List rows expose a title separate from the selection icon.
+        val listView = findLabel("List view") ?: findLabel("View as list")
+        if (listView != null) {
+            if (!performAccessibilityClick(listView)) tapPickerNode(listView)
+            automation.waitForIdle(250, 5_000)
+        }
+        openDocumentRow(FIXTURE_DIRECTORY, "backup fixture in the opened directory") {
+            findDocumentTitle(FIXTURE)
+        }
+    }
+
+    private fun findDocumentTitle(label: String): AccessibilityNodeInfo? = findNode { node ->
+        node.packageName?.toString() in DOCUMENT_PICKER_PACKAGES &&
+            node.viewIdResourceName?.endsWith(":id/title") == true &&
+            node.isVisibleToUser && node.isEnabled && node.text?.toString() == label
+    }
+
+    private fun openDocumentRow(
+        label: String,
+        destination: String,
+        findDestination: () -> AccessibilityNodeInfo?,
+    ) {
+        var attempts = 0
+        var nextTap = 0L
+        waitFor("$destination after tapping Documents row $label") {
+            findDestination()?.let { return@waitFor it }
+            if (attempts < 3 && SystemClock.uptimeMillis() >= nextTap) {
+                findDocumentTitle(label)?.let { title ->
+                    tapPickerNode(title)
+                    attempts++
+                    nextTap = SystemClock.uptimeMillis() + 1_000
+                }
+            }
+            null
+        }
     }
 
     private fun waitForClosedPickerRoots() {
