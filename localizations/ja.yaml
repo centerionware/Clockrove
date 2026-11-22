@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "見積書全体の見積額は {currency} {total} �
 quoteInvoicePrivateReviewNote: "非公開の確認メモ\n{note}"
 quoteInvoiceAllocationNotice: "選択した実績作業をこの見積書に割り当て、二重請求を防ぐために予約します。追加の作業や支払いは作成されません。メール送信は別の操作です。"
 quoteInvoiceEmailNotSet: "未設定"
+quoteInvoiceTaskDetails: "実績 {actual} · 見積もり {estimated}\n承諾済み {currency} {accepted}/単位 · 現在 {current}\n完了日 {completed}"
+quoteInvoiceRateUnset: "未設定"
+quoteInvoiceAlreadyBilled: "請求済み · {number}"
+quoteInvoiceReviewOlderBilled: "過去の請求済み作業を確認 · {number}"
+quoteInvoiceUnfinalizedExcluded: "アクティブ、仮、または確認が必要な時間記録 {count} 件を除外しました。請求前に実績を確定して確認してください。"

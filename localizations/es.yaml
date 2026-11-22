@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Estimación total del presupuesto {currency} {total}
 quoteInvoicePrivateReviewNote: "Nota privada de revisión\n{note}"
 quoteInvoiceAllocationNotice: "Este trabajo real se asigna al presupuesto y se reserva para evitar facturarlo dos veces. No crea trabajo ni pagos adicionales. El envío del correo es una acción aparte."
 quoteInvoiceEmailNotSet: "No indicado"
+quoteInvoiceTaskDetails: "Real {actual} · Estimada {estimated}\nAceptado {currency} {accepted} por unidad · Actual {current}\nCompletada {completed}"
+quoteInvoiceRateUnset: "sin configurar"
+quoteInvoiceAlreadyBilled: "Ya facturado · {number}"
+quoteInvoiceReviewOlderBilled: "Revisar trabajo facturado anterior · {number}"
+quoteInvoiceUnfinalizedExcluded: "Se excluyen {count} registros de tiempo activos, provisionales o pendientes de revisión. Finaliza y revisa el trabajo real antes de facturar."

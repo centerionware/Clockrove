@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Estimasi seluruh penawaran {currency} {total}. Tagih
 quoteInvoicePrivateReviewNote: "Catatan tinjauan pribadi\n{note}"
 quoteInvoiceAllocationNotice: "Pekerjaan aktual yang dipilih dialokasikan ke penawaran ini dan dicadangkan agar tidak ditagihkan dua kali. Ini tidak membuat pekerjaan atau pembayaran baru. Pengiriman email adalah tindakan terpisah."
 quoteInvoiceEmailNotSet: "Belum diatur"
+quoteInvoiceTaskDetails: "Aktual {actual} · Perkiraan {estimated}\nDiterima {currency} {accepted} per unit · Saat ini {current}\nSelesai {completed}"
+quoteInvoiceRateUnset: "belum diatur"
+quoteInvoiceAlreadyBilled: "Sudah ditagihkan · {number}"
+quoteInvoiceReviewOlderBilled: "Tinjau pekerjaan lama yang ditagihkan · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count} entri waktu aktif, sementara, atau perlu ditinjau dikecualikan. Finalisasi dan tinjau pekerjaan aktual sebelum menagihkan."

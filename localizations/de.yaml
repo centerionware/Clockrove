@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Gesamtes Angebotsvolumen {currency} {total}. Diese R
 quoteInvoicePrivateReviewNote: "Private Prüfnote\n{note}"
 quoteInvoiceAllocationNotice: "Die ausgewählte Arbeit wird diesem Angebot zugeordnet und gegen doppelte Abrechnung reserviert. Es entstehen keine zusätzliche Arbeit und keine Zahlung. Der E-Mail-Versand erfolgt separat."
 quoteInvoiceEmailNotSet: "Nicht festgelegt"
+quoteInvoiceTaskDetails: "Tatsächlich {actual} · Geschätzt {estimated}\nAngenommen {currency} {accepted} je Einheit · Aktuell {current}\nAbgeschlossen {completed}"
+quoteInvoiceRateUnset: "nicht festgelegt"
+quoteInvoiceAlreadyBilled: "Bereits abgerechnet · {number}"
+quoteInvoiceReviewOlderBilled: "Ältere abgerechnete Arbeit prüfen · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count} aktive, vorläufige oder prüfbedürftige Zeiteinträge ausgeschlossen. Erfassen Sie die tatsächliche Arbeit endgültig und prüfen Sie sie vor der Abrechnung."

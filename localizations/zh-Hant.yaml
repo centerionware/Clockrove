@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "報價單總估值為 {currency} {total}。此發票
 quoteInvoicePrivateReviewNote: "私人複核備註\n{note}"
 quoteInvoiceAllocationNotice: "所選實際工作會分配給此報價單並保留，以防重複開立。不會建立額外工作或付款。寄送電子郵件是個別操作。"
 quoteInvoiceEmailNotSet: "未設定"
+quoteInvoiceTaskDetails: "實際 {actual} · 預估 {estimated}\n已接受 {currency} {accepted}/單位 · 目前 {current}\n完成時間 {completed}"
+quoteInvoiceRateUnset: "未設定"
+quoteInvoiceAlreadyBilled: "已開立發票 · {number}"
+quoteInvoiceReviewOlderBilled: "複核較早已開立發票的工作 · {number}"
+quoteInvoiceUnfinalizedExcluded: "已排除 {count} 筆進行中、暫定或需要複核的工時紀錄。開立發票前請結算並複核實際工作。"

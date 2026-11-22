@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Estimation totale du devis : {currency} {total}. Cet
 quoteInvoicePrivateReviewNote: "Note privée de vérification\n{note}"
 quoteInvoiceAllocationNotice: "Le travail réel sélectionné est affecté à ce devis et réservé afin d’éviter une double facturation. Aucun travail ni paiement supplémentaire n’est créé. L’envoi de l’e-mail est une action distincte."
 quoteInvoiceEmailNotSet: "Non renseigné"
+quoteInvoiceTaskDetails: "Réel {actual} · Estimé {estimated}\nAccepté {currency} {accepted} par unité · Actuel {current}\nTerminé le {completed}"
+quoteInvoiceRateUnset: "non défini"
+quoteInvoiceAlreadyBilled: "Déjà facturé · {number}"
+quoteInvoiceReviewOlderBilled: "Vérifier le travail facturé antérieur · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count} entrées de temps actives, provisoires ou à vérifier sont exclues. Finalisez et vérifiez le travail réel avant de facturer."

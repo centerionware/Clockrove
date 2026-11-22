@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "报价单总估值为 {currency} {total}。此发票
 quoteInvoicePrivateReviewNote: "私密复核备注\n{note}"
 quoteInvoiceAllocationNotice: "所选实际工作会分配给此报价单并保留，以防重复开票。不会创建额外工作或付款。发送电子邮件是单独操作。"
 quoteInvoiceEmailNotSet: "未设置"
+quoteInvoiceTaskDetails: "实际 {actual} · 预计 {estimated}\n已接受 {currency} {accepted}/单位 · 当前 {current}\n完成时间 {completed}"
+quoteInvoiceRateUnset: "未设置"
+quoteInvoiceAlreadyBilled: "已开票 · {number}"
+quoteInvoiceReviewOlderBilled: "复核较早已开票工作 · {number}"
+quoteInvoiceUnfinalizedExcluded: "已排除 {count} 条正在进行、暂定或需要复核的工时记录。开票前请结算并复核实际工作。"

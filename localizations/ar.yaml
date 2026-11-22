@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "تقدير عرض السعر الكامل {currency}
 quoteInvoicePrivateReviewNote: "ملاحظة المراجعة الخاصة\n{note}"
 quoteInvoiceAllocationNotice: "يخصص هذا العمل الفعلي المحدد لعرض السعر ويحجزه لمنع فوترة مكررة. لا ينشئ عملًا أو دفعة إضافية. إرسال البريد إجراء منفصل."
 quoteInvoiceEmailNotSet: "غير محدد"
+quoteInvoiceTaskDetails: "الفعلي {actual} · المقدّر {estimated}\nالمقبول {currency} {accepted} لكل وحدة · الحالي {current}\nتاريخ الإكمال {completed}"
+quoteInvoiceRateUnset: "غير محدد"
+quoteInvoiceAlreadyBilled: "مفوتر سابقًا · {number}"
+quoteInvoiceReviewOlderBilled: "راجع العمل المفوتر سابقًا · {number}"
+quoteInvoiceUnfinalizedExcluded: "تم استبعاد {count} من إدخالات الوقت النشطة أو المؤقتة أو التي تحتاج إلى مراجعة. أنهِ العمل الفعلي وراجعه قبل الفوترة."

@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Stima dell’intero preventivo {currency} {total}. L
 quoteInvoicePrivateReviewNote: "Nota privata di verifica\n{note}"
 quoteInvoiceAllocationNotice: "Il lavoro effettivo selezionato viene assegnato a questo preventivo e riservato per evitare una doppia fatturazione. Non vengono creati altri lavori o pagamenti. L’invio dell’e-mail è separato."
 quoteInvoiceEmailNotSet: "Non impostato"
+quoteInvoiceTaskDetails: "Effettivo {actual} · Stimato {estimated}\nAccettato {currency} {accepted} per unità · Attuale {current}\nCompletato il {completed}"
+quoteInvoiceRateUnset: "non impostato"
+quoteInvoiceAlreadyBilled: "Già fatturato · {number}"
+quoteInvoiceReviewOlderBilled: "Verifica il lavoro fatturato precedente · {number}"
+quoteInvoiceUnfinalizedExcluded: "Sono escluse {count} registrazioni orarie attive, provvisorie o da verificare. Finalizza e verifica il lavoro effettivo prima di fatturarlo."

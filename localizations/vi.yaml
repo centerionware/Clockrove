@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Ước tính toàn bộ báo giá {currency} {total}
 quoteInvoicePrivateReviewNote: "Ghi chú xem xét riêng tư\n{note}"
 quoteInvoiceAllocationNotice: "Công việc thực tế đã chọn được phân bổ cho báo giá này và giữ chỗ để tránh tính phí trùng. Không tạo thêm công việc hay khoản thanh toán. Gửi email là thao tác riêng."
 quoteInvoiceEmailNotSet: "Chưa đặt"
+quoteInvoiceTaskDetails: "Thực tế {actual} · Ước tính {estimated}\nĐã chấp nhận {currency} {accepted}/đơn vị · Hiện tại {current}\nHoàn thành {completed}"
+quoteInvoiceRateUnset: "chưa đặt"
+quoteInvoiceAlreadyBilled: "Đã lập hóa đơn · {number}"
+quoteInvoiceReviewOlderBilled: "Xem lại công việc đã lập hóa đơn trước · {number}"
+quoteInvoiceUnfinalizedExcluded: "Đã loại trừ {count} mục thời gian đang hoạt động, tạm thời hoặc cần xem xét. Hãy chốt và xem lại công việc thực tế trước khi lập hóa đơn."

@@ -668,15 +668,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ),
                 Text(AppMessage.quoteInvoiceActualWorkRules.of(context)),
                 if (data.mode == 'HOURLY') ...[
-                  Text(
-                    'Estimated ${taskQuantity(data.estimatedHours)} hours · Agreed rate ${data.currency} ${money(data.acceptedRate, data.digits)}/hour',
-                  ),
-                  Text(
-                    'Current rate ${data.currency} ${data.currentRate == null ? 'unset' : money(data.currentRate, data.digits)}/hour',
-                  ),
-                  Text(
-                    'Selected actual duration: ${reportDuration(data.times.where((time) => _times.contains(time.key)).fold(BigInt.zero, (sum, time) => sum + BigInt.parse(time.durationMillis)).toString())}',
-                  ),
+                  Text(AppMessage.quoteInvoiceEstimatedRate.format(context, {'hours': taskQuantity(data.estimatedHours), 'currency': data.currency, 'rate': money(data.acceptedRate, data.digits)})),
+                  Text(AppMessage.quoteInvoiceCurrentRate.format(context, {'currency': data.currency, 'rate': data.currentRate == null ? AppMessage.quoteInvoiceRateUnset.of(context) : money(data.currentRate, data.digits)})),
+                  Text(AppMessage.quoteInvoiceSelectedDuration.format(context, {'duration': reportDuration(data.times.where((time) => _times.contains(time.key)).fold(BigInt.zero, (sum, time) => sum + BigInt.parse(time.durationMillis)).toString())})),
                 ],
                 for (final task in data.tasks)
                   CheckboxListTile(
@@ -750,7 +744,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 for (final item in data.excluded)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Already billed · ${item.number}'),
+                    title: Text(AppMessage.quoteInvoiceAlreadyBilled.format(context, {'number': item.number})),
                     subtitle: Text(item.title),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: !_enabled ? null : () => _invoice(item.invoiceId),
@@ -758,7 +752,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 for (final item in data.legacy)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Review older billed work · ${item.number}'),
+                    title: Text(AppMessage.quoteInvoiceReviewOlderBilled.format(context, {'number': item.number})),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: !_enabled
                         ? null
@@ -766,7 +760,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   ),
                 if (data.unfinalized.isNotEmpty)
                   Text(
-                    '${data.unfinalized.length} active, provisional or review-needed time entries excluded. Finalize/review the actual work before invoicing.',
+                    AppMessage.quoteInvoiceUnfinalizedExcluded.format(context, {'count': MaterialLocalizations.of(context).formatDecimal(data.unfinalized.length)}),
                   ),
               ],
               Semantics(

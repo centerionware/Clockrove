@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "전체 견적 금액 {currency} {total}. 이 청구�
 quoteInvoicePrivateReviewNote: "비공개 검토 메모\n{note}"
 quoteInvoiceAllocationNotice: "선택한 실제 작업을 이 견적에 할당하고 중복 청구를 막기 위해 예약합니다. 추가 작업이나 결제가 생성되지는 않습니다. 이메일 전송은 별도의 작업입니다."
 quoteInvoiceEmailNotSet: "설정되지 않음"
+quoteInvoiceTaskDetails: "실제 {actual} · 예상 {estimated}\n수락된 가격 {currency} {accepted}/단위 · 현재 {current}\n완료 {completed}"
+quoteInvoiceRateUnset: "설정되지 않음"
+quoteInvoiceAlreadyBilled: "이미 청구됨 · {number}"
+quoteInvoiceReviewOlderBilled: "이전 청구 작업 검토 · {number}"
+quoteInvoiceUnfinalizedExcluded: "활성, 임시 또는 검토가 필요한 시간 항목 {count}개를 제외했습니다. 청구 전에 실제 작업을 확정하고 검토하세요."

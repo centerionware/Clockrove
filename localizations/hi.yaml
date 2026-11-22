@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "पूरे कोटेशन का अनुम�
 quoteInvoicePrivateReviewNote: "निजी समीक्षा नोट\n{note}"
 quoteInvoiceAllocationNotice: "चुना गया वास्तविक काम इस कोटेशन को आवंटित करके दोहरी बिलिंग से बचाने के लिए आरक्षित किया जाता है। इससे कोई अतिरिक्त काम या भुगतान नहीं बनता। ईमेल भेजना अलग कार्रवाई है।"
 quoteInvoiceEmailNotSet: "सेट नहीं है"
+quoteInvoiceTaskDetails: "वास्तविक {actual} · अनुमानित {estimated}\nस्वीकृत {currency} {accepted} प्रति इकाई · मौजूदा {current}\nपूरा हुआ {completed}"
+quoteInvoiceRateUnset: "सेट नहीं है"
+quoteInvoiceAlreadyBilled: "पहले से बिल किया · {number}"
+quoteInvoiceReviewOlderBilled: "पुराने बिल किए काम की समीक्षा करें · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count} सक्रिय, अस्थायी या समीक्षा-आवश्यक समय प्रविष्टियाँ बाहर रखी गई हैं। चालान से पहले वास्तविक काम को अंतिम रूप देकर समीक्षा करें।"

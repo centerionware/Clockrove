@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Teklifin tamamı için tahmin {currency} {total}. Bu
 quoteInvoicePrivateReviewNote: "Özel inceleme notu\n{note}"
 quoteInvoiceAllocationNotice: "Seçilen gerçekleşmiş iş bu teklife tahsis edilir ve mükerrer faturalandırmayı önlemek için rezerve edilir. Ek iş veya ödeme oluşturulmaz. E-posta göndermek ayrı bir işlemdir."
 quoteInvoiceEmailNotSet: "Ayarlanmamış"
+quoteInvoiceTaskDetails: "Gerçek {actual} · Tahmini {estimated}\nKabul edilen {currency} {accepted}/birim · Güncel {current}\nTamamlandı {completed}"
+quoteInvoiceRateUnset: "ayarlanmamış"
+quoteInvoiceAlreadyBilled: "Zaten faturalandı · {number}"
+quoteInvoiceReviewOlderBilled: "Önceden faturalanan işi incele · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count} etkin, geçici veya incelenmesi gereken zaman kaydı dışarıda bırakıldı. Faturalandırmadan önce gerçek işi kesinleştirip inceleyin."

@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "Оценка всей сметы {currency} {total}.
 quoteInvoicePrivateReviewNote: "Личная заметка к проверке\n{note}"
 quoteInvoiceAllocationNotice: "Выбранные фактически выполненные работы относятся к этой смете и резервируются от повторного выставления. Новые работы и платежи не создаются. Отправка письма выполняется отдельно."
 quoteInvoiceEmailNotSet: "Не задано"
+quoteInvoiceTaskDetails: "Фактически {actual} · Оценка {estimated}\nПринято {currency} {accepted} за единицу · Текущая {current}\nЗавершено {completed}"
+quoteInvoiceRateUnset: "не задано"
+quoteInvoiceAlreadyBilled: "Уже выставлено · {number}"
+quoteInvoiceReviewOlderBilled: "Проверить прежние выставленные работы · {number}"
+quoteInvoiceUnfinalizedExcluded: "Исключено записей времени: {count} активных, предварительных или требующих проверки. Завершите и проверьте фактические работы перед выставлением счёта."

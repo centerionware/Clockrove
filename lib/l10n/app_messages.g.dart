@@ -681,7 +681,12 @@ enum AppMessage {
   quoteInvoiceWholeEstimate("Whole quote estimate {currency} {total}. This invoice includes only selected actual work; quantities, duration and per-invoice tax can differ."),
   quoteInvoicePrivateReviewNote("Private review note\n{note}"),
   quoteInvoiceAllocationNotice("This allocates the selected actual work to this quote and reserves it against duplicate billing. It creates no additional work or payment. Emailing is a separate action."),
-  quoteInvoiceEmailNotSet("Not set");
+  quoteInvoiceEmailNotSet("Not set"),
+  quoteInvoiceTaskDetails("Actual {actual} · Estimated {estimated}\nAccepted {currency} {accepted} each · Current {current}\nCompleted {completed}"),
+  quoteInvoiceRateUnset("unset"),
+  quoteInvoiceAlreadyBilled("Already billed · {number}"),
+  quoteInvoiceReviewOlderBilled("Review older billed work · {number}"),
+  quoteInvoiceUnfinalizedExcluded("{count} active, provisional or review-needed time entries excluded. Finalize/review the actual work before invoicing.");
 
   const AppMessage(this.english);
   final String english;

@@ -677,3 +677,8 @@ quoteInvoiceWholeEstimate: "সম্পূর্ণ মূল্যপ্রস
 quoteInvoicePrivateReviewNote: "ব্যক্তিগত পর্যালোচনা নোট\n{note}"
 quoteInvoiceAllocationNotice: "নির্বাচিত প্রকৃত কাজটি এই মূল্যপ্রস্তাবে বরাদ্দ করে দ্বৈত চালান রোধে সংরক্ষণ করা হবে। এতে অতিরিক্ত কাজ বা পেমেন্ট তৈরি হয় না। ইমেল পাঠানো আলাদা কাজ।"
 quoteInvoiceEmailNotSet: "সেট করা নেই"
+quoteInvoiceTaskDetails: "প্রকৃত {actual} · আনুমানিক {estimated}\nগৃহীত {currency} {accepted} প্রতি একক · বর্তমান {current}\nসম্পন্ন {completed}"
+quoteInvoiceRateUnset: "সেট করা নেই"
+quoteInvoiceAlreadyBilled: "আগেই চালান করা · {number}"
+quoteInvoiceReviewOlderBilled: "পুরোনো চালানের কাজ দেখুন · {number}"
+quoteInvoiceUnfinalizedExcluded: "{count}টি সক্রিয়, সাময়িক বা পর্যালোচনা-প্রয়োজনীয় সময় এন্ট্রি বাদ দেওয়া হয়েছে। চালানের আগে প্রকৃত কাজ সম্পন্ন করে পর্যালোচনা করুন।"
