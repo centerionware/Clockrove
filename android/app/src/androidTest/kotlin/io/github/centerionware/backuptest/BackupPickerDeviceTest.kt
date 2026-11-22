@@ -37,18 +37,17 @@ class BackupPickerDeviceTest {
         click("App settings and customers")
         click("Settings")
         click("Restore encrypted backup", scroll = true)
-        click("Choose encrypted backup")
-        val picker = waitFor("Android document picker") {
-            automation.rootInActiveWindow?.takeIf {
-                it.packageName?.toString() in setOf("com.android.documentsui", "com.google.android.documentsui")
-            }
-        }
+        openPicker()
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        waitFor("picker cancellation") { findLabel("File selection cancelled.") }
+        assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
+
+        openPicker()
         if (findLabel(FIXTURE) == null) {
             val roots = findLabel("Show roots") ?: findLabel("Open navigation drawer")
             if (roots != null) clickNode(roots)
             click("Downloads")
         }
-        assertTrue(picker.packageName?.toString()?.endsWith("documentsui") == true)
         click(FIXTURE)
         waitFor("encrypted document staged") { findLabel("Selected encrypted file", prefix = true) }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
@@ -86,6 +85,15 @@ class BackupPickerDeviceTest {
         assertEquals(1735689600000L, entry.start)
         assertEquals(1735693200000L, entry.end)
         assertEquals("Etc/UTC", entry.timezone)
+    }
+
+    private fun openPicker() {
+        click("Choose encrypted backup")
+        waitFor("Android document picker") {
+            automation.rootInActiveWindow?.takeIf {
+                it.packageName?.toString() in setOf("com.android.documentsui", "com.google.android.documentsui")
+            }
+        }
     }
 
     private fun findLabel(label: String, prefix: Boolean = false): AccessibilityNodeInfo? = findNode { node ->
