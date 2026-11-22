@@ -79,12 +79,12 @@ No build, test, formatter, or analyzer ran on the development VM.
 
 - The native preview API returns aggregate counts and conflict pages, so the
   screen cannot itemize individual additions, unchanged records, and deletions.
-- Imported open sessions can be omitted but offer no close-time choice.
-- The picker/read bridge has source coverage only; a real SAF provider and
-  device restore journey are still unverified. Cancellation cannot interrupt an
-  in-flight method-channel read.
-- End-to-end transactional restore acceptance on a device remains open, as do
-  M7.2's near-maximum archive memory gate and M7.6.
+- Preview requires explicit omission for imported open sessions. The product
+  contract permits omission, and the restore flow offers no close-time editor.
+- The Android system document picker acceptance run is pending. Cancellation
+  cannot interrupt an in-flight method-channel read.
+- Data-changing restore acceptance and M7.6 remain open. The near-limit
+  preview and replay results follow below.
 
 ### Near-limit restore preview and apply
 
@@ -97,9 +97,8 @@ preview staging. It does not exercise the Android system document picker.
 
 The follow-up extends the same device journey through native apply. It checks
 that replay inserts zero rows, preserves the state version and attachment
-identities and sizes, and retires the preview handle. Actions evidence for the
-apply extension is pending. A data-changing restore via the system picker
-remains open.
+identities and sizes, and retires the preview handle. A data-changing restore via the system
+picker remains open.
 
 Actions [45013742618](https://github.com/centerionware/Clockrove/actions/runs/45013742618)
 passed on `d87f5a7`, the first commit that calls native apply in the near-limit
@@ -109,3 +108,16 @@ Both preserved attachment IDs and sizes and retired the preview handle.
 Preview-only RSS increases were 34,496 and 20,580 KiB, respectively. The
 benchmark stops RSS sampling before apply. This evidence does not cover the
 later system-picker journey or a data-changing merge.
+
+### Android system document picker
+
+[Actions 45018958919](https://github.com/centerionware/Clockrove/actions/runs/45018958919)
+passed the API 24 near-limit replay and exported the encrypted synthetic
+fixture. The device workflow stopped before the picker test because Flutter
+placed the fixture under app-private `code_cache` and the transfer script
+expected `cache`. The follow-up on `ed39e48` accepts either app-private
+location and transfers only the named test fixture to the disposable
+emulator's Downloads directory. [Actions 45021006125](https://github.com/centerionware/Clockrove/actions/runs/45021006125)
+is the first run of that correction. Keep the picker journey open until
+its results confirm cancellation, authentication, conflict resolution, and
+committed state from a data-changing merge on both API levels.
