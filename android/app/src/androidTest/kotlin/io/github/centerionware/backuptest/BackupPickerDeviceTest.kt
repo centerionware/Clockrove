@@ -32,7 +32,8 @@ class BackupPickerDeviceTest {
         assertTrue(repository.snapshot().jobs.isEmpty())
         val existingJob = repository.createJob("Synthetic destination job")
         automation.serviceInfo = automation.serviceInfo.apply {
-            flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         app.startActivity(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
@@ -97,16 +98,33 @@ class BackupPickerDeviceTest {
             val bounds = Rect().also(window::getBoundsInScreen)
             // Tapping the dimmed pane closes the roots drawer without exiting Documents.
             runShellInput("tap ${bounds.right - 8} ${bounds.centerY()}")
-            clickPickerLabel("More options")
-            clickPickerLabel("Show internal storage")
+            waitForClosedPickerRoots()
+            val overflow = waitFor("Documents options button") { findLabel("More options") }
+            if (!performAccessibilityClick(overflow)) tapPickerNode(overflow)
+            val showStorage = waitFor("Show internal storage in Documents options") {
+                (sequenceOf(automation.rootInActiveWindow) + automation.windows.asSequence().map { it.root })
+                    .filterNotNull()
+                    .filter { it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES }
+                    .mapNotNull { root -> findLabel("Show internal storage", root = root) }
+                    .firstOrNull { it.isEnabled }
+            }
+            if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
             showPickerRoots()
             waitFor("shared storage root", ::sharedStorageRoot)
         }
         tapPickerNode(device)
-        waitFor("closed document roots") {
-            automation.rootInActiveWindow?.takeIf { findLabel("Open from") == null }
-        }
+        waitForClosedPickerRoots()
         clickPickerLabel(FIXTURE_DIRECTORY)
+    }
+
+    private fun waitForClosedPickerRoots() {
+        waitFor("closed document roots") {
+            automation.rootInActiveWindow?.takeIf {
+                it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES &&
+                    findLabel("Open from", root = it) == null
+            }
+        }
+        automation.waitForIdle(250, 5_000)
     }
 
     private fun showPickerRoots() {
@@ -161,14 +179,18 @@ class BackupPickerDeviceTest {
         label: String,
         prefix: Boolean = false,
         ignoreCase: Boolean = false,
-    ): AccessibilityNodeInfo? = findNode { node ->
+        root: AccessibilityNodeInfo? = automation.rootInActiveWindow,
+    ): AccessibilityNodeInfo? = findNode(root) { node ->
         node.isVisibleToUser && listOf(node.text, node.contentDescription).any { value ->
             val text = value?.lineSequence()?.firstOrNull()?.trim()
             text.equals(label, ignoreCase = ignoreCase) || (prefix && text?.startsWith(label) == true)
         }
     }
 
-    private fun findNode(predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
+    private fun findNode(
+        root: AccessibilityNodeInfo? = automation.rootInActiveWindow,
+        predicate: (AccessibilityNodeInfo) -> Boolean,
+    ): AccessibilityNodeInfo? {
         fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
             if (predicate(node)) return node
             for (index in 0 until node.childCount) {
@@ -176,7 +198,7 @@ class BackupPickerDeviceTest {
             }
             return null
         }
-        return automation.rootInActiveWindow?.let(::visit)
+        return root?.let(::visit)
     }
 
     private fun click(label: String, scroll: Boolean = false) {
@@ -206,12 +228,18 @@ class BackupPickerDeviceTest {
     }
 
     private fun clickNode(node: AccessibilityNodeInfo) {
+        if (!performAccessibilityClick(node)) {
+            failWithScreenshot("Could not activate ${node.text ?: node.contentDescription}")
+        }
+    }
+
+    private fun performAccessibilityClick(node: AccessibilityNodeInfo): Boolean {
         var target: AccessibilityNodeInfo? = node
         while (target != null) {
-            if (target.isClickable && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            if (target.isClickable && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
             target = target.parent
         }
-        failWithScreenshot("Could not activate ${node.text ?: node.contentDescription}")
+        return false
     }
 
     private fun <T : Any> waitFor(label: String, find: () -> T?): T {

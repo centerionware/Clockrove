@@ -25,8 +25,12 @@ Statuses describe evidence, not intent.
   [Validation on `5e97816`](https://github.com/centerionware/Clockrove/actions/runs/45065306259)
   passed the API 24 crypto benchmark, then failed clearing Clockrove before
   picker fixture export. The benchmark uninstalls its APK, so the picker setup
-  now installs the validation APK before clearing the database. Both APIs still
-  need passing picker and committed-merge evidence.
+  now installs the validation APK before clearing the database.
+  [Validation on `4336bb3`](https://github.com/centerionware/Clockrove/actions/runs/45066553727)
+  passed API 24 setup and fixture export. The failure capture showed Documents
+  back on Recent with its overflow menu closed. The test now waits for the
+  roots drawer to settle and searches Documents' interactive windows for the
+  storage menu item. Both APIs still need passing committed-merge evidence.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
