@@ -34,7 +34,10 @@ internal class GeofenceRegistrationController(
     fun prepareRecovery() {
         if (initial) {
             initial = false
-            if (wasRequested() && repository.sitesToRegister().isNotEmpty())
+            // A cold process may have been started to deliver an already observed
+            // transition. Preserve its membership history and timestamp barrier.
+            // A persisted departure still needs review before an alarm can end it.
+            if (wasRequested() && repository.pendingDeparture() != null)
                 repository.geofenceProblem(TimerRepository.GeofenceProblem.RECOVERY_UNCERTAIN)
         }
     }
