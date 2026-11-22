@@ -588,7 +588,11 @@ enum AppMessage {
   invoiceLineQuantity("Quantity"),
   invoiceLineAmount("Line amount ({currency})"),
   invoiceLineUnitPrice("Unit price ({currency})"),
-  invoiceLinePrintedDetails("Line details (printed)");
+  invoiceLinePrintedDetails("Line details (printed)"),
+  invoiceCorrectionUnavailable("This invoice can no longer be corrected here. Return to its details and review its status."),
+  invoiceCorrectionStale("Invoice data changed or refresh failed. Your draft is kept. Refresh, then review the latest balance before continuing."),
+  invoiceUseRefreshedBalance("Use refreshed balance"),
+  invoiceReplacementRetainedDetails("The original customer, currency, company and style are retained. Edit the new invoice below.");
 
   const AppMessage(this.english);
   final String english;

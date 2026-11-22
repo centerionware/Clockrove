@@ -229,7 +229,8 @@ reservation transfer, and unpaid invoice cancellation. The editor’s
 on-screen financial labels and controls for added work and reservation
 review also use the catalogs, including the replacement tax field and
 historical tax and work reservation guidance. Replacement invoice line
-fields and the no-separate-charge note use catalog strings.
+fields and the no-separate-charge note use catalog strings, as do stale
+balance, unavailable correction, and retained invoice details notices.
 Other command
 rejections, payment event
 descriptions stored in snapshots, and rendered PDF locale and right-to-left

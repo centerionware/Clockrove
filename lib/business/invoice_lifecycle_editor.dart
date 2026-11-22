@@ -375,13 +375,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
               Text(_amountLine(AppMessage.invoiceExistingPaymentCredit, _invoice.paid)),
               const SizedBox(height: 12),
               if (!_allowed)
-                const Text(
-                  'This invoice can no longer be corrected here. Return to its details and review its status.',
-                ),
+                Text(AppMessage.invoiceCorrectionUnavailable.of(context)),
               if (_stale || widget.refreshFailed) ...[
-                const Text(
-                  'Invoice data changed or refresh failed. Your draft is kept. Refresh, then review the latest balance before continuing.',
-                ),
+                Text(AppMessage.invoiceCorrectionStale.of(context)),
                 TextButton(
                   onPressed: _pending || widget.refreshFailed
                       ? null
@@ -389,13 +385,11 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           _version = _invoice.version;
                           _confirmed = false;
                         }),
-                  child: const Text('Use refreshed balance'),
+                  child: Text(AppMessage.invoiceUseRefreshedBalance.of(context)),
                 ),
               ],
               if (widget.replace) ...[
-                const Text(
-                  'The original customer, currency, company and style are retained. Edit the new invoice below.',
-                ),
+                Text(AppMessage.invoiceReplacementRetainedDetails.of(context)),
                 const SizedBox(height: 20),
                 for (final line in _lines)
                   Card(
