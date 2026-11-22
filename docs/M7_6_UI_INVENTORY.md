@@ -100,6 +100,19 @@ The Help version-bridge commit `d4d961c` passed [Actions 45020364892](https://gi
 | Export, share, email and external maps | `lib/business/report_screen.dart`, `lib/business/invoice_screen.dart`, `lib/maps/work_location_map.dart`, `android/app/src/main/kotlin/io/github/centerionware/clockrove/invoice/DocumentHostApi.kt` | User cancel, no compatible app, failed handoff, successful saved file; confirm exact filtered data and no leaked URLs/credentials. |
 | Permanent/destructive records | `lib/business/job_deletion_dialog.dart`, `lib/business/job_settings_screen.dart`, `lib/business/archive_screen.dart`, `lib/business/settings_screen.dart`, `lib/business/actual_cost_screen.dart`, `lib/tracking/history_screen.dart`, invoice and quote editors | Review confirmation wording, cancel path, retry/unknown commit outcome, exact deleted/retained records, audit/revision ancestry and exports/backups boundary. |
 
+## Existing Android journeys available for the overhaul
+
+The device artifact in [Actions 45020364892](https://github.com/centerionware/Clockrove/actions/runs/45020364892)
+contains these passing JUnit cases on API 24 and 35. Re-run them on the
+redesigned candidate and review the screenshots for each applicable state.
+
+| Inventory rows | Existing artifact and journey | Scope still to verify |
+| --- | --- | --- |
+| J3 | `TEST-task-media.xml`: actual task comment and reviewed camera photos persist in private storage. | Review all gallery, viewer, cancellation and failure states. |
+| I2–I3 | `TEST-billing.xml`: legacy review, quantity and tax, billing exclusion, and retained PDF. `TEST-copies.xml`: sample and retained PDF rendering. | Capture invoice history, correction and handoff states. |
+| I4 | `TEST-payments.xml`: partial payment, settlement, correction and receipt after job deletion. | Capture editor validation, cancellation and error states. |
+| Q2–Q4 | `TEST-quotes.xml`: actual issue, acceptance, scope planning, completed-quantity invoice and duplicate exclusion. | Capture listing and editor states in Q1 and the full option matrix in the downstream routes. |
+
 ## M7.6 evidence ledger template
 
 Duplicate one row for every inventory ID when implementation begins. Store
