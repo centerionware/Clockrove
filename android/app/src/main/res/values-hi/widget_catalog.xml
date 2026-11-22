@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"आंशिक भुगतान"</string>
     <string name="pdf_status_void">"रद्द"</string>
     <string name="pdf_status_nothing_due">"कुछ देय नहीं"</string>
+    <string name="quote_email_reference">"कोटेशन %1$s · संशोधन %2$s"</string>
+    <string name="quote_email_body">"नमस्ते %1$s,\n\nकोटेशन %2$s संलग्न है।\nअनुमानित कुल: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"कोटेशन — अनुमान, चालान नहीं।"</string>
+    <string name="quote_email_custom_subject">"कोटेशन · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

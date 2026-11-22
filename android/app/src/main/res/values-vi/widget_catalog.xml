@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"ĐÃ THANH TOÁN MỘT PHẦN"</string>
     <string name="pdf_status_void">"ĐÃ HỦY"</string>
     <string name="pdf_status_nothing_due">"KHÔNG CÓ KHOẢN PHẢI TRẢ"</string>
+    <string name="quote_email_reference">"Báo giá %1$s · Bản sửa đổi %2$s"</string>
+    <string name="quote_email_body">"Xin chào %1$s,\n\nBáo giá %2$s được đính kèm.\nTổng dự kiến: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"BÁO GIÁ — giá ước tính, không phải hóa đơn."</string>
+    <string name="quote_email_custom_subject">"Báo giá · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

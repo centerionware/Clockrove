@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"DIBAYAR SEBAGIAN"</string>
     <string name="pdf_status_void">"DIBATALKAN"</string>
     <string name="pdf_status_nothing_due">"TIDAK ADA TAGIHAN"</string>
+    <string name="quote_email_reference">"Penawaran %1$s · Revisi %2$s"</string>
+    <string name="quote_email_body">"Halo %1$s,\n\nPenawaran %2$s terlampir.\nPerkiraan total: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"PENAWARAN — perkiraan, bukan tagihan."</string>
+    <string name="quote_email_custom_subject">"Penawaran · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"PAGATA IN PARTE"</string>
     <string name="pdf_status_void">"ANNULLATA"</string>
     <string name="pdf_status_nothing_due">"NESSUN IMPORTO DOVUTO"</string>
+    <string name="quote_email_reference">"Preventivo %1$s · Revisione %2$s"</string>
+    <string name="quote_email_body">"Gentile %1$s,\n\nin allegato trova il preventivo %2$s.\nTotale stimato: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"PREVENTIVO — stima, non è una fattura."</string>
+    <string name="quote_email_custom_subject">"Preventivo · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

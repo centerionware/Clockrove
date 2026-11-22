@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"KISMEN ÖDENDİ"</string>
     <string name="pdf_status_void">"İPTAL"</string>
     <string name="pdf_status_nothing_due">"ÖDENECEK TUTAR YOK"</string>
+    <string name="quote_email_reference">"Teklif %1$s · Revizyon %2$s"</string>
+    <string name="quote_email_body">"Merhaba %1$s,\n\n%2$s teklifi ektedir.\nTahmini toplam: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"TEKLİF — tahmini tutar, fatura değildir."</string>
+    <string name="quote_email_custom_subject">"Teklif · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

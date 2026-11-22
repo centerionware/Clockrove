@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"TEILWEISE BEZAHLT"</string>
     <string name="pdf_status_void">"STORNIERT"</string>
     <string name="pdf_status_nothing_due">"KEIN OFFENER BETRAG"</string>
+    <string name="quote_email_reference">"Angebot %1$s · Version %2$s"</string>
+    <string name="quote_email_body">"Guten Tag %1$s,\n\nim Anhang finden Sie das Angebot %2$s.\nGeschätzter Gesamtbetrag: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"ANGEBOT — Kostenvoranschlag, keine Rechnung."</string>
+    <string name="quote_email_custom_subject">"Angebot · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

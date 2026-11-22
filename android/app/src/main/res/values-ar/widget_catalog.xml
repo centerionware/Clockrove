@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"مدفوعة جزئيًا"</string>
     <string name="pdf_status_void">"ملغاة"</string>
     <string name="pdf_status_nothing_due">"لا يوجد مبلغ مستحق"</string>
+    <string name="quote_email_reference">"عرض السعر %1$s · المراجعة %2$s"</string>
+    <string name="quote_email_body">"مرحبًا %1$s،\n\nعرض السعر %2$s مرفق.\nالمجموع التقديري: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"عرض سعر تقديري وليس فاتورة."</string>
+    <string name="quote_email_custom_subject">"عرض السعر · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

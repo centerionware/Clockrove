@@ -16,7 +16,7 @@ def resource_xml(messages):
     for key, value in messages.items():
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{key}: expected nonempty copy")
-        quoted = escape(value.replace("\\", "\\\\").replace('"', '\\"'))
+        quoted = escape(value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n"))
         rows.append(f'    <string name="{key}">"{quoted}"</string>')
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'

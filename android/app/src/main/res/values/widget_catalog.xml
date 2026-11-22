@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"PARTIALLY PAID"</string>
     <string name="pdf_status_void">"VOID"</string>
     <string name="pdf_status_nothing_due">"NOTHING DUE"</string>
+    <string name="quote_email_reference">"Quote %1$s · Revision %2$s"</string>
+    <string name="quote_email_body">"Hello %1$s,\n\nPlease find quote %2$s attached.\nEstimated total: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"QUOTE — estimate, not an invoice."</string>
+    <string name="quote_email_custom_subject">"Quote · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

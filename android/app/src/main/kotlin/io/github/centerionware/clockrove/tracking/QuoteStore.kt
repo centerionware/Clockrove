@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import java.util.Currency
 import org.json.JSONArray
@@ -147,7 +149,7 @@ internal object QuoteStore {
     fun latest(db: SQLiteDatabase, id: String): Revision? = db.rawQuery("SELECT r.revision,q.number,r.payload,r.created_ms,d.decision,d.note FROM quote_revisions r JOIN quotes q ON q.id=r.quote_id LEFT JOIN quote_decisions d ON d.quote_id=r.quote_id AND d.revision=r.revision WHERE r.quote_id=? ORDER BY r.revision DESC LIMIT 1", arrayOf(id)).use {
         if (!it.moveToFirst()) null else Revision(id, it.getInt(0), it.getString(1), it.getString(2), it.getLong(3), if (it.isNull(4)) null else it.getString(4), if (it.isNull(5)) null else it.getString(5))
     }
-    fun issue(db: SQLiteDatabase, id: String, confirmed: Boolean, at: Long): String? {
+    fun issue(db: SQLiteDatabase, id: String, confirmed: Boolean, at: Long, strings: Context): String? {
         if (!confirmed) return "QUOTE_CONFIRMATION_REQUIRED"
         val draft = draft(db, id) ?: return "QUOTE_DRAFT_UNAVAILABLE"
         val total = totals(draft)
@@ -167,14 +169,23 @@ internal object QuoteStore {
         if (previous == null && sequence == Long.MAX_VALUE) return "QUOTE_SEQUENCE_EXHAUSTED"
         val number = previous?.number ?: "Q-$sequence"
         val digits = currencyDigits(db, id, draft.currency)
+        val reference = strings.getString(R.string.quote_email_reference, number, revision.toString())
+        val amount = InvoiceStore.amount(total.total, digits)
         val values = mapOf("company_name" to company.companyName, "customer_name" to customer?.name.orEmpty(),
-            "job_name" to draft.title, "invoice_number" to "$number revision $revision", "amount" to InvoiceStore.amount(total.total, digits), "currency" to draft.currency)
-        val defaultBody = BusinessStore.Settings(company.currency).emailBody
-        val body = if (company.emailBody == defaultBody) "Hello ${customer?.name.orEmpty()},\n\nPlease find quote $number, revision $revision attached.\nEstimated total: ${InvoiceStore.amount(total.total, digits)} ${draft.currency}\n\n${company.companyName}"
-            else "QUOTE — estimate, not an invoice.\n\n" + InvoiceEmailTemplate.expand(company.emailBody, values, false)
-        val subject = if (company.emailSubject == BusinessStore.Settings(company.currency).emailSubject)
-            "Quote $number · Revision $revision — " + draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
-            else "Quote · " + InvoiceEmailTemplate.expand(company.emailSubject, values, true)
+            "job_name" to draft.title, "invoice_number" to reference, "amount" to amount, "currency" to draft.currency)
+        val defaults = BusinessStore.Settings(company.currency)
+        val body = if (company.emailBody == defaults.emailBody) {
+            strings.getString(R.string.quote_email_body, customer?.name.orEmpty(), reference, amount, draft.currency, company.companyName)
+        } else {
+            strings.getString(R.string.quote_email_estimate_notice) + "\n\n" +
+                InvoiceEmailTemplate.expand(company.emailBody, values, false)
+        }
+        val subject = if (company.emailSubject == defaults.emailSubject) {
+            val title = draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
+            strings.getString(R.string.quote_email_default_subject, reference, title)
+        } else {
+            strings.getString(R.string.quote_email_custom_subject, InvoiceEmailTemplate.expand(company.emailSubject, values, true))
+        }
         if (subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size > 100_000) return "EMAIL_TOO_LARGE"
         val frozen = JSONObject(mapOf("draft" to JSONObject(draft.encode()), "number" to number, "revision" to revision,
             "created" to at, "digits" to digits, "subtotal" to InvoiceStore.amount(total.subtotal, digits),

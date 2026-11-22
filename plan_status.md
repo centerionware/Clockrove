@@ -192,9 +192,11 @@ first render uses the device's current effective app language. Line-item
 headings, amount fallbacks, subtotal, tax, total, payment state, balances,
 credit labels, and cancellation notices use translated Android resources.
 The PDF renderer reserves width for translated total labels before drawing
-exact amounts. Default email templates, payment event descriptions stored
-in snapshots, and rendered PDF locale and right-to-left verification remain
-open.
+exact amounts. New quote revisions use the effective app language for
+default email subjects and bodies, quote references, and the estimate notice
+added to custom emails. Existing issued revisions keep their saved email
+text. Invoice email templates, payment event descriptions stored in
+snapshots, and rendered PDF locale and right-to-left verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms
 and supports language, script and region tags.

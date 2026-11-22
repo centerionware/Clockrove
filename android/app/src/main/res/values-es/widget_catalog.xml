@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"PAGADA PARCIALMENTE"</string>
     <string name="pdf_status_void">"ANULADA"</string>
     <string name="pdf_status_nothing_due">"SIN SALDO PENDIENTE"</string>
+    <string name="quote_email_reference">"Presupuesto %1$s · Revisión %2$s"</string>
+    <string name="quote_email_body">"Hola, %1$s:\n\nAdjuntamos el presupuesto %2$s.\nTotal estimado: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"PRESUPUESTO — estimación, no es una factura."</string>
+    <string name="quote_email_custom_subject">"Presupuesto · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

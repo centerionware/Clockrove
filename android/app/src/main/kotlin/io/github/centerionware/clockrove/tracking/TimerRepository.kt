@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.tracking
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.UUID
 
@@ -694,7 +695,9 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized
     internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean): Outcome =
-        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) { QuoteStore.issue(it, quoteId, confirmed, wallClock()) }
+        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) {
+            QuoteStore.issue(it, quoteId, confirmed, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun decideQuote(id: String, version: Long, quoteId: String, revision: Int, decision: String, note: String, confirmed: Boolean): Outcome =
         boardChange(id, version, "QUOTE_DECIDE", listOf(quoteId, revision, decision, note, confirmed)) { QuoteStore.decide(it, quoteId, revision, decision, note, confirmed, wallClock()) }

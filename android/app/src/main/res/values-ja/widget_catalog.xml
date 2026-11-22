@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"一部支払い済み"</string>
     <string name="pdf_status_void">"無効"</string>
     <string name="pdf_status_nothing_due">"支払残額なし"</string>
+    <string name="quote_email_reference">"見積書 %1$s · 第%2$s版"</string>
+    <string name="quote_email_body">"%1$s 様\n\n見積書（%2$s）を添付いたします。\n見積合計：%3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"この書類は見積書です。請求書ではありません。"</string>
+    <string name="quote_email_custom_subject">"見積書 · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>

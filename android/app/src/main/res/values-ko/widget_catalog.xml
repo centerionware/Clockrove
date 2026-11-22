@@ -76,4 +76,9 @@
     <string name="pdf_status_partial">"일부 결제"</string>
     <string name="pdf_status_void">"무효"</string>
     <string name="pdf_status_nothing_due">"미결제 금액 없음"</string>
+    <string name="quote_email_reference">"견적서 %1$s · 개정 %2$s"</string>
+    <string name="quote_email_body">"%1$s 님, 안녕하세요.\n\n견적서(%2$s)를 첨부합니다.\n예상 합계: %3$s %4$s\n\n%5$s"</string>
+    <string name="quote_email_estimate_notice">"견적서입니다. 청구서가 아닙니다."</string>
+    <string name="quote_email_custom_subject">"견적서 · %1$s"</string>
+    <string name="quote_email_default_subject">"%1$s — %2$s"</string>
 </resources>
