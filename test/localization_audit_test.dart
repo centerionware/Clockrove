@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tool/localization_audit.dart';
@@ -18,5 +20,41 @@ void example(String name) {
       'Hello,',
       'clockrove/language/v1',
     ]);
+  });
+
+  test('invoice and payment screens keep static copy in the catalogs', () {
+    const screens = {
+      'invoice_detail_screen',
+      'invoice_history_screen',
+      'invoice_lifecycle_editor',
+      'payment_editor',
+    };
+    const identifiers = {
+      'balance-',
+      'receipt-',
+      'void-',
+      'invoice-balance-copy-command',
+      'invoice-correction-price-',
+      'invoice-correction-quantity-',
+      'invoice-correction-reason',
+      'invoice-correction-tax',
+      'invoice-lifecycle-command',
+      'invoice-lifecycle-submit',
+      'invoice-payment-amount',
+      'invoice-payment-command',
+      'invoice-payment-note',
+      'invoice-payment-submit',
+    };
+    for (final screen in screens) {
+      final path = 'lib/business/$screen.dart';
+      final source = File(path).readAsStringSync();
+      final lines = source.split('\n');
+      final candidates = auditDart(path, source).where(
+        (finding) =>
+            !lines[finding.line - 1].startsWith('import ') &&
+            !identifiers.contains(finding.text.trim()),
+      );
+      expect(candidates, isEmpty, reason: path);
+    }
   });
 }
