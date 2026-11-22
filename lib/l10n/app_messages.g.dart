@@ -113,7 +113,18 @@ enum AppMessage {
   exportNoFilePicker("No file picker is available. Install or enable a file manager and try again."),
   exportPickerBusy("Finish the other open file action, then try again."),
   exportTooLarge("This backup is too large to save on this device."),
-  exportSaveFailed("Could not save the encrypted backup. Your saved work was not changed.");
+  exportSaveFailed("Could not save the encrypted backup. Your saved work was not changed."),
+  exportPrivateData("Your backup contains private work, location history, invoices, receipts, tasks and attached photos."),
+  exportPasswordAdvice("Choose a password you can keep safe. Clockrove cannot recover it if you forget it. The password is not saved in the app."),
+  exportTimerAdvice("Export does not stop a running timer. It is included as open work and will not start automatically if restored."),
+  exportPasswordBounds("At least 12 UTF-8 bytes; maximum 1,024 bytes."),
+  backupPasswordRequired("Enter a password."),
+  backupPasswordTooShort("Use a longer password (at least 12 UTF-8 bytes)."),
+  backupPasswordTooLong("Password is too long. The maximum is 1,024 UTF-8 bytes."),
+  backupPasswordMismatch("The passwords do not match."),
+  exportOpenTimer("This backup includes {count} open timer. Your timer will keep running."),
+  exportOpenTimers("This backup includes {count} open timers. Your timer will keep running."),
+  exportSnapshotProgress("{read} of {records} records · {mediaRead} of {media} media bytes");
 
   const AppMessage(this.english);
   final String english;

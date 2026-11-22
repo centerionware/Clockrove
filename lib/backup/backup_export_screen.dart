@@ -76,8 +76,8 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   int _transferredBytes = 0;
   int _expectedBytes = 0;
   int _openSessionCount = 0;
-  String? _passwordError;
-  String? _confirmationError;
+  AppMessage? _passwordError;
+  AppMessage? _confirmationError;
   AppMessage? _message;
   bool _passwordVisible = false;
   bool _cancelRequested = false;
@@ -107,14 +107,14 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     final utf8Bytes = utf8.encode(_password.text).length;
     setState(() {
       _passwordError = _password.text.isEmpty
-          ? 'Enter a password.'
+          ? AppMessage.backupPasswordRequired
           : utf8Bytes < 12
-          ? 'Use a longer password (at least 12 UTF-8 bytes).'
+          ? AppMessage.backupPasswordTooShort
           : utf8Bytes > 1024
-          ? 'Password is too long. The maximum is 1,024 UTF-8 bytes.'
+          ? AppMessage.backupPasswordTooLong
           : null;
       _confirmationError = _confirmation.text != _password.text
-          ? 'The passwords do not match.'
+          ? AppMessage.backupPasswordMismatch
           : null;
     });
     return _passwordError == null && _confirmationError == null;
@@ -400,23 +400,16 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your backup contains private work, location history, '
-                          'invoices, receipts, tasks and attached photos.',
+                          AppMessage.exportPrivateData.of(context),
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Choose a password you can keep safe. Clockrove cannot '
-                    'recover it if you forget it. The password is not saved in the app.',
-                  ),
+                  Text(AppMessage.exportPasswordAdvice.of(context)),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Export does not stop a running timer. It is included as '
-                    'open work and will not start automatically if restored.',
-                  ),
+                  Text(AppMessage.exportTimerAdvice.of(context)),
                 ],
               ),
             ),
@@ -432,8 +425,8 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             onChanged: (_) => _inputChanged(),
             decoration: InputDecoration(
               labelText: AppMessage.backupPassword.of(context),
-              helperText: 'At least 12 UTF-8 bytes; maximum 1,024 bytes.',
-              errorText: _passwordError,
+              helperText: AppMessage.exportPasswordBounds.of(context),
+              errorText: _passwordError?.of(context),
               suffixIcon: IconButton(
                 tooltip: _passwordVisible
                     ? AppMessage.hidePassword.of(context)
@@ -459,7 +452,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             onSubmitted: (_) => _createBackup(),
             decoration: InputDecoration(
               labelText: AppMessage.confirmPassword.of(context),
-              errorText: _confirmationError,
+              errorText: _confirmationError?.of(context),
             ),
           ),
           if (_openSessionCount > 0) ...[
@@ -469,8 +462,10 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(
-                  'This backup includes $_openSessionCount open '
-                  '${_openSessionCount == 1 ? 'timer' : 'timers'}. Your timer will keep running.',
+                  (_openSessionCount == 1
+                          ? AppMessage.exportOpenTimer
+                          : AppMessage.exportOpenTimers)
+                      .format(context, {'count': '$_openSessionCount'}),
                 ),
               ),
             ),
@@ -480,14 +475,16 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
             LinearProgressIndicator(value: _progressValue),
             const SizedBox(height: 10),
             Text(_phaseMessage),
-            if (_phase == _BackupExportPhase.reading &&
-                _snapshotProgress != null)
-              Text(
-                '${_snapshotProgress!.recordsRead} of '
-                '${_snapshotProgress!.totalRecords} records · '
-                '${_snapshotProgress!.mediaBytesRead} of '
-                '${_snapshotProgress!.totalMediaBytes} media bytes',
-              ),
+            if (_phase == _BackupExportPhase.reading)
+              if (_snapshotProgress case final progress?)
+                Text(
+                  AppMessage.exportSnapshotProgress.format(context, {
+                    'read': '${progress.recordsRead}',
+                    'records': '${progress.totalRecords}',
+                    'mediaRead': '${progress.mediaBytesRead}',
+                    'media': '${progress.totalMediaBytes}',
+                  }),
+                ),
             if (_phase == _BackupExportPhase.transferring)
               Text(
                 AppMessage.exportEncryptedBytes.format(context, {

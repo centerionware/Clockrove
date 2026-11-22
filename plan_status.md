@@ -112,8 +112,10 @@ catalog keys. Remaining backup review details, error paths, and export
 progress still require migration.
 Export phase labels, cancellation controls, and encrypted-byte progress now
 use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
-catalog keys. Export instructions, password validation, and other dynamic
-summary text still need migration.
+catalog keys. Export instructions, password validation, and dynamic summary
+text also use the catalogs. Backup restore review and other surfaces remain
+open. Further localization commits are being kept local for a single final
+GitHub Actions validation, per owner instruction.
 Flutter message keys and English fallback copy are now generated from the
 English YAML catalog. GitHub Actions is configured to reject stale generated
 sources and continues to check catalog keys and placeholders.
