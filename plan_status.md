@@ -1,15 +1,21 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-16. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-22. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
 ## November 22 release readiness update
 
 - Geofence regression: [PR #77](https://github.com/centerionware/Clockrove/pull/77)
-  preserves existing 15 m sites and fixes cold-start handling of delayed
-  Android events. Its [validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
-  passed. The PR remains open and the owner’s physical site is unverified.
+  merged as `abe6f5f`; its [native validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
+  and [merged-main validation](https://github.com/centerionware/Clockrove/actions/runs/45028310174)
+  passed. Internal delivery [45035168876](https://github.com/centerionware/Clockrove/actions/runs/45035168876)
+  was accepted, but the owner now reports automatic clock-in still failed at
+  the work site. A 15 m radius is below Android's 100–150 m guidance. Saving a
+  current location while already there resets entry detection and waits for a
+  confirmed exit and fresh entry; the current flow did not offer a direct
+  clock-in. Follow-up UI, Help and test changes are in progress; exact-head
+  Actions and another physical arrival check remain pending.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   passed exact-head checks and was merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
   verified near-limit replay on API 24 and 35. Its system-picker flow still

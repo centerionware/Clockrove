@@ -53,8 +53,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     'STALE_STATE' => 'Work changed while you were editing. Review the refreshed details and try again.',
     _ => 'This change could not be saved. Review the refreshed details and try again.',
   };
-  Future<void> _write(Future<TimerOutcome> Function() action) async {
-    if (_busy) return;
+  Future<bool> _write(Future<TimerOutcome> Function() action) async {
+    if (_busy) return false;
     setState(() {
       _busy = true;
       _pending = action;
@@ -62,11 +62,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     });
     try {
       final outcome = await action();
-      if (!mounted) return;
+      if (!mounted) return outcome.committed;
       setState(() {
         _pending = null;
         _notice = outcome.committed ? null : _conflict(outcome.conflict);
       });
+      return outcome.committed;
     } catch (_) {
       if (mounted) {
         setState(
@@ -74,6 +75,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
               'This change could not be confirmed. Retry to check its result.',
         );
       }
+      return false;
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -197,11 +199,94 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (result == null || !mounted) return;
     final api = ref.read(automationApiProvider);
     final id = newAutomationId();
-    await _write(
+    final saved = await _write(
       () => result.remove
           ? api.removeSite(id, state.version, result.site.id)
           : api.saveSite(id, state.version, widget.jobId, result.site),
     );
+    if (saved &&
+        !result.remove &&
+        result.usedCurrentLocation &&
+        result.site.enabled &&
+        state.settings.enabled &&
+        state.settings.autoStart) {
+      await _offerClockInNow();
+    }
+  }
+
+  Future<void> _offerClockInNow() async {
+    TimerSnapshot timer;
+    try {
+      timer = await ref.read(timerApiProvider).snapshot();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _notice =
+              'The current timer could not be checked. Use the Timer screen to clock in manually.',
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    if (timer.running != null) {
+      setState(
+        () => _notice = timer.running!.jobId == widget.jobId
+            ? 'This job is already running.'
+            : 'Another job is running. Clockrove will not switch jobs automatically.',
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clock in at this site now?'),
+        content: const Text(
+          'Changing a site while you are here resets arrival detection. '
+          'Automatic clock-in resumes after your phone confirms an exit and '
+          'a fresh entry. Start this job now to record work from this point?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clock in now'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final actions = ref.read(timerActionsProvider);
+    if (actions.working || actions.hasPending) {
+      setState(
+        () => _notice =
+            'Another timer action is still being confirmed. Check the Timer screen before starting work.',
+      );
+      return;
+    }
+    await ref
+        .read(timerActionsProvider.notifier)
+        .submit(timer, TimerAction.start, jobId: widget.jobId);
+    if (!mounted) return;
+    final outcome = ref.read(timerActionsProvider);
+    if (outcome.pending != null || outcome.pendingJob != null) {
+      setState(
+        () => _notice =
+            'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
+      );
+    } else if (outcome.conflict != null) {
+      setState(
+        () => _notice =
+            'Work changed before clock-in completed. Refresh the Timer screen and try again.',
+      );
+    } else {
+      setState(() => _notice = 'Clocked in to ${widget.jobName}.');
+    }
+    ref.invalidate(timerSnapshotProvider);
+    ref.invalidate(automationSnapshotProvider(widget.jobId));
   }
 
   Future<void> _grace(AutomationSnapshot state) async {
@@ -275,6 +360,17 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
             : 'Waiting for a fresh exit and entry',
       _ => 'Site monitoring needs attention',
     };
+  }
+
+  String _siteSubtitle(WorkSite site) {
+    final warning = site.enabled && site.radius < 100
+        ? 'Android may miss arrivals at this radius'
+        : null;
+    return [
+      '${site.radius.toStringAsFixed(0)} m radius',
+      site.enabled ? 'Enabled' : 'Disabled',
+      if (warning != null) warning,
+    ].join(' · ');
   }
 
   Widget _group(List<Widget> children) => Card(
@@ -459,9 +555,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                             : Icons.location_off_outlined,
                       ),
                       title: Text(site.name),
-                      subtitle: Text(
-                        '${site.radius.toStringAsFixed(0)} m radius · ${site.enabled ? "Enabled" : "Disabled"}',
-                      ),
+                      subtitle: Text(_siteSubtitle(site)),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       enabled: !_locked,
                       onTap: () => _edit(value, site),
