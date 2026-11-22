@@ -25,7 +25,7 @@ class AppLocalizations {
 
   final Map<String, String> messages;
 
-  static final placeholder = RegExp(r'\{([a-zA-Z][a-zA-Z0-9]*)\}');
+  static final placeholder = RegExp(r'\{([a-zA-Z][a-zA-Z0-9_]*)\}');
   static const delegate = _AppLocalizationsDelegate();
   static final supportedLocales = [
     for (final (locale, _) in appLanguages.values) locale,

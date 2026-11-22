@@ -437,3 +437,8 @@ useCurrentJobTax: "استخدام ضريبة العمل الحالية بدلا�
 useCurrentPrices: "استخدام الأسعار الحالية بدلاً من ذلك"
 reviewActualWorkInvoice: "مراجعة فاتورة العمل الفعلي"
 prepareReviewedInvoice: "إعداد الفاتورة بعد المراجعة"
+invoiceEmailDraft: "مسودة البريد الإلكتروني"
+invoiceEmailSubjectLabel: "قالب موضوع البريد الإلكتروني"
+invoiceEmailBodyLabel: "قالب نص البريد الإلكتروني"
+invoiceEmailDefaultSubject: "الفاتورة {invoice_number} — {job_name}"
+invoiceEmailDefaultBody: "مرحبًا {customer_name}،\n\nالفاتورة {invoice_number} مرفقة.\nالمبلغ: {amount} {currency}\n\n{company_name}"

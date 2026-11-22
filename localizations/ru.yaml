@@ -437,3 +437,8 @@ useCurrentJobTax: "Использовать текущий налог работ
 useCurrentPrices: "Использовать текущие цены"
 reviewActualWorkInvoice: "Проверить счёт за фактическую работу"
 prepareReviewedInvoice: "Подготовить проверенный счёт"
+invoiceEmailDraft: "Черновик письма"
+invoiceEmailSubjectLabel: "Шаблон темы письма"
+invoiceEmailBodyLabel: "Шаблон текста письма"
+invoiceEmailDefaultSubject: "Счёт {invoice_number} — {job_name}"
+invoiceEmailDefaultBody: "Здравствуйте, {customer_name}!\n\nВо вложении счёт {invoice_number}.\nСумма: {amount} {currency}\n\n{company_name}"

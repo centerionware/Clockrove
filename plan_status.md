@@ -199,8 +199,11 @@ text. New ordinary, quote-linked, and replacement invoice snapshots use
 localized default email templates. Replacement emails also translate the
 credit and balance notice. The stored default values still identify default
 templates, and custom templates use their saved text. Catalog generation
-checks named email placeholders across Android locales. Settings template
-field defaults, payment event descriptions stored in snapshots, and rendered
+checks named email placeholders across Android locales and matches the
+Flutter editor templates against the native defaults. Settings displays the
+localized default templates and their field labels. Unedited defaults are
+saved in the existing storage format. Settings template instructions and
+validation, payment event descriptions stored in snapshots, and rendered
 PDF locale and right-to-left verification remain open.
 Flutter and Android now take the set of registered locales from the same YAML
 registry. Generation checks for missing or extra catalogs on both platforms

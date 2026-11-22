@@ -441,7 +441,12 @@ enum AppMessage {
   useCurrentJobTax("Use current job tax instead"),
   useCurrentPrices("Use current prices instead"),
   reviewActualWorkInvoice("Review actual-work invoice"),
-  prepareReviewedInvoice("Prepare reviewed invoice");
+  prepareReviewedInvoice("Prepare reviewed invoice"),
+  invoiceEmailDraft("Email draft"),
+  invoiceEmailSubjectLabel("Email subject template"),
+  invoiceEmailBodyLabel("Email body template"),
+  invoiceEmailDefaultSubject("Invoice {invoice_number} — {job_name}"),
+  invoiceEmailDefaultBody("Hello {customer_name},\n\nPlease find invoice {invoice_number} attached.\nAmount: {amount} {currency}\n\n{company_name}");
 
   const AppMessage(this.english);
   final String english;

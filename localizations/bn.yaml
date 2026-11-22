@@ -437,3 +437,8 @@ useCurrentJobTax: "বর্তমান কাজের কর ব্যবহ�
 useCurrentPrices: "বর্তমান দাম ব্যবহার করুন"
 reviewActualWorkInvoice: "প্রকৃত কাজের চালান পর্যালোচনা করুন"
 prepareReviewedInvoice: "পর্যালোচিত চালান প্রস্তুত করুন"
+invoiceEmailDraft: "ইমেলের খসড়া"
+invoiceEmailSubjectLabel: "ইমেলের বিষয়ের টেমপ্লেট"
+invoiceEmailBodyLabel: "ইমেলের মূল অংশের টেমপ্লেট"
+invoiceEmailDefaultSubject: "চালান {invoice_number} — {job_name}"
+invoiceEmailDefaultBody: "নমস্কার {customer_name},\n\nচালান {invoice_number} সংযুক্ত আছে।\nপরিমাণ: {amount} {currency}\n\n{company_name}"

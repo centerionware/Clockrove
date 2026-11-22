@@ -44,6 +44,13 @@ def main():
             arguments = r"%[1-9][0-9]*\$s|\{[a-z_]+\}"
             if sorted(re.findall(arguments, value)) != sorted(re.findall(arguments, english[key])):
                 parser.error(f"{source}: format arguments differ for {key}")
+        flutter = read_catalog(CATALOGS.parent / f"{tag}.yaml")
+        for native_key, flutter_key in (
+            ("invoice_email_default_subject", "invoiceEmailDefaultSubject"),
+            ("invoice_email_default_body", "invoiceEmailDefaultBody"),
+        ):
+            if messages[native_key] != flutter.get(flutter_key):
+                parser.error(f"{source}: {native_key} differs from the Flutter editor")
         qualifier = f"b+{tag.replace('-', '+')}" if "-" in tag else tag
         directory = "values" if tag == "en" else f"values-{qualifier}"
         target = RESOURCES / directory / "widget_catalog.xml"

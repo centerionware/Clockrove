@@ -88,15 +88,44 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   late final _footer = TextEditingController(
     text: widget.initial.invoiceFooter,
   );
-  late final _subject = TextEditingController(
-    text: widget.initial.emailSubject,
-  );
-  late final _body = TextEditingController(text: widget.initial.emailBody);
+  final _subject = TextEditingController();
+  final _body = TextEditingController();
+  String? _displayedDefaultSubject;
+  String? _displayedDefaultBody;
   late String _currency = widget.initial.currency,
       _style = widget.initial.invoiceStyle;
   late String _hourlyBillingMode = widget.initial.hourlyBillingMode;
   late int _digits = widget.initial.digits;
   late bool _defaultLocationRecording = widget.initial.defaultLocationRecording;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final subjectDefault = AppMessage.invoiceEmailDefaultSubject.of(context);
+    final bodyDefault = AppMessage.invoiceEmailDefaultBody.of(context);
+    if (_displayedDefaultSubject == null) {
+      _subject.text =
+          widget.initial.emailSubject ==
+              AppMessage.invoiceEmailDefaultSubject.english
+          ? subjectDefault
+          : widget.initial.emailSubject;
+      _body.text =
+          widget.initial.emailBody == AppMessage.invoiceEmailDefaultBody.english
+          ? bodyDefault
+          : widget.initial.emailBody;
+    } else {
+      if (_subject.text == _displayedDefaultSubject &&
+          _displayedDefaultSubject != subjectDefault) {
+        _subject.text = subjectDefault;
+      }
+      if (_body.text == _displayedDefaultBody &&
+          _displayedDefaultBody != bodyDefault) {
+        _body.text = bodyDefault;
+      }
+    }
+    _displayedDefaultSubject = subjectDefault;
+    _displayedDefaultBody = bodyDefault;
+  }
+
   @override
   void dispose() {
     for (final c in [
@@ -499,7 +528,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 20),
         _field(_header, 'Optional invoice header', lines: 2),
         _field(_footer, 'Optional invoice footer', lines: 2),
-        Text('Email draft', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          AppMessage.invoiceEmailDraft.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         const Text(
           'Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.',
@@ -507,14 +539,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         _field(
           _subject,
-          'Email subject template',
+          AppMessage.invoiceEmailSubjectLabel.of(context),
           length: 500,
           error: _subjectError,
           onChanged: _templateChanged,
         ),
         _field(
           _body,
-          'Email body template',
+          AppMessage.invoiceEmailBodyLabel.of(context),
           lines: 5,
           length: 20000,
           error: _bodyError,
@@ -541,8 +573,12 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               invoiceHeader: _header.text,
               invoiceFooter: _footer.text,
               invoiceStyle: _style,
-              emailSubject: _subject.text,
-              emailBody: _body.text,
+              emailSubject: _subject.text == _displayedDefaultSubject
+                  ? AppMessage.invoiceEmailDefaultSubject.english
+                  : _subject.text,
+              emailBody: _body.text == _displayedDefaultBody
+                  ? AppMessage.invoiceEmailDefaultBody.english
+                  : _body.text,
               defaultLocationRecording: _defaultLocationRecording,
               hourlyBillingMode: _hourlyBillingMode,
               minimumBillableHours: canonicalMinimumHours(
