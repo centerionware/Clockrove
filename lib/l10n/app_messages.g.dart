@@ -653,7 +653,19 @@ enum AppMessage {
   quoteInvoiceClearUnavailable("Clear unavailable selections"),
   quoteInvoiceActualTimeBelongs("The selected actual job time belongs to this quote"),
   quoteInvoicePrivateNote("Private invoice review note"),
-  quoteInvoicePrivateNoteHelp("Optional. The selected work and prices are reviewed separately.");
+  quoteInvoicePrivateNoteHelp("Optional. The selected work and prices are reviewed separately."),
+  quoteInvoiceMappedJob("Mapped job"),
+  quoteInvoiceRemovedJob("Removed job · history retained"),
+  quoteInvoiceCustomerNotSpecified("Customer not specified"),
+  quoteInvoiceCurrentCustomer("Current customer: {customer}"),
+  quoteInvoiceAcceptedPartyHelp("Off keeps the accepted customer and contact snapshot."),
+  quoteInvoiceTaxComparison("Accepted tax {accepted}% · Current job tax {current}%"),
+  quoteInvoiceAcceptedPricesHelp("Off keeps accepted unit/hourly prices."),
+  quoteInvoiceCurrentPricesMissingHelp("Some selected current prices are unset; accepted prices remain available."),
+  quoteInvoiceEstimatedRate("Estimated {hours} hours · Agreed rate {currency} {rate}/hour"),
+  quoteInvoiceCurrentRate("Current rate {currency} {rate}/hour"),
+  quoteInvoiceSelectedDuration("Selected actual duration: {duration}"),
+  quoteInvoiceAcceptedCustomer("Accepted customer: {customer}");
 
   const AppMessage(this.english);
   final String english;

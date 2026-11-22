@@ -533,7 +533,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 label: Text(AppMessage.reviewAcceptedScope.of(context)),
               ),
               const SizedBox(height: 12),
-              Text('Mapped job', style: Theme.of(context).textTheme.titleSmall),
+              Text(AppMessage.quoteInvoiceMappedJob.of(context), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: ValueKey('invoice-job/$_job'),
@@ -545,7 +545,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                     DropdownMenuItem(
                       value: id,
                       child: Text(
-                        jobName[id] ?? 'Removed job · history retained',
+                        jobName[id] ?? AppMessage.quoteInvoiceRemovedJob.of(context),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -623,7 +623,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 if (data.archived)
                   Text(AppMessage.quoteInvoiceArchivedJob.of(context)),
                 Text(
-                  'Accepted customer: ${accepted.customer.isEmpty ? 'Not specified' : accepted.customer}',
+                  AppMessage.quoteInvoiceAcceptedCustomer.format(context, {'customer': accepted.customer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : accepted.customer}),
                 ),
                 Text(
                   [
@@ -632,7 +632,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   ].where((v) => v.isNotEmpty).join('\n'),
                 ),
                 Text(
-                  'Current customer: ${data.currentCustomer.isEmpty ? 'Not specified' : data.currentCustomer}',
+                  AppMessage.quoteInvoiceCurrentCustomer.format(context, {'customer': data.currentCustomer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : data.currentCustomer}),
                 ),
                 Text(data.currentContact),
                 SwitchListTile(
@@ -647,7 +647,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                         }),
                 ),
                 Text(
-                  'Accepted tax ${taxPercent(accepted.draft.taxUnits)}% · Current job tax ${taxPercent(data.currentTax)}%',
+                  AppMessage.quoteInvoiceTaxComparison.format(context, {'accepted': taxPercent(accepted.draft.taxUnits), 'current': taxPercent(data.currentTax)}),
                 ),
                 SwitchListTile(
                   title: Text(AppMessage.useCurrentJobTax.of(context)),
@@ -663,8 +663,8 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   title: Text(AppMessage.useCurrentPrices.of(context)),
                   subtitle: Text(
                     _currentAvailable
-                        ? 'Off keeps accepted unit/hourly prices.'
-                        : 'Some selected current prices are unset; accepted prices remain available.',
+                        ? AppMessage.quoteInvoiceAcceptedPricesHelp.of(context)
+                        : AppMessage.quoteInvoiceCurrentPricesMissingHelp.of(context),
                   ),
                   value: _currentPrices,
                   onChanged: !_enabled
@@ -677,9 +677,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 if (data.historical)
                   CheckboxListTile(
                     value: _historical,
-                    title: const Text(
-                      'I reviewed this historical accepted revision',
-                    ),
+                    title: Text(AppMessage.quoteInvoiceHistoricalReviewed.of(context)),
                     onChanged: !_enabled
                         ? null
                         : (value) => setState(() {
