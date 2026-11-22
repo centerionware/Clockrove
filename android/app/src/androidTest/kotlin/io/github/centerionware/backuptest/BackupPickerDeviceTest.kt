@@ -4,8 +4,8 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
-import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -93,8 +93,8 @@ class BackupPickerDeviceTest {
     }
 
     private fun pressBack() {
-        assertTrue(automation.injectInputEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK), true))
-        assertTrue(automation.injectInputEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK), true))
+        val shellOutput = automation.executeShellCommand("input keyevent KEYCODE_BACK")
+        ParcelFileDescriptor.AutoCloseInputStream(shellOutput).bufferedReader().use { it.readText() }
     }
 
     private fun openPicker() {

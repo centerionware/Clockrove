@@ -144,3 +144,9 @@ reached Documents on API 24, then Android rejected Back from the app-scoped
 instrumentation API because Documents belongs to another package. The test
 now sends Back through the same UI automation channel used by the other
 Android device tests. Cancellation and the committed restore remain pending.
+
+[Actions 45030155865](https://github.com/centerionware/Clockrove/actions/runs/45030155865)
+opened Documents but API 24 did not accept raw key-event injection through
+its test automation connection. The follow-up sends the standard shell Back
+action on the disposable emulator and still waits for Clockrove’s visible
+cancellation state before testing an import.
