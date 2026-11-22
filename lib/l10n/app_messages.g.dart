@@ -286,7 +286,13 @@ enum AppMessage {
   reportRoundingNote("Rounded once for the selected total, half up to the currency minor unit."),
   reportHourlyTaskPrice("Hourly job · task price kept separately"),
   reportBilledQuantity("Quantity {quantity} · included in task billing"),
-  reportPriceUnset("Price not set");
+  reportPriceUnset("Price not set"),
+  reportCsvSaved("CSV saved."),
+  reportPdfSaved("PDF saved."),
+  reportExportCancelled("Export cancelled."),
+  reportWorkExportFailed("Export could not be saved. Refresh the report and try again."),
+  reportPdfExportFailed("Could not save the PDF. Try a shorter period or export CSV, then refresh and try again."),
+  reportCsvExportFailed("Could not save the CSV. Refresh and try again.");
 
   const AppMessage(this.english);
   final String english;

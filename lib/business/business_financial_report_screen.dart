@@ -239,12 +239,13 @@ class _BusinessFinancialReportScreenState
           .read(reportApiProvider)
           .saveBusinessReport(_selection!, report.version, pdf: pdf);
       if (mounted) {
+        final message = switch ((saved, pdf)) {
+          (true, true) => AppMessage.reportPdfSaved,
+          (true, false) => AppMessage.reportCsvSaved,
+          _ => AppMessage.reportExportCancelled,
+        };
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              saved ? '${pdf ? 'PDF' : 'CSV'} saved.' : 'Export cancelled.',
-            ),
-          ),
+          SnackBar(content: Text(message.of(context))),
         );
       }
     } catch (_) {
@@ -252,9 +253,10 @@ class _BusinessFinancialReportScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              pdf
-                  ? 'Could not save the PDF. Try a shorter period or export CSV, then refresh and try again.'
-                  : 'Could not save the CSV. Refresh and try again.',
+              (pdf
+                      ? AppMessage.reportPdfExportFailed
+                      : AppMessage.reportCsvExportFailed)
+                  .of(context),
             ),
           ),
         );

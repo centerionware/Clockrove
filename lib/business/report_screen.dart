@@ -179,16 +179,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
           .saveCsv(_selection!, report.version, gps);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(saved ? 'CSV saved.' : 'Export cancelled.')),
+          SnackBar(
+            content: Text(
+              (saved
+                      ? AppMessage.reportCsvSaved
+                      : AppMessage.reportExportCancelled)
+                  .of(context),
+            ),
+          ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Export could not be saved. Refresh the report and try again.',
-            ),
+          SnackBar(
+            content: Text(AppMessage.reportWorkExportFailed.of(context)),
           ),
         );
       }
