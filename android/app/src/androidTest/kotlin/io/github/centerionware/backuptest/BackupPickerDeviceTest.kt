@@ -99,7 +99,7 @@ class BackupPickerDeviceTest {
 
     private fun click(label: String, scroll: Boolean = false) {
         val node = waitFor(label) {
-            findLabel(label) ?: run {
+            findLabel(label)?.takeIf { it.isEnabled } ?: run {
                 if (scroll) {
                     findNode { it.isVisibleToUser && it.isScrollable }
                         ?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
