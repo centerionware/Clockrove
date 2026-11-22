@@ -84,7 +84,8 @@ internal object GeofenceRuntime {
     }
 
     private fun startLocation(context: Context, repository: TimerRepository, sessionId: String) {
-        if (repository.snapshot().running?.id != sessionId) return
+        val jobId = repository.snapshot().running?.takeIf { it.id == sessionId }?.jobId ?: return
+        if (!repository.locationRecordingEnabled(jobId)) return
         try {
             WorkLocationService.markStartRequested()
             val intent = Intent(context, WorkLocationService::class.java)

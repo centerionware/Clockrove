@@ -1,5 +1,6 @@
 # Clockrove task status
 
+Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
 Updated 2026-11-16. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
