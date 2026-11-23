@@ -822,3 +822,13 @@ calls, the channel-method set layout, and one ternary wrap; those exact changes
 are applied. Analyze, behavior tests and all Android build/device/PDF gates
 were skipped. No local build, test, formatter or analysis ran; another fresh
 exact-head Actions run is required.
+
+Exact-head run [45120815685](https://github.com/centerionware/Clockrove/actions/runs/45120815685)
+on `5899060` passed generated catalogs, both localization audits, formatting
+and analysis. The behavior suite reported 311 passing tests, 1 audit failure
+and 14 skips. The aggregated Flutter scan isolated the last finding to the
+multiline `widgetChannel.invokeMapMethod` `jobId` key: the prior 160-character
+context missed the call site. The bounded source context is widened and the
+fixture now matches the production call layout. Android build, native tests and
+API 24/35 PDF rendering were skipped. No local build, test, formatter or
+analysis ran; another exact-head run is required.

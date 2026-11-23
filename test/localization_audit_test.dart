@@ -44,9 +44,12 @@ void buildProgress() {
   AppMessage.exportSnapshotProgress.format(context, {
     'mediaRead': '$mediaRead',
   });
-  widgetChannel.invokeMapMethod<String, Object?>('save', {
-    'jobId': job,
-  });
+  widgetChannel
+      .invokeMapMethod<String, Object?>('save', {
+        'id': id,
+        'version': version,
+        'jobId': job,
+      });
   final tasksOnly = config['taskOnly'];
   final route = 'receipt-$id';
   final voidCopy = 'void-$id';

@@ -177,7 +177,7 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
 
 bool _isMachineDartValue(String source, int offset, int end, String text) {
   final prefix = source.substring(0, offset);
-  final contextStart = (prefix.length - 160).clamp(0, prefix.length).toInt();
+  final contextStart = (prefix.length - 256).clamp(0, prefix.length).toInt();
   final context = prefix.substring(contextStart);
   final value = text.trim();
   final isCamelCaseIdentifier =
