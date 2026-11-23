@@ -832,3 +832,12 @@ context missed the call site. The bounded source context is widened and the
 fixture now matches the production call layout. Android build, native tests and
 API 24/35 PDF rendering were skipped. No local build, test, formatter or
 analysis ran; another exact-head run is required.
+
+Exact-head run [45121426265](https://github.com/centerionware/Clockrove/actions/runs/45121426265)
+on `a959b86` passed catalog generation, both localization audits,
+formatting, analysis, and the 311-test behavior suite. Android compilation
+failed because the new cost-category map referenced three `R.string.actual_cost_*`
+names that are not generated. The map now uses the existing localized
+`report_pdf_cost_*` resources from all Android catalogs. Native tests and API
+24/35 PDF rendering were skipped after compilation failed. No local build,
+test, formatter or analysis ran; another exact-head run is required.

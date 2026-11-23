@@ -226,10 +226,10 @@ internal object ReportCsv {
     })
 
     private fun localizedCostCategory(context: Context, category: String): String = context.getString(when (category) {
-        ActualCostStore.MATERIALS -> R.string.actual_cost_materials
-        ActualCostStore.SUBCONTRACT_LABOR -> R.string.actual_cost_subcontract_labor
-        ActualCostStore.OTHER_DIRECT -> R.string.actual_cost_other_direct
-        ActualCostStore.OVERHEAD -> R.string.actual_cost_overhead
+        ActualCostStore.MATERIALS -> R.string.report_pdf_cost_materials
+        ActualCostStore.SUBCONTRACT_LABOR -> R.string.report_pdf_cost_labor
+        ActualCostStore.OTHER_DIRECT -> R.string.report_pdf_cost_other_direct
+        ActualCostStore.OVERHEAD -> R.string.report_pdf_cost_overhead
         else -> R.string.actual_cost_unknown_category
     })
 }
