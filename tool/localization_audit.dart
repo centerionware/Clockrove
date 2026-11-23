@@ -68,7 +68,8 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   parsed.unit.accept(visitor);
   return [
     for (final (offset, end, text) in visitor.strings)
-      if (!_isMachineDartValue(source, offset, end, text) &&
+      if (!_isDartDirectiveString(source, offset) &&
+          !_isMachineDartValue(source, offset, end, text) &&
           _looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
@@ -87,6 +88,8 @@ Iterable<({int line, String text})> auditKotlinPresentation(
         line.contains('throw ') ||
         line.contains('check(') ||
         line.contains('require(') ||
+        line.contains('android.util.Log.') ||
+        line.contains('protected.replace(') ||
         (trimmed.startsWith('"') && trimmed.contains('->'))) {
       continue;
     }
@@ -109,8 +112,8 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text.endsWith('.pdf') ||
           text == 'task-captures' ||
           RegExp(r'^clockrove-[a-z0-9-]+$').hasMatch(text) ||
-          (text.startsWith('widget-stop-') &&
-              line.contains('executeFromSurface(')) ||
+          text.startsWith('widget-stop-') ||
+          text.startsWith('/widget-') ||
           text.startsWith('io.github.') ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
@@ -192,8 +195,19 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
       (RegExp(r'config\s*\[\s*$').hasMatch(context) ||
           (source.substring(end).trimLeft().startsWith(':') &&
               context.contains('invokeMapMethod')));
+  final isWidgetConfigurationField =
+      const {'jobId', 'taskOnly'}.contains(value) &&
+      context.contains('widgetChannel');
+  final isChannelMethod =
+      const {'companyLogo', 'pickLogo', 'applyLogo', 'removeLogo'}.contains(
+        value,
+      ) &&
+      (context.contains('invokeMapMethod') || context.contains('_change('));
   final isProtocolChannel = RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$')
       .hasMatch(value);
+  final isBusinessRecordKey = RegExp(
+    r'^(?:quote-invoice/|void-|balance-|receipt-|task/|scope/)[A-Za-z0-9_/\- ]*$',
+  ).hasMatch(value);
   final isUriHost =
       RegExp(r'^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$').hasMatch(value) &&
       RegExp(r'Uri\s*\.\s*https\s*\(\s*$').hasMatch(context);
@@ -205,10 +219,24 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
       RegExp(r'userAgentPackageName\s*:\s*$').hasMatch(context);
   return isFormatParameter ||
       isBridgeField ||
+      isWidgetConfigurationField ||
+      isChannelMethod ||
       isProtocolChannel ||
+      isBusinessRecordKey ||
       isUriHost ||
       isUriFragment ||
       isPlatformPackage;
+}
+
+bool _isDartDirectiveString(String source, int offset) {
+  final lineBreak = offset == 0
+      ? -1
+      : source.lastIndexOf('\n', offset - 1);
+  final lineStart = lineBreak + 1;
+  final prefix = source.substring(lineStart, offset).trimLeft();
+  return prefix.startsWith('import ') ||
+      prefix.startsWith('export ') ||
+      prefix.startsWith('part ');
 }
 
 bool _looksLikeCopy(String value) {

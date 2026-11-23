@@ -35,8 +35,9 @@ void openMap() {
     ]);
   });
 
-  test('catalog format parameter keys are not presentation copy', () {
+  test('catalog parameters and platform identifiers are not presentation copy', () {
     final findings = auditDart('lib/export.dart', r'''
+export 'board/board_view.dart';
 void buildProgress() {
   AppMessage.exportSnapshotProgress.format(context, {
     'mediaRead': '$mediaRead',
@@ -45,6 +46,16 @@ void buildProgress() {
     'jobId': job,
   });
   final tasksOnly = config['taskOnly'];
+  final route = 'receipt-$id';
+  final voidCopy = 'void-$id';
+  final balanceCopy = 'balance-$id';
+  final quoteCopy = 'quote-invoice/$id/$revision';
+  final taskKey = 'task/$id/$taskId';
+  final scopeKey = 'scope/$id/$revision';
+  channel.invokeMapMethod<Object?, Object?>('companyLogo');
+  channel.invokeMapMethod<Object?, Object?>('pickLogo');
+  _change('applyLogo');
+  _change('removeLogo');
   final message = 'Backup is ready';
 }
 ''');
@@ -70,6 +81,17 @@ val invoiceId = Regex("[A-Za-z0-9_-]{1,140}")
 val message = "Invoice is ready"
 ''');
     expect(findings.map((finding) => finding.text), ['Invoice is ready']);
+  });
+
+  test('Kotlin widget routes, logging, and CSV escaping are machine values', () {
+    final findings = auditKotlinPresentation(r'''
+val route = "/widget-board"
+android.util.Log.d("ClockroveWidgetFactory", "Load failed: $detail")
+executeFromSurface("widget-stop-$id-$version")
+val escaped = "\"${protected.replace("\"", "\"\"")}\""
+val message = "Timer stopped"
+''');
+    expect(findings.map((finding) => finding.text), ['Timer stopped']);
   });
 
   test('resource lookups inside Kotlin interpolation are not literal copy', () {

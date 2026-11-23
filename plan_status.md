@@ -803,3 +803,14 @@ corrections in the aggregated Android surface scan; those exact changes are
 applied. Analyze, behavior tests and all Android build/device/PDF gates were
 skipped. No local build, test, formatter or analysis ran; a fresh exact-head
 Actions run is required.
+
+Exact-head run [45119264452](https://github.com/centerionware/Clockrove/actions/runs/45119264452)
+on `5d90912` passed generated catalogs, both localization audits, formatting
+and analysis. The aggregated behavior checks reported 309 passing tests, 2
+audit failures and 14 skips. The report enumerated machine-only Flutter
+business IDs, MethodChannel method names, widget configuration keys, Dart
+export directives, and Android widget routes/log calls/CSV escaping. The audit
+now recognizes those source contexts, with fixtures that still require visible
+copy to be detected. Android build, native tests and API 24/35 PDF rendering
+were skipped. No local build, test, formatter or analysis ran; another
+exact-head run is required.
