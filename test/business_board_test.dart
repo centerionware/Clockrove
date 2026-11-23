@@ -13,6 +13,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
@@ -269,12 +270,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Task total: USD 130.00'), findsOneWidget);
       await tester.enterText(quantity, '0');
-      await tester.ensureVisible(find.text('Save task'));
-      await tester.tap(find.text('Save task'));
+      await tester.ensureVisible(find.text(englishCopy(AppMessage.save)));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
         find.text(
-          'Quantity must be greater than 0 and within the supported range.',
+          englishCopy(AppMessage.quoteQuantityInvalid),
         ),
         findsOneWidget,
       );
@@ -300,8 +301,8 @@ void main() {
     final supplies = find.widgetWithText(SwitchListTile, 'Supplies');
     await tester.ensureVisible(supplies);
     await tester.tap(supplies);
-    await tester.ensureVisible(find.text('Save task'));
-    await tester.tap(find.text('Save task'));
+    await tester.ensureVisible(find.text(englishCopy(AppMessage.save)));
+    await tester.tap(find.text(englishCopy(AppMessage.save)));
     await tester.pumpAndSettle();
     expect(api.saved?.quantityUnits, '260000');
     expect(api.saved?.priceMinor, '500');
@@ -321,8 +322,8 @@ void main() {
         find.text('Choose how this existing task is classified for reports.'),
         findsOneWidget,
       );
-      await tester.ensureVisible(find.text('Save task'));
-      await tester.tap(find.text('Save task'));
+      await tester.ensureVisible(find.text(englishCopy(AppMessage.save)));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
         find.text('Choose Labor or Supplies before saving.'),
@@ -330,8 +331,8 @@ void main() {
       );
       await tester.tap(find.widgetWithText(ChoiceChip, 'Supplies'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Save task'));
-      await tester.tap(find.text('Save task'));
+      await tester.ensureVisible(find.text(englishCopy(AppMessage.save)));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(api.saved?.chargeType, 'SUPPLIES');
       expect(tester.takeException(), isNull);
@@ -363,11 +364,13 @@ void main() {
       await tester.tap(find.text('Install kitchen tiles'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).at(2), '1.001');
-      await tester.ensureVisible(find.text('Save task'));
-      await tester.tap(find.text('Save task'));
+      await tester.ensureVisible(find.text(englishCopy(AppMessage.save)));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
-        find.text('This currency allows 2 decimal places.'),
+        find.text(
+          englishCopy(AppMessage.paymentAmountFormat, {'digits': '2'}),
+        ),
         findsOneWidget,
       );
       expect(find.text('Install kitchen tiles'), findsOneWidget);

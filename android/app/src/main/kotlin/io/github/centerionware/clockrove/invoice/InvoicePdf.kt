@@ -111,7 +111,7 @@ internal object InvoicePdf {
         var y = 110f; var pageNumber = 0
         fun paint(size: Float, bold: Boolean = false, color: Int = ink) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = size; this.color = color
-            typeface = Typeface.create(if (classic) "serif" else "sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
+            typeface = Typeface.create(if (classic) Typeface.SERIF else Typeface.SANS_SERIF, if (bold) Typeface.BOLD else Typeface.NORMAL)
         }
         private fun titlePaint(value: String, size: Float, color: Int = ink, centered: Boolean = false): TextPaint {
             val title = paint(size, true, color)

@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 class _Versions extends TimerApi {
   final versions = StreamController<int>.broadcast();
   @override
@@ -231,11 +233,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('USD 123.45'), findsWidgets);
       await tester.scrollUntilVisible(
-        find.text('PDF invoice'),
+        find.text(englishCopy(AppMessage.reportExportPdf)),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.tap(find.text('PDF invoice'));
+      await tester.tap(find.text(englishCopy(AppMessage.reportExportPdf)));
       await tester.pumpAndSettle();
       expect(find.text('Review invoice'), findsOneWidget);
       expect(find.text('USD 132.71'), findsOneWidget);
@@ -275,11 +277,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('CSV export'),
+      find.text(englishCopy(AppMessage.reportExportCsv)),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('CSV export'));
+    await tester.tap(find.text(englishCopy(AppMessage.reportExportCsv)));
     await tester.pumpAndSettle();
     expect(api.exported!.jobs, ['job']);
     expect(api.exported!.timezone, 'UTC');
@@ -315,7 +317,7 @@ void main() {
       expect(find.text('Delete permanently'), findsOneWidget);
       expect(
         find.textContaining(
-          'Issued invoices and billing history are kept, along with reusable task templates and customers.',
+          englishCopy(AppMessage.deleteJobWarning),
         ),
         findsOneWidget,
       );

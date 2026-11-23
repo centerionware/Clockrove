@@ -308,7 +308,19 @@ acceptance stays open for exact-head CI and owner review of the results. Run
 [45102757199](https://github.com/centerionware/Clockrove/actions/runs/45102757199)
 passed catalog generation and the localization audit but found one final
 formatting adjustment in the legacy invoice review. Applied that exact
-workflow patch.
+workflow patch. Run
+[45103063045](https://github.com/centerionware/Clockrove/actions/runs/45103063045)
+passed catalog generation, the localization audit, formatting and analysis,
+then failed the behavior gate with 267 tests passed, 38 failed and 14 skipped.
+The test log showed that Flutter did not bundle nested locale overlay files
+from the parent asset directory, and existing widget checks still searched for
+pre-catalog labels and formatting. Added the 17 locale overlay directories to
+`pubspec.yaml` and updated those checks to read the current English catalog
+messages, including quote and invoice totals. Corrected three audit false
+positives for internal invoice placeholder-map keys, the currency-format
+sentinel and the native PDF typeface constant. The behavior suite must pass on
+a fresh exact head before this localization source work can be marked complete.
+No build, test, formatter or analysis ran locally, per owner instruction.
 
 The report below preserves earlier evidence and milestone history.
 

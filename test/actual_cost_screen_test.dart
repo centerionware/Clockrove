@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 class _CostsApi extends BusinessApi {
   int version = 1;
   final entries = <ActualCostEntry>[];
@@ -112,7 +114,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField).first, '12.34');
       await tester.enterText(find.byType(TextFormField).at(1), 'usd');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Save cost'));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(api.saved?.amountMinor, '1234');
       expect(api.saved?.currency, 'USD');
@@ -131,14 +133,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '0');
     await tester.enterText(find.byType(TextFormField).at(1), 'USD');
-    await tester.tap(find.text('Save cost'));
+    await tester.tap(find.text(englishCopy(AppMessage.save)));
     await tester.pumpAndSettle();
     expect(api.saved, isNull);
     expect(find.text('Enter an amount greater than zero.'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).first, '1.001');
-    await tester.tap(find.text('Save cost'));
+    await tester.tap(find.text(englishCopy(AppMessage.save)));
     await tester.pumpAndSettle();
     expect(api.saved, isNull);
-    expect(find.text('This currency allows 2 decimal places.'), findsOneWidget);
+    expect(
+      find.text(englishCopy(AppMessage.paymentAmountFormat, {'digits': '2'})),
+      findsOneWidget,
+    );
   });
 }

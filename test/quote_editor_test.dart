@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 const _company = CompanySettings(
   currency: 'USD',
   digits: 2,
@@ -163,7 +165,7 @@ void main() {
         find.widgetWithText(TextField, 'Email'),
         'customer@example.test',
       );
-      await tester.tap(find.text('Save customer'));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(business.savedCustomer?.id, isNotNull);
       expect(business.savedCustomer?.name, 'New quote customer');
@@ -305,7 +307,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.calls, isEmpty);
       expect(
-        find.textContaining('This currency allows 0 decimal places.'),
+        find.text(
+          englishCopy(AppMessage.paymentAmountFormat, {'digits': '0'}),
+        ),
         findsOneWidget,
       );
       await _reveal(tester, price, -400);

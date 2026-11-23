@@ -20,7 +20,7 @@ String localizedBusinessFormatError(
   BuildContext context,
   FormatException error,
 ) {
-  if (error.message.startsWith('CURRENCY_DECIMAL_PLACES:')) {
+  if (error.message.startsWith('CURRENCY_DECIMAL_PLACES')) {
     return AppMessage.paymentAmountFormat.format(context, {
       'digits': error.message.split(':').last,
     });

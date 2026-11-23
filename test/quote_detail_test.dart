@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 QuoteDraft _draft() => QuoteDraft(
   id: 'quote',
   title: 'Synthetic tile estimate',
@@ -156,7 +158,11 @@ void main() {
       final api = _Quotes();
       await _show(tester, api);
       await _tap(tester, 'Review quote for issue');
-      expect(find.text('Estimated total USD 349.38'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.quoteEstimatedTotalLabel)),
+        findsOneWidget,
+      );
+      expect(find.text('USD 349.38'), findsOneWidget);
       await _tap(tester, 'Keep editing');
       expect(api.issues, isEmpty);
       await _tap(tester, 'Review quote for issue');

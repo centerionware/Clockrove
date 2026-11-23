@@ -21,6 +21,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
@@ -175,7 +176,7 @@ Future<void> _reveal(WidgetTester tester, String label) async {
   tester.state<ScrollableState>(scrollable).position.jumpTo(0);
   await tester.pumpAndSettle();
   await tester.scrollUntilVisible(
-    find.text(label),
+    find.text(label).last,
     250,
     scrollable: scrollable,
   );
@@ -224,9 +225,16 @@ void main() {
     await tester.tap(find.text('Preview invoice'));
     await tester.pumpAndSettle();
     expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
-    expect(find.text('Classic · sample invoice'), findsOneWidget);
     expect(
-      find.textContaining('does not create or send an invoice'),
+      find.text(
+        englishCopy(AppMessage.invoiceStyleSampleTitle, {
+          'style': englishCopy(AppMessage.invoiceStyleClassic),
+        }),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(englishCopy(AppMessage.invoiceStylePreviewDisclaimer)),
       findsOneWidget,
     );
     expect(find.text('Page 1 of 1'), findsOneWidget);
@@ -423,7 +431,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.savedSettings, isNull);
       expect(
-        find.textContaining('Fix the highlighted email subject'),
+        find.text(englishCopy(AppMessage.invoiceEmailFixTemplates)),
         findsOneWidget,
       );
       await _reveal(tester, 'Email subject template');
@@ -556,8 +564,8 @@ void main() {
       await _reveal(tester, 'Archive customer');
       await tester.tap(find.text('Archive customer'));
       await tester.pumpAndSettle();
-      await _reveal(tester, 'Save customer');
-      await tester.tap(find.text('Save customer'));
+      await _reveal(tester, englishCopy(AppMessage.save));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(api.savedCustomer!.id, 'customer');
       expect(api.savedCustomer!.email, 'changed@example.test');

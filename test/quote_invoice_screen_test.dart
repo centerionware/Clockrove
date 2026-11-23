@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 Map<String, Object?> _issued({bool hourly = false}) => {
@@ -292,7 +293,15 @@ void main() {
       await tester.tap(find.text('Review actual-work invoice'));
       await tester.pumpAndSettle();
       expect(find.text('Prepare this invoice?'), findsOneWidget);
-      expect(find.text('Invoice total USD 403.13'), findsOneWidget);
+      expect(
+        find.text(
+          englishCopy(AppMessage.invoiceAmountLine, {
+            'label': englishCopy(AppMessage.invoiceTotal),
+            'amount': 'USD 403.13',
+          }),
+        ),
+        findsOneWidget,
+      );
       expect(api.calls, isEmpty);
       await tester.tap(find.text('Keep editing'));
       await tester.pumpAndSettle();
@@ -419,7 +428,15 @@ void main() {
       await _reach(tester, find.text('Review actual-work invoice'));
       await tester.tap(find.text('Review actual-work invoice'));
       await tester.pumpAndSettle();
-      expect(find.text('Invoice total USD 43.00'), findsOneWidget);
+      expect(
+        find.text(
+          englishCopy(AppMessage.invoiceAmountLine, {
+            'label': englishCopy(AppMessage.invoiceTotal),
+            'amount': 'USD 43.00',
+          }),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.text('Finalized synthetic hour\n1h 0m actual finalized work'),
         findsOneWidget,
@@ -466,7 +483,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Prepare this invoice?'), findsOneWidget);
         await tester.scrollUntilVisible(
-          find.text('Invoice total USD 403.13'),
+          find.text(
+            englishCopy(AppMessage.invoiceAmountLine, {
+              'label': englishCopy(AppMessage.invoiceTotal),
+              'amount': 'USD 403.13',
+            }),
+          ),
           180,
           scrollable: find
               .descendant(

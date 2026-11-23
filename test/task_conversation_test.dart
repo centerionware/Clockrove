@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 final _pixel = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AP8AAP8FAAH/+lyI0QAAAABJRU5ErkJggg==',
 );
@@ -365,7 +367,7 @@ void main() {
           .setMockMethodCallHandler(photoChannel, (call) async {
             throw PlatformException(
               code: 'NO_DOCUMENT_PICKER',
-              message: 'No image picker is installed',
+              message: 'Synthetic image picker failure',
             );
           });
       addTearDown(
@@ -375,7 +377,10 @@ void main() {
       await show(tester, api);
       await tester.tap(find.widgetWithText(OutlinedButton, 'Choose photos'));
       await tester.pumpAndSettle();
-      expect(find.text('No image picker is installed'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.taskPhotoOpenFailed)),
+        findsOneWidget,
+      );
       expect(api._images, isEmpty);
     },
   );

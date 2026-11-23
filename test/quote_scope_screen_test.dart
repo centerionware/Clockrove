@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 QuoteScopeData _data({int version = 7}) => QuoteScopeData({
   'version': version,
   'issued': {
@@ -140,7 +142,10 @@ void main() {
       expect(api.calls.last.id, first.id);
       expect(api.calls.last.version, first.version);
       expect(identical(api.calls.last.draft, first.draft), isTrue);
-      expect(find.text('Plan accepted scope'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.quoteScopeReviewGroupPlan)),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     },
   );

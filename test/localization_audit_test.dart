@@ -64,6 +64,8 @@ void example(String name) {
       'task-comment-body',
       'task-attachment-',
       'clockrove/documents/v1',
+      'paidLabel',
+      'dueLabel',
       'captureTaskPhoto',
       'pickTaskPhoto',
       'invoice-payment-amount',
@@ -155,6 +157,8 @@ void example(String name) {
       'quote-decision-card/',
       'task-comment-body',
       'task-attachment-',
+      'paidLabel',
+      'dueLabel',
     };
 
     bool isSurface(File file) {

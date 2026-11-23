@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const fileChannel = MethodChannel('clockrove/backup-files/v1');
@@ -417,7 +419,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('restore-preview')));
     await tester.pumpAndSettle();
-    expect(find.text('Authentication failed.'), findsOneWidget);
+    expect(find.text(englishCopy(AppMessage.restoreFailed)), findsOneWidget);
     expect(find.byKey(const ValueKey('restore-selected-file')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

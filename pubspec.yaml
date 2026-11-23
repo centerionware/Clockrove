@@ -35,3 +35,20 @@ flutter:
   assets:
     - localizations/
     - localizations/flutter/
+    - localizations/flutter/ar/
+    - localizations/flutter/bn/
+    - localizations/flutter/de/
+    - localizations/flutter/en/
+    - localizations/flutter/es/
+    - localizations/flutter/fr/
+    - localizations/flutter/hi/
+    - localizations/flutter/id/
+    - localizations/flutter/it/
+    - localizations/flutter/ja/
+    - localizations/flutter/ko/
+    - localizations/flutter/pt/
+    - localizations/flutter/ru/
+    - localizations/flutter/tr/
+    - localizations/flutter/vi/
+    - localizations/flutter/zh-Hans/
+    - localizations/flutter/zh-Hant/
