@@ -9,11 +9,7 @@ import 'automation_api.dart';
 import 'site_map_picker.dart';
 
 class SiteEditResult {
-  const SiteEditResult(
-    this.site, {
-    this.remove = false,
-    this.currentPosition,
-  });
+  const SiteEditResult(this.site, {this.remove = false, this.currentPosition});
   final WorkSite site;
   final bool remove;
   final SitePosition? currentPosition;
