@@ -1,6 +1,7 @@
 import 'package:clockrove/help/help_screen.dart';
 import 'package:clockrove/l10n/language_preference.dart';
 import 'package:clockrove/main.dart';
+import 'package:clockrove/tracking/timer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,12 +20,15 @@ void main() {
             _EnglishLanguagePreference.new,
           ),
         ],
-        child: const ClockroveApp(),
+        child: const ClockroveApp(initialRoute: '/'),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    expect(find.byType(TimerScreen), findsOneWidget);
+    final overflowMenu = find.byIcon(Icons.more_vert);
+    expect(overflowMenu, findsOneWidget);
+    await tester.tap(overflowMenu);
     await tester.pumpAndSettle();
     await tester.tap(
       find.byWidgetPredicate(

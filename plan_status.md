@@ -989,9 +989,12 @@ flow exposed one stale `Task notes and photos` assertion. It now expects the
 catalog title `Task notes & photos`. API 35 was skipped after the API 24
 failure. No local build, test, formatter or analysis ran.
 
-Exact-head runs [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515)
-and [45210857943](https://github.com/centerionware/Clockrove/actions/runs/45210857943)
-passed the task-photo device flow but failed Help navigation at its `Settings`
-text finder, even after the test pinned English. The test now opens the menu by
-widget type and selects its stable `settings` route value. API 35 and viewer
-checks were skipped. No local build, test, formatter or analysis ran.
+Runs [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515),
+[45210857943](https://github.com/centerionware/Clockrove/actions/runs/45210857943),
+and [45216392006](https://github.com/centerionware/Clockrove/actions/runs/45216392006)
+failed Help navigation: the latest run could not find `PopupMenuButton<String>`.
+The test now pins `/`, asserts `TimerScreen`, and opens the overflow icon. CI
+collects Android suite failures across both APIs, continues independent workflow
+checks, and summarizes failures at the end. Exact-head validation is pending;
+no local build, test, formatter or analysis ran. Localization acceptance stays
+open.
