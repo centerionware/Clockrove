@@ -950,3 +950,13 @@ stale English assertion: invalid precision is now exposed as the catalog-backed
 checks were skipped after this API 24 failure. The test now expects the current
 message; a fresh exact-head Actions run is required. No local build, test,
 formatter or analysis ran.
+
+Exact-head run [45139224460](https://github.com/centerionware/Clockrove/actions/runs/45139224460)
+on `c4a5103` passed catalog checks, both localization audits, formatting,
+analysis, all 311 behavior tests, Android/release compilation, instrumentation
+APK assembly, and all 759 native unit tests. API 24 report/PDF and invoice
+payment instrumentation advanced past the corrected precision assertion; the
+quote billing device flow then found two stale `Save task` labels. Those now
+follow the task editor's visible `Save` action. API 35 and invoice-viewer checks
+were skipped after the API 24 quote-flow failure. A fresh exact-head Actions run
+is required. No local build, test, formatter or analysis ran.
