@@ -191,7 +191,9 @@ void main() {
         tester
             .getRect(find.byType(FlutterMap))
             .contains(
-              tester.getRect(find.byTooltip(AppMessage.zoomOut.english)).bottomRight,
+              tester
+                  .getRect(find.byTooltip(AppMessage.zoomOut.english))
+                  .bottomRight,
             ),
         isTrue,
       );

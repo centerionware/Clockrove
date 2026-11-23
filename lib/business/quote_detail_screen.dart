@@ -169,9 +169,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
       total = quoteTotals(draft.lines, draft.taxUnits);
     } on QuoteValidationException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.messageKey.of(context))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.messageKey.of(context))));
       }
       return;
     }
@@ -213,14 +213,16 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       }),
               ),
               if (data.draftStyle.isNotEmpty)
-                Text(AppMessage.quoteIssueDocumentStyle.format(context, {
-                  'style': switch (data.draftStyle) {
-                    'CLASSIC' => AppMessage.invoiceStyleClassic.of(context),
-                    'MODERN' => AppMessage.invoiceStyleModern.of(context),
-                    'MINIMAL' => AppMessage.invoiceStyleMinimal.of(context),
-                    _ => AppMessage.invoiceStyle.of(context),
-                  },
-                })),
+                Text(
+                  AppMessage.quoteIssueDocumentStyle.format(context, {
+                    'style': switch (data.draftStyle) {
+                      'CLASSIC' => AppMessage.invoiceStyleClassic.of(context),
+                      'MODERN' => AppMessage.invoiceStyleModern.of(context),
+                      'MINIMAL' => AppMessage.invoiceStyleMinimal.of(context),
+                      _ => AppMessage.invoiceStyle.of(context),
+                    },
+                  }),
+                ),
               if (data.latest != null)
                 Text(
                   AppMessage.quoteIssueRevisionHistory.format(context, {
@@ -251,7 +253,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
               Text(
                 AppMessage.invoiceAmountLine.format(context, {
                   'label': AppMessage.invoiceSubtotal.of(context),
-                  'amount': '${draft.currency} ${money(total.subtotal, digits)}',
+                  'amount':
+                      '${draft.currency} ${money(total.subtotal, digits)}',
                 }),
               ),
               Text(
@@ -275,13 +278,17 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       }),
               ),
               if (draft.terms.isNotEmpty)
-                Text(AppMessage.quoteIssueTerms.format(context, {
-                  'terms': draft.terms,
-                })),
+                Text(
+                  AppMessage.quoteIssueTerms.format(context, {
+                    'terms': draft.terms,
+                  }),
+                ),
               if (draft.notes.isNotEmpty)
-                Text(AppMessage.quoteIssuePrintedNotes.format(context, {
-                  'notes': draft.notes,
-                })),
+                Text(
+                  AppMessage.quoteIssuePrintedNotes.format(context, {
+                    'notes': draft.notes,
+                  }),
+                ),
             ],
           ),
         ),
@@ -349,9 +356,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       }),
               ),
               if (review.note.isNotEmpty)
-                Text(AppMessage.quoteDecisionPrivateNote.format(context, {
-                  'note': review.note,
-                })),
+                Text(
+                  AppMessage.quoteDecisionPrivateNote.format(context, {
+                    'note': review.note,
+                  }),
+                ),
               Text(AppMessage.quoteDecisionRecordNotice.of(context)),
             ],
           ),
@@ -416,9 +425,11 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         : quoteStatusMessage(value.decision!).of(context),
                   ),
                   if (value.decisionNote?.isNotEmpty == true)
-                    Text(AppMessage.quotePrivateLocalNote.format(context, {
-                      'note': value.decisionNote!,
-                    })),
+                    Text(
+                      AppMessage.quotePrivateLocalNote.format(context, {
+                        'note': value.decisionNote!,
+                      }),
+                    ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () {
@@ -434,9 +445,7 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         Navigator.pop(context);
                         _scope(value);
                       },
-                      child: Text(
-                        AppMessage.reviewAcceptedScope.of(context),
-                      ),
+                      child: Text(AppMessage.reviewAcceptedScope.of(context)),
                     ),
                   if (value.decision == 'ACCEPTED')
                     OutlinedButton(
@@ -509,10 +518,12 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                 '${AppMessage.quoteRelatedInvoiceRevision.format(context, {'revision': latest.revision.toString()})} · ${quoteStatusMessage(latest.decision ?? (expired ? 'EXPIRED' : 'ISSUED')).of(context)}',
               ),
               if (data.today.isNotEmpty)
-                Text(AppMessage.quoteStatusAsOf.format(context, {
-                  'date': data.today,
-                  'timezone': data.timezone,
-                })),
+                Text(
+                  AppMessage.quoteStatusAsOf.format(context, {
+                    'date': data.today,
+                    'timezone': data.timezone,
+                  }),
+                ),
               if (latest.customer.isNotEmpty) Text(latest.customer),
               Card(
                 child: Padding(
@@ -636,7 +647,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                               version != data.version ||
                               draft == null) {
                             throw FormatException(
-                              AppMessage.quoteReviewDraftBeforeIssue.of(context),
+                              AppMessage.quoteReviewDraftBeforeIssue.of(
+                                context,
+                              ),
                             );
                           }
                           final id = newBusinessId(),
@@ -667,23 +680,31 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         Text(quoteStatusMessage(latest.decision!).of(context)),
                         if (latest.decisionNote?.isNotEmpty == true)
                           Text(latest.decisionNote!),
-                        Text(AppMessage.quoteDecisionRetainedNotice.of(context)),
+                        Text(
+                          AppMessage.quoteDecisionRetainedNotice.of(context),
+                        ),
                       ] else ...[
                         Text(AppMessage.quoteDecisionPrivacyNotice.of(context)),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _decision,
                           decoration: InputDecoration(
-                            labelText: AppMessage.quoteDecisionLabel.of(context),
+                            labelText: AppMessage.quoteDecisionLabel.of(
+                              context,
+                            ),
                           ),
                           items: [
                             DropdownMenuItem(
                               value: 'ACCEPTED',
-                              child: Text(AppMessage.quoteStatusAccepted.of(context)),
+                              child: Text(
+                                AppMessage.quoteStatusAccepted.of(context),
+                              ),
                             ),
                             DropdownMenuItem(
                               value: 'DECLINED',
-                              child: Text(AppMessage.quoteStatusDeclined.of(context)),
+                              child: Text(
+                                AppMessage.quoteStatusDeclined.of(context),
+                              ),
                             ),
                           ],
                           onChanged: !_eligible
@@ -708,8 +729,10 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                             maxLength: 2000,
                             maxLengthEnforcement: MaxLengthEnforcement.none,
                             decoration: InputDecoration(
-                              labelText: AppMessage.quotePrivateDecisionLabel.of(context),
-                              helperText: AppMessage.quotePrivateDecisionHelp.of(context),
+                              labelText: AppMessage.quotePrivateDecisionLabel
+                                  .of(context),
+                              helperText: AppMessage.quotePrivateDecisionHelp
+                                  .of(context),
                               errorText: _noteError,
                             ),
                             onChanged: (_) => setState(() {
@@ -722,11 +745,15 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                           onPressed: _eligible && latest.decision == null
                               ? _reviewDecision
                               : null,
-                          child: Text(AppMessage.quoteReviewCustomerDecision.of(context)),
+                          child: Text(
+                            AppMessage.quoteReviewCustomerDecision.of(context),
+                          ),
                         ),
                         BusinessCommand(
                           key: ValueKey('decision/${widget.id}'),
-                          label: AppMessage.quoteRecordReviewedDecision.of(context),
+                          label: AppMessage.quoteRecordReviewedDecision.of(
+                            context,
+                          ),
                           enabled:
                               _eligible &&
                               latest.decision == null &&
@@ -740,7 +767,8 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                 review.version != data.version ||
                                 review.revision != latest.revision) {
                               throw FormatException(
-                                AppMessage.quoteReviewCurrentDecisionRequired.of(context),
+                                AppMessage.quoteReviewCurrentDecisionRequired
+                                    .of(context),
                               );
                             }
                             final id = newBusinessId(),
@@ -776,7 +804,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                       onPressed: () => setState(() {
                         _history = _readHistory();
                       }),
-                      child: Text(AppMessage.quoteRetryRevisionHistory.of(context)),
+                      child: Text(
+                        AppMessage.quoteRetryRevisionHistory.of(context),
+                      ),
                     );
                   }
                   final entries =
@@ -787,14 +817,19 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                         const LinearProgressIndicator(),
                       for (final entry in entries)
                         ListTile(
-                          title: Text(AppMessage.quoteRevisionTitle.format(context, {
-                            'revision': entry.revision.toString(),
-                          })),
+                          title: Text(
+                            AppMessage.quoteRevisionTitle.format(context, {
+                              'revision': entry.revision.toString(),
+                            }),
+                          ),
                           subtitle: Text(
                             AppMessage.quoteHistoryEntry.format(context, {
                               'decision': entry.decision == null
-                                  ? AppMessage.quoteNoDecisionRecorded.of(context)
-                                  : quoteStatusMessage(entry.decision!).of(context),
+                                  ? AppMessage.quoteNoDecisionRecorded.of(
+                                      context,
+                                    )
+                                  : quoteStatusMessage(entry.decision!)
+                                        .of(context),
                               'timestamp': DateTime.fromMillisecondsSinceEpoch(
                                 entry.created,
                                 isUtc: true,
@@ -832,7 +867,9 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                                         }),
                                   );
                                 },
-                          child: Text(AppMessage.quoteLoadOlderRevisions.of(context)),
+                          child: Text(
+                            AppMessage.quoteLoadOlderRevisions.of(context),
+                          ),
                         ),
                     ],
                   );

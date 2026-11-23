@@ -348,12 +348,14 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       builder: (dialogContext) => AlertDialog(
         scrollable: true,
         title: Text(AppMessage.applyBackupQuestion.of(dialogContext)),
-        content: Text([
-          AppMessage.restoreMergeTransaction.of(dialogContext),
-          if (preview.openSessionCount > 0)
-            AppMessage.restoreOpenSessionsOmitted.of(dialogContext),
-          AppMessage.restoreDeviceSettingsExcluded.of(dialogContext),
-        ].join(' ')),
+        content: Text(
+          [
+            AppMessage.restoreMergeTransaction.of(dialogContext),
+            if (preview.openSessionCount > 0)
+              AppMessage.restoreOpenSessionsOmitted.of(dialogContext),
+            AppMessage.restoreDeviceSettingsExcluded.of(dialogContext),
+          ].join(' '),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -511,7 +513,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                           ? null
                           : _createPreview,
                       icon: const Icon(Icons.preview),
-                      label: Text(AppMessage.authenticateAndPreview.of(context)),
+                      label: Text(
+                        AppMessage.authenticateAndPreview.of(context),
+                      ),
                     ),
                   ],
                   if (_busy) ...[
@@ -605,7 +609,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     if (_page != null && _page!.done && _allConflictsReviewed)
                       _NoticeCard(
                         icon: Icons.fact_check_outlined,
-                        text: AppMessage.restoreAllConflictsReviewed.of(context),
+                        text: AppMessage.restoreAllConflictsReviewed.of(
+                          context,
+                        ),
                       ),
                     if (_page != null && !_page!.done)
                       FilledButton.tonalIcon(
@@ -614,7 +620,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : _nextConflictPage,
                         icon: const Icon(Icons.navigate_next),
-                        label: Text(AppMessage.restoreNextConflictPage.of(context)),
+                        label: Text(
+                          AppMessage.restoreNextConflictPage.of(context),
+                        ),
                       ),
                     if (_pageIndex > 0)
                       TextButton.icon(
@@ -622,7 +630,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : () => _loadConflictPage(_pageIndex - 1),
                         icon: const Icon(Icons.navigate_before),
-                        label: Text(AppMessage.restorePreviousConflictPage.of(context)),
+                        label: Text(
+                          AppMessage.restorePreviousConflictPage.of(context),
+                        ),
                       ),
                     if (restore.preview.localOpenSessionCount == 0 &&
                         _page?.done == true)
@@ -654,7 +664,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       ),
     );
   }
-
 }
 
 final class _ConflictCard extends StatelessWidget {
@@ -695,9 +704,7 @@ final class _ConflictCard extends StatelessWidget {
             if (conflict.allowedChoices.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  AppMessage.restoreUnsupportedConflict.of(context),
-                ),
+                child: Text(AppMessage.restoreUnsupportedConflict.of(context)),
               )
             else ...[
               const SizedBox(height: 8),
@@ -858,23 +865,24 @@ String _conflictTitle(BuildContext context, BackupImportConflict conflict) {
   return message?.of(context) ?? AppMessage.restoreRecordConflict.of(context);
 }
 
-String _summaryFieldLabel(BuildContext context, String field) => switch (field) {
-  'identifier' => AppMessage.restoreSummaryFieldIdentifier.of(context),
-  'id' => AppMessage.restoreSummaryFieldId.of(context),
-  'name' => AppMessage.restoreSummaryFieldName.of(context),
-  'job_name' => AppMessage.restoreSummaryFieldJobName.of(context),
-  'customer_name' => AppMessage.restoreSummaryFieldCustomerName.of(context),
-  'number' => AppMessage.restoreSummaryFieldNumber.of(context),
-  'title' => AppMessage.restoreSummaryFieldTitle.of(context),
-  'start_ms' => AppMessage.restoreSummaryFieldStartMs.of(context),
-  'end_ms' => AppMessage.restoreSummaryFieldEndMs.of(context),
-  'occurred_ms' => AppMessage.restoreSummaryFieldOccurredMs.of(context),
-  'amount_minor' => AppMessage.restoreSummaryFieldAmountMinor.of(context),
-  'currency' => AppMessage.restoreSummaryFieldCurrency.of(context),
-  'kind' => AppMessage.restoreSummaryFieldKind.of(context),
-  'category' => AppMessage.restoreSummaryFieldCategory.of(context),
-  _ => AppMessage.restoreSummaryFieldIdentifier.of(context),
-};
+String _summaryFieldLabel(BuildContext context, String field) =>
+    switch (field) {
+      'identifier' => AppMessage.restoreSummaryFieldIdentifier.of(context),
+      'id' => AppMessage.restoreSummaryFieldId.of(context),
+      'name' => AppMessage.restoreSummaryFieldName.of(context),
+      'job_name' => AppMessage.restoreSummaryFieldJobName.of(context),
+      'customer_name' => AppMessage.restoreSummaryFieldCustomerName.of(context),
+      'number' => AppMessage.restoreSummaryFieldNumber.of(context),
+      'title' => AppMessage.restoreSummaryFieldTitle.of(context),
+      'start_ms' => AppMessage.restoreSummaryFieldStartMs.of(context),
+      'end_ms' => AppMessage.restoreSummaryFieldEndMs.of(context),
+      'occurred_ms' => AppMessage.restoreSummaryFieldOccurredMs.of(context),
+      'amount_minor' => AppMessage.restoreSummaryFieldAmountMinor.of(context),
+      'currency' => AppMessage.restoreSummaryFieldCurrency.of(context),
+      'kind' => AppMessage.restoreSummaryFieldKind.of(context),
+      'category' => AppMessage.restoreSummaryFieldCategory.of(context),
+      _ => AppMessage.restoreSummaryFieldIdentifier.of(context),
+    };
 
 String _summaryValueText(BuildContext context, String field, Object? value) {
   if (value == null) return '—';
@@ -890,8 +898,9 @@ String _summaryValueText(BuildContext context, String field, Object? value) {
         'ON_DEVICE' => AppMessage.restoreOnDevice,
         'LOCAL_DELETION' => AppMessage.restorePreserveLocalDeletion,
         'BACKUP_RECORD' => AppMessage.restoreInBackup,
-        'GPS_DELETION' || 'GPS_LOCAL_POINTS' || 'GPS_BACKUP_POINTS' =>
-          AppMessage.restoreDeletedGps,
+        'GPS_DELETION' ||
+        'GPS_LOCAL_POINTS' ||
+        'GPS_BACKUP_POINTS' => AppMessage.restoreDeletedGps,
         'GPS_DELETION_UNAVAILABLE' => AppMessage.actualCostLinkUnavailable,
         _ => null,
       };

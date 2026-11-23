@@ -100,9 +100,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
       if (mounted) setState(() => _validationError = error.key);
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _message = AppMessage.mapSaveFailed,
-        );
+        setState(() => _message = AppMessage.mapSaveFailed);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -138,9 +136,7 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _message = AppMessage.mapResetFailed,
-        );
+        setState(() => _message = AppMessage.mapResetFailed);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -271,18 +267,14 @@ class _MapProviderFormState extends ConsumerState<_MapProviderForm> {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
-                AppMessage.mapCredentialPrivacy.of(context),
-              ),
+              child: Text(AppMessage.mapCredentialPrivacy.of(context)),
             ),
           ),
         ],
         if (!android)
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              AppMessage.mapCredentialsAndroidOnly.of(context),
-            ),
+            child: Text(AppMessage.mapCredentialsAndroidOnly.of(context)),
           ),
         const SizedBox(height: 16),
         if (_validationError != null)

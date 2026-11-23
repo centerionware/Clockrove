@@ -184,7 +184,10 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   children: [
                     _amount(AppMessage.invoiceTotal.of(context), data.total),
                     if (data.cancellation == null)
-                      _amount(AppMessage.invoicePaidToDate.of(context), data.paid)
+                      _amount(
+                        AppMessage.invoicePaidToDate.of(context),
+                        data.paid,
+                      )
                     else ...[
                       _amount(
                         AppMessage.invoiceCreditTransferred.of(context),
@@ -301,7 +304,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 ),
               if (data.cancellation != null)
                 ExpansionTile(
-                  title: Text(AppMessage.invoiceCancellationHistory.of(context)),
+                  title: Text(
+                    AppMessage.invoiceCancellationHistory.of(context),
+                  ),
                   children: [
                     Text(data.cancellation!.createdLabel),
                     Text(
@@ -320,9 +325,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 child: Text(AppMessage.openOriginalInvoice.of(context)),
               ),
             if (data.accountingEmail.isEmpty)
-              Text(
-                AppMessage.invoiceMissingAccountingEmail.of(context),
-              )
+              Text(AppMessage.invoiceMissingAccountingEmail.of(context))
             else
               Text(
                 data.accountingEmail.toLowerCase() ==
@@ -333,9 +336,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                       }),
               ),
             if (widget.refreshFailed)
-              Text(
-                AppMessage.invoiceDetailsRefreshFailed.of(context),
-              ),
+              Text(AppMessage.invoiceDetailsRefreshFailed.of(context)),
             if (data.legacy) ...[
               const SizedBox(height: 20),
               Text(
@@ -394,7 +395,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                           payment.reversalNote != null)
                         ExpansionTile(
                           tilePadding: EdgeInsets.zero,
-                          title: Text(AppMessage.invoicePaymentNotes.of(context)),
+                          title: Text(
+                            AppMessage.invoicePaymentNotes.of(context),
+                          ),
                           children: [
                             if (payment.note.isNotEmpty) Text(payment.note),
                             if (payment.reversalNote != null)
@@ -417,14 +420,18 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                                     payment.originalInvoiceId,
                                   )
                                 : null,
-                            child: Text(AppMessage.openPaymentReceipt.of(context)),
+                            child: Text(
+                              AppMessage.openPaymentReceipt.of(context),
+                            ),
                           ),
                           if (payment.allocatedInvoiceId != data.invoiceId)
                             TextButton(
                               onPressed: eligible
                                   ? () => _related(payment.allocatedInvoiceId)
                                   : null,
-                              child: Text(AppMessage.openCurrentInvoice.of(context)),
+                              child: Text(
+                                AppMessage.openCurrentInvoice.of(context),
+                              ),
                             ),
                           if (!voided &&
                               payment.reversalId == null &&
@@ -433,7 +440,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                               onPressed: eligible
                                   ? () => _payment(reversal: payment)
                                   : null,
-                              child: Text(AppMessage.correctInvoicePayment.of(context)),
+                              child: Text(
+                                AppMessage.correctInvoicePayment.of(context),
+                              ),
                             ),
                         ],
                       ),
@@ -457,7 +466,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 leading: const Icon(Icons.description_outlined),
                 title: Text(switch (copy.kind) {
                   'RECEIPT' => AppMessage.invoicePaymentReceipt.of(context),
-                  'CORRECTION' => AppMessage.invoicePaymentCorrection.of(context),
+                  'CORRECTION' => AppMessage.invoicePaymentCorrection.of(
+                    context,
+                  ),
                   'VOID' => AppMessage.invoiceCancellationCopy.of(context),
                   _ => AppMessage.invoiceBalanceCopy.of(context),
                 }),
@@ -465,10 +476,11 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   [
                     copy.createdLabel,
                     AppMessage.invoiceCopyBalanceSummary.format(context, {
-                      'paidLabel': (copy.kind == 'VOID'
-                              ? AppMessage.invoiceCreditTransferred
-                              : AppMessage.invoiceCopyPaid)
-                          .of(context),
+                      'paidLabel':
+                          (copy.kind == 'VOID'
+                                  ? AppMessage.invoiceCreditTransferred
+                                  : AppMessage.invoiceCopyPaid)
+                              .of(context),
                       'paid': money(copy.paid, data.digits),
                       'dueLabel': AppMessage.invoiceCopyDue.of(context),
                       'due': money(copy.due, data.digits),

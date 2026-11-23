@@ -163,10 +163,9 @@ class _LegacyCoveredTimeDialogState
         labelText: label,
         hintText: AppMessage.legacyLocalTimestampFormat.of(context),
         suffixIcon: IconButton(
-          tooltip: AppMessage.legacyChooseDateTime.format(
-            context,
-            {'label': label},
-          ),
+          tooltip: AppMessage.legacyChooseDateTime.format(context, {
+            'label': label,
+          }),
           onPressed: _resolving ? null : () => _pick(controller),
           icon: const Icon(Icons.calendar_month_outlined),
         ),
@@ -183,10 +182,12 @@ class _LegacyCoveredTimeDialogState
     if (choices.length == 1) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: Text(AppMessage.legacyResolvedTime.format(
-          context,
-          {'label': label, 'time': choices.single.label},
-        )),
+        child: Text(
+          AppMessage.legacyResolvedTime.format(context, {
+            'label': label,
+            'time': choices.single.label,
+          }),
+        ),
       );
     }
     return Padding(
@@ -197,10 +198,9 @@ class _LegacyCoveredTimeDialogState
           Text(AppMessage.legacyAmbiguousTime.of(context)),
           InputDecorator(
             decoration: InputDecoration(
-              labelText: AppMessage.legacyOffsetLabel.format(
-                context,
-                {'label': label},
-              ),
+              labelText: AppMessage.legacyOffsetLabel.format(context, {
+                'label': label,
+              }),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<HistoryTimeChoice>(

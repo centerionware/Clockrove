@@ -116,7 +116,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
         .toSet();
     final missing = _tasks.difference(available);
     setState(() {
-          _noteError = note.length < 10 || note.length > 4000
+      _noteError = note.length < 10 || note.length > 4000
           ? AppMessage.legacyNoteLength.of(context)
           : null;
       _confirmationError = _confirmed
@@ -182,7 +182,9 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                     Text(AppMessage.invoiceDetailsRefreshFailed.of(context)),
                     TextButton(
                       onPressed: _pending ? null : _refresh,
-                      child: Text(AppMessage.retryInvoiceCorrection.of(context)),
+                      child: Text(
+                        AppMessage.retryInvoiceCorrection.of(context),
+                      ),
                     ),
                   ],
                   Text(
@@ -219,13 +221,14 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                     ),
                   if (editing) ...[
                     _heading(AppMessage.legacyCoveredWork.of(context)),
-                    Text(AppMessage.legacyCoverageSelectionCount.format(
-                      context,
-                      {
-                        'tasks': MaterialLocalizations.of(context).formatDecimal(_tasks.length),
-                        'times': MaterialLocalizations.of(context).formatDecimal(_times.length),
-                      },
-                    )),
+                    Text(
+                      AppMessage.legacyCoverageSelectionCount.format(context, {
+                        'tasks': MaterialLocalizations.of(context)
+                            .formatDecimal(_tasks.length),
+                        'times': MaterialLocalizations.of(context)
+                            .formatDecimal(_times.length),
+                      }),
+                    ),
                     Text(AppMessage.legacyLinkingHelp.of(context)),
                     if (_selectionError != null)
                       Text(
@@ -243,13 +246,17 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                 _changed();
                               })
                             : null,
-                        child: Text(AppMessage.legacyClearSelection.of(context)),
+                        child: Text(
+                          AppMessage.legacyClearSelection.of(context),
+                        ),
                       ),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _noSources,
                       title: Text(AppMessage.legacyNoSources.of(context)),
-                      subtitle: Text(AppMessage.legacyMissingSourcesHelp.of(context)),
+                      subtitle: Text(
+                        AppMessage.legacyMissingSourcesHelp.of(context),
+                      ),
                       onChanged: _editable && _tasks.isEmpty && _times.isEmpty
                           ? (value) => setState(() {
                               _noSources = value ?? false;
@@ -286,7 +293,9 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                       {'number': task.number!},
                                     )
                                   : task.completedLabel == null
-                                  ? AppMessage.quoteScopeNotCompleted.of(context)
+                                  ? AppMessage.quoteScopeNotCompleted.of(
+                                      context,
+                                    )
                                   : AppMessage.legacyTaskCompleted.format(
                                       context,
                                       {'date': task.completedLabel!},
@@ -313,10 +322,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                 onPressed: _pending
                                     ? null
                                     : () => _open(task.invoiceId!),
-                                child: Text(AppMessage.legacyOpenInvoice.format(
-                                  context,
-                                  {'number': task.number!},
-                                )),
+                                child: Text(
+                                  AppMessage.legacyOpenInvoice.format(context, {
+                                    'number': task.number!,
+                                  }),
+                                ),
                               ),
                             ),
                         ],
@@ -340,7 +350,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                     onPressed: _editable
                                         ? () => _time(i)
                                         : null,
-                                    child: Text(AppMessage.legacyEditCoveredTime.of(context)),
+                                    child: Text(
+                                      AppMessage.legacyEditCoveredTime.of(
+                                        context,
+                                      ),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: _editable
@@ -349,7 +363,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                             _changed();
                                           })
                                         : null,
-                                    child: Text(AppMessage.legacyRemoveTimeRange.of(context)),
+                                    child: Text(
+                                      AppMessage.legacyRemoveTimeRange.of(
+                                        context,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -375,7 +393,8 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                         maxLines: 6,
                         decoration: InputDecoration(
                           labelText: AppMessage.legacyReasonWhy.of(context),
-                          helperText: AppMessage.invoiceCorrectionPrivacyHelp.of(context),
+                          helperText: AppMessage.invoiceCorrectionPrivacyHelp
+                              .of(context),
                           errorText: _noteError,
                           errorMaxLines: 3,
                         ),
@@ -389,8 +408,12 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _confirmed,
-                      title: Text(AppMessage.legacyReviewedOriginal.of(context)),
-                      subtitle: Text(AppMessage.legacyReviewedOriginalHelp.of(context)),
+                      title: Text(
+                        AppMessage.legacyReviewedOriginal.of(context),
+                      ),
+                      subtitle: Text(
+                        AppMessage.legacyReviewedOriginalHelp.of(context),
+                      ),
                       onChanged: _editable
                           ? (value) {
                               FocusScope.of(context).unfocus();

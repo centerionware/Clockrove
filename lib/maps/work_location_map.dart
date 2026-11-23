@@ -182,9 +182,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
       // Keep an unavailable browser separate from map and timer state.
     }
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppMessage.linkUnavailable.of(context))),
       );
     }
@@ -212,9 +210,7 @@ class _WorkLocationMapState extends ConsumerState<WorkLocationMap> {
       }
     }
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppMessage.linkUnavailable.of(context))),
       );
     }

@@ -157,20 +157,14 @@ void main() {
   test(
     'display preserves fractional elapsed seconds and selection equality',
     () {
-      expect(
-        reportDurationParts('600'),
-        (
-          arguments: {'hours': '0', 'minutes': '0', 'seconds': '0.6'},
-          hasSeconds: true,
-        ),
-      );
-      expect(
-        reportDurationParts('3600000'),
-        (
-          arguments: {'hours': '1', 'minutes': '0', 'seconds': '0'},
-          hasSeconds: false,
-        ),
-      );
+      expect(reportDurationParts('600'), (
+        arguments: {'hours': '0', 'minutes': '0', 'seconds': '0.6'},
+        hasSeconds: true,
+      ));
+      expect(reportDurationParts('3600000'), (
+        arguments: {'hours': '1', 'minutes': '0', 'seconds': '0'},
+        hasSeconds: false,
+      ));
       expect(
         ReportSelection('2026-11-01', '2026-11-02', 'UTC', ['job']),
         ReportSelection('2026-11-01', '2026-11-02', 'UTC', ['job']),

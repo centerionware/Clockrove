@@ -9,49 +9,29 @@ import 'invoice_detail_screen.dart';
 import 'legacy_invoice_screen.dart';
 import 'quote_api.dart';
 import 'quote_invoice_api.dart';
+import 'quote_invoice_format.dart';
+import 'quote_invoice_review_dialog.dart';
 import 'quote_scope_api.dart';
 import 'quote_scope_screen.dart';
 import 'settings_validation_messages.dart';
 import 'tax_rate.dart';
 
-String _quoteInvoiceDuration(BuildContext context, String millis) {
-  final value = BigInt.parse(millis);
-  final hour = BigInt.from(3600000);
-  final minute = BigInt.from(60000);
-  final hours = value ~/ hour;
-  final minutes = value.remainder(hour) ~/ minute;
-  final remaining = value.remainder(minute);
-  final wholeSeconds = remaining ~/ BigInt.from(1000);
-  final fraction = remaining
-      .remainder(BigInt.from(1000))
-      .toString()
-      .padLeft(3, '0')
-      .replaceFirst(RegExp(r'0+$'), '');
-  final seconds = '$wholeSeconds${fraction.isEmpty ? '' : '.$fraction'}';
-  return AppMessage.quoteInvoiceDurationFormat.format(context, {
-    'hours': hours.toString(),
-    'minutes': minutes.toString(),
-    'seconds': remaining == BigInt.zero
-        ? ''
-        : AppMessage.quoteInvoiceDurationSeconds.format(context, {
-            'seconds': seconds,
-          }),
-  });
-}
-
 AppMessage quoteInvoiceProblem(String? code) => switch (code) {
   'QUOTE_INVOICE_MAPPING_REQUIRED' => AppMessage.quoteInvoiceMappingRequired,
   'QUOTE_ACCEPTANCE_REQUIRED' => AppMessage.quoteAcceptanceRequired,
-  'QUOTE_HISTORICAL_REVIEW_REQUIRED' => AppMessage.quoteHistoricalReviewRequired,
+  'QUOTE_HISTORICAL_REVIEW_REQUIRED' =>
+    AppMessage.quoteHistoricalReviewRequired,
   'QUOTE_INVOICE_SOURCES_CHANGED' => AppMessage.quoteInvoiceSourcesChanged,
   'NO_BILLABLE_ITEMS' => AppMessage.quoteInvoiceNoBillableItems,
   'LEGACY_INVOICE_REVIEW_REQUIRED' => AppMessage.quoteInvoiceLegacyReview,
-  'TASK_PRICES_REQUIRED' || 'HOURLY_RATE_REQUIRED' => AppMessage.quoteInvoiceCurrentPricesMissing,
+  'TASK_PRICES_REQUIRED' ||
+  'HOURLY_RATE_REQUIRED' => AppMessage.quoteInvoiceCurrentPricesMissing,
   'JOB_UNAVAILABLE' => AppMessage.quoteInvoiceJobUnavailable,
   'QUOTE_SCOPE_KIND_CHANGED' ||
   'QUOTE_JOB_MODE_MISMATCH' ||
   'QUOTE_SCOPE_SPLIT_REQUIRED' => AppMessage.quoteInvoiceScopeMismatch,
-  'CURRENCY_MISMATCH' || 'QUOTE_CURRENCY_PRECISION_CHANGED' => AppMessage.quoteInvoiceCurrencyMismatch,
+  'CURRENCY_MISMATCH' ||
+  'QUOTE_CURRENCY_PRECISION_CHANGED' => AppMessage.quoteInvoiceCurrencyMismatch,
   'INVALID_REPORT_RANGE' => AppMessage.quoteInvoiceInvalidRange,
   'INVOICE_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge,
   _ => AppMessage.quoteInvoiceReviewUnavailable,
@@ -213,7 +193,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         last = _last.text.trim(),
         zone = _zone.text.trim();
     if (!_date(first) || !_date(last) || first.compareTo(last) > 0) {
-      throw FormatException(AppMessage.quoteInvoiceDateRangeInvalid.of(context));
+      throw FormatException(
+        AppMessage.quoteInvoiceDateRangeInvalid.of(context),
+      );
     }
     if (_job == null || zone.isEmpty || zone.length > 100) {
       throw FormatException(
@@ -328,7 +310,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       throw FormatException(AppMessage.quoteInvoiceSourcesStale.of(context));
     }
     if (_tasks.isEmpty && _times.isEmpty) {
-      throw FormatException(AppMessage.quoteInvoiceSelectActualWork.of(context));
+      throw FormatException(
+        AppMessage.quoteInvoiceSelectActualWork.of(context),
+      );
     }
     if (_context!.mode == 'HOURLY' && !_timeAllocation) {
       throw FormatException(
@@ -381,7 +365,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         return;
       }
       if (result.problem != null) {
-        setState(() => _message = quoteInvoiceProblem(result.problem).of(context));
+        setState(
+          () => _message = quoteInvoiceProblem(result.problem).of(context),
+        );
         return;
       }
       if (result.total == null ||
@@ -395,54 +381,16 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
         );
       }
       setState(() => _reading = false);
-      final accepted = data.issued!;
       // Keep focus restoration from reopening the soft keyboard when the
       // confirmation dialog closes and obscuring the prepare action.
       FocusManager.instance.primaryFocus?.unfocus();
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppMessage.prepareInvoiceQuestion.of(context)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(AppMessage.quoteInvoiceRevisionRef.format(context, {'number': accepted.number, 'revision': accepted.revision.toString()})),
-                Text(data.jobName),
-                Text(AppMessage.quoteInvoiceDateRange.format(context, {'first': request.firstDate, 'last': request.lastDate, 'timezone': request.timezone})),
-                Text(AppMessage.quoteInvoiceReviewCustomer.format(context, {'customer': result.customer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : result.customer})),
-                Text(AppMessage.quoteInvoiceReviewEmail.format(context, {'email': result.email.isEmpty ? AppMessage.quoteInvoiceEmailNotSet.of(context) : result.email})),
-                Text(AppMessage.quoteInvoiceReviewPricesLabel.format(context, {'basis': (choices.currentPrices ? AppMessage.quoteInvoiceReviewCurrentPrices : AppMessage.quoteInvoiceReviewAcceptedAgreement).of(context)})),
-                Text(AppMessage.quoteInvoiceReviewTax.format(context, {'rate': taxPercent(result.taxUnits!), 'basis': (choices.currentTax ? AppMessage.quoteInvoiceReviewCurrentJobTax : AppMessage.quoteInvoiceReviewAcceptedTaxBasis).of(context)})),
-                for (final task in data.tasks.where(
-                  (task) => choices.taskIds.contains(task.id),
-                ))
-                  Text(AppMessage.quoteInvoiceReviewTaskLine.format(context, {'title': task.title, 'quantity': taskQuantity(task.actualQuantity), 'currency': data.currency, 'amount': money(choices.currentPrices ? task.currentPrice : task.acceptedPrice, data.digits)})),
-                for (final time in choices.times)
-                  Text(AppMessage.quoteInvoiceReviewTimeLine.format(context, {'title': time.label, 'duration': _quoteInvoiceDuration(context, time.durationMillis)})),
-                const SizedBox(height: 12),
-                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceSubtotal.of(context), 'amount': '${data.currency} ${money(result.subtotal, data.digits)}'})),
-                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceTax.of(context), 'amount': '${data.currency} ${money(result.tax, data.digits)}'})),
-                Text(AppMessage.invoiceAmountLine.format(context, {'label': AppMessage.invoiceTotal.of(context), 'amount': '${data.currency} ${money(result.total, data.digits)}'}), style: Theme.of(context).textTheme.titleLarge),
-                Text(AppMessage.quoteInvoiceWholeEstimate.format(context, {'currency': data.currency, 'total': accepted.total})),
-                const SizedBox(height: 12),
-                if (choices.note.isNotEmpty)
-                  Text(AppMessage.quoteInvoicePrivateReviewNote.format(context, {'note': choices.note})),
-                Text(AppMessage.quoteInvoiceAllocationNotice.of(context)),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppMessage.keepEditing.of(context)),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(AppMessage.confirmQuoteInvoiceReview.of(context)),
-            ),
-          ],
+        builder: (context) => QuoteInvoiceReviewDialog(
+          request: request,
+          choices: choices,
+          data: data,
+          result: result,
         ),
       );
       if (mounted && confirmed == true) {
@@ -532,19 +480,25 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 label: Text(AppMessage.reviewAcceptedScope.of(context)),
               ),
               const SizedBox(height: 12),
-              Text(AppMessage.quoteInvoiceMappedJob.of(context), style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                AppMessage.quoteInvoiceMappedJob.of(context),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: ValueKey('invoice-job/$_job'),
                 initialValue: _job,
                 isExpanded: true,
-                decoration: InputDecoration(hintText: AppMessage.quoteInvoiceChooseJob.of(context)),
+                decoration: InputDecoration(
+                  hintText: AppMessage.quoteInvoiceChooseJob.of(context),
+                ),
                 items: [
                   for (final id in jobIds)
                     DropdownMenuItem(
                       value: id,
                       child: Text(
-                        jobName[id] ?? AppMessage.quoteInvoiceRemovedJob.of(context),
+                        jobName[id] ??
+                            AppMessage.quoteInvoiceRemovedJob.of(context),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -567,7 +521,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _first,
                   enabled: _enabled,
-                  decoration: InputDecoration(hintText: AppMessage.dateIsoHint.of(context)),
+                  decoration: InputDecoration(
+                    hintText: AppMessage.dateIsoHint.of(context),
+                  ),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
@@ -582,7 +538,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _last,
                   enabled: _enabled,
-                  decoration: InputDecoration(hintText: AppMessage.dateIsoHint.of(context)),
+                  decoration: InputDecoration(
+                    hintText: AppMessage.dateIsoHint.of(context),
+                  ),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
@@ -597,7 +555,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 child: TextFormField(
                   controller: _zone,
                   enabled: _enabled,
-                  decoration: InputDecoration(hintText: AppMessage.ianaTimezoneHint.of(context)),
+                  decoration: InputDecoration(
+                    hintText: AppMessage.ianaTimezoneHint.of(context),
+                  ),
                   onChanged: (_) => setState(() => _changed(source: true)),
                 ),
               ),
@@ -622,7 +582,13 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 if (data.archived)
                   Text(AppMessage.quoteInvoiceArchivedJob.of(context)),
                 Text(
-                  AppMessage.quoteInvoiceAcceptedCustomer.format(context, {'customer': accepted.customer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : accepted.customer}),
+                  AppMessage.quoteInvoiceAcceptedCustomer.format(context, {
+                    'customer': accepted.customer.isEmpty
+                        ? AppMessage.quoteInvoiceCustomerNotSpecified.of(
+                            context,
+                          )
+                        : accepted.customer,
+                  }),
                 ),
                 Text(
                   [
@@ -631,12 +597,22 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   ].where((v) => v.isNotEmpty).join('\n'),
                 ),
                 Text(
-                  AppMessage.quoteInvoiceCurrentCustomer.format(context, {'customer': data.currentCustomer.isEmpty ? AppMessage.quoteInvoiceCustomerNotSpecified.of(context) : data.currentCustomer}),
+                  AppMessage.quoteInvoiceCurrentCustomer.format(context, {
+                    'customer': data.currentCustomer.isEmpty
+                        ? AppMessage.quoteInvoiceCustomerNotSpecified.of(
+                            context,
+                          )
+                        : data.currentCustomer,
+                  }),
                 ),
                 Text(data.currentContact),
                 SwitchListTile(
-                  title: Text(AppMessage.quoteInvoiceBillCurrentParty.of(context)),
-                  subtitle: Text(AppMessage.quoteInvoiceKeepAcceptedParty.of(context)),
+                  title: Text(
+                    AppMessage.quoteInvoiceBillCurrentParty.of(context),
+                  ),
+                  subtitle: Text(
+                    AppMessage.quoteInvoiceKeepAcceptedParty.of(context),
+                  ),
                   value: _currentParty,
                   onChanged: !_enabled
                       ? null
@@ -646,7 +622,10 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                         }),
                 ),
                 Text(
-                  AppMessage.quoteInvoiceTaxComparison.format(context, {'accepted': taxPercent(accepted.draft.taxUnits), 'current': taxPercent(data.currentTax)}),
+                  AppMessage.quoteInvoiceTaxComparison.format(context, {
+                    'accepted': taxPercent(accepted.draft.taxUnits),
+                    'current': taxPercent(data.currentTax),
+                  }),
                 ),
                 SwitchListTile(
                   title: Text(AppMessage.useCurrentJobTax.of(context)),
@@ -663,7 +642,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   subtitle: Text(
                     _currentAvailable
                         ? AppMessage.quoteInvoiceAcceptedPricesHelp.of(context)
-                        : AppMessage.quoteInvoiceCurrentPricesMissingHelp.of(context),
+                        : AppMessage.quoteInvoiceCurrentPricesMissingHelp.of(
+                            context,
+                          ),
                   ),
                   value: _currentPrices,
                   onChanged: !_enabled
@@ -676,7 +657,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 if (data.historical)
                   CheckboxListTile(
                     value: _historical,
-                    title: Text(AppMessage.quoteInvoiceHistoricalReviewed.of(context)),
+                    title: Text(
+                      AppMessage.quoteInvoiceHistoricalReviewed.of(context),
+                    ),
                     onChanged: !_enabled
                         ? null
                         : (value) => setState(() {
@@ -690,25 +673,54 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 ),
                 Text(AppMessage.quoteInvoiceActualWorkRules.of(context)),
                 if (data.mode == 'HOURLY') ...[
-                  Text(AppMessage.quoteInvoiceEstimatedRate.format(context, {'hours': taskQuantity(data.estimatedHours), 'currency': data.currency, 'rate': money(data.acceptedRate, data.digits)})),
-                  Text(AppMessage.quoteInvoiceCurrentRate.format(context, {'currency': data.currency, 'rate': data.currentRate == null ? AppMessage.quoteInvoiceRateUnset.of(context) : money(data.currentRate, data.digits)})),
-                  Text(AppMessage.quoteInvoiceSelectedDuration.format(context, {'duration': _quoteInvoiceDuration(context, data.times.where((time) => _times.contains(time.key)).fold(BigInt.zero, (sum, time) => sum + BigInt.parse(time.durationMillis)).toString())})),
+                  Text(
+                    AppMessage.quoteInvoiceEstimatedRate.format(context, {
+                      'hours': taskQuantity(data.estimatedHours),
+                      'currency': data.currency,
+                      'rate': money(data.acceptedRate, data.digits),
+                    }),
+                  ),
+                  Text(
+                    AppMessage.quoteInvoiceCurrentRate.format(context, {
+                      'currency': data.currency,
+                      'rate': data.currentRate == null
+                          ? AppMessage.quoteInvoiceRateUnset.of(context)
+                          : money(data.currentRate, data.digits),
+                    }),
+                  ),
+                  Text(
+                    AppMessage.quoteInvoiceSelectedDuration.format(context, {
+                      'duration': quoteInvoiceDurationLabel(
+                        context,
+                        data.times
+                            .where((time) => _times.contains(time.key))
+                            .fold(
+                              BigInt.zero,
+                              (sum, time) =>
+                                  sum + BigInt.parse(time.durationMillis),
+                            )
+                            .toString(),
+                      ),
+                    }),
+                  ),
                 ],
                 for (final task in data.tasks)
                   CheckboxListTile(
                     key: ValueKey('invoice-task/${task.id}'),
                     contentPadding: EdgeInsets.zero,
                     title: Text(task.title),
-                    subtitle: Text(AppMessage.quoteInvoiceTaskDetails.format(context, {
-                      'actual': taskQuantity(task.actualQuantity),
-                      'estimated': taskQuantity(task.estimatedQuantity),
-                      'currency': data.currency,
-                      'accepted': money(task.acceptedPrice, data.digits),
-                      'current': task.currentPrice == null
-                          ? AppMessage.quoteInvoiceRateUnset.of(context)
-                          : money(task.currentPrice, data.digits),
-                      'completed': task.completedLabel,
-                    })),
+                    subtitle: Text(
+                      AppMessage.quoteInvoiceTaskDetails.format(context, {
+                        'actual': taskQuantity(task.actualQuantity),
+                        'estimated': taskQuantity(task.estimatedQuantity),
+                        'currency': data.currency,
+                        'accepted': money(task.acceptedPrice, data.digits),
+                        'current': task.currentPrice == null
+                            ? AppMessage.quoteInvoiceRateUnset.of(context)
+                            : money(task.currentPrice, data.digits),
+                        'completed': task.completedLabel,
+                      }),
+                    ),
                     value: _tasks.contains(task.id),
                     onChanged: !_ready
                         ? null
@@ -726,7 +738,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                     key: ValueKey('invoice-time/${time.key}'),
                     contentPadding: EdgeInsets.zero,
                     title: Text(time.label),
-                    subtitle: Text(_quoteInvoiceDuration(context, time.durationMillis)),
+                    subtitle: Text(
+                      quoteInvoiceDurationLabel(context, time.durationMillis),
+                    ),
                     value: _times.contains(time.key),
                     onChanged: !_ready
                         ? null
@@ -755,12 +769,16 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                             );
                             _changed();
                           }),
-                    child: Text(AppMessage.quoteInvoiceClearUnavailable.of(context)),
+                    child: Text(
+                      AppMessage.quoteInvoiceClearUnavailable.of(context),
+                    ),
                   ),
                 if (data.mode == 'HOURLY')
                   CheckboxListTile(
                     value: _timeAllocation,
-                    title: Text(AppMessage.quoteInvoiceActualTimeBelongs.of(context)),
+                    title: Text(
+                      AppMessage.quoteInvoiceActualTimeBelongs.of(context),
+                    ),
                     onChanged: !_enabled
                         ? null
                         : (value) => setState(() {
@@ -771,7 +789,11 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 for (final item in data.excluded)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(AppMessage.quoteInvoiceAlreadyBilled.format(context, {'number': item.number})),
+                    title: Text(
+                      AppMessage.quoteInvoiceAlreadyBilled.format(context, {
+                        'number': item.number,
+                      }),
+                    ),
                     subtitle: Text(
                       item.title.isEmpty
                           ? AppMessage.reportFinalizedTime.of(context)
@@ -783,7 +805,11 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 for (final item in data.legacy)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(AppMessage.quoteInvoiceReviewOlderBilled.format(context, {'number': item.number})),
+                    title: Text(
+                      AppMessage.quoteInvoiceReviewOlderBilled.format(context, {
+                        'number': item.number,
+                      }),
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: !_enabled
                         ? null
@@ -791,7 +817,10 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   ),
                 if (data.unfinalized.isNotEmpty)
                   Text(
-                    AppMessage.quoteInvoiceUnfinalizedExcluded.format(context, {'count': MaterialLocalizations.of(context).formatDecimal(data.unfinalized.length)}),
+                    AppMessage.quoteInvoiceUnfinalizedExcluded.format(context, {
+                      'count': MaterialLocalizations.of(context)
+                          .formatDecimal(data.unfinalized.length),
+                    }),
                   ),
               ],
               Semantics(
@@ -805,7 +834,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   maxLengthEnforcement: MaxLengthEnforcement.none,
                   decoration: InputDecoration(
                     labelText: AppMessage.quoteInvoicePrivateNote.of(context),
-                    helperText: AppMessage.quoteInvoicePrivateNoteHelp.of(context),
+                    helperText: AppMessage.quoteInvoicePrivateNoteHelp.of(
+                      context,
+                    ),
                   ),
                   onChanged: (_) => setState(_changed),
                 ),

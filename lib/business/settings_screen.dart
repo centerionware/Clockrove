@@ -199,7 +199,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
     final tax = settingsTaxInputError(context, _tax.text);
-    final receivables = settingsReceivablesInputError(context, _receivables.text);
+    final receivables = settingsReceivablesInputError(
+      context,
+      _receivables.text,
+    );
     final minimumHours = settingsHoursInputError(context, _minimumHours.text);
     final minimumTaskFee = _taskFeeError();
     setState(() {
@@ -286,7 +289,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _currency,
-          decoration: InputDecoration(labelText: AppMessage.currencyForNewJobs.of(context)),
+          decoration: InputDecoration(
+            labelText: AppMessage.currencyForNewJobs.of(context),
+          ),
           items: [
             for (final c in currencies.keys)
               DropdownMenuItem(value: c, child: Text(c)),
@@ -304,9 +309,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         ),
         Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text(
-            AppMessage.settingsCurrencyChangeHelp.of(context),
-          ),
+          child: Text(AppMessage.settingsCurrencyChangeHelp.of(context)),
         ),
         TextField(
           controller: _rate,
@@ -328,7 +331,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _hourlyBillingMode,
-          decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
+          decoration: InputDecoration(
+            labelText: AppMessage.hourlyBillingRule.of(context),
+          ),
           items: [
             DropdownMenuItem(
               value: minimumThenExactBilling,
@@ -383,9 +388,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(AppMessage.recordWorkLocations.of(context)),
-          subtitle: Text(
-            AppMessage.locationRecordingDefaultHelp.of(context),
-          ),
+          subtitle: Text(AppMessage.locationRecordingDefaultHelp.of(context)),
           value: _defaultLocationRecording,
           onChanged: (value) =>
               setState(() => _defaultLocationRecording = value),
@@ -421,7 +424,9 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             ),
             onChanged: (_) {
               if (_taxError != null) {
-                setState(() => _taxError = settingsTaxInputError(context, _tax.text));
+                setState(
+                  () => _taxError = settingsTaxInputError(context, _tax.text),
+                );
               }
             },
           ),
@@ -461,9 +466,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         ),
         Padding(
           padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            AppMessage.customerReceivablesHelp.of(context),
-          ),
+          child: Text(AppMessage.customerReceivablesHelp.of(context)),
         ),
         _field(_phone, AppMessage.phone.of(context), length: 120),
         _field(_address, AppMessage.address.of(context), lines: 2),
@@ -476,11 +479,22 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _style,
-          decoration: InputDecoration(labelText: AppMessage.invoiceStyle.of(context)),
+          decoration: InputDecoration(
+            labelText: AppMessage.invoiceStyle.of(context),
+          ),
           items: [
-            DropdownMenuItem(value: 'MINIMAL', child: Text(AppMessage.invoiceStyleMinimal.of(context))),
-            DropdownMenuItem(value: 'CLASSIC', child: Text(AppMessage.invoiceStyleClassic.of(context))),
-            DropdownMenuItem(value: 'MODERN', child: Text(AppMessage.invoiceStyleModern.of(context))),
+            DropdownMenuItem(
+              value: 'MINIMAL',
+              child: Text(AppMessage.invoiceStyleMinimal.of(context)),
+            ),
+            DropdownMenuItem(
+              value: 'CLASSIC',
+              child: Text(AppMessage.invoiceStyleClassic.of(context)),
+            ),
+            DropdownMenuItem(
+              value: 'MODERN',
+              child: Text(AppMessage.invoiceStyleModern.of(context)),
+            ),
           ],
           onChanged: (v) {
             if (v != null) {
@@ -618,9 +632,7 @@ class CustomersScreen extends ConsumerWidget {
             ),
           ),
           data: (data) => data.customers.isEmpty
-              ? Center(
-                  child: Text(AppMessage.customersEmptyHelp.of(context)),
-                )
+              ? Center(child: Text(AppMessage.customersEmptyHelp.of(context)))
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                   children: [
@@ -637,7 +649,8 @@ class CustomersScreen extends ConsumerWidget {
                           title: Text(c.name),
                           subtitle: Text(
                             [
-                              if (c.archived) AppMessage.customerArchived.of(context),
+                              if (c.archived)
+                                AppMessage.customerArchived.of(context),
                               if (c.email.isNotEmpty) c.email,
                               if (c.phone.isNotEmpty) c.phone,
                             ].join(' · '),
@@ -688,7 +701,9 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.customer == null ? AppMessage.customerNew.of(context) : AppMessage.customerDetails.of(context),
+          widget.customer == null
+              ? AppMessage.customerNew.of(context)
+              : AppMessage.customerDetails.of(context),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -701,7 +716,9 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
             enabled: data != null,
             create: () {
               if (_name.text.trim().isEmpty) {
-                throw FormatException(AppMessage.validationCustomerName.of(context));
+                throw FormatException(
+                  AppMessage.validationCustomerName.of(context),
+                );
               }
               final id = newBusinessId();
               final version = data!.version;

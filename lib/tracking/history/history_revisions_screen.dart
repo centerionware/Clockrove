@@ -26,7 +26,9 @@ class _HistoryRevisionsScreenState
       .revisions(widget.jobId, widget.sessionId);
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(AppMessage.historyEntryChangesTitle.of(context))),
+    appBar: AppBar(
+      title: Text(AppMessage.historyEntryChangesTitle.of(context)),
+    ),
     body: FutureBuilder(
       future: _data,
       builder: (context, snapshot) {

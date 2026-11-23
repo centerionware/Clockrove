@@ -165,10 +165,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
     _transferredBytes = 0;
     _expectedBytes = 0;
     _openSessionCount = 0;
-    _setPhase(
-      _BackupExportPhase.reading,
-      message: AppMessage.exportReading,
-    );
+    _setPhase(_BackupExportPhase.reading, message: AppMessage.exportReading);
 
     BackupSnapshotStreamExport? snapshot;
     BackupCryptoCancellationToken? cancellationToken;
@@ -348,9 +345,7 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         '${now.year.toString().padLeft(4, '0')}'
         '${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}';
-    return AppMessage.backupSuggestedFilename.format(context, {
-      'date': date,
-    });
+    return AppMessage.backupSuggestedFilename.format(context, {'date': date});
   }
 
   AppMessage _platformFailureMessage(PlatformException error) =>
@@ -547,7 +542,9 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
   String get _phaseMessage => switch (_phase) {
     _BackupExportPhase.reading => AppMessage.exportReading.of(context),
     _BackupExportPhase.encrypting => AppMessage.exportEncrypting.of(context),
-    _BackupExportPhase.transferring => AppMessage.exportTransferring.of(context),
+    _BackupExportPhase.transferring => AppMessage.exportTransferring.of(
+      context,
+    ),
     _BackupExportPhase.writing => AppMessage.exportFinishing.of(context),
     _BackupExportPhase.cancelling => AppMessage.exportCancelling.of(context),
     _ => _message?.of(context) ?? '',

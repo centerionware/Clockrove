@@ -189,9 +189,7 @@ replacementTotals(
     throw const FormatException('REPLACEMENT_AMOUNT_TOO_LARGE');
   }
   if (total < credit) {
-    throw const FormatException(
-      'REPLACEMENT_BELOW_PAYMENT_CREDIT',
-    );
+    throw const FormatException('REPLACEMENT_BELOW_PAYMENT_CREDIT');
   }
   return (
     subtotal: subtotal.toString(),

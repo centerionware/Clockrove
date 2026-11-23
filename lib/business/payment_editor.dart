@@ -133,8 +133,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _timeError =
-              AppMessage.paymentCheckTimezone.of(context),
+          () => _timeError = AppMessage.paymentCheckTimezone.of(context),
         );
       }
     } finally {
@@ -201,10 +200,11 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         '${localizations.formatMediumDate(calendar)} · ${localizations.formatTimeOfDay(TimeOfDay(hour: calendar.hour, minute: calendar.minute))}';
     final command = BusinessCommand(
       key: const ValueKey('invoice-payment-command'),
-      label: (_correction
-              ? AppMessage.confirmPaymentReversal
-              : AppMessage.confirmPayment)
-          .of(context),
+      label:
+          (_correction
+                  ? AppMessage.confirmPaymentReversal
+                  : AppMessage.confirmPayment)
+              .of(context),
       enabled: !_locked && !widget.refreshFailed && available,
       onPendingChanged: (value) {
         if (mounted) setState(() => _pending = value);
@@ -229,9 +229,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               );
             }
             if (BigInt.parse(minor) > BigInt.parse(data.due)) {
-              throw FormatException(
-                AppMessage.paymentAboveBalance.of(context),
-              );
+              throw FormatException(AppMessage.paymentAboveBalance.of(context));
             }
             setState(() => _amountError = null);
           } on FormatException catch (error) {
@@ -242,8 +240,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         final received = _received;
         if (received == null) {
           setState(
-            () => _timeError =
-                AppMessage.paymentConfirmFullDate.of(context),
+            () => _timeError = AppMessage.paymentConfirmFullDate.of(context),
           );
           throw FormatException(
             AppMessage.paymentConfirmHighlightedDate.of(context),
@@ -251,8 +248,8 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         }
         if (_correction && _note.text.trim().length < 10) {
           setState(
-            () => _noteError =
-                AppMessage.paymentCorrectionMinLength.of(context),
+            () =>
+                _noteError = AppMessage.paymentCorrectionMinLength.of(context),
           );
           throw FormatException(
             AppMessage.paymentExplainCorrection.of(context),
@@ -374,7 +371,11 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                 ),
               ),
               _field(_method, AppMessage.paymentMethodField.of(context), 80),
-              _field(_reference, AppMessage.paymentReferenceField.of(context), 240),
+              _field(
+                _reference,
+                AppMessage.paymentReferenceField.of(context),
+                240,
+              ),
             ],
             const SizedBox(height: 20),
             ListTile(
@@ -443,8 +444,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             const SizedBox(height: 12),
             if (widget.refreshFailed)
               Text(AppMessage.paymentBalanceRefreshFailed.of(context)),
-            if (!available)
-              Text(AppMessage.paymentBalanceChanged.of(context)),
+            if (!available) Text(AppMessage.paymentBalanceChanged.of(context)),
             KeyedSubtree(
               key: const ValueKey('invoice-payment-submit'),
               child: _correction

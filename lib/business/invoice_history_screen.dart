@@ -102,7 +102,9 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                         }),
                       if (invoice.legacy)
                         invoice.jobDeleted
-                            ? AppMessage.invoiceHistoricalSourcesUnavailable.of(context)
+                            ? AppMessage.invoiceHistoricalSourcesUnavailable.of(
+                                context,
+                              )
                             : AppMessage.invoiceBilledWorkReview.of(context),
                     ].join('\n'),
                   ),

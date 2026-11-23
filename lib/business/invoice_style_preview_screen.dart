@@ -46,7 +46,9 @@ class _InvoiceStylePreviewScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(AppMessage.invoiceStylePreviewTitle.of(context))),
+    appBar: AppBar(
+      title: Text(AppMessage.invoiceStylePreviewTitle.of(context)),
+    ),
     body: SafeArea(
       child: Column(
         children: [
@@ -74,7 +76,11 @@ class _InvoiceStylePreviewScreenState
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
-                          Text(AppMessage.invoiceStylePreviewDisclaimer.of(context)),
+                          Text(
+                            AppMessage.invoiceStylePreviewDisclaimer.of(
+                              context,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -110,12 +116,15 @@ class _InvoiceStylePreviewScreenState
                           child: Image.memory(
                             page.png,
                             fit: BoxFit.contain,
-                            semanticLabel: AppMessage.documentPage.format(context, {
-                              'page': MaterialLocalizations.of(context)
-                                  .formatDecimal(page.index + 1),
-                              'total': MaterialLocalizations.of(context)
-                                  .formatDecimal(page.pages),
-                            }),
+                            semanticLabel: AppMessage.documentPage.format(
+                              context,
+                              {
+                                'page': MaterialLocalizations.of(context)
+                                    .formatDecimal(page.index + 1),
+                                'total': MaterialLocalizations.of(context)
+                                    .formatDecimal(page.pages),
+                              },
+                            ),
                           ),
                         ),
                       ),

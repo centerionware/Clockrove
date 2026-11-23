@@ -157,11 +157,13 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                     children: [
                       Text(AppMessage.siteMapIntro.of(context)),
                       Text(AppMessage.mapPrivacy.of(context)),
-                      Text(AppMessage.siteMapRadiusHelp.format(context, {
-                        'radius': widget.radius.toStringAsFixed(
-                          widget.radius < 10 ? 1 : 0,
-                        ),
-                      })),
+                      Text(
+                        AppMessage.siteMapRadiusHelp.format(context, {
+                          'radius': widget.radius.toStringAsFixed(
+                            widget.radius < 10 ? 1 : 0,
+                          ),
+                        }),
+                      ),
                       if (widget.latitude != null &&
                           widget.latitude!.abs() > 85)
                         Text(AppMessage.siteMapPolarHelp.of(context)),
@@ -171,7 +173,9 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                           child: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(AppMessage.siteMapTilesUnavailable.of(context)),
+                              Text(
+                                AppMessage.siteMapTilesUnavailable.of(context),
+                              ),
                               if (_point != null)
                                 TextButton.icon(
                                   onPressed: _openExternalMap,
@@ -251,7 +255,9 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 width: 48,
                                 height: 48,
                                 child: Semantics(
-                                  label: AppMessage.siteMapSelectedCentre.of(context),
+                                  label: AppMessage.siteMapSelectedCentre.of(
+                                    context,
+                                  ),
                                   child: const DecoratedBox(
                                     decoration: BoxDecoration(
                                       color: Colors.white,

@@ -4,34 +4,13 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 
 enum HelpTopic {
-  timekeeping(
-    AppMessage.helpTimekeeping,
-    AppMessage.helpTimekeepingBody,
-  ),
-  automation(
-    AppMessage.helpAutomation,
-    AppMessage.helpAutomationBody,
-  ),
-  backups(
-    AppMessage.helpBackups,
-    AppMessage.helpBackupsBody,
-  ),
-  boards(
-    AppMessage.helpBoards,
-    AppMessage.helpBoardsBody,
-  ),
-  reports(
-    AppMessage.helpReports,
-    AppMessage.helpReportsBody,
-  ),
-  billing(
-    AppMessage.helpBilling,
-    AppMessage.helpBillingBody,
-  ),
-  widgets(
-    AppMessage.helpWidgets,
-    AppMessage.helpWidgetsBody,
-  ),
+  timekeeping(AppMessage.helpTimekeeping, AppMessage.helpTimekeepingBody),
+  automation(AppMessage.helpAutomation, AppMessage.helpAutomationBody),
+  backups(AppMessage.helpBackups, AppMessage.helpBackupsBody),
+  boards(AppMessage.helpBoards, AppMessage.helpBoardsBody),
+  reports(AppMessage.helpReports, AppMessage.helpReportsBody),
+  billing(AppMessage.helpBilling, AppMessage.helpBillingBody),
+  widgets(AppMessage.helpWidgets, AppMessage.helpWidgetsBody),
   locationHistory(
     AppMessage.helpLocationHistory,
     AppMessage.helpLocationHistoryBody,

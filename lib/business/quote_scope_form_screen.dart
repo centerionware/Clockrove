@@ -140,10 +140,11 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
     _name
       ..text = AppMessage.quoteScopeNewJobTitle.format(context, {
         'title': _data.issued.draft.title,
-        'group': (_group.kind == 'ITEM'
-            ? AppMessage.quoteScopeTasksSuffix
-            : AppMessage.quoteScopeHourlySuffix)
-            .of(context),
+        'group':
+            (_group.kind == 'ITEM'
+                    ? AppMessage.quoteScopeTasksSuffix
+                    : AppMessage.quoteScopeHourlySuffix)
+                .of(context),
       });
     _nameLocalized = true;
   }
@@ -212,10 +213,14 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
 
   QuoteScopeDraft _capture() {
     if (_readFailed || _reading) {
-      throw FormatException(AppMessage.quoteScopeRefreshBeforeApply.of(context));
+      throw FormatException(
+        AppMessage.quoteScopeRefreshBeforeApply.of(context),
+      );
     }
     if (_data.issued.decision != 'ACCEPTED') {
-      throw FormatException(AppMessage.quoteScopeAcceptanceRequired.of(context));
+      throw FormatException(
+        AppMessage.quoteScopeAcceptanceRequired.of(context),
+      );
     }
     final problem = _incompatible;
     if (problem != null) {
@@ -225,10 +230,14 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
       throw FormatException(AppMessage.quoteScopeSelectLines.of(context));
     }
     if (_data.historical && !_historical) {
-      throw FormatException(AppMessage.quoteScopeHistoricalReviewRequired.of(context));
+      throw FormatException(
+        AppMessage.quoteScopeHistoricalReviewRequired.of(context),
+      );
     }
     if (_jobDiffers && !_differences) {
-      throw FormatException(AppMessage.quoteScopeJobDifferencesReviewRequired.of(context));
+      throw FormatException(
+        AppMessage.quoteScopeJobDifferencesReviewRequired.of(context),
+      );
     }
     if (_targetId == null &&
         (_name.text.trim().isEmpty ||
@@ -238,7 +247,9 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
     }
     if (_note.text.length > 2000 || _note.text.contains('\u0000')) {
       throw FormatException(
-        AppMessage.quoteScopePrivateNoteLimit.format(context, {'limit': '2000'}),
+        AppMessage.quoteScopePrivateNoteLimit.format(context, {
+          'limit': '2000',
+        }),
       );
     }
     final items = <QuoteScopeItem>[];
@@ -249,11 +260,15 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
       final binding = _binding(line.id);
       if (binding != null) {
         if (binding.jobId != _targetId) {
-          throw FormatException(AppMessage.quoteScopeLineAlreadyInOtherJob.of(context));
+          throw FormatException(
+            AppMessage.quoteScopeLineAlreadyInOtherJob.of(context),
+          );
         }
         final task = _task(binding.taskId);
         if (task == null) {
-          throw FormatException(AppMessage.quoteScopeRetainedTaskRemoved.of(context));
+          throw FormatException(
+            AppMessage.quoteScopeRetainedTaskRemoved.of(context),
+          );
         }
         items.add(
           QuoteScopeItem(line.id, binding.taskId, task.title, existing: true),
@@ -263,7 +278,9 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
         final selected = _existing[line.id];
         final task = _task(selected);
         if (selected != null && (task == null || task.ownerQuoteId != null)) {
-          throw FormatException(AppMessage.quoteScopeChooseAvailableTask.of(context));
+          throw FormatException(
+            AppMessage.quoteScopeChooseAvailableTask.of(context),
+          );
         }
         final title = task?.title ?? _titles[line.id]!.text.trim();
         if (title.isEmpty || title.length > 240 || title.contains('\u0000')) {
@@ -284,7 +301,9 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
       throw FormatException(AppMessage.quoteScopeAlreadyLinked.of(context));
     }
     if (items.map((item) => item.taskId).toSet().length != items.length) {
-      throw FormatException(AppMessage.quoteScopeDistinctTaskIdentities.of(context));
+      throw FormatException(
+        AppMessage.quoteScopeDistinctTaskIdentities.of(context),
+      );
     }
     return QuoteScopeDraft(
       quoteId: _data.issued.id,
@@ -314,19 +333,24 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppMessage.quoteInvoiceRevisionRef.format(context, {
-                  'number': _data.issued.number,
-                  'revision': draft.revision.toString(),
-                })),
-                Text(AppMessage.quoteScopeJobLabel.format(context, {
-                  'job': draft.newJobName ?? target!.name,
-                })),
+                Text(
+                  AppMessage.quoteInvoiceRevisionRef.format(context, {
+                    'number': _data.issued.number,
+                    'revision': draft.revision.toString(),
+                  }),
+                ),
+                Text(
+                  AppMessage.quoteScopeJobLabel.format(context, {
+                    'job': draft.newJobName ?? target!.name,
+                  }),
+                ),
                 Text(
                   AppMessage.quoteScopeModeAndTax.format(context, {
-                    'mode': (_group.mode == 'TASK'
-                        ? AppMessage.quoteScopeTaskRateMode
-                        : AppMessage.quoteScopeHourlyMode)
-                        .of(context),
+                    'mode':
+                        (_group.mode == 'TASK'
+                                ? AppMessage.quoteScopeTaskRateMode
+                                : AppMessage.quoteScopeHourlyMode)
+                            .of(context),
                     'currency': _data.issued.draft.currency,
                     'rate': taxPercent(_data.issued.draft.taxUnits).toString(),
                   }),
@@ -334,27 +358,25 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                 if (_group.rate != null)
                   Text(
                     AppMessage.quoteScopeAgreedHourlyRate.format(context, {
-                      'rate': '${_data.issued.draft.currency} ${money(_group.rate, _data.issued.digits)}',
+                      'rate':
+                          '${_data.issued.draft.currency} ${money(_group.rate, _data.issued.digits)}',
                     }),
                   ),
                 for (final item in draft.items)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      '${item.title}\n${(item.existing
-                          ? AppMessage.quoteScopeRetainedTaskAction
-                          : AppMessage.quoteScopeNewTaskAction)
-                          .of(context)}',
+                      '${item.title}\n${(item.existing ? AppMessage.quoteScopeRetainedTaskAction : AppMessage.quoteScopeNewTaskAction).of(context)}',
                     ),
                   ),
                 const SizedBox(height: 12),
                 if (draft.note.isNotEmpty)
-                  Text(AppMessage.quoteScopePrivateNote.format(context, {
-                    'note': draft.note,
-                  })),
-                Text(
-                  AppMessage.quoteScopeApplySafety.of(context),
-                ),
+                  Text(
+                    AppMessage.quoteScopePrivateNote.format(context, {
+                      'note': draft.note,
+                    }),
+                  ),
+                Text(AppMessage.quoteScopeApplySafety.of(context)),
               ],
             ),
           ),
@@ -402,17 +424,19 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(line.title),
-              subtitle: Text(AppMessage.quoteScopeLineValue.format(context, {
-                'quantity': taskQuantity(line.quantity),
-                'unit': line.kind == 'HOURS'
-                    ? AppMessage.estimatedHours.of(context)
-                    : AppMessage.quoteUnitsUnit.of(context),
-                'currency': _data.issued.draft.currency,
-                'price': money(line.unitPrice, _data.issued.digits),
-                'suffix': line.kind == 'HOURS'
-                    ? AppMessage.quotePerHourSuffix.of(context)
-                    : ' ${AppMessage.quoteScopeEachSuffix.of(context)}',
-              })),
+              subtitle: Text(
+                AppMessage.quoteScopeLineValue.format(context, {
+                  'quantity': taskQuantity(line.quantity),
+                  'unit': line.kind == 'HOURS'
+                      ? AppMessage.estimatedHours.of(context)
+                      : AppMessage.quoteUnitsUnit.of(context),
+                  'currency': _data.issued.draft.currency,
+                  'price': money(line.unitPrice, _data.issued.digits),
+                  'suffix': line.kind == 'HOURS'
+                      ? AppMessage.quotePerHourSuffix.of(context)
+                      : ' ${AppMessage.quoteScopeEachSuffix.of(context)}',
+                }),
+              ),
               value: selected,
               onChanged:
                   !_enabled || otherJob || binding != null && task == null
@@ -434,19 +458,21 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                     ? AppMessage.quoteScopeRemovedTaskProvenance.of(context)
                     : AppMessage.quoteScopeExistingPlan.format(context, {
                         'title': task.title,
-                        'status': (task.completed == null
-                            ? AppMessage.quoteScopeNotCompleted
-                            : AppMessage.quoteScopeCompleted)
-                            .of(context),
+                        'status':
+                            (task.completed == null
+                                    ? AppMessage.quoteScopeNotCompleted
+                                    : AppMessage.quoteScopeCompleted)
+                                .of(context),
                       }),
               ),
               Text(
                 AppMessage.quoteScopeFirstPlannedRevision.format(context, {
                   'revision': binding.originalRevision.toString(),
-                  'status': (_data.linkedLines.contains(line.id)
-                      ? AppMessage.quoteScopeLinkedStatus
-                      : AppMessage.quoteScopeNeedsReviewStatus)
-                      .of(context),
+                  'status':
+                      (_data.linkedLines.contains(line.id)
+                              ? AppMessage.quoteScopeLinkedStatus
+                              : AppMessage.quoteScopeNeedsReviewStatus)
+                          .of(context),
                 }),
               ),
             ] else ...[
@@ -458,12 +484,16 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                   initialValue: _existing[line.id] ?? '',
                   isExpanded: true,
                   decoration: InputDecoration(
-                    labelText: AppMessage.quoteScopeCreateOrLinkTask.of(context),
+                    labelText: AppMessage.quoteScopeCreateOrLinkTask.of(
+                      context,
+                    ),
                   ),
                   items: [
                     DropdownMenuItem(
                       value: '',
-                      child: Text(AppMessage.quoteScopeNewPlanningTask.of(context)),
+                      child: Text(
+                        AppMessage.quoteScopeNewPlanningTask.of(context),
+                      ),
                     ),
                     if (_existing[line.id] != null &&
                         _task(_existing[line.id]) == null)
@@ -483,8 +513,7 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                               ? AppMessage.quoteScopeTaskAlreadyAssigned
                               : candidate.completed == null
                               ? AppMessage.quoteScopeTaskOpen
-                              : AppMessage.quoteScopeCompleted)
-                              .of(context)}',
+                              : AppMessage.quoteScopeCompleted).of(context)}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -524,20 +553,20 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
               if (task != null)
                 Text(
                   AppMessage.quoteScopeCurrentTaskStatus.format(context, {
-                    'completion': (task.completed == null
-                        ? AppMessage.quoteScopeNotCompleted
-                        : AppMessage.quoteScopeCompleted)
-                        .of(context),
-                    'billability': (task.billable
-                        ? AppMessage.quoteScopeBillable
-                        : AppMessage.quoteScopeNotBillable)
-                        .of(context),
+                    'completion':
+                        (task.completed == null
+                                ? AppMessage.quoteScopeNotCompleted
+                                : AppMessage.quoteScopeCompleted)
+                            .of(context),
+                    'billability':
+                        (task.billable
+                                ? AppMessage.quoteScopeBillable
+                                : AppMessage.quoteScopeNotBillable)
+                            .of(context),
                   }),
                 ),
               if (line.kind == 'HOURS')
-                Text(
-                  AppMessage.quoteScopeHourlyChecklist.of(context),
-                ),
+                Text(AppMessage.quoteScopeHourlyChecklist.of(context)),
             ],
           ],
         ),
@@ -583,9 +612,7 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                     ? AppMessage.quoteScopeFixedPricePlanning.of(context)
                     : AppMessage.quoteScopeHourlyPlanning.of(context),
               ),
-              Text(
-                AppMessage.quoteScopeReviewApplyGuidance.of(context),
-              ),
+              Text(AppMessage.quoteScopeReviewApplyGuidance.of(context)),
               if (_reading) const LinearProgressIndicator(),
               if (_message != null)
                 Text(
@@ -603,14 +630,18 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                 items: [
                   DropdownMenuItem(
                     value: '',
-                    child: Text(AppMessage.quoteScopeCreateCompatibleJob.of(context)),
+                    child: Text(
+                      AppMessage.quoteScopeCreateCompatibleJob.of(context),
+                    ),
                   ),
                   if (_targetId != null &&
                       !_data.jobs.any((job) => job.id == _targetId))
                     DropdownMenuItem(
                       value: _targetId,
                       enabled: false,
-                      child: Text(AppMessage.quoteScopeDeletedJobRetained.of(context)),
+                      child: Text(
+                        AppMessage.quoteScopeDeletedJobRetained.of(context),
+                      ),
                     ),
                   for (final job in _data.jobs)
                     DropdownMenuItem(
@@ -654,16 +685,18 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
               if (target != null) ...[
                 Text(
                   AppMessage.quoteInvoiceCurrentCustomer.format(context, {
-                    'customer': target.customerName ??
+                    'customer':
+                        target.customerName ??
                         AppMessage.quoteInvoiceCustomerNotSpecified.of(context),
                   }),
                 ),
                 Text(
                   AppMessage.quoteScopeCurrentJob.format(context, {
-                    'mode': (target.mode == 'TASK'
-                        ? AppMessage.quoteScopeTaskRateMode
-                        : AppMessage.quoteScopeHourlyMode)
-                        .of(context),
+                    'mode':
+                        (target.mode == 'TASK'
+                                ? AppMessage.quoteScopeTaskRateMode
+                                : AppMessage.quoteScopeHourlyMode)
+                            .of(context),
                     'currency': target.currency,
                     'rate': taxPercent(target.taxUnits).toString(),
                   }),
@@ -708,9 +741,7 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                   title: Text(
                     AppMessage.quoteScopeReviewJobDifference.of(context),
                   ),
-                  subtitle: Text(
-                    AppMessage.quoteScopeJobUnchanged.of(context),
-                  ),
+                  subtitle: Text(AppMessage.quoteScopeJobUnchanged.of(context)),
                 ),
               if (_data.historical)
                 CheckboxListTile(
@@ -748,7 +779,9 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                 onPressed: _enabled && !_readFailed && _incompatible == null
                     ? _review
                     : null,
-                child: Text(AppMessage.quoteScopeReviewSelectedPlan.of(context)),
+                child: Text(
+                  AppMessage.quoteScopeReviewSelectedPlan.of(context),
+                ),
               ),
               BusinessCommand(
                 key: ValueKey(
@@ -769,7 +802,9 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
                       version == null ||
                       version != _data.version) {
                     throw FormatException(
-                      AppMessage.quoteScopeReviewCurrentPlanRequired.of(context),
+                      AppMessage.quoteScopeReviewCurrentPlanRequired.of(
+                        context,
+                      ),
                     );
                   }
                   final id = newBusinessId(),

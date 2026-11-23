@@ -51,9 +51,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
       });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = AppMessage.historyLoadFailed.of(context),
-        );
+        setState(() => _error = AppMessage.historyLoadFailed.of(context));
       }
     } finally {
       if (mounted) {

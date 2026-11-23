@@ -131,7 +131,10 @@ void main() {
     await tester.tap(find.text(AppMessage.clockIn.english));
     await tester.pumpAndSettle();
     expect(find.text(AppMessage.clockOut.english), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(AppMessage.enableLocation.english), 200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.enableLocation.english),
+      200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppMessage.enableLocation.english));
     await tester.pumpAndSettle();
@@ -218,7 +221,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppMessage.viewLocationMap.english), 200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.viewLocationMap.english),
+      200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppMessage.viewLocationMap.english));
     await tester.pumpAndSettle();
@@ -327,7 +333,10 @@ void main() {
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
-      await tester.scrollUntilVisible(find.text(AppMessage.locationTitle.english), 200);
+      await tester.scrollUntilVisible(
+        find.text(AppMessage.locationTitle.english),
+        200,
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(AppMessage.disableLocation.english));
       await tester.pumpAndSettle();

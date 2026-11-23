@@ -290,8 +290,13 @@ ran here per owner instruction. Exact-head Actions run
 [45100595509](https://github.com/centerionware/Clockrove/actions/runs/45100595509)
 passed generated-source checks, then the localization audit found a malformed
 multiline switch expression in `history_time_format.dart`. The source is
-corrected; full-coverage acceptance stays open pending a successful fresh
-exact-head audit and owner review of the results.
+corrected. Follow-up run
+[45101221601](https://github.com/centerionware/Clockrove/actions/runs/45101221601)
+passed catalog generation and the localization audit, then stopped at the
+clean-formatting gate. Applied the exact formatter patch exported by that
+workflow. The formatted quote-to-invoice screen and its review dialog were
+split into focused files to remain below 1,000 lines. Full-coverage acceptance
+stays open for final exact-head validation and owner review of the results.
 
 The report below preserves earlier evidence and milestone history.
 

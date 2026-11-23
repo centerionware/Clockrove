@@ -13,8 +13,9 @@ import 'tax_rate.dart';
 
 String _invoiceLifecycleFormatError(BuildContext context, FormatException e) =>
     switch (e.message) {
-      'INVALID_REPLACEMENT_TOTALS' =>
-        AppMessage.invoiceLinePriceRequired.of(context),
+      'INVALID_REPLACEMENT_TOTALS' => AppMessage.invoiceLinePriceRequired.of(
+        context,
+      ),
       'REPLACEMENT_AMOUNT_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge.of(
         context,
       ),
@@ -43,11 +44,15 @@ class InvoiceLifecycleEditor extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: Text(AppMessage.invoiceCorrectionTitle.of(context))),
+        appBar: AppBar(
+          title: Text(AppMessage.invoiceCorrectionTitle.of(context)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: Text(AppMessage.invoiceCorrectionTitle.of(context))),
+        appBar: AppBar(
+          title: Text(AppMessage.invoiceCorrectionTitle.of(context)),
+        ),
         body: Center(
           child: TextButton(
             onPressed: () =>
@@ -93,7 +98,9 @@ class _LineFields {
   InvoiceEditLine freeze(BuildContext context, int digits) {
     if (original.amount == null) return original;
     if (title.text.trim().isEmpty) {
-      throw FormatException(AppMessage.invoiceLineDescriptionRequired.of(context));
+      throw FormatException(
+        AppMessage.invoiceLineDescriptionRequired.of(context),
+      );
     }
     final unit = original.quantity != null;
     final priceMinor = unit
@@ -224,11 +231,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
     });
   }
 
-  String _amountLine(AppMessage label, String amount) =>
-      AppMessage.invoiceAmountLine.format(context, {
-        'label': label.of(context),
-        'amount': _amount(amount),
-      });
+  String _amountLine(AppMessage label, String amount) => AppMessage
+      .invoiceAmountLine
+      .format(context, {'label': label.of(context), 'amount': _amount(amount)});
 
   Future<void> _review(InvoiceBillingPreview? preview) async {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -239,7 +244,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       if (widget.replace) {
         final lines = _freeze();
         if (!lines.any((line) => line.amount != null) && _added == null) {
-          throw FormatException(AppMessage.invoiceReplacementNeedsWork.of(context));
+          throw FormatException(
+            AppMessage.invoiceReplacementNeedsWork.of(context),
+          );
         }
         final totals = _totals(preview);
         summary = [
@@ -381,7 +388,12 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
               ),
               Text('${_invoice.jobName} · ${_invoice.customer}'),
               const SizedBox(height: 12),
-              Text(_amountLine(AppMessage.invoiceExistingPaymentCredit, _invoice.paid)),
+              Text(
+                _amountLine(
+                  AppMessage.invoiceExistingPaymentCredit,
+                  _invoice.paid,
+                ),
+              ),
               const SizedBox(height: 12),
               if (!_allowed)
                 Text(AppMessage.invoiceCorrectionUnavailable.of(context)),
@@ -394,7 +406,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           _version = _invoice.version;
                           _confirmed = false;
                         }),
-                  child: Text(AppMessage.invoiceUseRefreshedBalance.of(context)),
+                  child: Text(
+                    AppMessage.invoiceUseRefreshedBalance.of(context),
+                  ),
                 ),
               ],
               if (widget.replace) ...[
@@ -413,7 +427,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             title: Text(line.original.title),
                             subtitle: line.original.amount == null
                                 ? Text(
-                                    AppMessage.invoiceLineTimeNoCharge.of(context),
+                                    AppMessage.invoiceLineTimeNoCharge.of(
+                                      context,
+                                    ),
                                   )
                                 : null,
                             onChanged: _pending
@@ -497,8 +513,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                     if (preview.problem != null)
                       Text(
                         (switch (preview.problem) {
-                          'NO_BILLABLE_ITEMS' =>
-                            AppMessage.invoiceAddedNoWork,
+                          'NO_BILLABLE_ITEMS' => AppMessage.invoiceAddedNoWork,
                           'LEGACY_INVOICE_REVIEW_REQUIRED' =>
                             AppMessage.invoiceAddedReviewOlder,
                           'HOURLY_RATE_REQUIRED' =>
@@ -537,7 +552,9 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       CheckboxListTile(
                         value: _released.contains(claim.id),
                         title: Text(claim.label),
-                        subtitle: Text(AppMessage.invoiceReleaseReservation.of(context)),
+                        subtitle: Text(
+                          AppMessage.invoiceReleaseReservation.of(context),
+                        ),
                         onChanged: _pending
                             ? null
                             : (value) => setState(() {
@@ -558,12 +575,30 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(_amountLine(AppMessage.invoiceSubtotal, totals.subtotal)),
-                          Text(_amountLine(AppMessage.invoiceTax, totals.tax)),
-                          Text(_amountLine(AppMessage.invoiceReplacementTotal, totals.total)),
-                          Text(_amountLine(AppMessage.invoiceCredit, totals.credit)),
                           Text(
-                            _amountLine(AppMessage.invoiceBalanceDue, totals.due),
+                            _amountLine(
+                              AppMessage.invoiceSubtotal,
+                              totals.subtotal,
+                            ),
+                          ),
+                          Text(_amountLine(AppMessage.invoiceTax, totals.tax)),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceReplacementTotal,
+                              totals.total,
+                            ),
+                          ),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceCredit,
+                              totals.credit,
+                            ),
+                          ),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceBalanceDue,
+                              totals.due,
+                            ),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],

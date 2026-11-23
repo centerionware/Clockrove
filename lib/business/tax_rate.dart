@@ -1,6 +1,5 @@
 final class TaxPercentOutOfRange extends FormatException {
-  const TaxPercentOutOfRange()
-    : super('TAX_PERCENT_OUT_OF_RANGE');
+  const TaxPercentOutOfRange() : super('TAX_PERCENT_OUT_OF_RANGE');
 }
 
 /// Units are 0.0001 percentage point. Never parse a percentage as a double.
@@ -9,9 +8,7 @@ int parseTaxPercent(String input) {
   if (value.isEmpty ||
       value.length > 32 ||
       !RegExp(r'^[0-9]+(\.[0-9]{1,4})?$').hasMatch(value)) {
-    throw const FormatException(
-      'INVALID_TAX_PERCENTAGE',
-    );
+    throw const FormatException('INVALID_TAX_PERCENTAGE');
   }
   final parts = value.split('.');
   final units =

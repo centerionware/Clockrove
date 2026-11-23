@@ -68,9 +68,7 @@ class _TaskConversationScreenState
         );
       } on PlatformException catch (_) {
         if (mounted) {
-          setState(
-            () => _notice = AppMessage.taskPhotoOpenFailed.of(context),
-          );
+          setState(() => _notice = AppMessage.taskPhotoOpenFailed.of(context));
         }
         return;
       }
@@ -184,13 +182,12 @@ class _TaskConversationScreenState
                       'count': count,
                     })
             : selectedImages.length == 1
-                ? AppMessage.taskPhotoAttachedCommentOne.of(context)
-                : AppMessage.taskPhotoAttachedCommentMany.format(context, {
-                    'count': count,
-                  });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(attached)),
-        );
+            ? AppMessage.taskPhotoAttachedCommentOne.of(context)
+            : AppMessage.taskPhotoAttachedCommentMany.format(context, {
+                'count': count,
+              });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(attached)));
       }
       return;
     }
@@ -369,12 +366,16 @@ class _TaskConversationScreenState
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: false),
                     icon: const Icon(Icons.photo_library_outlined),
-                    label: Text(AppMessage.taskConversationChoosePhotos.of(context)),
+                    label: Text(
+                      AppMessage.taskConversationChoosePhotos.of(context),
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: true),
                     icon: const Icon(Icons.camera_alt_outlined),
-                    label: Text(AppMessage.taskConversationTakePhoto.of(context)),
+                    label: Text(
+                      AppMessage.taskConversationTakePhoto.of(context),
+                    ),
                   ),
                 ],
               ),
@@ -389,7 +390,9 @@ class _TaskConversationScreenState
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(AppMessage.taskConversationNoComments.of(context)),
+                  child: Text(
+                    AppMessage.taskConversationNoComments.of(context),
+                  ),
                 ),
               ),
             for (final comment in comments)
@@ -410,11 +413,14 @@ class _TaskConversationScreenState
                           if (comment.updatedMillis > comment.createdMillis)
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
-                              child: Text(AppMessage.taskConversationEdited.of(context)),
+                              child: Text(
+                                AppMessage.taskConversationEdited.of(context),
+                              ),
                             ),
                           if (!readOnly)
                             IconButton(
-                              tooltip: AppMessage.taskConversationEditComment.of(context),
+                              tooltip: AppMessage.taskConversationEditComment
+                                  .of(context),
                               onPressed: () => _edit(comment),
                               icon: const Icon(Icons.edit_outlined),
                             ),
@@ -456,8 +462,9 @@ class _TaskConversationScreenState
                               ),
                               icon: const Icon(Icons.add_a_photo_outlined),
                               label: Text(
-                                AppMessage.taskConversationTakeCommentPhoto
-                                    .of(context),
+                                AppMessage.taskConversationTakeCommentPhoto.of(
+                                  context,
+                                ),
                               ),
                             ),
                           ],
@@ -480,7 +487,9 @@ class _TaskConversationScreenState
                     labelText: _editing == null
                         ? AppMessage.taskConversationAddCommentField.of(context)
                         : AppMessage.taskConversationEditComment.of(context),
-                    hintText: AppMessage.taskConversationWriteUpdate.of(context),
+                    hintText: AppMessage.taskConversationWriteUpdate.of(
+                      context,
+                    ),
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -537,10 +546,12 @@ class _TaskConversationScreenState
                     _ => Icons.delete_outline,
                   }),
                   title: Text(switch (event.action) {
-                    'ADDED' =>
-                      AppMessage.taskConversationCommentAdded.of(context),
-                    'EDITED' =>
-                      AppMessage.taskConversationCommentEdited.of(context),
+                    'ADDED' => AppMessage.taskConversationCommentAdded.of(
+                      context,
+                    ),
+                    'EDITED' => AppMessage.taskConversationCommentEdited.of(
+                      context,
+                    ),
                     _ => AppMessage.taskConversationCommentDeleted.of(context),
                   }),
                   subtitle: Text(_date(event.recordedMillis)),

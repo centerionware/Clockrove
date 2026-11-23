@@ -179,9 +179,7 @@ class _BusinessFinancialReportScreenState
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      AppMessage.businessEveryCustomer.of(context),
-                    ),
+                    title: Text(AppMessage.businessEveryCustomer.of(context)),
                   ),
                   for (final customer in customers)
                     CheckboxListTile(
@@ -247,9 +245,8 @@ class _BusinessFinancialReportScreenState
           (true, false) => AppMessage.reportCsvSaved,
           _ => AppMessage.reportExportCancelled,
         };
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message.of(context))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message.of(context))));
       }
     } catch (_) {
       if (mounted) {
@@ -339,12 +336,10 @@ class _BusinessFinancialReportScreenState
               icon: const Icon(Icons.date_range),
               label: Text(
                 AppMessage.dateRangeLabel.format(context, {
-                  'first': MaterialLocalizations.of(context).formatCompactDate(
-                    DateTime.parse(selection.firstDate),
-                  ),
-                  'last': MaterialLocalizations.of(context).formatCompactDate(
-                    DateTime.parse(selection.lastDate),
-                  ),
+                  'first': MaterialLocalizations.of(context)
+                      .formatCompactDate(DateTime.parse(selection.firstDate)),
+                  'last': MaterialLocalizations.of(context)
+                      .formatCompactDate(DateTime.parse(selection.lastDate)),
                 }),
               ),
             ),
@@ -404,9 +399,8 @@ class _BusinessFinancialReportScreenState
               padding: const EdgeInsets.all(16),
               child: Text(
                 AppMessage.businessUnknownCustomerCosts.format(context, {
-                  'count': MaterialLocalizations.of(context).formatDecimal(
-                    report.excludedUnknownCustomerCostCount,
-                  ),
+                  'count': MaterialLocalizations.of(context)
+                      .formatDecimal(report.excludedUnknownCustomerCostCount),
                 }),
               ),
             ),
@@ -473,7 +467,10 @@ class _BusinessFinancialReportScreenState
           children: [
             Text(value.currency, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
-            row(AppMessage.reportInvoicedSales.of(context), value.invoicedSales),
+            row(
+              AppMessage.reportInvoicedSales.of(context),
+              value.invoicedSales,
+            ),
             row(AppMessage.reportCashReceived.of(context), value.cashReceived),
             row(AppMessage.reportTaxBilled.of(context), value.taxBilled),
             row(AppMessage.reportTaxCollected.of(context), value.taxCollected),
@@ -481,7 +478,10 @@ class _BusinessFinancialReportScreenState
             const Divider(),
             row(AppMessage.reportLaborCharges.of(context), value.labor),
             row(AppMessage.reportSuppliesCharges.of(context), value.supplies),
-            row(AppMessage.reportUnclassifiedCharges.of(context), value.unclassified),
+            row(
+              AppMessage.reportUnclassifiedCharges.of(context),
+              value.unclassified,
+            ),
             row(AppMessage.reportDirectCosts.of(context), value.directCosts),
             row(AppMessage.reportOverhead.of(context), value.overhead),
             row(AppMessage.reportGrossProfit.of(context), value.grossProfit),
@@ -541,17 +541,12 @@ class _BusinessFinancialReportScreenState
           trailing: Text(
             row.salesMinor == null
                 ? row.legacyTotalMinor == null
-                    ? AppMessage.reportAmountUnavailable.of(context)
-                    : AppMessage.businessLegacyTotal.format(context, {
-                        'amount': '${row.currency} ${money(row.legacyTotalMinor, row.digits)}',
-                      })
-                : '${AppMessage.businessSalesAmount.format(context, {
-                    'amount': '${row.currency} ${money(row.salesMinor, row.digits)}',
-                  })}\n${AppMessage.businessTaxAmount.format(context, {
-                    'amount': row.taxMinor == null
-                        ? AppMessage.reportAmountUnavailable.of(context)
-                        : money(row.taxMinor, row.digits),
-                  })}',
+                      ? AppMessage.reportAmountUnavailable.of(context)
+                      : AppMessage.businessLegacyTotal.format(context, {
+                          'amount':
+                              '${row.currency} ${money(row.legacyTotalMinor, row.digits)}',
+                        })
+                : '${AppMessage.businessSalesAmount.format(context, {'amount': '${row.currency} ${money(row.salesMinor, row.digits)}'})}\n${AppMessage.businessTaxAmount.format(context, {'amount': row.taxMinor == null ? AppMessage.reportAmountUnavailable.of(context) : money(row.taxMinor, row.digits)})}',
             textAlign: TextAlign.end,
           ),
           onTap: () => Navigator.push<void>(
@@ -586,15 +581,17 @@ class _BusinessFinancialReportScreenState
                     : AppMessage.businessPaymentTitle)
                 .format(context, {'number': row.number}),
           ),
-          subtitle: Text([
-            row.occurredLabel,
-            if (row.reference.isNotEmpty)
-              AppMessage.businessCashReference.format(context, {
-                'reference': row.reference,
-              }),
-            if (row.kind == 'TRANSFER')
-              AppMessage.businessCreditMovementNotice.of(context),
-          ].join('\n')),
+          subtitle: Text(
+            [
+              row.occurredLabel,
+              if (row.reference.isNotEmpty)
+                AppMessage.businessCashReference.format(context, {
+                  'reference': row.reference,
+                }),
+              if (row.kind == 'TRANSFER')
+                AppMessage.businessCreditMovementNotice.of(context),
+            ].join('\n'),
+          ),
           trailing: Text(
             AppMessage.businessCashAmount.format(context, {
               'amount': '${row.currency} ${money(row.cashMinor, row.digits)}',

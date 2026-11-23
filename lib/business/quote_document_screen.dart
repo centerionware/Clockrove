@@ -49,9 +49,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
         final saved = await api.savePdf(widget.quoteId, widget.revision);
         if (mounted) {
           _feedback(
-            saved
-                ? AppMessage.quotePdfSaved
-                : AppMessage.quoteSaveCancelled,
+            saved ? AppMessage.quotePdfSaved : AppMessage.quoteSaveCancelled,
           );
         }
       }
@@ -77,10 +75,12 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(AppMessage.quoteInvoiceRevisionRef.format(context, {
-        'number': widget.number,
-        'revision': widget.revision.toString(),
-      })),
+      title: Text(
+        AppMessage.quoteInvoiceRevisionRef.format(context, {
+          'number': widget.number,
+          'revision': widget.revision.toString(),
+        }),
+      ),
       actions: [
         IconButton(
           tooltip: AppMessage.quoteRefreshPdf.of(context),

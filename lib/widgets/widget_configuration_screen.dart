@@ -101,9 +101,7 @@ class _WidgetConfigurationScreenState
                   ),
                   const SizedBox(height: 20),
                   if (missing)
-                    Text(
-                      AppMessage.widgetSelectedJobUnavailable.of(context),
-                    ),
+                    Text(AppMessage.widgetSelectedJobUnavailable.of(context)),
                   RadioGroup<String>(
                     groupValue: _job ?? '',
                     onChanged: (value) {

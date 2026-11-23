@@ -37,9 +37,7 @@ class ArchiveScreen extends ConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.only(bottom: 20),
-                child: Text(
-                  AppMessage.archiveExplanation.of(context),
-                ),
+                child: Text(AppMessage.archiveExplanation.of(context)),
               ),
               if (data.jobs.isEmpty)
                 Center(child: Text(AppMessage.archiveEmpty.of(context))),
@@ -87,7 +85,9 @@ class ArchiveScreen extends ConsumerWidget {
                                   .error,
                             ),
                             icon: const Icon(Icons.delete_forever_outlined),
-                            label: Text(AppMessage.permanentlyDeleteJob.of(context)),
+                            label: Text(
+                              AppMessage.permanentlyDeleteJob.of(context),
+                            ),
                             onPressed: () => showDialog<void>(
                               context: context,
                               barrierDismissible: false,
@@ -118,7 +118,9 @@ class ArchiveScreen extends ConsumerWidget {
                                           ),
                                     ),
                                     child: BusinessCommand(
-                                      label: AppMessage.deletePermanently.of(dialog),
+                                      label: AppMessage.deletePermanently.of(
+                                        dialog,
+                                      ),
                                       create: () {
                                         final id = newBusinessId();
                                         return () => ref

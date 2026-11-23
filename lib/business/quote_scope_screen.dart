@@ -140,7 +140,9 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
                         label: Text(
                           widget.createNewJob
                               ? AppMessage.quoteScopeCreateTasksJob.of(context)
-                              : AppMessage.quoteScopeReviewGroupPlan.of(context),
+                              : AppMessage.quoteScopeReviewGroupPlan.of(
+                                  context,
+                                ),
                         ),
                       ),
                       if (!widget.createNewJob) ...[
@@ -173,16 +175,21 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
                                 .firstOrNull;
                             if (job == null) {
                               return Text(
-                                AppMessage.quoteScopeMappedJobUnavailable.of(context),
+                                AppMessage.quoteScopeMappedJobUnavailable.of(
+                                  context,
+                                ),
                               );
                             }
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const SizedBox(height: 8),
-                                Text(AppMessage.quoteScopePlannedIn.format(context, {
-                                  'job': job.name,
-                                })),
+                                Text(
+                                  AppMessage.quoteScopePlannedIn.format(
+                                    context,
+                                    {'job': job.name},
+                                  ),
+                                ),
                                 OutlinedButton.icon(
                                   onPressed: () => Navigator.push<void>(
                                     context,
@@ -194,7 +201,11 @@ class _QuoteScopeScreenState extends ConsumerState<QuoteScopeScreen> {
                                     ),
                                   ),
                                   icon: const Icon(Icons.view_kanban_outlined),
-                                  label: Text(AppMessage.quoteScopeOpenExistingJob.of(context)),
+                                  label: Text(
+                                    AppMessage.quoteScopeOpenExistingJob.of(
+                                      context,
+                                    ),
+                                  ),
                                 ),
                               ],
                             );

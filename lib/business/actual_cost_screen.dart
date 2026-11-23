@@ -80,7 +80,7 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-        _error = AppMessage.actualCostsLoadFailed.of(context);
+          _error = AppMessage.actualCostsLoadFailed.of(context);
         });
       }
     }
@@ -143,7 +143,10 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
         ? const Center(child: CircularProgressIndicator())
         : _error != null
         ? Center(
-            child: TextButton(onPressed: _load, child: Text(AppMessage.retry.of(context))),
+            child: TextButton(
+              onPressed: _load,
+              child: Text(AppMessage.retry.of(context)),
+            ),
           )
         : _entries.isEmpty
         ? const Center(
@@ -356,7 +359,9 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
     }
     final timezone = _timezone;
     if (timezone == null) {
-      throw FormatException(AppMessage.actualCostTimezoneUnavailable.of(context));
+      throw FormatException(
+        AppMessage.actualCostTimezoneUnavailable.of(context),
+      );
     }
     return ActualCostEntry(
       id: widget.initial?.id ?? newBusinessId(),
@@ -460,10 +465,14 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                         return AppMessage.actualCostCurrencyInvalid.of(context);
                       }
                       if (_currencyValid == false) {
-                        return AppMessage.actualCostCurrencyUnsupported.of(context);
+                        return AppMessage.actualCostCurrencyUnsupported.of(
+                          context,
+                        );
                       }
                       if (_currencyValid != true) {
-                        return AppMessage.actualCostCurrencyChecking.of(context);
+                        return AppMessage.actualCostCurrencyChecking.of(
+                          context,
+                        );
                       }
                       return null;
                     },
@@ -528,16 +537,22 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                         .watch(boardProvider(selectedJob))
                         .when(
                           loading: () => const LinearProgressIndicator(),
-                          error: (_, _) => Text(AppMessage.actualCostTasksLoadFailed.of(context)),
+                          error: (_, _) => Text(
+                            AppMessage.actualCostTasksLoadFailed.of(context),
+                          ),
                           data: (board) => DropdownButtonFormField<String?>(
                             initialValue: _taskId,
                             decoration: const InputDecoration(
-                              labelText: AppMessage.actualCostTaskOptional.of(context),
+                              labelText: AppMessage.actualCostTaskOptional.of(
+                                context,
+                              ),
                             ),
                             items: [
                               const DropdownMenuItem<String?>(
                                 value: null,
-                                child: Text(AppMessage.actualCostNoTask.of(context)),
+                                child: Text(
+                                  AppMessage.actualCostNoTask.of(context),
+                                ),
                               ),
                               for (final task in board.cards)
                                 DropdownMenuItem<String?>(
@@ -575,13 +590,17 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   TextFormField(
                     controller: _vendor,
                     decoration: const InputDecoration(
-                      labelText: AppMessage.actualCostVendorOptional.of(context),
+                      labelText: AppMessage.actualCostVendorOptional.of(
+                        context,
+                      ),
                     ),
                   ),
                   TextFormField(
                     controller: _reference,
                     decoration: const InputDecoration(
-                      labelText: AppMessage.actualCostReceiptOptional.of(context),
+                      labelText: AppMessage.actualCostReceiptOptional.of(
+                        context,
+                      ),
                     ),
                   ),
                   TextFormField(

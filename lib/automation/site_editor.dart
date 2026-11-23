@@ -148,9 +148,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
       });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice = AppMessage.siteNoFreshLocation.of(context),
-        );
+        setState(() => _notice = AppMessage.siteNoFreshLocation.of(context));
       }
     } finally {
       if (mounted) {

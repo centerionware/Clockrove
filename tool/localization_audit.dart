@@ -78,7 +78,9 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   ];
 }
 
-Iterable<({int line, String text})> auditKotlinPresentation(String source) sync* {
+Iterable<({int line, String text})> auditKotlinPresentation(
+  String source,
+) sync* {
   final lines = source.split('\n');
   for (var index = 0; index < lines.length; index++) {
     final line = lines[index];

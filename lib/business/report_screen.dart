@@ -261,11 +261,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           Text(AppMessage.reportUnavailable.of(context)),
                           TextButton(
                             onPressed: _range,
-                            child: Text(AppMessage.reportChangeDates.of(context)),
+                            child: Text(
+                              AppMessage.reportChangeDates.of(context),
+                            ),
                           ),
                           TextButton(
                             onPressed: _jobs,
-                            child: Text(AppMessage.reportChooseJobs.of(context)),
+                            child: Text(
+                              AppMessage.reportChooseJobs.of(context),
+                            ),
                           ),
                           FilledButton(
                             onPressed: () =>
@@ -365,48 +369,59 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 const SizedBox(height: 8),
                                 Text(
                                   total.amount == null
-                                      ? AppMessage.reportAmountUnavailable.of(context)
+                                      ? AppMessage.reportAmountUnavailable.of(
+                                          context,
+                                        )
                                       : '${total.currency} ${money(total.amount, total.digits)}',
                                   style: Theme.of(context)
                                       .textTheme
                                       .headlineSmall,
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  switch ((total.mode, total.rate)) {
-                                    ('TASK', _) when total.missing > 0 =>
-                                      AppMessage.reportTaskPricesMissing
-                                          .format(context, {
-                                            'count': '${total.missing}',
-                                          }),
-                                    ('TASK', _) => AppMessage
-                                        .reportCompletedBillableTasks
-                                        .of(context),
-                                    (_, null) =>
-                                      AppMessage.reportHourlyRateUnset.format(
-                                        context,
-                                        {'currency': total.currency},
-                                      ),
-                                    (_, final rate) =>
-                                      AppMessage.reportHourlyBreakdown.format(
-                                        context,
-                                        {
-                                          'duration': reportDuration(context, total.duration),
-                                          'currency': total.currency,
-                                          'rate': money(rate, total.digits),
-                                        },
-                                      ),
-                                  },
-                                ),
+                                Text(switch ((total.mode, total.rate)) {
+                                  ('TASK', _) when total.missing > 0 =>
+                                    AppMessage.reportTaskPricesMissing.format(
+                                      context,
+                                      {'count': '${total.missing}'},
+                                    ),
+                                  ('TASK', _) =>
+                                    AppMessage.reportCompletedBillableTasks.of(
+                                      context,
+                                    ),
+                                  (_, null) =>
+                                    AppMessage.reportHourlyRateUnset.format(
+                                      context,
+                                      {'currency': total.currency},
+                                    ),
+                                  (_, final rate) =>
+                                    AppMessage.reportHourlyBreakdown.format(
+                                      context,
+                                      {
+                                        'duration': reportDuration(
+                                          context,
+                                          total.duration,
+                                        ),
+                                        'currency': total.currency,
+                                        'rate': money(rate, total.digits),
+                                      },
+                                    ),
+                                }),
                                 if (total.mode == 'TASK')
                                   Text(
                                     AppMessage.reportTaskDuration.format(
                                       context,
-                                      {'duration': reportDuration(context, total.duration)},
+                                      {
+                                        'duration': reportDuration(
+                                          context,
+                                          total.duration,
+                                        ),
+                                      },
                                     ),
                                   ),
                                 if (total.mode == 'HOURLY')
-                                  Text(AppMessage.reportRoundingNote.of(context)),
+                                  Text(
+                                    AppMessage.reportRoundingNote.of(context),
+                                  ),
                               ],
                             ),
                           ),
@@ -444,14 +459,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ? null
                                 : () => _csv(report, true),
                             icon: const Icon(Icons.location_on_outlined),
-                            label: Text(AppMessage.reportExportGpsCsv.of(context)),
+                            label: Text(
+                              AppMessage.reportExportGpsCsv.of(context),
+                            ),
                           ),
                         ],
                       ),
                       if (report.totals.length != 1)
                         Padding(
                           padding: const EdgeInsets.only(top: 12),
-                          child: Text(AppMessage.reportInvoiceScopeHelp.of(context)),
+                          child: Text(
+                            AppMessage.reportInvoiceScopeHelp.of(context),
+                          ),
                         ),
                       if (selection.jobs.length == 1)
                         TextButton.icon(
@@ -463,7 +482,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             ),
                           ),
                           icon: const Icon(Icons.receipt_long_outlined),
-                          label: Text(AppMessage.reportPreparedInvoices.of(context)),
+                          label: Text(
+                            AppMessage.reportPreparedInvoices.of(context),
+                          ),
                         ),
                       const SizedBox(height: 24),
                       OutlinedButton.icon(
@@ -504,7 +525,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                       item.label,
                                       (item.reason == 'NEEDS_REVIEW'
                                               ? AppMessage.reportNeedsReview
-                                              : AppMessage.reportActiveOrProvisional)
+                                              : AppMessage
+                                                    .reportActiveOrProvisional)
                                           .of(context),
                                     ].join(' · '),
                                   ),
@@ -562,11 +584,22 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             subtitle: Text(
                               [
                                 task.date,
-                                report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY'
-                                    ? AppMessage.reportHourlyTaskPrice.of(context)
+                                report.totals
+                                            .firstWhere(
+                                              (t) => t.jobId == task.jobId,
+                                            )
+                                            .mode ==
+                                        'HOURLY'
+                                    ? AppMessage.reportHourlyTaskPrice.of(
+                                        context,
+                                      )
                                     : AppMessage.reportBilledQuantity.format(
                                         context,
-                                        {'quantity': taskQuantity(task.quantityUnits)},
+                                        {
+                                          'quantity': taskQuantity(
+                                            task.quantityUnits,
+                                          ),
+                                        },
                                       ),
                               ].join('\n'),
                             ),

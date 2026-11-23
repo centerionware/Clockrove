@@ -96,9 +96,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       await _resolve(preferredStart: start, preferredEnd: end);
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = AppMessage.historyEditorLoadFailed.of(context),
-        );
+        setState(() => _error = AppMessage.historyEditorLoadFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -346,8 +344,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(label, style: Theme.of(context).textTheme.titleSmall),
-      if (values.length > 1)
-        Text(AppMessage.legacyAmbiguousTime.of(context)),
+      if (values.length > 1) Text(AppMessage.legacyAmbiguousTime.of(context)),
       if (values.length == 1) Text(values.single.label),
       if (values.length > 1)
         for (final value in values)
@@ -465,16 +462,16 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                           onChanged: _changed,
                           decoration: InputDecoration(
                             labelText: field.$2,
-                            helperText:
-                                AppMessage.legacyLocalTimestampFormat.of(context),
+                            helperText: AppMessage.legacyLocalTimestampFormat
+                                .of(context),
                             suffixIcon: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  tooltip:
-                                  AppMessage.historyChooseDate.format(context, {
-                                    'label': field.$2,
-                                  }),
+                                  tooltip: AppMessage.historyChooseDate.format(
+                                    context,
+                                    {'label': field.$2},
+                                  ),
                                   onPressed: _locked
                                       ? null
                                       : () => _pick(field.$1, date: true),
@@ -483,10 +480,8 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip:
-                                  AppMessage.historyChooseClockTime.format(context, {
-                                    'label': field.$2,
-                                  }),
+                                  tooltip: AppMessage.historyChooseClockTime
+                                      .format(context, {'label': field.$2}),
                                   onPressed: _locked
                                       ? null
                                       : () => _pick(field.$1, date: false),
@@ -501,7 +496,9 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                                     r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$',
                                   ).hasMatch(v.trim())
                               ? null
-                              : AppMessage.historyEnterFullTimestamp.of(context),
+                              : AppMessage.historyEnterFullTimestamp.of(
+                                  context,
+                                ),
                         ),
                       ),
                     OutlinedButton(
@@ -585,7 +582,9 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                     if (widget.sessionId != null) ...[
                       TextButton(
                         onPressed: _locked ? null : _reload,
-                        child: Text(AppMessage.historyReloadSavedEntry.of(context)),
+                        child: Text(
+                          AppMessage.historyReloadSavedEntry.of(context),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       TextButton.icon(
@@ -594,7 +593,9 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                         ),
                         onPressed: _locked ? null : _delete,
                         icon: const Icon(Icons.delete_outline),
-                        label: Text(AppMessage.historyDeleteWorkEntry.of(context)),
+                        label: Text(
+                          AppMessage.historyDeleteWorkEntry.of(context),
+                        ),
                       ),
                     ],
                   ],

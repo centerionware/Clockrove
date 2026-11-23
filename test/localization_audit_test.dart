@@ -129,6 +129,7 @@ void example(String name) {
       'actual_cost_labels.dart',
       'quote_screens.dart',
       'quote_editor.dart',
+      'quote_invoice_format.dart',
       'payment_editor.dart',
       'invoice_lifecycle_editor.dart',
       'email_template.dart',
@@ -224,7 +225,8 @@ void example(String name) {
       expect(auditKotlinPresentation(source), isEmpty, reason: path);
     }
 
-    final reportStore = File('$root/tracking/ReportStore.kt').readAsStringSync();
+    final reportStore = File('$root/tracking/ReportStore.kt')
+        .readAsStringSync();
     final reportCsv = reportStore.substring(
       reportStore.indexOf('internal object ReportCsv {'),
     );

@@ -109,11 +109,17 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                                   children: [
                                     Text(task.description),
                                     SwitchListTile(
-                                      title: Text(AppMessage.copyTaskPrice.of(dialog)),
+                                      title: Text(
+                                        AppMessage.copyTaskPrice.of(dialog),
+                                      ),
                                       subtitle: Text(
                                         task.currency == board.currency
-                                            ? AppMessage.copyTaskIndependent.of(dialog)
-                                            : AppMessage.copyTaskDifferentCurrency.of(dialog),
+                                            ? AppMessage.copyTaskIndependent.of(
+                                                dialog,
+                                              )
+                                            : AppMessage
+                                                  .copyTaskDifferentCurrency
+                                                  .of(dialog),
                                       ),
                                       value: copyPrice,
                                       onChanged: task.currency != board.currency
@@ -124,7 +130,9 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                                 ),
                                 actions: [
                                   BusinessCommand(
-                                    label: AppMessage.useTaskTemplate.of(dialog),
+                                    label: AppMessage.useTaskTemplate.of(
+                                      dialog,
+                                    ),
                                     create: () {
                                       final id = newBusinessId();
                                       final cardId = newBusinessId();
@@ -151,17 +159,27 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                           );
                         },
                         trailing: IconButton(
-                          tooltip: AppMessage.removeReusableTemplate.of(context),
+                          tooltip: AppMessage.removeReusableTemplate.of(
+                            context,
+                          ),
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => showDialog<void>(
                             context: context,
                             barrierDismissible: false,
                             builder: (dialog) => AlertDialog(
-                              title: Text(AppMessage.removeSavedTemplateQuestion.of(dialog)),
-                              content: Text(AppMessage.existingCardsRetained.of(dialog)),
+                              title: Text(
+                                AppMessage.removeSavedTemplateQuestion.of(
+                                  dialog,
+                                ),
+                              ),
+                              content: Text(
+                                AppMessage.existingCardsRetained.of(dialog),
+                              ),
                               actions: [
                                 BusinessCommand(
-                                  label: AppMessage.removeTaskTemplate.of(dialog),
+                                  label: AppMessage.removeTaskTemplate.of(
+                                    dialog,
+                                  ),
                                   create: () {
                                     final id = newBusinessId();
                                     final version = ref

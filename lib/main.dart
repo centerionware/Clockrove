@@ -62,7 +62,8 @@ class ClockroveApp extends ConsumerWidget {
           builder: (context) => JobScreen(
             jobId: uri.queryParameters['job']!,
             jobName:
-                uri.queryParameters['name'] ?? AppMessage.boardTitle.of(context),
+                uri.queryParameters['name'] ??
+                AppMessage.boardTitle.of(context),
           ),
         );
       } else if (uri.path == '/widget-unavailable') {

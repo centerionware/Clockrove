@@ -109,9 +109,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                   padding: const EdgeInsets.all(24),
                   children: [
                     if (preview.hasError) ...[
-                      Text(
-                        AppMessage.invoiceReviewRefreshKept.of(context),
-                      ),
+                      Text(AppMessage.invoiceReviewRefreshKept.of(context)),
                       TextButton(
                         onPressed: _pending ? null : _refresh,
                         child: Text(AppMessage.invoiceReviewRetry.of(context)),
@@ -148,9 +146,13 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                             ),
                             _amount(
                               data.taxUnits >= 0 && data.taxUnits <= 1000000
-                                  ? AppMessage.invoiceReviewTaxRate.format(context, {
-                                      'rate': taxPercent(data.taxUnits).toString(),
-                                    })
+                                  ? AppMessage.invoiceReviewTaxRate.format(
+                                      context,
+                                      {
+                                        'rate': taxPercent(data.taxUnits)
+                                            .toString(),
+                                      },
+                                    )
                                   : AppMessage.invoiceTax.of(context),
                               data.tax,
                               data.currency,
@@ -211,7 +213,9 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                       for (final invoice in data.legacy)
                         ListTile(
                           title: Text(invoice.number),
-                          subtitle: Text(AppMessage.invoiceReviewCoverage.of(context)),
+                          subtitle: Text(
+                            AppMessage.invoiceReviewCoverage.of(context),
+                          ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: _pending ? null : () => _reviewLegacy(invoice),
                         ),
@@ -222,9 +226,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                         AppMessage.invoiceReviewAlreadyInvoiced.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      Text(
-                        AppMessage.invoiceReviewExcluded.of(context),
-                      ),
+                      Text(AppMessage.invoiceReviewExcluded.of(context)),
                       for (final item in data.excluded)
                         ListTile(
                           contentPadding: EdgeInsets.zero,

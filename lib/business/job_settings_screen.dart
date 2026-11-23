@@ -139,11 +139,16 @@ class _JobFormState extends ConsumerState<_JobForm> {
         TextField(
           controller: _name,
           maxLength: 240,
-          decoration: InputDecoration(labelText: AppMessage.jobName.of(context)),
+          decoration: InputDecoration(
+            labelText: AppMessage.jobName.of(context),
+          ),
           readOnly: data?.archived ?? true,
         ),
         const SizedBox(height: 16),
-        Text(AppMessage.jobColor.of(context), style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          AppMessage.jobColor.of(context),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
@@ -160,7 +165,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
             })
               Semantics(
                 selected: color == _color,
-                label: AppMessage.jobColorValue.format(context, {'color': color.toRadixString(16)}),
+                label: AppMessage.jobColorValue.format(context, {
+                  'color': color.toRadixString(16),
+                }),
                 child: IconButton.filled(
                   tooltip: color == _color
                       ? AppMessage.selectedJobColor.of(context)
@@ -180,7 +187,10 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ],
         ),
         const SizedBox(height: 32),
-        Text(AppMessage.billingBasis.of(context), style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          AppMessage.billingBasis.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         SegmentedButton<String>(
           segments: [
@@ -225,7 +235,14 @@ class _JobFormState extends ConsumerState<_JobForm> {
           title: Text(AppMessage.useDefaultTax.of(context)),
           subtitle: Text(
             AppMessage.jobDefaultTaxSummary.format(context, {
-              'rate': taxPercent(ref.watch(businessSettingsProvider).value?.settings.defaultTaxUnits ?? widget.business.settings.defaultTaxUnits),
+              'rate': taxPercent(
+                ref
+                        .watch(businessSettingsProvider)
+                        .value
+                        ?.settings
+                        .defaultTaxUnits ??
+                    widget.business.settings.defaultTaxUnits,
+              ),
             }),
           ),
           value: _inheritTax,
@@ -256,7 +273,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
               ),
               onChanged: (_) {
                 if (_taxError != null) {
-                  setState(() => _taxError = settingsTaxInputError(context, _tax.text));
+                  setState(
+                    () => _taxError = settingsTaxInputError(context, _tax.text),
+                  );
                 }
               },
             ),
@@ -272,9 +291,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
           contentPadding: EdgeInsets.zero,
           title: Text(AppMessage.useDefaultHourlyRule.of(context)),
           subtitle: Text(
-            billingModeMessage(
-              widget.business.settings.hourlyBillingMode,
-            ).of(context),
+            billingModeMessage(widget.business.settings.hourlyBillingMode)
+                .of(context),
           ),
           value: _inheritHourlyMode,
           onChanged: data?.archived == false
@@ -284,7 +302,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
         if (!_inheritHourlyMode)
           DropdownButtonFormField<String>(
             initialValue: _hourlyBillingMode,
-            decoration: InputDecoration(labelText: AppMessage.hourlyBillingRule.of(context)),
+            decoration: InputDecoration(
+              labelText: AppMessage.hourlyBillingRule.of(context),
+            ),
             items: [
               DropdownMenuItem(
                 value: minimumThenExactBilling,
@@ -307,9 +327,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
           contentPadding: EdgeInsets.zero,
           title: Text(AppMessage.useDefaultMinimumHours.of(context)),
           subtitle: Text(
-              AppMessage.minimumHoursSummary.format(context, {
-                'hours': widget.business.settings.minimumBillableHours,
-              }),
+            AppMessage.minimumHoursSummary.format(context, {
+              'hours': widget.business.settings.minimumBillableHours,
+            }),
           ),
           value: _inheritMinimumHours,
           onChanged: data?.archived == false
@@ -421,15 +441,22 @@ class _JobFormState extends ConsumerState<_JobForm> {
         DropdownButtonFormField<String>(
           initialValue: _customer ?? '',
           isExpanded: true,
-          decoration: InputDecoration(labelText: AppMessage.customer.of(context)),
+          decoration: InputDecoration(
+            labelText: AppMessage.customer.of(context),
+          ),
           items: [
-            DropdownMenuItem(value: '', child: Text(AppMessage.noCustomer.of(context))),
+            DropdownMenuItem(
+              value: '',
+              child: Text(AppMessage.noCustomer.of(context)),
+            ),
             for (final c in customers.where(
               (c) => !c.archived || c.id == _customer,
             ))
               DropdownMenuItem(
                 value: c.id,
-                child: Text('${c.name}${c.archived ? ' · ${AppMessage.archived.of(context)}' : ''}'),
+                child: Text(
+                  '${c.name}${c.archived ? ' · ${AppMessage.archived.of(context)}' : ''}',
+                ),
               ),
           ],
           onChanged: data?.archived == false
@@ -490,7 +517,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
             if (_name.text.trim().isEmpty) {
               throw FormatException(AppMessage.validationJobName.of(context));
             }
-            final taxError = _inheritTax ? null : settingsTaxInputError(context, _tax.text);
+            final taxError = _inheritTax
+                ? null
+                : settingsTaxInputError(context, _tax.text);
             final hoursError = _inheritMinimumHours
                 ? null
                 : settingsHoursInputError(context, _minimumHours.text);
@@ -549,9 +578,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
               barrierDismissible: false,
               builder: (dialog) => AlertDialog(
                 title: Text(AppMessage.confirmArchiveJob.of(dialog)),
-                content: Text(
-                  AppMessage.archiveJobWarning.of(dialog),
-                ),
+                content: Text(AppMessage.archiveJobWarning.of(dialog)),
                 actions: [
                   BusinessCommand(
                     label: AppMessage.archiveJob.of(context),

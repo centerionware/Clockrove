@@ -191,7 +191,9 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                                         .read(trackingApiProvider)
                                         .requestNotifications(),
                                   ),
-                            child: Text(AppMessage.allowNotifications.of(context)),
+                            child: Text(
+                              AppMessage.allowNotifications.of(context),
+                            ),
                           ),
                       ],
                     ),

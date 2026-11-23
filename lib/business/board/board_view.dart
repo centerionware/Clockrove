@@ -176,7 +176,11 @@ class _Board extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               if (card.dueDate != null)
-                Text(AppMessage.boardDueDate.format(context, {'date': card.dueDate!})),
+                Text(
+                  AppMessage.boardDueDate.format(context, {
+                    'date': card.dueDate!,
+                  }),
+                ),
               Text(
                 !card.billable
                     ? AppMessage.boardNonbillable.of(context)
@@ -230,9 +234,15 @@ class _Board extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'edit', child: Text(AppMessage.boardEditTask.of(context))),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text(AppMessage.boardEditTask.of(context)),
+                  ),
                   if (index > 0)
-                    PopupMenuItem(value: 'up', child: Text(AppMessage.boardMoveUp.of(context))),
+                    PopupMenuItem(
+                      value: 'up',
+                      child: Text(AppMessage.boardMoveUp.of(context)),
+                    ),
                   if (index + 1 < inColumn.length)
                     PopupMenuItem(
                       value: 'down',
@@ -243,7 +253,11 @@ class _Board extends ConsumerWidget {
                   ))
                     PopupMenuItem(
                       value: column.id,
-                      child: Text(AppMessage.boardMoveTo.format(context, {'column': column.name})),
+                      child: Text(
+                        AppMessage.boardMoveTo.format(context, {
+                          'column': column.name,
+                        }),
+                      ),
                     ),
                 ],
               ),
@@ -274,7 +288,8 @@ class _Board extends ConsumerWidget {
                 ),
                 Text(
                   AppMessage.boardTaskProgress.format(context, {
-                    'complete': '${board.cards.where((c) => c.completedMillis != null).length}',
+                    'complete':
+                        '${board.cards.where((c) => c.completedMillis != null).length}',
                     'total': '${board.cards.length}',
                   }),
                 ),
@@ -332,15 +347,23 @@ class _Board extends ConsumerWidget {
                                 ),
                                 subtitle: Text(
                                   column.completed
-                                      ? AppMessage.boardCompletesTasks.of(context)
-                                      : AppMessage.boardTaskCount.format(context, {
-                                          'count': '${board.inColumn(column.id).length}',
-                                        }),
+                                      ? AppMessage.boardCompletesTasks.of(
+                                          context,
+                                        )
+                                      : AppMessage.boardTaskCount.format(
+                                          context,
+                                          {
+                                            'count':
+                                                '${board.inColumn(column.id).length}',
+                                          },
+                                        ),
                                 ),
                                 trailing: board.archived
                                     ? null
                                     : IconButton(
-                                        tooltip: AppMessage.boardEditColumn.of(context),
+                                        tooltip: AppMessage.boardEditColumn.of(
+                                          context,
+                                        ),
                                         icon: const Icon(Icons.more_horiz),
                                         onPressed: () =>
                                             _editColumn(context, column),
@@ -447,13 +470,20 @@ class _Board extends ConsumerWidget {
                                               if (candidates.isNotEmpty)
                                                 Padding(
                                                   padding: EdgeInsets.all(12),
-                                                  child: Text(AppMessage.boardDropToMove.of(context)),
+                                                  child: Text(
+                                                    AppMessage.boardDropToMove
+                                                        .of(context),
+                                                  ),
                                                 ),
                                               TextButton.icon(
                                                 onPressed: () =>
                                                     _task(context, column.id),
                                                 icon: const Icon(Icons.add),
-                                                label: Text(AppMessage.boardAddTask.of(context)),
+                                                label: Text(
+                                                  AppMessage.boardAddTask.of(
+                                                    context,
+                                                  ),
+                                                ),
                                               ),
                                               TextButton.icon(
                                                 onPressed: () => Navigator.push(
@@ -469,7 +499,11 @@ class _Board extends ConsumerWidget {
                                                 icon: const Icon(
                                                   Icons.copy_outlined,
                                                 ),
-                                                label: Text(AppMessage.boardReuseTask.of(context)),
+                                                label: Text(
+                                                  AppMessage.boardReuseTask.of(
+                                                    context,
+                                                  ),
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -612,7 +646,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                           labelText: AppMessage.boardUnitPrice.format(context, {
                             'currency': board.currency,
                           }),
-                          helperText: AppMessage.boardPriceEntryHelp.of(context),
+                          helperText: AppMessage.boardPriceEntryHelp.of(
+                            context,
+                          ),
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -664,20 +700,26 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     if (_chargeType == 'UNCLASSIFIED') ...[
                       const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(AppMessage.boardClassificationPrompt.of(context)),
+                        child: Text(
+                          AppMessage.boardClassificationPrompt.of(context),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         children: [
                           ChoiceChip(
-                            label: Text(AppMessage.quoteChargeLabor.of(context)),
+                            label: Text(
+                              AppMessage.quoteChargeLabor.of(context),
+                            ),
                             selected: _chargeType == 'LABOR',
                             onSelected: (_) =>
                                 setState(() => _chargeType = 'LABOR'),
                           ),
                           ChoiceChip(
-                            label: Text(AppMessage.quoteChargeSupplies.of(context)),
+                            label: Text(
+                              AppMessage.quoteChargeSupplies.of(context),
+                            ),
                             selected: _chargeType == 'SUPPLIES',
                             onSelected: (_) =>
                                 setState(() => _chargeType = 'SUPPLIES'),
@@ -688,7 +730,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(AppMessage.quoteChargeSupplies.of(context)),
-                        subtitle: Text(AppMessage.boardSuppliesHelp.of(context)),
+                        subtitle: Text(
+                          AppMessage.boardSuppliesHelp.of(context),
+                        ),
                         value: _chargeType == 'SUPPLIES',
                         onChanged: (value) => setState(
                           () => _chargeType = value ? 'SUPPLIES' : 'LABOR',
@@ -697,12 +741,16 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.calendar_today_outlined),
-                      title: Text(_due ?? AppMessage.boardNoDueDate.of(context)),
+                      title: Text(
+                        _due ?? AppMessage.boardNoDueDate.of(context),
+                      ),
                       onTap: _pickDate,
                       trailing: _due == null
                           ? null
                           : IconButton(
-                              tooltip: AppMessage.boardRemoveDueDate.of(context),
+                              tooltip: AppMessage.boardRemoveDueDate.of(
+                                context,
+                              ),
                               icon: const Icon(Icons.close),
                               onPressed: () => setState(() => _due = null),
                             ),
@@ -712,10 +760,14 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       label: AppMessage.save.of(context),
                       create: () {
                         if (!_form.currentState!.validate()) {
-                          throw FormatException(AppMessage.boardCheckFields.of(context));
+                          throw FormatException(
+                            AppMessage.boardCheckFields.of(context),
+                          );
                         }
                         if (_chargeType == 'UNCLASSIFIED') {
-                          throw FormatException(AppMessage.boardChooseChargeType.of(context));
+                          throw FormatException(
+                            AppMessage.boardChooseChargeType.of(context),
+                          );
                         }
                         final command = newBusinessId();
                         final card = TaskCard(
@@ -750,8 +802,12 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             context: context,
                             barrierDismissible: false,
                             builder: (dialog) => AlertDialog(
-                              title: Text(AppMessage.boardDeleteTaskQuestion.of(dialog)),
-                              content: Text(AppMessage.boardKeepReusableTemplate.of(dialog)),
+                              title: Text(
+                                AppMessage.boardDeleteTaskQuestion.of(dialog),
+                              ),
+                              content: Text(
+                                AppMessage.boardKeepReusableTemplate.of(dialog),
+                              ),
                               actions: [
                                 BusinessCommand(
                                   label: AppMessage.boardDeleteTask.of(dialog),
@@ -826,7 +882,9 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(AppMessage.boardColumnCompleteTitle.of(context)),
-                  subtitle: Text(AppMessage.boardColumnCompleteHelp.of(context)),
+                  subtitle: Text(
+                    AppMessage.boardColumnCompleteHelp.of(context),
+                  ),
                   value: _completed,
                   onChanged: (v) => setState(() => _completed = v),
                 ),
@@ -835,7 +893,9 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                   label: AppMessage.save.of(context),
                   create: () {
                     if (_name.text.trim().isEmpty) {
-                      throw FormatException(AppMessage.boardColumnNameRequired.of(context));
+                      throw FormatException(
+                        AppMessage.boardColumnNameRequired.of(context),
+                      );
                     }
                     final id = newBusinessId();
                     final columnId = column?.id ?? newBusinessId();

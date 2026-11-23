@@ -181,13 +181,17 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     final settingsState = ref.watch(mapProviderSettingsProvider);
     if (settingsState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppMessage.reportLocationHistory.of(context))),
+        appBar: AppBar(
+          title: Text(AppMessage.reportLocationHistory.of(context)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (settingsState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppMessage.reportLocationHistory.of(context))),
+        appBar: AppBar(
+          title: Text(AppMessage.reportLocationHistory.of(context)),
+        ),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
@@ -396,11 +400,11 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       child: ActionChip(
                         label: Text(
                           [
-                          point.label,
-                          AppMessage.locationAccuracy.format(context, {
-                            'meters': point.accuracy.toStringAsFixed(0),
-                          }),
-                        ].join('\n'),
+                            point.label,
+                            AppMessage.locationAccuracy.format(context, {
+                              'meters': point.accuracy.toStringAsFixed(0),
+                            }),
+                          ].join('\n'),
                         ),
                         onPressed: () => _select(point),
                       ),

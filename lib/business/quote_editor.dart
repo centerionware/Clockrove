@@ -200,7 +200,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                     .read(businessApiProvider)
                                     .templates(search.text);
                               }),
-                              child: Text(AppMessage.quoteRetryTaskTemplates.of(context)),
+                              child: Text(
+                                AppMessage.quoteRetryTaskTemplates.of(context),
+                              ),
                             ),
                           );
                         }
@@ -212,7 +214,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                         final templates = snapshot.data!;
                         if (templates.isEmpty) {
                           return Center(
-                            child: Text(AppMessage.quoteNoTaskTemplates.of(context)),
+                            child: Text(
+                              AppMessage.quoteNoTaskTemplates.of(context),
+                            ),
                           );
                         }
                         return ListView.builder(
@@ -224,22 +228,41 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               title: Text(template.title),
                               subtitle: Text(
                                 [
-                                  template.source ?? AppMessage.quoteSavedTask.of(context),
+                                  template.source ??
+                                      AppMessage.quoteSavedTask.of(context),
                                   template.chargeType == 'SUPPLIES'
-                                      ? AppMessage.quoteChargeSupplies.of(context)
+                                      ? AppMessage.quoteChargeSupplies.of(
+                                          context,
+                                        )
                                       : template.chargeType == 'LABOR'
                                       ? AppMessage.quoteChargeLabor.of(context)
-                                      : AppMessage.quoteChargeUnclassified.of(context),
-                                  AppMessage.quoteTemplateQuantity.format(context, {
-                                    'quantity': taskQuantity(template.quantityUnits),
-                                  }),
+                                      : AppMessage.quoteChargeUnclassified.of(
+                                          context,
+                                        ),
+                                  AppMessage.quoteTemplateQuantity.format(
+                                    context,
+                                    {
+                                      'quantity': taskQuantity(
+                                        template.quantityUnits,
+                                      ),
+                                    },
+                                  ),
                                   if (template.priceMinor == null)
-                                    AppMessage.quoteTemplatePriceUnset.of(context)
+                                    AppMessage.quoteTemplatePriceUnset.of(
+                                      context,
+                                    )
                                   else
-                                    AppMessage.quoteTemplateEach.format(context, {
-                                      'currency': template.currency,
-                                      'amount': money(template.priceMinor, _currencies[template.currency] ?? _digits),
-                                    }),
+                                    AppMessage.quoteTemplateEach.format(
+                                      context,
+                                      {
+                                        'currency': template.currency,
+                                        'amount': money(
+                                          template.priceMinor,
+                                          _currencies[template.currency] ??
+                                              _digits,
+                                        ),
+                                      },
+                                    ),
                                 ].join(' · '),
                               ),
                               onTap: () =>
@@ -393,15 +416,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text(AppMessage.quoteReviewRefreshTitle.of(context)),
-          content: Text(AppMessage.quoteRefreshReviewContent.format(context, {
-            'revision': AppMessage.quoteRevisionValue.format(context, {
-              'revision': current.latest?.revision.toString() ??
-                  AppMessage.quoteNoneValue.of(context),
+          content: Text(
+            AppMessage.quoteRefreshReviewContent.format(context, {
+              'revision': AppMessage.quoteRevisionValue.format(context, {
+                'revision':
+                    current.latest?.revision.toString() ??
+                    AppMessage.quoteNoneValue.of(context),
+              }),
+              'draft': AppMessage.quoteDraftTitleValue.format(context, {
+                'title':
+                    current.draft?.title ??
+                    AppMessage.quoteNoneValue.of(context),
+              }),
             }),
-            'draft': AppMessage.quoteDraftTitleValue.format(context, {
-              'title': current.draft?.title ?? AppMessage.quoteNoneValue.of(context),
-            }),
-          })),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -479,9 +507,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice = AppMessage.quoteLinkJobFailed.of(context),
-        );
+        setState(() => _notice = AppMessage.quoteLinkJobFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -551,7 +577,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           ),
           DropdownButtonFormField<String>(
             initialValue: line.kind,
-            decoration: InputDecoration(labelText: AppMessage.lineType.of(context)),
+            decoration: InputDecoration(
+              labelText: AppMessage.lineType.of(context),
+            ),
             items: [
               DropdownMenuItem(
                 value: 'ITEM',
@@ -635,14 +663,18 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(AppMessage.invoiceAmountLine.format(context, {
-                'label': AppMessage.invoiceSubtotal.of(context),
-                'amount': '$_currency ${money(value.subtotal, _digits)}',
-              })),
-              Text(AppMessage.invoiceAmountLine.format(context, {
-                'label': AppMessage.invoiceTax.of(context),
-                'amount': '$_currency ${money(value.tax, _digits)}',
-              })),
+              Text(
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.invoiceSubtotal.of(context),
+                  'amount': '$_currency ${money(value.subtotal, _digits)}',
+                }),
+              ),
+              Text(
+                AppMessage.invoiceAmountLine.format(context, {
+                  'label': AppMessage.invoiceTax.of(context),
+                  'amount': '$_currency ${money(value.tax, _digits)}',
+                }),
+              ),
               const SizedBox(height: 8),
               Text(
                 AppMessage.invoiceAmountLine.format(context, {
@@ -727,7 +759,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                       !customers.any((customer) => customer.id == _customer))
                     DropdownMenuItem(
                       value: _customer,
-                      child: Text(AppMessage.quoteCustomerUnavailable.of(context)),
+                      child: Text(
+                        AppMessage.quoteCustomerUnavailable.of(context),
+                      ),
                     ),
                   for (final customer in customers.where(
                     (customer) =>
@@ -789,7 +823,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               DropdownButtonFormField<String>(
                 key: ValueKey('currency/$_currency'),
                 initialValue: _currency,
-                decoration: InputDecoration(labelText: AppMessage.quoteCurrency.of(context)),
+                decoration: InputDecoration(
+                  labelText: AppMessage.quoteCurrency.of(context),
+                ),
                 items: _currencies.keys
                     .map(
                       (currency) => DropdownMenuItem(

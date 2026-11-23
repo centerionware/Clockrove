@@ -76,9 +76,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
         return;
       }
       if (more && _page?.version != page.version) {
-        setState(
-          () => _error = AppMessage.historyLoadChanged.of(context),
-        );
+        setState(() => _error = AppMessage.historyLoadChanged.of(context));
       } else {
         setState(() {
           if (!more) {
@@ -90,9 +88,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
       }
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = AppMessage.historyListLoadFailed.of(context),
-        );
+        setState(() => _error = AppMessage.historyListLoadFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -333,9 +329,7 @@ class _GpsRangeDeletionDialogState
       }
     } catch (_) {
       if (mounted && scope == _scopeJobId) {
-        setState(
-          () => _error = AppMessage.historyPointCountFailed.of(context),
-        );
+        setState(() => _error = AppMessage.historyPointCountFailed.of(context));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -396,9 +390,11 @@ class _GpsRangeDeletionDialogState
                       contentPadding: EdgeInsets.zero,
                       value: widget.jobId,
                       enabled: !_loading && !_pending,
-                      title: Text(AppMessage.historyThisJobOnly.format(context, {
-                        'job': widget.jobName,
-                      })),
+                      title: Text(
+                        AppMessage.historyThisJobOnly.format(context, {
+                          'job': widget.jobName,
+                        }),
+                      ),
                     ),
                     RadioListTile<String?>(
                       contentPadding: EdgeInsets.zero,
@@ -421,9 +417,11 @@ class _GpsRangeDeletionDialogState
                 ),
               ],
               if (!_loading && _error == null && preview != null) ...[
-                Text(AppMessage.historyMatchingGpsPoints.format(context, {
-                  'label': label,
-                })),
+                Text(
+                  AppMessage.historyMatchingGpsPoints.format(context, {
+                    'label': label,
+                  }),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   count == 0

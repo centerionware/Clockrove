@@ -80,9 +80,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
       return outcome.committed;
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice = AppMessage.commandUnconfirmed.of(context),
-        );
+        setState(() => _notice = AppMessage.commandUnconfirmed.of(context));
       }
       return false;
     } finally {
@@ -166,9 +164,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
       await ref.read(automationApiProvider).retryMonitoring();
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice = AppMessage.automationRetryFailed.of(context),
-        );
+        setState(() => _notice = AppMessage.automationRetryFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -280,9 +276,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     } else if (outcome.conflict != null) {
       _feedback(AppMessage.automationClockInConflict.of(context));
     } else {
-      _feedback(AppMessage.automationClockInSuccess.format(context, {
-        'job': widget.jobName,
-      }));
+      _feedback(
+        AppMessage.automationClockInSuccess.format(context, {
+          'job': widget.jobName,
+        }),
+      );
     }
     ref.invalidate(timerSnapshotProvider);
     ref.invalidate(automationSnapshotProvider(widget.jobId));
@@ -434,7 +432,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     if (_pending != null)
                       TextButton(
                         onPressed: _busy ? null : () => _write(_pending!),
-                        child: Text(AppMessage.automationRetryChange.of(context)),
+                        child: Text(
+                          AppMessage.automationRetryChange.of(context),
+                        ),
                       ),
                   ]),
                 _group([
@@ -485,8 +485,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     const SizedBox(height: 8),
                     Text(
                       value.reviews.isNotEmpty
-                          ? AppMessage.automationDeparturePausedReview.of(context)
-                          : AppMessage.automationProvisionalDeparture.of(context),
+                          ? AppMessage.automationDeparturePausedReview.of(
+                              context,
+                            )
+                          : AppMessage.automationProvisionalDeparture.of(
+                              context,
+                            ),
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -526,9 +530,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text(AppMessage.automationBackgroundHelp.format(context, {
-                      'background': value.backgroundLabel,
-                    })),
+                    Text(
+                      AppMessage.automationBackgroundHelp.format(context, {
+                        'background': value.backgroundLabel,
+                      }),
+                    ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _locked ? null : () => _permission(value),
@@ -553,7 +559,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   if (value.sites.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text(AppMessage.automationAddPlacesHelp.of(context)),
+                      child: Text(
+                        AppMessage.automationAddPlacesHelp.of(context),
+                      ),
                     ),
                   for (final site in value.sites)
                     ListTile(
@@ -583,7 +591,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(AppMessage.automationUseSiteAutomation.of(context)),
+                    title: Text(
+                      AppMessage.automationUseSiteAutomation.of(context),
+                    ),
                     value: value.settings.enabled,
                     onChanged: _locked
                         ? null
@@ -591,8 +601,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                             if (enabled &&
                                 value.sites.every((site) => !site.enabled)) {
                               setState(
-                                () => _notice =
-                                    AppMessage.automationNeedSite.of(context),
+                                () => _notice = AppMessage.automationNeedSite
+                                    .of(context),
                               );
                               return;
                             }
@@ -609,8 +619,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(AppMessage.automationClockInArrival.of(context)),
-                    subtitle: Text(AppMessage.automationAfterExitEntry.of(context)),
+                    title: Text(
+                      AppMessage.automationClockInArrival.of(context),
+                    ),
+                    subtitle: Text(
+                      AppMessage.automationAfterExitEntry.of(context),
+                    ),
                     value: value.settings.autoStart,
                     onChanged: _locked || !value.settings.enabled
                         ? null
@@ -621,7 +635,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(AppMessage.automationClockOutDeparture.of(context)),
+                    title: Text(
+                      AppMessage.automationClockOutDeparture.of(context),
+                    ),
                     subtitle: Text(
                       value.settings.automaticDeparture
                           ? AppMessage.automationUseGrace.of(context)
@@ -639,9 +655,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(AppMessage.automationGraceTitle.of(context)),
-                      subtitle: Text(AppMessage.automationGraceMinutes.format(context, {
-                        'minutes': '${value.settings.graceMinutes}',
-                      })),
+                      subtitle: Text(
+                        AppMessage.automationGraceMinutes.format(context, {
+                          'minutes': '${value.settings.graceMinutes}',
+                        }),
+                      ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       enabled: !_locked && value.settings.enabled,
                       onTap: () => _grace(value),

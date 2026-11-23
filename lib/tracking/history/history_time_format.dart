@@ -13,10 +13,7 @@ String historyOriginLabel(BuildContext context, String origin) =>
 
 String historyUtc(BuildContext context, int instant) {
   try {
-    final value = DateTime.fromMillisecondsSinceEpoch(
-      instant,
-      isUtc: true,
-    );
+    final value = DateTime.fromMillisecondsSinceEpoch(instant, isUtc: true);
     final localizations = MaterialLocalizations.of(context);
     return AppMessage.historyUtcTimestamp.format(context, {
       'date': localizations.formatMediumDate(value),

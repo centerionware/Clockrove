@@ -51,9 +51,7 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
       });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = AppMessage.quoteListLoadFailed.of(context),
-        );
+        setState(() => _error = AppMessage.quoteListLoadFailed.of(context));
       }
     } finally {
       if (mounted) {

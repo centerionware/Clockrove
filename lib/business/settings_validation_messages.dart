@@ -32,8 +32,8 @@ String localizedBusinessFormatError(
     'INVALID_MINIMUM_HOURS' => AppMessage.validationMinimumHours.of(context),
     'AMOUNT_TOO_LONG' => AppMessage.quoteInvoiceTooLarge.of(context),
     'INVALID_AMOUNT_FORMAT' => AppMessage.quoteUnitPriceInvalid.of(context),
-    'INVALID_TASK_QUANTITY' || 'TASK_QUANTITY_OUT_OF_RANGE' =>
-      AppMessage.quoteQuantityInvalid.of(context),
+    'INVALID_TASK_QUANTITY' ||
+    'TASK_QUANTITY_OUT_OF_RANGE' => AppMessage.quoteQuantityInvalid.of(context),
     _ => AppMessage.businessInputInvalid.of(context),
   };
 }

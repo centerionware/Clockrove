@@ -101,9 +101,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
       }
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = AppMessage.businessLogoChooseError.of(context),
-        );
+        setState(() => _error = AppMessage.businessLogoChooseError.of(context));
       }
     } finally {
       if (mounted) {
@@ -140,8 +138,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
                       : AppMessage.businessLogoSelectedSemantic.of(context),
                 ),
               ),
-            if (png == null)
-              Text(AppMessage.businessLogoHelp.of(context)),
+            if (png == null) Text(AppMessage.businessLogoHelp.of(context)),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
