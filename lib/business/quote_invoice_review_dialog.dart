@@ -114,8 +114,7 @@ final class QuoteInvoiceReviewDialog extends StatelessWidget {
             Text(
               AppMessage.invoiceAmountLine.format(context, {
                 'label': AppMessage.invoiceTax.of(context),
-                'amount':
-                    '${data.currency} ${money(result.tax, data.digits)}',
+                'amount': '${data.currency} ${money(result.tax, data.digits)}',
               }),
             ),
             Text(

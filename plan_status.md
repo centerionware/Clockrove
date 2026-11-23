@@ -295,8 +295,12 @@ corrected. Follow-up run
 passed catalog generation and the localization audit, then stopped at the
 clean-formatting gate. Applied the exact formatter patch exported by that
 workflow. The formatted quote-to-invoice screen and its review dialog were
-split into focused files to remain below 1,000 lines. Full-coverage acceptance
-stays open for final exact-head validation and owner review of the results.
+split into focused files to remain below 1,000 lines. Run
+[45101858207](https://github.com/centerionware/Clockrove/actions/runs/45101858207)
+passed catalog generation and the localization audit but found one final wrap
+in the extracted invoice review dialog. Applied its exact formatter patch.
+Full-coverage acceptance stays open for exact-head CI and owner review of the
+results.
 
 The report below preserves earlier evidence and milestone history.
 
