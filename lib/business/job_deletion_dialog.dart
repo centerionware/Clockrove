@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'lifecycle_api.dart';
@@ -14,17 +15,16 @@ Future<bool?> confirmJobDeletion(
   context: context,
   barrierDismissible: false,
   builder: (dialog) => AlertDialog(
+    scrollable: true,
     title: Text(
-      'Permanently delete $name?',
+      AppMessage.confirmDeleteJob.format(dialog, {'job': name}),
       style: TextStyle(color: Theme.of(dialog).colorScheme.error),
     ),
-    content: const Text(
-      'This cannot be undone. Work history, GPS and the board will be deleted. Issued invoices, payments, receipts and billing history are kept, along with reusable task templates and customers. Copies you already exported remain outside Clockrove.',
-    ),
+    content: Text(AppMessage.deleteJobWarning.of(dialog)),
     actions: [
       TextButton(
         onPressed: () => Navigator.maybePop(dialog),
-        child: const Text('Keep job'),
+        child: Text(AppMessage.keepJob.of(dialog)),
       ),
       Theme(
         data: Theme.of(dialog).copyWith(
@@ -34,7 +34,7 @@ Future<bool?> confirmJobDeletion(
           ),
         ),
         child: BusinessCommand(
-          label: 'Delete permanently',
+          label: AppMessage.deletePermanently.of(dialog),
           create: () {
             final id = newBusinessId();
             return () => api.delete(id, version, jobId);

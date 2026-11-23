@@ -4,6 +4,48 @@ set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]] || { echo 'This check runs only in GitHub Actions.' >&2; exit 2; }
 : "${ANDROID_HOME:?}" "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
 source "$GITHUB_WORKSPACE/scripts/ci-adb-install.sh"
+
+declare -a clockrove_validation_failures=()
+declare -a clockrove_validation_failure_logs=()
+
+clockrove_record_validation_failure() {
+  local api="$1"
+  local label="$2"
+  local status="$3"
+  local log_path="${4:-}"
+  local failure="API $api: $label (exit $status)"
+  clockrove_validation_failures+=("$failure")
+  clockrove_validation_failure_logs+=("$log_path")
+}
+
+clockrove_run_validation_suite() {
+  local api="$1"
+  local label="$2"
+  shift 2
+  local log_directory="$GITHUB_WORKSPACE/build/device-test-results/api-$api"
+  local log_path="$log_directory/validation-$label.log"
+  mkdir -p "$log_directory"
+  if "$@" 2>&1 | tee "$log_path"; then
+    echo "Passed API $api: $label"
+  else
+    local status=$?
+    clockrove_record_validation_failure "$api" "$label" "$status" "$log_path"
+  fi
+}
+
+clockrove_require_files() {
+  local api="$1"
+  local label="$2"
+  shift 2
+  local missing=()
+  local path
+  for path in "$@"; do
+    [[ -s "$path" ]] || missing+=("${path##*/}")
+  done
+  if ((${#missing[@]})); then
+    clockrove_record_validation_failure "$api" "$label missing: ${missing[*]}" 1
+  fi
+}
 # Ubuntu runner prerequisite linked by the pinned emulator, even with no audio.
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends libpulse0
@@ -131,19 +173,24 @@ for clockrove_api in 24 35; do
     -- flutter test --no-pub integration_test/backup_crypto_benchmark_test.dart \
     -d emulator-5554 --reporter expanded > "$clockrove_benchmark_log" 2>&1; then
     cat "$clockrove_benchmark_log"
-    grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134601 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
-      "$clockrove_benchmark_log"
+    if ! grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134601 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
+      "$clockrove_benchmark_log"; then
+      clockrove_record_validation_failure \
+        "$clockrove_api" backup-crypto-benchmark-marker 1 "$clockrove_benchmark_log"
+    fi
   else
     clockrove_benchmark_status=$?
     cat "$clockrove_benchmark_log"
-    exit "$clockrove_benchmark_status"
+    clockrove_record_validation_failure "$clockrove_api" backup-crypto-benchmark \
+      "$clockrove_benchmark_status" "$clockrove_benchmark_log"
   fi
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
   # Run the picker before other device journeys mutate app and picker state.
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
-    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
+  clockrove_run_validation_suite "$clockrove_api" backup-picker \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
+      "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
   # Keep both APKs installed until the actual results and pages are captured.
   # Gradle's connected-test cleanup removes app-specific external files.
   echo "Installing app and instrumentation APKs on API $clockrove_api"
@@ -187,12 +234,18 @@ for clockrove_api in 24 35; do
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-timer-running.png "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-timer-running.png" || true
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures"
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures/" || true
-  [[ "$clockrove_instrumentation_failed" == false ]]
+  if [[ "$clockrove_instrumentation_failed" == true ]]; then
+    clockrove_record_validation_failure "$clockrove_api" native-instrumentation 1 \
+      "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
+  fi
   # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/invoice-previews/. "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/" || true
-  timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml"
-  python3 - "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml" <<'PY_DEVICE'
+  clockrove_device_results="$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/TEST-clockrove.xml"
+  if ! timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/clockrove-test-results.xml "$clockrove_device_results"; then
+    clockrove_record_validation_failure "$clockrove_api" native-test-results-pull 1
+  fi
+  if ! python3 - "$clockrove_device_results" <<'PY_DEVICE'
 import sys
 import xml.etree.ElementTree as E
 root = E.parse(sys.argv[1]).getroot()
@@ -216,40 +269,91 @@ for classname, count in expected.items():
     assert actual == count, (classname, actual, count)
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
+  then
+    clockrove_record_validation_failure "$clockrove_api" native-test-results-validation 1 \
+      "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
+  fi
 for clockrove_settings_capture in location-recording-global-off location-recording-global-on; do
-  test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/$clockrove_settings_capture.png"
+  clockrove_require_files "$clockrove_api" settings-captures \
+    "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/settings-captures/$clockrove_settings_capture.png"
 done
 for clockrove_gps_capture in gps-date-range-calendar gps-date-range-input gps-cancel-review gps-after-cancel gps-after-cancel-report gps-map-after-cancel gps-confirm-review gps-after-confirm gps-after-confirm-report; do
-  test -s "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures/$clockrove_gps_capture.png"
+  clockrove_require_files "$clockrove_api" gps-captures \
+    "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/gps-captures/$clockrove_gps_capture.png"
 done
   for clockrove_style in minimal classic modern; do
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.pdf"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.png"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.png"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf"
-    test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
+    clockrove_require_files "$clockrove_api" "invoice-preview-$clockrove_style" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.pdf" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-long-exact-invoice-$clockrove_style.png" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.pdf" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-wide-invoice-$clockrove_style.png" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.pdf" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style.png" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage.pdf" \
+      "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-invoice-$clockrove_style-multipage-page-1.png"
   done
-  test -s "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-settings-preview-screen.png"
+  clockrove_require_files "$clockrove_api" settings-preview \
+    "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api/clockrove-settings-preview-screen.png"
   # All original XML/PDF/widget evidence has been pulled before clearing the
   # ephemeral emulator for the independently numbered financial journey.
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
+  clockrove_run_validation_suite "$clockrove_api" billing \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-billing.sh" "$clockrove_api"
+  clockrove_run_validation_suite "$clockrove_api" copies \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-copies.sh" "$clockrove_api"
+  clockrove_run_validation_suite "$clockrove_api" payments \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-payments.sh" "$clockrove_api"
+  clockrove_run_validation_suite "$clockrove_api" quotes \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-quotes.sh" "$clockrove_api"
+  clockrove_run_validation_suite "$clockrove_api" task-media \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-task-media.sh" "$clockrove_api"
   # Run after native journeys because it clears app data and seeds synthetic
   # task media that must not affect those product journeys.
-  bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
-    "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
-  clockrove_run_flutter_integration_test "$clockrove_api" help-navigation \
+  clockrove_run_validation_suite "$clockrove_api" backup-memory-benchmark \
+    bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
+      "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
+  clockrove_run_validation_suite "$clockrove_api" help-navigation \
+    clockrove_run_flutter_integration_test "$clockrove_api" help-navigation \
     'CLOCKROVE_HELP_NAVIGATION version_and_search=true' \
     -- flutter test --no-uninstall --no-pub integration_test/help_navigation_test.dart \
-      -d emulator-5554 --reporter expanded \
-    | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"
+      -d emulator-5554 --reporter expanded
+  cp "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/validation-help-navigation.log" \
+    "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
 done
+
+if ((${#clockrove_validation_failures[@]})); then
+  echo 'Android validation failures:' >&2
+  for clockrove_failure in "${clockrove_validation_failures[@]}"; do
+    echo "::error title=Android validation failure::$clockrove_failure"
+  done
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    {
+      echo '## Android validation failures'
+      for index in "${!clockrove_validation_failures[@]}"; do
+        echo
+        printf -- '- **%s**\n' "${clockrove_validation_failures[$index]}"
+        log_path="${clockrove_validation_failure_logs[$index]:-}"
+        if [[ -s "$log_path" ]]; then
+          echo '  Diagnostic output:'
+          echo '  ```text'
+          tail -n 30 "$log_path" | cut -c1-400 | sed 's/^/  /'
+          echo '  ```'
+        else
+          echo '  The check failed before writing diagnostic output.'
+        fi
+      done
+    } >> "$GITHUB_STEP_SUMMARY"
+  fi
+  for index in "${!clockrove_validation_failures[@]}"; do
+    printf -- '- %s\n' "${clockrove_validation_failures[$index]}" >&2
+    log_path="${clockrove_validation_failure_logs[$index]:-}"
+    if [[ -s "$log_path" ]]; then
+      tail -n 30 "$log_path" | cut -c1-400 >&2
+    fi
+  done
+  exit 1
+fi
+
+echo 'All Android API 24 and 35 validation journeys passed.'

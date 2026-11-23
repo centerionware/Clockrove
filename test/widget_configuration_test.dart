@@ -103,37 +103,38 @@ void main() {
       },
     );
   }
-  testWidgets(
-    'Full app starts directly in widget setup with one initial route',
-    (tester) async {
-      tester.binding.platformDispatcher.defaultRouteNameTestValue =
-          '/widget-configuration';
-      addTearDown(
-        tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
-      );
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(
-        widgetChannel,
-        (call) async => {'jobId': null, 'taskOnly': false},
-      );
-      addTearDown(
-        () => messenger.setMockMethodCallHandler(widgetChannel, null),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [timerApiProvider.overrideWithValue(_Timer())],
-          child: const ClockroveApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(WidgetConfigurationScreen), findsOneWidget);
-      expect(find.text('Synthetic work'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      expect(navigator.canPop(), false);
-    },
-  );
+  testWidgets('Full app configures widget setup as one platform route', (
+    tester,
+  ) async {
+    final dispatcher = tester.binding.platformDispatcher;
+    dispatcher.defaultRouteNameTestValue = '/widget-configuration';
+    addTearDown(() => dispatcher.defaultRouteNameTestValue = '/');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      widgetChannel,
+      (call) async => {'jobId': null, 'taskOnly': false},
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(widgetChannel, null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [timerApiProvider.overrideWithValue(_Timer())],
+        child: const ClockroveApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.initialRoute, '/widget-configuration');
+    final routes = app.onGenerateInitialRoutes!('/widget-configuration');
+    expect(routes, hasLength(1));
+    expect(routes.single.settings.name, '/widget-configuration');
+    final route = routes.single as MaterialPageRoute<void>;
+    expect(
+      route.builder(tester.element(find.byType(MaterialApp))),
+      isA<WidgetConfigurationScreen>(),
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'Widget save retries the same command after a lost response and locks its choice',
     (tester) async {

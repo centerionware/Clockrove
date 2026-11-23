@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "Jam minimum, lalu waktu tepat"
+billingModeRoundTotalUp: "Bulatkan total waktu ke jam berikutnya"
+minimumHoursSummary: "{hours} jam"

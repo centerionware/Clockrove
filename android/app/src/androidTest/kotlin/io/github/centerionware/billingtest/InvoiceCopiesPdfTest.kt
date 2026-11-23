@@ -31,7 +31,7 @@ class InvoiceCopiesPdfTest {
     private val createdJobs = mutableListOf<String>()
     private val version get() = repository.snapshot().version
     private fun render(invoiceId: String, copyId: String?, name: String, expected: List<String>): InvoiceStore.Record {
-        val record = InvoiceDocuments.ensure(repository, invoiceId, copyId)
+        val record = InvoiceDocuments.ensure(app, repository, invoiceId, copyId)
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
         val bytes = requireNotNull(record.pdf)
@@ -107,7 +107,7 @@ class InvoiceCopiesPdfTest {
         val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
         val before = repository.snapshot().version
         for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
-            val pdf = InvoiceDocuments.settingsPreview(style, "USD", 2)
+            val pdf = InvoiceDocuments.settingsPreview(app, style, "USD", 2)
             val firstPage = InvoiceDocuments.preview(app, pdf, 0)
             assertEquals(0, firstPage["page"])
             assertEquals(1, firstPage["pages"])
@@ -160,7 +160,7 @@ class InvoiceCopiesPdfTest {
                 header = "", footer = "", total = "119.99", email = "", subject = "", body = "", lines = emptyList(),
                 subtotal = "111.11", taxRateUnits = 80000, taxAmount = "8.88",
             )
-            val bytes = InvoicePdf.generate(snapshot)
+            val bytes = InvoicePdf.generate(app, snapshot)
             val file = File.createTempFile("party-layout-", ".pdf", app.cacheDir)
             try {
                 file.writeBytes(bytes)
@@ -239,7 +239,7 @@ class InvoiceCopiesPdfTest {
             for (style in listOf("MINIMAL", "CLASSIC", "MODERN")) {
                 val token = style.lowercase(Locale.ROOT)
                 val id = invoice(style, token, BigInteger.valueOf(10000))
-                val original = InvoiceDocuments.ensure(repository, id)
+                val original = InvoiceDocuments.ensure(app, repository, id)
                 if (style == "MINIMAL") assertEquals("INV-1000", original.number)
                 pay(id, "$token-first", BigInteger.valueOf(3000))
                 val partial = render(id, "receipt-$token-first", "clockrove-receipt-partial-$token",
@@ -272,7 +272,7 @@ class InvoiceCopiesPdfTest {
                     "12000", line.quantityUnits, "12000") }
                 assertNull(repository.replaceInvoice("copy-pdf-replace-$token", version, InvoiceLifecycleStore.ReplacementDraft(id, replacementId, edits,
                     100000, "PRIVATE REPLACEMENT REASON", "UTC", true)).conflict)
-                val historicalNotice = requireNotNull(InvoiceDocuments.historicalNotice(repository, original))
+                val historicalNotice = requireNotNull(InvoiceDocuments.historicalNotice(app, repository, original))
                 val historicalEmail = InvoiceDocuments.email(app, original, repository.businessSnapshot().settings, historicalNotice)
                 assertTrue(historicalEmail.getStringExtra(android.content.Intent.EXTRA_TEXT)!!.startsWith(historicalNotice))
                 assertTrue(historicalNotice.contains("Do not pay this invoice"))

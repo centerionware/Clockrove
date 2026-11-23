@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'invoice_detail_screen.dart';
 import 'payment_api.dart';
@@ -36,10 +37,13 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.jobId == null ? 'Invoices' : 'Job invoices'),
+      title: Text(
+        (widget.jobId == null ? AppMessage.invoices : AppMessage.jobInvoices)
+            .of(context),
+      ),
       actions: [
         IconButton(
-          tooltip: 'Refresh invoices',
+          tooltip: AppMessage.refreshInvoices.of(context),
           onPressed: _refresh,
           icon: const Icon(Icons.refresh),
         ),
@@ -52,7 +56,7 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
           return Center(
             child: TextButton(
               onPressed: _refresh,
-              child: const Text('Retry invoices'),
+              child: Text(AppMessage.retryInvoices.of(context)),
             ),
           );
         }
@@ -63,8 +67,8 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
           return Center(
             child: Text(
               widget.jobId == null
-                  ? 'No invoices yet. Create one from a job report.'
-                  : 'No invoices prepared for this job.',
+                  ? AppMessage.noInvoices.of(context)
+                  : AppMessage.noJobInvoices.of(context),
             ),
           );
         }
@@ -78,19 +82,30 @@ class _InvoiceHistoryState extends ConsumerState<InvoiceHistory> {
                   subtitle: Text(
                     [
                       if (invoice.jobName.isNotEmpty)
-                        '${invoice.jobName}${invoice.jobDeleted ? ' · job deleted' : ''}',
+                        invoice.jobDeleted
+                            ? AppMessage.invoiceDeletedJob.format(context, {
+                                'job': invoice.jobName,
+                              })
+                            : invoice.jobName,
                       if (invoice.customer.isNotEmpty) invoice.customer,
                       '${invoice.currency} ${invoice.total}',
                       if (invoice.status != null)
-                        invoicePaymentStatus(invoice.status!),
+                        invoicePaymentStatus(invoice.status!).of(context),
                       if (invoice.due != null)
-                        'Balance due ${invoice.currency} ${money(invoice.due, invoice.digits)}',
+                        AppMessage.invoiceBalanceDueWithAmount.format(context, {
+                          'currency': invoice.currency,
+                          'amount': money(invoice.due, invoice.digits),
+                        }),
                       if (invoice.createdLabel.isNotEmpty)
-                        'Issued ${invoice.createdLabel}',
+                        AppMessage.invoiceIssuedOn.format(context, {
+                          'date': invoice.createdLabel,
+                        }),
                       if (invoice.legacy)
                         invoice.jobDeleted
-                            ? 'Historical source records unavailable'
-                            : 'Billed work needs review',
+                            ? AppMessage.invoiceHistoricalSourcesUnavailable.of(
+                                context,
+                              )
+                            : AppMessage.invoiceBilledWorkReview.of(context),
                     ].join('\n'),
                   ),
                   trailing: const Icon(Icons.chevron_right),

@@ -25,26 +25,24 @@ String? _parseMoney(String input, int digits, int maxDigits) {
   final entered = input.trim();
   if (entered.isEmpty) return null;
   if (entered.length > maxDigits + 5) {
-    throw const FormatException('Amount is too long.');
+    throw const FormatException('AMOUNT_TOO_LONG');
   }
   // Accept the common currency shorthand `.01` as `0.01`, without changing
   // the decimal parser or passing the amount through floating-point math.
   final value = entered.startsWith('.') ? '0$entered' : entered;
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value)) {
-    throw const FormatException(
-      'Enter a positive decimal amount, or leave blank.',
-    );
+    throw const FormatException('INVALID_AMOUNT_FORMAT');
   }
   final parts = value.split('.');
   final fraction = parts.length == 2 ? parts[1] : '';
   if (fraction.length > digits) {
-    throw FormatException('This currency allows $digits decimal places.');
+    throw FormatException('CURRENCY_DECIMAL_PLACES:$digits');
   }
   // Precision was validated above: shifting produces an exact integer, so
   // toBigInt cannot discard a fractional minor unit.
   final minor = Decimal.parse(value).shift(digits).toBigInt();
   if (minor.toString().length > maxDigits) {
-    throw const FormatException('Amount is too long.');
+    throw const FormatException('AMOUNT_TOO_LONG');
   }
   return minor.toString();
 }
@@ -57,18 +55,14 @@ String money(String? minor, int digits) => minor == null
 String parseTaskQuantity(String input) {
   final value = input.trim();
   if (!RegExp(r'^\d+(\.\d{1,4})?$').hasMatch(value)) {
-    throw const FormatException(
-      'Enter a quantity greater than 0, with up to 4 decimal places.',
-    );
+    throw const FormatException('INVALID_TASK_QUANTITY');
   }
   final parts = value.split('.');
   final units =
       BigInt.parse(parts[0]) * BigInt.from(10000) +
       BigInt.parse((parts.length == 2 ? parts[1] : '').padRight(4, '0'));
   if (units <= BigInt.zero || units > BigInt.parse('9223372036854775807')) {
-    throw const FormatException(
-      'Quantity must be greater than 0 and within the supported range.',
-    );
+    throw const FormatException('TASK_QUANTITY_OUT_OF_RANGE');
   }
   return units.toString();
 }

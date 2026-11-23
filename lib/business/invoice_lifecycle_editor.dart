@@ -2,12 +2,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_lifecycle_api.dart';
 import 'payment_api.dart';
 import 'report_api.dart';
+import 'settings_validation_messages.dart';
 import 'tax_rate.dart';
+
+String _invoiceLifecycleFormatError(BuildContext context, FormatException e) =>
+    switch (e.message) {
+      'INVALID_REPLACEMENT_TOTALS' => AppMessage.invoiceLinePriceRequired.of(
+        context,
+      ),
+      'REPLACEMENT_AMOUNT_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge.of(
+        context,
+      ),
+      'REPLACEMENT_BELOW_PAYMENT_CREDIT' =>
+        AppMessage.invoiceUseRefreshedBalance.of(context),
+      _ => localizedBusinessFormatError(context, e),
+    };
 
 class InvoiceLifecycleResult {
   const InvoiceLifecycleResult(this.replacementId);
@@ -29,16 +44,20 @@ class InvoiceLifecycleEditor extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Invoice correction')),
+        appBar: AppBar(
+          title: Text(AppMessage.invoiceCorrectionTitle.of(context)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Invoice correction')),
+        appBar: AppBar(
+          title: Text(AppMessage.invoiceCorrectionTitle.of(context)),
+        ),
         body: Center(
           child: TextButton(
             onPressed: () =>
                 ref.invalidate(invoiceLifecycleProvider(invoiceId)),
-            child: const Text('Retry invoice correction'),
+            child: Text(AppMessage.retryInvoiceCorrection.of(context)),
           ),
         ),
       ),
@@ -76,26 +95,28 @@ class _LineFields {
     quantity.dispose();
   }
 
-  InvoiceEditLine freeze(int digits) {
+  InvoiceEditLine freeze(BuildContext context, int digits) {
     if (original.amount == null) return original;
     if (title.text.trim().isEmpty) {
-      throw const FormatException('Every charged line needs a description.');
+      throw FormatException(
+        AppMessage.invoiceLineDescriptionRequired.of(context),
+      );
     }
     final unit = original.quantity != null;
     final priceMinor = unit
         ? parseMoney(price.text, digits)
         : parsePaymentMoney(price.text, digits);
     if (priceMinor == null) {
-      throw const FormatException('Enter a price for every included line.');
+      throw FormatException(AppMessage.invoiceLinePriceRequired.of(context));
     }
     final units = unit ? parseTaskQuantity(quantity.text) : null;
     return InvoiceEditLine(
       original.index,
       title.text.trim(),
       unit
-          ? 'Quantity and unit price\n${detail.text}'
+          ? '${AppMessage.invoiceQuantityPriceBasis.of(context)}\n${detail.text}'
           : priceMinor != original.amount && detail.text == original.detail
-          ? 'Adjusted amount. Original basis:\n${detail.text}'
+          ? '${AppMessage.invoiceAdjustedAmountBasis.of(context)}\n${detail.text}'
           : detail.text,
       unit ? taskAmount(priceMinor, units!) : priceMinor,
       quantity: units,
@@ -165,7 +186,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       '${_invoice.currency} ${money(minor, _invoice.digits)}';
   List<InvoiceEditLine> _freeze() => _lines
       .where((line) => line.included)
-      .map((line) => line.freeze(_invoice.digits))
+      .map((line) => line.freeze(context, _invoice.digits))
       .toList();
   String _addedMinor(InvoiceBillingPreview? preview) {
     if (_added == null) return '0';
@@ -174,9 +195,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
         preview.problem != null ||
         preview.currency != _invoice.currency ||
         preview.subtotal == null) {
-      throw const FormatException(
-        'Refresh and review the added work before issuing a replacement.',
-      );
+      throw FormatException(AppMessage.invoiceRefreshAddedWork.of(context));
     }
     return parsePaymentMoney(preview.subtotal!, _invoice.digits)!;
   }
@@ -212,6 +231,10 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
     });
   }
 
+  String _amountLine(AppMessage label, String amount) => AppMessage
+      .invoiceAmountLine
+      .format(context, {'label': label.of(context), 'amount': _amount(amount)});
+
   Future<void> _review(InvoiceBillingPreview? preview) async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_form.currentState!.validate()) return;
@@ -221,44 +244,55 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       if (widget.replace) {
         final lines = _freeze();
         if (!lines.any((line) => line.amount != null) && _added == null) {
-          throw const FormatException(
-            'Include a charged line or actual unbilled work.',
+          throw FormatException(
+            AppMessage.invoiceReplacementNeedsWork.of(context),
           );
         }
         final totals = _totals(preview);
-        summary =
-            'Replacement total: ${_amount(totals.total)}\nExisting credit: ${_amount(totals.credit)}\nRemaining balance: ${_amount(totals.due)}\n\n'
-            '${_released.length} work reservations will be released. All other reservations move to the replacement. Payments retain their original identity; no new cash is recorded.';
+        summary = [
+          AppMessage.invoiceReplacementReviewAmounts.format(context, {
+            'total': _amount(totals.total),
+            'credit': _amount(totals.credit),
+            'due': _amount(totals.due),
+          }),
+          AppMessage.invoiceReplacementReviewClaims.format(context, {
+            'count': MaterialLocalizations.of(context)
+                .formatDecimal(_released.length),
+          }),
+        ].join('\n\n');
       } else {
-        summary =
-            'Cancel ${_invoice.number} and its ${_amount(_invoice.due)} unpaid balance. Its work reservations will be released for billing again.';
+        summary = AppMessage.invoiceVoidReviewSummary.format(context, {
+          'number': _invoice.number,
+          'due': _amount(_invoice.due),
+        });
       }
     } on FormatException catch (error) {
-      setState(() => _message = error.message);
+      setState(() => _message = _invoiceLifecycleFormatError(context, error));
       return;
     }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          widget.replace
-              ? 'Void and replace ${_invoice.number}?'
-              : 'Void ${_invoice.number}?',
+          (widget.replace
+                  ? AppMessage.invoiceReviewReplaceTitle
+                  : AppMessage.invoiceReviewVoidTitle)
+              .format(context, {'number': _invoice.number}),
           style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
         content: SingleChildScrollView(
           child: Text(
-            '$summary\n\nThis cannot be undone in place. The original invoice and its history remain saved.',
+            '$summary\n\n${AppMessage.invoiceReviewPermanent.of(context)}',
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
+            child: Text(AppMessage.keepEditing.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm review'),
+            child: Text(AppMessage.confirmReview.of(context)),
           ),
         ],
       ),
@@ -313,17 +347,22 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       try {
         totals = _totals(preview);
       } on FormatException catch (error) {
-        previewError = error.message;
+        previewError = _invoiceLifecycleFormatError(context, error);
       }
     }
     return PopScope(
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.replace ? 'Void & replace' : 'Void invoice'),
+          title: Text(
+            (widget.replace
+                    ? AppMessage.voidAndReplaceInvoice
+                    : AppMessage.voidInvoice)
+                .of(context),
+          ),
           actions: [
             IconButton(
-              tooltip: 'Refresh correction details',
+              tooltip: AppMessage.refreshInvoiceCorrection.of(context),
               onPressed: _pending
                   ? null
                   : () => ref.invalidate(
@@ -349,16 +388,17 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
               ),
               Text('${_invoice.jobName} · ${_invoice.customer}'),
               const SizedBox(height: 12),
-              Text('Existing payment credit: ${_amount(_invoice.paid)}'),
+              Text(
+                _amountLine(
+                  AppMessage.invoiceExistingPaymentCredit,
+                  _invoice.paid,
+                ),
+              ),
               const SizedBox(height: 12),
               if (!_allowed)
-                const Text(
-                  'This invoice can no longer be corrected here. Return to its details and review its status.',
-                ),
+                Text(AppMessage.invoiceCorrectionUnavailable.of(context)),
               if (_stale || widget.refreshFailed) ...[
-                const Text(
-                  'Invoice data changed or refresh failed. Your draft is kept. Refresh, then review the latest balance before continuing.',
-                ),
+                Text(AppMessage.invoiceCorrectionStale.of(context)),
                 TextButton(
                   onPressed: _pending || widget.refreshFailed
                       ? null
@@ -366,13 +406,13 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           _version = _invoice.version;
                           _confirmed = false;
                         }),
-                  child: const Text('Use refreshed balance'),
+                  child: Text(
+                    AppMessage.invoiceUseRefreshedBalance.of(context),
+                  ),
                 ),
               ],
               if (widget.replace) ...[
-                const Text(
-                  'The original customer, currency, company and style are retained. Edit the new invoice below.',
-                ),
+                Text(AppMessage.invoiceReplacementRetainedDetails.of(context)),
                 const SizedBox(height: 20),
                 for (final line in _lines)
                   Card(
@@ -386,7 +426,11 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             value: line.included,
                             title: Text(line.original.title),
                             subtitle: line.original.amount == null
-                                ? const Text('Time detail · no separate charge')
+                                ? Text(
+                                    AppMessage.invoiceLineTimeNoCharge.of(
+                                      context,
+                                    ),
+                                  )
                                 : null,
                             onChanged: _pending
                                 ? null
@@ -397,11 +441,14 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           ),
                           if (line.included &&
                               line.original.amount != null) ...[
-                            _field(line.title, 'Line description'),
+                            _field(
+                              line.title,
+                              AppMessage.invoiceLineDescription.of(context),
+                            ),
                             if (line.original.quantity != null)
                               _field(
                                 line.quantity,
-                                'Quantity',
+                                AppMessage.invoiceLineQuantity.of(context),
                                 numeric: true,
                                 max: 32,
                                 identifier:
@@ -409,9 +456,12 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                               ),
                             _field(
                               line.price,
-                              line.original.quantity == null
-                                  ? 'Line amount (${_invoice.currency})'
-                                  : 'Unit price (${_invoice.currency})',
+                              (line.original.quantity == null
+                                      ? AppMessage.invoiceLineAmount
+                                      : AppMessage.invoiceLineUnitPrice)
+                                  .format(context, {
+                                    'currency': _invoice.currency,
+                                  }),
                               numeric: true,
                               max: 4101,
                               identifier:
@@ -419,7 +469,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             ),
                             _field(
                               line.detail,
-                              'Line details (printed)',
+                              AppMessage.invoiceLinePrintedDetails.of(context),
                               max: 12000,
                               lines: 2,
                             ),
@@ -434,7 +484,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   OutlinedButton.icon(
                     onPressed: _pending ? null : _chooseWork,
                     icon: const Icon(Icons.playlist_add),
-                    label: const Text('Add unbilled work'),
+                    label: Text(AppMessage.invoiceAddUnbilledWork.of(context)),
                   ),
                 if (_added != null) ...[
                   Text(
@@ -447,7 +497,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                             _added = null;
                             _confirmed = false;
                           }),
-                    child: const Text('Remove added work'),
+                    child: Text(AppMessage.invoiceRemoveAddedWork.of(context)),
                   ),
                   if (previewResult!.isLoading) const LinearProgressIndicator(),
                   if (previewResult.hasError)
@@ -457,19 +507,22 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                           : () => ref.invalidate(
                               invoiceBillingPreviewProvider(_added!),
                             ),
-                      child: const Text('Retry added work'),
+                      child: Text(AppMessage.invoiceRetryAddedWork.of(context)),
                     ),
                   if (preview != null) ...[
                     if (preview.problem != null)
-                      Text(switch (preview.problem) {
-                        'NO_BILLABLE_ITEMS' =>
-                          'No unbilled work remains in those dates.',
-                        'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on older invoices before adding new work.',
-                        'HOURLY_RATE_REQUIRED' => 'Set an hourly rate for the added work in job settings.',
-                        'TASK_PRICES_REQUIRED' =>
-                          'Set a unit price on every added task.',
-                        _ => 'The added work could not be prepared. Review the job report and date range.',
-                      }),
+                      Text(
+                        (switch (preview.problem) {
+                          'NO_BILLABLE_ITEMS' => AppMessage.invoiceAddedNoWork,
+                          'LEGACY_INVOICE_REVIEW_REQUIRED' =>
+                            AppMessage.invoiceAddedReviewOlder,
+                          'HOURLY_RATE_REQUIRED' =>
+                            AppMessage.invoiceAddedHourlyRate,
+                          'TASK_PRICES_REQUIRED' =>
+                            AppMessage.invoiceAddedTaskPrices,
+                          _ => AppMessage.invoiceAddedPrepareFailed,
+                        }).of(context),
+                      ),
                     for (final line in preview.lines)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -478,34 +531,30 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                         trailing: Text(line.amount),
                       ),
                     if (preview.excluded.isNotEmpty)
-                      const Text(
-                        'Previously invoiced work is excluded from these additions.',
-                      ),
+                      Text(AppMessage.invoiceAddedExcludesBilled.of(context)),
                   ],
                 ],
                 const SizedBox(height: 16),
                 _field(
                   _tax,
-                  'Replacement tax (%)',
+                  AppMessage.invoiceReplacementTax.of(context),
                   numeric: true,
                   max: 32,
                   identifier: 'invoice-correction-tax',
                 ),
                 if (widget.data.taxUnits == null)
-                  const Text(
-                    'Historical tax is unknown. Choose the replacement tax explicitly.',
-                  ),
+                  Text(AppMessage.invoiceHistoricalTaxUnknown.of(context)),
                 ExpansionTile(
-                  title: const Text('Review work reservations'),
+                  title: Text(AppMessage.invoiceReviewReservations.of(context)),
                   children: [
-                    const Text(
-                      'Removing an invoice line keeps its work reserved. Release only the specific work you intend to bill again. Line titles are not used to guess source links.',
-                    ),
+                    Text(AppMessage.invoiceReservationHelp.of(context)),
                     for (final claim in widget.data.claims)
                       CheckboxListTile(
                         value: _released.contains(claim.id),
                         title: Text(claim.label),
-                        subtitle: const Text('Release this reservation'),
+                        subtitle: Text(
+                          AppMessage.invoiceReleaseReservation.of(context),
+                        ),
                         onChanged: _pending
                             ? null
                             : (value) => setState(() {
@@ -526,12 +575,30 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text('Subtotal: ${_amount(totals.subtotal)}'),
-                          Text('Tax: ${_amount(totals.tax)}'),
-                          Text('Replacement total: ${_amount(totals.total)}'),
-                          Text('Credit: ${_amount(totals.credit)}'),
                           Text(
-                            'Balance due: ${_amount(totals.due)}',
+                            _amountLine(
+                              AppMessage.invoiceSubtotal,
+                              totals.subtotal,
+                            ),
+                          ),
+                          Text(_amountLine(AppMessage.invoiceTax, totals.tax)),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceReplacementTotal,
+                              totals.total,
+                            ),
+                          ),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceCredit,
+                              totals.credit,
+                            ),
+                          ),
+                          Text(
+                            _amountLine(
+                              AppMessage.invoiceBalanceDue,
+                              totals.due,
+                            ),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
@@ -540,9 +607,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   ),
                 if (previewError != null) Text(previewError),
               ] else
-                const Text(
-                  'Voiding releases this invoice’s work for billing again. The original document is retained and will no longer be collectible.',
-                ),
+                Text(AppMessage.invoiceVoidReleaseHelp.of(context)),
               const SizedBox(height: 20),
               Semantics(
                 identifier: 'invoice-correction-reason',
@@ -552,28 +617,26 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                   minLines: 2,
                   maxLines: 4,
                   maxLength: 4000,
-                  decoration: const InputDecoration(
-                    labelText: 'Internal correction reason',
+                  decoration: InputDecoration(
+                    labelText: AppMessage.invoiceInternalCorrectionReason.of(
+                      context,
+                    ),
                   ),
                   onChanged: _changed,
                   validator: (value) => (value?.trim().length ?? 0) < 10
-                      ? 'Explain the correction in at least 10 characters.'
+                      ? AppMessage.paymentCorrectionMinLength.of(context)
                       : null,
                 ),
               ),
-              const Text(
-                'The reason is retained in history and is not printed on the customer’s copy.',
-              ),
+              Text(AppMessage.invoiceCorrectionPrivacyHelp.of(context)),
               const SizedBox(height: 16),
               if (_message != null) Text(_message!),
               OutlinedButton(
                 onPressed: eligible ? () => _review(preview) : null,
-                child: const Text('Review correction'),
+                child: Text(AppMessage.reviewInvoiceCorrection.of(context)),
               ),
               if (_confirmed)
-                const Text(
-                  'Review confirmed. Confirm below to save this correction.',
-                ),
+                Text(AppMessage.invoiceReviewConfirmed.of(context)),
               const SizedBox(height: 12),
               FilledButtonTheme(
                 key: const ValueKey('invoice-lifecycle-submit'),
@@ -586,8 +649,8 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                 child: BusinessCommand(
                   key: const ValueKey('invoice-lifecycle-command'),
                   label: widget.replace
-                      ? 'Issue replacement invoice'
-                      : 'Confirm void',
+                      ? AppMessage.issueReplacementInvoice.of(context)
+                      : AppMessage.confirmInvoiceVoid.of(context),
                   enabled: eligible && _confirmed,
                   onPendingChanged: (value) {
                     if (mounted) setState(() => _pending = value);
@@ -597,13 +660,13 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                         _stale ||
                         !_allowed ||
                         widget.refreshFailed) {
-                      throw const FormatException(
-                        'Refresh and review this correction first.',
+                      throw FormatException(
+                        AppMessage.invoiceRefreshCorrectionFirst.of(context),
                       );
                     }
                     if (!_form.currentState!.validate()) {
-                      throw const FormatException(
-                        'Review the correction reason.',
+                      throw FormatException(
+                        AppMessage.invoiceReviewCorrectionReason.of(context),
                       );
                     }
                     final api = ref.read(invoiceLifecycleApiProvider),

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/history_api.dart';
 import 'business_api.dart';
 import 'business_command.dart';
@@ -24,15 +25,15 @@ class InvoicePaymentEditor extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
+        appBar: AppBar(title: Text(AppMessage.paymentTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
+        appBar: AppBar(title: Text(AppMessage.paymentTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(invoicePaymentsProvider(invoiceId)),
-            child: const Text('Retry invoice balance'),
+            child: Text(AppMessage.retryInvoiceBalance.of(context)),
           ),
         ),
       ),
@@ -109,7 +110,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         selected = await showDialog<HistoryTimeChoice>(
           context: context,
           builder: (context) => SimpleDialog(
-            title: const Text('Choose the UTC offset'),
+            title: Text(AppMessage.chooseUtcOffset.of(context)),
             children: [
               for (final choice in choices)
                 SimpleDialogOption(
@@ -124,16 +125,15 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
       setState(() {
         _received = selected;
         _timeError = choices.isEmpty
-            ? 'This time is skipped in that timezone. Choose another time.'
+            ? AppMessage.paymentSkippedTime.of(context)
             : selected == null
-            ? 'Choose the intended UTC offset before saving.'
+            ? AppMessage.paymentChooseOffset.of(context)
             : null;
       });
     } catch (_) {
       if (mounted) {
         setState(
-          () => _timeError =
-              'Check the timezone, then confirm the date and time again.',
+          () => _timeError = AppMessage.paymentCheckTimezone.of(context),
         );
       }
     } finally {
@@ -200,7 +200,11 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         '${localizations.formatMediumDate(calendar)} · ${localizations.formatTimeOfDay(TimeOfDay(hour: calendar.hour, minute: calendar.minute))}';
     final command = BusinessCommand(
       key: const ValueKey('invoice-payment-command'),
-      label: _correction ? 'Confirm reversal' : 'Confirm payment',
+      label:
+          (_correction
+                  ? AppMessage.confirmPaymentReversal
+                  : AppMessage.confirmPayment)
+              .of(context),
       enabled: !_locked && !widget.refreshFailed && available,
       onPendingChanged: (value) {
         if (mounted) setState(() => _pending = value);
@@ -209,14 +213,23 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         String? minor;
         if (!_correction) {
           try {
-            minor = parsePaymentMoney(_amount.text, data.digits);
+            try {
+              minor = parsePaymentMoney(_amount.text, data.digits);
+            } on FormatException {
+              throw FormatException(
+                AppMessage.paymentAmountFormat.format(context, {
+                  'digits': MaterialLocalizations.of(context)
+                      .formatDecimal(data.digits),
+                }),
+              );
+            }
             if (minor == null || BigInt.parse(minor) <= BigInt.zero) {
-              throw const FormatException('Enter an amount greater than zero.');
+              throw FormatException(
+                AppMessage.paymentPositiveAmount.of(context),
+              );
             }
             if (BigInt.parse(minor) > BigInt.parse(data.due)) {
-              throw const FormatException(
-                'This exceeds the current balance. Review the amount or refresh the invoice.',
-              );
+              throw FormatException(AppMessage.paymentAboveBalance.of(context));
             }
             setState(() => _amountError = null);
           } on FormatException catch (error) {
@@ -227,18 +240,19 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         final received = _received;
         if (received == null) {
           setState(
-            () => _timeError =
-                'Confirm the date, time and timezone before saving.',
+            () => _timeError = AppMessage.paymentConfirmFullDate.of(context),
           );
-          throw const FormatException('Confirm the highlighted date and time.');
+          throw FormatException(
+            AppMessage.paymentConfirmHighlightedDate.of(context),
+          );
         }
         if (_correction && _note.text.trim().length < 10) {
           setState(
-            () => _noteError =
-                'Add at least 10 characters explaining the correction.',
+            () =>
+                _noteError = AppMessage.paymentCorrectionMinLength.of(context),
           );
-          throw const FormatException(
-            'Explain why this payment needs correction.',
+          throw FormatException(
+            AppMessage.paymentExplainCorrection.of(context),
           );
         }
         final commandId = newBusinessId(),
@@ -284,14 +298,14 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         appBar: AppBar(
           title: Text(
             _correction
-                ? 'Correct payment'
+                ? AppMessage.correctInvoicePayment.of(context)
                 : widget.settle
-                ? 'Mark paid'
-                : 'Record payment',
+                ? AppMessage.markInvoicePaid.of(context)
+                : AppMessage.recordInvoicePayment.of(context),
           ),
           actions: [
             IconButton(
-              tooltip: 'Refresh invoice balance',
+              tooltip: AppMessage.refreshInvoiceBalance.of(context),
               onPressed: _pending
                   ? null
                   : () =>
@@ -311,20 +325,24 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             Text(data.number, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Balance due: ${data.currency} ${money(data.due, data.digits)}',
+              AppMessage.invoiceBalanceDueWithAmount.format(context, {
+                'currency': data.currency,
+                'amount': money(data.due, data.digits),
+              }),
             ),
             const SizedBox(height: 24),
             if (_correction) ...[
               Text(
-                'Reverse the recorded payment of ${data.currency} ${money(widget.reversal!.amount, data.digits)}.',
+                AppMessage.paymentReverseAmount.format(context, {
+                  'currency': data.currency,
+                  'amount': money(widget.reversal!.amount, data.digits),
+                }),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Its original receipt remains in history. Record the reason for correcting this entry.',
-              ),
+              Text(AppMessage.paymentReversalReceiptHelp.of(context)),
             ] else ...[
-              const Text('Record a payment you have received.'),
+              Text(AppMessage.paymentReceivedHelp.of(context)),
               const SizedBox(height: 16),
               Semantics(
                 identifier: 'invoice-payment-amount',
@@ -339,7 +357,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   autocorrect: false,
                   enableSuggestions: false,
                   decoration: InputDecoration(
-                    labelText: 'Payment amount (${data.currency})',
+                    labelText: AppMessage.paymentAmountField.format(context, {
+                      'currency': data.currency,
+                    }),
                     errorText: _amountError,
                     errorMaxLines: 4,
                   ),
@@ -350,17 +370,26 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   },
                 ),
               ),
-              _field(_method, 'Payment method (optional)', 80),
-              _field(_reference, 'Reference (optional)', 240),
+              _field(_method, AppMessage.paymentMethodField.of(context), 80),
+              _field(
+                _reference,
+                AppMessage.paymentReferenceField.of(context),
+                240,
+              ),
             ],
             const SizedBox(height: 20),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(_correction ? 'Correction effective' : 'Received on'),
+              title: Text(
+                (_correction
+                        ? AppMessage.paymentCorrectionEffective
+                        : AppMessage.paymentReceivedOn)
+                    .of(context),
+              ),
               subtitle: Text(dateLabel),
               trailing: IconButton(
-                tooltip: 'Change payment date and time',
+                tooltip: AppMessage.changePaymentDateTime.of(context),
                 onPressed: _locked ? null : _pick,
                 icon: const Icon(Icons.edit_calendar_outlined),
               ),
@@ -371,8 +400,8 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               maxLength: 120,
               autocorrect: false,
               decoration: InputDecoration(
-                labelText: 'Timezone',
-                helperText: 'For example UTC or America/New_York',
+                labelText: AppMessage.timezoneField.of(context),
+                helperText: AppMessage.timezoneFieldHelp.of(context),
                 errorText: _timeError,
                 errorMaxLines: 4,
               ),
@@ -385,7 +414,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               TextButton.icon(
                 onPressed: _locked ? null : () => _resolve(_local),
                 icon: const Icon(Icons.check),
-                label: const Text('Confirm date and time'),
+                label: Text(AppMessage.confirmPaymentDateTime.of(context)),
               ),
             if (_resolving) const LinearProgressIndicator(),
             const SizedBox(height: 20),
@@ -399,10 +428,9 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                 maxLength: 4000,
                 decoration: InputDecoration(
                   labelText: _correction
-                      ? 'Reason for correction'
-                      : 'Internal note (optional)',
-                  helperText:
-                      'Kept in your records; omitted from customer PDFs.',
+                      ? AppMessage.paymentCorrectionReason.of(context)
+                      : AppMessage.paymentInternalNote.of(context),
+                  helperText: AppMessage.paymentInternalNoteHelp.of(context),
                   helperMaxLines: 2,
                   errorText: _noteError,
                 ),
@@ -412,16 +440,11 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Confirmation saves this entry and opens its receipt.'),
+            Text(AppMessage.paymentConfirmReceiptHelp.of(context)),
             const SizedBox(height: 12),
             if (widget.refreshFailed)
-              const Text(
-                'Balance refresh failed. Your draft is kept. Refresh before saving.',
-              ),
-            if (!available)
-              const Text(
-                'This balance or payment changed. Review the latest invoice before continuing.',
-              ),
+              Text(AppMessage.paymentBalanceRefreshFailed.of(context)),
+            if (!available) Text(AppMessage.paymentBalanceChanged.of(context)),
             KeyedSubtree(
               key: const ValueKey('invoice-payment-submit'),
               child: _correction

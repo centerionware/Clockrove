@@ -239,7 +239,7 @@ class TaskConversationDeviceTest {
             assertEquals(false, repository.jobDetail(job).job.settings.locationRecordingOverride)
             assertFalse(repository.locationRecordingEnabled(job))
 
-            click("Task notes and photos")
+            click("Task notes & photos")
             waitFor("Task notes & photos")
             enterComment("Synthetic site progress note")
             reveal("Add comment")

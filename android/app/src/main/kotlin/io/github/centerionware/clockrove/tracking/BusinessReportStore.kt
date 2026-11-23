@@ -230,7 +230,7 @@ internal object BusinessReportStore {
                     record.jobId, record.document.job, record.customerId, record.document.customer,
                     record.document.currency, record.document.digits,
                     amounts.sales, amounts.tax, amounts.legacyTotal, amounts.labor, amounts.supplies, amounts.unclassified,
-                    null, "Invoice issued",
+                    null, "",
                 )
             }
             val void = voids[record.id]

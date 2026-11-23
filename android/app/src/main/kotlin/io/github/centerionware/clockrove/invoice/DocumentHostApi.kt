@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Handler
@@ -39,7 +41,7 @@ internal class DocumentHostApi(
                         val currency = requireNotNull(call.argument<String>("currency"))
                         val digits = requireNotNull(call.argument<Int>("digits"))
                         val page = requireNotNull(call.argument<Int>("page"))
-                        val pdf = InvoiceDocuments.settingsPreview(style, currency, digits, call.argument<ByteArray>("logo"))
+                        val pdf = InvoiceDocuments.settingsPreview(activity, style, currency, digits, call.argument<ByteArray>("logo"))
                         result.success(InvoiceDocuments.preview(activity, pdf, page))
                     }
                     "pickLogo" -> main.post {
@@ -60,8 +62,8 @@ internal class DocumentHostApi(
                         val id = requireNotNull(call.argument<String>(if (call.method == "quotePreview") "quoteId" else "invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
-                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(repository, record)))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
+                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(activity, repository, record)))
                     }
                     "saveReport" -> {
                         val selection = io.github.centerionware.clockrove.tracking.ReportStore.Selection(requireNotNull(call.argument<String>("firstDate")), requireNotNull(call.argument<String>("lastDate")), requireNotNull(call.argument<String>("timezone")), requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) })
@@ -70,14 +72,23 @@ internal class DocumentHostApi(
                         val expected = (rawVersion as Number).toLong()
                         if (snapshot.version != expected) { result.error("STALE_STATE", "Work changed. Refresh the report before exporting.", null); return@setMethodCallHandler }
                         val gps = requireNotNull(call.argument<Boolean>("gps"))
-                        val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(snapshot.report)).toByteArray(Charsets.UTF_8)
+                        val strings = localizedContext(activity)
+                        val filenameResource = if (gps) R.string.report_filename_gps
+                            else R.string.report_filename_work
+                        val filename = strings.getString(
+                            filenameResource,
+                            strings.getString(R.string.app_name),
+                            selection.firstDate,
+                            selection.lastDate,
+                        )
+                        val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(strings, snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(strings, snapshot.report)).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(bytes, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, "Clockrove-${if (gps) "gps" else "work"}-${selection.firstDate}-${selection.lastDate}.csv")
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, filename)
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -100,9 +111,17 @@ internal class DocumentHostApi(
                             return@setMethodCallHandler
                         }
                         val pdf = requireNotNull(call.argument<Boolean>("pdf"))
-                        val bytes = if (pdf) BusinessReportPdf.generate(snapshot.report)
-                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(snapshot.report).toByteArray(Charsets.UTF_8)
-                        val extension = if (pdf) "pdf" else "csv"
+                        val strings = localizedContext(activity)
+                        val filenameResource = if (pdf) R.string.business_report_filename_pdf
+                            else R.string.business_report_filename_csv
+                        val filename = strings.getString(
+                            filenameResource,
+                            strings.getString(R.string.app_name),
+                            selection.firstDate,
+                            selection.lastDate,
+                        )
+                        val bytes = if (pdf) BusinessReportPdf.generate(strings, snapshot.report)
+                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(strings, snapshot.report).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
@@ -111,7 +130,7 @@ internal class DocumentHostApi(
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                     addCategory(Intent.CATEGORY_OPENABLE)
                                     type = if (pdf) "application/pdf" else "text/csv"
-                                    putExtra(Intent.EXTRA_TITLE, "Clockrove-business-${selection.firstDate}-${selection.lastDate}.$extension")
+                                    putExtra(Intent.EXTRA_TITLE, filename)
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -120,14 +139,14 @@ internal class DocumentHostApi(
                     "saveInvoice", "saveQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(requireNotNull(record.pdf), result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(record))
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(activity, record))
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -136,9 +155,16 @@ internal class DocumentHostApi(
                     "emailInvoice", "shareInvoice", "emailQuote", "shareQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method.endsWith("Quote")) "quoteId" else "invoiceId"))
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(repository, id, call.argument<String>("copyId"))
-                        val notice = InvoiceDocuments.historicalNotice(repository, record)
-                        val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice) else Intent.createChooser(InvoiceDocuments.share(activity, record, notice), if (quote) "Share quote" else "Share invoice")
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
+                        val notice = InvoiceDocuments.historicalNotice(activity, repository, record)
+                        val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") {
+                            InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice)
+                        } else {
+                            val title = localizedContext(activity).getString(
+                                if (quote) R.string.share_quote else R.string.share_invoice,
+                            )
+                            Intent.createChooser(InvoiceDocuments.share(activity, record, notice), title)
+                        }
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)
                             else try { activity.startActivity(intent); result.success(null) }
@@ -163,7 +189,7 @@ internal class DocumentHostApi(
 
     private fun launchTaskPhoto(result: MethodChannel.Result, camera: Boolean) = main.post {
         if (!attached || activity.isFinishing) {
-            result.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null)
+            result.error("ACTIVITY_UNAVAILABLE", localizedContext(activity).getString(R.string.document_host_photo_activity_unavailable), null)
             return@post
         }
         if (externalActionPending()) {
@@ -179,7 +205,7 @@ internal class DocumentHostApi(
                 photoCaptureFile = file
                 Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
                     putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
-                    clipData = ClipData.newUri(activity.contentResolver, "Clockrove task photo", uri)
+                    clipData = ClipData.newUri(activity.contentResolver, localizedContext(activity).getString(R.string.document_host_task_photo_label), uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
             } else {
@@ -228,6 +254,7 @@ internal class DocumentHostApi(
             val camera = code == 0xcc45
             val file = photoCaptureFile
             photoCaptureFile = null
+            val strings = localizedContext(activity)
             if (status != Activity.RESULT_OK) {
                 file?.delete()
                 pending.success(null)
@@ -243,9 +270,9 @@ internal class DocumentHostApi(
                             (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
                         } ?: listOfNotNull(data?.data)
                         val uris = selected.distinctBy { it.toString() }
-                        if (uris.isEmpty()) throw TaskPhotoImportException("PHOTO_SOURCE_UNAVAILABLE", "No photos were selected")
+                        if (uris.isEmpty()) throw TaskPhotoImportException("PHOTO_SOURCE_UNAVAILABLE", strings.getString(R.string.document_host_no_photos_selected))
                         if (uris.size > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGES_PER_SELECTION) {
-                            throw TaskPhotoImportException("TASK_IMAGE_SELECTION_LIMIT", "Choose up to 10 photos at a time")
+                            throw TaskPhotoImportException("TASK_IMAGE_SELECTION_LIMIT", strings.getString(R.string.document_host_photo_selection_limit))
                         }
                         val normalized = ArrayList<ByteArray>(uris.size)
                         var totalBytes = 0L
@@ -254,17 +281,17 @@ internal class DocumentHostApi(
                             val bytes = input.use { LogoImages.normalize(activity, it).bytes }
                             totalBytes += bytes.size
                             if (totalBytes > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGE_BATCH_BYTES) {
-                                throw TaskPhotoImportException("TASK_IMAGE_BATCH_STORAGE_LIMIT", "Select a smaller group of photos (30 MB maximum per selection)")
+                                throw TaskPhotoImportException("TASK_IMAGE_BATCH_STORAGE_LIMIT", strings.getString(R.string.document_host_photo_batch_size_limit))
                             }
                             normalized.add(bytes)
                         }
                         normalized
                     }
-                    main.post { if (attached) pending.success(images) else pending.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null) }
+                    main.post { if (attached) pending.success(images) else pending.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_photo_activity_unavailable), null) }
                 } catch (failure: TaskPhotoImportException) {
                     main.post { pending.error(failure.code, failure.message, null) }
                 } catch (_: Exception) {
-                    main.post { pending.error("INVALID_TASK_PHOTO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) }
+                    main.post { pending.error("INVALID_TASK_PHOTO", strings.getString(R.string.document_host_photo_invalid_image), null) }
                 } finally {
                     file?.delete()
                 }
@@ -277,12 +304,13 @@ internal class DocumentHostApi(
             logoResult = null
             val uri = data?.data
             if (status != Activity.RESULT_OK || uri == null) { pending.success(null); return true }
+            val strings = localizedContext(activity)
             writer.execute {
                 try {
                     val asset = requireNotNull(activity.contentResolver.openInputStream(uri)).use { LogoImages.normalize(activity, it) }
                     LogoImages.remember(activity, asset)
                     main.post { pending.success(mapOf("token" to asset.id, "width" to asset.width, "height" to asset.height, "png" to asset.bytes)) }
-                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) } }
+                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", strings.getString(R.string.document_host_photo_invalid_image), null) } }
             }
             return true
         }
@@ -305,11 +333,12 @@ internal class DocumentHostApi(
 
     fun detach() {
         attached = false
-        logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
+        val strings = localizedContext(activity)
+        logoResult?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_logo_activity_unavailable), null)
         logoResult = null
-        save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
+        save?.result?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_invoice_activity_unavailable), null)
         save = null
-        photoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to attach a task photo", null)
+        photoResult?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_photo_activity_unavailable), null)
         photoResult = null
         photoCaptureFile?.delete()
         photoCaptureFile = null

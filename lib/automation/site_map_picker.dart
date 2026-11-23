@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../l10n/app_strings.dart';
+import '../l10n/app_localizations.dart';
 import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
@@ -89,8 +89,8 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The map attribution link could not be opened.'),
+        SnackBar(
+          content: Text(AppMessage.mapAttributionLinkFailed.of(context)),
         ),
       );
     }
@@ -112,7 +112,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The map could not be opened.')),
+        SnackBar(content: Text(AppMessage.mapNoExternalApp.of(context))),
       );
     }
   }
@@ -122,17 +122,17 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     final settingsState = ref.watch(mapProviderSettingsProvider);
     if (settingsState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Choose site centre')),
+        appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (settingsState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Choose site centre')),
+        appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-            child: const Text('Map settings could not be loaded. Retry.'),
+            child: Text(AppMessage.mapSettingsRetry.of(context)),
           ),
         ),
       );
@@ -141,7 +141,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     final tiles = _tilesFor(mapSettings);
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose site centre')),
+      appBar: AppBar(title: Text(AppMessage.chooseSiteCentre.of(context))),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => Column(
@@ -155,32 +155,32 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Tap the map to choose the centre of your work site.',
-                      ),
-                      const Text(AppStrings.mapPrivacy),
+                      Text(AppMessage.siteMapIntro.of(context)),
+                      Text(AppMessage.mapPrivacy.of(context)),
                       Text(
-                        'Radius: ${widget.radius.toStringAsFixed(widget.radius < 10 ? 1 : 0)} m. Accuracy and arrival/departure delivery can vary.',
+                        AppMessage.siteMapRadiusHelp.format(context, {
+                          'radius': widget.radius.toStringAsFixed(
+                            widget.radius < 10 ? 1 : 0,
+                          ),
+                        }),
                       ),
                       if (widget.latitude != null &&
                           widget.latitude!.abs() > 85)
-                        const Text(
-                          'This map cannot display polar locations. You can keep or edit those coordinates in the site form.',
-                        ),
+                        Text(AppMessage.siteMapPolarHelp.of(context)),
                       if (_failed)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const Text(
-                                'Map tiles are unavailable. Go back to enter coordinates or use current location.',
+                              Text(
+                                AppMessage.siteMapTilesUnavailable.of(context),
                               ),
                               if (_point != null)
                                 TextButton.icon(
                                   onPressed: _openExternalMap,
                                   icon: const Icon(Icons.open_in_new),
-                                  label: const Text('Open map'),
+                                  label: Text(AppMessage.openMap.of(context)),
                                 ),
                             ],
                           ),
@@ -255,7 +255,9 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 width: 48,
                                 height: 48,
                                 child: Semantics(
-                                  label: 'Selected site centre',
+                                  label: AppMessage.siteMapSelectedCentre.of(
+                                    context,
+                                  ),
                                   child: const DecoratedBox(
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -279,7 +281,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                       child: Column(
                         children: [
                           IconButton.filledTonal(
-                            tooltip: 'Zoom in',
+                            tooltip: AppMessage.zoomIn.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom + 1)
@@ -290,7 +292,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                           ),
                           const SizedBox(height: 8),
                           IconButton.filledTonal(
-                            tooltip: 'Zoom out',
+                            tooltip: AppMessage.zoomOut.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom - 1)
@@ -320,7 +322,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                         onPressed: _point == null || _failed
                             ? null
                             : () => Navigator.pop(context, _point),
-                        child: const Text('Use this centre'),
+                        child: Text(AppMessage.siteMapUseCentre.of(context)),
                       ),
                     ),
                   ],

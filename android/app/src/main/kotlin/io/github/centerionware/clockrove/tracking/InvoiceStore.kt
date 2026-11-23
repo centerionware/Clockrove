@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.text.SimpleDateFormat
@@ -56,20 +58,67 @@ internal object InvoiceStore {
     }
     fun amount(value: BigInteger, digits: Int): String = BigDecimal(value, digits).toPlainString()
     private fun instant(value: Long, zone: String): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS XXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
-    private fun duration(value: BigInteger): String = "${BigDecimal(value, 3).stripTrailingZeros().toPlainString()} seconds"
-    fun billableLines(report: ReportStore.Report): List<Line> {
+    private fun duration(value: BigInteger, strings: Context): String = strings.getString(
+        R.string.invoice_duration_seconds,
+        BigDecimal(value, 3).stripTrailingZeros().toPlainString(),
+    )
+    fun billableLines(report: ReportStore.Report, strings: Context): List<Line> {
         val total = report.totals.single()
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
         return if (total.mode == "TASK") report.tasks.map { task ->
             val price = task.priceMinor?.takeIf { task.currency == total.currency }
-            Line(task.title, "${TaskQuantityStore.format(task.quantityUnits)} × ${price?.let { amount(it, digits) + " ${total.currency} each" } ?: "Unit price not set"}\nCompleted ${instant(task.completed, report.selection.timezone)}",
+            val unitPrice = price?.let { strings.getString(
+                R.string.invoice_unit_price_each,
+                amount(it, digits),
+                total.currency,
+            ) } ?: strings.getString(R.string.invoice_unit_price_unset)
+            val detail = strings.getString(
+                R.string.invoice_task_line_detail,
+                TaskQuantityStore.format(task.quantityUnits),
+                unitPrice,
+                strings.getString(
+                    R.string.invoice_completed_at,
+                    instant(task.completed, report.selection.timezone),
+                ),
+            )
+            Line(task.title, detail,
                 price?.let { amount(TaskQuantityStore.amount(it, task.quantityUnits), digits) }.orEmpty(), task.quantityUnits.toString(), price?.toString(), task.chargeType)
         } + listOfNotNull(total.minimumTaskAdjustmentMinor.takeIf { it.signum() > 0 }?.let { fee ->
-            Line("Task-rate minimum fee", "Adjustment to the configured minimum invoice fee", amount(fee, digits))
+            Line(
+                strings.getString(R.string.invoice_task_minimum_fee),
+                strings.getString(R.string.invoice_task_minimum_fee_detail),
+                amount(fee, digits),
+            )
         })
-        else listOf(Line("Finalized work", "Actual work: ${duration(total.durationMillis)}\nBilled hours: ${total.billedHours ?: "0"}\n${total.billingRule ?: "Exact recorded time"} · ${total.hourlyMinor?.let { amount(it, digits) + " ${total.currency}/hour" } ?: "Hourly rate not set"}",
+        else listOf(Line(strings.getString(R.string.invoice_finalized_work), listOf(
+            strings.getString(
+                R.string.invoice_actual_work_duration,
+                duration(total.durationMillis, strings),
+            ),
+            strings.getString(R.string.invoice_billed_hours, total.billedHours ?: "0"),
+            strings.getString(
+                R.string.invoice_billing_basis,
+                strings.getString(
+                    if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP)
+                        R.string.invoice_round_time_up
+                    else R.string.invoice_minimum_then_exact,
+                ),
+                total.hourlyMinor?.let {
+                    strings.getString(
+                        R.string.invoice_rate_per_hour,
+                        amount(it, digits),
+                        total.currency,
+                    )
+                } ?: strings.getString(R.string.invoice_hourly_rate_unset),
+            ),
+        ).joinToString("\n"),
             total.amountMinor?.let { amount(it, digits) }.orEmpty(), chargeType = TaskClassification.LABOR)) + report.intervals.map {
-                Line(it.date, "${instant(it.start, report.selection.timezone)} — ${instant(it.end, report.selection.timezone)}\n${duration(BigInteger.valueOf(it.end - it.start))}", "")
+                Line(it.date, strings.getString(
+                    R.string.invoice_interval_detail,
+                    instant(it.start, report.selection.timezone),
+                    instant(it.end, report.selection.timezone),
+                    duration(BigInteger.valueOf(it.end - it.start), strings),
+                ), "")
             }
     }
     fun coverageProblem(preview: InvoiceCoverageStore.Preview): String? {
@@ -80,14 +129,14 @@ internal object InvoiceStore {
         if (report.intervals.size > 5000 || report.tasks.size > 2000) return "INVOICE_TOO_LARGE"
         return null
     }
-    fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long): String? {
+    fun prepare(db: SQLiteDatabase, id: String, selection: ReportStore.Selection, at: Long, strings: Context): String? {
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT id FROM invoices WHERE id=?", arrayOf(id)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         val preview = InvoiceCoverageStore.preview(db, ReportStore.read(db, selection))
-        return prepareReviewed(db, id, preview, at)
+        return prepareReviewed(db, id, preview, at, strings)
     }
     /** Quote caller supplies a native revalidated report, never client amounts. */
-    fun prepareReviewed(db: SQLiteDatabase, id: String, preview: InvoiceCoverageStore.Preview, at: Long,
+    fun prepareReviewed(db: SQLiteDatabase, id: String, preview: InvoiceCoverageStore.Preview, at: Long, strings: Context,
         agreement: QuoteInvoiceReviewStore.Reviewed? = null): String? {
         val selection = preview.report.selection
         if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || selection.jobIds.size != 1 || at < 0) return "INVALID_INVOICE"
@@ -113,19 +162,53 @@ internal object InvoiceStore {
         val tax = TaxRate.amount(amountMinor, taxUnits)
         val subtotal = amount(amountMinor, digits)
         val formatted = amount(amountMinor.add(tax), digits)
-        val quoteCaption = agreement?.let { "Quote ${it.context.issued.number} · Revision ${it.context.issued.revision}" }
-        val lines = billableLines(report).map { line -> if (quoteCaption == null) line else line.copy(detail = line.detail + "\n" + quoteCaption) }
+        val quoteCaption = agreement?.let {
+            strings.getString(
+                R.string.quote_email_reference,
+                it.context.issued.number,
+                it.context.issued.revision.toString(),
+            )
+        }
+        val lines = billableLines(report, strings).map { line ->
+            if (quoteCaption == null) line else line.copy(detail = line.detail + "\n" + quoteCaption)
+        }
         val values = mapOf("company_name" to company.companyName, "customer_name" to customer, "job_name" to job.settings.name,
             "invoice_number" to number, "amount" to formatted, "currency" to total.currency)
         val snapshot = Snapshot(number, at, company.invoiceStyle, total.currency, digits, company.companyName,
             listOf(company.companyEmail, company.companyPhone, company.companyAddress, company.companyWebsite).filter { it.isNotBlank() }.joinToString("\n"),
             customer, contact,
-            job.settings.name, "${selection.firstDate} — ${selection.lastDate} · ${selection.timezone}",
-            listOfNotNull(quoteCaption, if (total.mode == "TASK") "Completed billable tasks · quantity × unit price · each line rounded half up" else "Finalized time · ${total.billingRule ?: "exact recorded time"} · actual ${duration(total.durationMillis)} · billed ${total.billedHours ?: "0"} hours",
-                if (total.minimumTaskAdjustmentMinor.signum() > 0) "Minimum task-rate fee adjustment ${amount(total.minimumTaskAdjustmentMinor, digits)} ${total.currency}" else null,
-                "currency amount rounded half up to ${digits} decimal places").joinToString(" · "),
+            job.settings.name,
+            strings.getString(
+                R.string.invoice_period,
+                selection.firstDate,
+                selection.lastDate,
+                selection.timezone,
+            ),
+            listOfNotNull(
+                quoteCaption,
+                if (total.mode == "TASK") strings.getString(R.string.invoice_task_basis)
+                else strings.getString(
+                    R.string.invoice_time_basis,
+                    strings.getString(
+                        if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP)
+                            R.string.invoice_round_time_up
+                        else R.string.invoice_minimum_then_exact,
+                    ),
+                    duration(total.durationMillis, strings),
+                    total.billedHours ?: "0",
+                ),
+                if (total.minimumTaskAdjustmentMinor.signum() > 0)
+                    strings.getString(
+                        R.string.invoice_minimum_fee_adjustment,
+                        amount(total.minimumTaskAdjustmentMinor, digits),
+                        total.currency,
+                    )
+                else null,
+                strings.getString(R.string.invoice_currency_rounding, digits.toString()),
+            ).joinToString(" · "),
             company.invoiceHeader, company.invoiceFooter, formatted, email,
-            InvoiceEmailTemplate.expand(company.emailSubject, values, true), InvoiceEmailTemplate.expand(company.emailBody, values, false), lines,
+            InvoiceEmailTemplate.renderDefaultAware(strings, company, values, true),
+            InvoiceEmailTemplate.renderDefaultAware(strings, company, values, false), lines,
             subtotal, taxUnits, amount(tax, digits), billingPolicy = JSONObject(mapOf(
                 "mode" to total.mode, "hourlyMode" to total.policyHourlyMode, "minimumHours" to total.policyMinimumHours,
                 "minimumTaskFeeMinor" to total.policyTaskMinimumMinor?.toString(), "exactDurationMillis" to total.durationMillis.toString(),

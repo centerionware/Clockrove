@@ -1,0 +1,3 @@
+durationHoursMinutes: "{hours}h {minutes}m"
+durationHoursMinutesSeconds: "{hours}h {minutes}m {seconds}s"
+timeUtcOffset: " (UTC{offset})"

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/app_localizations.dart';
 import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
@@ -151,7 +152,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No map app or browser could be opened.')),
+        SnackBar(content: Text(AppMessage.mapNoExternalApp.of(context))),
       );
     }
   }
@@ -168,8 +169,8 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The map attribution link could not be opened.'),
+        SnackBar(
+          content: Text(AppMessage.mapAttributionLinkFailed.of(context)),
         ),
       );
     }
@@ -180,17 +181,21 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     final settingsState = ref.watch(mapProviderSettingsProvider);
     if (settingsState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Report location history')),
+        appBar: AppBar(
+          title: Text(AppMessage.reportLocationHistory.of(context)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (settingsState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Report location history')),
+        appBar: AppBar(
+          title: Text(AppMessage.reportLocationHistory.of(context)),
+        ),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(mapProviderSettingsProvider),
-            child: const Text('Map settings could not be loaded. Retry.'),
+            child: Text(AppMessage.mapSettingsRetry.of(context)),
           ),
         ),
       );
@@ -204,7 +209,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
     final selected = _selected;
     const ink = Color(0xff176b55);
     return Scaffold(
-      appBar: AppBar(title: const Text('Report location history')),
+      appBar: AppBar(title: Text(AppMessage.reportLocationHistory.of(context))),
       body: SafeArea(
         child: Column(
           children: [
@@ -226,20 +231,23 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                         '${selected.latitude.toStringAsFixed(6)}, ${selected.longitude.toStringAsFixed(6)}',
                       ),
                       Text(
-                        '${selected.label} · ${selected.accuracy.toStringAsFixed(0)} m accuracy',
+                        [
+                          selected.label,
+                          AppMessage.locationAccuracy.format(context, {
+                            'meters': selected.accuracy.toStringAsFixed(0),
+                          }),
+                        ].join(' · '),
                       ),
                     ] else
-                      const Text(
-                        'No recorded location samples in this report.',
-                      ),
-                    Text('Report timezone: ${widget.timezone}'),
-                    const Text(
-                      'Lines connect measured samples within a session, with gaps over 30 minutes left open. They are not verified routes. Map requests share the viewed area with the tile provider.',
+                      Text(AppMessage.reportMapNoSamples.of(context)),
+                    Text(
+                      AppMessage.reportMapTimezone.format(context, {
+                        'timezone': widget.timezone,
+                      }),
                     ),
+                    Text(AppMessage.reportMapSampleLines.of(context)),
                     if (visible.length != widget.points.length)
-                      const Text(
-                        'Some samples are outside the map coordinate range. They remain in the list and CSV.',
-                      ),
+                      Text(AppMessage.reportMapOutsideRange.of(context)),
                   ],
                 ),
               ),
@@ -343,7 +351,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       child: Column(
                         children: [
                           IconButton(
-                            tooltip: 'Zoom in',
+                            tooltip: AppMessage.zoomIn.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom + 1).clamp(2, 19),
@@ -351,7 +359,7 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                             icon: const Icon(Icons.add),
                           ),
                           IconButton(
-                            tooltip: 'Zoom out',
+                            tooltip: AppMessage.zoomOut.of(context),
                             onPressed: () => _controller.move(
                               _controller.camera.center,
                               (_controller.camera.zoom - 1).clamp(2, 19),
@@ -391,7 +399,12 @@ class _ReportMapState extends ConsumerState<ReportMap> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
                         label: Text(
-                          '${point.label}\n${point.accuracy.toStringAsFixed(0)} m accuracy',
+                          [
+                            point.label,
+                            AppMessage.locationAccuracy.format(context, {
+                              'meters': point.accuracy.toStringAsFixed(0),
+                            }),
+                          ].join('\n'),
                         ),
                         onPressed: () => _select(point),
                       ),

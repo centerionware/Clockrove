@@ -14,11 +14,11 @@ void main() {
 
   test('billing mode labels remain understandable', () {
     expect(
-      billingModeLabel(minimumThenExactBilling),
+      billingModeMessage(minimumThenExactBilling).english,
       'Minimum hours, then exact time',
     );
     expect(
-      billingModeLabel(roundTotalUpBilling),
+      billingModeMessage(roundTotalUpBilling).english,
       'Round total time up to the next hour',
     );
   });

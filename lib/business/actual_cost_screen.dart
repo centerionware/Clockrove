@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_providers.dart';
 import 'business_api.dart';
 import 'business_command.dart';
+import 'actual_cost_labels.dart';
 import 'report_api.dart';
 import 'settings_api.dart';
-
-const actualCostCategories = <String, String>{
-  'MATERIALS': 'Materials',
-  'SUBCONTRACT_LABOR': 'Subcontract labor',
-  'OTHER_DIRECT': 'Other direct cost',
-  'OVERHEAD': 'Overhead',
-};
+import 'settings_validation_messages.dart';
 
 String _costDateLabel(ActualCostEntry entry) {
   final local = DateTime.fromMillisecondsSinceEpoch(
@@ -84,7 +80,7 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Actual costs could not be loaded.';
+          _error = AppMessage.actualCostsLoadFailed.of(context);
         });
       }
     }
@@ -109,9 +105,7 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
       if (mounted) setState(() => _loadingMore = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('More costs could not be loaded. Try again.'),
-          ),
+          SnackBar(content: Text(AppMessage.actualCostsMoreFailed.of(context))),
         );
       }
     }
@@ -131,10 +125,10 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Actual costs'),
+      title: Text(AppMessage.reportDirectCosts.of(context)),
       actions: [
         IconButton(
-          tooltip: 'Refresh costs',
+          tooltip: AppMessage.actualCostsRefresh.of(context),
           onPressed: _load,
           icon: const Icon(Icons.refresh),
         ),
@@ -143,52 +137,54 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _loading ? null : () => _edit(),
       icon: const Icon(Icons.add),
-      label: const Text('Add cost'),
+      label: Text(AppMessage.actualCostsAdd.of(context)),
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : _error != null
         ? Center(
-            child: TextButton(onPressed: _load, child: Text('$_error Retry')),
+            child: TextButton(
+              onPressed: _load,
+              child: Text(AppMessage.retry.of(context)),
+            ),
           )
         : _entries.isEmpty
-        ? const Center(
+        ? Center(
             child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Text(
-                'No actual costs yet. Record receipts, subcontract labor and overhead here. Task supplies labels help you classify a cost, but never create one automatically.',
-              ),
+              padding: const EdgeInsets.all(32),
+              child: Text(AppMessage.actualCostsEmpty.of(context)),
             ),
           )
         : ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
-                child: Text(
-                  'Costs stay separate from invoice totals and are kept in their recorded currency.',
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                child: Text(AppMessage.actualCostsSeparate.of(context)),
               ),
               for (final entry in _entries)
                 Card(
                   child: ListTile(
                     title: Text(
                       entry.vendor.isEmpty
-                          ? actualCostCategories[entry.category] ??
-                                entry.category
+                          ? actualCostCategoryLabel(context, entry.category)
                           : entry.vendor,
                     ),
                     subtitle: Text(
                       [
-                        '${actualCostCategories[entry.category] ?? entry.category} · ${_costDateLabel(entry)}',
+                        '${actualCostCategoryLabel(context, entry.category)} · ${_costDateLabel(entry)}',
                         if (entry.jobName.isNotEmpty)
                           entry.taskName.isEmpty
                               ? entry.jobName
                               : '${entry.jobName} · ${entry.taskName}',
                         if (entry.customerName.isNotEmpty)
-                          'Customer ${entry.customerName}',
+                          AppMessage.actualCostCustomer.format(context, {
+                            'customer': entry.customerName,
+                          }),
                         if (entry.reference.isNotEmpty)
-                          'Reference ${entry.reference}',
+                          AppMessage.actualCostReference.format(context, {
+                            'reference': entry.reference,
+                          }),
                         if (entry.note.isNotEmpty) entry.note,
                       ].join('\n'),
                     ),
@@ -210,9 +206,7 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
                     padding: const EdgeInsets.all(16),
                     child: OutlinedButton(
                       onPressed: _loadingMore ? null : _loadMore,
-                      child: Text(
-                        _loadingMore ? 'Loading…' : 'Load more costs',
-                      ),
+                      child: Text(AppMessage.actualCostsLoadMore.of(context)),
                     ),
                   ),
                 ),
@@ -349,28 +343,24 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
 
   ActualCostEntry _draft() {
     if (!(_form.currentState?.validate() ?? false)) {
-      throw const FormatException('Fix the highlighted fields before saving.');
+      throw FormatException(AppMessage.actualCostFixFields.of(context));
     }
     final currency = _currency.text.trim().toUpperCase();
     if (_currencyValid != true) {
-      throw const FormatException(
-        'Choose a supported currency code and wait for it to validate.',
-      );
+      throw FormatException(AppMessage.actualCostCurrencyChoose.of(context));
     }
     final digits = _digits;
     final minor = parseMoney(_amount.text, digits);
     if (minor == null || BigInt.parse(minor) <= BigInt.zero) {
-      throw const FormatException('Enter a cost greater than zero.');
+      throw FormatException(AppMessage.paymentPositiveAmount.of(context));
     }
     if (_occurred.isAfter(DateTime.now())) {
-      throw const FormatException(
-        'Choose a cost date and time that is not in the future.',
-      );
+      throw FormatException(AppMessage.actualCostDateFuture.of(context));
     }
     final timezone = _timezone;
     if (timezone == null) {
-      throw const FormatException(
-        'The local timezone could not be read. Retry after refreshing the screen.',
+      throw FormatException(
+        AppMessage.actualCostTimezoneUnavailable.of(context),
       );
     }
     return ActualCostEntry(
@@ -393,18 +383,16 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Delete this cost?'),
-        content: const Text(
-          'This removes the cost from active totals. Its audit history is retained.',
-        ),
+        title: Text(AppMessage.actualCostDeleteQuestion.of(context)),
+        content: Text(AppMessage.actualCostDeleteHelp.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(dialog)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Delete cost'),
+            child: Text(AppMessage.actualCostDelete.of(dialog)),
           ),
         ],
       ),
@@ -423,7 +411,11 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
     final selectedJob = _jobId;
     return Scaffold(
       appBar: AppBar(
-        title: Text(old == null ? 'Add actual cost' : 'Edit actual cost'),
+        title: Text(
+          old == null
+              ? AppMessage.actualCostAddTitle.of(context)
+              : AppMessage.actualCostEditTitle.of(context),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -437,8 +429,8 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostAmount.of(context),
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                     validator: (v) {
@@ -446,11 +438,11 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                         final value = parseMoney(v ?? '', _digits);
                         if (value == null ||
                             BigInt.parse(value) <= BigInt.zero) {
-                          return 'Enter an amount greater than zero.';
+                          return AppMessage.paymentPositiveAmount.of(context);
                         }
                         return null;
                       } on FormatException catch (e) {
-                        return e.message;
+                        return localizedBusinessFormatError(context, e);
                       }
                     },
                   ),
@@ -463,20 +455,24 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                       setState(() => _currencyValid = null);
                       _setCurrencyDigits(value);
                     },
-                    decoration: const InputDecoration(
-                      labelText: 'Currency code',
-                      hintText: 'USD',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostCurrency.of(context),
+                      hintText: AppMessage.currencyCodeExample.of(context),
                     ),
                     validator: (v) {
                       if (!RegExp(r'^[A-Z]{3}$')
                           .hasMatch((v ?? '').trim().toUpperCase())) {
-                        return 'Enter a supported three-letter currency code.';
+                        return AppMessage.actualCostCurrencyInvalid.of(context);
                       }
                       if (_currencyValid == false) {
-                        return 'This currency code is not supported.';
+                        return AppMessage.actualCostCurrencyUnsupported.of(
+                          context,
+                        );
                       }
                       if (_currencyValid != true) {
-                        return 'Wait for the currency code to be checked.';
+                        return AppMessage.actualCostCurrencyChecking.of(
+                          context,
+                        );
                       }
                       return null;
                     },
@@ -484,14 +480,19 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: _category,
-                    decoration: const InputDecoration(
-                      labelText: 'Cost category',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostCategory.of(context),
                     ),
                     items: [
-                      for (final item in actualCostCategories.entries)
+                      for (final item in const [
+                        'MATERIALS',
+                        'SUBCONTRACT_LABOR',
+                        'OTHER_DIRECT',
+                        'OVERHEAD',
+                      ])
                         DropdownMenuItem(
-                          value: item.key,
-                          child: Text(item.value),
+                          value: item,
+                          child: Text(actualCostCategoryLabel(context, item)),
                         ),
                     ],
                     onChanged: (value) {
@@ -501,19 +502,19 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedJob,
-                    decoration: const InputDecoration(
-                      labelText: 'Job (optional)',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.optionalLinkedJob.of(context),
                     ),
                     items: [
-                      const DropdownMenuItem<String?>(
+                      DropdownMenuItem<String?>(
                         value: null,
-                        child: Text('General / unlinked cost'),
+                        child: Text(AppMessage.actualCostGeneral.of(context)),
                       ),
                       for (final job in widget.jobs)
                         DropdownMenuItem<String?>(
                           value: job.id,
                           child: Text(
-                            '${job.name}${job.archived ? ' · archived' : ''}',
+                            '${job.name}${job.archived ? ' · ${AppMessage.archived.of(context)}' : ''}',
                           ),
                         ),
                       if (selectedJob != null &&
@@ -521,7 +522,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                         DropdownMenuItem<String?>(
                           value: selectedJob,
                           child: Text(
-                            '${old?.jobName ?? 'Previously linked job'} · unavailable',
+                            '${old?.jobName ?? AppMessage.actualCostPreviouslyLinkedJob.of(context)} · ${AppMessage.actualCostLinkUnavailable.of(context)}',
                           ),
                         ),
                     ],
@@ -536,18 +537,22 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                         .watch(boardProvider(selectedJob))
                         .when(
                           loading: () => const LinearProgressIndicator(),
-                          error: (_, _) => const Text(
-                            'Tasks could not be loaded. You can leave the cost linked to its job only.',
+                          error: (_, _) => Text(
+                            AppMessage.actualCostTasksLoadFailed.of(context),
                           ),
                           data: (board) => DropdownButtonFormField<String?>(
                             initialValue: _taskId,
-                            decoration: const InputDecoration(
-                              labelText: 'Task (optional)',
+                            decoration: InputDecoration(
+                              labelText: AppMessage.actualCostTaskOptional.of(
+                                context,
+                              ),
                             ),
                             items: [
-                              const DropdownMenuItem<String?>(
+                              DropdownMenuItem<String?>(
                                 value: null,
-                                child: Text('No task selected'),
+                                child: Text(
+                                  AppMessage.actualCostNoTask.of(context),
+                                ),
                               ),
                               for (final task in board.cards)
                                 DropdownMenuItem<String?>(
@@ -561,7 +566,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                                 DropdownMenuItem<String?>(
                                   value: _taskId,
                                   child: Text(
-                                    '${old?.taskName ?? 'Previously linked task'} · unavailable',
+                                    '${old?.taskName ?? AppMessage.actualCostPreviouslyLinkedTask.of(context)} · ${AppMessage.actualCostLinkUnavailable.of(context)}',
                                   ),
                                 ),
                             ],
@@ -574,7 +579,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.event_outlined),
-                      title: const Text('Cost date and time'),
+                      title: Text(AppMessage.actualCostDateTime.of(context)),
                       subtitle: Text(
                         '${_occurred.year.toString().padLeft(4, '0')}-${_occurred.month.toString().padLeft(2, '0')}-${_occurred.day.toString().padLeft(2, '0')} · ${TimeOfDay.fromDateTime(_occurred).format(context)}${_timezone == null ? '' : ' · $_timezone'}',
                       ),
@@ -584,28 +589,30 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   ),
                   TextFormField(
                     controller: _vendor,
-                    decoration: const InputDecoration(
-                      labelText: 'Vendor (optional)',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostVendorOptional.of(
+                        context,
+                      ),
                     ),
                   ),
                   TextFormField(
                     controller: _reference,
-                    decoration: const InputDecoration(
-                      labelText: 'Receipt or reference (optional)',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostReceiptOptional.of(
+                        context,
+                      ),
                     ),
                   ),
                   TextFormField(
                     controller: _note,
                     minLines: 2,
                     maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes (optional)',
+                    decoration: InputDecoration(
+                      labelText: AppMessage.actualCostNotesOptional.of(context),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'This records a real cost. Supplies task labels are classification only and do not add ledger entries automatically.',
-                  ),
+                  Text(AppMessage.actualCostEntryHelp.of(context)),
                 ],
               ),
             ),
@@ -619,7 +626,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   children: [
                     if (_deleting && old != null)
                       BusinessCommand(
-                        label: 'Delete cost',
+                        label: AppMessage.actualCostDelete.of(context),
                         create: () {
                           final id = newBusinessId();
                           return () => ref
@@ -630,7 +637,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                       )
                     else
                       BusinessCommand(
-                        label: old == null ? 'Save cost' : 'Save changes',
+                        label: AppMessage.save.of(context),
                         create: () {
                           final entry = _draft();
                           final id = newBusinessId();
@@ -647,8 +654,8 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                           Icons.delete_outline,
                           color: Colors.red,
                         ),
-                        label: const Text(
-                          'Delete cost',
+                        label: Text(
+                          AppMessage.actualCostDelete.of(context),
                           style: TextStyle(color: Colors.red),
                         ),
                       ),

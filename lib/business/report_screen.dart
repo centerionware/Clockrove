@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'actual_cost_screen.dart';
 import 'business_financial_report_screen.dart';
@@ -8,10 +9,13 @@ import 'invoice_review_screen.dart';
 import 'invoice_history_screen.dart';
 import 'report_api.dart';
 import 'report_map.dart';
+import '../tracking/history/history_time_format.dart';
 
 String reportDate(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-String reportDuration(String millis) {
+({Map<String, String> arguments, bool hasSeconds}) reportDurationParts(
+  String millis,
+) {
   final value = BigInt.parse(millis);
   final hour = BigInt.from(3600000);
   final minute = BigInt.from(60000);
@@ -24,7 +28,19 @@ String reportDuration(String millis) {
       .toString()
       .padLeft(3, '0')
       .replaceFirst(RegExp(r'0+$'), '');
-  return '${hours}h ${minutes}m${remaining == BigInt.zero ? '' : ' $seconds${fraction.isEmpty ? '' : '.$fraction'}s'}';
+  final arguments = <String, String>{
+    'hours': '$hours',
+    'minutes': '$minutes',
+    'seconds': '$seconds${fraction.isEmpty ? '' : '.$fraction'}',
+  };
+  return (arguments: arguments, hasSeconds: remaining != BigInt.zero);
+}
+
+String reportDuration(BuildContext context, String millis) {
+  final parts = reportDurationParts(millis);
+  return parts.hasSeconds
+      ? AppMessage.durationHoursMinutesSeconds.format(context, parts.arguments)
+      : AppMessage.durationHoursMinutes.format(context, parts.arguments);
 }
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -84,7 +100,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
         );
       });
     } catch (_) {
-      if (mounted) setState(() => _error = 'Reports could not be loaded.');
+      if (mounted) {
+        setState(() => _error = AppMessage.reportUnavailable.of(context));
+      }
     }
   }
 
@@ -119,7 +137,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, update) => AlertDialog(
-          title: const Text('Report jobs'),
+          title: Text(AppMessage.reportJobs.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
@@ -130,7 +148,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? const Text('Archived') : null,
+                      subtitle: job.archived
+                          ? Text(AppMessage.archived.of(context))
+                          : null,
                       value: selected.contains(job.id),
                       onChanged: (v) => update(() {
                         if (v == true) {
@@ -149,7 +169,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply filters'),
+              child: Text(AppMessage.reportApplyFilters.of(context)),
             ),
           ],
         ),
@@ -176,16 +196,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
           .saveCsv(_selection!, report.version, gps);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(saved ? 'CSV saved.' : 'Export cancelled.')),
+          SnackBar(
+            content: Text(
+              (saved
+                      ? AppMessage.reportCsvSaved
+                      : AppMessage.reportExportCancelled)
+                  .of(context),
+            ),
+          ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Export could not be saved. Refresh the report and try again.',
-            ),
+          SnackBar(
+            content: Text(AppMessage.reportWorkExportFailed.of(context)),
           ),
         );
       }
@@ -199,10 +224,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
     final selection = _selection;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Work report'),
+        title: Text(AppMessage.workReport.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh report',
+            tooltip: AppMessage.refreshReport.of(context),
             onPressed: () {
               _load();
               if (selection != null) {
@@ -220,7 +245,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                   : TextButton(onPressed: _load, child: Text(_error!)),
             )
           : selection.jobs.isEmpty
-          ? const Center(child: Text('Create a job to view reports.'))
+          ? Center(child: Text(AppMessage.reportCreateJob.of(context)))
           : ref
                 .watch(reportProvider(selection))
                 .when(
@@ -233,21 +258,23 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'This report is unavailable. Retry or choose a smaller selection.',
-                          ),
+                          Text(AppMessage.reportUnavailable.of(context)),
                           TextButton(
                             onPressed: _range,
-                            child: const Text('Change dates'),
+                            child: Text(
+                              AppMessage.reportChangeDates.of(context),
+                            ),
                           ),
                           TextButton(
                             onPressed: _jobs,
-                            child: const Text('Choose jobs'),
+                            child: Text(
+                              AppMessage.reportChooseJobs.of(context),
+                            ),
                           ),
                           FilledButton(
                             onPressed: () =>
                                 ref.invalidate(reportProvider(selection)),
-                            child: const Text('Retry report'),
+                            child: Text(AppMessage.retryReport.of(context)),
                           ),
                         ],
                       ),
@@ -264,14 +291,26 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             onPressed: _invoicePending ? null : _range,
                             icon: const Icon(Icons.date_range),
                             label: Text(
-                              '${selection.firstDate} – ${selection.lastDate}',
+                              AppMessage.dateRangeLabel.format(context, {
+                                'first': MaterialLocalizations.of(context)
+                                    .formatCompactDate(
+                                      DateTime.parse(selection.firstDate),
+                                    ),
+                                'last': MaterialLocalizations.of(context)
+                                    .formatCompactDate(
+                                      DateTime.parse(selection.lastDate),
+                                    ),
+                              }),
                             ),
                           ),
                           OutlinedButton.icon(
                             onPressed: _invoicePending ? null : _jobs,
                             icon: const Icon(Icons.filter_list),
                             label: Text(
-                              '${selection.jobs.length} job${selection.jobs.length == 1 ? '' : 's'}',
+                              AppMessage.reportSelectedJobs.format(context, {
+                                'count': MaterialLocalizations.of(context)
+                                    .formatDecimal(selection.jobs.length),
+                              }),
                             ),
                           ),
                         ],
@@ -279,7 +318,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Text(
-                          'Report timezone: ${selection.timezone}. Only finalized selected work contributes to hourly totals.',
+                          AppMessage.reportTimezoneHourlyHelp.format(context, {
+                            'timezone': selection.timezone,
+                          }),
                         ),
                       ),
                       Align(
@@ -294,7 +335,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           icon: const Icon(
                             Icons.account_balance_wallet_outlined,
                           ),
-                          label: const Text('Actual cost ledger'),
+                          label: Text(AppMessage.reportDirectCosts.of(context)),
                         ),
                       ),
                       Align(
@@ -309,7 +350,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             ),
                           ),
                           icon: const Icon(Icons.assessment_outlined),
-                          label: const Text('Tax & financial report'),
+                          label: Text(AppMessage.taxFinances.of(context)),
                         ),
                       ),
                       for (final total in report.totals)
@@ -328,27 +369,58 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 const SizedBox(height: 8),
                                 Text(
                                   total.amount == null
-                                      ? 'Amount not available'
+                                      ? AppMessage.reportAmountUnavailable.of(
+                                          context,
+                                        )
                                       : '${total.currency} ${money(total.amount, total.digits)}',
                                   style: Theme.of(context)
                                       .textTheme
                                       .headlineSmall,
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  total.mode == 'TASK'
-                                      ? 'Completed billable tasks${total.missing > 0 ? ' · ${total.missing} prices missing' : ''}'
-                                      : total.rate == null
-                                      ? 'Hourly rate not set for ${total.currency}'
-                                      : '${reportDuration(total.duration)} × ${total.currency} ${money(total.rate, total.digits)}/hour',
-                                ),
+                                Text(switch ((total.mode, total.rate)) {
+                                  ('TASK', _) when total.missing > 0 =>
+                                    AppMessage.reportTaskPricesMissing.format(
+                                      context,
+                                      {'count': '${total.missing}'},
+                                    ),
+                                  ('TASK', _) =>
+                                    AppMessage.reportCompletedBillableTasks.of(
+                                      context,
+                                    ),
+                                  (_, null) =>
+                                    AppMessage.reportHourlyRateUnset.format(
+                                      context,
+                                      {'currency': total.currency},
+                                    ),
+                                  (_, final rate) =>
+                                    AppMessage.reportHourlyBreakdown.format(
+                                      context,
+                                      {
+                                        'duration': reportDuration(
+                                          context,
+                                          total.duration,
+                                        ),
+                                        'currency': total.currency,
+                                        'rate': money(rate, total.digits),
+                                      },
+                                    ),
+                                }),
                                 if (total.mode == 'TASK')
                                   Text(
-                                    '${reportDuration(total.duration)} recorded · billed by task',
+                                    AppMessage.reportTaskDuration.format(
+                                      context,
+                                      {
+                                        'duration': reportDuration(
+                                          context,
+                                          total.duration,
+                                        ),
+                                      },
+                                    ),
                                   ),
                                 if (total.mode == 'HOURLY')
-                                  const Text(
-                                    'Rounded once for the selected total, half up to the currency minor unit.',
+                                  Text(
+                                    AppMessage.reportRoundingNote.of(context),
                                   ),
                               ],
                             ),
@@ -365,7 +437,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ? null
                                 : () => _csv(report, false),
                             icon: const Icon(Icons.file_download_outlined),
-                            label: const Text('CSV export'),
+                            label: Text(AppMessage.reportExportCsv.of(context)),
                           ),
                           if (report.totals.length == 1)
                             SizedBox(
@@ -387,15 +459,17 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ? null
                                 : () => _csv(report, true),
                             icon: const Icon(Icons.location_on_outlined),
-                            label: const Text('GPS CSV'),
+                            label: Text(
+                              AppMessage.reportExportGpsCsv.of(context),
+                            ),
                           ),
                         ],
                       ),
                       if (report.totals.length != 1)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
                           child: Text(
-                            'Select one job to prepare a customer invoice. Currencies remain separate.',
+                            AppMessage.reportInvoiceScopeHelp.of(context),
                           ),
                         ),
                       if (selection.jobs.length == 1)
@@ -408,7 +482,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             ),
                           ),
                           icon: const Icon(Icons.receipt_long_outlined),
-                          label: const Text('Prepared invoices'),
+                          label: Text(
+                            AppMessage.reportPreparedInvoices.of(context),
+                          ),
                         ),
                       const SizedBox(height: 24),
                       OutlinedButton.icon(
@@ -425,7 +501,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               ),
                         icon: const Icon(Icons.map_outlined),
                         label: Text(
-                          'Map · ${report.points.length} measured samples',
+                          AppMessage.reportMapSamples.format(context, {
+                            'count': '${report.points.length}',
+                          }),
                         ),
                       ),
                       if (report.excluded.isNotEmpty)
@@ -436,14 +514,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Excluded from final totals and exports',
+                                  AppMessage.reportExcluded.of(context),
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium,
                                 ),
                                 for (final item in report.excluded)
                                   Text(
-                                    '${item.label} · ${item.reason == 'NEEDS_REVIEW' ? 'Needs review' : 'Active or provisional'}',
+                                    [
+                                      item.label,
+                                      (item.reason == 'NEEDS_REVIEW'
+                                              ? AppMessage.reportNeedsReview
+                                              : AppMessage
+                                                    .reportActiveOrProvisional)
+                                          .of(context),
+                                    ].join(' · '),
                                   ),
                               ],
                             ),
@@ -451,25 +536,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Finalized time',
+                        AppMessage.reportFinalizedTime.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       if (report.intervals.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Text('No finalized work in this selection.'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            AppMessage.reportNoFinalizedWork.of(context),
+                          ),
                         ),
                       for (final interval in report.intervals)
                         Card(
                           child: ListTile(
                             title: Text('${interval.date} · ${interval.name}'),
                             subtitle: Text(
-                              '${interval.startLabel}\n${interval.endLabel}\n${interval.origin.toLowerCase()}',
+                              '${interval.startLabel}\n${interval.endLabel}\n${historyOriginLabel(context, interval.origin)}',
                             ),
                             trailing: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 120),
                               child: Text(
                                 reportDuration(
+                                  context,
                                   (interval.end - interval.start).toString(),
                                 ),
                                 textAlign: TextAlign.end,
@@ -479,14 +567,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Completed billable tasks',
+                        AppMessage.reportCompletedBillableTasks.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       if (report.tasks.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
-                            'No completed billable tasks in this selection.',
+                            AppMessage.reportNoBillableTasks.of(context),
                           ),
                         ),
                       for (final task in report.tasks)
@@ -494,13 +582,32 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           child: ListTile(
                             title: Text(task.title),
                             subtitle: Text(
-                              '${task.date}\n${report.totals.firstWhere((t) => t.jobId == task.jobId).mode == 'HOURLY' ? 'Hourly job · task price kept separately' : 'Quantity ${taskQuantity(task.quantityUnits)} · included in task billing'}',
+                              [
+                                task.date,
+                                report.totals
+                                            .firstWhere(
+                                              (t) => t.jobId == task.jobId,
+                                            )
+                                            .mode ==
+                                        'HOURLY'
+                                    ? AppMessage.reportHourlyTaskPrice.of(
+                                        context,
+                                      )
+                                    : AppMessage.reportBilledQuantity.format(
+                                        context,
+                                        {
+                                          'quantity': taskQuantity(
+                                            task.quantityUnits,
+                                          ),
+                                        },
+                                      ),
+                              ].join('\n'),
                             ),
                             trailing: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 140),
                               child: Text(
                                 task.price == null
-                                    ? 'Price not set'
+                                    ? AppMessage.reportPriceUnset.of(context)
                                     : '${task.currency} ${money(taskAmount(task.price, task.quantityUnits), report.totals.firstWhere((t) => t.jobId == task.jobId).digits)}',
                                 textAlign: TextAlign.end,
                               ),
@@ -523,7 +630,7 @@ class _InvoiceButton extends StatelessWidget {
   final ValueChanged<bool> onPendingChanged;
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
-    label: const Text('PDF invoice'),
+    label: Text(AppMessage.reportExportPdf.of(context)),
     icon: const Icon(Icons.receipt_long_outlined),
     onPressed: () => Navigator.push(
       context,

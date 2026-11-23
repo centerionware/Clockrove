@@ -8,9 +8,12 @@ import 'settings_api.dart';
 import 'logo_controls.dart';
 import 'email_template.dart';
 import 'tax_rate.dart';
+import 'settings_validation_messages.dart';
 import 'invoice_style_preview_screen.dart';
 import 'invoice_billing_policy.dart';
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/language_setting.dart';
 import '../maps/map_provider_settings_screen.dart';
 import '../backup/backup_export_screen.dart';
 import '../backup/backup_restore_screen.dart';
@@ -21,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(
-      title: const Text('Settings'),
+      title: Text(AppMessage.settings.of(context)),
       actions: const [HelpButton()],
     ),
     body: ref
@@ -32,7 +35,7 @@ class SettingsScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: FilledButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry settings'),
+              child: Text(AppMessage.retrySettings.of(context)),
             ),
           ),
           data: (data) => _CompanyForm(initial: data.settings),
@@ -49,9 +52,8 @@ class _CompanyForm extends ConsumerStatefulWidget {
 
 class _CompanyFormState extends ConsumerState<_CompanyForm> {
   bool _logoBusy = false;
-  String? _subjectError,
-      _bodyError,
-      _taxError,
+  AppMessage? _subjectError, _bodyError;
+  String? _taxError,
       _receivablesError,
       _minimumHoursErrorText,
       _minimumTaskFeeError;
@@ -85,15 +87,44 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
   late final _footer = TextEditingController(
     text: widget.initial.invoiceFooter,
   );
-  late final _subject = TextEditingController(
-    text: widget.initial.emailSubject,
-  );
-  late final _body = TextEditingController(text: widget.initial.emailBody);
+  final _subject = TextEditingController();
+  final _body = TextEditingController();
+  String? _displayedDefaultSubject;
+  String? _displayedDefaultBody;
   late String _currency = widget.initial.currency,
       _style = widget.initial.invoiceStyle;
   late String _hourlyBillingMode = widget.initial.hourlyBillingMode;
   late int _digits = widget.initial.digits;
   late bool _defaultLocationRecording = widget.initial.defaultLocationRecording;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final subjectDefault = AppMessage.invoiceEmailDefaultSubject.of(context);
+    final bodyDefault = AppMessage.invoiceEmailDefaultBody.of(context);
+    if (_displayedDefaultSubject == null) {
+      _subject.text =
+          widget.initial.emailSubject ==
+              AppMessage.invoiceEmailDefaultSubject.english
+          ? subjectDefault
+          : widget.initial.emailSubject;
+      _body.text =
+          widget.initial.emailBody == AppMessage.invoiceEmailDefaultBody.english
+          ? bodyDefault
+          : widget.initial.emailBody;
+    } else {
+      if (_subject.text == _displayedDefaultSubject &&
+          _displayedDefaultSubject != subjectDefault) {
+        _subject.text = subjectDefault;
+      }
+      if (_body.text == _displayedDefaultBody &&
+          _displayedDefaultBody != bodyDefault) {
+        _body.text = bodyDefault;
+      }
+    }
+    _displayedDefaultSubject = subjectDefault;
+    _displayedDefaultBody = bodyDefault;
+  }
+
   @override
   void dispose() {
     for (final c in [
@@ -158,16 +189,21 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       parseMoney(_minimumTaskFee.text, _digits);
       return null;
     } on FormatException {
-      return 'Enter a valid amount in $_currency, or enter 0 to disable the minimum.';
+      return AppMessage.validationTaskFee.format(context, {
+        'currency': _currency,
+      });
     }
   }
 
   void _validateDraft() {
     final subject = emailTemplateError(_subject.text, subject: true);
     final body = emailTemplateError(_body.text, subject: false);
-    final tax = taxPercentError(_tax.text);
-    final receivables = accountingEmailError(_receivables.text);
-    final minimumHours = minimumHoursError(_minimumHours.text);
+    final tax = settingsTaxInputError(context, _tax.text);
+    final receivables = settingsReceivablesInputError(
+      context,
+      _receivables.text,
+    );
+    final minimumHours = settingsHoursInputError(context, _minimumHours.text);
     final minimumTaskFee = _taskFeeError();
     setState(() {
       _subjectError = subject;
@@ -178,9 +214,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       _minimumTaskFeeError = minimumTaskFee;
     });
     if (subject != null || body != null) {
-      throw const FormatException(
-        'Fix the highlighted email subject and body templates before saving. Use the supported placeholders shown above.',
-      );
+      throw FormatException(AppMessage.invoiceEmailFixTemplates.of(context));
     }
     if (tax != null) throw FormatException(tax);
     if (receivables != null) throw FormatException(receivables);
@@ -213,13 +247,11 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
       padding: const EdgeInsets.all(24),
       children: [
         Text(
-          'Backup and restore',
+          AppMessage.backupAndRestore.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Save an encrypted copy of your records. When you restore a backup, review the proposed changes before applying them.',
-        ),
+        Text(AppMessage.settingsBackupHelp.of(context)),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const ValueKey('settings-export-backup'),
@@ -227,7 +259,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             MaterialPageRoute<void>(builder: (_) => const BackupExportScreen()),
           ),
           icon: const Icon(Icons.backup_outlined),
-          label: const Text('Export encrypted backup'),
+          label: Text(AppMessage.exportBackup.of(context)),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
@@ -245,14 +277,21 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             }
           },
           icon: const Icon(Icons.restore),
-          label: const Text('Restore encrypted backup'),
+          label: Text(AppMessage.restoreBackup.of(context)),
         ),
         const SizedBox(height: 24),
-        Text('Billing defaults', style: Theme.of(context).textTheme.titleLarge),
+        const LanguageSetting(),
+        const SizedBox(height: 24),
+        Text(
+          AppMessage.billingDefaults.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _currency,
-          decoration: const InputDecoration(labelText: 'Currency for new jobs'),
+          decoration: InputDecoration(
+            labelText: AppMessage.currencyForNewJobs.of(context),
+          ),
           items: [
             for (final c in currencies.keys)
               DropdownMenuItem(value: c, child: Text(c)),
@@ -268,41 +307,41 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             }
           },
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text(
-            'Existing jobs keep their currency. Changing currency clears the default rate and per-task minimum; enter new amounts explicitly.',
-          ),
+          child: Text(AppMessage.settingsCurrencyChangeHelp.of(context)),
         ),
         TextField(
           controller: _rate,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Default hourly rate ($_currency)',
-            helperText: 'Blank means no rate set. Override this in any job.',
+            labelText: AppMessage.defaultHourlyRate.format(context, {
+              'currency': _currency,
+            }),
+            helperText: AppMessage.settingsRateBlankHelp.of(context),
           ),
         ),
         const SizedBox(height: 24),
         Text(
-          'Invoice billing rules',
+          AppMessage.invoiceBillingRules.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'These rules affect new invoices only. Work reports and recorded time stay exact.',
-        ),
+        Text(AppMessage.jobInvoiceRulesHelp.of(context)),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _hourlyBillingMode,
-          decoration: const InputDecoration(labelText: 'Hourly billing rule'),
-          items: const [
+          decoration: InputDecoration(
+            labelText: AppMessage.hourlyBillingRule.of(context),
+          ),
+          items: [
             DropdownMenuItem(
               value: minimumThenExactBilling,
-              child: Text('Minimum hours, then exact time'),
+              child: Text(AppMessage.minimumThenExact.of(context)),
             ),
             DropdownMenuItem(
               value: roundTotalUpBilling,
-              child: Text('Round total time up to the next hour'),
+              child: Text(AppMessage.roundTotalUp.of(context)),
             ),
           ],
           onChanged: (value) {
@@ -314,15 +353,14 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           controller: _minimumHours,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Minimum billable hours',
-            helperText:
-                '0 disables the minimum. Applied only to hourly invoices.',
+            labelText: AppMessage.minimumBillableHours.of(context),
             errorText: _minimumHoursErrorText,
           ),
           onChanged: (_) {
             if (_minimumHoursErrorText != null) {
               setState(
-                () => _minimumHoursErrorText = minimumHoursError(
+                () => _minimumHoursErrorText = settingsHoursInputError(
+                  context,
                   _minimumHours.text,
                 ),
               );
@@ -334,8 +372,10 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           controller: _minimumTaskFee,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Minimum per-task invoice fee ($_currency)',
-            helperText: '0 disables it. A job in another currency needs its own override.',
+            labelText: AppMessage.minimumInvoiceTaskFee.format(context, {
+              'currency': _currency,
+            }),
+            helperText: AppMessage.settingsMinimumTaskFeeHelp.of(context),
             errorText: _minimumTaskFeeError,
           ),
           onChanged: (_) {
@@ -347,10 +387,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
         const SizedBox(height: 16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Record work locations'),
-          subtitle: const Text(
-            'Default on. Samples target about every 10 minutes while clocked in; delivery varies. Turning this off stops future samples and keeps saved history. Each job can override it.',
-          ),
+          title: Text(AppMessage.recordWorkLocations.of(context)),
+          subtitle: Text(AppMessage.locationRecordingDefaultHelp.of(context)),
           value: _defaultLocationRecording,
           onChanged: (value) =>
               setState(() => _defaultLocationRecording = value),
@@ -366,7 +404,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               ),
             ),
             icon: const Icon(Icons.map_outlined),
-            label: const Text('Map provider settings'),
+            label: Text(AppMessage.mapProviderSettings.of(context)),
           ),
         ),
         const SizedBox(height: 20),
@@ -378,39 +416,47 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             maxLength: 32,
             maxLengthEnforcement: MaxLengthEnforcement.none,
             decoration: InputDecoration(
-              labelText: 'Default tax (%)',
-              helperText: '7.5 adds 7.5% to the subtotal. Override per job; 0 means no tax.',
+              labelText: AppMessage.defaultTax.of(context),
+              helperText: AppMessage.settingsDefaultTaxHelp.of(context),
               helperMaxLines: 3,
               errorText: _taxError,
               errorMaxLines: 3,
             ),
             onChanged: (_) {
               if (_taxError != null) {
-                setState(() => _taxError = taxPercentError(_tax.text));
+                setState(
+                  () => _taxError = settingsTaxInputError(context, _tax.text),
+                );
               }
             },
           ),
         ),
         const SizedBox(height: 32),
         Text(
-          'Company & contact',
+          AppMessage.companyContact.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        _field(_name, 'Company name', length: 240),
-        _field(_email, 'Company email', length: 254, email: true),
+        _field(_name, AppMessage.companyName.of(context), length: 240),
+        _field(
+          _email,
+          AppMessage.companyEmail.of(context),
+          length: 254,
+          email: true,
+        ),
         Semantics(
           identifier: 'accounts-receivable-email',
           child: _field(
             _receivables,
-            'Accounts receivable email (optional)',
+            AppMessage.receivablesEmailOptional.of(context),
             length: 254,
             email: true,
             error: _receivablesError,
             onChanged: (_) {
               if (_receivablesError != null) {
                 setState(
-                  () => _receivablesError = accountingEmailError(
+                  () => _receivablesError = settingsReceivablesInputError(
+                    context,
                     _receivables.text,
                   ),
                 );
@@ -418,28 +464,37 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             },
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            'Invoice and receipt emails CC this address, or the company email when blank.',
-          ),
+          child: Text(AppMessage.customerReceivablesHelp.of(context)),
         ),
-        _field(_phone, 'Phone', length: 120),
-        _field(_address, 'Address', lines: 2),
-        _field(_website, 'Website', length: 2000),
+        _field(_phone, AppMessage.phone.of(context), length: 120),
+        _field(_address, AppMessage.address.of(context), lines: 2),
+        _field(_website, AppMessage.website.of(context), length: 2000),
         const SizedBox(height: 16),
         Text(
-          'Invoice appearance',
+          AppMessage.invoiceStyle.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _style,
-          decoration: const InputDecoration(labelText: 'Invoice style'),
-          items: const [
-            DropdownMenuItem(value: 'MINIMAL', child: Text('Minimal')),
-            DropdownMenuItem(value: 'CLASSIC', child: Text('Classic')),
-            DropdownMenuItem(value: 'MODERN', child: Text('Modern')),
+          decoration: InputDecoration(
+            labelText: AppMessage.invoiceStyle.of(context),
+          ),
+          items: [
+            DropdownMenuItem(
+              value: 'MINIMAL',
+              child: Text(AppMessage.invoiceStyleMinimal.of(context)),
+            ),
+            DropdownMenuItem(
+              value: 'CLASSIC',
+              child: Text(AppMessage.invoiceStyleClassic.of(context)),
+            ),
+            DropdownMenuItem(
+              value: 'MODERN',
+              child: Text(AppMessage.invoiceStyleModern.of(context)),
+            ),
           ],
           onChanged: (v) {
             if (v != null) {
@@ -464,7 +519,7 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               ),
             ),
             icon: const Icon(Icons.visibility_outlined),
-            label: const Text('Preview invoice'),
+            label: Text(AppMessage.previewInvoice.of(context)),
           ),
         ),
         const SizedBox(height: 20),
@@ -476,31 +531,32 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           },
         ),
         const SizedBox(height: 20),
-        _field(_header, 'Optional invoice header', lines: 2),
-        _field(_footer, 'Optional invoice footer', lines: 2),
-        Text('Email draft', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        const Text(
-          'Placeholders: {company_name}, {customer_name}, {job_name}, {invoice_number}, {amount}, {currency}. The email app lets you review the attached invoice before sending.',
+        _field(_header, AppMessage.invoiceHeaderOptional.of(context), lines: 2),
+        _field(_footer, AppMessage.invoiceFooterOptional.of(context), lines: 2),
+        Text(
+          AppMessage.invoiceEmailDraft.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
+        const SizedBox(height: 16),
+        Text(AppMessage.invoiceEmailInstructions.of(context)),
         const SizedBox(height: 16),
         _field(
           _subject,
-          'Email subject template',
+          AppMessage.invoiceEmailSubjectLabel.of(context),
           length: 500,
-          error: _subjectError,
+          error: _subjectError?.of(context),
           onChanged: _templateChanged,
         ),
         _field(
           _body,
-          'Email body template',
+          AppMessage.invoiceEmailBodyLabel.of(context),
           lines: 5,
           length: 20000,
-          error: _bodyError,
+          error: _bodyError?.of(context),
           onChanged: _templateChanged,
         ),
         BusinessCommand(
-          label: 'Save settings',
+          label: AppMessage.saveSettings.of(context),
           enabled: current != null && !_logoBusy,
           create: () {
             _validateDraft();
@@ -520,8 +576,12 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
               invoiceHeader: _header.text,
               invoiceFooter: _footer.text,
               invoiceStyle: _style,
-              emailSubject: _subject.text,
-              emailBody: _body.text,
+              emailSubject: _subject.text == _displayedDefaultSubject
+                  ? AppMessage.invoiceEmailDefaultSubject.english
+                  : _subject.text,
+              emailBody: _body.text == _displayedDefaultBody
+                  ? AppMessage.invoiceEmailDefaultBody.english
+                  : _body.text,
               defaultLocationRecording: _defaultLocationRecording,
               hourlyBillingMode: _hourlyBillingMode,
               minimumBillableHours: canonicalMinimumHours(
@@ -547,7 +607,7 @@ class CustomersScreen extends ConsumerWidget {
   const CustomersScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Customers')),
+    appBar: AppBar(title: Text(AppMessage.customers.of(context))),
     floatingActionButton: FloatingActionButton.extended(
       elevation: 0,
       focusElevation: 0,
@@ -558,7 +618,7 @@ class CustomersScreen extends ConsumerWidget {
         MaterialPageRoute<void>(builder: (_) => const CustomerEditor()),
       ),
       icon: const Icon(Icons.person_add_alt),
-      label: const Text('Customer'),
+      label: Text(AppMessage.customer.of(context)),
     ),
     body: ref
         .watch(businessSettingsProvider)
@@ -568,15 +628,11 @@ class CustomersScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: TextButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry customers'),
+              child: Text(AppMessage.retryCustomers.of(context)),
             ),
           ),
           data: (data) => data.customers.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Add a customer to keep billing details with your jobs.',
-                  ),
-                )
+              ? Center(child: Text(AppMessage.customersEmptyHelp.of(context)))
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                   children: [
@@ -593,7 +649,8 @@ class CustomersScreen extends ConsumerWidget {
                           title: Text(c.name),
                           subtitle: Text(
                             [
-                              if (c.archived) 'Archived',
+                              if (c.archived)
+                                AppMessage.customerArchived.of(context),
                               if (c.email.isNotEmpty) c.email,
                               if (c.phone.isNotEmpty) c.phone,
                             ].join(' · '),
@@ -644,7 +701,9 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.customer == null ? 'New customer' : 'Customer details',
+          widget.customer == null
+              ? AppMessage.customerNew.of(context)
+              : AppMessage.customerDetails.of(context),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -653,11 +712,13 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
           child: BusinessCommand(
             key: ValueKey('save-customer/$_id'),
-            label: 'Save customer',
+            label: AppMessage.save.of(context),
             enabled: data != null,
             create: () {
               if (_name.text.trim().isEmpty) {
-                throw const FormatException('Enter a customer name.');
+                throw FormatException(
+                  AppMessage.validationCustomerName.of(context),
+                );
               }
               final id = newBusinessId();
               final version = data!.version;
@@ -685,11 +746,11 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
         padding: const EdgeInsets.all(24),
         children: [
           for (final (controller, label, lines, length) in [
-            (_name, 'Customer name', 1, 240),
-            (_email, 'Email', 1, 254),
-            (_phone, 'Phone', 1, 120),
-            (_address, 'Billing address', 3, 4000),
-            (_notes, 'Notes', 3, 20000),
+            (_name, AppMessage.customerName.of(context), 1, 240),
+            (_email, AppMessage.customerEmailLabel.of(context), 1, 254),
+            (_phone, AppMessage.phone.of(context), 1, 120),
+            (_address, AppMessage.billingAddress.of(context), 3, 4000),
+            (_notes, AppMessage.customerNotes.of(context), 3, 20000),
           ])
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -703,10 +764,8 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
             ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Archive customer'),
-            subtitle: const Text(
-              'Keep existing job contacts; hide from new assignments.',
-            ),
+            title: Text(AppMessage.archiveCustomer.of(context)),
+            subtitle: Text(AppMessage.archiveCustomerHelp.of(context)),
             value: _archived,
             onChanged: (v) => setState(() => _archived = v),
           ),
@@ -718,18 +777,16 @@ class _CustomerEditorState extends ConsumerState<CustomerEditor> {
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
               icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete unused customer'),
+              label: Text(AppMessage.deleteUnusedCustomer.of(context)),
               onPressed: () => showDialog<void>(
                 context: context,
                 barrierDismissible: false,
                 builder: (dialog) => AlertDialog(
-                  title: const Text('Delete customer?'),
-                  content: const Text(
-                    'Only unused customers can be deleted. Archive a customer assigned to jobs or invoices.',
-                  ),
+                  title: Text(AppMessage.confirmDeleteCustomer.of(dialog)),
+                  content: Text(AppMessage.deleteCustomerHelp.of(dialog)),
                   actions: [
                     BusinessCommand(
-                      label: 'Delete customer',
+                      label: AppMessage.deleteCustomer.of(dialog),
                       enabled: data != null,
                       create: () {
                         final id = newBusinessId();

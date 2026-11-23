@@ -10,6 +10,11 @@ on:
         type: boolean
         default: false
 
+      strict_localization:
+        description: Fail if the audit still finds untranslated copy
+        type: boolean
+        default: false
+
 permissions:
   contents: read
 
@@ -23,13 +28,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check out source
+        id: checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
       - name: Test bounded APK install recovery policies
+        id: adb_policy_tests
+        continue-on-error: true
         shell: bash
         run: bash scripts/test-ci-adb-install.sh
-      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+      - name: Set up Java
+        id: java_setup
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
           java-version: '17.0.17+10'
@@ -41,6 +52,7 @@ jobs:
             .github/workflows/validate.yml
             .github/gradle/flutter-plugin-repositories.init.gradle
       - name: Install verified Flutter SDK
+        id: flutter_setup
         shell: bash
         run: |
           set -euo pipefail
@@ -50,12 +62,14 @@ jobs:
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
           echo "FLUTTER_ROOT=$RUNNER_TEMP/flutter" >> "$GITHUB_ENV"
       - name: Configure Kotlin resolution for Flutter Gradle plugins
+        id: gradle_repositories
         shell: bash
         run: |
           init_dir="${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
           mkdir -p "$init_dir"
           cp .github/gradle/flutter-plugin-repositories.init.gradle "$init_dir/"
       - name: Install pinned Android components
+        id: android_sdk
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +90,7 @@ jobs:
           echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
       - name: Resolve locked dependencies
+        id: dependencies
         env:
           PREPARE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_dependencies && github.actor == 'centerionware' }}
         run: |
@@ -85,6 +100,8 @@ jobs:
             flutter pub get --enforce-lockfile
           fi
       - name: Export proposed source lockfile
+        id: proposed_lockfile_export
+        continue-on-error: true
         if: github.event_name == 'workflow_dispatch' && inputs.prepare_dependencies && github.actor == 'centerionware'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -92,16 +109,45 @@ jobs:
           path: pubspec.lock
           retention-days: 1
           if-no-files-found: error
+      - name: Check generated localization sources against catalogs
+        id: localization_sources
+        continue-on-error: true
+        run: |
+          python3 tool/flutter_catalog.py --check
+          python3 tool/android_catalog.py --check
+      - name: Audit app localization coverage
+        id: localization_audit
+        continue-on-error: true
+        env:
+          STRICT_LOCALIZATION: ${{ inputs.strict_localization }}
+        run: |
+          flags=()
+          if [[ "$STRICT_LOCALIZATION" == true ]]; then
+            flags+=(--strict)
+          fi
+          dart run tool/localization_audit.dart "${flags[@]}" > "$RUNNER_TEMP/localization-audit.txt"
+      - name: Export localization findings
+        id: localization_audit_artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: localization-audit
+          path: ${{ runner.temp }}/localization-audit.txt
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Check formatting
         id: format
         # Collect behavior evidence in the same run; the final gate still fails.
         continue-on-error: true
         run: |
-          dart format lib test integration_test
-          git diff --binary -- lib test integration_test > "$RUNNER_TEMP/format.patch"
-          git diff --exit-code -- lib test integration_test
+          dart format lib test integration_test tool
+          git diff --binary -- lib test integration_test tool > "$RUNNER_TEMP/format.patch"
+          git diff --exit-code -- lib test integration_test tool
       - name: Export formatter correction for source review
+        id: formatter_patch_artifact
         if: always() && steps.format.outcome == 'failure'
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: formatter-source-patch
@@ -109,7 +155,9 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Annotate formatter correction for source review
+        id: formatter_annotation
         if: always() && steps.format.outcome == 'failure'
+        continue-on-error: true
         shell: bash
         run: |
           python3 - "$RUNNER_TEMP/format.patch" <<'PY_FORMAT'
@@ -119,14 +167,13 @@ jobs:
           escaped = patch.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print(f'::error title=Dart formatter correction::{escaped or "Formatter patch was empty"}')
           PY_FORMAT
-      - name: Require clean formatting
-        if: always() && steps.format.outcome == 'failure'
-        run: |
-          echo 'Apply the exported formatter-source-patch and revalidate.' >&2
-          exit 1
       - name: Analyze
+        id: analyze
+        continue-on-error: true
         run: flutter analyze --no-pub
       - name: Test implemented behavior
+        id: dart_tests
+        continue-on-error: true
         shell: bash
         run: |
           if find test -name '*_test.dart' -print -quit | grep -q .; then
@@ -135,7 +182,9 @@ jobs:
             echo 'No application behavior tests yet (milestone 1 scaffold).' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Export synthetic UI previews
+        id: ui_preview_artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ui-previews
@@ -143,20 +192,32 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Validate Android build
+        id: android_build
+        continue-on-error: true
         run: flutter build apk --debug --no-pub
       - name: Configure release plugin registration without artifacts
+        id: release_config
+        continue-on-error: true
         run: flutter build apk --release --config-only
       - name: Compile release Java without signing
+        id: release_java
+        continue-on-error: true
         run: ./gradlew :app:compileReleaseJavaWithJavac
         working-directory: android
       - name: Assemble Android instrumentation tests before emulator setup
+        id: instrumentation_build
+        continue-on-error: true
         working-directory: android
         run: ./gradlew :app:assembleDebugAndroidTest
       - name: Native unit tests
+        id: native_tests
+        continue-on-error: true
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest
       - name: Export native test results
+        id: native_results_artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-test-results
@@ -164,11 +225,17 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Real Android PDF generation and rendering on API 24 and 35
+        id: android_suites
+        continue-on-error: true
         run: bash scripts/ci-android-pdf.sh
       - name: Check invoice viewer using actual Android-generated pages
+        id: document_preview
+        continue-on-error: true
         run: flutter test --no-pub test/invoice_document_preview_test.dart test/quote_document_preview_test.dart --dart-define=CLOCKROVE_DEVICE_PREVIEW=true
       - name: Export actual-document Flutter previews
+        id: invoice_preview_artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: invoice-viewer-previews
@@ -176,7 +243,9 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Export Android device test results
+        id: device_results_artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: android-device-test-results
@@ -184,18 +253,26 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
       - name: Export synthetic Android visual previews
+        id: native_ui_artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-ui-previews
           path: build/native-ui-preview
           retention-days: 1
           if-no-files-found: ignore
-      - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
+      - name: Set up Ruby for release checks
+        id: ruby_setup
+        continue-on-error: true
+        uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
         with:
           ruby-version: '3.3.6'
           bundler: '2.5.23'
       - name: Validate locked release tooling and version policy
+        id: release_tools
+        if: always() && steps.ruby_setup.outcome == 'success'
+        continue-on-error: true
         env:
           BUNDLE_FROZEN: 'true'
           FASTLANE_OPT_OUT_USAGE: '1'
@@ -206,3 +283,59 @@ jobs:
           bundle exec ruby -c fastlane/Fastfile
       - name: Publishing status
         run: echo 'Validation only. Successful main pushes trigger separate Play internal delivery; production tags remain readiness-gated.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize validation failures
+        if: always()
+        env:
+          CHECK_RESULTS: |
+            Source checkout|${{ steps.checkout.outcome }}
+            Java setup|${{ steps.java_setup.outcome }}
+            Flutter SDK setup|${{ steps.flutter_setup.outcome }}
+            Gradle plugin repository setup|${{ steps.gradle_repositories.outcome }}
+            Android SDK setup|${{ steps.android_sdk.outcome }}
+            Locked dependencies|${{ steps.dependencies.outcome }}
+            APK install recovery policy tests|${{ steps.adb_policy_tests.outcome }}
+            Proposed lockfile artifact|${{ steps.proposed_lockfile_export.outcome }}
+            Generated localization parity|${{ steps.localization_sources.outcome }}
+            Localization coverage audit|${{ steps.localization_audit.outcome }}
+            Localization audit artifact|${{ steps.localization_audit_artifact.outcome }}
+            Dart formatting|${{ steps.format.outcome }}
+            Formatter patch artifact|${{ steps.formatter_patch_artifact.outcome }}
+            Formatter annotation|${{ steps.formatter_annotation.outcome }}
+            Dart analysis|${{ steps.analyze.outcome }}
+            Dart behavior tests|${{ steps.dart_tests.outcome }}
+            UI preview artifact|${{ steps.ui_preview_artifact.outcome }}
+            Android debug build|${{ steps.android_build.outcome }}
+            Android release configuration|${{ steps.release_config.outcome }}
+            Android release Java compile|${{ steps.release_java.outcome }}
+            Android instrumentation APK|${{ steps.instrumentation_build.outcome }}
+            Native unit tests|${{ steps.native_tests.outcome }}
+            Native test results artifact|${{ steps.native_results_artifact.outcome }}
+            API 24 and API 35 journeys|${{ steps.android_suites.outcome }}
+            Invoice and quote document preview|${{ steps.document_preview.outcome }}
+            Invoice preview artifact|${{ steps.invoice_preview_artifact.outcome }}
+            Android device results artifact|${{ steps.device_results_artifact.outcome }}
+            Native UI artifact|${{ steps.native_ui_artifact.outcome }}
+            Ruby setup|${{ steps.ruby_setup.outcome }}
+            Release tooling and version policy|${{ steps.release_tools.outcome }}
+        shell: bash
+        run: |
+          failures=()
+          while IFS='|' read -r label outcome; do
+            if [[ "$outcome" == failure ]]; then
+              failures+=("$label")
+            fi
+          done <<< "$CHECK_RESULTS"
+          {
+            echo '## Validation results'
+            if ((${#failures[@]})); then
+              echo 'Failed checks:'
+              printf -- '- %s\n' "${failures[@]}"
+              echo 'See the corresponding step logs and Android journey failure list for details.'
+            else
+              echo 'All validation checks passed.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if ((${#failures[@]})); then
+            printf 'Validation checks failed: %s\n' "${failures[*]}" >&2
+            exit 1
+          fi

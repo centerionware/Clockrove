@@ -1,0 +1,3 @@
+durationHoursMinutes: "{hours} ч {minutes} мин"
+durationHoursMinutesSeconds: "{hours} ч {minutes} мин {seconds} с"
+timeUtcOffset: " (UTC{offset})"

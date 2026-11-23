@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../business/business_api.dart';
 import '../business/business_command.dart';
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 
@@ -29,16 +30,13 @@ class _WidgetConfigurationScreenState
     extends ConsumerState<WidgetConfigurationScreen> {
   String? _job;
   bool _initialized = false, _pending = false, _saved = false;
-  String? _finishError;
+  AppMessage? _finishError;
   Future<void> _finish() async {
     try {
       await widgetChannel.invokeMethod<void>('finish');
     } catch (_) {
       if (mounted) {
-        setState(
-          () =>
-              _finishError = 'Settings saved. Tap Done to close widget setup.',
-        );
+        setState(() => _finishError = AppMessage.widgetFinishRetry);
       }
     }
   }
@@ -50,13 +48,13 @@ class _WidgetConfigurationScreenState
     return PopScope(
       canPop: !_pending,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Widget settings')),
+        appBar: AppBar(title: Text(AppMessage.widgetSettings.of(context))),
         body: configuration.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => Center(
             child: FilledButton(
               onPressed: () => ref.invalidate(widgetConfigurationProvider),
-              child: const Text('Retry widget settings'),
+              child: Text(AppMessage.widgetRetrySettings.of(context)),
             ),
           ),
           data: (config) => state.when(
@@ -66,7 +64,7 @@ class _WidgetConfigurationScreenState
             error: (_, _) => Center(
               child: FilledButton(
                 onPressed: () => ref.invalidate(timerSnapshotProvider),
-                child: const Text('Retry jobs'),
+                child: Text(AppMessage.retryJobs.of(context)),
               ),
             ),
             data: (snapshot) {
@@ -81,29 +79,29 @@ class _WidgetConfigurationScreenState
                 padding: const EdgeInsets.all(24),
                 children: [
                   if (state.hasError) ...[
-                    const Text(
-                      'Could not refresh jobs. Your selection and current operation are kept.',
-                    ),
+                    Text(AppMessage.widgetRefreshJobsFailed.of(context)),
                     TextButton(
                       onPressed: () => ref.invalidate(timerSnapshotProvider),
-                      child: const Text('Retry jobs'),
+                      child: Text(AppMessage.retryJobs.of(context)),
                     ),
                   ],
                   Text(
-                    tasksOnly ? 'Choose which jobs appear in your task list.' : 'Choose a default job for one-tap clock-in, or choose a job each time.',
+                    (tasksOnly
+                            ? AppMessage.widgetChooseTaskJobs
+                            : AppMessage.widgetChooseDefaultJob)
+                        .of(context),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    tasksOnly
-                        ? 'Overdue tasks and the next 7 calendar days. Completed tasks and archived jobs are hidden.'
-                        : 'The timer always shows the running job. Clock out before starting another job. Tap the job title to change these settings.',
+                    (tasksOnly
+                            ? AppMessage.widgetTaskWindow
+                            : AppMessage.widgetTimerBehavior)
+                        .of(context),
                   ),
                   const SizedBox(height: 20),
                   if (missing)
-                    const Text(
-                      'The selected job is unavailable. Choose an active job or picker mode.',
-                    ),
+                    Text(AppMessage.widgetSelectedJobUnavailable.of(context)),
                   RadioGroup<String>(
                     groupValue: _job ?? '',
                     onChanged: (value) {
@@ -117,7 +115,10 @@ class _WidgetConfigurationScreenState
                           enabled: !_pending && !_saved,
                           value: '',
                           title: Text(
-                            tasksOnly ? 'All active jobs' : 'Choose each time',
+                            (tasksOnly
+                                    ? AppMessage.widgetAllJobs
+                                    : AppMessage.widgetChooseEachTime)
+                                .of(context),
                           ),
                         ),
                         for (final job in snapshot.jobs)
@@ -131,11 +132,14 @@ class _WidgetConfigurationScreenState
                   ),
                   const SizedBox(height: 20),
                   if (_saved)
-                    FilledButton(onPressed: _finish, child: const Text('Done'))
+                    FilledButton(
+                      onPressed: _finish,
+                      child: Text(AppMessage.done.of(context)),
+                    )
                   else
                     BusinessCommand(
                       key: const ValueKey('widget-save'),
-                      label: 'Save widget',
+                      label: AppMessage.widgetSave.of(context),
                       enabled: !missing,
                       onPendingChanged: (pending) =>
                           setState(() => _pending = pending),
@@ -165,7 +169,7 @@ class _WidgetConfigurationScreenState
                         _finish();
                       },
                     ),
-                  if (_finishError != null) Text(_finishError!),
+                  if (_finishError != null) Text(_finishError!.of(context)),
                 ],
               );
             },

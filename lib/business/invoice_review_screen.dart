@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
@@ -42,19 +43,14 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
     if (mounted) _refresh();
   }
 
-  String? _problem(String? value) => switch (value) {
-    null => null,
-    'LEGACY_INVOICE_REVIEW_REQUIRED' => 'Review the billed work on the older invoices below before creating another invoice for this job.',
-    'NO_BILLABLE_ITEMS' => 'No unbilled work remains in these dates. Previously invoiced work is excluded.',
-    'HOURLY_RATE_REQUIRED' =>
-      'Set an hourly rate in Settings or this job’s settings first.',
-    'TASK_PRICES_REQUIRED' =>
-      'Set prices in this job’s currency for the unbilled completed tasks.',
-    'INVOICE_TOO_LARGE' => 'Reduce the date range or shorten the invoice/email text, then try again.',
-    'INVALID_TAX_RATE' =>
-      'Correct the tax percentage in Settings or this job’s settings.',
-    _ =>
-      'The invoice cannot be prepared yet. Review this job’s billing settings.',
+  AppMessage _problem(String? value) => switch (value) {
+    'LEGACY_INVOICE_REVIEW_REQUIRED' => AppMessage.invoiceAddedReviewOlder,
+    'NO_BILLABLE_ITEMS' => AppMessage.invoiceAddedNoWork,
+    'HOURLY_RATE_REQUIRED' => AppMessage.invoiceAddedHourlyRate,
+    'TASK_PRICES_REQUIRED' => AppMessage.invoiceAddedTaskPrices,
+    'INVOICE_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge,
+    'INVALID_TAX_RATE' => AppMessage.validationTaxBounds,
+    _ => AppMessage.invoiceAddedPrepareFailed,
   };
   Widget _amount(
     String label,
@@ -69,7 +65,9 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
         Expanded(child: Text(label)),
         Flexible(
           child: Text(
-            value == null ? 'Not available' : '$currency $value',
+            value == null
+                ? AppMessage.invoiceReviewUnavailableAmount.of(context)
+                : '$currency $value',
             textAlign: TextAlign.end,
             style: emphasized ? Theme.of(context).textTheme.titleLarge : null,
           ),
@@ -84,10 +82,10 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Review invoice'),
+          title: Text(AppMessage.invoiceReviewTitle.of(context)),
           actions: [
             IconButton(
-              tooltip: 'Refresh invoice preview',
+              tooltip: AppMessage.invoiceReviewRefresh.of(context),
               onPressed: _pending ? null : _refresh,
               icon: const Icon(Icons.refresh),
             ),
@@ -104,19 +102,17 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                 error: (_, _) => Center(
                   child: FilledButton(
                     onPressed: _refresh,
-                    child: const Text('Retry invoice preview'),
+                    child: Text(AppMessage.invoiceReviewRetry.of(context)),
                   ),
                 ),
                 data: (data) => ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
                     if (preview.hasError) ...[
-                      const Text(
-                        'Could not refresh the preview. Your current operation is kept.',
-                      ),
+                      Text(AppMessage.invoiceReviewRefreshKept.of(context)),
                       TextButton(
                         onPressed: _pending ? null : _refresh,
-                        child: const Text('Retry invoice preview'),
+                        child: Text(AppMessage.invoiceReviewRetry.of(context)),
                       ),
                     ],
                     Text(
@@ -125,13 +121,17 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${widget.selection.firstDate} — ${widget.selection.lastDate} · ${widget.selection.timezone}',
+                      AppMessage.invoiceReviewDateRange.format(context, {
+                        'first': widget.selection.firstDate,
+                        'last': widget.selection.lastDate,
+                        'timezone': widget.selection.timezone,
+                      }),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       data.legacy.isEmpty
-                          ? 'Only unbilled finalized work or completed billable tasks are included. Creating the invoice reserves this work even if PDF export or email is interrupted.'
-                          : 'Older invoices need source review before unbilled amounts can be calculated. No new invoice can be created until they are reconciled.',
+                          ? AppMessage.invoiceReviewEligibleGuidance.of(context)
+                          : AppMessage.invoiceReviewLegacyGuidance.of(context),
                     ),
                     const SizedBox(height: 20),
                     Card(
@@ -140,20 +140,26 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                         child: Column(
                           children: [
                             _amount(
-                              'Unbilled subtotal',
+                              AppMessage.invoiceSubtotal.of(context),
                               data.subtotal,
                               data.currency,
                             ),
                             _amount(
                               data.taxUnits >= 0 && data.taxUnits <= 1000000
-                                  ? 'Tax (${taxPercent(data.taxUnits)}%)'
-                                  : 'Tax',
+                                  ? AppMessage.invoiceReviewTaxRate.format(
+                                      context,
+                                      {
+                                        'rate': taxPercent(data.taxUnits)
+                                            .toString(),
+                                      },
+                                    )
+                                  : AppMessage.invoiceTax.of(context),
                               data.tax,
                               data.currency,
                             ),
                             const Divider(),
                             _amount(
-                              'Invoice total',
+                              AppMessage.invoiceTotal.of(context),
                               data.total,
                               data.currency,
                               emphasized: true,
@@ -167,7 +173,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Text(
-                          _problem(data.problem)!,
+                          _problem(data.problem).of(context),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
@@ -175,7 +181,7 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                       ),
                     BusinessCommand(
                       key: const ValueKey('prepare-invoice'),
-                      label: 'Create invoice',
+                      label: AppMessage.invoiceReviewCreate.of(context),
                       enabled: data.problem == null,
                       onPendingChanged: (value) {
                         setState(() => _pending = value);
@@ -201,13 +207,15 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                     if (data.legacy.isNotEmpty) ...[
                       const SizedBox(height: 28),
                       Text(
-                        'Older invoices to review',
+                        AppMessage.invoiceReviewOlderTitle.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       for (final invoice in data.legacy)
                         ListTile(
                           title: Text(invoice.number),
-                          subtitle: const Text('Source coverage needs review'),
+                          subtitle: Text(
+                            AppMessage.invoiceReviewCoverage.of(context),
+                          ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: _pending ? null : () => _reviewLegacy(invoice),
                         ),
@@ -215,16 +223,16 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                     if (data.excluded.isNotEmpty) ...[
                       const SizedBox(height: 28),
                       Text(
-                        'Already invoiced',
+                        AppMessage.invoiceReviewAlreadyInvoiced.of(context),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const Text(
-                        'These items are excluded from the new invoice, including items on unpaid invoices.',
-                      ),
+                      Text(AppMessage.invoiceReviewExcluded.of(context)),
                       for (final item in data.excluded)
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text('${item.title} · ${item.number}'),
+                          title: Text(
+                            '${item.title.isEmpty ? AppMessage.reportFinalizedTime.of(context) : item.title} · ${item.number}',
+                          ),
                           subtitle: Text(item.detail),
                           trailing: const Icon(Icons.open_in_new),
                           onTap: _pending ? null : () => _open(item),
@@ -233,15 +241,17 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                     const SizedBox(height: 28),
                     Text(
                       data.legacy.isEmpty
-                          ? 'Work to invoice'
-                          : 'Work to review',
+                          ? AppMessage.invoiceReviewWorkToInvoice.of(context)
+                          : AppMessage.invoiceReviewWorkToReview.of(context),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     if (data.lines.isEmpty &&
                         data.problem != 'INVOICE_TOO_LARGE')
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text('No eligible work in this selection.'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          AppMessage.invoiceReviewNoEligibleWork.of(context),
+                        ),
                       ),
                     for (final line in data.lines)
                       ListTile(

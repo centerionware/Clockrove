@@ -16,6 +16,7 @@ open class MainActivity : FlutterActivity() {
     private var backupFileApi: io.github.centerionware.clockrove.backup.BackupDocumentHostApi? = null
     private var documentApi: io.github.centerionware.clockrove.invoice.DocumentHostApi? = null
     private var mapProviderApi: io.github.centerionware.clockrove.maps.MapProviderSettingsHostApi? = null
+    private var languageApi: LanguageHostApi? = null
     private var helpApi: MethodChannel? = null
     private var debugApi: io.flutter.plugin.common.MethodChannel? = null
     private var visible = false
@@ -37,6 +38,7 @@ open class MainActivity : FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        languageApi = LanguageHostApi(this, flutterEngine.dartExecutor.binaryMessenger)
         helpApi = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "clockrove/help/v1").also { api ->
             api.setMethodCallHandler { call, result ->
                 if (call.method != "appVersion") {
@@ -80,6 +82,8 @@ open class MainActivity : FlutterActivity() {
         automationApi = io.github.centerionware.clockrove.location.geofence.AutomationHostApi(this, flutterEngine.dartExecutor.binaryMessenger) { visible }
     }
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        languageApi?.detach()
+        languageApi = null
         helpApi?.setMethodCallHandler(null)
         helpApi = null
         debugApi?.setMethodCallHandler(null)

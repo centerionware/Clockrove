@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:clockrove/l10n/app_strings.dart';
+import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -125,45 +125,51 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.idle), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockIn), 200);
+    expect(find.text(AppMessage.idle.english), findsOneWidget);
+    await tester.scrollUntilVisible(find.text(AppMessage.clockIn.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockIn));
+    await tester.tap(find.text(AppMessage.clockIn.english));
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.clockOut), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(AppStrings.enableLocation), 200);
+    expect(find.text(AppMessage.clockOut.english), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.enableLocation.english),
+      200,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.tap(find.text(AppMessage.enableLocation.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
-    expect(find.text(AppStrings.locationPurpose), findsOneWidget);
-    await tester.tap(find.text(AppStrings.cancel));
+    expect(find.text(AppMessage.locationPurpose.english), findsOneWidget);
+    await tester.tap(find.text(AppMessage.cancel.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 0);
-    await tester.tap(find.text(AppStrings.enableLocation));
+    await tester.tap(find.text(AppMessage.enableLocation.english));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.continueLabel));
+    await tester.tap(find.text(AppMessage.continueLabel.english));
     await tester.pumpAndSettle();
     expect(tracking.enableCalls, 1);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
     expect(
       tester
           .widget<FilledButton>(
-            find.widgetWithText(FilledButton, AppStrings.clockOut),
+            find.widgetWithText(FilledButton, AppMessage.clockOut.english),
           )
           .onPressed,
       isNotNull,
     );
-    await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.newJob.english), 200);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.newJob));
+    await tester.tap(find.text(AppMessage.newJob.english));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Synthetic second');
-    await tester.tap(find.text(AppStrings.create));
+    await tester.tap(find.text(AppMessage.create.english));
     await tester.pumpAndSettle();
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
-    expect((tiles.last.title! as Text).data, AppStrings.newJob);
+    expect((tiles.last.title! as Text).data, AppMessage.newJob.english);
     final second = find.widgetWithText(ListTile, 'Synthetic second');
     await tester.ensureVisible(second);
     await tester.tap(
@@ -171,11 +177,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(api.running!.jobId, api.jobs.last.id);
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockOut));
+    await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.idle), findsOneWidget);
+    expect(find.text(AppMessage.idle.english), findsOneWidget);
     expect(api.intents, [
       TimerAction.start,
       TimerAction.switchJob,
@@ -212,9 +221,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.viewLocationMap), 200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.viewLocationMap.english),
+      200,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.viewLocationMap));
+    await tester.tap(find.text(AppMessage.viewLocationMap.english));
     await tester.pumpAndSettle();
     await tester.runAsync(
       () => precacheImage(
@@ -224,14 +236,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.mapUnavailable), findsOneWidget);
+    expect(find.text(AppMessage.mapUnavailable.english), findsOneWidget);
     expect(api.running!.id, 'map-outage-session');
     expect(api.intents, isEmpty);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.clockOut), -200);
+    await tester.scrollUntilVisible(
+      find.text(AppMessage.clockOut.english),
+      -200,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.clockOut));
+    await tester.tap(find.text(AppMessage.clockOut.english));
     await tester.pumpAndSettle();
     expect(api.running, isNull);
     expect(api.intents, [TimerAction.stop]);
@@ -318,9 +333,12 @@ void main() {
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
-      await tester.scrollUntilVisible(find.text(AppStrings.locationTitle), 200);
+      await tester.scrollUntilVisible(
+        find.text(AppMessage.locationTitle.english),
+        200,
+      );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text(AppStrings.disableLocation));
+      await tester.ensureVisible(find.text(AppMessage.disableLocation.english));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.runAsync(() async {
@@ -366,10 +384,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(AppStrings.newJob), 200);
+    await tester.scrollUntilVisible(find.text(AppMessage.newJob.english), 200);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text(AppStrings.newJob), findsOneWidget);
+    expect(find.text(AppMessage.newJob.english), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

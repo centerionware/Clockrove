@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'quote_api.dart';
 import 'report_api.dart';
 
@@ -24,10 +25,10 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   bool _busy = false;
   Future<InvoicePage> _load(int page) =>
       ref.read(quoteApiProvider).preview(widget.quoteId, widget.revision, page);
-  void _feedback(String message) {
+  void _feedback(AppMessage message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(SnackBar(content: Text(message.of(context))));
   }
 
   Future<void> _action(String action) async {
@@ -40,9 +41,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
       if (action == 'email') {
         await api.email(widget.quoteId, widget.revision);
         if (mounted) {
-          _feedback(
-            'Email draft opened. Review the quote and press Send in your email app.',
-          );
+          _feedback(AppMessage.quoteEmailOpened);
         }
       } else if (action == 'share') {
         await api.share(widget.quoteId, widget.revision);
@@ -50,24 +49,21 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
         final saved = await api.savePdf(widget.quoteId, widget.revision);
         if (mounted) {
           _feedback(
-            saved
-                ? 'Quote PDF saved.'
-                : 'Save cancelled. Your issued quote is retained.',
+            saved ? AppMessage.quotePdfSaved : AppMessage.quoteSaveCancelled,
           );
         }
       }
     } on PlatformException catch (error) {
       if (mounted) {
         _feedback(
-          error.message ??
-              'The document could not be opened. Try saving the PDF.',
+          error.code == 'NO_DOCUMENT_PICKER'
+              ? AppMessage.exportNoFilePicker
+              : AppMessage.quoteDocumentOpenFailed,
         );
       }
     } catch (_) {
       if (mounted) {
-        _feedback(
-          'The quote could not be shared. Its issued revision is retained.',
-        );
+        _feedback(AppMessage.quoteShareFailed);
       }
     } finally {
       if (mounted) {
@@ -79,10 +75,15 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text('${widget.number} · Revision ${widget.revision}'),
+      title: Text(
+        AppMessage.quoteInvoiceRevisionRef.format(context, {
+          'number': widget.number,
+          'revision': widget.revision.toString(),
+        }),
+      ),
       actions: [
         IconButton(
-          tooltip: 'Refresh quote PDF',
+          tooltip: AppMessage.quoteRefreshPdf.of(context),
           onPressed: _busy
               ? null
               : () => setState(() {
@@ -102,7 +103,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                 onPressed: () => setState(() {
                   _page = _load(0);
                 }),
-                child: const Text('Retry quote PDF'),
+                child: Text(AppMessage.quoteRetryPdf.of(context)),
               ),
             );
           }
@@ -119,12 +120,12 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Quote · estimate only',
+                      Text(
+                        AppMessage.quoteDocumentEstimate.of(context),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const Text(
-                        'This issued revision is retained. Opening an email draft does not record acceptance or payment.',
+                      Text(
+                        AppMessage.quoteDocumentAcceptanceNotice.of(context),
                       ),
                       if (page.notice != null)
                         Padding(
@@ -144,15 +145,15 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                           FilledButton.icon(
                             onPressed: _busy ? null : () => _action('email'),
                             icon: const Icon(Icons.mail_outline),
-                            label: const Text('Email quote'),
+                            label: Text(AppMessage.quoteEmail.of(context)),
                           ),
                           OutlinedButton.icon(
                             onPressed: _busy ? null : () => _action('save'),
                             icon: const Icon(Icons.download),
-                            label: const Text('Save PDF'),
+                            label: Text(AppMessage.documentSavePdf.of(context)),
                           ),
                           IconButton(
-                            tooltip: 'Share quote PDF',
+                            tooltip: AppMessage.quoteSharePdf.of(context),
                             onPressed: _busy ? null : () => _action('share'),
                             icon: const Icon(Icons.share_outlined),
                           ),
@@ -172,8 +173,10 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                     child: Image.memory(
                       page.png,
                       fit: BoxFit.contain,
-                      semanticLabel:
-                          'Quote page ${page.index + 1} of ${page.pages}',
+                      semanticLabel: AppMessage.quotePage.format(context, {
+                        'page': '${page.index + 1}',
+                        'total': '${page.pages}',
+                      }),
                     ),
                   ),
                 ),
@@ -182,7 +185,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    tooltip: 'Previous quote page',
+                    tooltip: AppMessage.quotePreviousPage.of(context),
                     onPressed: loading || page.index == 0
                         ? null
                         : () => setState(() {
@@ -190,9 +193,14 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                           }),
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  Text('Page ${page.index + 1} of ${page.pages}'),
+                  Text(
+                    AppMessage.documentPage.format(context, {
+                      'page': '${page.index + 1}',
+                      'total': '${page.pages}',
+                    }),
+                  ),
                   IconButton(
-                    tooltip: 'Next quote page',
+                    tooltip: AppMessage.quoteNextPage.of(context),
                     onPressed: loading || page.index + 1 >= page.pages
                         ? null
                         : () => setState(() {

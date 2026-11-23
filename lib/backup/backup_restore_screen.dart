@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_import_api.dart';
 import 'backup_restore_importer.dart';
+import 'backup_restore_preview.dart';
 
 typedef BackupRestorePreviewRunner =
     Future<BackupRestoreImportResult> Function({
@@ -41,9 +43,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _pageIndex = 0;
   int _furthestReviewedPage = -1;
   BackupCryptoCancellationToken? _cancellationToken;
-  String? _error;
-  String? _message;
-  String? _passwordError;
+  AppMessage? _error;
+  AppMessage? _message;
+  AppMessage? _passwordError;
   bool _busy = false;
   bool _passwordVisible = false;
   bool _applied = false;
@@ -111,8 +113,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       if (selected == null) {
         setState(() {
           _message = previousRestore == null
-              ? 'File selection cancelled.'
-              : 'File selection cancelled. The existing preview is still open.';
+              ? AppMessage.restoreFileCancelled
+              : AppMessage.restoreFileCancelledWithPreview;
         });
         return;
       }
@@ -140,7 +142,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ..add(null);
         _pageIndex = 0;
         _furthestReviewedPage = -1;
-        _message = 'Encrypted backup selected. Enter its password to preview.';
+        _message = AppMessage.restoreFileSelected;
       });
     } on Object catch (error) {
       if (selected != null && !identical(selected, _document)) {
@@ -160,9 +162,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final byteLength = utf8.encode(_password.text).length;
     setState(() {
       _passwordError = byteLength < 12
-          ? 'Enter the backup password (at least 12 UTF-8 bytes).'
+          ? AppMessage.restorePasswordShort
           : byteLength > 1024
-          ? 'The password is longer than the supported limit.'
+          ? AppMessage.restorePasswordLong
           : null;
     });
     return _passwordError == null;
@@ -176,7 +178,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _message = 'Authenticating and checking the encrypted backup…';
+      _message = AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
     try {
@@ -195,7 +197,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ..add(null);
           _pageIndex = 0;
           _furthestReviewedPage = -1;
-          _message = 'Backup authenticated. Review its contents and choices.';
+          _message = AppMessage.restoreAuthenticated;
         });
       } else {
         await restore.close();
@@ -233,7 +235,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _cancellationToken?.cancel();
     if (mounted) {
       setState(() {
-        _message = 'Cancelling preview. No local records have been changed.';
+        _message = AppMessage.restoreCancelling;
       });
     }
   }
@@ -344,22 +346,24 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Apply this backup?'),
+        scrollable: true,
+        title: Text(AppMessage.applyBackupQuestion.of(dialogContext)),
         content: Text(
-          'Clockrove will merge the reviewed records in one database transaction. '
-          'If validation fails, the transaction is rolled back. '
-          '${preview.openSessionCount > 0 ? 'Open/provisional sessions in the backup will be omitted; no end time will be invented and no timer will start. ' : ''}'
-          'Imported site automation starts disabled. Map credentials and '
-          'Android geofence registrations are excluded from the backup.',
+          [
+            AppMessage.restoreMergeTransaction.of(dialogContext),
+            if (preview.openSessionCount > 0)
+              AppMessage.restoreOpenSessionsOmitted.of(dialogContext),
+            AppMessage.restoreDeviceSettingsExcluded.of(dialogContext),
+          ].join(' '),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(dialogContext)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Apply reviewed merge'),
+            child: Text(AppMessage.applyReviewedMerge.of(dialogContext)),
           ),
         ],
       ),
@@ -369,7 +373,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _message = 'Applying the reviewed merge…';
+      _message = AppMessage.restoreApplying;
     });
     try {
       await restore.api.apply(
@@ -390,11 +394,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           if (_requiresFreshPreview(error)) {
             _previewNeedsRefresh = true;
-            _error = 'No records were restored because this preview is no longer current.';
-            _message = 'Discard this preview and select the backup again to review current data before restoring.';
+            _error = AppMessage.restorePreviewStale;
+            _message = AppMessage.restoreReviewAgain;
           } else {
             _error = _safeError(error);
-            _message = 'The merge could not be confirmed. Check current records before retrying.';
+            _message = AppMessage.restoreMergeUnconfirmed;
           }
         });
       }
@@ -420,7 +424,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         _page = null;
         _previewNeedsRefresh = false;
         _password.clear();
-        _message = 'Preview discarded. No local records were changed.';
+        _message = AppMessage.restorePreviewDiscarded;
         _pageCursors
           ..clear()
           ..add(null);
@@ -442,7 +446,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       canPop: !_busy,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Restore encrypted backup'),
+          title: Text(AppMessage.restoreBackup.of(context)),
           actions: [HelpButton(topic: HelpTopic.backups, enabled: !_busy)],
         ),
         body: CustomScrollView(
@@ -451,9 +455,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
               sliver: SliverList.list(
                 children: [
-                  const Text(
-                    'Choose a Clockrove backup and enter its password. The file is read into private encrypted staging; the password is never saved. Clockrove cannot recover it.',
-                  ),
+                  Text(AppMessage.restoreChooseAndProtect.of(context)),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     key: const ValueKey('restore-choose-backup'),
@@ -461,16 +463,19 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     icon: const Icon(Icons.folder_open),
                     label: Text(
                       restore != null
-                          ? 'Choose another backup'
+                          ? AppMessage.chooseAnotherBackup.of(context)
                           : _document == null
-                          ? 'Choose encrypted backup'
-                          : 'Choose a different backup',
+                          ? AppMessage.chooseEncryptedBackup.of(context)
+                          : AppMessage.chooseDifferentBackup.of(context),
                     ),
                   ),
                   if (_document != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Selected encrypted file · ${(_document!.totalBytes / (1024 * 1024)).toStringAsFixed(1)} MiB',
+                      AppMessage.selectedEncryptedFile.format(context, {
+                        'size': (_document!.totalBytes / (1024 * 1024))
+                            .toStringAsFixed(1),
+                      }),
                       key: const ValueKey('restore-selected-file'),
                     ),
                   ],
@@ -484,12 +489,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                       autocorrect: false,
                       enableSuggestions: false,
                       decoration: InputDecoration(
-                        labelText: 'Backup password',
-                        errorText: _passwordError,
+                        labelText: AppMessage.backupPassword.of(context),
+                        errorText: _passwordError?.of(context),
                         suffixIcon: IconButton(
                           tooltip: _passwordVisible
-                              ? 'Hide password'
-                              : 'Show password',
+                              ? AppMessage.hidePassword.of(context)
+                              : AppMessage.showPassword.of(context),
                           onPressed: () => setState(
                             () => _passwordVisible = !_passwordVisible,
                           ),
@@ -508,7 +513,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                           ? null
                           : _createPreview,
                       icon: const Icon(Icons.preview),
-                      label: const Text('Authenticate and preview'),
+                      label: Text(
+                        AppMessage.authenticateAndPreview.of(context),
+                      ),
                     ),
                   ],
                   if (_busy) ...[
@@ -519,17 +526,20 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         key: const ValueKey('restore-cancel-preview'),
                         onPressed: _cancelPreview,
                         icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Cancel preview'),
+                        label: Text(AppMessage.cancelPreview.of(context)),
                       ),
                   ],
                   if (_message != null) ...[
                     const SizedBox(height: 12),
-                    Text(_message!, key: const ValueKey('restore-message')),
+                    Text(
+                      _message!.of(context),
+                      key: const ValueKey('restore-message'),
+                    ),
                   ],
-                  if (_error != null) ...[
+                  if (_error case final error?) ...[
                     const SizedBox(height: 12),
                     Text(
-                      _error!,
+                      error.of(context),
                       key: const ValueKey('restore-error'),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
@@ -538,40 +548,40 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   ],
                   if (preview != null) ...[
                     const SizedBox(height: 20),
-                    _previewSummary(preview),
+                    BackupRestorePreviewSummary(preview: preview),
                     if (preview.openSessionCount > 0) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.timer_off_outlined,
-                        text: 'This backup contains open/provisional sessions. The available restore choice is to omit them. Restore will not clock them out, invent an end time, or start a timer.',
+                        text: AppMessage.restoreOpenSessionsOmitted.of(context),
                       ),
                     ],
                     if (preview.localOpenSessionCount > 0) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.pause_circle_outline,
                         isError: true,
-                        text: 'A timer is running on this device. Stop it, discard this preview, and create a fresh preview before restoring. The native transaction also rejects an open local timer.',
+                        text: AppMessage.restoreLocalTimerBlocking.of(context),
                       ),
                     ],
                     if (_previewNeedsRefresh) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.refresh,
                         isError: true,
-                        text: 'This preview cannot be applied again. Discard it and select the backup to create a fresh preview of current data.',
+                        text: AppMessage.restorePreviewAlreadyStale.of(context),
                       ),
                     ],
                     if (_page != null && _page!.conflicts.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Conflicts · page ${_pageIndex + 1}',
+                        AppMessage.restoreConflictPage.format(context, {
+                          'page': '${_pageIndex + 1}',
+                        }),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Review each proposed choice. You can revisit reviewed pages before applying.',
-                      ),
+                      Text(AppMessage.restoreReviewChoices.of(context)),
                     ],
                   ],
                 ],
@@ -597,9 +607,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 sliver: SliverList.list(
                   children: [
                     if (_page != null && _page!.done && _allConflictsReviewed)
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.fact_check_outlined,
-                        text: 'All conflict pages have been reviewed. Applying sends the choices to the native repository, which checks the local version and commits atomically.',
+                        text: AppMessage.restoreAllConflictsReviewed.of(
+                          context,
+                        ),
                       ),
                     if (_page != null && !_page!.done)
                       FilledButton.tonalIcon(
@@ -608,7 +620,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : _nextConflictPage,
                         icon: const Icon(Icons.navigate_next),
-                        label: const Text('Continue to next conflict page'),
+                        label: Text(
+                          AppMessage.restoreNextConflictPage.of(context),
+                        ),
                       ),
                     if (_pageIndex > 0)
                       TextButton.icon(
@@ -616,7 +630,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ? null
                             : () => _loadConflictPage(_pageIndex - 1),
                         icon: const Icon(Icons.navigate_before),
-                        label: const Text('Previous conflict page'),
+                        label: Text(
+                          AppMessage.restorePreviousConflictPage.of(context),
+                        ),
                       ),
                     if (restore.preview.localOpenSessionCount == 0 &&
                         _page?.done == true)
@@ -624,21 +640,21 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         key: const ValueKey('restore-apply'),
                         onPressed: _canApply ? _apply : null,
                         icon: const Icon(Icons.merge_type),
-                        label: const Text('Apply reviewed merge'),
+                        label: Text(AppMessage.applyReviewedMerge.of(context)),
                       ),
                     if (restore.preview.localOpenSessionCount > 0 ||
                         (_page != null && _page!.done && !_pageChoicesResolved))
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          'Resolve every conflict and stop any running local timer to enable apply.',
+                          AppMessage.restoreResolveBeforeApply.of(context),
                         ),
                       ),
                     TextButton.icon(
                       key: const ValueKey('restore-discard-preview'),
                       onPressed: _busy ? null : _discardPreview,
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Discard preview'),
+                      label: Text(AppMessage.discardPreview.of(context)),
                     ),
                   ],
                 ),
@@ -648,58 +664,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       ),
     );
   }
-
-  Widget _previewSummary(BackupImportPreview preview) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Restore preview',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          _CountLine(label: 'Records in backup', count: preview.recordCount),
-          _CountLine(label: 'Proposed additions', count: preview.addedCount),
-          _CountLine(
-            label: 'Existing records changed',
-            count: preview.changedCount,
-          ),
-          _CountLine(label: 'Deletion markers', count: preview.deletedCount),
-          _CountLine(label: 'Unchanged records', count: preview.unchangedCount),
-          _CountLine(
-            label: 'Conflicts to review',
-            count: preview.conflictCount,
-          ),
-          _CountLine(
-            label: 'Reference conflicts in backup',
-            count: preview.unresolvedReferenceCount,
-          ),
-          _CountLine(
-            label: 'Time overlap conflicts in backup',
-            count: preview.timeOverlapCount,
-          ),
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text(
-              'Deletion markers count backup tombstones, not every record they affect.',
-            ),
-          ),
-          _CountLine(label: 'Media files', count: preview.mediaCount),
-          _CountLine(
-            label: 'Media data',
-            value:
-                '${(preview.mediaBytes / (1024 * 1024)).toStringAsFixed(1)} MiB',
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Restore merges saved records. It does not start timers, enable geofences, or import map credentials and device registrations.',
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 final class _ConflictCard extends StatelessWidget {
@@ -725,11 +689,10 @@ final class _ConflictCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _conflictTitle(conflict),
+              _conflictTitle(context, conflict),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
-            Text('${_humanize(conflict.table)} · ${_humanize(conflict.kind)}'),
             if (conflict.localSummary.isNotEmpty ||
                 conflict.backupSummary.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -739,11 +702,9 @@ final class _ConflictCard extends StatelessWidget {
               ),
             ],
             if (conflict.allowedChoices.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Text(
-                  'This app cannot resolve this conflict. Applying is blocked; discard this preview.',
-                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(AppMessage.restoreUnsupportedConflict.of(context)),
               )
             else ...[
               const SizedBox(height: 8),
@@ -759,14 +720,14 @@ final class _ConflictCard extends StatelessWidget {
                         contentPadding: EdgeInsets.zero,
                         value: choice,
                         enabled: enabled,
-                        title: Text(_choiceLabel(choice)),
+                        title: Text(_choiceLabel(context, choice)),
                       ),
                   ],
                 ),
               ),
               if (!conflict.resolved)
                 Text(
-                  'Choose how to handle this item before continuing.',
+                  AppMessage.restoreChooseItem.of(context),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
             ],
@@ -787,9 +748,9 @@ final class _SummaryPair extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      _SummaryColumn(title: 'On this device', values: local),
+      _SummaryColumn(title: AppMessage.restoreOnDevice, values: local),
       const SizedBox(height: 8),
-      _SummaryColumn(title: 'In backup', values: backup),
+      _SummaryColumn(title: AppMessage.restoreInBackup, values: backup),
     ],
   );
 }
@@ -797,7 +758,7 @@ final class _SummaryPair extends StatelessWidget {
 final class _SummaryColumn extends StatelessWidget {
   const _SummaryColumn({required this.title, required this.values});
 
-  final String title;
+  final AppMessage title;
   final Map<String, Object?> values;
 
   @override
@@ -811,30 +772,16 @@ final class _SummaryColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            title.of(context),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           for (final entry in values.entries)
-            Text('${_humanize(entry.key)}: ${_scalarText(entry.value)}'),
+            Text(
+              '${_summaryFieldLabel(context, entry.key)}: ${_summaryValueText(context, entry.key, entry.value)}',
+            ),
         ],
       ),
-    ),
-  );
-}
-
-final class _CountLine extends StatelessWidget {
-  const _CountLine({required this.label, this.count, this.value});
-
-  final String label;
-  final int? count;
-  final String? value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        Expanded(child: Text(label)),
-        Text(value ?? '${count ?? 0}'),
-      ],
     ),
   );
 }
@@ -888,60 +835,111 @@ final class _NoticeCard extends StatelessWidget {
   }
 }
 
-String _choiceLabel(String choice) => switch (choice) {
-  'KEEP_LOCAL' => 'Keep the version on this device',
-  'MERGE_KEEP_LOCAL_CONTENT' =>
-    'Keep local content and preserve both revision parents',
-  'MERGE_USE_BACKUP_CONTENT' =>
-    'Use backup content and preserve both revision parents',
-  'MERGE_IDENTICAL_CONTENT' =>
-    'Keep identical content and merge revision history',
-  'OMIT_BACKUP_RECORD' => 'Omit this backup record',
-  'OMIT_OPEN_SESSION' => 'Omit this open session',
-  'OMIT_BACKUP_SESSION' => 'Omit this backup session',
-  'PRESERVE_DELETION' =>
-    'Keep the local deletion; omit the covered backup point',
-  'PRESERVE_LOCAL_DELETION' => 'Keep the local deletion',
-  'APPLY_BACKUP_DELETION' => 'Apply the deletion recorded in the backup',
-  'RESTORE_BACKUP_CONTENT' => 'Restore the content in this backup',
-  _ => _humanize(choice),
-};
-
-String _conflictTitle(BackupImportConflict conflict) {
-  if (conflict.kind == 'OPEN_SESSION') return 'Open session in backup';
-  if (conflict.kind == 'SESSION_OVERLAP') return 'Overlapping work interval';
-  if (conflict.kind == 'GPS_DELETION_COVERAGE') return 'Deleted GPS history';
-  if (conflict.kind == 'DEPENDENT_ON_CONFLICT') {
-    return 'Record depends on a skipped item';
-  }
-  return '${_humanize(conflict.table)} conflict';
+String _choiceLabel(BuildContext context, String choice) {
+  final message = switch (choice) {
+    'KEEP_LOCAL' => AppMessage.restoreKeepLocal,
+    'MERGE_KEEP_LOCAL_CONTENT' => AppMessage.restoreMergeLocal,
+    'MERGE_USE_BACKUP_CONTENT' => AppMessage.restoreMergeBackup,
+    'MERGE_IDENTICAL_CONTENT' => AppMessage.restoreMergeIdentical,
+    'OMIT_BACKUP_RECORD' => AppMessage.restoreOmitRecord,
+    'OMIT_OPEN_SESSION' => AppMessage.restoreOmitOpenSession,
+    'OMIT_BACKUP_SESSION' => AppMessage.restoreOmitBackupSession,
+    'PRESERVE_DELETION' => AppMessage.restorePreserveGpsDeletion,
+    'PRESERVE_LOCAL_DELETION' => AppMessage.restorePreserveLocalDeletion,
+    'APPLY_BACKUP_DELETION' => AppMessage.restoreApplyBackupDeletion,
+    'RESTORE_BACKUP_CONTENT' => AppMessage.restoreUseBackupContent,
+    _ => null,
+  };
+  return message?.of(context) ??
+      AppMessage.restoreUnrecognizedChoice.format(context, {'code': choice});
 }
 
-String _humanize(String value) => value
-    .replaceAll('_', ' ')
-    .split(' ')
-    .where((word) => word.isNotEmpty)
-    .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
-    .join(' ');
+String _conflictTitle(BuildContext context, BackupImportConflict conflict) {
+  final message = switch (conflict.kind) {
+    'OPEN_SESSION' => AppMessage.restoreOpenSessionConflict,
+    'SESSION_OVERLAP' => AppMessage.restoreOverlappingInterval,
+    'GPS_DELETION_COVERAGE' => AppMessage.restoreDeletedGps,
+    'DEPENDENT_ON_CONFLICT' => AppMessage.restoreSkippedDependency,
+    _ => null,
+  };
+  return message?.of(context) ?? AppMessage.restoreRecordConflict.of(context);
+}
 
-String _scalarText(Object? value) {
+String _summaryFieldLabel(BuildContext context, String field) =>
+    switch (field) {
+      'identifier' => AppMessage.restoreSummaryFieldIdentifier.of(context),
+      'id' => AppMessage.restoreSummaryFieldId.of(context),
+      'name' => AppMessage.restoreSummaryFieldName.of(context),
+      'job_name' => AppMessage.restoreSummaryFieldJobName.of(context),
+      'customer_name' => AppMessage.restoreSummaryFieldCustomerName.of(context),
+      'number' => AppMessage.restoreSummaryFieldNumber.of(context),
+      'title' => AppMessage.restoreSummaryFieldTitle.of(context),
+      'start_ms' => AppMessage.restoreSummaryFieldStartMs.of(context),
+      'end_ms' => AppMessage.restoreSummaryFieldEndMs.of(context),
+      'occurred_ms' => AppMessage.restoreSummaryFieldOccurredMs.of(context),
+      'amount_minor' => AppMessage.restoreSummaryFieldAmountMinor.of(context),
+      'currency' => AppMessage.restoreSummaryFieldCurrency.of(context),
+      'kind' => AppMessage.restoreSummaryFieldKind.of(context),
+      'category' => AppMessage.restoreSummaryFieldCategory.of(context),
+      _ => AppMessage.restoreSummaryFieldIdentifier.of(context),
+    };
+
+String _summaryValueText(BuildContext context, String field, Object? value) {
   if (value == null) return '—';
-  if (value is bool) return value ? 'Yes' : 'No';
-  if (value is num || value is String) return '$value';
+  if (value is bool) {
+    return (value ? AppMessage.yes : AppMessage.no).of(context);
+  }
+  if (value is num) {
+    return MaterialLocalizations.of(context).formatDecimal(value.toInt());
+  }
+  if (value is String) {
+    if (field == 'identifier') {
+      final message = switch (value) {
+        'ON_DEVICE' => AppMessage.restoreOnDevice,
+        'LOCAL_DELETION' => AppMessage.restorePreserveLocalDeletion,
+        'BACKUP_RECORD' => AppMessage.restoreInBackup,
+        'GPS_DELETION' ||
+        'GPS_LOCAL_POINTS' ||
+        'GPS_BACKUP_POINTS' => AppMessage.restoreDeletedGps,
+        'GPS_DELETION_UNAVAILABLE' => AppMessage.actualCostLinkUnavailable,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+    }
+    if (field == 'kind') {
+      final message = switch (value) {
+        'ITEM' => AppMessage.quoteChargeSupplies,
+        'HOURS' => AppMessage.quoteChargeLabor,
+        'HOURLY' => AppMessage.quoteScopeHourlyMode,
+        'TASK' => AppMessage.billingPerTask,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+      return AppMessage.restoreSummaryFieldKind.of(context);
+    }
+    if (field == 'category') {
+      final message = switch (value) {
+        'MATERIALS' => AppMessage.actualCostMaterials,
+        'SUBCONTRACT_LABOR' => AppMessage.actualCostSubcontractLabor,
+        'OTHER_DIRECT' => AppMessage.actualCostOtherDirect,
+        'OVERHEAD' => AppMessage.actualCostOverhead,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+      return AppMessage.restoreSummaryFieldCategory.of(context);
+    }
+    return value;
+  }
   return '—';
 }
 
-String _safeError(Object error) {
-  if (error is BackupCryptoV2CancelledException) {
-    return 'Preview cancelled. No local records were changed.';
-  }
-  if (error is FormatException) return error.message.toString();
-  if (error is BackupRestoreImportCleanupException ||
-      error is BackupCryptoV2CleanupException) {
-    return 'Restore staging could not be cleaned up. Close Clockrove and reopen it before trying again.';
-  }
-  return 'The backup could not be processed. Check the selected file and try again.';
-}
+AppMessage _safeError(Object error) => switch (error) {
+  BackupCryptoV2CancelledException() => AppMessage.restoreCancelled,
+  BackupUnlockException() => AppMessage.restoreUnlockFailed,
+  BackupRestoreImportCleanupException() ||
+  BackupCryptoV2CleanupException() => AppMessage.restoreCleanupFailed,
+  _ => AppMessage.restoreFailed,
+};
 
 bool _requiresFreshPreview(Object error) =>
     error is PlatformException &&

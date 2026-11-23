@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "Önce minimum saat, sonra tam süre"
+billingModeRoundTotalUp: "Toplam süreyi sonraki saate yuvarla"
+minimumHoursSummary: "{hours} saat"

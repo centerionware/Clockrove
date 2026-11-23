@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "最低時數，然後按實際時間計費"
+billingModeRoundTotalUp: "將總時數進位至下一小時"
+minimumHoursSummary: "{hours}小時"

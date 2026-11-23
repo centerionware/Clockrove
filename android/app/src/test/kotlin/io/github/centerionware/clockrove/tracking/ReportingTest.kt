@@ -79,7 +79,8 @@ class ReportingTest {
         val report = repository.report(selection()).report
         assertEquals(setOf("NEEDS_REVIEW", "ACTIVE_OR_PROVISIONAL"), report.excluded.map { it.reason }.toSet())
         assertTrue(report.intervals.isEmpty()); assertTrue(report.points.isEmpty()); assertEquals(BigInteger.ZERO, report.totals.single().durationMillis)
-        assertEquals(1, ReportCsv.work(report).split("\r\n").count { it.isNotEmpty() })
+        val context = RuntimeEnvironment.getApplication()
+        assertEquals(1, ReportCsv.work(context, report).split("\r\n").count { it.isNotEmpty() })
     }
     @Test fun taskModeUsesOnlyCompletedBillableTasksAndExposesMissingPrices() {
         val completion = at("2026-11-01T12:00:00.000Z")
@@ -110,7 +111,8 @@ class ReportingTest {
         assertNull(repository.execute(TimerRepository.Command("finish", version, TimerRepository.Action.STOP, null, at("2026-11-02T08:00:00.000Z"), "UTC", 0, TimerRepository.Origin.MANUAL)).conflict)
         val report = repository.report(selection()).report
         assertEquals(1, report.points.size)
-        val work = ReportCsv.work(report); val gps = ReportCsv.gps(report)
+        val context = RuntimeEnvironment.getApplication()
+        val work = ReportCsv.work(context, report); val gps = ReportCsv.gps(context, report)
         assertTrue(work.contains("\"'=Synthetic, \"\"quoted\"\"\njob\"")); assertTrue(gps.contains("\"'=Synthetic, \"\"quoted\"\"\njob\""))
         assertTrue(work.contains("2026-11-01T00:00:00.000-04:00")); assertTrue(work.contains("2026-11-02T00:00:00.000-05:00"))
         assertTrue(gps.contains("\"-1.0\",\"-2.0\"")); assertTrue(gps.contains("2026-11-01T01:30:00.000-04:00")); assertTrue(work.endsWith("\r\n"))
@@ -139,7 +141,8 @@ class ReportingTest {
         assertEquals(at("2026-11-01T04:00:00.000Z"), report.days.single().start)
         assertEquals(BigInteger.valueOf(25L * 3600000), report.totals.single().durationMillis)
         assertEquals(BigInteger.valueOf(150000), report.totals.single().amountMinor)
-        assertTrue(ReportCsv.work(report).contains("2026-11-01T00:00:00.000-04:00"))
+        val context = RuntimeEnvironment.getApplication()
+        assertTrue(ReportCsv.work(context, report).contains("2026-11-01T00:00:00.000-04:00"))
     }
     @Test fun finalSupportedCalendarDateTerminatesAtTheFollowingExclusiveBoundary() {
         val day = ReportStore.days(selection("9999-12-31", zone = "UTC")).single()

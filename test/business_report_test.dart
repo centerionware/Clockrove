@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 class _Versions extends TimerApi {
   final versions = StreamController<int>.broadcast();
   @override
@@ -157,8 +159,20 @@ void main() {
   test(
     'display preserves fractional elapsed seconds and selection equality',
     () {
-      expect(reportDuration('600'), '0h 0m 0.6s');
-      expect(reportDuration('3600000'), '1h 0m');
+      final fractional = reportDurationParts('600');
+      expect(fractional.arguments, {
+        'hours': '0',
+        'minutes': '0',
+        'seconds': '0.6',
+      });
+      expect(fractional.hasSeconds, isTrue);
+      final wholeHour = reportDurationParts('3600000');
+      expect(wholeHour.arguments, {
+        'hours': '1',
+        'minutes': '0',
+        'seconds': '0',
+      });
+      expect(wholeHour.hasSeconds, isFalse);
       expect(
         ReportSelection('2026-11-01', '2026-11-02', 'UTC', ['job']),
         ReportSelection('2026-11-01', '2026-11-02', 'UTC', ['job']),
@@ -225,11 +239,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('USD 123.45'), findsWidgets);
       await tester.scrollUntilVisible(
-        find.text('PDF invoice'),
+        find.text(englishCopy(AppMessage.reportExportPdf)),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.tap(find.text('PDF invoice'));
+      await tester.tap(find.text(englishCopy(AppMessage.reportExportPdf)));
       await tester.pumpAndSettle();
       expect(find.text('Review invoice'), findsOneWidget);
       expect(find.text('USD 132.71'), findsOneWidget);
@@ -269,11 +283,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('CSV export'),
+      find.text(englishCopy(AppMessage.reportExportCsv)),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('CSV export'));
+    await tester.tap(find.text(englishCopy(AppMessage.reportExportCsv)));
     await tester.pumpAndSettle();
     expect(api.exported!.jobs, ['job']);
     expect(api.exported!.timezone, 'UTC');
@@ -308,9 +322,7 @@ void main() {
       expect(find.textContaining('This cannot be undone.'), findsOneWidget);
       expect(find.text('Delete permanently'), findsOneWidget);
       expect(
-        find.textContaining(
-          'Issued invoices and billing history are kept, along with reusable task templates and customers.',
-        ),
+        find.textContaining(englishCopy(AppMessage.deleteJobWarning)),
         findsOneWidget,
       );
     },

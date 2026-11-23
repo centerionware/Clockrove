@@ -152,9 +152,13 @@ class SettingsSaveDeviceTest {
             false
         }
     }
-    private fun setSwitch(label: String, checked: Boolean) {
-        reveal(label, checkable = true)
-        val current = waitFor(label, checkable = true)
+    private fun setSwitch(label: String, checked: Boolean, currentChecked: Boolean) {
+        reveal(label)
+        val current = find(label, checkable = true)
+        if (current == null) {
+            if (currentChecked != checked) click(label)
+            return
+        }
         if (current.isChecked != checked) {
             assertTrue("Could not change $label", current.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         }
@@ -482,7 +486,11 @@ class SettingsSaveDeviceTest {
         try {
             click("App settings and customers"); click("Settings")
             reveal("Record work locations")
-            setSwitch("Record work locations", checked = false)
+            setSwitch(
+                "Record work locations",
+                checked = false,
+                currentChecked = before.settings.defaultLocationRecording,
+            )
             capture("location-recording-global-off")
             reveal("Save settings")
             click("Save settings")
@@ -492,7 +500,11 @@ class SettingsSaveDeviceTest {
 
             waitFor("App settings and customers"); click("App settings and customers"); click("Settings")
             reveal("Record work locations")
-            setSwitch("Record work locations", checked = true)
+            setSwitch(
+                "Record work locations",
+                checked = true,
+                currentChecked = repository.businessSnapshot().settings.defaultLocationRecording,
+            )
             capture("location-recording-global-on")
             reveal("Save settings")
             click("Save settings")

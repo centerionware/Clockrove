@@ -260,7 +260,7 @@ class QuoteBillingDeviceTest {
         assertEquals(0, count("sessions")); assertEquals(0, count("invoices")); assertEquals(0, count("invoice_task_claims")); assertEquals(0, count("invoice_payments"))
     }
     private fun document(repository: TimerRepository, id: String, name: String) {
-        val record = InvoiceDocuments.ensure(repository, id)
+        val record = InvoiceDocuments.ensure(app, repository, id)
         val bytes = requireNotNull(record.pdf)
         val file = File(captures, "$name.pdf").apply { writeBytes(bytes) }
         val extracted = StringBuilder()
@@ -326,9 +326,9 @@ class QuoteBillingDeviceTest {
             noWorkOrInvoices(); waitFor("Create job from quote"); capture("planned-scope")
             reveal("Open existing job"); click("Open existing job")
             waitFor("Task board"); waitFor("Install tile"); click("Install tile"); waitFor("Edit task")
-            enter("Unit price (USD)", "9.99"); enter("Quantity", "30"); reveal("Save task"); click("Save task")
+            enter("Unit price (USD)", "9.99"); enter("Quantity", "30"); reveal("Save"); click("Save")
             waitFor("Choose Labor or Supplies before saving.")
-            click("Labor"); reveal("Save task"); click("Save task")
+            click("Labor"); reveal("Save"); click("Save")
             until("Actual task quantity edit was not saved") { repository.boardSnapshot(binding.jobId).board.cards.single().quantityUnits == 300000L }
             waitFor("Task board"); capture("actual-task-quantity")
             click("Task actions"); click("Move to Done")
@@ -338,11 +338,11 @@ class QuoteBillingDeviceTest {
             assertEquals(BigInteger("999"), repository.boardSnapshot(binding.jobId).board.cards.single().priceMinor)
             assertEquals(0, count("sessions")); assertEquals(0, count("invoices"))
             val completedDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getDefault() }.format(java.util.Date(requireNotNull(repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis)))
-            back(); waitFor("Create job from quote"); back(); waitFor("Plan accepted scope")
+            back(); waitFor("Create job from quote"); back(); waitFor("Review accepted scope")
             scrollToStart(); reveal("Invoice actual work"); click("Invoice actual work")
             waitFor("Load available work"); enter("First date (YYYY-MM-DD)", completedDate); enter("Last date (YYYY-MM-DD)", completedDate)
             reveal("Load available work"); click("Load available work"); reveal("Install tile"); click("Install tile"); capture("actual-source-selection")
-            reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total USD 403.13"); capture("actual-invoice-review")
+            reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total: USD 403.13"); capture("actual-invoice-review")
             click("Keep editing"); assertEquals(0, count("invoices"))
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); click("Confirm invoice review")
             until("Invoice review left the keyboard open over the prepare action") { !keyboardVisible() }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'quote_api.dart';
 import 'quote_detail_screen.dart';
@@ -50,9 +51,7 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
       });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = 'Quotes could not be loaded. Retry to refresh their current status.',
-        );
+        setState(() => _error = AppMessage.quoteListLoadFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -85,10 +84,10 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Quotes'),
+      title: Text(AppMessage.quotes.of(context)),
       actions: [
         PopupMenuButton<String>(
-          tooltip: 'Filter quotes',
+          tooltip: AppMessage.quoteFilter.of(context),
           enabled: !_busy,
           onSelected: (value) {
             setState(() {
@@ -99,7 +98,10 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
             _load(reset: true);
           },
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'ALL', child: Text('All quotes')),
+            PopupMenuItem(
+              value: 'ALL',
+              child: Text(AppMessage.quoteFilterAll.of(context)),
+            ),
             for (final status in [
               'DRAFT',
               'ISSUED',
@@ -107,11 +109,14 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
               'DECLINED',
               'EXPIRED',
             ])
-              PopupMenuItem(value: status, child: Text(quoteStatus(status))),
+              PopupMenuItem(
+                value: status,
+                child: Text(quoteStatusMessage(status).of(context)),
+              ),
           ],
         ),
         IconButton(
-          tooltip: 'Refresh quotes',
+          tooltip: AppMessage.quoteRefresh.of(context),
           onPressed: _busy ? null : () => _load(reset: true),
           icon: const Icon(Icons.refresh),
         ),
@@ -120,7 +125,7 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _busy ? null : _create,
       icon: const Icon(Icons.add),
-      label: const Text('New quote'),
+      label: Text(AppMessage.quoteCreate.of(context)),
     ),
     body: RefreshIndicator(
       onRefresh: () => _load(reset: true),
@@ -130,14 +135,18 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
         children: [
           Text(
             _status == null
-                ? 'Estimates and agreements'
-                : quoteStatus(_status!),
+                ? AppMessage.quoteOverview.of(context)
+                : quoteStatusMessage(_status!).of(context),
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const Text(
-            'Quotes stay separate from worked hours, invoices and payments.',
-          ),
-          if (_today.isNotEmpty) Text('Status as of $_today · $_timezone'),
+          Text(AppMessage.quoteSeparationNotice.of(context)),
+          if (_today.isNotEmpty)
+            Text(
+              AppMessage.quoteStatusAsOf.format(context, {
+                'date': _today,
+                'timezone': _timezone,
+              }),
+            ),
           const SizedBox(height: 16),
           if (_busy) const LinearProgressIndicator(),
           if (_error != null) ...[
@@ -147,30 +156,34 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
             ),
             TextButton(
               onPressed: () => _load(reset: true),
-              child: const Text('Retry quotes'),
+              child: Text(AppMessage.quoteRetry.of(context)),
             ),
           ],
           if (!_busy && _error == null && _entries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Text(
-                'No quotes in this view. Create an estimate or choose another filter.',
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Text(AppMessage.quoteEmpty.of(context)),
             ),
           for (final quote in _entries)
             Card(
               child: ListTile(
-                title: Text(quote.number ?? 'Unissued draft'),
+                title: Text(
+                  quote.number ?? AppMessage.quoteUnissuedDraft.of(context),
+                ),
                 subtitle: Text(
                   [
                     quote.title,
                     if (quote.customer.isNotEmpty) quote.customer,
                     '${quote.currency} ${quote.total}',
-                    quoteStatus(quote.status),
+                    quoteStatusMessage(quote.status).of(context),
                     if (quote.revision != null)
-                      'Latest issued revision ${quote.revision}',
+                      AppMessage.quoteLatestIssuedRevision.format(context, {
+                        'revision': quote.revision.toString(),
+                      }),
                     if (quote.validUntil != null)
-                      'Valid until ${quote.validUntil}',
+                      AppMessage.quoteValidUntil.format(context, {
+                        'date': quote.validUntil!,
+                      }),
                   ].join('\n'),
                 ),
                 trailing: const Icon(Icons.chevron_right),
@@ -180,7 +193,7 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
           if (_next != null)
             OutlinedButton(
               onPressed: _busy ? null : () => _load(),
-              child: const Text('Load older quotes'),
+              child: Text(AppMessage.quoteLoadOlder.of(context)),
             ),
         ],
       ),

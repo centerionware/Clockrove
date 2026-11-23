@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import org.json.JSONObject
 
@@ -54,7 +56,7 @@ internal object InvoiceCopyStore {
         retain(db, "BALANCE", copyToken, state.invoice, state.balance, at)
         return null
     }
-    fun read(db: SQLiteDatabase, copyId: String): InvoiceStore.Record {
+    fun read(db: SQLiteDatabase, copyId: String, strings: Context): InvoiceStore.Record {
         val row = db.rawQuery("SELECT invoice_id,kind,created_ms,command_version,metadata FROM invoice_copies WHERE id=?", arrayOf(copyId)).use {
             require(it.moveToFirst()) { "INVOICE_COPY_UNAVAILABLE" }
             Copy(it.getString(0), it.getString(1), it.getLong(2), it.getLong(3), JSONObject(it.getString(4)))
@@ -72,29 +74,67 @@ internal object InvoiceCopyStore {
             require(due == BigInteger.ZERO && paid.add(cancelled) == total) { "INVALID_INVOICE_COPY" }
             val replacementId = if (row.metadata.isNull("replacement_id")) null else row.metadata.getString("replacement_id")
             val replacementNumber = replacementId?.let { InvoiceStore.read(db, it).number }
-            val detail = replacementNumber?.let { "Replaced by $it. Existing payments were transferred; no new cash received." }
-                ?: "Cancelled. No payment is due on this invoice."
+            val detail = replacementNumber?.let {
+                strings.getString(R.string.invoice_void_detail_replaced, it)
+            } ?: strings.getString(R.string.invoice_void_detail_cancelled)
             val statement = InvoiceStore.Statement("VOID", "VOID", row.created, InvoiceStore.amount(paid, document.digits),
-                InvoiceStore.amount(BigInteger.ZERO, document.digits), listOf(InvoiceStore.Line("Cancelled unpaid balance", detail, InvoiceStore.amount(cancelled, document.digits))), copyId)
-            val copy = document.copy(subject = "Voided invoice · ${document.number}",
-                body = "Invoice ${document.number} is VOID. $detail\nOriginal total: ${document.total} ${document.currency}\nCredit transferred: ${statement.paid} ${document.currency}\nBalance due: ${statement.due} ${document.currency}\nCopy reference: $copyId", statement = statement)
+                InvoiceStore.amount(BigInteger.ZERO, document.digits), listOf(InvoiceStore.Line(strings.getString(R.string.invoice_void_cancelled_balance), detail, InvoiceStore.amount(cancelled, document.digits))), copyId)
+            val copy = document.copy(
+                subject = strings.getString(R.string.invoice_void_subject, document.number),
+                body = strings.getString(
+                    R.string.invoice_void_body,
+                    document.number,
+                    strings.getString(R.string.pdf_status_void),
+                    detail,
+                    document.total,
+                    document.currency,
+                    statement.paid,
+                    document.currency,
+                    statement.due,
+                    document.currency,
+                    copyId,
+                ),
+                statement = statement,
+            )
             return original.copy(payload = copy.encode(), pdf = cachedPdf, copyId = copyId, documentKind = "VOID")
         }
         val balance = PaymentMath.balance(total, paid)
         require(balance.due == due) { "INVALID_INVOICE_COPY" }
         val eventId = if (row.metadata.isNull("event_id")) null else row.metadata.getString("event_id")
         require((row.kind == "BALANCE") == (eventId == null)) { "INVALID_INVOICE_COPY" }
-        val events = events(db, row.invoiceId, row.version, eventId, document.digits)
+        val events = events(db, row.invoiceId, row.version, eventId, document.digits, strings)
         val statement = InvoiceStore.Statement(row.kind, balance.status, row.created,
             InvoiceStore.amount(paid, document.digits), InvoiceStore.amount(due, document.digits), events, copyId)
-        val caption = when (row.kind) { "RECEIPT" -> "Payment receipt"; "CORRECTION" -> "Payment correction"; else -> "Invoice balance copy" }
-        val status = balance.status.replace('_', ' ')
-        val body = document.body + "\n\n$caption ${document.number}\nStatus: $status\nOriginal total: ${document.total} ${document.currency}\nPaid: ${statement.paid} ${document.currency}\nBalance due: ${statement.due} ${document.currency}\nCopy reference: $copyId"
-        val copy = document.copy(subject = "$caption · ${document.subject}", body = body, statement = statement)
+        val caption = strings.getString(when (row.kind) {
+            "RECEIPT" -> R.string.invoice_copy_caption_receipt
+            "CORRECTION" -> R.string.invoice_copy_caption_correction
+            else -> R.string.invoice_copy_caption_balance
+        })
+        val statusResource = when (balance.status) {
+            "PAID" -> R.string.pdf_status_paid
+            "PARTIAL", "PARTIALLY_PAID" -> R.string.pdf_status_partial
+            "VOID" -> R.string.pdf_status_void
+            "NOTHING_DUE" -> R.string.pdf_status_nothing_due
+            else -> R.string.pdf_status_unpaid
+        }
+        val status = strings.getString(statusResource)
+        val body = listOf(
+            strings.getString(R.string.invoice_copy_caption_number, caption, document.number),
+            strings.getString(R.string.invoice_copy_status, status),
+            strings.getString(R.string.invoice_copy_original_total, document.total, document.currency),
+            strings.getString(R.string.invoice_copy_paid, statement.paid, document.currency),
+            strings.getString(R.string.invoice_copy_balance_due, statement.due, document.currency),
+            strings.getString(R.string.pdf_copy_reference, copyId),
+        ).joinToString("\n")
+        val copy = document.copy(
+            subject = strings.getString(R.string.invoice_copy_subject, caption, document.subject),
+            body = document.body + "\n\n" + body,
+            statement = statement,
+        )
         return original.copy(payload = copy.encode(), pdf = cachedPdf, copyId = copyId, documentKind = row.kind)
     }
     private data class Copy(val invoiceId: String, val kind: String, val created: Long, val version: Long, val metadata: JSONObject)
-    private fun events(db: SQLiteDatabase, invoiceId: String, version: Long, eventId: String?, digits: Int): List<InvoiceStore.Line> {
+    private fun events(db: SQLiteDatabase, invoiceId: String, version: Long, eventId: String?, digits: Int, strings: Context): List<InvoiceStore.Line> {
         val args = if (eventId == null) arrayOf(invoiceId, version.toString()) else arrayOf(invoiceId, version.toString(), eventId)
         return db.rawQuery("SELECT e.kind,e.effective_ms,e.payload,p.method,p.reference FROM invoice_payment_events e JOIN invoice_payments p ON p.id=e.payment_id WHERE e.invoice_id=? AND e.command_version<=? ${if (eventId == null) "" else "AND e.id=?"} ORDER BY e.command_version,e.ordinal LIMIT 5001", args).use { rows -> buildList {
             while (rows.moveToNext()) {
@@ -103,7 +143,11 @@ internal object InvoiceCopyStore {
                 val cash = BigInteger(value.getString("cash_change_minor"))
                 val credited = BigInteger(value.getString("paid_minor")).subtract(BigInteger(value.getString("before_paid_minor")))
                 val amount = if (kind == "TRANSFER") credited else cash
-                val title = when (kind) { "PAYMENT" -> "Payment received"; "REVERSAL" -> "Payment reversed"; else -> "Credit transferred" }
+                val title = strings.getString(when (kind) {
+                    "PAYMENT" -> R.string.invoice_copy_payment_received
+                    "REVERSAL" -> R.string.invoice_copy_payment_reversed
+                    else -> R.string.invoice_copy_credit_transferred
+                })
                 val detail = listOf(value.getString("time_label"), rows.getString(3), rows.getString(4)).filter { it.isNotBlank() }.joinToString("\n")
                 add(InvoiceStore.Line(title, detail, InvoiceStore.amount(amount, digits)))
             }

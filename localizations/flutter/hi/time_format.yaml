@@ -1,0 +1,3 @@
+durationHoursMinutes: "{hours} घं {minutes} मि"
+durationHoursMinutesSeconds: "{hours} घं {minutes} मि {seconds} से"
+timeUtcOffset: " (UTC{offset})"

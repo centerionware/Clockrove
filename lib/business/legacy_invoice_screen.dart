@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
@@ -17,16 +18,16 @@ class LegacyInvoiceScreen extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Review billed work')),
+        appBar: AppBar(title: Text(AppMessage.reviewBilledWork.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Review billed work')),
+        appBar: AppBar(title: Text(AppMessage.reviewBilledWork.of(context))),
         body: Center(
           child: FilledButton(
             onPressed: () =>
                 ref.invalidate(legacyInvoiceContextProvider(invoiceId)),
-            child: const Text('Retry coverage review'),
+            child: Text(AppMessage.retryInvoiceCorrection.of(context)),
           ),
         ),
       ),
@@ -116,23 +117,21 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
     final missing = _tasks.difference(available);
     setState(() {
       _noteError = note.length < 10 || note.length > 4000
-          ? 'Add 10 to 4000 characters explaining this review.'
+          ? AppMessage.legacyNoteLength.of(context)
           : null;
       _confirmationError = _confirmed
           ? null
-          : 'Confirm that you checked the original invoice.';
+          : AppMessage.legacyConfirmationRequired.of(context);
       _selectionError = missing.isNotEmpty
-          ? 'Selected work changed or is already reserved. Clear the selection, refresh and review it again.'
+          ? AppMessage.quoteInvoiceSourcesStale.of(context)
           : (_tasks.isEmpty && _times.isEmpty) != _noSources
-          ? 'Select covered tasks/time or explicitly acknowledge that no source records can be linked.'
+          ? AppMessage.legacyCoverageSourceRequired.of(context)
           : null;
     });
     if (_noteError != null ||
         _confirmationError != null ||
         _selectionError != null) {
-      throw const FormatException(
-        'Correct the highlighted coverage review fields.',
-      );
+      throw FormatException(AppMessage.legacyCoverageFieldsInvalid.of(context));
     }
     final tasks = _tasks.toList()..sort();
     return LegacyInvoiceDraft(
@@ -161,10 +160,10 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
       canPop: !_pending,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Review billed work'),
+          title: Text(AppMessage.reviewBilledWork.of(context)),
           actions: [
             IconButton(
-              tooltip: 'Refresh source records',
+              tooltip: AppMessage.refreshInvoiceCorrection.of(context),
               onPressed: _pending ? null : _refresh,
               icon: const Icon(Icons.refresh),
             ),
@@ -178,12 +177,12 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                 padding: const EdgeInsets.all(24),
                 children: [
                   if (widget.refreshFailed) ...[
-                    const Text(
-                      'Could not refresh source records. Your review and current operation are kept.',
-                    ),
+                    Text(AppMessage.invoiceDetailsRefreshFailed.of(context)),
                     TextButton(
                       onPressed: _pending ? null : _refresh,
-                      child: const Text('Retry source records'),
+                      child: Text(
+                        AppMessage.retryInvoiceCorrection.of(context),
+                      ),
                     ),
                   ],
                   Text(
@@ -194,39 +193,41 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                   Text(data.jobName),
                   Text('${data.currency} ${data.total} · ${data.period}'),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Select the work this invoice already billed. Its PDF, total and number stay unchanged. This review does not record a payment.',
-                  ),
+                  Text(AppMessage.legacyCoverageInstructions.of(context)),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _pending ? null : () => _open(data.invoiceId),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('View original invoice'),
+                    label: Text(AppMessage.openOriginalInvoice.of(context)),
                   ),
                   if (data.jobDeleted)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 16),
-                      child: Text(
-                        'This job was deleted. Its financial records remain available; source review cannot modify deleted work.',
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(AppMessage.legacyDeletedJob.of(context)),
                     ),
                   if (!data.legacy)
                     Padding(
                       padding: const EdgeInsets.only(top: 16),
                       child: Text(
                         _pending
-                            ? 'Coverage is saved. Retry the same operation to confirm its outcome.'
-                            : 'Coverage reviewed. ${data.note}',
+                            ? AppMessage.commandResultUnknown.of(context)
+                            : AppMessage.legacyCoverageSavedNote.format(
+                                context,
+                                {'note': data.note},
+                              ),
                       ),
                     ),
                   if (editing) ...[
-                    _heading('Covered work'),
+                    _heading(AppMessage.legacyCoveredWork.of(context)),
                     Text(
-                      '${_tasks.length} tasks · ${_times.length} time ranges selected',
+                      AppMessage.legacyCoverageSelectionCount.format(context, {
+                        'tasks': MaterialLocalizations.of(context)
+                            .formatDecimal(_tasks.length),
+                        'times': MaterialLocalizations.of(context)
+                            .formatDecimal(_times.length),
+                      }),
                     ),
-                    const Text(
-                      'Nothing is selected automatically. Linking a task keeps its current completion and price.',
-                    ),
+                    Text(AppMessage.legacyLinkingHelp.of(context)),
                     if (_selectionError != null)
                       Text(
                         _selectionError!,
@@ -243,14 +244,16 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                 _changed();
                               })
                             : null,
-                        child: const Text('Clear selected work'),
+                        child: Text(
+                          AppMessage.legacyClearSelection.of(context),
+                        ),
                       ),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _noSources,
-                      title: const Text('No source records can be linked'),
-                      subtitle: const Text(
-                        'Explain missing records or existing reservations in the review note.',
+                      title: Text(AppMessage.legacyNoSources.of(context)),
+                      subtitle: Text(
+                        AppMessage.legacyMissingSourcesHelp.of(context),
                       ),
                       onChanged: _editable && _tasks.isEmpty && _times.isEmpty
                           ? (value) => setState(() {
@@ -264,20 +267,16 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       controller: _search,
                       readOnly: !_editable,
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'Search this job’s tasks',
+                      decoration: InputDecoration(
+                        labelText: AppMessage.quoteSearchSavedTasks.of(context),
                         prefixIcon: Icon(Icons.search),
                       ),
                     ),
                     const SizedBox(height: 8),
                     if (data.tasks.isEmpty)
-                      const Text(
-                        'No task records remain for this job. Add covered time if the original invoice billed hours, or explicitly review missing source records.',
-                      ),
+                      Text(AppMessage.legacyNoTaskRecords.of(context)),
                     if (data.tasks.isNotEmpty && tasks.isEmpty)
-                      const Text(
-                        'No tasks match this search. Other selections are kept.',
-                      ),
+                      Text(AppMessage.legacyNoTaskMatches.of(context)),
                     for (final task in tasks)
                       Column(
                         children: [
@@ -287,10 +286,18 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                             title: Text(task.title),
                             subtitle: Text(
                               task.number != null
-                                  ? 'Already reserved · ${task.number}'
+                                  ? AppMessage.quoteInvoiceAlreadyBilled.format(
+                                      context,
+                                      {'number': task.number!},
+                                    )
                                   : task.completedLabel == null
-                                  ? 'Not currently completed'
-                                  : 'Completed ${task.completedLabel}',
+                                  ? AppMessage.quoteScopeNotCompleted.of(
+                                      context,
+                                    )
+                                  : AppMessage.legacyTaskCompleted.format(
+                                      context,
+                                      {'date': task.completedLabel!},
+                                    ),
                             ),
                             onChanged:
                                 _editable &&
@@ -313,12 +320,16 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                 onPressed: _pending
                                     ? null
                                     : () => _open(task.invoiceId!),
-                                child: Text('Open ${task.number}'),
+                                child: Text(
+                                  AppMessage.legacyOpenInvoice.format(context, {
+                                    'number': task.number!,
+                                  }),
+                                ),
                               ),
                             ),
                         ],
                       ),
-                    _heading('Covered time'),
+                    _heading(AppMessage.legacyCoveredTime.of(context)),
                     for (var i = 0; i < _times.length; i++)
                       Card(
                         child: Padding(
@@ -337,7 +348,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                     onPressed: _editable
                                         ? () => _time(i)
                                         : null,
-                                    child: const Text('Edit covered time'),
+                                    child: Text(
+                                      AppMessage.legacyEditCoveredTime.of(
+                                        context,
+                                      ),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: _editable
@@ -346,7 +361,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                                             _changed();
                                           })
                                         : null,
-                                    child: const Text('Remove range'),
+                                    child: Text(
+                                      AppMessage.legacyRemoveTimeRange.of(
+                                        context,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -359,9 +378,9 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                           ? () => _time()
                           : null,
                       icon: const Icon(Icons.add),
-                      label: const Text('Add covered time'),
+                      label: Text(AppMessage.legacyAddCoveredTime.of(context)),
                     ),
-                    _heading('Review note'),
+                    _heading(AppMessage.invoicePaymentNotes.of(context)),
                     Semantics(
                       identifier: 'legacy-invoice-review-note',
                       child: TextField(
@@ -371,8 +390,9 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                         minLines: 3,
                         maxLines: 6,
                         decoration: InputDecoration(
-                          labelText: 'Why this work belongs to the invoice',
-                          helperText: 'Private audit note; never added to the customer PDF.',
+                          labelText: AppMessage.legacyReasonWhy.of(context),
+                          helperText: AppMessage.invoiceCorrectionPrivacyHelp
+                              .of(context),
                           errorText: _noteError,
                           errorMaxLines: 3,
                         ),
@@ -386,11 +406,11 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _confirmed,
-                      title: const Text(
-                        'I checked this against the original invoice',
+                      title: Text(
+                        AppMessage.legacyReviewedOriginal.of(context),
                       ),
-                      subtitle: const Text(
-                        'I verified the selected work or explained missing source records in my note.',
+                      subtitle: Text(
+                        AppMessage.legacyReviewedOriginalHelp.of(context),
                       ),
                       onChanged: _editable
                           ? (value) {
@@ -411,7 +431,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       ),
                   ],
                   if (data.reservedTimes.isNotEmpty) ...[
-                    _heading('Existing time reservations'),
+                    _heading(AppMessage.invoiceReviewReservations.of(context)),
                     for (final value in data.reservedTimes)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -439,7 +459,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                 child: editing
                     ? BusinessCommand(
                         key: const ValueKey('save-legacy-coverage'),
-                        label: 'Save coverage review',
+                        label: AppMessage.legacySaveCoverage.of(context),
                         enabled: data.legacy && !data.jobDeleted,
                         onPendingChanged: (value) =>
                             setState(() => _pending = value),
@@ -454,7 +474,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       )
                     : FilledButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Done'),
+                        child: Text(AppMessage.done.of(context)),
                       ),
               ),
             ),

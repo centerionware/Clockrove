@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.invoice
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -8,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.tracking.BusinessReportStore
 import java.io.File
 import java.math.BigInteger
+import java.util.Locale
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,7 +37,7 @@ class BusinessReportPdfTest {
                 customerId = "customer", customer = "Synthetic customer", currency = "USD", digits = 2,
                 salesMinor = BigInteger("15000"), taxMinor = BigInteger("1125"), legacyTotalMinor = null,
                 laborMinor = BigInteger("5000"), suppliesMinor = BigInteger("10000"), unclassifiedMinor = zero,
-                relatedInvoiceId = null, reason = "Invoice issued",
+                relatedInvoiceId = null, reason = "",
             )),
             cash = listOf(BusinessReportStore.CashMovement(
                 id = "payment-event", invoiceId = "invoice", paymentId = "payment", number = "INV-1000",
@@ -53,7 +55,13 @@ class BusinessReportPdfTest {
             )),
             excludedUnknownCustomerCostCount = 0,
         )
-        val bytes = BusinessReportPdf.generate(report)
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val spanish = target.createConfigurationContext(
+            Configuration(target.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag("es"))
+            },
+        )
+        val bytes = BusinessReportPdf.generate(spanish, report)
         assertTrue(bytes.size > 1000)
         val file = File.createTempFile("clockrove-business-report-", ".pdf", InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
         try {

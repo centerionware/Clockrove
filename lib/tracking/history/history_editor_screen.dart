@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../business/business_api.dart';
 import '../../business/business_command.dart';
 import '../../business/report_screen.dart';
@@ -95,9 +96,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       await _resolve(preferredStart: start, preferredEnd: end);
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = 'The entry could not be loaded. Retry without changing saved work.',
-        );
+        setState(() => _error = AppMessage.historyEditorLoadFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -196,13 +195,13 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
             (_ends.length == 1 ? _ends.single : null);
         _reviewed = true;
         if (_starts.isEmpty || _ends.isEmpty) {
-          _error = 'This local time does not exist in the selected timezone. Choose a time outside the clock change or skipped date.';
+          _error = AppMessage.paymentSkippedTime.of(context);
         }
       });
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error = 'Check the full date, time and IANA timezone. Times must include seconds and three millisecond digits.',
+          () => _error = AppMessage.legacyInvalidLocalDateTime.of(context),
         );
       }
     } finally {
@@ -242,14 +241,14 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
           if (_sameEntry(_original, detail.entry)) {
             _version = detail.version;
           } else {
-            _error = 'The saved entry changed. Your draft is kept. Reload the saved entry and review it before making another correction.';
+            _error = AppMessage.historySavedEntryChanged.of(context);
           }
         });
       }
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error = 'Could not check the saved entry. Your draft is kept.',
+          () => _error = AppMessage.historyCheckSavedEntryFailed.of(context),
         );
       }
     } finally {
@@ -263,18 +262,16 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Reload saved entry?'),
-        content: const Text(
-          'This replaces your unsaved draft with the current saved entry.',
-        ),
+        title: Text(AppMessage.historyReloadTitle.of(dialog)),
+        content: Text(AppMessage.historyReloadWarning.of(dialog)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Keep draft'),
+            child: Text(AppMessage.historyKeepDraft.of(dialog)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Reload'),
+            child: Text(AppMessage.historyReload.of(dialog)),
           ),
         ],
       ),
@@ -297,16 +294,14 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, update) => AlertDialog(
           title: Text(
-            'Delete work entry?',
+            AppMessage.historyDeleteTitle.of(dialog),
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-          content: const Text(
-            'This removes the work interval and its GPS points. Local change history is retained. Previously exported files and prepared invoices are unchanged.',
-          ),
+          content: Text(AppMessage.historyDeleteWarning.of(dialog)),
           actions: [
             TextButton(
               onPressed: pending ? null : () => Navigator.pop(dialog),
-              child: const Text('Cancel'),
+              child: Text(AppMessage.cancel.of(dialog)),
             ),
             Theme(
               data: Theme.of(context).copyWith(
@@ -316,7 +311,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                 ),
               ),
               child: BusinessCommand(
-                label: 'Delete entry',
+                label: AppMessage.historyDeleteWorkEntry.of(dialog),
                 onPendingChanged: (value) {
                   update(() => pending = value);
                   setState(() => _pending = value);
@@ -349,8 +344,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(label, style: Theme.of(context).textTheme.titleSmall),
-      if (values.length > 1)
-        const Text('This time occurs twice. Choose the intended UTC offset.'),
+      if (values.length > 1) Text(AppMessage.legacyAmbiguousTime.of(context)),
       if (values.length == 1) Text(values.single.label),
       if (values.length > 1)
         for (final value in values)
@@ -366,7 +360,7 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
               onPressed: _locked ? null : () => change(value),
             ),
           ),
-      if (selected != null) Text(historyUtc(selected.instant)),
+      if (selected != null) Text(historyUtc(context, selected.instant)),
       const SizedBox(height: 16),
     ],
   );
@@ -384,12 +378,14 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            widget.sessionId == null ? 'Add work entry' : 'Work entry',
+            widget.sessionId == null
+                ? AppMessage.historyAddWorkEntry.of(context)
+                : AppMessage.historyWorkEntry.of(context),
           ),
           actions: [
             if (widget.sessionId != null)
               IconButton(
-                tooltip: 'Entry change history',
+                tooltip: AppMessage.historyAuditTitle.of(context),
                 onPressed: _locked
                     ? null
                     : () => Navigator.push(
@@ -413,12 +409,12 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                 children: [
                   Text(
                     _original == null
-                        ? 'This entry is no longer available. Its change history may still be viewed.'
-                        : 'This entry is running. Clock out before correcting or deleting it.',
+                        ? AppMessage.historyEntryUnavailable.of(context)
+                        : AppMessage.historyEntryRunning.of(context),
                   ),
                   TextButton(
                     onPressed: _load,
-                    child: const Text('Refresh entry'),
+                    child: Text(AppMessage.historyRefreshEntry.of(context)),
                   ),
                 ],
               )
@@ -427,19 +423,17 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    const Text(
-                      'Manual work entry',
+                    Text(
+                      AppMessage.historyManualWorkEntry.of(context),
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Enter local times in the timezone below. Overlapping work is rejected across every job. Correcting times prunes GPS points outside the interval; extending work never creates observations.',
-                    ),
+                    Text(AppMessage.historyEditorGuidance.of(context)),
                     if (_original?.needsReview == true)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
                         child: Text(
-                          'This entry needs review after a tracking conflict. Saving a correction resolves its review flag.',
+                          AppMessage.historyEntryNeedsReview.of(context),
                         ),
                       ),
                     const SizedBox(height: 20),
@@ -447,18 +441,18 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                       controller: _zone,
                       enabled: !_locked,
                       onChanged: _changed,
-                      decoration: const InputDecoration(
-                        labelText: 'IANA timezone',
-                        helperText: 'For example America/New_York or UTC',
+                      decoration: InputDecoration(
+                        labelText: AppMessage.ianaTimezoneHint.of(context),
+                        helperText: AppMessage.timezoneFieldHelp.of(context),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Enter a timezone'
+                          ? AppMessage.historyEnterTimezone.of(context)
                           : null,
                     ),
                     const SizedBox(height: 16),
                     for (final field in [
-                      (_start, 'Start local time'),
-                      (_end, 'End local time'),
+                      (_start, AppMessage.historyStartLocalTime.of(context)),
+                      (_end, AppMessage.historyEndLocalTime.of(context)),
                     ])
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
@@ -468,13 +462,16 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                           onChanged: _changed,
                           decoration: InputDecoration(
                             labelText: field.$2,
-                            helperText: 'YYYY-MM-DDTHH:mm:ss.SSS',
+                            helperText: AppMessage.legacyLocalTimestampFormat
+                                .of(context),
                             suffixIcon: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  tooltip:
-                                      'Choose ${field.$2.toLowerCase()} date',
+                                  tooltip: AppMessage.historyChooseDate.format(
+                                    context,
+                                    {'label': field.$2},
+                                  ),
                                   onPressed: _locked
                                       ? null
                                       : () => _pick(field.$1, date: true),
@@ -483,8 +480,8 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip:
-                                      'Choose ${field.$2.toLowerCase()} clock time',
+                                  tooltip: AppMessage.historyChooseClockTime
+                                      .format(context, {'label': field.$2}),
                                   onPressed: _locked
                                       ? null
                                       : () => _pick(field.$1, date: false),
@@ -499,27 +496,29 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                                     r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$',
                                   ).hasMatch(v.trim())
                               ? null
-                              : 'Enter the full date and time, including milliseconds',
+                              : AppMessage.historyEnterFullTimestamp.of(
+                                  context,
+                                ),
                         ),
                       ),
                     OutlinedButton(
                       onPressed: _locked ? null : () => _resolve(),
                       child: Text(
                         _resolving
-                            ? 'Checking times…'
-                            : 'Review times and UTC offsets',
+                            ? AppMessage.legacyResolvingTimes.of(context)
+                            : AppMessage.legacyReviewTimes.of(context),
                       ),
                     ),
                     const SizedBox(height: 16),
                     if (_reviewed) ...[
                       _choices(
-                        'Start',
+                        AppMessage.legacyStart.of(context),
                         _starts,
                         start,
                         (v) => setState(() => _selectedStart = v),
                       ),
                       _choices(
-                        'End',
+                        AppMessage.legacyEnd.of(context),
                         _ends,
                         end,
                         (v) => setState(() => _selectedEnd = v),
@@ -527,8 +526,13 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                       if (start != null && end != null)
                         Text(
                           end.instant > start.instant
-                              ? 'Duration · ${reportDuration('${end.instant - start.instant}')}'
-                              : 'End must be after start.',
+                              ? AppMessage.historyDuration.format(context, {
+                                  'duration': reportDuration(
+                                    context,
+                                    '${end.instant - start.instant}',
+                                  ),
+                                })
+                              : AppMessage.historyEndAfterStart.of(context),
                           style: TextStyle(
                             color: valid
                                 ? null
@@ -549,8 +553,8 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                       ),
                     BusinessCommand(
                       label: widget.sessionId == null
-                          ? 'Save work entry'
-                          : 'Save correction',
+                          ? AppMessage.historySaveWorkEntry.of(context)
+                          : AppMessage.historySaveCorrection.of(context),
                       enabled: valid && !_locked && _version != null,
                       onPendingChanged: (v) => setState(() => _pending = v),
                       create: () {
@@ -573,12 +577,14 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                     ),
                     TextButton(
                       onPressed: _locked ? null : _refreshVersion,
-                      child: const Text('Check for changes · keep draft'),
+                      child: Text(AppMessage.historyCheckKeepDraft.of(context)),
                     ),
                     if (widget.sessionId != null) ...[
                       TextButton(
                         onPressed: _locked ? null : _reload,
-                        child: const Text('Reload saved entry'),
+                        child: Text(
+                          AppMessage.historyReloadSavedEntry.of(context),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       TextButton.icon(
@@ -587,7 +593,9 @@ class _HistoryEditorState extends ConsumerState<HistoryEditor> {
                         ),
                         onPressed: _locked ? null : _delete,
                         icon: const Icon(Icons.delete_outline),
-                        label: const Text('Delete work entry'),
+                        label: Text(
+                          AppMessage.historyDeleteWorkEntry.of(context),
+                        ),
                       ),
                     ],
                   ],

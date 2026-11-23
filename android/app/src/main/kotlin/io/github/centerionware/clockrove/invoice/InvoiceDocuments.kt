@@ -7,12 +7,14 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.BusinessStore
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.TaxRate
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import java.math.BigInteger
-import java.text.SimpleDateFormat
+import java.text.DateFormat
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Currency
@@ -22,46 +24,76 @@ import java.util.TimeZone
 
 internal object InvoiceDocuments {
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
-    fun ensure(repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
+    fun ensure(context: Context, repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
         fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
         val before = read()
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo)
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo)
         if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
         return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
-    fun ensureQuote(repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
+    fun ensureQuote(context: Context, repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
         val before = repository.quoteDocument(id, revision)
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
         repository.cacheQuotePdf(id, revision, before.payload, bytes)
         return repository.quoteDocument(id, revision).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
     }
     fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
     fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.quoteRevision != null) Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("quotes").appendPath(record.id).appendPath(record.quoteRevision.toString()).build()
         else if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
-    fun filename(record: InvoiceStore.Record): String {
-        if (record.quoteRevision != null) return "${record.number}-revision-${record.quoteRevision}.pdf"
+    fun filename(context: Context, record: InvoiceStore.Record): String {
+        val strings = localizedContext(context)
+        if (record.quoteRevision != null) return strings.getString(
+            R.string.document_filename_quote_revision,
+            record.number,
+            strings.getString(R.string.document_filename_revision),
+            record.quoteRevision,
+        )
         if (record.copyId == null) return "${record.number}.pdf"
         val statement = requireNotNull(InvoiceStore.Snapshot.decode(record.payload).statement)
         val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(statement.created))
-        return "${record.number}-${record.documentKind.lowercase(java.util.Locale.ROOT)}-$date-${record.copyId.takeLast(8)}.pdf"
+        val kind = strings.getString(when (record.documentKind) {
+            "RECEIPT" -> R.string.invoice_copy_caption_receipt
+            "CORRECTION" -> R.string.invoice_copy_caption_correction
+            "VOID" -> R.string.pdf_void_invoice_title
+            else -> R.string.invoice_copy_caption_balance
+        })
+        return strings.getString(
+            R.string.document_filename_copy,
+            record.number,
+            kind,
+            date,
+            record.copyId.takeLast(8),
+        )
     }
-    fun historicalNotice(repository: TimerRepository, record: InvoiceStore.Record): String? {
+    fun historicalNotice(context: Context, repository: TimerRepository, record: InvoiceStore.Record): String? {
+        val strings = localizedContext(context)
         if (record.quoteRevision != null) {
             val latest = repository.quote(record.id).latest ?: return null
-            return if (latest.revision == record.quoteRevision) null else "Historical quote: ${record.number} revision ${record.quoteRevision}. The current issued revision is ${latest.revision}. This estimate is not an invoice or payment request."
+            return if (latest.revision == record.quoteRevision) null else strings.getString(
+                R.string.historical_quote_notice,
+                record.number,
+                record.quoteRevision.toString(),
+                latest.revision.toString(),
+            )
         }
         if (record.documentKind == "VOID") return null
         val state = repository.invoiceVoidContext(record.id) ?: return null
-        return "Historical copy: ${record.number} is VOID. Do not pay this invoice." +
-            (state.replacementNumber?.let { " Replaced by $it; consult the replacement for its current balance." } ?: " Its unpaid balance was cancelled.") +
-            " The original document and payment history remain retained."
+        return listOf(
+            strings.getString(R.string.historical_invoice_void_notice, record.number),
+            state.replacementNumber?.let {
+                strings.getString(R.string.historical_invoice_replacement_notice, it)
+            } ?: strings.getString(R.string.historical_invoice_balance_cancelled),
+            strings.getString(R.string.historical_invoice_records_retained),
+        ).joinToString(" ")
     }
     fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings, notice: String? = null): Intent {
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         require(BusinessStore.validEmail(snapshot.email)) { "INVALID_RECIPIENT" }
-        val subject = if (notice == null) snapshot.subject else "Historical copy · ${snapshot.subject}"
+        val strings = localizedContext(context)
+        val subject = if (notice == null) snapshot.subject
+            else strings.getString(R.string.historical_email_subject, snapshot.subject)
         val body = if (notice == null) snapshot.body else "$notice\n\n${snapshot.body}"
         require(subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size <= 100_000) { "EMAIL_TOO_LARGE" }
         require(subject.none { it == '\r' || it == '\n' }) { "INVALID_SUBJECT" }
@@ -76,14 +108,19 @@ internal object InvoiceDocuments {
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
             putExtra(Intent.EXTRA_STREAM, uri)
-            clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri)
+            clipData = ClipData.newRawUri(attachmentLabel(context, record), uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
     fun share(context: Context, record: InvoiceStore.Record, notice: String? = null): Intent {
         val uri = uri(context, record)
-        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(if (record.quoteRevision == null) "Invoice PDF" else "Quote PDF", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(attachmentLabel(context, record), uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
+    private fun attachmentLabel(context: Context, record: InvoiceStore.Record): String =
+        localizedContext(context).getString(
+            if (record.quoteRevision == null) R.string.invoice_pdf_attachment else R.string.quote_pdf_attachment,
+        )
+
     fun preview(context: Context, record: InvoiceStore.Record, index: Int): Map<String, Any> {
         return preview(context, requireNotNull(record.pdf), index)
     }
@@ -107,7 +144,7 @@ internal object InvoiceDocuments {
     }
 
     /** Real native sample document for Settings; it consumes no invoice number and writes no records. */
-    fun settingsPreview(style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
+    fun settingsPreview(context: Context, style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
         require(style in setOf("MINIMAL", "CLASSIC", "MODERN"))
         val currencyDigits = Currency.getInstance(currency).defaultFractionDigits
         require(digits == currencyDigits && digits in 0..3)
@@ -117,25 +154,51 @@ internal object InvoiceDocuments {
         val tax = TaxRate.amount(subtotal, 75000)
         val total = subtotal.add(tax)
         val now = System.currentTimeMillis()
-        val day = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(now))
+        val strings = localizedContext(context)
+        val locale = strings.resources.configuration.locales[0] ?: Locale.getDefault()
+        val day = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date(now))
+        val sampleNumber = strings.getString(R.string.invoice_preview_sample_number)
+        val unit = strings.getString(R.string.invoice_preview_square_feet)
+        val amount = InvoiceStore.amount(unitPrice, digits)
+        val basis = strings.getString(
+            R.string.invoice_preview_sample_basis,
+            "26",
+            unit,
+            amount,
+            currency,
+        )
+        val lineDetail = strings.getString(
+            R.string.invoice_preview_sample_line_detail,
+            "26",
+            unit,
+            amount,
+            currency,
+            day,
+        )
         val snapshot = InvoiceStore.Snapshot(
-            number = "INV-SAMPLE-1000", created = now, style = style, currency = currency, digits = digits,
-            company = "Sample Company LLC",
-            companyContact = "billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test",
-            customer = "Taylor Morgan",
-            customerContact = "taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210",
-            job = "Kitchen tile installation", period = "$day — $day · UTC",
-            basis = "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft",
-            header = "Thank you for choosing us for your project.",
-            footer = "Payment due within 14 days. Sample preview only — no payment is due.",
-            total = InvoiceStore.amount(total, digits), email = "taylor.morgan@example.test",
-            subject = "Invoice INV-SAMPLE-1000", body = "Please find your sample invoice attached.",
-            lines = listOf(InvoiceStore.Line("Install porcelain tile",
-                "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft\nCompleted $day",
+            number = sampleNumber, created = now, style = style, currency = currency, digits = digits,
+            company = strings.getString(R.string.invoice_preview_sample_company),
+            companyContact = strings.getString(R.string.invoice_preview_sample_company_contact),
+            customer = strings.getString(R.string.invoice_preview_sample_customer),
+            customerContact = strings.getString(R.string.invoice_preview_sample_customer_contact),
+            job = strings.getString(R.string.invoice_preview_sample_job),
+            period = strings.getString(R.string.invoice_preview_sample_period, day, day),
+            basis = basis,
+            header = strings.getString(R.string.invoice_preview_sample_header),
+            footer = strings.getString(R.string.invoice_preview_sample_footer),
+            total = InvoiceStore.amount(total, digits),
+            email = strings.getString(R.string.invoice_preview_sample_email),
+            subject = strings.getString(R.string.invoice_preview_sample_email_subject, sampleNumber),
+            body = strings.getString(R.string.invoice_preview_sample_email_body),
+            lines = listOf(InvoiceStore.Line(
+                strings.getString(R.string.invoice_preview_sample_line),
+                lineDetail,
                 InvoiceStore.amount(subtotal, digits), "260000", unitPrice.toString())),
             subtotal = InvoiceStore.amount(subtotal, digits), taxRateUnits = 75000,
             taxAmount = InvoiceStore.amount(tax, digits),
         )
-        return InvoicePdf.generate(snapshot, logoBytes)
+        return InvoicePdf.generate(context, snapshot, logoBytes)
     }
 }

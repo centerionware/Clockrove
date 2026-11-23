@@ -68,9 +68,7 @@ List<QuoteScopeGroup> quoteScopeGroups(QuoteDraft draft) {
   final grouped = <String, List<QuoteLine>>{};
   for (final line in draft.lines) {
     if (line.kind != 'ITEM' && line.kind != 'HOURS') {
-      throw const FormatException(
-        'Unsupported quote line type. Refresh the issued revision.',
-      );
+      throw const FormatException('QUOTE_SCOPE_UNSUPPORTED_LINE');
     }
     final key = line.kind == 'ITEM' ? 'ITEM' : 'HOURS:${line.unitPrice}';
     grouped.putIfAbsent(key, () => []).add(line);

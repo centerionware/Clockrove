@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 const _entry = HistoryEntry(
@@ -22,6 +23,10 @@ const _entry = HistoryEntry(
   origin: 'WIDGET',
   needsReview: true,
 );
+
+String _mediumDate(WidgetTester tester) =>
+    MaterialLocalizations.of(tester.element(find.byType(HistoryScreen).first))
+        .formatMediumDate(DateTime(2026, 11, 1));
 
 class _Timer extends TimerApi {
   _Timer([this.events = const Stream.empty()]);
@@ -280,7 +285,7 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(api.gpsDeletions, isEmpty);
-      expect(find.textContaining('2026-11-01'), findsOneWidget);
+      expect(find.textContaining(_mediumDate(tester)), findsOneWidget);
     },
   );
 
@@ -309,7 +314,7 @@ void main() {
       expect(api.gpsDeletions[1].$2, api.version - 1);
       expect(api.gpsDeletions[1].$4, api.gpsDeletions[0].$4);
       expect(api.gpsDeletions[1].$5, api.gpsDeletions[0].$5);
-      expect(find.textContaining('2026-11-01'), findsOneWidget);
+      expect(find.textContaining(_mediumDate(tester)), findsOneWidget);
     },
   );
 
@@ -340,7 +345,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.gpsDeletions.length, 2);
     expect(api.gpsDeletions[1], api.gpsDeletions[0]);
-    expect(find.textContaining('2026-11-01'), findsOneWidget);
+    expect(find.textContaining(_mediumDate(tester)), findsOneWidget);
   });
 
   testWidgets(
@@ -357,7 +362,7 @@ void main() {
       );
       final held = Completer<HistoryData>();
       api.holdHistory = held;
-      await tester.tap(find.byTooltip('Refresh work history'));
+      await tester.tap(find.byTooltip(englishCopy(AppMessage.historyRefresh)));
       await tester.pump();
       events.add(13);
       await tester.pump();
@@ -429,7 +434,10 @@ void main() {
       await _reveal(tester, 'Review times and UTC offsets');
       await tester.tap(find.text('Review times and UTC offsets'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('does not exist'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.paymentSkippedTime)),
+        findsOneWidget,
+      );
       expect(api.calls, isEmpty);
     },
   );
@@ -477,7 +485,9 @@ void main() {
       await tester.tap(find.text('Delete work entry'));
       await tester.pumpAndSettle();
       expect(api.deletions, isEmpty);
-      await tester.tap(find.text('Delete entry'));
+      await tester.tap(
+        find.text(englishCopy(AppMessage.historyDeleteWorkEntry)).last,
+      );
       await tester.pumpAndSettle();
       expect(
         tester
@@ -497,16 +507,24 @@ void main() {
     (tester) async {
       final api = _History()..entry = null;
       await _show(tester, api, const HistoryAuditScreen(jobId: 'job'));
-      expect(find.text('manual delete'), findsOneWidget);
+      final removed = find.textContaining(
+        englishCopy(AppMessage.historyWorkEntryRemoved),
+      );
+      expect(removed, findsOneWidget);
       await tester.tap(find.text('Load older changes'));
       await tester.pumpAndSettle();
       expect(api.auditCursors, [null, 5]);
-      expect(find.text('manual entry'), findsOneWidget);
-      await tester.tap(find.text('manual delete'));
+      await tester.tap(removed);
       await tester.pumpAndSettle();
       expect(find.text('Entry changes'), findsOneWidget);
-      expect(find.text('Work entry removed'), findsNothing);
-      expect(find.textContaining('Work entry removed'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.historyWorkEntryRemoved)),
+        findsNothing,
+      );
+      expect(
+        find.textContaining(englishCopy(AppMessage.historyWorkEntryRemoved)),
+        findsOneWidget,
+      );
     },
   );
   testWidgets(

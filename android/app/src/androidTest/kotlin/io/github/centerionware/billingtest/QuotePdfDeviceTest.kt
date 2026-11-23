@@ -25,7 +25,7 @@ class QuotePdfDeviceTest {
     private val repository get() = TimerRepository.get(app)
     private val version get() = repository.snapshot().version
     private fun render(id: String, revision: Int, name: String, expected: List<String>): InvoiceStore.Record {
-        val record = InvoiceDocuments.ensureQuote(repository, id, revision)
+        val record = InvoiceDocuments.ensureQuote(app, repository, id, revision)
         val directory = File(app.getExternalFilesDir(null), "invoice-previews").apply { mkdirs() }
         File(directory, "$name.pdf").writeBytes(requireNotNull(record.pdf))
         val file = File.createTempFile("quote-real-", ".pdf", app.cacheDir)
@@ -39,8 +39,15 @@ class QuotePdfDeviceTest {
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
                         val compact = CopyPdfTextApi35.read(page).filterNot { it.isWhitespace() }
                         assertTrue("Missing QUOTE heading on $name page ${index + 1}", compact.contains("QUOTE"))
-                        text.append(compact.replace("Page${index + 1}·${record.number}·Revision$revision", "")
-                            .replace("QUOTE", "").replace("${record.number}·Revision$revision", ""))
+                        text.append(
+                            compact
+                                .replace(
+                                    "Page${index + 1}·Quote${record.number}·Revision$revision",
+                                    "",
+                                )
+                                .replace("Quote${record.number}·Revision$revision", "")
+                                .replace("QUOTE", ""),
+                        )
                     }
                     if (index == 0 || index == pdf.pageCount - 1) {
                         val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)
@@ -93,7 +100,7 @@ class QuotePdfDeviceTest {
             assertNull(repository.issueQuote("quote-reissue-$token", version, id, true).conflict)
             render(id, 2, "clockrove-quote-revision-$token", listOf("411.00", "30.83", "441.83"))
             assertArrayEquals(original.pdf, repository.quoteDocument(id, 1).pdf)
-            assertTrue(InvoiceDocuments.historicalNotice(repository, original)!!.contains("current issued revision is 2"))
+            assertTrue(InvoiceDocuments.historicalNotice(app, repository, original)!!.contains("current issued revision is 2"))
             val wide = "9".repeat(1000)
             assertNull(repository.saveQuote("quote-wide-save-$token", version, draft.copy(lines = listOf(draft.lines.first().copy(quantity = "10000", unitPrice = wide)))).conflict)
             assertNull(repository.issueQuote("quote-wide-issue-$token", version, id, true).conflict)

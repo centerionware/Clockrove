@@ -75,6 +75,290 @@ Statuses describe evidence, not intent.
   passed. Android Help journey results, policy approval and publication,
   the whole-app UI and device coverage gate, and closed testing remain open.
 
+**App localization is in progress.** The first slice adds offline YAML catalogs
+for 17 locales and a device-default or explicit language choice in Settings.
+The catalogs cover 36 messages across language selection, selected Settings
+labels, the timekeeping dashboard and its navigation. Tests check placeholder
+parity for messages containing dynamic values.
+Catalog parity, locale preference tests, and a Flutter/Android source audit are
+prepared for GitHub Actions. The audit reports remaining candidates during
+migration, with strict mode available for a full-coverage check. Initial
+[Actions validation](https://github.com/centerionware/Clockrove/actions/runs/45065644235)
+completed the audit and stopped at the formatting gate before behavior tests.
+The exported formatter corrections were reviewed and incorporated where they
+apply to the current source.
+The Android widget runtime now uses 13 generated catalog entries for its job
+and task labels, error messages, and accessibility descriptions across the
+same 17 locales. GitHub Actions verification is pending. Widget picker metadata and the existing
+tracking and geofence notification resource strings are now also generated
+from the Android catalogs. Other native copy still needs migration.
+[Actions run 45066471967](https://github.com/centerionware/Clockrove/actions/runs/45066471967)
+reported 294 Flutter tests passed, 2 failed, and 14 skipped. The two Settings
+tests now scroll to the hourly rate field before using it, since adding the
+language picker moved the field below the initial viewport.
+Native widget contents and newly rendered notifications now also use the
+saved language override. A native regression checks Spanish format arguments
+and resetting the override on API 24 and 35. Validation is pending.
+The recorded-location map and location sample labels now use 14 additional
+Flutter messages, including translated date, time, and accuracy templates.
+The existing catalog parity check covers their named placeholders.
+The work-location permission dialog, action labels, and tracking statuses
+now resolve from the Flutter catalogs. The dialog scrolls to accommodate
+long translations, and displayed status notices follow locale changes.
+Backup export and restore now resolve password fields, picker actions, and
+the reviewed-merge confirmation controls from every shipped Flutter catalog.
+Restore progress, picker cancellation, and stale-preview messages also use
+catalog keys.
+Restore conflict choices now use the same catalogs and preserve their
+native choice codes. Unknown codes get a translated display label. Restore
+confirmation, conflict pagination, and review instructions also use the
+catalogs. The restore preview totals use translated labels, locale-formatted
+record counts, and a translated media-size template. Conflict titles,
+comparison headings, and boolean values also use the catalogs. Native record
+field labels and remaining review copy and error paths are still open.
+Restore password validation, staging instructions, timer and stale-preview
+warnings, and the deletion-count explanation now use the catalogs.
+The restore screen now maps cancellation, unlock failure, cleanup failure,
+and other errors to catalog keys. Low-level format errors use a general
+localized message, while an unlock failure still prompts users to check the
+password and file.
+Export phase labels, cancellation controls, and encrypted-byte progress now
+use the 17 Flutter catalogs. Save outcomes and file-picker errors also use
+catalog keys. Export instructions, password validation, and dynamic summary
+text also use the catalogs. Backup restore review and other surfaces remain
+open. Further localization commits are being kept local for a single final
+GitHub Actions validation, per owner instruction.
+Shared dialog actions, screen titles, map retry text, and zoom tooltips now
+reuse existing catalogs at 25 points across 14 Flutter screens.
+The in-app Help title, search, empty state, version label, tooltips, and all
+eight topic titles are translated. The timekeeping, backup and location
+history articles now have translations across all current catalogs and Help
+search uses their localized bodies. Job board, reporting, and billing Help
+articles now also use the catalogs. The automation and Android widget
+articles complete the eight-topic Help catalog migration for the current 17
+locales. Device verification is deferred to the final Actions run.
+The Flutter widget configuration screen now uses translated picker labels,
+instructions, save actions and recovery text across all current locales.
+Shared business-command retry, unknown outcome, stale state, missing widget,
+and other common failures are now catalog-backed. Feature-specific conflict
+messages and validation errors still need migration.
+Sixteen additional shared action, report, review, and archive labels are
+translated across the 17 current catalogs and used in 15 Flutter files.
+Work and business reports now use catalog entries for their titles,
+refresh actions, job and customer filters, and business export actions.
+Financial totals and the work report's finalized-time and billable-task
+sections now use translated labels and empty states. Remaining dynamic
+report messages still need migration. Margin and cost-count summaries,
+financial activity headings, map sample totals, and exclusion statuses
+now use translated templates.
+Work report task prices, hourly rate breakdowns, rounding guidance, and
+billed quantities also use catalog entries and placeholders.
+Work and financial report export success, cancellation, and save failures
+now resolve through the 17 current catalogs.
+Job archive, restore, and permanent deletion now use catalog-backed labels
+and warnings. The deletion dialogs share the detailed retention notice.
+Settings and Job settings now use translated company and customer fields,
+currency and tax labels, hourly billing labels, and invoice style controls.
+Billing defaults, hourly policy choices, inherited tax and minimums, and
+currency-labelled job overrides now also use the catalogs. Additional
+descriptions and fields remain open. Tax, minimum hours, minimum task fee,
+and receivables email validation now show translated feedback in Settings
+and job preferences where applicable. Quote tax validation shares the same
+messages.
+Global and per-job location recording now use the catalogs for options,
+privacy explanations, and map provider and worksite navigation labels.
+Map provider selection, field labels, save controls, and reset dialog
+actions now use the catalogs. Credential guidance, privacy notices, and
+general save/reset failures are translated. The URL guidance preserves its
+three literal tile tokens. The map provider input validator now returns
+catalog keys for its specific URL, attribution, and credential errors.
+The Google Maps SDK note, report map location history, timezone, accuracy,
+privacy and unavailable-map notices now use the Flutter catalogs.
+Quote and invoice document screens now localize their save, share, email and
+page navigation controls, along with invoice copy titles and quote image
+accessibility labels. Their save and cancel outcomes, email draft prompts,
+and handoff failures now also use the catalogs. Quote scope planning, remaining
+document copy, generated PDFs, and app-generated email text remain in
+localization scope.
+Quote draft line types, currency, optional links and line-add actions are
+catalog-backed. Actual-work invoice preparation now localizes its title,
+review actions, current-tax and current-price override labels, validation and
+load failures, task summaries, revision heading, and elapsed-time units across
+the registered catalogs. The invoice source-audit test now includes this form.
+Native quote and invoice historical notices, historical email subject
+prefixes, attachment labels, and share chooser titles now use localized
+Android resources. Stored PDFs and saved email template expansions are
+preserved. New quote and invoice PDFs and the Settings sample use localized
+document titles, party labels, issue dates and page footers. Already cached
+PDF bytes are reused. For a document whose PDF has yet to be cached, the
+first render uses the device's current effective app language. Line-item
+headings, amount fallbacks, subtotal, tax, total, payment state, balances,
+credit labels, and cancellation notices use translated Android resources.
+The PDF renderer reserves width for translated total labels before drawing
+exact amounts. New quote revisions use the effective app language for
+default email subjects and bodies, quote references, and the estimate notice
+added to custom emails. Existing issued revisions keep their saved email
+text. New ordinary, quote-linked, and replacement invoice snapshots use
+localized default email templates. Replacement emails also translate the
+credit and balance notice. The stored default values still identify default
+templates, and custom templates use their saved text. Catalog generation
+checks named email placeholders across Android locales and matches the
+Flutter editor templates against the native defaults. Settings displays the
+localized default templates and their field labels. Unedited defaults are
+saved in the existing storage format. Template instructions and local field
+validation now use catalog messages, including the literal template tokens.
+Native email template and Settings rejections and the unavailable-invoice
+message use catalog strings. Invoice details and history resolve payment
+statuses and balance labels from the Flutter catalogs. Invoice history also
+localizes its navigation, empty states, and record labels. Invoice details
+also localize payment, correction, and document actions and section titles,
+plus cancellation, accounting copy, deleted-job, and refresh notices.
+Payment history and saved copies localize empty states, reversal and
+receipt labels, and balance and collected-tax summaries. The payment
+editor uses localized titles, amount, method and reference labels, date
+controls, confirmation actions, and timezone and internal-note guidance.
+The editor also localizes the balance summary, receipt confirmation, and
+guidance for recording or reversing payments. Stale balances and failed
+refresh notices come from the catalogs. Payment submit validation localizes
+positive amounts, balance limits, date confirmation and correction reasons.
+The payment editor also localizes currency precision, timezone resolution
+errors, and the reversal amount. The invoice correction editor localizes
+its title, retry and refresh controls, reason label, review action, and
+final void and replacement buttons. The review dialog localizes its
+confirmation titles and permanent-action notice. Review and correction
+reason validation use catalog messages. The confirmation summary localizes
+replacement totals, credits, remaining balance, reservation counts and
+reservation transfer, and unpaid invoice cancellation. The editor’s
+on-screen financial labels and controls for added work and reservation
+review also use the catalogs, including the replacement tax field and
+historical tax and work reservation guidance. Replacement invoice line
+fields and the no-separate-charge note use catalog strings, as do stale
+balance, unavailable correction, and retained invoice details notices.
+Added-work previews use localized preparation errors and exclusion notices.
+The quote-linked invoice list localizes navigation, revision provenance,
+empty states and loading errors. Quote to invoice setup and validation errors
+now use catalog messages for all registered locales. Job, date, timezone, refresh, and confirmation controls in the form also use
+localized messages. Scope, actual work, customer carryover, historical review,
+and private note guidance now use the catalogs too. Customer carryover,
+removed-job, price and tax comparisons are also localized.
+The quote list now localizes its filters, status labels, empty and error states,
+revision and validity labels, and status date. The source-audit test covers this
+screen as well.
+Quote issue and acceptance review, quote revision details and history, and
+calculation validation now use localized catalog messages. Invoice style names
+shown in quote previews are translated with the registered locale catalogs.
+Quote draft editing now localizes task-template search and selection, pricing,
+currency and job guidance, field validation, refresh review, and save feedback.
+The correction editor also localizes voiding and reason-privacy guidance,
+replacement-line validation and edited line basis prefixes. The Flutter
+source audit test checks for new hardcoded copy in invoice detail, invoice
+history, payment, correction, quote-to-invoice, quote-list, quote-detail, and
+quote-draft screens. Native-provided
+labels and other
+Flutter screens still need coverage. The new test awaits GitHub Actions.
+Other command
+rejections, payment event
+descriptions stored in snapshots, and rendered PDF locale and right-to-left
+verification remain open.
+Flutter and Android now take the set of registered locales from the same YAML
+registry. Generation checks for missing or extra catalogs on both platforms
+and supports language, script and region tags.
+Flutter message keys and English fallback copy are now generated from the
+English YAML catalog. GitHub Actions is configured to reject stale generated
+sources and continues to check catalog keys and placeholders.
+Remaining Flutter screens, Help, notifications, and generated document
+copy are still pending. See [translation instructions](localizations/README.md).
+
+## 2026-11-23 localization source update
+
+The source-coverage test now walks Flutter screen, dialog, and control files
+plus the shared presentation surfaces. It also checks Android PDF, invoice,
+quote, widget, notification, and XML presentation copy. The catalog test checks
+every Flutter message and named placeholder in all 17 locales. Android resource
+generation checks locale keys and placeholders and resolves
+`@flutter:<messageKey>` aliases into native resources. Work and GPS CSV headers,
+business CSV labels and record values, actual-cost categories, and the business
+report PDF now use these catalogs. Business-format and quote error fallbacks use
+localized text instead of exposing raw error strings.
+
+The branch was rebased onto current main through `e126bf1`. The in-place worksite
+clock-in prompt, small-radius warning, and updated Help details from PR #83 now
+have translations. The restore preview and quote scope form were split into
+focused files so the edited maintained Dart sources stay below 1,000 lines.
+Catalog generators and whitespace review completed locally; no build or test
+ran here per owner instruction. Exact-head Actions run
+[45100595509](https://github.com/centerionware/Clockrove/actions/runs/45100595509)
+passed generated-source checks, then the localization audit found a malformed
+multiline switch expression in `history_time_format.dart`. The source is
+corrected. Follow-up run
+[45101221601](https://github.com/centerionware/Clockrove/actions/runs/45101221601)
+passed catalog generation and the localization audit, then stopped at the
+clean-formatting gate. Applied the exact formatter patch exported by that
+workflow. The formatted quote-to-invoice screen and its review dialog were
+split into focused files to remain below 1,000 lines. Run
+[45101858207](https://github.com/centerionware/Clockrove/actions/runs/45101858207)
+passed catalog generation and the localization audit but found one final wrap
+in the extracted invoice review dialog. Applied its exact formatter patch.
+Run
+[45102205997](https://github.com/centerionware/Clockrove/actions/runs/45102205997)
+passed catalog generation, audit and formatting, then Analyze found localized
+values inside const widgets, duplicate audit-test entries, and an import lost
+during the quote scope split. Corrected those source issues. Full-coverage
+acceptance stays open for exact-head CI and owner review of the results. Run
+[45102757199](https://github.com/centerionware/Clockrove/actions/runs/45102757199)
+passed catalog generation and the localization audit but found one final
+formatting adjustment in the legacy invoice review. Applied that exact
+workflow patch. Run
+[45103063045](https://github.com/centerionware/Clockrove/actions/runs/45103063045)
+passed catalog generation, the localization audit, formatting and analysis,
+then failed the behavior gate with 267 tests passed, 38 failed and 14 skipped.
+The test log showed that Flutter did not bundle nested locale overlay files
+from the parent asset directory, and existing widget checks still searched for
+pre-catalog labels and formatting. Added the 17 locale overlay directories to
+`pubspec.yaml` and updated those checks to read the current English catalog
+messages, including quote and invoice totals. Corrected three audit false
+positives for internal invoice placeholder-map keys, the currency-format
+sentinel and the native PDF typeface constant. The behavior suite must pass on
+a fresh exact head before this localization source work can be marked complete.
+Run
+[45106126881](https://github.com/centerionware/Clockrove/actions/runs/45106126881)
+on `c359e84` passed catalog generation and the localization audit, then stopped
+at the clean-formatting gate. Applied the exact four-file formatter patch
+exported by that run. Analyze and behavior tests did not run. No build, test,
+formatter or analysis ran locally, per owner instruction. Follow-up run
+[45106534384](https://github.com/centerionware/Clockrove/actions/runs/45106534384)
+on `957999d` passed catalog generation and localization audit but found one
+remaining formatter wrap in the board test. Applied that exact CI correction;
+Analyze and behavior tests again did not run.
+
+Actions run [45106822457](https://github.com/centerionware/Clockrove/actions/runs/45106822457)
+on `2a9336f` passed catalog generation, the localization audit, formatting and
+analysis, then reported 283 passing tests, 22 failures and 14 skips. The
+failures exposed a scroll-test finder that threw before lazy content appeared,
+several assertions still using pre-catalog copy, a record test comparing maps
+by identity, and stale file/API entries in the audit fixture. Those are
+corrected. The full native Settings invoice sample, including its example
+company, customer, line descriptions, email copy and locale-formatted dates,
+now comes from translated Android resources in all 17 locale catalogs. The
+audit ignores only file MIME, URI authority and temporary filename constants;
+sample document copy remains audited. The app now passes the platform default
+route by default and accepts an explicit route for widget-entry tests. Android
+resources were regenerated from the catalogs. No build, test, formatter or
+analysis ran locally.
+
+Exact-head validation [45109023541](https://github.com/centerionware/Clockrove/actions/runs/45109023541)
+on `eb65676` passed catalog generation, localization audit, formatting and
+analysis, then reported 288 passing tests, 17 failures and 14 skips. The
+remaining failures showed that indexed finders still throw before lazy list
+children exist, the audit fixture treated a Help method-channel name and the
+`.pdf` extension as visible prose, and the shared validation formatter replaced
+already-localized catalog messages with a generic fallback. The settings test
+now scrolls until a text element is actually built; validation preserves a
+message only when it matches a catalog entry (including its placeholders);
+the audit recognizes those machine identifiers; and the widget route test
+passes its entry path explicitly. These fixes need another exact-head Actions
+run before full localization coverage can be marked complete.
+
 The report below preserves earlier evidence and milestone history.
 
 **M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run
@@ -390,3 +674,326 @@ The chronological validation record is preserved in the following files, split a
 - [2026-11-14 — second settings visit and PR #45 merge through 2026-11-15 — owner decision: Google Maps deferred beyond launch](docs/plan/status-history/validation-history-06.md)
 
 See [maintainability-audit.md](docs/plan/maintainability-audit.md) for oversized source/test files and their safe split sequence.
+
+Exact-head run [45110440339](https://github.com/centerionware/Clockrove/actions/runs/45110440339)
+on `7bf6d44` passed catalog generation and the localization audit, then stopped
+at the clean-formatting gate. The CI formatter identified two Dart formatting
+corrections in the widget configuration test and localization audit CLI; those
+exact changes are applied. Analyze, behavior tests, Android build, native tests,
+and API 24/35 document rendering were skipped after the formatting failure. No
+build, test, formatter or analysis ran locally. A fresh exact-head Actions run is
+required to close the localization source and CI milestone.
+
+After main advanced to `d88595b`, the localization branch was rebased and pushed
+as `42dd406`. Exact-head run
+[45111136795](https://github.com/centerionware/Clockrove/actions/runs/45111136795)
+passed catalog generation, the full localization audit, formatting and analysis.
+The behavior gate found four failures: two audit false positives for a quote
+field identifier and localized Android report amount lookups inside a Kotlin
+interpolation; the widget route launch test did not resolve its configured
+route; and the zero-decimal quote test expected the generic field message while
+the command path reports the precision-specific catalog message. These are
+corrected in the pending source update. Android build, native unit tests, and
+API 24/35 PDF rendering did not run. No build, test, formatter or analysis ran
+locally. Full coverage still needs a green exact-head Actions run.
+
+The next exact-head run, [45112466600](https://github.com/centerionware/Clockrove/actions/runs/45112466600)
+on `c9253da`, again passed catalog generation and the full localization audit,
+then stopped at formatting. The formatter's exact two test-file corrections are
+applied. The behavior suite and all Android build/device gates were skipped; a
+fresh exact-head Actions run is needed.
+
+Exact-head run [45112812265](https://github.com/centerionware/Clockrove/actions/runs/45112812265)
+on `d18cce5` passed generated catalog checks, both localization audits,
+formatting and analysis. The behavior gate again reported 303 passed, 4 failed
+and 14 skipped. The remaining failures were the mounted-widget assertion for
+platform route setup, two audit false positives for Android channel/MIME/
+protocol values and main's channel/version keys, and a quote test looking for
+validation feedback while its lazy field was offscreen. The route test now checks
+the app's platform route and generated route builder directly; the audit filters
+machine protocol values while retaining a prose assertion; and the quote test
+checks the catalog-backed validator output before submission, then confirms no
+command is sent and the pasted input remains. Android build/native/PDF gates did
+not run. No local build, test, formatter or analysis ran. A fresh exact-head
+Actions run is required.
+
+Exact-head run [45113784426](https://github.com/centerionware/Clockrove/actions/runs/45113784426)
+on `e3dd5bd` passed catalog generation, both localization audit commands,
+formatting and analysis. The behavior suite reached 306 passing tests, 2 audit
+failures and 14 skips. Remaining findings were Android protocol/file identifiers
+and the root method-channel keys, plus the actual task-photo chooser label and
+pending attachment messages. The eight attachment/document handoff messages are
+now translated in all 17 Android catalogs and loaded through native resources;
+the audit recognizes only the documented machine-value forms. Android catalogs
+were regenerated. The next exact-head Actions run must pass before localization
+coverage can be marked complete. No local build, test, formatter or analysis ran.
+
+Exact-head run [45114817097](https://github.com/centerionware/Clockrove/actions/runs/45114817097)
+on `c7c278b` passed catalog generation, both localization audit commands,
+formatting and analysis, then reported 306 passing tests, 2 audit failures and
+14 skips. The last findings were a literal UTC suffix assembled in the
+automation time display and the fully qualified CI-only camera fixture class.
+The UTC suffix now comes from the time-format overlay in all 17 Flutter
+catalogs, and the audit treats fully qualified `io.github` class names as
+machine identifiers. The next exact-head Actions run must pass before this
+localization milestone can be marked complete. No local build, test, formatter
+or analysis ran.
+
+Exact-head run [45115331773](https://github.com/centerionware/Clockrove/actions/runs/45115331773)
+on `a2f29f5` passed generated catalog checks, both localization audits,
+formatting and analysis, then reported 306 passing tests, 2 failures and 14
+skips. Both remaining failures were audit false positives: URI host/fragment
+and Android package-name arguments in the site map picker, and invoice ID
+regular-expression patterns in the Android document provider. The audit now
+recognizes those syntax contexts as machine values, with regression fixtures
+that retain checks for visible prose. Android build, native tests and API 24/35
+PDF rendering were skipped after the behavior failures. No local build, test,
+formatter or analysis ran; another exact-head Actions run is required.
+
+Exact-head run [45116071563](https://github.com/centerionware/Clockrove/actions/runs/45116071563)
+on `c6e0fa4` passed generated catalog checks but stopped compiling the audit:
+the pinned Analyzer 13 AST no longer exposes `NamedExpression`. No behavior or
+Android validation ran. The detector now checks source context around AST
+literal offsets for URI hosts/fragments and `userAgentPackageName`, avoiding
+that removed type; regression fixtures continue to assert real visible prose.
+No local build, test, formatter or analysis ran. A fresh exact-head Actions run
+is required.
+
+Exact-head run [45116524069](https://github.com/centerionware/Clockrove/actions/runs/45116524069)
+on `eefbb6d` passed generated catalog checks and compiled/completed the
+localization audit. The clean-formatting gate exported one line-wrap correction
+in `tool/localization_audit.dart`; that exact correction is applied. Analysis,
+behavior tests, Android build/native tests, and API 24/35 PDF rendering were
+skipped. No local build, test, formatter or analysis ran; another exact-head
+Actions run is required.
+
+Exact-head run [45116893608](https://github.com/centerionware/Clockrove/actions/runs/45116893608)
+on `fc9576e` passed catalog checks, localization audits, formatting and
+analysis. The behavior suite reported 308 passing tests, 2 failures and 14
+skips. Both failures were audit false positives for a camelCase parameter key
+inside a catalog-format map and the native `clockrove-work-location`
+notification channel ID. The audit now recognizes those contexts/IDs, with
+fixtures that keep visible prose covered. Android build, native tests and API
+24/35 PDF rendering were skipped. No local build, test, formatter or analysis
+ran; another exact-head Actions run is required.
+
+Exact-head run [45117654345](https://github.com/centerionware/Clockrove/actions/runs/45117654345)
+on `31af1ef` passed generated catalogs, both localization audits, formatting
+and analysis. The behavior suite reported 309 passing tests, 2 audit failures
+and 14 skips. Findings were the Flutter widget method-channel name and its
+native configuration field keys, plus the native `widget-stop` idempotency key.
+The audit now treats channel names, bridge fields and that command key as
+machine values; fixtures continue to require visible prose to be found.
+Android build, native tests and API 24/35 PDF rendering were skipped. No local
+build, test, formatter or analysis ran; another exact-head run is required.
+
+Exact-head run [45118304505](https://github.com/centerionware/Clockrove/actions/runs/45118304505)
+on `99cbe98` passed generated catalog checks and both localization audits,
+then the clean-formatting gate found one wrap in the protocol-channel pattern.
+That exact correction is applied. Analyze, behavior tests, Android build,
+native tests and API 24/35 PDF rendering were skipped. The Flutter and Android
+surface tests now aggregate findings across all scanned files, so the next
+exact-head run reports the remaining failures together. No local build, test,
+formatter or analysis ran; a fresh Actions run is required.
+
+Exact-head run [45118887120](https://github.com/centerionware/Clockrove/actions/runs/45118887120)
+on `69f625c` passed generated catalog checks and both localization audits,
+then stopped at clean formatting. The formatter exported three wrapping
+corrections in the aggregated Android surface scan; those exact changes are
+applied. Analyze, behavior tests and all Android build/device/PDF gates were
+skipped. No local build, test, formatter or analysis ran; a fresh exact-head
+Actions run is required.
+
+Exact-head run [45119264452](https://github.com/centerionware/Clockrove/actions/runs/45119264452)
+on `5d90912` passed generated catalogs, both localization audits, formatting
+and analysis. The aggregated behavior checks reported 309 passing tests, 2
+audit failures and 14 skips. The report enumerated machine-only Flutter
+business IDs, MethodChannel method names, widget configuration keys, Dart
+export directives, and Android widget routes/log calls/CSV escaping. The audit
+now recognizes those source contexts, with fixtures that still require visible
+copy to be detected. Android build, native tests and API 24/35 PDF rendering
+were skipped. No local build, test, formatter or analysis ran; another
+exact-head run is required.
+
+Exact-head run [45120470875](https://github.com/centerionware/Clockrove/actions/runs/45120470875)
+on `bc71a61` passed generated catalog checks and both localization audits,
+then stopped at clean formatting. The formatter exported two wrapped test
+calls, the channel-method set layout, and one ternary wrap; those exact changes
+are applied. Analyze, behavior tests and all Android build/device/PDF gates
+were skipped. No local build, test, formatter or analysis ran; another fresh
+exact-head Actions run is required.
+
+Exact-head run [45120815685](https://github.com/centerionware/Clockrove/actions/runs/45120815685)
+on `5899060` passed generated catalogs, both localization audits, formatting
+and analysis. The behavior suite reported 311 passing tests, 1 audit failure
+and 14 skips. The aggregated Flutter scan isolated the last finding to the
+multiline `widgetChannel.invokeMapMethod` `jobId` key: the prior 160-character
+context missed the call site. The bounded source context is widened and the
+fixture now matches the production call layout. Android build, native tests and
+API 24/35 PDF rendering were skipped. No local build, test, formatter or
+analysis ran; another exact-head run is required.
+
+Exact-head run [45121426265](https://github.com/centerionware/Clockrove/actions/runs/45121426265)
+on `a959b86` passed catalog generation, both localization audits,
+formatting, analysis, and the 311-test behavior suite. Android compilation
+failed because the new cost-category map referenced three `R.string.actual_cost_*`
+names that are not generated. The map now uses the existing localized
+`report_pdf_cost_*` resources from all Android catalogs. Native tests and API
+24/35 PDF rendering were skipped after compilation failed. No local build,
+test, formatter or analysis ran; another exact-head run is required.
+
+Exact-head run [45122220513](https://github.com/centerionware/Clockrove/actions/runs/45122220513)
+on `ae0ac93` passed catalog generation, both localization audits,
+formatting, analysis, and the 311-test behavior suite. Android compilation
+then found a missing app-resource import in `InvoiceStore.kt` and three report
+payment resource IDs that were absent from Android catalogs. `InvoiceStore.kt`
+now imports `R`, and the CSV activity labels use existing localized report
+payment-title resources. Native tests and API 24/35 PDF rendering were skipped
+after compilation failed. No local build, test, formatter or analysis ran; a
+fresh exact-head run is required.
+
+Exact-head run [45123098879](https://github.com/centerionware/Clockrove/actions/runs/45123098879)
+on `55a32e1` passed catalog generation, both localization audits, formatting,
+analysis, all 311 behavior tests, and the Android app build. Instrumentation APK
+assembly then found that `InvoiceBlobStorageDeviceTest` still called
+`InvoiceCopyStore.read` without its required Android context. The device test
+now passes its instrumentation target context. Native tests and API 24/35 PDF
+rendering were skipped after test APK compilation failed. No local build, test,
+formatter or analysis ran; a fresh exact-head run is required.
+
+Exact-head run [45124237399](https://github.com/centerionware/Clockrove/actions/runs/45124237399)
+on `24212c2` passed catalogs, both localization audits, formatting, analysis,
+all 311 behavior tests, Android app compilation, release Java compilation, and
+instrumentation APK assembly. Native unit-test compilation found two tests
+using the old one-argument localized filename API and one obsolete generic type
+argument on `RuntimeEnvironment.getApplication`. Those call sites now pass the
+Android context or use the updated API. Native execution and API 24/35 PDF
+rendering were skipped after test compilation failed. No local build, test,
+formatter or analysis ran; a fresh exact-head run is required.
+
+Exact-head run [45125375290](https://github.com/centerionware/Clockrove/actions/runs/45125375290)
+on `c29b1a1` passed catalogs, both localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, and instrumentation
+APK assembly. Native JUnit completed 759 tests with 8 failures: invoice and
+quote tests still assumed English-only copy, and quote filenames exposed a
+missing third format placeholder in every Android locale. The tests now read
+localized expectations and assert locale-independent filename structure; all
+Android catalog templates include the quote revision value, and generated
+resources have been refreshed. API 24/35 PDF rendering was skipped after the
+native failures. No local build, test, formatter or analysis ran; a fresh
+exact-head run is required.
+
+Exact-head run [45127419079](https://github.com/centerionware/Clockrove/actions/runs/45127419079)
+on `3d5a5bb` passed generated catalogs, both localization audits, formatting,
+analysis and all 311 behavior tests. The Android app build retried but could
+not download `org.jetbrains:annotations:13.0` because Maven Central returned
+HTTP 429. Android compilation, native tests and API 24/35 PDF rendering were
+skipped. No local build, test, formatter or analysis ran; the Android and
+document-validation gates need a fresh exact-head run after dependency
+resolution is available.
+
+Exact-head run [45128133481](https://github.com/centerionware/Clockrove/actions/runs/45128133481)
+on `0d1ea6e` cleared catalogs, localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, instrumentation APK
+assembly, and all 759 native unit tests. API 24 document/device instrumentation
+reported three failures: the business-report PDF left a page open when an
+earlier exception occurred, and two history/map tests still searched for the
+old `Job report` tab label instead of the current `Work report`. PDF cleanup
+now finishes an active page, and those tests target the visible tab label.
+The invoice billing device flow used the same obsolete label and now targets
+`Work report` as well.
+API 35 rendering and invoice-viewer validation did not run after the API 24
+failures. No local build, test, formatter or analysis ran; another exact-head
+Actions run is required.
+
+Exact-head run [45130659210](https://github.com/centerionware/Clockrove/actions/runs/45130659210)
+on `8ab3e16` passed catalog checks, localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, instrumentation APK
+assembly, and all 759 native unit tests. API 24 PDF/device instrumentation
+still found an unescaped literal percent in the localized report-margin format
+and one GPS test waiting for `CSV export` instead of the visible `Export CSV`.
+The Android catalog generator now escapes literal percent signs in formatted
+Flutter aliases across locales, and the device test follows the visible label.
+API 35 rendering and invoice-viewer validation were skipped after API 24
+failed; the exact-head PR check records validation of these follow-up fixes.
+No local build, test, formatter or analysis ran.
+
+Exact-head run [45132754657](https://github.com/centerionware/Clockrove/actions/runs/45132754657)
+on `98a7d3e` passed the localization/resource checks, formatting, analysis,
+all 311 behavior tests, Android/release compilation, instrumentation APK
+assembly and all 759 native unit tests. The API 24 suite passed the PDF format
+case and the earlier CSV label assertion, leaving one GPS device failure: the
+map button is below the report scroll viewport, and that test waited without
+revealing it. The GPS test now uses the same accessibility scroll and swipe
+reveal as the passing report-map device test. API 35 and invoice-viewer checks
+were skipped after the API 24 failure; the exact-head PR check validates this
+last test adjustment. No local build, test, formatter or analysis ran.
+
+Exact-head run [45134781152](https://github.com/centerionware/Clockrove/actions/runs/45134781152)
+on `04207c1` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, all 759 native
+unit tests, and all 30 API 24 report/PDF device tests, including the GPS map
+reveal and literal-percent PDF fix. The invoice-billing device flow then found
+its task editor button is `Save`, not `Save task`. Its later report/review
+assertions also used superseded copy; they now follow `Export PDF` and `No
+eligible work in this selection.` API 35 and invoice-viewer validation did not
+run after the API 24 invoice-billing failure; the exact-head PR check validates
+these invoice-flow label corrections. No local build, test, formatter or
+analysis ran.
+
+Exact-head run [45137008771](https://github.com/centerionware/Clockrove/actions/runs/45137008771)
+on `439e332` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, and all 759
+native unit tests. Real Android invoice payment instrumentation found one more
+stale English assertion: invalid precision is now exposed as the catalog-backed
+`Enter an amount with up to 2 decimal places.` API 35 rendering and invoice-viewer
+checks were skipped after this API 24 failure. The test now expects the current
+message; a fresh exact-head Actions run is required. No local build, test,
+formatter or analysis ran.
+
+Exact-head run [45139224460](https://github.com/centerionware/Clockrove/actions/runs/45139224460)
+on `c4a5103` passed catalog checks, both localization audits, formatting,
+analysis, all 311 behavior tests, Android/release compilation, instrumentation
+APK assembly, and all 759 native unit tests. API 24 report/PDF and invoice
+payment instrumentation advanced past the corrected precision assertion; the
+quote billing device flow then found two stale `Save task` labels. The save
+actions now use `Save`. API 35 and invoice-viewer checks were skipped after the
+API 24 quote-flow failure. A fresh exact-head Actions run is required. No local
+build, test, formatter or analysis ran.
+
+Exact-head run [45141596331](https://github.com/centerionware/Clockrove/actions/runs/45141596331)
+(`0a6c070`) passed catalogs, localization audits, formatting, analysis, 311
+Dart tests, Android/release compilation, instrumentation assembly, and 759
+native tests. API 24 quote flow found a stale `Save task` label; API 35 and
+viewer checks were skipped. No local validation ran.
+
+Exact-head run [45144258534](https://github.com/centerionware/Clockrove/actions/runs/45144258534)
+(`91fe25b`) passed catalogs, localization audits, formatting, analysis, 311
+Dart tests, Android/release compilation, instrumentation assembly, and 759
+native tests. API 24 quote flow found a missing catalog colon in its expected
+`Invoice total: USD 403.13` label; API 35 and viewer checks were skipped. No
+local validation ran.
+
+Exact-head run [45146903159](https://github.com/centerionware/Clockrove/actions/runs/45146903159)
+(`2cf8af7`) passed static, Dart, build, and native checks plus API 24 report,
+invoice, and quote flows. Task-photo flow found a stale `Task notes and photos`
+assertion, corrected to `Task notes & photos`; API 35 was skipped. No local
+validation ran.
+
+Run [45241249815](https://github.com/centerionware/Clockrove/actions/runs/45241249815)
+on `867878e` passed localization checks, formatting, analysis, 311 behavior
+tests, Android/release builds, instrumentation assembly, 759 native tests, and
+release tooling. Help navigation failed to find `TimerScreen` on both APIs.
+API 35 quote-PDF extraction left page footers inside a long total, stopping
+preview generation; dependent quote/task-media checks and five viewer cases
+then lacked quote preview files. Help now starts from its Help button with
+English catalogs; PDF assertions remove the full quote footer; CI includes
+failed-suite diagnostics in the final summary. Exact-head validation is pending; no local builds or tests ran, and localization acceptance stays open.
+
+Run [45265770690](https://github.com/centerionware/Clockrove/actions/runs/45265770690)
+(`bacad38`) passed localization, analysis, Flutter behavior, Android build,
+native, and release checks, but failed formatting and four device root cases:
+picker setup on API 24/35, settings accessibility, and multi-page quote text.
+Five viewer misses followed preview generation stopping. The current repair
+covers all listed failures; see [PR #82 validation recovery](docs/plan/evidence/pr82-validation-recovery.md).
+Exact-head Actions remains the evidence gate. No local build/test ran; localization acceptance stays open.

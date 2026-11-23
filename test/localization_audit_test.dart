@@ -1,0 +1,353 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+import '../tool/localization_audit.dart';
+
+void main() {
+  test('finds literal copy passed indirectly and with interpolation', () {
+    final findings = auditDart('lib/screen.dart', r'''
+void example(String name) {
+  // 'This comment is ignored.'
+  final message = 'Record your work ' 'location.';
+  final label = 'Hello, $name';
+  final channel = 'clockrove/language/v1';
+  final code = 'INVALID_LANGUAGE';
+}
+''');
+    expect(findings.map((finding) => finding.text.trim()), [
+      'Record your work location.',
+      'Hello,',
+    ]);
+  });
+
+  test('URI and platform identifiers are not presentation copy', () {
+    final findings = auditDart('lib/map.dart', r'''
+void openMap() {
+  final uri = Uri.https('www.openstreetmap.org', '/', {})
+      .replace(fragment: 'map=17/$latitude/$longitude');
+  TileLayer(userAgentPackageName: 'io.github.centerionware.clockrove');
+  final message = 'Open this location in your browser';
+}
+''');
+    expect(findings.map((finding) => finding.text.trim()), [
+      'Open this location in your browser',
+    ]);
+  });
+
+  test(
+    'catalog parameters and platform identifiers are not presentation copy',
+    () {
+      final findings = auditDart('lib/export.dart', r'''
+export 'board/board_view.dart';
+void buildProgress() {
+  AppMessage.exportSnapshotProgress.format(context, {
+    'mediaRead': '$mediaRead',
+  });
+  widgetChannel
+      .invokeMapMethod<String, Object?>('save', {
+        'id': id,
+        'version': version,
+        'jobId': job,
+      });
+  final tasksOnly = config['taskOnly'];
+  final route = 'receipt-$id';
+  final voidCopy = 'void-$id';
+  final balanceCopy = 'balance-$id';
+  final quoteCopy = 'quote-invoice/$id/$revision';
+  final taskKey = 'task/$id/$taskId';
+  final scopeKey = 'scope/$id/$revision';
+  channel.invokeMapMethod<Object?, Object?>('companyLogo');
+  channel.invokeMapMethod<Object?, Object?>('pickLogo');
+  _change('applyLogo');
+  _change('removeLogo');
+  final message = 'Backup is ready';
+}
+''');
+      expect(findings.map((finding) => finding.text.trim()), [
+        'Backup is ready',
+      ]);
+    },
+  );
+
+  test('Kotlin protocol values are excluded while prose is still audited', () {
+    final findings = auditKotlinPresentation(r'''
+val channel = "clockrove/documents/v1"
+val mime = "image/png"
+val channelId = "clockrove-work-location"
+val quoteId = call.argument<String>("quoteId")
+val quote = call.method.endsWith("Quote")
+executeFromSurface("widget-stop-$id-$version")
+flow.write("Document copy")
+''');
+    expect(findings.map((finding) => finding.text), ['Document copy']);
+  });
+
+  test('Kotlin regular expression patterns are not presentation copy', () {
+    final findings = auditKotlinPresentation(r'''
+val invoiceId = Regex("[A-Za-z0-9_-]{1,140}")
+val message = "Invoice is ready"
+''');
+    expect(findings.map((finding) => finding.text), ['Invoice is ready']);
+  });
+
+  test(
+    'Kotlin widget routes, logging, and CSV escaping are machine values',
+    () {
+      final findings = auditKotlinPresentation(r'''
+val route = "/widget-board"
+android.util.Log.d("ClockroveWidgetFactory", "Load failed: $detail")
+executeFromSurface("widget-stop-$id-$version")
+val escaped = "\"${protected.replace("\"", "\"\"")}\""
+val message = "Timer stopped"
+''');
+      expect(findings.map((finding) => finding.text), ['Timer stopped']);
+    },
+  );
+
+  test('resource lookups inside Kotlin interpolation are not literal copy', () {
+    final findings = auditKotlinPresentation(r'''
+flow.write(
+    "${strings.getString(R.string.report_pdf_cash_amount, "${money(amount, digits)} ${currency}")} · " +
+        strings.getString(R.string.report_pdf_no_cash_activity),
+)
+''');
+    expect(findings, isEmpty);
+  });
+
+  test('invoice, payment, and quote invoice screens use catalog copy', () {
+    const screens = {
+      'invoice_detail_screen',
+      'invoice_history_screen',
+      'invoice_lifecycle_editor',
+      'payment_editor',
+      'invoice_review_screen',
+      'invoice_screen',
+      'invoice_style_preview_screen',
+      'quote_invoice_screen',
+      'quote_screens',
+      'quote_detail_screen',
+      'quote_document_screen',
+      'quote_editor',
+      'quote_scope_screen',
+      'quote_related_invoices_screen',
+      'legacy_invoice_screen',
+      'legacy_covered_time_dialog',
+      'business_command',
+      'task_conversation_screen',
+    };
+    const identifiers = {
+      'balance-',
+      'prepare-invoice',
+      'receipt-',
+      'void-',
+      'invoice-balance-copy-command',
+      'invoice-correction-price-',
+      'invoice-correction-quantity-',
+      'invoice-correction-reason',
+      'invoice-correction-tax',
+      'invoice-lifecycle-command',
+      'invoice-lifecycle-submit',
+      'legacy-invoice-review-note',
+      'save-legacy-coverage',
+      'task-comment-body',
+      'task-attachment-',
+      'clockrove/documents/v1',
+      'clockrove/help/v1',
+      'appVersion',
+      'paidLabel',
+      'dueLabel',
+      'captureTaskPhoto',
+      'pickTaskPhoto',
+      'invoice-payment-amount',
+      'invoice-payment-command',
+      'invoice-payment-note',
+      'invoice-payment-submit',
+      'invoice-job/',
+      'invoice-task/',
+      'invoice-time/',
+      'quote-invoice-first',
+      'quote-invoice-last',
+      'quote-invoice-zone',
+      'quote-invoice-note',
+      'quote-invoice/',
+      'quote-issue-card/',
+      'issue/',
+      'quote-decision-card/',
+      'quote-decision-note',
+      'decision/',
+      'quote-editor-',
+      'quote-scope-note',
+      'scope/',
+      'customer/',
+      'job/',
+      'currency/',
+      'save-quote/',
+    };
+    for (final screen in screens) {
+      final path = 'lib/business/$screen.dart';
+      final source = File(path).readAsStringSync();
+      final lines = source.split('\n');
+      final candidates = auditDart(path, source).where(
+        (finding) =>
+            !lines[finding.line - 1].startsWith('import ') &&
+            !identifiers.any(
+              (identifier) => finding.text.trim().startsWith(identifier),
+            ),
+      );
+      expect(candidates, isEmpty, reason: path);
+    }
+  });
+
+  test('every Flutter presentation surface uses catalog copy', () {
+    const additionalSurfaces = {
+      'main.dart',
+      'board_view.dart',
+      'backup_restore_preview.dart',
+      'report_map.dart',
+      'logo_controls.dart',
+      'history_time_format.dart',
+      'site_editor.dart',
+      'site_map_picker.dart',
+      'work_location_map.dart',
+      'elapsed_display.dart',
+      'business_command.dart',
+      'settings_validation_messages.dart',
+      'actual_cost_labels.dart',
+      'quote_screens.dart',
+      'quote_editor.dart',
+      'quote_invoice_format.dart',
+      'payment_editor.dart',
+      'invoice_lifecycle_editor.dart',
+      'email_template.dart',
+    };
+    const identifiers = {
+      'captureTaskPhoto',
+      'pickTaskPhoto',
+      'invoice-balance-copy-command',
+      'invoice-correction-price-',
+      'invoice-correction-quantity-',
+      'invoice-correction-reason',
+      'invoice-correction-tax',
+      'invoice-lifecycle-command',
+      'invoice-lifecycle-submit',
+      'invoice-payment-amount',
+      'invoice-payment-command',
+      'invoice-payment-note',
+      'invoice-payment-submit',
+      'invoice-job/',
+      'invoice-task/',
+      'invoice-time/',
+      'quote-invoice-first',
+      'quote-invoice-last',
+      'quote-invoice-zone',
+      'quote-invoice-note',
+      'quote-issue-card/',
+      'quote-decision-card/',
+      'task-comment-body',
+      'task-attachment-',
+      'paidLabel',
+      'dueLabel',
+      'quote-editor-',
+      'clockrove/help/v1',
+      'appVersion',
+      'clockrove/debug/v1',
+      'flutterError',
+      '/widget-configuration',
+    };
+
+    bool isSurface(File file) {
+      final name = file.uri.pathSegments.last;
+      return name == 'main.dart' ||
+          additionalSurfaces.contains(name) ||
+          name.endsWith('_screen.dart') ||
+          name.endsWith('_dialog.dart') ||
+          name.endsWith('_controls.dart');
+    }
+
+    bool isInternalLiteral(String text, List<String> lines, int line) {
+      final value = text.trim();
+      final sourceLine = lines[line - 1];
+      if (sourceLine.startsWith('import ')) return true;
+      if (identifiers.any(value.startsWith)) return true;
+      if (sourceLine.contains('ValueKey(') ||
+          sourceLine.contains('Key(') ||
+          sourceLine.contains('identifier:') ||
+          sourceLine.contains('debugPrint(') ||
+          sourceLine.contains('uri.path')) {
+        return true;
+      }
+      final contextStart = (line - 4).clamp(0, lines.length).toInt();
+      final context = lines.sublist(contextStart, line).join('\n');
+      return context.contains('throw ') &&
+          (context.contains('FormatException') ||
+              context.contains('StateError'));
+    }
+
+    final files = Directory('lib')
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart') && isSurface(file));
+    expect(files, isNotEmpty);
+    final surfaceFindings = <String>[];
+    for (final file in files) {
+      final path = file.path;
+      final source = file.readAsStringSync();
+      final lines = source.split('\n');
+      final findings = auditDart(path, source).where(
+        (finding) => !isInternalLiteral(finding.text, lines, finding.line),
+      );
+      surfaceFindings.addAll(
+        findings.map((finding) => '$path:${finding.line}: ${finding.text}'),
+      );
+    }
+    expect(surfaceFindings, isEmpty, reason: surfaceFindings.join('\n'));
+  });
+
+  test('Android presentation surfaces use localized resources', () {
+    const root =
+        'android/app/src/main/kotlin/io/github/centerionware/clockrove';
+    const nativeSurfaces = [
+      '$root/invoice/InvoicePdf.kt',
+      '$root/invoice/InvoiceDocuments.kt',
+      '$root/invoice/BusinessReportPdf.kt',
+      '$root/invoice/DocumentHostApi.kt',
+      '$root/invoice/InvoiceProvider.kt',
+      '$root/location/WorkLocationService.kt',
+      '$root/location/geofence/GeofenceRuntime.kt',
+      '$root/widget/TimerWidget.kt',
+      '$root/widget/WidgetTasksService.kt',
+      '$root/widget/WidgetActivities.kt',
+    ];
+    final surfaceFindings = <String>[];
+    for (final path in nativeSurfaces) {
+      final source = File(path).readAsStringSync();
+      surfaceFindings.addAll(
+        auditKotlinPresentation(source)
+            .map((finding) => '$path:${finding.line}: ${finding.text}'),
+      );
+    }
+
+    final reportStore = File('$root/tracking/ReportStore.kt')
+        .readAsStringSync();
+    final reportCsv = reportStore.substring(
+      reportStore.indexOf('internal object ReportCsv {'),
+    );
+    surfaceFindings.addAll(
+      auditKotlinPresentation(reportCsv)
+          .map((finding) => 'ReportCsv:${finding.line}: ${finding.text}'),
+    );
+
+    final xmlFiles = Directory('android/app/src/main')
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.xml'));
+    for (final file in xmlFiles) {
+      surfaceFindings.addAll(
+        auditAndroidPresentationXml(file.readAsStringSync())
+            .map((finding) => '${file.path}:${finding.line}: ${finding.text}'),
+      );
+    }
+    expect(surfaceFindings, isEmpty, reason: surfaceFindings.join('\n'));
+  });
+}

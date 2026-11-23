@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/automation_fixture.dart';
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
@@ -184,7 +185,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.tap(find.text('Clock in now'));
+    await tester.tap(find.text(englishCopy(AppMessage.clockIn)));
     await tester.pumpAndSettle();
     expect(timer.calls, hasLength(1));
     expect(timer.calls.single.action, TimerAction.start);
@@ -325,7 +326,10 @@ void main() {
     await tester.enterText(find.byType(TextFormField), '1441');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter a whole number from 0 to 1,440.'), findsOneWidget);
+    expect(
+      find.text(englishCopy(AppMessage.automationInvalidGrace)),
+      findsOneWidget,
+    );
     expect(api.attempts, isEmpty);
     await tester.enterText(find.byType(TextFormField), '0');
     await tester.tap(find.text('Save'));

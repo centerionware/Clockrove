@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/history_api.dart';
 import 'legacy_invoice_api.dart';
 
@@ -119,12 +120,14 @@ class _LegacyCoveredTimeDialogState
         _selectedEnd =
             _ends.where((v) => v.instant == keepEnd).firstOrNull ??
             (_ends.length == 1 ? _ends.single : null);
-        if (_starts.isEmpty || _ends.isEmpty) _error = 'This local time does not exist in that timezone. Choose a time outside the clock change or skipped date.';
+        if (_starts.isEmpty || _ends.isEmpty) {
+          _error = AppMessage.paymentSkippedTime.of(context);
+        }
       });
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error = 'Check the full date/time, including seconds and three millisecond digits, and the IANA timezone.',
+          () => _error = AppMessage.legacyInvalidLocalDateTime.of(context),
         );
       }
     } finally {
@@ -132,20 +135,20 @@ class _LegacyCoveredTimeDialogState
     }
   }
 
-  String? get _rangeError {
+  String? _rangeError(BuildContext context) {
     final start = _selectedStart?.instant, end = _selectedEnd?.instant;
     if (start == null || end == null) return null;
-    if (end <= start) return 'Covered end must be after covered start.';
+    if (end <= start) return AppMessage.legacyEndBeforeStart.of(context);
     if (end - start > 3660 * 86400000) {
-      return 'Use a shorter covered time range (at most 3660 days).';
+      return AppMessage.legacyTimeRangeLimit.of(context);
     }
     if (widget.otherTimes.any((time) => time.start < end && time.end > start)) {
-      return 'This range overlaps another selected range. Edit or remove that range first.';
+      return AppMessage.restoreOverlappingInterval.of(context);
     }
     if (widget.reservedTimes.any(
       (value) => value.time.start < end && value.time.end > start,
     )) {
-      return 'This time is already reserved by an invoice. Review its existing invoice link.';
+      return AppMessage.legacyAlreadyReserved.of(context);
     }
     return null;
   }
@@ -158,9 +161,11 @@ class _LegacyCoveredTimeDialogState
       onChanged: _changed,
       decoration: InputDecoration(
         labelText: label,
-        hintText: '2026-11-01T09:00:00.000',
+        hintText: AppMessage.legacyLocalTimestampFormat.of(context),
         suffixIcon: IconButton(
-          tooltip: 'Choose $label',
+          tooltip: AppMessage.legacyChooseDateTime.format(context, {
+            'label': label,
+          }),
           onPressed: _resolving ? null : () => _pick(controller),
           icon: const Icon(Icons.calendar_month_outlined),
         ),
@@ -177,7 +182,12 @@ class _LegacyCoveredTimeDialogState
     if (choices.length == 1) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: Text('$label: ${choices.single.label}'),
+        child: Text(
+          AppMessage.legacyResolvedTime.format(context, {
+            'label': label,
+            'time': choices.single.label,
+          }),
+        ),
       );
     }
     return Padding(
@@ -185,17 +195,19 @@ class _LegacyCoveredTimeDialogState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'This local time occurs twice. Choose the intended UTC offset.',
-          ),
+          Text(AppMessage.legacyAmbiguousTime.of(context)),
           InputDecorator(
-            decoration: InputDecoration(labelText: '$label UTC offset'),
+            decoration: InputDecoration(
+              labelText: AppMessage.legacyOffsetLabel.format(context, {
+                'label': label,
+              }),
+            ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<HistoryTimeChoice>(
                 isExpanded: true,
                 itemHeight: null,
                 value: selected,
-                hint: const Text('Choose an offset'),
+                hint: Text(AppMessage.chooseUtcOffset.of(context)),
                 items: choices
                     .map(
                       (value) => DropdownMenuItem(
@@ -215,7 +227,11 @@ class _LegacyCoveredTimeDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.initial == null ? 'Covered time' : 'Edit covered time'),
+    title: Text(
+      widget.initial == null
+          ? AppMessage.legacyTimeDialogTitle.of(context)
+          : AppMessage.legacyEditTimeDialogTitle.of(context),
+    ),
     content: SizedBox(
       width: 500,
       child: SingleChildScrollView(
@@ -223,19 +239,17 @@ class _LegacyCoveredTimeDialogState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Enter only the work already billed on the original invoice. This reserves billing coverage; it does not create or change a work session.',
-            ),
+            Text(AppMessage.legacyTimeDialogHelp.of(context)),
             const SizedBox(height: 20),
-            _field(_start, 'Covered start'),
-            _field(_end, 'Covered end'),
+            _field(_start, AppMessage.legacyCoveredStart.of(context)),
+            _field(_end, AppMessage.legacyCoveredEnd.of(context)),
             TextField(
               controller: _zone,
               readOnly: _resolving,
               onChanged: _changed,
-              decoration: const InputDecoration(
-                labelText: 'IANA timezone',
-                hintText: 'America/New_York',
+              decoration: InputDecoration(
+                labelText: AppMessage.ianaTimezoneHint.of(context),
+                hintText: AppMessage.timezoneFieldHelp.of(context),
               ),
             ),
             const SizedBox(height: 16),
@@ -243,8 +257,8 @@ class _LegacyCoveredTimeDialogState
               onPressed: _resolving ? null : _resolve,
               child: Text(
                 _resolving
-                    ? 'Resolving times…'
-                    : 'Review times and UTC offsets',
+                    ? AppMessage.legacyResolvingTimes.of(context)
+                    : AppMessage.legacyReviewTimes.of(context),
               ),
             ),
             if (_error != null)
@@ -253,20 +267,20 @@ class _LegacyCoveredTimeDialogState
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             _choices(
-              'Start',
+              AppMessage.legacyStart.of(context),
               _starts,
               _selectedStart,
               (value) => setState(() => _selectedStart = value),
             ),
             _choices(
-              'End',
+              AppMessage.legacyEnd.of(context),
               _ends,
               _selectedEnd,
               (value) => setState(() => _selectedEnd = value),
             ),
-            if (_rangeError != null)
+            if (_rangeError(context) != null)
               Text(
-                _rangeError!,
+                _rangeError(context)!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
           ],
@@ -276,7 +290,7 @@ class _LegacyCoveredTimeDialogState
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(AppMessage.cancel.of(context)),
       ),
       FilledButton(
         onPressed:
@@ -284,7 +298,7 @@ class _LegacyCoveredTimeDialogState
                 _error != null ||
                 _selectedStart == null ||
                 _selectedEnd == null ||
-                _rangeError != null
+                _rangeError(context) != null
             ? null
             : () => Navigator.pop(
                 context,
@@ -298,7 +312,7 @@ class _LegacyCoveredTimeDialogState
                   localEnd: _end.text.trim(),
                 ),
               ),
-        child: const Text('Use covered time'),
+        child: Text(AppMessage.legacyUseCoveredTime.of(context)),
       ),
     ],
   );

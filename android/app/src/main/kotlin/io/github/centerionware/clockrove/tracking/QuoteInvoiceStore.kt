@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import org.json.JSONArray
 import org.json.JSONObject
@@ -41,7 +42,7 @@ internal object QuoteInvoiceStore {
         val link = origin(db, source.id)?.copy(invoiceId = replacementId, created = at) ?: return
         retain(db, link, source.jobId, at)
     }
-    fun prepare(db: SQLiteDatabase, draft: Draft, at: Long): String? {
+    fun prepare(db: SQLiteDatabase, draft: Draft, at: Long, strings: Context): String? {
         if (!draft.invoiceId.matches(Regex("[A-Za-z0-9_-]{1,100}")) || at < 0) return "INVALID_INVOICE"
         if (db.rawQuery("SELECT 1 FROM invoices WHERE id=?", arrayOf(draft.invoiceId)).use { it.moveToFirst() }) return "INVOICE_ID_EXISTS"
         val review = QuoteInvoiceReviewStore.review(db, draft.request, draft.choices)
@@ -61,7 +62,7 @@ internal object QuoteInvoiceStore {
             "times" to JSONArray(reviewed.report.intervals.map { JSONObject(mapOf("session_id" to it.sessionId, "start_ms" to it.start, "end_ms" to it.end, "timezone" to reviewed.report.selection.timezone)) }),
             "hourly_minor" to reviewed.report.totals.single().hourlyMinor?.toString())).toString()
         if (origin.toByteArray(Charsets.UTF_8).size > 1_000_000) return "INVOICE_TOO_LARGE"
-        InvoiceStore.prepareReviewed(db, draft.invoiceId, context.coverage.copy(report = reviewed.report), at, reviewed)?.let { return it }
+        InvoiceStore.prepareReviewed(db, draft.invoiceId, context.coverage.copy(report = reviewed.report), at, strings, reviewed)?.let { return it }
         retain(db, Link(draft.invoiceId, draft.request.quoteId, draft.request.revision, draft.invoiceId, at, origin), context.job.settings.id, at)
         return null
     }

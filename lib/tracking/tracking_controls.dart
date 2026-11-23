@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_strings.dart';
+import '../l10n/app_localizations.dart';
 import '../maps/work_location_map.dart';
 import 'tracking_api.dart';
 
@@ -13,22 +13,23 @@ class TrackingControls extends ConsumerStatefulWidget {
 
 class _TrackingControlsState extends ConsumerState<TrackingControls> {
   bool _busy = false;
-  String? _notice;
+  AppMessage? _notice;
 
   Future<void> _enable() async {
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(AppStrings.locationTitle),
-        content: const Text(AppStrings.locationPurpose),
+        scrollable: true,
+        title: Text(AppMessage.locationTitle.of(context)),
+        content: Text(AppMessage.locationPurpose.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(AppStrings.cancel),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(AppStrings.continueLabel),
+            child: Text(AppMessage.continueLabel.of(context)),
           ),
         ],
       ),
@@ -48,10 +49,10 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
       final status = await action();
       if (!mounted) return;
       if (status.permission == 'denied') {
-        setState(() => _notice = AppStrings.locationDenied);
+        setState(() => _notice = AppMessage.locationDenied);
       }
     } catch (_) {
-      if (mounted) setState(() => _notice = AppStrings.locationRestricted);
+      if (mounted) setState(() => _notice = AppMessage.locationRestricted);
     } finally {
       if (mounted) {
         ref.invalidate(trackingStatusProvider);
@@ -60,17 +61,35 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
     }
   }
 
-  String _description(TrackingStatus status) {
-    if (!status.working) return AppStrings.locationIdle;
-    if (status.permission == 'denied') return AppStrings.locationDenied;
+  AppMessage _description(TrackingStatus status) {
+    if (!status.working) return AppMessage.locationIdle;
+    if (status.permission == 'denied') return AppMessage.locationDenied;
     return switch (status.service) {
-      'REQUESTING' => AppStrings.locationRequesting,
-      'START_REQUESTED' => AppStrings.locationStarting,
-      'LOCATION_UNAVAILABLE' => AppStrings.locationUnavailable,
-      'DISABLED' => AppStrings.locationRecordingDisabled,
-      'PROVIDER_ERROR' || 'START_RESTRICTED' => AppStrings.locationRestricted,
-      _ => AppStrings.locationStopped,
+      'REQUESTING' => AppMessage.locationRequesting,
+      'START_REQUESTED' => AppMessage.locationStarting,
+      'LOCATION_UNAVAILABLE' => AppMessage.locationUnavailable,
+      'DISABLED' => AppMessage.locationRecordingDisabled,
+      'PROVIDER_ERROR' || 'START_RESTRICTED' => AppMessage.locationRestricted,
+      _ => AppMessage.locationStopped,
     };
+  }
+
+  String _sampleLabel(
+    BuildContext context,
+    DateTime observation,
+    double? meters,
+  ) {
+    final local = observation.toLocal();
+    final material = MaterialLocalizations.of(context);
+    final sample = AppMessage.lastLocationSample.format(context, {
+      'date': material.formatShortDate(local),
+      'time': material.formatTimeOfDay(TimeOfDay.fromDateTime(local)),
+    });
+    if (meters == null) return sample;
+    final accuracy = AppMessage.locationAccuracy.format(context, {
+      'meters': meters.toStringAsFixed(0),
+    });
+    return '$sample · $accuracy';
   }
 
   @override
@@ -91,7 +110,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  AppStrings.locationTitle,
+                  AppMessage.locationTitle.of(context),
                   style: Theme.of(context).textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -101,18 +120,20 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
             status.when(
               loading: () => const LinearProgressIndicator(),
               error: (error, stack) =>
-                  const Text(AppStrings.locationRestricted),
+                  Text(AppMessage.locationRestricted.of(context)),
               data: (value) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_description(value)),
-                  if (value.lastObservationUtc != null)
+                  Text(_description(value).of(context)),
+                  if (value.lastObservationUtc case final observation?)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        '${AppStrings.lastSample} ${MaterialLocalizations.of(context).formatShortDate(value.lastObservationUtc!.toLocal())} '
-                        '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(value.lastObservationUtc!.toLocal()))}'
-                        '${value.lastAccuracyMeters == null ? "" : " · ${value.lastAccuracyMeters!.toStringAsFixed(0)} m ${AppStrings.accuracy}"}',
+                        _sampleLabel(
+                          context,
+                          observation,
+                          value.lastAccuracyMeters,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -129,10 +150,10 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                         ),
                       ),
                       icon: const Icon(Icons.map_outlined),
-                      label: const Text(AppStrings.viewLocationMap),
+                      label: Text(AppMessage.viewLocationMap.of(context)),
                     ),
                   if (value.permission == 'approximate')
-                    const Text(AppStrings.locationApproximate),
+                    Text(AppMessage.locationApproximate.of(context)),
                   if (value.working)
                     Wrap(
                       spacing: 8,
@@ -145,7 +166,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                             }.contains(value.service))
                           TextButton(
                             onPressed: _busy ? null : _enable,
-                            child: const Text(AppStrings.enableLocation),
+                            child: Text(AppMessage.enableLocation.of(context)),
                           ),
                         if (const {
                           'REQUESTING',
@@ -159,7 +180,7 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                                     () =>
                                         ref.read(trackingApiProvider).disable(),
                                   ),
-                            child: const Text(AppStrings.disableLocation),
+                            child: Text(AppMessage.disableLocation.of(context)),
                           ),
                         if (!value.notificationsAllowed)
                           TextButton(
@@ -170,14 +191,16 @@ class _TrackingControlsState extends ConsumerState<TrackingControls> {
                                         .read(trackingApiProvider)
                                         .requestNotifications(),
                                   ),
-                            child: const Text(AppStrings.allowNotifications),
+                            child: Text(
+                              AppMessage.allowNotifications.of(context),
+                            ),
                           ),
                       ],
                     ),
                 ],
               ),
             ),
-            if (_notice != null) Text(_notice!),
+            if (_notice != null) Text(_notice!.of(context)),
             if (_busy) const LinearProgressIndicator(),
           ],
         ),

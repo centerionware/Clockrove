@@ -5,6 +5,7 @@ import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import io.github.centerionware.clockrove.tracking.WidgetTasksStore
 
@@ -45,14 +46,22 @@ class WidgetTasksService : RemoteViewsService() {
         override fun getCount(): Int = rows.let { if (it.failed) 1 else it.items.size }
         override fun getViewAt(position: Int): RemoteViews? {
             val data = rows
+            val strings = localizedContext(this@WidgetTasksService)
             val views = RemoteViews(packageName, R.layout.widget_task_row)
-            if (data.failed) { views.setTextViewText(R.id.widget_task_title, "Tasks unavailable. Open Clockrove to retry."); return views }
+            if (data.failed) {
+                views.setTextViewText(R.id.widget_task_title, strings.getString(R.string.widget_tasks_unavailable))
+                return views
+            }
             val item = data.items.getOrNull(position) ?: return null
-            val date = if (item.due < data.today) "Overdue · ${item.due}" else if (item.due == data.today) "Today" else item.due
+            val date = when {
+                item.due < data.today -> strings.getString(R.string.widget_overdue, item.due)
+                item.due == data.today -> strings.getString(R.string.widget_today)
+                else -> item.due
+            }
             views.setTextViewText(R.id.widget_task_title, item.title)
             views.setTextViewText(R.id.widget_task_detail, if (data.filtered) date else "${item.jobName} · $date")
             views.setTextColor(R.id.widget_task_detail, if (item.due < data.today) 0xFFFFB4AB.toInt() else 0xFFCBD5E1.toInt())
-            views.setContentDescription(R.id.widget_task_row, "${item.title}, ${item.jobName}, $date. Open job board")
+            views.setContentDescription(R.id.widget_task_row, strings.getString(R.string.widget_task_open_board, item.title, item.jobName, date))
             views.setOnClickFillInIntent(R.id.widget_task_row, Intent().putExtra("jobId", item.jobId).putExtra("taskId", item.id))
             return views
         }

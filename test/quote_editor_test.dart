@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
+
 const _company = CompanySettings(
   currency: 'USD',
   digits: 2,
@@ -163,7 +165,7 @@ void main() {
         find.widgetWithText(TextField, 'Email'),
         'customer@example.test',
       );
-      await tester.tap(find.text('Save customer'));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(business.savedCustomer?.id, isNotNull);
       expect(business.savedCustomer?.name, 'New quote customer');
@@ -298,16 +300,19 @@ void main() {
       await _show(tester, api);
       final price = _field('Unit price (BIF)');
       await _reveal(tester, price, 400);
+      final priceForm = tester.widget<TextFormField>(
+        find.ancestor(of: price, matching: find.byType(TextFormField)),
+      );
+      expect(
+        priceForm.validator?.call('1.5'),
+        englishCopy(AppMessage.quoteUnitPriceInvalid),
+      );
       await tester.enterText(price, '1.5');
       final save = find.widgetWithText(FilledButton, 'Save quote draft');
       await _reveal(tester, save, 400);
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(api.calls, isEmpty);
-      expect(
-        find.textContaining('This currency allows 0 decimal places.'),
-        findsOneWidget,
-      );
       await _reveal(tester, price, -400);
       expect(tester.widget<TextField>(price).controller!.text, '1.5');
       expect(tester.widget<TextField>(price).enabled, isTrue);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'invoice_detail_screen.dart';
 import 'quote_invoice_api.dart';
 
@@ -17,7 +18,7 @@ class _QuoteRelatedInvoicesState
   List<QuoteRelatedInvoice> _rows = [];
   QuoteInvoiceCursor? _next;
   bool _reading = false, _loaded = false, _failedMore = false;
-  String? _error;
+  AppMessage? _error;
   @override
   void initState() {
     super.initState();
@@ -54,7 +55,7 @@ class _QuoteRelatedInvoicesState
       if (mounted) {
         setState(() {
           _failedMore = more;
-          _error = 'Invoice history could not be read. Retained results are shown; retry to load current history.';
+          _error = AppMessage.quoteRelatedInvoiceReadFailed;
         });
       }
     } finally {
@@ -67,10 +68,10 @@ class _QuoteRelatedInvoicesState
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Related invoices'),
+      title: Text(AppMessage.quoteRelatedInvoices.of(context)),
       actions: [
         IconButton(
-          tooltip: 'Refresh quote invoices',
+          tooltip: AppMessage.refreshQuoteInvoices.of(context),
           onPressed: _reading ? null : _read,
           icon: const Icon(Icons.refresh),
         ),
@@ -79,25 +80,32 @@ class _QuoteRelatedInvoicesState
     body: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
-          'Original invoices and their replacements retain the accepted quote revision they came from. Open an invoice for current payment status, corrections and receipts.',
-        ),
+        Text(AppMessage.quoteRelatedInvoiceHelp.of(context)),
         if (_reading) const LinearProgressIndicator(),
         if (_error != null)
           Text(
-            _error!,
+            _error!.of(context),
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         if (_loaded && _rows.isEmpty)
-          const Text(
-            'No invoices from this quote yet. Prepare one from its eligible actual work.',
-          ),
+          Text(AppMessage.quoteRelatedInvoiceEmpty.of(context)),
         for (final invoice in _rows)
           Card(
             child: ListTile(
               title: Text(invoice.number),
               subtitle: Text(
-                'Quote revision ${invoice.revision}${invoice.id != invoice.originalId ? ' · Replacement with retained original quote provenance' : ''}\nIssued ${invoice.createdLabel}',
+                [
+                  [
+                    AppMessage.quoteRelatedInvoiceRevision.format(context, {
+                      'revision': invoice.revision.toString(),
+                    }),
+                    if (invoice.id != invoice.originalId)
+                      AppMessage.quoteRelatedInvoiceReplacement.of(context),
+                  ].join(' · '),
+                  AppMessage.invoiceIssuedOn.format(context, {
+                    'date': invoice.createdLabel,
+                  }),
+                ].join('\n'),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
@@ -116,12 +124,12 @@ class _QuoteRelatedInvoicesState
         if (_next != null)
           OutlinedButton(
             onPressed: _reading ? null : () => _read(more: true),
-            child: const Text('Load older quote invoices'),
+            child: Text(AppMessage.olderQuoteInvoices.of(context)),
           ),
         if (_error != null)
           TextButton(
             onPressed: _reading ? null : () => _read(more: _failedMore),
-            child: const Text('Retry quote invoices'),
+            child: Text(AppMessage.retryQuoteInvoices.of(context)),
           ),
       ],
     ),

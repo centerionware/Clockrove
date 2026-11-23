@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.pm.ProviderInfo
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.invoice.InvoiceDocuments
 import io.github.centerionware.clockrove.invoice.InvoiceProvider
 import org.junit.After
@@ -39,11 +40,23 @@ class QuoteDocumentTest {
     @Test fun frozenQuoteAdaptationContainsExactPricesTaxRevisionAndNoPaymentStatement() {
         val record = repository.quoteDocument("quote", 1); val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         assertEquals("QUOTE", record.documentKind); assertEquals(1, record.quoteRevision)
-        assertEquals("Q-1000 · Revision 1", snapshot.number); assertEquals("349.38", snapshot.total)
+        val reference = app.getString(R.string.quote_email_reference, record.number, record.quoteRevision.toString())
+        assertEquals(reference, snapshot.number); assertEquals("349.38", snapshot.total)
         assertEquals("325.00", snapshot.subtotal); assertEquals("24.38", snapshot.taxAmount); assertNull(snapshot.statement)
         assertEquals("325.00", snapshot.lines.single().amount); assertTrue(snapshot.lines.single().detail.contains("26 units × 12.50 USD each"))
         assertTrue(snapshot.period.contains("2026-12-01")); assertTrue(snapshot.footer.contains("Synthetic terms"))
-        assertTrue(snapshot.subject.startsWith("Quote Q-1000")); assertTrue(snapshot.body.contains("Estimated total: 349.38 USD"))
+        assertTrue(snapshot.subject.startsWith(reference))
+        assertEquals(
+            app.getString(
+                R.string.quote_email_body,
+                "Synthetic customer",
+                reference,
+                "349.38",
+                "USD",
+                "Original company",
+            ),
+            snapshot.body,
+        )
         assertNull(repository.saveBusinessSettings("change", version, repository.businessSnapshot().settings.copy(companyName = "Changed company")).conflict)
         assertEquals(record.payload, repository.quoteDocument("quote", 1).payload)
     }
@@ -56,7 +69,9 @@ class QuoteDocumentTest {
         assertEquals(before, version)
         val cached = repository.quoteDocument("quote", 1); assertArrayEquals(bytes, cached.pdf)
         val uri = InvoiceDocuments.uri(app, cached); assertEquals(listOf("quotes", "quote", "1"), uri.pathSegments)
-        assertEquals("Q-1000-revision-1.pdf", InvoiceDocuments.filename(cached))
+        val filename = InvoiceDocuments.filename(app, cached)
+        assertTrue(filename.startsWith("${cached.number}-"))
+        assertTrue(filename.endsWith("-${cached.quoteRevision}.pdf"))
         val email = InvoiceDocuments.email(app, cached, repository.businessSnapshot().settings.copy(receivablesEmail = "accounts@example.test"))
         assertArrayEquals(arrayOf("customer@example.test"), email.getStringArrayExtra(Intent.EXTRA_EMAIL))
         assertArrayEquals(arrayOf("accounts@example.test"), email.getStringArrayExtra(Intent.EXTRA_CC))
@@ -68,17 +83,35 @@ class QuoteDocumentTest {
         assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
         assertNull(repository.quoteDocument("quote", 2).pdf)
         assertArrayEquals(bytes, repository.quoteDocument("quote", 1).pdf)
-        assertTrue(InvoiceDocuments.historicalNotice(repository, cached)!!.contains("current issued revision is 2"))
+        assertEquals(
+            app.getString(R.string.historical_quote_notice, cached.number, "1", "2"),
+            InvoiceDocuments.historicalNotice(app, repository, cached),
+        )
     }
     @Test fun revisedQuoteRetainsCustomTemplatesWithAnExplicitEstimatePrefix() {
         assertNull(repository.saveBusinessSettings("templates", version, repository.businessSnapshot().settings.copy(
             emailSubject = "For {customer_name}: {invoice_number}", emailBody = "Scope for {job_name}: {amount} {currency} — {company_name}")).conflict)
         assertNull(repository.saveQuote("revise", version, draft()).conflict)
         assertNull(repository.issueQuote("reissue", version, "quote", true).conflict)
-        val snapshot = InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload)
-        assertEquals("Quote · For Synthetic customer: Q-1000 revision 2", snapshot.subject)
-        assertEquals("QUOTE — estimate, not an invoice.\n\nScope for Synthetic estimate: 349.38 USD — Original company", snapshot.body)
-        val original = InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 1).payload)
-        assertTrue(original.subject.startsWith("Quote Q-1000 · Revision 1"))
+        val issued = repository.quoteDocument("quote", 2)
+        val snapshot = InvoiceStore.Snapshot.decode(issued.payload)
+        val reference = app.getString(R.string.quote_email_reference, issued.number, "2")
+        assertEquals(
+            app.getString(R.string.quote_email_custom_subject, "For Synthetic customer: $reference"),
+            snapshot.subject,
+        )
+        assertEquals(
+            app.getString(R.string.quote_email_estimate_notice) +
+                "\n\nScope for Synthetic estimate: 349.38 USD — Original company",
+            snapshot.body,
+        )
+        val originalRecord = repository.quoteDocument("quote", 1)
+        val original = InvoiceStore.Snapshot.decode(originalRecord.payload)
+        val originalReference = app.getString(
+            R.string.quote_email_reference,
+            originalRecord.number,
+            originalRecord.quoteRevision.toString(),
+        )
+        assertTrue(original.subject.startsWith(originalReference))
     }
 }

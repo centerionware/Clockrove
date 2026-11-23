@@ -257,7 +257,7 @@ class InvoicePaymentDeviceTest {
         val date = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }
         assertNull(repository.prepareInvoice("payment-fixture-invoice", version(), "payment-invoice",
             ReportStore.Selection(date.format(Date(now - 86400000)), date.format(Date(now + 86400000)), "UTC", listOf(job))).conflict)
-        val original = InvoiceDocuments.ensure(repository, "payment-invoice")
+        val original = InvoiceDocuments.ensure(app, repository, "payment-invoice")
         assertEquals("INV-1000", original.number)
         try {
             launch(); click("App settings and customers"); click("Settings")
@@ -275,7 +275,7 @@ class InvoicePaymentDeviceTest {
             waitFor("Payment amount (USD)", true)
             enter("Payment amount (USD)", "30.001")
             reveal("Confirm payment"); click("Confirm payment")
-            reveal("This currency allows 2 decimal places.")
+            reveal("Enter an amount with up to 2 decimal places.")
             assertTrue(repository.invoicePayments("payment-invoice").second.payments.isEmpty())
             scrollToStart(); reveal("Payment amount (USD)", true)
             assertEquals("30.001", waitFor("Payment amount (USD)", true).text.toString())
@@ -342,10 +342,10 @@ class InvoicePaymentDeviceTest {
                 "Synthetic correction tile", priceMinor = BigInteger.valueOf(10000), currency = "USD")).conflict)
             val correctionSelection = ReportStore.Selection(date.format(Date(now - 86400000)), date.format(Date(now + 86400000)), "UTC", listOf(correctionJob))
             assertNull(repository.prepareInvoice("correction-fixture-invoice", version(), "correction-invoice", correctionSelection).conflict)
-            val correctionOriginal = InvoiceDocuments.ensure(repository, "correction-invoice")
+            val correctionOriginal = InvoiceDocuments.ensure(app, repository, "correction-invoice")
             assertEquals("INV-1001", correctionOriginal.number)
             assertNull(repository.recordInvoicePayment("correction-fixture-credit", version(), InvoicePaymentStore.Draft("correction-credit", "correction-invoice", "3000", "USD", System.currentTimeMillis() - 1000, "UTC")).conflict)
-            val originalReceipt = InvoiceDocuments.ensure(repository, "correction-invoice", "receipt-correction-credit")
+            val originalReceipt = InvoiceDocuments.ensure(app, repository, "correction-invoice", "receipt-correction-credit")
             closeActivities(); launch(); click("App settings and customers"); click("Invoices"); click("INV-1001")
             waitFor("Partially paid"); reveal("Correct this invoice"); click("Correct this invoice")
             reveal("Void & replace"); click("Void & replace")
@@ -390,7 +390,7 @@ class InvoicePaymentDeviceTest {
             assertNull(repository.saveCard("unpaid-void-fixture-card", version(), BoardStore.Draft("unpaid-void-task", correctionJob, correctionColumn,
                 "Synthetic cancelled work", priceMinor = BigInteger.valueOf(5000), currency = "USD")).conflict)
             assertNull(repository.prepareInvoice("unpaid-void-fixture-invoice", version(), "unpaid-void-invoice", correctionSelection).conflict)
-            val unpaidOriginal = InvoiceDocuments.ensure(repository, "unpaid-void-invoice")
+            val unpaidOriginal = InvoiceDocuments.ensure(app, repository, "unpaid-void-invoice")
             assertEquals("INV-1003", unpaidOriginal.number)
             closeActivities(); launch(); click("App settings and customers"); click("Invoices"); click("INV-1003")
             waitFor("Unpaid"); reveal("Correct this invoice"); click("Correct this invoice")

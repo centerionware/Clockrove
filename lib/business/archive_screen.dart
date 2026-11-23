@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'job_screen.dart';
@@ -11,10 +12,10 @@ class ArchiveScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(
-      title: const Text('Archived jobs'),
+      title: Text(AppMessage.archivedJobs.of(context)),
       actions: [
         IconButton(
-          tooltip: 'Refresh archive eligibility',
+          tooltip: AppMessage.archiveRefresh.of(context),
           onPressed: () => ref.invalidate(archiveProvider),
           icon: const Icon(Icons.refresh),
         ),
@@ -28,20 +29,18 @@ class ArchiveScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: TextButton(
               onPressed: () => ref.invalidate(archiveProvider),
-              child: const Text('Retry archived jobs'),
+              child: Text(AppMessage.archiveRetry.of(context)),
             ),
           ),
           data: (data) => ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: Text(
-                  'Archived jobs keep their history. Restore a job to clock in and use its automation again. Permanent deletion becomes available after 30 continuous days archived.',
-                ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Text(AppMessage.archiveExplanation.of(context)),
               ),
               if (data.jobs.isEmpty)
-                const Center(child: Text('No archived jobs.')),
+                Center(child: Text(AppMessage.archiveEmpty.of(context))),
               for (final job in data.jobs)
                 Card(
                   child: Padding(
@@ -54,7 +53,10 @@ class ArchiveScreen extends ConsumerWidget {
                           leading: const Icon(Icons.archive_outlined),
                           title: Text(job.name),
                           subtitle: Text(
-                            job.canDelete ? 'Eligible for permanent deletion' : 'History retained · deletion is not yet available',
+                            (job.canDelete
+                                    ? AppMessage.archiveCanDelete
+                                    : AppMessage.archiveCannotDelete)
+                                .of(context),
                           ),
                           onTap: () => Navigator.push(
                             context,
@@ -65,7 +67,7 @@ class ArchiveScreen extends ConsumerWidget {
                           ),
                         ),
                         BusinessCommand(
-                          label: 'Restore job',
+                          label: AppMessage.restoreJob.of(context),
                           create: () {
                             final id = newBusinessId();
                             final version = data.version;
@@ -83,19 +85,24 @@ class ArchiveScreen extends ConsumerWidget {
                                   .error,
                             ),
                             icon: const Icon(Icons.delete_forever_outlined),
-                            label: const Text('Permanently delete job'),
+                            label: Text(
+                              AppMessage.permanentlyDeleteJob.of(context),
+                            ),
                             onPressed: () => showDialog<void>(
                               context: context,
                               barrierDismissible: false,
                               builder: (dialog) => AlertDialog(
+                                scrollable: true,
                                 title: Text(
-                                  'Permanently delete ${job.name}?',
+                                  AppMessage.confirmDeleteJob.format(dialog, {
+                                    'job': job.name,
+                                  }),
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.error,
                                   ),
                                 ),
-                                content: const Text(
-                                  'This cannot be undone. Work history, GPS and the board will be deleted. Issued invoices and billing history are kept, along with reusable task templates and customers. Copies you already exported remain outside Clockrove.',
+                                content: Text(
+                                  AppMessage.deleteJobWarning.of(dialog),
                                 ),
                                 actions: [
                                   Theme(
@@ -111,7 +118,9 @@ class ArchiveScreen extends ConsumerWidget {
                                           ),
                                     ),
                                     child: BusinessCommand(
-                                      label: 'Delete permanently',
+                                      label: AppMessage.deletePermanently.of(
+                                        dialog,
+                                      ),
                                       create: () {
                                         final id = newBusinessId();
                                         return () => ref

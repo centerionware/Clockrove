@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 class _Versions extends TimerApi {
@@ -393,7 +394,10 @@ void main() {
       await tester.ensureVisible(find.text('Review times and UTC offsets'));
       await tester.tap(find.text('Review times and UTC offsets'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('does not exist'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.paymentSkippedTime)),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<FilledButton>(

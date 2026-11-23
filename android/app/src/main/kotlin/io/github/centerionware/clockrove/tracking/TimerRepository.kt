@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.tracking
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.UUID
 
@@ -636,9 +637,24 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun quoteCurrencyDigits(id: String?, currency: String): Int = QuoteStore.currencyDigits(helper.readableDatabase, id, currency)
     @Synchronized
-    internal fun quoteDocument(id: String, revision: Int): InvoiceStore.Record = QuoteStore.document(helper.readableDatabase, id, revision)
+    internal fun quoteDocument(id: String, revision: Int): InvoiceStore.Record =
+        QuoteStore.document(
+            helper.readableDatabase,
+            id,
+            revision,
+            localizedContext(appContext),
+        )
+    internal fun localizedStrings(): Context = localizedContext(appContext)
     @Synchronized
-    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray): Boolean = QuoteStore.cachePdf(helper.writableDatabase, id, revision, payload, bytes)
+    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray): Boolean =
+        QuoteStore.cachePdf(
+            helper.writableDatabase,
+            id,
+            revision,
+            payload,
+            bytes,
+            localizedContext(appContext),
+        )
     @Synchronized
     internal fun quoteHistory(id: String, before: Int? = null, limit: Int = 20): List<QuoteStore.RevisionSummary> =
         QuoteStore.history(helper.readableDatabase, id, before, limit)
@@ -651,7 +667,7 @@ class TimerRepository internal constructor(context: Context,
     }
     @Synchronized
     internal fun applyQuoteScope(id: String, version: Long, value: QuoteScopeStore.Draft): Outcome =
-        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_SCOPE_APPLY") + value.values()).toString()), version) { QuoteScopeStore.apply(it, value, wallClock()) }
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_SCOPE_APPLY") + value.values()).toString()), version) { QuoteScopeStore.apply(it, value, wallClock(), localizedContext(appContext)) }
     @Synchronized
     internal fun quoteScope(id: String): Pair<Long, List<QuoteScopeStore.Binding>> =
         readSnapshot(helper.readableDatabase).version to QuoteScopeStore.bindings(helper.readableDatabase, id)
@@ -686,7 +702,9 @@ class TimerRepository internal constructor(context: Context,
         QuoteInvoiceCalculation(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.review(helper.readableDatabase, request, choices))
     @Synchronized
     internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft): Outcome =
-        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) { QuoteInvoiceStore.prepare(it, value, wallClock()) }
+        changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) {
+            QuoteInvoiceStore.prepare(it, value, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun quoteInvoices(id: String, before: Pair<Long, String>? = null, limit: Int = 20): List<QuoteInvoiceStore.Summary> = QuoteInvoiceStore.links(helper.readableDatabase, id, before, limit)
     @Synchronized
@@ -694,21 +712,25 @@ class TimerRepository internal constructor(context: Context,
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized
     internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean): Outcome =
-        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) { QuoteStore.issue(it, quoteId, confirmed, wallClock()) }
+        boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) {
+            QuoteStore.issue(it, quoteId, confirmed, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun decideQuote(id: String, version: Long, quoteId: String, revision: Int, decision: String, note: String, confirmed: Boolean): Outcome =
         boardChange(id, version, "QUOTE_DECIDE", listOf(quoteId, revision, decision, note, confirmed)) { QuoteStore.decide(it, quoteId, revision, decision, note, confirmed, wallClock()) }
     @Synchronized
     internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
-            InvoiceStore.prepare(it, invoiceId, selection, wallClock())
+            InvoiceStore.prepare(it, invoiceId, selection, wallClock(), localizedContext(appContext))
         }
     @Synchronized
     internal fun voidInvoice(id: String, version: Long, value: InvoiceLifecycleStore.VoidDraft): Outcome =
         boardChange(id, version, "INVOICE_VOID", value.values()) { InvoiceLifecycleStore.void(it, value, wallClock()) }
     @Synchronized
     internal fun replaceInvoice(id: String, version: Long, value: InvoiceLifecycleStore.ReplacementDraft): Outcome =
-        boardChange(id, version, "INVOICE_REPLACE", value.values()) { InvoiceLifecycleStore.replace(it, value, wallClock()) }
+        boardChange(id, version, "INVOICE_REPLACE", value.values()) {
+            InvoiceLifecycleStore.replace(it, value, wallClock(), localizedContext(appContext))
+        }
     @Synchronized
     internal fun invoicePayments(invoiceId: String): Pair<Long, InvoicePaymentStore.Snapshot> =
         readSnapshot(helper.readableDatabase).version to InvoicePaymentStore.read(helper.readableDatabase, invoiceId)
@@ -753,12 +775,12 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun invoiceCopies(invoiceId: String): List<InvoiceCopyStore.Summary> = InvoiceCopyStore.list(helper.readableDatabase, invoiceId)
     @Synchronized
-    internal fun invoiceCopy(copyId: String): InvoiceStore.Record = InvoiceCopyStore.read(helper.readableDatabase, copyId)
+    internal fun invoiceCopy(copyId: String): InvoiceStore.Record = InvoiceCopyStore.read(helper.readableDatabase, copyId, localizedContext(appContext))
     @Synchronized
     internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray): Boolean {
         require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))
         val db = helper.writableDatabase
-        if (InvoiceCopyStore.read(db, copyId).payload != payload) return false
+        if (InvoiceCopyStore.read(db, copyId, localizedContext(appContext)).payload != payload) return false
         return db.update("invoice_copies", android.content.ContentValues().apply { put("pdf", bytes) }, "id=? AND pdf IS NULL", arrayOf(copyId)) == 1
     }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,

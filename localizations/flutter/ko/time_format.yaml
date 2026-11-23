@@ -1,0 +1,3 @@
+durationHoursMinutes: "{hours}시간 {minutes}분"
+durationHoursMinutesSeconds: "{hours}시간 {minutes}분 {seconds}초"
+timeUtcOffset: " (UTC{offset})"

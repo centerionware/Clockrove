@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'report_api.dart';
 
 class InvoiceStylePreviewScreen extends ConsumerStatefulWidget {
@@ -37,15 +38,17 @@ class _InvoiceStylePreviewScreenState
         page: index,
       );
 
-  String get _styleName => switch (widget.style) {
-    'CLASSIC' => 'Classic',
-    'MODERN' => 'Modern',
-    _ => 'Minimal',
+  String _styleName(BuildContext context) => switch (widget.style) {
+    'CLASSIC' => AppMessage.invoiceStyleClassic.of(context),
+    'MODERN' => AppMessage.invoiceStyleModern.of(context),
+    _ => AppMessage.invoiceStyleMinimal.of(context),
   };
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Invoice style preview')),
+    appBar: AppBar(
+      title: Text(AppMessage.invoiceStylePreviewTitle.of(context)),
+    ),
     body: SafeArea(
       child: Column(
         children: [
@@ -67,12 +70,16 @@ class _InvoiceStylePreviewScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '$_styleName · sample invoice',
+                            AppMessage.invoiceStyleSampleTitle.format(context, {
+                              'style': _styleName(context),
+                            }),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Example company, customer and work details. This preview does not create or send an invoice.',
+                          Text(
+                            AppMessage.invoiceStylePreviewDisclaimer.of(
+                              context,
+                            ),
                           ),
                         ],
                       ),
@@ -91,7 +98,7 @@ class _InvoiceStylePreviewScreenState
                     child: TextButton.icon(
                       onPressed: () => setState(() => _page = _load(0)),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry invoice preview'),
+                      label: Text(AppMessage.invoiceReviewRetry.of(context)),
                     ),
                   );
                 }
@@ -109,8 +116,15 @@ class _InvoiceStylePreviewScreenState
                           child: Image.memory(
                             page.png,
                             fit: BoxFit.contain,
-                            semanticLabel:
-                                'Sample invoice page ${page.index + 1} of ${page.pages}',
+                            semanticLabel: AppMessage.documentPage.format(
+                              context,
+                              {
+                                'page': MaterialLocalizations.of(context)
+                                    .formatDecimal(page.index + 1),
+                                'total': MaterialLocalizations.of(context)
+                                    .formatDecimal(page.pages),
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -119,7 +133,7 @@ class _InvoiceStylePreviewScreenState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          tooltip: 'Previous preview page',
+                          tooltip: AppMessage.invoicePreviousPage.of(context),
                           onPressed:
                               state.connectionState ==
                                       ConnectionState.waiting ||
@@ -130,9 +144,16 @@ class _InvoiceStylePreviewScreenState
                                 ),
                           icon: const Icon(Icons.chevron_left),
                         ),
-                        Text('Page ${page.index + 1} of ${page.pages}'),
+                        Text(
+                          AppMessage.documentPage.format(context, {
+                            'page': MaterialLocalizations.of(context)
+                                .formatDecimal(page.index + 1),
+                            'total': MaterialLocalizations.of(context)
+                                .formatDecimal(page.pages),
+                          }),
+                        ),
                         IconButton(
-                          tooltip: 'Next preview page',
+                          tooltip: AppMessage.invoiceNextPage.of(context),
                           onPressed:
                               state.connectionState ==
                                       ConnectionState.waiting ||

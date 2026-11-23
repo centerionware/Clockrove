@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
+
 const defaultMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const defaultMapAttribution = '© OpenStreetMap contributors';
 const defaultMapAttributionUrl = 'https://www.openstreetmap.org/copyright';
@@ -86,26 +88,26 @@ Map<String, String> mapTileRequestHeaders(MapProviderSettings settings) => {
   'User-Agent': clockroveMapUserAgent,
 };
 
-String? mapProviderSettingsError(
+AppMessage? mapProviderSettingsError(
   MapProviderSettings value, {
   String authSecret = '',
 }) {
   if (value.provider != 'OSM' && value.provider != 'CUSTOM') {
-    return 'Choose a supported map provider.';
+    return AppMessage.mapUnsupportedProvider;
   }
   if (value.provider == 'OSM') return null;
   if (value.urlTemplate.length > 2048 ||
       !value.urlTemplate.contains('{z}') ||
       !value.urlTemplate.contains('{x}') ||
       !value.urlTemplate.contains('{y}')) {
-    return 'Enter an HTTPS tile URL with {z}, {x}, and {y} placeholders.';
+    return AppMessage.mapMissingTileTokens;
   }
   final replaced = value.urlTemplate
       .replaceAll('{z}', '1')
       .replaceAll('{x}', '1')
       .replaceAll('{y}', '1');
   if (RegExp(r'[{}]').hasMatch(replaced)) {
-    return 'Only {z}, {x}, and {y} URL placeholders are supported.';
+    return AppMessage.mapUnsupportedTileTokens;
   }
   final uri = Uri.tryParse(replaced);
   if (uri == null ||
@@ -113,7 +115,7 @@ String? mapProviderSettingsError(
       uri.host.isEmpty ||
       uri.userInfo.isNotEmpty ||
       uri.hasFragment) {
-    return 'Use a valid HTTPS tile URL without embedded credentials.';
+    return AppMessage.mapUnsafeTileUrl;
   }
   const sensitiveQueryNames = {
     'key',
@@ -152,10 +154,10 @@ String? mapProviderSettingsError(
   if (uri.queryParameters.keys.any(
     (key) => sensitiveQueryNames.contains(key.toLowerCase()),
   )) {
-    return 'Keep credentials out of the tile URL. Use the encrypted header field.';
+    return AppMessage.mapUrlCredentials;
   }
   if (value.attribution.trim().isEmpty || value.attribution.length > 300) {
-    return 'Enter the map provider attribution exactly as they require it.';
+    return AppMessage.mapMissingAttribution;
   }
   if (value.attributionUrl.isNotEmpty) {
     final link = Uri.tryParse(value.attributionUrl);
@@ -165,7 +167,7 @@ String? mapProviderSettingsError(
         link.userInfo.isNotEmpty ||
         link.hasFragment ||
         value.attributionUrl.length > 2048) {
-      return 'Enter a valid HTTPS attribution link, or leave it blank.';
+      return AppMessage.mapInvalidAttributionLink;
     }
   }
   const reservedHeaders = {
@@ -183,14 +185,20 @@ String? mapProviderSettingsError(
       ((value.hasCredential || authSecret.isNotEmpty) &&
           (!RegExp(r'^[A-Za-z0-9-]{1,64}$').hasMatch(value.authHeader) ||
               reservedHeaders.contains(value.authHeader.toLowerCase())))) {
-    return 'Use a valid authentication header name, such as Authorization or X-API-Key.';
+    return AppMessage.mapInvalidAuthHeader;
   }
   if (authSecret.length > 4096 ||
       authSecret.contains('\r') ||
       authSecret.contains('\n')) {
-    return 'The authentication value is too long or contains a line break.';
+    return AppMessage.mapInvalidAuthValue;
   }
   return null;
+}
+
+final class MapProviderInputException extends FormatException {
+  MapProviderInputException(this.key) : super(key.english);
+
+  final AppMessage key;
 }
 
 abstract interface class MapProviderSettingsApi {
@@ -236,7 +244,7 @@ class MethodChannelMapProviderSettingsApi implements MapProviderSettingsApi {
       settings,
       authSecret: authSecret ?? '',
     );
-    if (error != null) throw FormatException(error);
+    if (error != null) throw MapProviderInputException(error);
     final value = await _channel.invokeMapMethod<Object?, Object?>(
       'save',
       settings.encode(

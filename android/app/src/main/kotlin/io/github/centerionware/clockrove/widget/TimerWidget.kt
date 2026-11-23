@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import io.github.centerionware.clockrove.R
+import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import java.util.concurrent.Executors
 
@@ -56,6 +57,7 @@ open class TimerWidget : AppWidgetProvider() {
         }
         @Synchronized
         fun refreshAll(context: Context) {
+            val strings = localizedContext(context)
             val manager = AppWidgetManager.getInstance(context)
             val repository = TimerRepository.get(context)
             providers.forEach { provider -> manager.getAppWidgetIds(ComponentName(context, provider)).forEach { id ->
@@ -73,10 +75,10 @@ open class TimerWidget : AppWidgetProvider() {
                 } catch (_: Exception) {
                     // A failed refresh must not crash an already committed timer/settings command.
                     val unavailable = RemoteViews(context.packageName, R.layout.timer_widget).apply {
-                        setTextViewText(R.id.widget_job, "Widget unavailable · open app")
+                        setTextViewText(R.id.widget_job, strings.getString(R.string.widget_unavailable))
                         setViewVisibility(R.id.widget_elapsed, View.GONE)
                         setImageViewResource(R.id.widget_action, R.drawable.ic_widget_open)
-                        setContentDescription(R.id.widget_action, context.getString(R.string.widget_open))
+                        setContentDescription(R.id.widget_action, strings.getString(R.string.widget_open))
                         setOnClickPendingIntent(R.id.widget_action, PendingIntent.getActivity(context, id,
                             Intent(context, WidgetPickerActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
                     }
@@ -85,6 +87,7 @@ open class TimerWidget : AppWidgetProvider() {
             } }
         }
         internal fun viewsForSize(context: Context, bound: TimerRepository.WidgetSnapshot, id: Int, provider: Class<out TimerWidget>, width: Int, height: Int): RemoteViews {
+                val strings = localizedContext(context)
                 val tasks = provider == TaskListWidget::class.java || (provider == TimerWidget::class.java && hasTaskRoom(width, height, context.resources.configuration.fontScale))
                 val views = if (!tasks) viewsFor(context, bound.state, id, bound) else RemoteViews(context.packageName, R.layout.tasks_widget).apply {
                     // Reapply must replace its one timer row, never append to the
@@ -92,13 +95,23 @@ open class TimerWidget : AppWidgetProvider() {
                     removeAllViews(R.id.widget_timer_container)
                     if (provider == TaskListWidget::class.java) setViewVisibility(R.id.widget_timer_container, View.GONE)
                     else addView(R.id.widget_timer_container, viewsFor(context, bound.state, id, bound))
-                    val taskTitle = bound.defaultJob?.let { "Due soon · ${it.name}" } ?: if (bound.missingDefault) "Job unavailable · configure" else "Due soon · all jobs"
+                    val defaultJob = bound.defaultJob
+                    val taskTitle = when {
+                        defaultJob != null -> strings.getString(R.string.widget_due_job, defaultJob.name)
+                        bound.missingDefault -> strings.getString(R.string.widget_configure_unavailable)
+                        else -> strings.getString(R.string.widget_due_all)
+                    }
                     setTextViewText(R.id.widget_tasks_title, taskTitle)
-                    setContentDescription(R.id.widget_tasks_title, "$taskTitle. Change widget settings")
+                    setContentDescription(R.id.widget_tasks_title, strings.getString(R.string.widget_change_settings, taskTitle))
                     setOnClickPendingIntent(R.id.widget_tasks_title, configureIntent(context, id))
-                    setTextViewText(R.id.widget_tasks_empty, if (bound.missingDefault) "Choose an active job in widget settings" else "No tasks due in the next 7 days")
+                    val emptyMessage = if (bound.missingDefault) R.string.widget_choose_active_job
+                        else R.string.widget_no_due_tasks
+                    setTextViewText(R.id.widget_tasks_empty, strings.getString(emptyMessage))
                     val adapter = Intent(context, WidgetTasksService::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                        .setData(taskAdapterUri(bound, id, io.github.centerionware.clockrove.tracking.WidgetTasksStore.localDate(System.currentTimeMillis(), java.util.TimeZone.getDefault().id)))
+                        .setData(taskAdapterUri(
+                            bound, id,
+                            io.github.centerionware.clockrove.tracking.WidgetTasksStore.localDate(System.currentTimeMillis(), java.util.TimeZone.getDefault().id),
+                        ).buildUpon().appendQueryParameter("locale", strings.resources.configuration.locales[0].toLanguageTag()).build())
                     setRemoteAdapter(R.id.widget_tasks, adapter)
                     setEmptyView(R.id.widget_tasks, R.id.widget_tasks_empty)
                     val template = Intent(context, WidgetBoardActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -123,16 +136,25 @@ open class TimerWidget : AppWidgetProvider() {
             Intent(context, WidgetConfigurationActivity::class.java).setData(Uri.parse("clockrove://widget/$id/configure"))
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         internal fun viewsFor(context: Context, snapshot: TimerRepository.Snapshot, id: Int, bound: TimerRepository.WidgetSnapshot? = null): RemoteViews {
+            val strings = localizedContext(context)
             val running = snapshot.running
             val views = RemoteViews(context.packageName, R.layout.timer_widget)
-            views.setTextViewText(R.id.widget_job, running?.jobName ?: bound?.defaultJob?.name ?: if (bound?.missingDefault == true) "Job unavailable · choose" else context.getString(R.string.widget_idle))
+            val defaultJob = bound?.defaultJob
+            val emptyJob = if (bound?.missingDefault == true) R.string.widget_choose_unavailable
+                else R.string.widget_idle
+            views.setTextViewText(R.id.widget_job, running?.jobName ?: defaultJob?.name ?: strings.getString(emptyJob))
             val showElapsed = running != null && context.resources.configuration.fontScale <= 1.3f
             views.setViewVisibility(R.id.widget_elapsed, if (showElapsed) View.VISIBLE else View.GONE)
             if (running != null) {
                 val elapsed = (System.currentTimeMillis() - running.startUtcMillis).coerceAtLeast(0)
                 views.setChronometer(R.id.widget_elapsed, SystemClock.elapsedRealtime() - elapsed, null, showElapsed)
             }
-            views.setContentDescription(R.id.widget_action, if (running != null) context.getString(R.string.widget_stop) else if (bound?.defaultJob != null) "Clock in to ${bound.defaultJob!!.name}" else context.getString(R.string.widget_open))
+            val actionDescription = when {
+                running != null -> strings.getString(R.string.widget_stop)
+                defaultJob != null -> strings.getString(R.string.widget_clock_in_job, defaultJob.name)
+                else -> strings.getString(R.string.widget_open)
+            }
+            views.setContentDescription(R.id.widget_action, actionDescription)
             views.setImageViewResource(R.id.widget_action, if (running != null) R.drawable.ic_widget_stop else if (bound?.defaultJob != null) R.drawable.ic_widget_start else R.drawable.ic_widget_open)
             val tap = if (running == null) {
                 val intent = Intent(context, WidgetStartActivity::class.java).setData(Uri.parse("clockrove://widget/$id/start/${snapshot.version}/${bound?.configuration?.token}"))

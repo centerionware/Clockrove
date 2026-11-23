@@ -21,6 +21,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/localized_copy.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
@@ -174,11 +175,15 @@ Future<void> _reveal(WidgetTester tester, String label) async {
   final scrollable = find.byType(Scrollable).first;
   tester.state<ScrollableState>(scrollable).position.jumpTo(0);
   await tester.pumpAndSettle();
-  await tester.scrollUntilVisible(
-    find.text(label),
-    250,
-    scrollable: scrollable,
-  );
+  List<Element> matches = [];
+  for (var attempts = 0; attempts < 40; attempts++) {
+    matches = find.text(label).evaluate().toList();
+    if (matches.isNotEmpty) break;
+    await tester.drag(scrollable, const Offset(0, -250));
+    await tester.pumpAndSettle();
+  }
+  expect(matches, isNotEmpty, reason: 'Could not reveal "$label".');
+  await tester.ensureVisible(find.byWidget(matches.last.widget));
   await tester.pumpAndSettle();
 }
 
@@ -224,9 +229,16 @@ void main() {
     await tester.tap(find.text('Preview invoice'));
     await tester.pumpAndSettle();
     expect(find.byType(InvoiceStylePreviewScreen), findsOneWidget);
-    expect(find.text('Classic · sample invoice'), findsOneWidget);
     expect(
-      find.textContaining('does not create or send an invoice'),
+      find.text(
+        englishCopy(AppMessage.invoiceStyleSampleTitle, {
+          'style': englishCopy(AppMessage.invoiceStyleClassic),
+        }),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(englishCopy(AppMessage.invoiceStylePreviewDisclaimer)),
       findsOneWidget,
     );
     expect(find.text('Page 1 of 1'), findsOneWidget);
@@ -295,15 +307,15 @@ void main() {
       }).encode()['receivablesEmail'],
       'accounts@example.test',
     );
-    expect(accountingEmailError(''), isNull);
-    expect(accountingEmailError(' accounts@example.test '), isNull);
+    expect(isValidAccountingEmail(''), isTrue);
+    expect(isValidAccountingEmail(' accounts@example.test '), isTrue);
     for (final value in [
       'bad',
       'a@example.test;b@example.test',
       'a@example.test\nBcc:b@example.test',
       'a@example.test\u0000',
     ]) {
-      expect(accountingEmailError(value), isNotNull);
+      expect(isValidAccountingEmail(value), isFalse);
     }
   });
   testWidgets(
@@ -386,6 +398,7 @@ void main() {
         const SettingsScreen(),
         timer: _Timer(events.stream),
       );
+      await _reveal(tester, 'Default hourly rate (USD)');
       await tester.enterText(
         find.widgetWithText(TextField, 'Default hourly rate (USD)'),
         '123.45',
@@ -422,7 +435,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.savedSettings, isNull);
       expect(
-        find.textContaining('Fix the highlighted email subject'),
+        find.text(englishCopy(AppMessage.invoiceEmailFixTemplates)),
         findsOneWidget,
       );
       await _reveal(tester, 'Email subject template');
@@ -469,6 +482,7 @@ void main() {
     (tester) async {
       final api = _SettingsApi();
       await _show(tester, api, const SettingsScreen());
+      await _reveal(tester, 'Default hourly rate (USD)');
       await tester.enterText(
         find.widgetWithText(TextField, 'Default hourly rate (USD)'),
         '1234.56',
@@ -554,8 +568,8 @@ void main() {
       await _reveal(tester, 'Archive customer');
       await tester.tap(find.text('Archive customer'));
       await tester.pumpAndSettle();
-      await _reveal(tester, 'Save customer');
-      await tester.tap(find.text('Save customer'));
+      await _reveal(tester, englishCopy(AppMessage.save));
+      await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(api.savedCustomer!.id, 'customer');
       expect(api.savedCustomer!.email, 'changed@example.test');

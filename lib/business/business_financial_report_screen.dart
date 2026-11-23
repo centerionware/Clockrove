@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
+import 'actual_cost_labels.dart';
 import 'business_api.dart';
 import 'invoice_detail_screen.dart';
 import 'report_api.dart';
@@ -52,7 +54,9 @@ class _BusinessFinancialReportScreenState
       });
     } catch (_) {
       if (mounted) {
-        setState(() => _loadError = 'Report filters could not be loaded.');
+        setState(
+          () => _loadError = AppMessage.businessReportLoadFailed.of(context),
+        );
       }
     }
   }
@@ -98,22 +102,24 @@ class _BusinessFinancialReportScreenState
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, updateDialog) => AlertDialog(
-          title: const Text('Report jobs'),
+          title: Text(AppMessage.reportJobs.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const ListTile(
+                  ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Leave all unchecked to include every job.'),
+                    title: Text(AppMessage.businessEveryJob.of(context)),
                   ),
                   for (final job in jobs)
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(job.name),
-                      subtitle: job.archived ? const Text('Archived') : null,
+                      subtitle: job.archived
+                          ? Text(AppMessage.archived.of(context))
+                          : null,
                       value: selected.contains(job.id),
                       onChanged: (value) => updateDialog(() {
                         if (value == true) {
@@ -130,13 +136,13 @@ class _BusinessFinancialReportScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialog, <String>[]),
-              child: const Text('All jobs'),
+              child: Text(AppMessage.allJobs.of(context)),
             ),
             FilledButton(
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply'),
+              child: Text(AppMessage.apply.of(context)),
             ),
           ],
         ),
@@ -164,25 +170,23 @@ class _BusinessFinancialReportScreenState
       context: context,
       builder: (dialog) => StatefulBuilder(
         builder: (dialog, updateDialog) => AlertDialog(
-          title: const Text('Report customers'),
+          title: Text(AppMessage.reportCustomers.of(context)),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const ListTile(
+                  ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      'Leave all unchecked to include every customer.',
-                    ),
+                    title: Text(AppMessage.businessEveryCustomer.of(context)),
                   ),
                   for (final customer in customers)
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(customer.name),
                       subtitle: customer.archived
-                          ? const Text('Archived')
+                          ? Text(AppMessage.archived.of(context))
                           : null,
                       value: selected.contains(customer.id),
                       onChanged: (value) => updateDialog(() {
@@ -200,13 +204,13 @@ class _BusinessFinancialReportScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialog, <String>[]),
-              child: const Text('All customers'),
+              child: Text(AppMessage.reportAllCustomers.of(context)),
             ),
             FilledButton(
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(dialog, selected.toList()),
-              child: const Text('Apply'),
+              child: Text(AppMessage.apply.of(context)),
             ),
           ],
         ),
@@ -236,22 +240,23 @@ class _BusinessFinancialReportScreenState
           .read(reportApiProvider)
           .saveBusinessReport(_selection!, report.version, pdf: pdf);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              saved ? '${pdf ? 'PDF' : 'CSV'} saved.' : 'Export cancelled.',
-            ),
-          ),
-        );
+        final message = switch ((saved, pdf)) {
+          (true, true) => AppMessage.reportPdfSaved,
+          (true, false) => AppMessage.reportCsvSaved,
+          _ => AppMessage.reportExportCancelled,
+        };
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message.of(context))));
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              pdf
-                  ? 'Could not save the PDF. Try a shorter period or export CSV, then refresh and try again.'
-                  : 'Could not save the CSV. Refresh and try again.',
+              (pdf
+                      ? AppMessage.reportPdfExportFailed
+                      : AppMessage.reportCsvExportFailed)
+                  .of(context),
             ),
           ),
         );
@@ -266,10 +271,10 @@ class _BusinessFinancialReportScreenState
     final selection = _selection;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Business report'),
+        title: Text(AppMessage.businessReport.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh business report',
+            tooltip: AppMessage.refreshBusinessReport.of(context),
             onPressed: selection == null
                 ? _loadContext
                 : () => ref.invalidate(businessReportProvider(selection)),
@@ -283,7 +288,7 @@ class _BusinessFinancialReportScreenState
                   ? const CircularProgressIndicator()
                   : TextButton(
                       onPressed: _loadContext,
-                      child: const Text('Retry report filters'),
+                      child: Text(AppMessage.retryReportFilters.of(context)),
                     ),
             )
           : ref
@@ -298,14 +303,12 @@ class _BusinessFinancialReportScreenState
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'This business report could not be loaded. Try a smaller date range or fewer filters.',
-                          ),
+                          Text(AppMessage.businessReportLoadFailed.of(context)),
                           FilledButton(
                             onPressed: () => ref.invalidate(
                               businessReportProvider(selection),
                             ),
-                            child: const Text('Retry report'),
+                            child: Text(AppMessage.retryReport.of(context)),
                           ),
                         ],
                       ),
@@ -331,15 +334,25 @@ class _BusinessFinancialReportScreenState
             OutlinedButton.icon(
               onPressed: _range,
               icon: const Icon(Icons.date_range),
-              label: Text('${selection.firstDate} – ${selection.lastDate}'),
+              label: Text(
+                AppMessage.dateRangeLabel.format(context, {
+                  'first': MaterialLocalizations.of(context)
+                      .formatCompactDate(DateTime.parse(selection.firstDate)),
+                  'last': MaterialLocalizations.of(context)
+                      .formatCompactDate(DateTime.parse(selection.lastDate)),
+                }),
+              ),
             ),
             OutlinedButton.icon(
               onPressed: _jobs,
               icon: const Icon(Icons.work_outline),
               label: Text(
                 selection.jobs.isEmpty
-                    ? 'All jobs'
-                    : '${selection.jobs.length} jobs',
+                    ? AppMessage.allJobs.of(context)
+                    : AppMessage.businessSelectedJobs.format(context, {
+                        'count': MaterialLocalizations.of(context)
+                            .formatDecimal(selection.jobs.length),
+                      }),
               ),
             ),
             OutlinedButton.icon(
@@ -347,8 +360,11 @@ class _BusinessFinancialReportScreenState
               icon: const Icon(Icons.people_outline),
               label: Text(
                 selection.customers.isEmpty
-                    ? 'All customers'
-                    : '${selection.customers.length} customers',
+                    ? AppMessage.reportAllCustomers.of(context)
+                    : AppMessage.businessSelectedCustomers.format(context, {
+                        'count': MaterialLocalizations.of(context)
+                            .formatDecimal(selection.customers.length),
+                      }),
               ),
             ),
           ],
@@ -356,25 +372,24 @@ class _BusinessFinancialReportScreenState
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            'Dates use ${selection.timezone}. Invoiced sales use issue and void dates; cash uses payment or correction dates; balances are as of ${selection.lastDate}. Currency totals are kept separate.',
+            AppMessage.businessReportDateBasis.format(context, {
+              'timezone': selection.timezone,
+              'date': selection.lastDate,
+            }),
           ),
         ),
         if (summaries.isEmpty)
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'No financial activity or job currency was found for these filters.',
-              ),
+              padding: const EdgeInsets.all(20),
+              child: Text(AppMessage.businessReportNoActivity.of(context)),
             ),
           ),
         for (final summary in summaries) _summary(summary),
-        const Card(
+        Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Profit and margins are estimates using recorded costs only. Missing costs are unknown, not zero. Tax is shown separately and is not profit. Quotes are not revenue. These local records are not a tax return.',
-            ),
+            padding: const EdgeInsets.all(16),
+            child: Text(AppMessage.businessReportProfitHelp.of(context)),
           ),
         ),
         if (report.excludedUnknownCustomerCostCount > 0)
@@ -383,7 +398,10 @@ class _BusinessFinancialReportScreenState
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                '${report.excludedUnknownCustomerCostCount} recorded cost entries have no captured customer and are excluded from this customer-filtered view.',
+                AppMessage.businessUnknownCustomerCosts.format(context, {
+                  'count': MaterialLocalizations.of(context)
+                      .formatDecimal(report.excludedUnknownCustomerCostCount),
+                }),
               ),
             ),
           ),
@@ -393,18 +411,14 @@ class _BusinessFinancialReportScreenState
         if (report.invoices.isEmpty &&
             report.cash.isEmpty &&
             report.costs.isEmpty)
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'No issued invoices, payments, or actual costs in this period.',
-              ),
+              padding: const EdgeInsets.all(16),
+              child: Text(AppMessage.businessReportEmpty.of(context)),
             ),
           ),
         const SizedBox(height: 16),
-        const Text(
-          'CSV amount columns contain exact minor-unit integers as text.',
-        ),
+        Text(AppMessage.reportCsvAmountExact.of(context)),
         Wrap(
           spacing: 12,
           runSpacing: 8,
@@ -412,12 +426,12 @@ class _BusinessFinancialReportScreenState
             OutlinedButton.icon(
               onPressed: _exporting ? null : () => _export(report, pdf: false),
               icon: const Icon(Icons.table_view_outlined),
-              label: const Text('Export CSV'),
+              label: Text(AppMessage.reportExportCsv.of(context)),
             ),
             OutlinedButton.icon(
               onPressed: _exporting ? null : () => _export(report, pdf: true),
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('Export PDF'),
+              label: Text(AppMessage.reportExportPdf.of(context)),
             ),
           ],
         ),
@@ -453,33 +467,51 @@ class _BusinessFinancialReportScreenState
           children: [
             Text(value.currency, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
-            row('Invoiced sales · tax exclusive', value.invoicedSales),
-            row('Cash received · payment date', value.cashReceived),
-            row('Tax billed', value.taxBilled),
-            row('Tax collected with payments', value.taxCollected),
-            row('Outstanding as of report end', value.outstanding),
+            row(
+              AppMessage.reportInvoicedSales.of(context),
+              value.invoicedSales,
+            ),
+            row(AppMessage.reportCashReceived.of(context), value.cashReceived),
+            row(AppMessage.reportTaxBilled.of(context), value.taxBilled),
+            row(AppMessage.reportTaxCollected.of(context), value.taxCollected),
+            row(AppMessage.reportOutstanding.of(context), value.outstanding),
             const Divider(),
-            row('Labor charges', value.labor),
-            row('Supplies charges', value.supplies),
-            row('Unclassified charges', value.unclassified),
-            row('Recorded direct costs', value.directCosts),
-            row('Recorded overhead', value.overhead),
-            row('Estimated gross profit', value.grossProfit),
-            row('Estimated net profit', value.netProfit),
-            row('Estimated cash surplus', value.cashSurplus),
+            row(AppMessage.reportLaborCharges.of(context), value.labor),
+            row(AppMessage.reportSuppliesCharges.of(context), value.supplies),
+            row(
+              AppMessage.reportUnclassifiedCharges.of(context),
+              value.unclassified,
+            ),
+            row(AppMessage.reportDirectCosts.of(context), value.directCosts),
+            row(AppMessage.reportOverhead.of(context), value.overhead),
+            row(AppMessage.reportGrossProfit.of(context), value.grossProfit),
+            row(AppMessage.reportNetProfit.of(context), value.netProfit),
+            row(AppMessage.reportCashSurplus.of(context), value.cashSurplus),
             Text(
-              'Gross margin ${value.grossMarginPercent ?? '—'}% · net margin ${value.netMarginPercent ?? '—'}%',
+              AppMessage.reportMarginPair.format(context, {
+                'gross': value.grossMarginPercent?.toString() ?? '—',
+                'net': value.netMarginPercent?.toString() ?? '—',
+              }),
             ),
             Text(
-              '${value.costCount} recorded cost entries · ${value.unattributedCostCount} without a job',
+              AppMessage.reportCostAttribution.format(context, {
+                'count': '${value.costCount}',
+                'unlinked': '${value.unattributedCostCount}',
+              }),
             ),
             if (value.legacyInvoiceCount > 0)
               Text(
-                '${value.legacyInvoiceCount} legacy invoice(s) lack a reliable tax-exclusive subtotal.',
+                AppMessage.businessLegacyInvoiceTaxMissing.format(context, {
+                  'count': MaterialLocalizations.of(context)
+                      .formatDecimal(value.legacyInvoiceCount),
+                }),
               ),
             if (value.unknownTaxInvoiceCount > 0)
               Text(
-                '${value.unknownTaxInvoiceCount} invoice(s) have no reliable tax snapshot.',
+                AppMessage.businessUnknownTaxInvoices.format(context, {
+                  'count': MaterialLocalizations.of(context)
+                      .formatDecimal(value.unknownTaxInvoiceCount),
+                }),
               ),
           ],
         ),
@@ -488,20 +520,33 @@ class _BusinessFinancialReportScreenState
   }
 
   Widget _invoiceSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Invoice issue and void activity · ${report.invoices.length}'),
+    title: Text(
+      AppMessage.reportInvoiceActivity.format(context, {
+        'count': '${report.invoices.length}',
+      }),
+    ),
     children: [
       for (final row in report.invoices.take(_invoiceLimit))
         ListTile(
           title: Text(
-            '${row.kind == 'VOID_ADJUSTMENT' ? 'Void adjustment · ' : ''}${row.number}',
+            row.kind == 'VOID_ADJUSTMENT'
+                ? AppMessage.businessVoidAdjustment.format(context, {
+                    'number': row.number,
+                  })
+                : row.number,
           ),
           subtitle: Text(
             '${row.occurredLabel} · ${row.customer.isEmpty ? row.job : '${row.customer} · ${row.job}'}${row.reason.isEmpty ? '' : '\n${row.reason}'}',
           ),
           trailing: Text(
             row.salesMinor == null
-                ? 'Legacy total ${row.legacyTotalMinor == null ? 'unavailable' : '${row.currency} ${money(row.legacyTotalMinor, row.digits)}'}'
-                : '${row.currency} ${money(row.salesMinor, row.digits)} sales\nTax ${row.taxMinor == null ? 'unknown' : money(row.taxMinor, row.digits)}',
+                ? row.legacyTotalMinor == null
+                      ? AppMessage.reportAmountUnavailable.of(context)
+                      : AppMessage.businessLegacyTotal.format(context, {
+                          'amount':
+                              '${row.currency} ${money(row.legacyTotalMinor, row.digits)}',
+                        })
+                : '${AppMessage.businessSalesAmount.format(context, {'amount': '${row.currency} ${money(row.salesMinor, row.digits)}'})}\n${AppMessage.businessTaxAmount.format(context, {'amount': row.taxMinor == null ? AppMessage.reportAmountUnavailable.of(context) : money(row.taxMinor, row.digits)})}',
             textAlign: TextAlign.end,
           ),
           onTap: () => Navigator.push<void>(
@@ -514,28 +559,43 @@ class _BusinessFinancialReportScreenState
       if (_invoiceLimit < report.invoices.length)
         TextButton(
           onPressed: () => setState(() => _invoiceLimit += 100),
-          child: const Text('Load more invoice activity'),
+          child: Text(AppMessage.businessLoadMoreInvoices.of(context)),
         ),
     ],
   );
 
   Widget _cashSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Cash and credit events · ${report.cash.length}'),
+    title: Text(
+      AppMessage.reportCashEvents.format(context, {
+        'count': '${report.cash.length}',
+      }),
+    ),
     children: [
       for (final row in report.cash.take(_cashLimit))
         ListTile(
           title: Text(
-            '${row.kind == 'TRANSFER'
-                ? 'Credit transfer · '
-                : row.kind == 'REVERSAL'
-                ? 'Payment correction · '
-                : 'Payment · '}${row.number}',
+            (row.kind == 'TRANSFER'
+                    ? AppMessage.businessCreditTransferTitle
+                    : row.kind == 'REVERSAL'
+                    ? AppMessage.businessPaymentCorrectionTitle
+                    : AppMessage.businessPaymentTitle)
+                .format(context, {'number': row.number}),
           ),
           subtitle: Text(
-            '${row.occurredLabel}${row.reference.isEmpty ? '' : '\nReference ${row.reference}'}${row.kind == 'TRANSFER' ? '\nCredit movements do not count as cash received.' : ''}',
+            [
+              row.occurredLabel,
+              if (row.reference.isNotEmpty)
+                AppMessage.businessCashReference.format(context, {
+                  'reference': row.reference,
+                }),
+              if (row.kind == 'TRANSFER')
+                AppMessage.businessCreditMovementNotice.of(context),
+            ].join('\n'),
           ),
           trailing: Text(
-            '${row.currency} ${money(row.cashMinor, row.digits)} cash',
+            AppMessage.businessCashAmount.format(context, {
+              'amount': '${row.currency} ${money(row.cashMinor, row.digits)}',
+            }),
             textAlign: TextAlign.end,
           ),
           onTap: () => Navigator.push<void>(
@@ -548,19 +608,27 @@ class _BusinessFinancialReportScreenState
       if (_cashLimit < report.cash.length)
         TextButton(
           onPressed: () => setState(() => _cashLimit += 100),
-          child: const Text('Load more cash events'),
+          child: Text(AppMessage.businessLoadMoreCash.of(context)),
         ),
     ],
   );
 
   Widget _costSection(BusinessFinancialReport report) => ExpansionTile(
-    title: Text('Recorded cost entries · ${report.costs.length}'),
+    title: Text(
+      AppMessage.reportCostEntries.format(context, {
+        'count': '${report.costs.length}',
+      }),
+    ),
     children: [
       for (final row in report.costs.take(_costLimit))
         ListTile(
-          title: Text(row.vendor.isEmpty ? row.category : row.vendor),
+          title: Text(
+            row.vendor.isEmpty
+                ? actualCostCategoryLabel(context, row.category)
+                : row.vendor,
+          ),
           subtitle: Text(
-            '${row.category} · ${row.occurredLabel}${row.job.isEmpty ? '' : '\n${row.job}'}${row.reference.isEmpty ? '' : '\nReference ${row.reference}'}${row.note.isEmpty ? '' : '\n${row.note}'}',
+            '${actualCostCategoryLabel(context, row.category)} · ${row.occurredLabel}${row.job.isEmpty ? '' : '\n${row.job}'}${row.reference.isEmpty ? '' : '\n${AppMessage.businessCashReference.format(context, {'reference': row.reference})}'}${row.note.isEmpty ? '' : '\n${row.note}'}',
           ),
           trailing: Text(
             '${row.currency} ${money(row.amountMinor, row.digits)}',
@@ -570,7 +638,7 @@ class _BusinessFinancialReportScreenState
       if (_costLimit < report.costs.length)
         TextButton(
           onPressed: () => setState(() => _costLimit += 100),
-          child: const Text('Load more cost entries'),
+          child: Text(AppMessage.businessLoadMoreCosts.of(context)),
         ),
     ],
   );

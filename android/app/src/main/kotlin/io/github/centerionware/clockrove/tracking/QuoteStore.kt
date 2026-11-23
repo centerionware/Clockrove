@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import java.util.Currency
 import org.json.JSONArray
@@ -147,7 +149,7 @@ internal object QuoteStore {
     fun latest(db: SQLiteDatabase, id: String): Revision? = db.rawQuery("SELECT r.revision,q.number,r.payload,r.created_ms,d.decision,d.note FROM quote_revisions r JOIN quotes q ON q.id=r.quote_id LEFT JOIN quote_decisions d ON d.quote_id=r.quote_id AND d.revision=r.revision WHERE r.quote_id=? ORDER BY r.revision DESC LIMIT 1", arrayOf(id)).use {
         if (!it.moveToFirst()) null else Revision(id, it.getInt(0), it.getString(1), it.getString(2), it.getLong(3), if (it.isNull(4)) null else it.getString(4), if (it.isNull(5)) null else it.getString(5))
     }
-    fun issue(db: SQLiteDatabase, id: String, confirmed: Boolean, at: Long): String? {
+    fun issue(db: SQLiteDatabase, id: String, confirmed: Boolean, at: Long, strings: Context): String? {
         if (!confirmed) return "QUOTE_CONFIRMATION_REQUIRED"
         val draft = draft(db, id) ?: return "QUOTE_DRAFT_UNAVAILABLE"
         val total = totals(draft)
@@ -167,14 +169,23 @@ internal object QuoteStore {
         if (previous == null && sequence == Long.MAX_VALUE) return "QUOTE_SEQUENCE_EXHAUSTED"
         val number = previous?.number ?: "Q-$sequence"
         val digits = currencyDigits(db, id, draft.currency)
+        val reference = strings.getString(R.string.quote_email_reference, number, revision.toString())
+        val amount = InvoiceStore.amount(total.total, digits)
         val values = mapOf("company_name" to company.companyName, "customer_name" to customer?.name.orEmpty(),
-            "job_name" to draft.title, "invoice_number" to "$number revision $revision", "amount" to InvoiceStore.amount(total.total, digits), "currency" to draft.currency)
-        val defaultBody = BusinessStore.Settings(company.currency).emailBody
-        val body = if (company.emailBody == defaultBody) "Hello ${customer?.name.orEmpty()},\n\nPlease find quote $number, revision $revision attached.\nEstimated total: ${InvoiceStore.amount(total.total, digits)} ${draft.currency}\n\n${company.companyName}"
-            else "QUOTE — estimate, not an invoice.\n\n" + InvoiceEmailTemplate.expand(company.emailBody, values, false)
-        val subject = if (company.emailSubject == BusinessStore.Settings(company.currency).emailSubject)
-            "Quote $number · Revision $revision — " + draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
-            else "Quote · " + InvoiceEmailTemplate.expand(company.emailSubject, values, true)
+            "job_name" to draft.title, "invoice_number" to reference, "amount" to amount, "currency" to draft.currency)
+        val defaults = BusinessStore.Settings(company.currency)
+        val body = if (company.emailBody == defaults.emailBody) {
+            strings.getString(R.string.quote_email_body, customer?.name.orEmpty(), reference, amount, draft.currency, company.companyName)
+        } else {
+            strings.getString(R.string.quote_email_estimate_notice) + "\n\n" +
+                InvoiceEmailTemplate.expand(company.emailBody, values, false)
+        }
+        val subject = if (company.emailSubject == defaults.emailSubject) {
+            val title = draft.title.map { if (it.isISOControl()) ' ' else it }.joinToString("")
+            strings.getString(R.string.quote_email_default_subject, reference, title)
+        } else {
+            strings.getString(R.string.quote_email_custom_subject, InvoiceEmailTemplate.expand(company.emailSubject, values, true))
+        }
         if (subject.toByteArray(Charsets.UTF_8).size + body.toByteArray(Charsets.UTF_8).size > 100_000) return "EMAIL_TOO_LARGE"
         val frozen = JSONObject(mapOf("draft" to JSONObject(draft.encode()), "number" to number, "revision" to revision,
             "created" to at, "digits" to digits, "subtotal" to InvoiceStore.amount(total.subtotal, digits),
@@ -197,21 +208,43 @@ internal object QuoteStore {
         return null
     }
     /** Adapt the frozen estimate to the shared paginated renderer; never read live prices. */
-    fun document(db: SQLiteDatabase, id: String, revision: Int): InvoiceStore.Record {
+    fun document(db: SQLiteDatabase, id: String, revision: Int, strings: Context): InvoiceStore.Record {
         val issued = requireNotNull(QuoteStore.revision(db, id, revision)) { "QUOTE_UNAVAILABLE" }
         val v = JSONObject(issued.payload); val draft = Draft.decode(v.getJSONObject("draft").toString())
         val digits = v.getInt("digits")
         val lines = draft.lines.map { line ->
             val units = line.quantity.toLong(); val price = MoneyMath.parse(line.unitPrice)
-            val basis = "${TaskQuantityStore.format(units)} ${if (line.kind == "HOURS") "estimated hours" else "units"} × ${InvoiceStore.amount(price, digits)} ${draft.currency}${if (line.kind == "HOURS") "/hour" else " each"}"
+            val basis = strings.getString(
+                R.string.quote_pdf_line_basis,
+                TaskQuantityStore.format(units),
+                strings.getString(
+                    if (line.kind == "HOURS") R.string.quote_pdf_estimated_hours
+                    else R.string.quote_pdf_units,
+                ),
+                InvoiceStore.amount(price, digits),
+                draft.currency,
+                strings.getString(
+                    if (line.kind == "HOURS") R.string.quote_pdf_hour_suffix
+                    else R.string.quote_pdf_each_suffix,
+                ),
+            )
             InvoiceStore.Line(line.title, listOf(basis, line.detail).filter { it.isNotEmpty() }.joinToString("\n"), InvoiceStore.amount(TaskQuantityStore.amount(price, units), digits), line.quantity, line.unitPrice)
         }
-        val snapshot = InvoiceStore.Snapshot("${issued.number} · Revision $revision", issued.created, v.getString("style"), draft.currency, digits,
+        val snapshot = InvoiceStore.Snapshot(strings.getString(R.string.quote_email_reference, issued.number, revision.toString()), issued.created, v.getString("style"), draft.currency, digits,
             v.getString("company"), listOf("companyEmail", "companyPhone", "companyAddress", "companyWebsite").map { v.getString(it) }.filter { it.isNotEmpty() }.joinToString("\n"),
             v.getString("customer"), listOf(v.getString("email"), v.getString("customerAddress")).filter { it.isNotEmpty() }.joinToString("\n"), draft.title,
-            draft.validUntil?.let { "Valid until $it (calendar date)" } ?: "No expiry date set",
-            "Estimate only · not an invoice · no payment due",
-            v.getString("header"), listOf(draft.terms.takeIf { it.isNotEmpty() }?.let { "Terms\n$it" }, draft.notes.takeIf { it.isNotEmpty() }?.let { "Notes\n$it" }, v.getString("footer")).filterNotNull().filter { it.isNotEmpty() }.joinToString("\n\n"),
+            draft.validUntil?.let { strings.getString(R.string.quote_pdf_valid_until, it) }
+                ?: strings.getString(R.string.quote_pdf_no_expiry),
+            strings.getString(R.string.quote_pdf_estimate_basis),
+            v.getString("header"), listOf(
+                draft.terms.takeIf { it.isNotEmpty() }?.let {
+                    strings.getString(R.string.quote_pdf_terms) + "\n$it"
+                },
+                draft.notes.takeIf { it.isNotEmpty() }?.let {
+                    strings.getString(R.string.quote_pdf_notes) + "\n$it"
+                },
+                v.getString("footer"),
+            ).filterNotNull().filter { it.isNotEmpty() }.joinToString("\n\n"),
             v.getString("total"), v.getString("email"), v.getString("subject"), v.getString("body"), lines,
             v.getString("subtotal"), draft.taxUnits, v.getString("tax"))
         val logoId = db.rawQuery("SELECT logo_id FROM quote_revisions WHERE quote_id=? AND revision=?", arrayOf(id, revision.toString())).use { check(it.moveToFirst()); if (it.isNull(0)) null else it.getString(0) }
@@ -220,9 +253,16 @@ internal object QuoteStore {
         return InvoiceStore.Record(id, draft.jobId.orEmpty(), issued.number, snapshot.encode(), if (cached) InvoiceBlobs.quote(db, pdfId) else null,
             logoId?.let { InvoiceBlobs.logo(db, it) }, documentKind = "QUOTE", quoteRevision = revision)
     }
-    fun cachePdf(db: SQLiteDatabase, id: String, revision: Int, payload: String, bytes: ByteArray): Boolean {
+    fun cachePdf(
+        db: SQLiteDatabase,
+        id: String,
+        revision: Int,
+        payload: String,
+        bytes: ByteArray,
+        strings: Context,
+    ): Boolean {
         require(bytes.size in 5..20_000_000 && bytes.copyOfRange(0, 5).contentEquals("%PDF-".toByteArray(Charsets.US_ASCII))) { "INVALID_QUOTE_PDF" }
-        if (document(db, id, revision).payload != payload) return false
+        if (document(db, id, revision, strings).payload != payload) return false
         val inserted = db.compileStatement("INSERT OR IGNORE INTO quote_pdfs VALUES(?,?,?,?)").use {
             it.bindString(1, "$id:$revision"); it.bindString(2, id); it.bindLong(3, revision.toLong()); it.bindBlob(4, bytes); it.executeInsert()
         }

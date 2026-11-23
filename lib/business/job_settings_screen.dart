@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../automation/automation_screen.dart';
 import 'business_api.dart';
 import 'business_command.dart';
@@ -10,6 +11,7 @@ import 'settings_screen.dart';
 import 'lifecycle_api.dart';
 import 'job_deletion_dialog.dart';
 import 'tax_rate.dart';
+import 'settings_validation_messages.dart';
 import 'invoice_billing_policy.dart';
 
 class JobSettingsScreen extends ConsumerWidget {
@@ -21,10 +23,10 @@ class JobSettingsScreen extends ConsumerWidget {
     final business = ref.watch(businessSettingsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Job settings'),
+        title: Text(AppMessage.jobSettings.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh job details and deletion eligibility',
+            tooltip: AppMessage.archiveRefresh.of(context),
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(jobPreferencesProvider(jobId)),
           ),
@@ -36,7 +38,7 @@ class JobSettingsScreen extends ConsumerWidget {
         error: (_, _) => Center(
           child: FilledButton(
             onPressed: () => ref.invalidate(jobPreferencesProvider(jobId)),
-            child: const Text('Retry job settings'),
+            child: Text(AppMessage.retryJobSettings.of(context)),
           ),
         ),
         data: (preferences) => business.when(
@@ -45,7 +47,7 @@ class JobSettingsScreen extends ConsumerWidget {
           error: (_, _) => Center(
             child: FilledButton(
               onPressed: () => ref.invalidate(businessSettingsProvider),
-              child: const Text('Retry customers'),
+              child: Text(AppMessage.retryCustomers.of(context)),
             ),
           ),
           data: (data) => _JobForm(initial: preferences, business: data),
@@ -119,7 +121,9 @@ class _JobFormState extends ConsumerState<_JobForm> {
       parseMoney(_minimumTaskFee.text, digits);
       return null;
     } on FormatException {
-      return 'Enter a valid amount in $currency, or enter 0 to disable the minimum.';
+      return AppMessage.validationTaskFee.format(context, {
+        'currency': currency,
+      });
     }
   }
 
@@ -135,11 +139,16 @@ class _JobFormState extends ConsumerState<_JobForm> {
         TextField(
           controller: _name,
           maxLength: 240,
-          decoration: const InputDecoration(labelText: 'Job name'),
+          decoration: InputDecoration(
+            labelText: AppMessage.jobName.of(context),
+          ),
           readOnly: data?.archived ?? true,
         ),
         const SizedBox(height: 16),
-        Text('Job color', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          AppMessage.jobColor.of(context),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
@@ -156,11 +165,13 @@ class _JobFormState extends ConsumerState<_JobForm> {
             })
               Semantics(
                 selected: color == _color,
-                label: 'Job color ${color.toRadixString(16)}',
+                label: AppMessage.jobColorValue.format(context, {
+                  'color': color.toRadixString(16),
+                }),
                 child: IconButton.filled(
                   tooltip: color == _color
-                      ? 'Selected job color'
-                      : 'Choose job color',
+                      ? AppMessage.selectedJobColor.of(context)
+                      : AppMessage.chooseJobColor.of(context),
                   style: IconButton.styleFrom(
                     backgroundColor: Color(color),
                     foregroundColor: Colors.white,
@@ -176,18 +187,21 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ],
         ),
         const SizedBox(height: 32),
-        Text('Billing basis', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          AppMessage.billingBasis.of(context),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         SegmentedButton<String>(
-          segments: const [
+          segments: [
             ButtonSegment(
               value: 'HOURLY',
-              label: Text('Hourly'),
+              label: Text(AppMessage.quoteScopeHourlyMode.of(context)),
               icon: Icon(Icons.schedule),
             ),
             ButtonSegment(
               value: 'TASK',
-              label: Text('Per task'),
+              label: Text(AppMessage.billingPerTask.of(context)),
               icon: Icon(Icons.task_alt),
             ),
           ],
@@ -200,8 +214,8 @@ class _JobFormState extends ConsumerState<_JobForm> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Text(
             _mode == 'TASK'
-                ? 'Completed billable task prices determine the amount owed. Recorded time remains available.'
-                : 'Finalized report time × hourly rate determines the amount owed. Task prices are kept separately.',
+                ? AppMessage.jobTaskBillingHelp.of(context)
+                : AppMessage.jobHourlyBillingHelp.of(context),
           ),
         ),
         TextField(
@@ -209,16 +223,27 @@ class _JobFormState extends ConsumerState<_JobForm> {
           readOnly: data?.archived ?? true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Hourly rate override (${widget.initial.currency})',
-            helperText: 'Blank uses the global default for the same currency.',
+            labelText: AppMessage.jobHourlyRateOverride.format(context, {
+              'currency': widget.initial.currency,
+            }),
+            helperText: AppMessage.jobRateBlankHelp.of(context),
           ),
         ),
         const SizedBox(height: 24),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default tax rate'),
+          title: Text(AppMessage.useDefaultTax.of(context)),
           subtitle: Text(
-            '${taxPercent(ref.watch(businessSettingsProvider).value?.settings.defaultTaxUnits ?? widget.business.settings.defaultTaxUnits)}% of the invoice subtotal',
+            AppMessage.jobDefaultTaxSummary.format(context, {
+              'rate': taxPercent(
+                ref
+                        .watch(businessSettingsProvider)
+                        .value
+                        ?.settings
+                        .defaultTaxUnits ??
+                    widget.business.settings.defaultTaxUnits,
+              ),
+            }),
           ),
           value: _inheritTax,
           onChanged: data?.archived == false
@@ -240,33 +265,34 @@ class _JobFormState extends ConsumerState<_JobForm> {
               maxLength: 32,
               maxLengthEnforcement: MaxLengthEnforcement.none,
               decoration: InputDecoration(
-                labelText: 'Job tax (%)',
-                helperText: 'Enter 0 for no tax on this job. Issued invoices keep their original tax.',
+                labelText: AppMessage.jobTaxLabel.of(context),
+                helperText: AppMessage.jobTaxHelp.of(context),
                 helperMaxLines: 3,
                 errorText: _taxError,
                 errorMaxLines: 3,
               ),
               onChanged: (_) {
                 if (_taxError != null) {
-                  setState(() => _taxError = taxPercentError(_tax.text));
+                  setState(
+                    () => _taxError = settingsTaxInputError(context, _tax.text),
+                  );
                 }
               },
             ),
           ),
         const SizedBox(height: 24),
         Text(
-          'Invoice billing rules',
+          AppMessage.invoiceBillingRules.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'These rules apply only to new invoices. Recorded time and work reports stay exact.',
-        ),
+        Text(AppMessage.jobInvoiceRulesHelp.of(context)),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default hourly billing rule'),
+          title: Text(AppMessage.useDefaultHourlyRule.of(context)),
           subtitle: Text(
-            billingModeLabel(widget.business.settings.hourlyBillingMode),
+            billingModeMessage(widget.business.settings.hourlyBillingMode)
+                .of(context),
           ),
           value: _inheritHourlyMode,
           onChanged: data?.archived == false
@@ -276,15 +302,17 @@ class _JobFormState extends ConsumerState<_JobForm> {
         if (!_inheritHourlyMode)
           DropdownButtonFormField<String>(
             initialValue: _hourlyBillingMode,
-            decoration: const InputDecoration(labelText: 'Hourly billing rule'),
-            items: const [
+            decoration: InputDecoration(
+              labelText: AppMessage.hourlyBillingRule.of(context),
+            ),
+            items: [
               DropdownMenuItem(
                 value: minimumThenExactBilling,
-                child: Text('Minimum hours, then exact time'),
+                child: Text(AppMessage.minimumThenExact.of(context)),
               ),
               DropdownMenuItem(
                 value: roundTotalUpBilling,
-                child: Text('Round total time up to the next hour'),
+                child: Text(AppMessage.roundTotalUp.of(context)),
               ),
             ],
             onChanged: data?.archived == false
@@ -297,9 +325,11 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default minimum billable hours'),
+          title: Text(AppMessage.useDefaultMinimumHours.of(context)),
           subtitle: Text(
-            '${widget.business.settings.minimumBillableHours} hours',
+            AppMessage.minimumHoursSummary.format(context, {
+              'hours': widget.business.settings.minimumBillableHours,
+            }),
           ),
           value: _inheritMinimumHours,
           onChanged: data?.archived == false
@@ -315,14 +345,15 @@ class _JobFormState extends ConsumerState<_JobForm> {
             readOnly: data?.archived ?? true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: 'Minimum billable hours for this job',
-              helperText: '0 disables the minimum.',
+              labelText: AppMessage.jobMinimumHoursLabel.of(context),
+              helperText: AppMessage.jobMinimumHoursHelp.of(context),
               errorText: _minimumHoursErrorText,
             ),
             onChanged: (_) {
               if (_minimumHoursErrorText != null) {
                 setState(
-                  () => _minimumHoursErrorText = minimumHoursError(
+                  () => _minimumHoursErrorText = settingsHoursInputError(
+                    context,
                     _minimumHours.text,
                   ),
                 );
@@ -331,11 +362,14 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use default minimum per-task fee'),
+          title: Text(AppMessage.useDefaultTaskFee.of(context)),
           subtitle: Text(
             widget.business.settings.currency == widget.initial.currency
                 ? '${widget.business.settings.currency} ${money(widget.business.settings.minimumTaskFeeMinor, widget.business.settings.digits)}'
-                : 'Global fee uses ${widget.business.settings.currency}; enter a ${widget.initial.currency} override for this job.',
+                : AppMessage.jobGlobalFeeDifferentCurrency.format(context, {
+                    'global_currency': widget.business.settings.currency,
+                    'job_currency': widget.initial.currency,
+                  }),
           ),
           value: _inheritMinimumTaskFee,
           onChanged: data?.archived == false
@@ -351,9 +385,10 @@ class _JobFormState extends ConsumerState<_JobForm> {
             readOnly: data?.archived ?? true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText:
-                  'Minimum task-rate invoice fee (${widget.initial.currency})',
-              helperText: '0 disables it. This job uses its own currency.',
+              labelText: AppMessage.jobMinimumTaskFee.format(context, {
+                'currency': widget.initial.currency,
+              }),
+              helperText: AppMessage.jobMinimumFeeHelp.of(context),
               errorText: _minimumTaskFeeError,
             ),
             onChanged: (_) {
@@ -370,24 +405,27 @@ class _JobFormState extends ConsumerState<_JobForm> {
         const SizedBox(height: 8),
         DropdownButtonFormField<bool?>(
           initialValue: _locationRecordingOverride,
-          decoration: const InputDecoration(
-            labelText: 'Work location recording',
-            helperText: 'Record actual locations only while this job is clocked in. Turning it off keeps saved history.',
+          decoration: InputDecoration(
+            labelText: AppMessage.workLocationRecording.of(context),
+            helperText: AppMessage.jobLocationRecordingHelp.of(context),
           ),
           items: [
             DropdownMenuItem<bool?>(
               value: null,
               child: Text(
-                'Use global default (${widget.business.settings.defaultLocationRecording ? 'on' : 'off'})',
+                (widget.business.settings.defaultLocationRecording
+                        ? AppMessage.useGlobalLocationOn
+                        : AppMessage.useGlobalLocationOff)
+                    .of(context),
               ),
             ),
-            const DropdownMenuItem<bool?>(
+            DropdownMenuItem<bool?>(
               value: true,
-              child: Text('On for this job'),
+              child: Text(AppMessage.locationOnForJob.of(context)),
             ),
-            const DropdownMenuItem<bool?>(
+            DropdownMenuItem<bool?>(
               value: false,
-              child: Text('Off for this job'),
+              child: Text(AppMessage.locationOffForJob.of(context)),
             ),
           ],
           onChanged: data?.archived == false
@@ -396,22 +434,29 @@ class _JobFormState extends ConsumerState<_JobForm> {
         ),
         const SizedBox(height: 32),
         Text(
-          'Customer & invoice recipient',
+          AppMessage.jobCustomerSection.of(context),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: _customer ?? '',
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Customer'),
+          decoration: InputDecoration(
+            labelText: AppMessage.customer.of(context),
+          ),
           items: [
-            const DropdownMenuItem(value: '', child: Text('No customer')),
+            DropdownMenuItem(
+              value: '',
+              child: Text(AppMessage.noCustomer.of(context)),
+            ),
             for (final c in customers.where(
               (c) => !c.archived || c.id == _customer,
             ))
               DropdownMenuItem(
                 value: c.id,
-                child: Text('${c.name}${c.archived ? ' (archived)' : ''}'),
+                child: Text(
+                  '${c.name}${c.archived ? ' · ${AppMessage.archived.of(context)}' : ''}',
+                ),
               ),
           ],
           onChanged: data?.archived == false
@@ -434,14 +479,12 @@ class _JobFormState extends ConsumerState<_JobForm> {
             MaterialPageRoute<void>(builder: (_) => const CustomersScreen()),
           ),
           icon: const Icon(Icons.people_outline),
-          label: const Text('Manage customers'),
+          label: Text(AppMessage.manageCustomers.of(context)),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use customer email'),
-          subtitle: const Text(
-            'Turn off to set a recipient for only this job.',
-          ),
+          title: Text(AppMessage.useCustomerEmail.of(context)),
+          subtitle: Text(AppMessage.useCustomerEmailHelp.of(context)),
           value: _useCustomerEmail,
           onChanged: data?.archived == false
               ? (v) => setState(() {
@@ -461,23 +504,25 @@ class _JobFormState extends ConsumerState<_JobForm> {
           controller: _email,
           readOnly: _useCustomerEmail || (data?.archived ?? true),
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Customer email for this job',
+          decoration: InputDecoration(
+            labelText: AppMessage.jobCustomerEmail.of(context),
           ),
           maxLength: 254,
         ),
         const SizedBox(height: 24),
         BusinessCommand(
-          label: 'Save job settings',
+          label: AppMessage.saveJobSettings.of(context),
           enabled: data?.archived == false,
           create: () {
             if (_name.text.trim().isEmpty) {
-              throw const FormatException('Enter a job name.');
+              throw FormatException(AppMessage.validationJobName.of(context));
             }
-            final taxError = _inheritTax ? null : taxPercentError(_tax.text);
+            final taxError = _inheritTax
+                ? null
+                : settingsTaxInputError(context, _tax.text);
             final hoursError = _inheritMinimumHours
                 ? null
-                : minimumHoursError(_minimumHours.text);
+                : settingsHoursInputError(context, _minimumHours.text);
             final feeError = _inheritMinimumTaskFee
                 ? null
                 : _taskFeeError(data!.digits, data.currency);
@@ -527,18 +572,16 @@ class _JobFormState extends ConsumerState<_JobForm> {
         if (data?.archived == false)
           OutlinedButton.icon(
             icon: const Icon(Icons.archive_outlined),
-            label: const Text('Archive job'),
+            label: Text(AppMessage.archiveJob.of(context)),
             onPressed: () => showDialog<void>(
               context: context,
               barrierDismissible: false,
               builder: (dialog) => AlertDialog(
-                title: const Text('Archive this job?'),
-                content: const Text(
-                  'Clock out first. History and automation preferences are kept. You can restore the job; permanent deletion requires 30 continuous days archived.',
-                ),
+                title: Text(AppMessage.confirmArchiveJob.of(dialog)),
+                content: Text(AppMessage.archiveJobWarning.of(dialog)),
                 actions: [
                   BusinessCommand(
-                    label: 'Archive job',
+                    label: AppMessage.archiveJob.of(context),
                     create: () {
                       final id = newBusinessId();
                       final version = data!.version;
@@ -557,7 +600,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
           ),
         if (data?.archived == true)
           BusinessCommand(
-            label: 'Restore job',
+            label: AppMessage.restoreJob.of(context),
             create: () {
               final id = newBusinessId();
               final api = ref.read(lifecycleApiProvider);
@@ -576,7 +619,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
               icon: const Icon(Icons.delete_forever_outlined),
-              label: const Text('Permanently delete job'),
+              label: Text(AppMessage.permanentlyDeleteJob.of(context)),
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 final container = ProviderScope.containerOf(
@@ -614,7 +657,7 @@ class _JobFormState extends ConsumerState<_JobForm> {
                   ),
                 ),
           icon: const Icon(Icons.location_on_outlined),
-          label: const Text('Worksites & automation'),
+          label: Text(AppMessage.worksitesAutomation.of(context)),
         ),
       ],
     );

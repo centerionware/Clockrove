@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -119,28 +121,62 @@ internal object ReportCsv {
     private fun exactMinor(value: BigInteger?) = value?.let { "'${it}" }.orEmpty()
     private fun row(vararg values: Any) = values.joinToString(",") { if (it is Numeric) "\"${it.value}\"" else text(it.toString()) } + "\r\n"
     internal fun instant(value: Long, zone: String) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
-    fun work(report: ReportStore.Report): String = buildString {
-        append(row("session_id", "job_id", "job_name", "report_date", "source_start", "source_end", "export_start", "export_end", "duration_seconds", "report_timezone", "origin", "source_timezone", "source_offset_seconds"))
+    fun work(context: Context, report: ReportStore.Report): String = buildString {
+        append(row(
+            context.getString(R.string.csv_session_id),
+            context.getString(R.string.csv_job_id),
+            context.getString(R.string.csv_job_name),
+            context.getString(R.string.csv_report_date),
+            context.getString(R.string.csv_source_start),
+            context.getString(R.string.csv_source_end),
+            context.getString(R.string.csv_export_start),
+            context.getString(R.string.csv_export_end),
+            context.getString(R.string.csv_duration_seconds),
+            context.getString(R.string.report_csv_col_timezone),
+            context.getString(R.string.csv_origin),
+            context.getString(R.string.csv_source_timezone),
+            context.getString(R.string.csv_source_offset_seconds),
+        ))
         report.intervals.forEach { i -> append(row(i.sessionId, i.jobId, i.jobName, i.date, instant(i.sourceStart, report.selection.timezone), instant(i.sourceEnd, report.selection.timezone),
-            instant(i.start, report.selection.timezone), instant(i.end, report.selection.timezone), numeric(java.math.BigDecimal.valueOf(i.end - i.start, 3).stripTrailingZeros().toPlainString()), report.selection.timezone, i.origin, i.sourceTimezone, numeric(i.sourceOffsetSeconds))) }
+            instant(i.start, report.selection.timezone), instant(i.end, report.selection.timezone), numeric(java.math.BigDecimal.valueOf(i.end - i.start, 3).stripTrailingZeros().toPlainString()), report.selection.timezone, localizedOrigin(context, i.origin), i.sourceTimezone, numeric(i.sourceOffsetSeconds))) }
     }
-    fun gps(report: ReportStore.Report): String = buildString {
-        append(row("point_id", "session_id", "job_id", "job_name", "measured_timestamp", "latitude", "longitude", "accuracy_meters", "report_timezone"))
+    fun gps(context: Context, report: ReportStore.Report): String = buildString {
+        append(row(
+            context.getString(R.string.csv_point_id),
+            context.getString(R.string.csv_session_id),
+            context.getString(R.string.csv_job_id),
+            context.getString(R.string.csv_job_name),
+            context.getString(R.string.csv_measured_timestamp),
+            context.getString(R.string.csv_latitude),
+            context.getString(R.string.csv_longitude),
+            context.getString(R.string.csv_accuracy_meters),
+            context.getString(R.string.report_csv_col_timezone),
+        ))
         report.points.forEach { p -> append(row(p.id, p.sessionId, p.jobId, p.jobName, instant(p.measured, report.selection.timezone), numeric(p.latitude), numeric(p.longitude), numeric(p.accuracy), report.selection.timezone)) }
     }
 
     /** Exact minor-unit values are exported as spreadsheet text, never as rounded floating-point cells. */
-    fun business(report: BusinessReportStore.Report): String = buildString {
+    fun business(context: Context, report: BusinessReportStore.Report): String = buildString {
         append(row(
-            "record_type", "date", "timezone", "currency", "fraction_digits", "job", "customer", "document",
-            "activity", "sales_minor_text", "tax_minor_text", "cash_minor_text", "credit_minor_text",
-            "cost_minor_text", "cost_category", "labor_minor_text", "supplies_minor_text", "unclassified_minor_text",
-            "legacy_total_minor_text", "reference", "detail", "overhead_minor_text", "outstanding_minor_text",
-            "tax_collected_minor_text", "gross_profit_minor_text", "net_profit_minor_text", "cash_surplus_minor_text",
-            "gross_margin_percent", "net_margin_percent", "excluded_unknown_customer_cost_count",
+            context.getString(R.string.report_csv_col_record_type), context.getString(R.string.report_csv_col_date),
+            context.getString(R.string.report_csv_col_timezone), context.getString(R.string.report_csv_col_currency),
+            context.getString(R.string.report_csv_col_fraction_digits), context.getString(R.string.report_csv_col_job),
+            context.getString(R.string.report_csv_col_customer), context.getString(R.string.report_csv_col_document),
+            context.getString(R.string.report_csv_col_activity), context.getString(R.string.report_csv_col_sales),
+            context.getString(R.string.report_csv_col_tax), context.getString(R.string.report_csv_col_cash),
+            context.getString(R.string.report_csv_col_credit), context.getString(R.string.report_csv_col_cost),
+            context.getString(R.string.report_csv_col_cost_category), context.getString(R.string.report_csv_col_labor),
+            context.getString(R.string.report_csv_col_supplies), context.getString(R.string.report_csv_col_unclassified),
+            context.getString(R.string.report_csv_col_legacy_total), context.getString(R.string.report_csv_col_reference),
+            context.getString(R.string.report_csv_col_detail), context.getString(R.string.report_csv_col_overhead),
+            context.getString(R.string.report_csv_col_outstanding), context.getString(R.string.report_csv_col_tax_collected),
+            context.getString(R.string.report_csv_col_gross_profit), context.getString(R.string.report_csv_col_net_profit),
+            context.getString(R.string.report_csv_col_cash_surplus), context.getString(R.string.report_csv_col_gross_margin),
+            context.getString(R.string.report_csv_col_net_margin),
+            context.getString(R.string.report_csv_col_excluded_unknown_customer_cost_count),
         ))
         report.summaries.forEach { value -> append(row(
-            "SUMMARY", "${report.selection.firstDate}..${report.selection.lastDate}", report.selection.timezone,
+            context.getString(R.string.report_csv_summary), "${report.selection.firstDate}..${report.selection.lastDate}", report.selection.timezone,
             value.currency, value.digits, "", "", "", "", exactMinor(value.invoicedSales), exactMinor(value.taxBilled),
             exactMinor(value.cashReceived), "", exactMinor(value.directCosts), "", exactMinor(value.labor),
             exactMinor(value.supplies), exactMinor(value.unclassified), "", "",
@@ -149,25 +185,51 @@ internal object ReportCsv {
             value.grossMarginPercent.orEmpty(), value.netMarginPercent.orEmpty(), report.excludedUnknownCustomerCostCount,
         )) }
         report.invoices.forEach { value -> append(row(
-            "INVOICE", instant(value.occurred, report.selection.timezone), report.selection.timezone,
-            value.currency, value.digits, value.job, value.customer, value.number, value.kind,
+            context.getString(R.string.report_csv_invoice), instant(value.occurred, report.selection.timezone), report.selection.timezone,
+            value.currency, value.digits, value.job, value.customer, value.number, localizedInvoiceActivity(context, value.kind),
             exactMinor(value.salesMinor), exactMinor(value.taxMinor), "", "", "", "",
             exactMinor(value.laborMinor), exactMinor(value.suppliesMinor), exactMinor(value.unclassifiedMinor),
-            exactMinor(value.legacyTotalMinor), "", listOf(value.reason, value.relatedInvoiceId?.let { "Replacement $it" }.orEmpty())
+            exactMinor(value.legacyTotalMinor), "", listOf(value.reason, value.relatedInvoiceId?.let { context.getString(R.string.report_csv_replacement, it) }.orEmpty())
                 .filter { it.isNotBlank() }.joinToString(" · "), "", "", "", "", "", "", "", "", "",
         )) }
         report.cash.forEach { value -> append(row(
-            "CASH_EVENT", instant(value.occurred, report.selection.timezone), report.selection.timezone,
-            value.currency, value.digits, value.job, value.customer, value.number, value.kind,
+            context.getString(R.string.report_csv_cash_event), instant(value.occurred, report.selection.timezone), report.selection.timezone,
+            value.currency, value.digits, value.job, value.customer, value.number, localizedCashActivity(context, value.kind),
             exactMinor(value.salesMinor), exactMinor(value.taxMinor), exactMinor(value.cashMinor), exactMinor(value.creditMinor),
             "", "", "", "", "", "", value.reference, "", "", "", "", "", "", "", "", "", "",
         )) }
         report.costs.forEach { value -> append(row(
-            "ACTUAL_COST", instant(value.occurred, value.timezone), value.timezone,
+            context.getString(R.string.report_csv_actual_cost), instant(value.occurred, value.timezone), value.timezone,
             value.currency, value.digits, value.job, value.customer, "", "", "", "", "", "",
-            exactMinor(value.amountMinor), value.category, "", "", "", "", value.reference,
+            exactMinor(value.amountMinor), localizedCostCategory(context, value.category), "", "", "", "", value.reference,
             listOf(value.task, value.vendor, value.note).filter { it.isNotBlank() }.joinToString(" · "),
             "", "", "", "", "", "", "", "", "",
         )) }
     }
+
+    private fun localizedOrigin(context: Context, origin: String): String = context.getString(when (origin) {
+        "WIDGET" -> R.string.report_csv_origin_widget
+        "NOTIFICATION" -> R.string.report_csv_origin_notification
+        "GEOFENCE" -> R.string.report_csv_origin_geofence
+        else -> R.string.report_csv_origin_manual
+    })
+
+    private fun localizedInvoiceActivity(context: Context, kind: String): String = context.getString(when (kind) {
+        "VOID_ADJUSTMENT" -> R.string.report_csv_void_adjustment
+        else -> R.string.report_csv_issued
+    })
+
+    private fun localizedCashActivity(context: Context, kind: String): String = context.getString(when (kind) {
+        "REVERSAL" -> R.string.report_pdf_payment_correction_title
+        "TRANSFER" -> R.string.report_pdf_credit_transfer_title
+        else -> R.string.report_pdf_payment_title
+    })
+
+    private fun localizedCostCategory(context: Context, category: String): String = context.getString(when (category) {
+        ActualCostStore.MATERIALS -> R.string.report_pdf_cost_materials
+        ActualCostStore.SUBCONTRACT_LABOR -> R.string.report_pdf_cost_labor
+        ActualCostStore.OTHER_DIRECT -> R.string.report_pdf_cost_other_direct
+        ActualCostStore.OVERHEAD -> R.string.report_pdf_cost_overhead
+        else -> R.string.actual_cost_unknown_category
+    })
 }

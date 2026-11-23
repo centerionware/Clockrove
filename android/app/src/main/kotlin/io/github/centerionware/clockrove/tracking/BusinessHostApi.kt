@@ -386,7 +386,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "taxUnits" to s.taxUnits, "subtotal" to subtotal?.let { InvoiceStore.amount(it, digits) },
             "tax" to tax?.let { InvoiceStore.amount(it, digits) }, "total" to tax?.let { InvoiceStore.amount(requireNotNull(subtotal).add(it), digits) },
             "problem" to problem, "mode" to total.mode,
-            "lines" to (if (problem == "INVOICE_TOO_LARGE") emptyList() else InvoiceStore.billableLines(report)).map { mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount) },
+            "lines" to (if (problem == "INVOICE_TOO_LARGE") emptyList() else InvoiceStore.billableLines(report, repository.localizedStrings())).map { mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount) },
             "excluded" to preview.excluded.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "title" to it.title,
                 "detail" to if (it.taskId != null) "Previously invoiced task" else "${ReportCsv.instant(requireNotNull(it.start), report.selection.timezone)} — ${ReportCsv.instant(requireNotNull(it.end), report.selection.timezone)}") },
             "legacy" to preview.legacy.map { mapOf("invoiceId" to it.first, "number" to it.second) })
@@ -403,7 +403,8 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
     }
     private fun report(s: TimerRepository.ReportSnapshot): Map<String, Any?> {
         val r = s.report
-        return mapOf("version" to s.version, "timezone" to r.selection.timezone, "workCsv" to ReportCsv.work(r), "gpsCsv" to ReportCsv.gps(r),
+        val strings = repository.localizedStrings()
+        return mapOf("version" to s.version, "timezone" to r.selection.timezone, "workCsv" to ReportCsv.work(strings, r), "gpsCsv" to ReportCsv.gps(strings, r),
             "days" to r.days.map { mapOf("date" to it.date, "start" to it.start, "end" to it.end) },
             "intervals" to r.intervals.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "jobName" to it.jobName, "date" to it.date, "start" to it.start, "end" to it.end, "sourceStart" to it.sourceStart, "sourceEnd" to it.sourceEnd, "origin" to it.origin, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone), "endLabel" to ReportCsv.instant(it.end, r.selection.timezone)) },
             "excluded" to r.excluded.map { mapOf("sessionId" to it.sessionId, "jobId" to it.jobId, "start" to it.start, "end" to it.end, "reason" to it.reason, "startLabel" to ReportCsv.instant(it.start, r.selection.timezone)) },

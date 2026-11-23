@@ -33,7 +33,7 @@ void main() {
         () => saveMapPreview(boundary, 'help-index-$theme'),
       );
 
-      await tester.tap(find.text(HelpTopic.backups.title));
+      await tester.tap(find.text(HelpTopic.backups.title.english));
       await tester.pumpAndSettle();
       expect(find.text(HelpTopic.backups.content), findsOneWidget);
       await tester.runAsync(
@@ -51,8 +51,8 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'proposed merge');
     await tester.pump();
-    expect(find.text(HelpTopic.timekeeping.title), findsNothing);
-    await tester.tap(find.text(HelpTopic.backups.title));
+    expect(find.text(HelpTopic.timekeeping.title.english), findsNothing);
+    await tester.tap(find.text(HelpTopic.backups.title.english));
     await tester.pumpAndSettle();
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
   });
@@ -81,7 +81,7 @@ void main() {
       ),
     );
 
-    final topic = find.text(HelpTopic.locationHistory.title);
+    final topic = find.text(HelpTopic.locationHistory.title.english);
     await tester.scrollUntilVisible(
       topic,
       180,

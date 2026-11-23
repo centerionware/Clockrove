@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "Minimum hours, then exact time"
+billingModeRoundTotalUp: "Round total time up to the next hour"
+minimumHoursSummary: "{hours} hours"

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
 import 'invoice_screen.dart';
@@ -19,15 +20,15 @@ class InvoiceDetailScreen extends ConsumerWidget {
       skipLoadingOnReload: true,
       skipError: true,
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Invoice')),
+        appBar: AppBar(title: Text(AppMessage.invoiceDetailTitle.of(context))),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Invoice')),
+        appBar: AppBar(title: Text(AppMessage.invoiceDetailTitle.of(context))),
         body: Center(
           child: TextButton(
             onPressed: () => ref.invalidate(invoicePaymentsProvider(invoiceId)),
-            child: const Text('Retry invoice details'),
+            child: Text(AppMessage.retryInvoiceDetails.of(context)),
           ),
         ),
       ),
@@ -146,7 +147,7 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
           title: Text(data.number),
           actions: [
             IconButton(
-              tooltip: 'Refresh invoice details',
+              tooltip: AppMessage.refreshInvoiceDetails.of(context),
               onPressed: _pendingCopy
                   ? null
                   : () =>
@@ -166,11 +167,13 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             Text(data.jobName, style: Theme.of(context).textTheme.titleLarge),
             if (data.customer.isNotEmpty) Text(data.customer),
             if (data.jobDeleted)
-              const Text('Job deleted · financial records retained'),
+              Text(AppMessage.invoiceDeletedJobRetained.of(context)),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
-              child: Chip(label: Text(invoicePaymentStatus(data.status))),
+              child: Chip(
+                label: Text(invoicePaymentStatus(data.status).of(context)),
+              ),
             ),
             const SizedBox(height: 12),
             Card(
@@ -179,20 +182,33 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _amount('Invoice total', data.total),
+                    _amount(AppMessage.invoiceTotal.of(context), data.total),
                     if (data.cancellation == null)
-                      _amount('Paid to date', data.paid)
-                    else ...[
-                      _amount('Credit transferred', data.cancellation!.credit),
                       _amount(
-                        'Cancelled unpaid balance',
+                        AppMessage.invoicePaidToDate.of(context),
+                        data.paid,
+                      )
+                    else ...[
+                      _amount(
+                        AppMessage.invoiceCreditTransferred.of(context),
+                        data.cancellation!.credit,
+                      ),
+                      _amount(
+                        AppMessage.invoiceCancelledBalance.of(context),
                         data.cancellation!.cancelled,
                       ),
                     ],
-                    _amount('Balance due', data.due, prominent: true),
+                    _amount(
+                      AppMessage.invoiceBalanceDue.of(context),
+                      data.due,
+                      prominent: true,
+                    ),
                     if (data.collectedTax != null)
                       Text(
-                        'Collected tax included: ${data.currency} ${money(data.collectedTax, data.digits)}',
+                        AppMessage.invoiceCollectedTaxIncluded.format(context, {
+                          'currency': data.currency,
+                          'amount': money(data.collectedTax, data.digits),
+                        }),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],
@@ -202,12 +218,12 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             TextButton.icon(
               onPressed: eligible ? () => _open() : null,
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('View original PDF'),
+              label: Text(AppMessage.viewOriginalPdf.of(context)),
             ),
             const SizedBox(height: 16),
             if (correctable)
               ExpansionTile(
-                title: const Text('Correct this invoice'),
+                title: Text(AppMessage.correctInvoice.of(context)),
                 children: [
                   if (data.paid == '0')
                     TextButton.icon(
@@ -216,12 +232,12 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         foregroundColor: Theme.of(context).colorScheme.error,
                       ),
                       icon: const Icon(Icons.block_outlined),
-                      label: const Text('Void unpaid invoice'),
+                      label: Text(AppMessage.voidUnpaidInvoice.of(context)),
                     ),
                   TextButton.icon(
                     onPressed: eligible ? () => _correction(true) : null,
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Void & replace'),
+                    label: Text(AppMessage.voidAndReplaceInvoice.of(context)),
                   ),
                 ],
               ),
@@ -234,19 +250,19 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                   FilledButton.icon(
                     onPressed: eligible ? () => _payment() : null,
                     icon: const Icon(Icons.add_card_outlined),
-                    label: const Text('Record payment'),
+                    label: Text(AppMessage.recordInvoicePayment.of(context)),
                   ),
                   OutlinedButton.icon(
                     onPressed: eligible ? () => _payment(settle: true) : null,
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Mark paid'),
+                    label: Text(AppMessage.markInvoicePaid.of(context)),
                   ),
                 ],
               ),
             const SizedBox(height: 16),
             BusinessCommand(
               key: const ValueKey('invoice-balance-copy-command'),
-              label: 'Send latest copy',
+              label: AppMessage.sendLatestInvoiceCopy.of(context),
               enabled: eligible && !voided,
               onPendingChanged: (value) {
                 if (mounted) setState(() => _pendingCopy = value);
@@ -267,7 +283,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
             ),
             const SizedBox(height: 8),
             Text(
-              voided ? 'This invoice is void. No payment is due on it.' : 'Prepare the current balance and open an email draft with its PDF attached.',
+              voided
+                  ? AppMessage.invoiceVoidNotice.of(context)
+                  : AppMessage.invoiceCurrentCopyHelp.of(context),
             ),
             if (voided) ...[
               OutlinedButton.icon(
@@ -275,21 +293,27 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                     ? () => _open('void-${data.invoiceId}', true)
                     : null,
                 icon: const Icon(Icons.description_outlined),
-                label: const Text('Email cancellation copy'),
+                label: Text(AppMessage.emailCancellationCopy.of(context)),
               ),
               if (data.cancellation?.replacementId != null)
                 TextButton(
                   onPressed: eligible
                       ? () => _related(data.cancellation!.replacementId!)
                       : null,
-                  child: const Text('Open replacement invoice'),
+                  child: Text(AppMessage.openReplacementInvoice.of(context)),
                 ),
               if (data.cancellation != null)
                 ExpansionTile(
-                  title: const Text('Cancellation history'),
+                  title: Text(
+                    AppMessage.invoiceCancellationHistory.of(context),
+                  ),
                   children: [
                     Text(data.cancellation!.createdLabel),
-                    Text('Internal reason: ${data.cancellation!.reason}'),
+                    Text(
+                      AppMessage.invoiceCancellationReason.format(context, {
+                        'reason': data.cancellation!.reason,
+                      }),
+                    ),
                   ],
                 ),
             ],
@@ -298,29 +322,27 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 onPressed: eligible
                     ? () => _related(data.replacesInvoiceId!)
                     : null,
-                child: const Text('Open original invoice'),
+                child: Text(AppMessage.openOriginalInvoice.of(context)),
               ),
             if (data.accountingEmail.isEmpty)
-              const Text(
-                'No accounting copy address is configured. Add a company or accounts receivable email in Settings.',
-              )
+              Text(AppMessage.invoiceMissingAccountingEmail.of(context))
             else
               Text(
                 data.accountingEmail.toLowerCase() ==
                         data.customerEmail.toLowerCase()
-                    ? 'The accounting address is already the customer recipient.'
-                    : 'Email copies CC ${data.accountingEmail}.',
+                    ? AppMessage.invoiceAccountingEmailMatches.of(context)
+                    : AppMessage.invoiceAccountingEmailCc.format(context, {
+                        'email': data.accountingEmail,
+                      }),
               ),
             if (widget.refreshFailed)
-              const Text(
-                'Refresh failed. Saved details are shown; refresh before making changes.',
-              ),
+              Text(AppMessage.invoiceDetailsRefreshFailed.of(context)),
             if (data.legacy) ...[
               const SizedBox(height: 20),
               Text(
                 data.jobDeleted
-                    ? 'Historical work links are unavailable for this deleted job.'
-                    : 'Billed work on this historical invoice needs review.',
+                    ? AppMessage.invoiceHistoricalSourcesUnavailable.of(context)
+                    : AppMessage.invoiceBilledWorkReview.of(context),
               ),
               if (!data.jobDeleted)
                 TextButton.icon(
@@ -334,18 +356,18 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                         )
                       : null,
                   icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Review billed work'),
+                  label: Text(AppMessage.reviewBilledWork.of(context)),
                 ),
             ],
             const SizedBox(height: 28),
             Text(
-              'Payment history',
+              AppMessage.invoicePaymentHistory.of(context),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (data.payments.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No payments recorded.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(AppMessage.invoiceNoPayments.of(context)),
               ),
             for (final payment in data.payments)
               Card(
@@ -368,16 +390,23 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                           ].where((v) => v.isNotEmpty).join(' · '),
                         ),
                       if (payment.reversalId != null)
-                        const Text('Reversed · original receipt kept'),
+                        Text(AppMessage.invoicePaymentReversed.of(context)),
                       if (payment.note.isNotEmpty ||
                           payment.reversalNote != null)
                         ExpansionTile(
                           tilePadding: EdgeInsets.zero,
-                          title: const Text('Internal notes'),
+                          title: Text(
+                            AppMessage.invoicePaymentNotes.of(context),
+                          ),
                           children: [
                             if (payment.note.isNotEmpty) Text(payment.note),
                             if (payment.reversalNote != null)
-                              Text('Correction: ${payment.reversalNote}'),
+                              Text(
+                                AppMessage.invoicePaymentCorrectionNote.format(
+                                  context,
+                                  {'note': payment.reversalNote!},
+                                ),
+                              ),
                           ],
                         ),
                       Wrap(
@@ -391,14 +420,18 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                                     payment.originalInvoiceId,
                                   )
                                 : null,
-                            child: const Text('Open receipt'),
+                            child: Text(
+                              AppMessage.openPaymentReceipt.of(context),
+                            ),
                           ),
                           if (payment.allocatedInvoiceId != data.invoiceId)
                             TextButton(
                               onPressed: eligible
                                   ? () => _related(payment.allocatedInvoiceId)
                                   : null,
-                              child: const Text('Open current invoice'),
+                              child: Text(
+                                AppMessage.openCurrentInvoice.of(context),
+                              ),
                             ),
                           if (!voided &&
                               payment.reversalId == null &&
@@ -407,7 +440,9 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                               onPressed: eligible
                                   ? () => _payment(reversal: payment)
                                   : null,
-                              child: const Text('Correct payment'),
+                              child: Text(
+                                AppMessage.correctInvoicePayment.of(context),
+                              ),
                             ),
                         ],
                       ),
@@ -416,24 +451,42 @@ class _InvoiceDetailState extends ConsumerState<_InvoiceDetail> {
                 ),
               ),
             const SizedBox(height: 24),
-            Text('Saved copies', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              AppMessage.invoiceSavedCopies.of(context),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             if (data.copies.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Receipts and balance copies will appear here.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(AppMessage.invoiceNoSavedCopies.of(context)),
               ),
             for (final copy in data.copies)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.description_outlined),
                 title: Text(switch (copy.kind) {
-                  'RECEIPT' => 'Payment receipt',
-                  'CORRECTION' => 'Payment correction',
-                  'VOID' => 'Cancellation copy',
-                  _ => 'Balance copy',
+                  'RECEIPT' => AppMessage.invoicePaymentReceipt.of(context),
+                  'CORRECTION' => AppMessage.invoicePaymentCorrection.of(
+                    context,
+                  ),
+                  'VOID' => AppMessage.invoiceCancellationCopy.of(context),
+                  _ => AppMessage.invoiceBalanceCopy.of(context),
                 }),
                 subtitle: Text(
-                  '${copy.createdLabel}\n${copy.kind == 'VOID' ? 'Credit transferred' : 'Paid'} ${money(copy.paid, data.digits)} · Due ${money(copy.due, data.digits)} ${data.currency}',
+                  [
+                    copy.createdLabel,
+                    AppMessage.invoiceCopyBalanceSummary.format(context, {
+                      'paidLabel':
+                          (copy.kind == 'VOID'
+                                  ? AppMessage.invoiceCreditTransferred
+                                  : AppMessage.invoiceCopyPaid)
+                              .of(context),
+                      'paid': money(copy.paid, data.digits),
+                      'dueLabel': AppMessage.invoiceCopyDue.of(context),
+                      'due': money(copy.due, data.digits),
+                      'currency': data.currency,
+                    }),
+                  ].join('\n'),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: eligible ? () => _open(copy.id) : null,

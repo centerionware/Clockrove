@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 import 'business_api.dart';
@@ -100,10 +101,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
       }
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error =
-              'Choose a PNG, JPEG or WebP logo up to 50 MB and 250 megapixels.',
-        );
+        setState(() => _error = AppMessage.businessLogoChooseError.of(context));
       }
     } finally {
       if (mounted) {
@@ -125,7 +123,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Company logo',
+              AppMessage.businessLogoTitle.of(context),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -136,14 +134,11 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
                   png,
                   fit: BoxFit.contain,
                   semanticLabel: _draft == null
-                      ? 'Saved company logo'
-                      : 'Selected logo preview',
+                      ? AppMessage.businessLogoSavedSemantic.of(context)
+                      : AppMessage.businessLogoSelectedSemantic.of(context),
                 ),
               ),
-            if (png == null)
-              const Text(
-                'Optional. The image is copied privately and keeps its aspect ratio on invoices.',
-              ),
+            if (png == null) Text(AppMessage.businessLogoHelp.of(context)),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -155,7 +150,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
             if (state.hasError && current == null)
               TextButton(
                 onPressed: () => ref.invalidate(logoProvider),
-                child: const Text('Retry logo settings'),
+                child: Text(AppMessage.businessLogoRetry.of(context)),
               ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -163,17 +158,17 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
               icon: const Icon(Icons.image_outlined),
               label: Text(
                 _picking
-                    ? 'Copying image…'
+                    ? AppMessage.businessLogoCopying.of(context)
                     : png == null
-                    ? 'Choose logo'
-                    : 'Change logo',
+                    ? AppMessage.businessLogoChoose.of(context)
+                    : AppMessage.businessLogoChange.of(context),
               ),
             ),
             if (_draft != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: BusinessCommand(
-                  label: 'Use this logo',
+                  label: AppMessage.businessLogoUse.of(context),
                   enabled: current != null && !_picking,
                   onPendingChanged: _pendingChanged,
                   create: () {
@@ -191,7 +186,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
               ),
             const SizedBox(height: 12),
             BusinessCommand(
-              label: 'Remove logo',
+              label: AppMessage.businessLogoRemove.of(context),
               enabled: current?.id != null && _draft == null && !_picking,
               onPendingChanged: _pendingChanged,
               create: () {
@@ -203,9 +198,7 @@ class _LogoControlsState extends ConsumerState<LogoControls> {
               onCommitted: () => ref.invalidate(logoProvider),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Changing or removing the logo affects future invoices. Prepared invoices keep their original branding.',
-            ),
+            Text(AppMessage.businessLogoImpactHelp.of(context)),
           ],
         ),
       ),

@@ -7,7 +7,7 @@ import java.util.UUID
 /** Durable source reservations, independent of mutable/deletable work rows. */
 internal object InvoiceCoverageStore {
     data class Exclusion(val invoiceId: String, val number: String, val taskId: String? = null,
-        val sessionId: String? = null, val start: Long? = null, val end: Long? = null, val title: String = "Finalized work")
+        val sessionId: String? = null, val start: Long? = null, val end: Long? = null, val title: String = "")
     data class Preview(val report: ReportStore.Report, val excluded: List<Exclusion>, val legacy: List<Pair<String, String>>)
     private data class TimeClaim(val invoiceId: String, val number: String, val start: Long, val end: Long)
 

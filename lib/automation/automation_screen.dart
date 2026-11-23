@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../help/help_screen.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
@@ -46,12 +47,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     ref.invalidate(automationSnapshotProvider(widget.jobId));
   }
 
-  String _conflict(String? code) => switch (code) {
-    'SITE_CAPACITY_EXCEEDED' => 'Android can monitor up to 100 enabled sites. Disable a site before adding another.',
-    'INVALID_GRACE' => 'Choose a whole number of minutes from 0 to 1,440.',
-    'INVALID_SITE' => 'Check the site name, coordinates and radius.',
-    'STALE_STATE' => 'Work changed while you were editing. Review the refreshed details and try again.',
-    _ => 'This change could not be saved. Review the refreshed details and try again.',
+  String _conflict(BuildContext context, String? code) => switch (code) {
+    'SITE_CAPACITY_EXCEEDED' => AppMessage.automationCapacityError.of(context),
+    'INVALID_GRACE' => AppMessage.automationInvalidGrace.of(context),
+    'INVALID_SITE' => AppMessage.automationInvalidSite.of(context),
+    'STALE_STATE' => AppMessage.automationStaleState.of(context),
+    _ => AppMessage.automationSaveFailed.of(context),
   };
   void _feedback(String message) {
     if (!mounted) return;
@@ -72,15 +73,14 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
       if (!mounted) return outcome.committed;
       setState(() {
         _pending = null;
-        _notice = outcome.committed ? null : _conflict(outcome.conflict);
+        _notice = outcome.committed
+            ? null
+            : _conflict(context, outcome.conflict);
       });
       return outcome.committed;
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice =
-              'This change could not be confirmed. Retry to check its result.',
-        );
+        setState(() => _notice = AppMessage.commandUnconfirmed.of(context));
       }
       return false;
     } finally {
@@ -109,21 +109,21 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Recognize your work sites'),
+        title: Text(AppMessage.automationPermissionTitle.of(context)),
         content: Text(
-          'Clockrove uses precise location, including when the app is closed, to recognize arrivals and departures. '
-          'Site monitoring continues while clocked out without keeping a travel history. Location history is recorded only during work. '
-          'Choose “${state.backgroundLabel}” in Android settings. You can decline and keep using the manual timer.',
+          AppMessage.automationPermissionBody.format(context, {
+            'background': state.backgroundLabel,
+          }),
         ),
         actions: [
           HelpButton(topic: HelpTopic.automation, enabled: !_busy),
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+            child: Text(AppMessage.notNow.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Continue'),
+            child: Text(AppMessage.continueLabel.of(context)),
           ),
         ],
       ),
@@ -143,7 +143,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'Location access could not be changed. Open app settings or keep timing manually.',
+          () => _notice = AppMessage.automationLocationAccessFailed.of(context),
         );
       }
     } finally {
@@ -164,9 +164,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
       await ref.read(automationApiProvider).retryMonitoring();
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _notice = 'Site monitoring could not be retried. You can keep using the manual timer.',
-        );
+        setState(() => _notice = AppMessage.automationRetryFailed.of(context));
       }
     } finally {
       if (mounted) {
@@ -187,7 +185,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'App settings could not be opened. You can keep using the manual timer.',
+          () => _notice = AppMessage.automationOpenSettingsFailed.of(context),
         );
       }
     } finally {
@@ -232,15 +230,16 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     try {
       timer = await ref.read(timerApiProvider).snapshot();
     } catch (_) {
-      _feedback(
-        'The current timer could not be checked. Use the Timer screen to clock in manually.',
-      );
+      if (!mounted) return;
+      _feedback(AppMessage.automationCurrentTimerReadFailed.of(context));
       return;
     }
     if (!mounted) return;
     if (timer.running != null) {
       _feedback(
-        timer.running!.jobId == widget.jobId ? 'This job is already running.' : 'Another job is running. Clockrove will not switch jobs automatically.',
+        timer.running!.jobId == widget.jobId
+            ? AppMessage.automationJobAlreadyRunning.of(context)
+            : AppMessage.automationOtherJobRunning.of(context),
       );
       return;
     }
@@ -248,20 +247,16 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clock in at this site now?'),
-        content: const Text(
-          'Changing a site while you are here resets arrival detection. '
-          'Automatic clock-in resumes after your phone confirms an exit and '
-          'a fresh entry. Start this job now to record work from this point?',
-        ),
+        title: Text(AppMessage.automationClockInNowTitle.of(context)),
+        content: Text(AppMessage.automationClockInNowBody.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
+            child: Text(AppMessage.notNow.of(context)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clock in now'),
+            child: Text(AppMessage.clockIn.of(context)),
           ),
         ],
       ),
@@ -269,9 +264,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (confirmed != true || !mounted) return;
     final actions = ref.read(timerActionsProvider);
     if (actions.working || actions.hasPending) {
-      _feedback(
-        'Another timer action is still being confirmed. Check the Timer screen before starting work.',
-      );
+      _feedback(AppMessage.automationTimerActionPending.of(context));
       return;
     }
     await ref
@@ -280,15 +273,15 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (!mounted) return;
     final outcome = ref.read(timerActionsProvider);
     if (outcome.pending != null || outcome.pendingJob != null) {
-      _feedback(
-        'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
-      );
+      _feedback(AppMessage.automationClockInUnconfirmed.of(context));
     } else if (outcome.conflict != null) {
-      _feedback(
-        'Work changed before clock-in completed. Refresh the Timer screen and try again.',
-      );
+      _feedback(AppMessage.automationClockInConflict.of(context));
     } else {
-      _feedback('Clocked in to ${widget.jobName}.');
+      _feedback(
+        AppMessage.automationClockInSuccess.format(context, {
+          'job': widget.jobName,
+        }),
+      );
     }
     ref.invalidate(timerSnapshotProvider);
     ref.invalidate(automationSnapshotProvider(widget.jobId));
@@ -312,19 +305,16 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final approved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keep these recorded times?'),
-        content: const Text(
-          'Recorded times stay as shown. Any pending departure is cleared and an ongoing timer keeps running. '
-          'Site automation resets and waits for a fresh exit and entry.',
-        ),
+        title: Text(AppMessage.automationKeepTimesTitle.of(context)),
+        content: Text(AppMessage.automationKeepTimesHelp.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppMessage.cancel.of(context)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Keep recorded times'),
+            child: Text(AppMessage.keepRecordedTimes.of(context)),
           ),
         ],
       ),
@@ -341,41 +331,52 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final zone =
         '${offset < 0 ? "−" : "+"}${(offset.abs() ~/ 60).toString().padLeft(2, '0')}:${(offset.abs() % 60).toString().padLeft(2, '0')}';
     final labels = MaterialLocalizations.of(context);
+    final utcOffset = AppMessage.timeUtcOffset.format(context, {
+      'offset': zone,
+    });
     return '${labels.formatMediumDate(local)}, ${local.year} '
         '${labels.formatTimeOfDay(TimeOfDay.fromDateTime(local), alwaysUse24HourFormat: true)}:'
-        '${local.second.toString().padLeft(2, '0')} (UTC$zone)';
+        '${local.second.toString().padLeft(2, '0')}$utcOffset';
   }
 
-  String _health(AutomationSnapshot value) {
-    if (!value.settings.enabled) return 'Site automation is off';
-    if (value.sites.every((site) => !site.enabled)) {
-      return 'Add or enable a work site';
+  String _health(BuildContext context, AutomationSnapshot value) {
+    if (!value.settings.enabled) {
+      return AppMessage.automationStatusOff.of(context);
     }
-    if (!value.precise || !value.background) return 'Location access needed';
-    if (value.reviews.isNotEmpty) return 'Work time needs review';
+    if (value.sites.every((site) => !site.enabled)) {
+      return AppMessage.automationStatusAddSite.of(context);
+    }
+    if (!value.precise || !value.background) {
+      return AppMessage.automationStatusLocationNeeded.of(context);
+    }
+    if (value.reviews.isNotEmpty) {
+      return AppMessage.automationReviewTitle.of(context);
+    }
     return switch (value.health) {
-      'REGISTERING' => 'Setting up site monitoring…',
+      'REGISTERING' => AppMessage.automationStatusRegistering.of(context),
       'READY' =>
         value.working
-            ? 'Monitoring this work session'
+            ? AppMessage.automationStatusWorking.of(context)
             : value.suppressed
-            ? 'Waiting for you to leave and return'
+            ? AppMessage.automationStatusWaitReturn.of(context)
             : value.armed
-            ? 'Watching for your next arrival'
-            : 'Waiting for a fresh exit and entry',
-      _ => 'Site monitoring needs attention',
+            ? AppMessage.automationStatusWatchArrival.of(context)
+            : AppMessage.automationStatusFreshEntry.of(context),
+      _ => AppMessage.automationStatusAttention.of(context),
     };
   }
 
   String _siteSubtitle(WorkSite site) {
-    final warning = site.enabled && site.radius < 100
-        ? 'Android may miss arrivals at this radius'
-        : null;
-    return [
-      '${site.radius.toStringAsFixed(0)} m radius',
-      site.enabled ? 'Enabled' : 'Disabled',
-      ?warning,
-    ].join(' · ');
+    final status = AppMessage.automationSiteRadiusStatus.format(context, {
+      'radius': site.radius.toStringAsFixed(0),
+      'status': site.enabled
+          ? AppMessage.automationEnabled.of(context)
+          : AppMessage.automationDisabled.of(context),
+    });
+    if (site.enabled && site.radius < 100) {
+      return '$status · ${AppMessage.automationSiteRadiusWarning.of(context)}';
+    }
+    return status;
   }
 
   Widget _group(List<Widget> children) => Card(
@@ -392,11 +393,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final state = ref.watch(automationSnapshotProvider(widget.jobId));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Work sites'),
+        title: Text(AppMessage.automationTitle.of(context)),
         actions: [
           IconButton(
             onPressed: _busy ? null : _refresh,
-            tooltip: 'Refresh work sites',
+            tooltip: AppMessage.automationRefresh.of(context),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -412,12 +413,10 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Work sites could not be loaded. Your manual timer remains available.',
-                  ),
+                  Text(AppMessage.automationLoadFailed.of(context)),
                   TextButton(
                     onPressed: _refresh,
-                    child: const Text('Try again'),
+                    child: Text(AppMessage.automationTryAgain.of(context)),
                   ),
                 ],
               ),
@@ -437,7 +436,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     if (_pending != null)
                       TextButton(
                         onPressed: _busy ? null : () => _write(_pending!),
-                        child: const Text('Retry change'),
+                        child: Text(
+                          AppMessage.automationRetryChange.of(context),
+                        ),
                       ),
                   ]),
                 _group([
@@ -448,13 +449,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _health(value),
+                    _health(context, value),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Manual timing always stays available. Arrivals never switch a running job.',
-                  ),
+                  Text(AppMessage.automationManualSafety.of(context)),
                   if (value.settings.enabled &&
                       value.precise &&
                       value.background &&
@@ -464,8 +463,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                       onPressed: _locked ? null : _retryMonitoring,
                       child: Text(
                         value.health == 'READY'
-                            ? 'Refresh site monitoring'
-                            : 'Retry site monitoring',
+                            ? AppMessage.automationRefreshMonitoring.of(context)
+                            : AppMessage.automationRetryMonitoring.of(context),
                       ),
                     ),
                 ]),
@@ -473,17 +472,29 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                 if (value.departed != null) ...[
                   _group([
                     Text(
-                      'Departure pending',
+                      AppMessage.automationDeparturePending.of(context),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text('Left site: ${_time(value.departed!)}'),
-                    Text('Grace ends: ${_time(value.deadline!)}'),
+                    Text(
+                      AppMessage.automationLeftSite.format(context, {
+                        'time': _time(value.departed!),
+                      }),
+                    ),
+                    Text(
+                      AppMessage.automationGraceEnds.format(context, {
+                        'time': _time(value.deadline!),
+                      }),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       value.reviews.isNotEmpty
-                          ? 'Automatic departure is paused while this work needs review. The timer keeps running; you can still clock out manually.'
-                          : 'This work is provisional. Grace starts after Android confirms the exit. Returning before it ends keeps the timer running; otherwise, recorded work ends at departure. Android may handle this later.',
+                          ? AppMessage.automationDeparturePausedReview.of(
+                              context,
+                            )
+                          : AppMessage.automationProvisionalDeparture.of(
+                              context,
+                            ),
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -491,24 +502,27 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                 if (value.reviews.isNotEmpty) ...[
                   _group([
                     Text(
-                      'Review recorded work',
+                      AppMessage.automationReviewTitle.of(context),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Site monitoring was interrupted or an event arrived late. Check the recorded times below. Automatic departure is paused for affected ongoing work.',
-                    ),
+                    Text(AppMessage.automationReviewIntro.of(context)),
                     for (final review in value.reviews)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
                         child: Text(
-                          'Start: ${_time(review.start)}\nEnd: ${review.end == null ? "Still running" : _time(review.end!)}',
+                          AppMessage.automationReviewInterval.format(context, {
+                            'start': _time(review.start),
+                            'end': review.end == null
+                                ? AppMessage.automationStillRunning.of(context)
+                                : _time(review.end!),
+                          }),
                         ),
                       ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _locked ? null : () => _accept(value),
-                      child: const Text('Keep recorded times'),
+                      child: Text(AppMessage.keepRecordedTimes.of(context)),
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -516,39 +530,41 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                 if (!value.precise || !value.background) ...[
                   _group([
                     Text(
-                      'Recognize sites in the background',
+                      AppMessage.automationBackgroundTitle.of(context),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Site monitoring needs precise location and “${value.backgroundLabel}”. You can keep using the manual timer without these permissions.',
+                      AppMessage.automationBackgroundHelp.format(context, {
+                        'background': value.backgroundLabel,
+                      }),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _locked ? null : () => _permission(value),
                       child: Text(
                         !value.precise
-                            ? 'Grant precise location'
-                            : 'Allow background location',
+                            ? AppMessage.automationGrantPrecise.of(context)
+                            : AppMessage.automationAllowBackground.of(context),
                       ),
                     ),
                     TextButton(
                       onPressed: _locked ? null : _openSettings,
-                      child: const Text('App settings'),
+                      child: Text(AppMessage.settings.of(context)),
                     ),
                   ]),
                   const SizedBox(height: 16),
                 ],
                 _group([
                   Text(
-                    'Places',
+                    AppMessage.automationPlaces.of(context),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   if (value.sites.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
-                        'Add the places where you work to use arrival and departure automation.',
+                        AppMessage.automationAddPlacesHelp.of(context),
                       ),
                     ),
                   for (final site in value.sites)
@@ -568,18 +584,20 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   OutlinedButton.icon(
                     onPressed: _locked ? null : () => _edit(value),
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add work site'),
+                    label: Text(AppMessage.automationAddSite.of(context)),
                   ),
                 ]),
                 const SizedBox(height: 16),
                 _group([
                   Text(
-                    'Automation',
+                    AppMessage.automationSectionTitle.of(context),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Use work site automation'),
+                    title: Text(
+                      AppMessage.automationUseSiteAutomation.of(context),
+                    ),
                     value: value.settings.enabled,
                     onChanged: _locked
                         ? null
@@ -587,8 +605,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                             if (enabled &&
                                 value.sites.every((site) => !site.enabled)) {
                               setState(
-                                () => _notice =
-                                    'Add or enable a work site first.',
+                                () => _notice = AppMessage.automationNeedSite
+                                    .of(context),
                               );
                               return;
                             }
@@ -605,9 +623,11 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Clock in on arrival'),
-                    subtitle: const Text(
-                      'After a confirmed exit and a fresh entry',
+                    title: Text(
+                      AppMessage.automationClockInArrival.of(context),
+                    ),
+                    subtitle: Text(
+                      AppMessage.automationAfterExitEntry.of(context),
                     ),
                     value: value.settings.autoStart,
                     onChanged: _locked || !value.settings.enabled
@@ -619,11 +639,13 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Clock out after leaving'),
+                    title: Text(
+                      AppMessage.automationClockOutDeparture.of(context),
+                    ),
                     subtitle: Text(
                       value.settings.automaticDeparture
-                          ? 'Use the departure grace below'
-                          : 'Paid travel: keep timing until manual clock-out',
+                          ? AppMessage.automationUseGrace.of(context)
+                          : AppMessage.automationPaidTravel.of(context),
                     ),
                     value: value.settings.automaticDeparture,
                     onChanged: _locked || !value.settings.enabled
@@ -636,18 +658,18 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                   if (value.settings.automaticDeparture)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Departure grace'),
+                      title: Text(AppMessage.automationGraceTitle.of(context)),
                       subtitle: Text(
-                        '${value.settings.graceMinutes} minutes · Starts after Android confirms the exit',
+                        AppMessage.automationGraceMinutes.format(context, {
+                          'minutes': '${value.settings.graceMinutes}',
+                        }),
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       enabled: !_locked && value.settings.enabled,
                       onTap: () => _grace(value),
                     ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Changes reset site detection and clear any pending departure. A running timer keeps going.',
-                  ),
+                  Text(AppMessage.automationResetHelp.of(context)),
                 ]),
               ],
             ),
@@ -666,10 +688,10 @@ class JobSiteSubtitle extends ConsumerWidget {
     final state = ref.watch(automationSnapshotProvider(jobId)).asData?.value;
     return Text(
       state?.reviews.isNotEmpty == true
-          ? 'Work time needs review'
+          ? AppMessage.automationReviewTitle.of(context)
           : state?.departed != null
-          ? 'Departure pending'
-          : 'Work sites & automation',
+          ? AppMessage.automationDeparturePending.of(context)
+          : AppMessage.worksitesAutomation.of(context),
     );
   }
 }
@@ -695,13 +717,13 @@ class AutomationNotice extends ConsumerWidget {
           leading: const Icon(Icons.schedule_outlined),
           title: Text(
             state.reviews.isNotEmpty
-                ? 'Work time needs review'
-                : 'Departure pending',
+                ? AppMessage.automationReviewTitle.of(context)
+                : AppMessage.automationDeparturePending.of(context),
           ),
           subtitle: Text(
             state.reviews.isNotEmpty
-                ? 'Automatic departure is held. Manual clock-out still works.'
-                : 'This session is provisional until departure is resolved.',
+                ? AppMessage.automationBannerManualHeld.of(context)
+                : AppMessage.automationBannerProvisional.of(context),
           ),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => Navigator.of(context).push(

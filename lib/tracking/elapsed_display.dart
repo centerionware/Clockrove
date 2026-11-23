@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../l10n/app_strings.dart';
+import '../l10n/app_localizations.dart';
 
-String elapsedLabel(DateTime start, DateTime now) {
+String elapsedLabel(DateTime start, DateTime now, {String? clockError}) {
   final seconds = now.difference(start).inSeconds;
-  if (now.isBefore(start)) return AppStrings.checkDeviceTime;
+  if (now.isBefore(start)) {
+    return clockError ?? AppMessage.checkDeviceTime.english;
+  }
   final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
   final minutes = (seconds ~/ 60 % 60).toString().padLeft(2, '0');
   final remainder = (seconds % 60).toString().padLeft(2, '0');
@@ -63,7 +65,11 @@ class _ElapsedDisplayState extends State<ElapsedDisplay>
     fit: BoxFit.scaleDown,
     alignment: Alignment.centerLeft,
     child: Text(
-      elapsedLabel(widget.startUtc, DateTime.now().toUtc()),
+      elapsedLabel(
+        widget.startUtc,
+        DateTime.now().toUtc(),
+        clockError: AppMessage.checkDeviceTime.of(context),
+      ),
       style: Theme.of(context).textTheme.displayMedium?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: -1.5,
