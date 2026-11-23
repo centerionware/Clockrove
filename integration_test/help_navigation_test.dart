@@ -1,4 +1,5 @@
 import 'package:clockrove/help/help_screen.dart';
+import 'package:clockrove/l10n/language_preference.dart';
 import 'package:clockrove/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,16 @@ void main() {
   testWidgets('opens installed Help and reads the Android app version', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: ClockroveApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          languagePreferenceProvider.overrideWith(
+            _EnglishLanguagePreference.new,
+          ),
+        ],
+        child: const ClockroveApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('App settings and customers'));
@@ -37,4 +47,9 @@ void main() {
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
     debugPrint('CLOCKROVE_HELP_NAVIGATION version_and_search=true');
   });
+}
+
+class _EnglishLanguagePreference extends LanguagePreference {
+  @override
+  Future<String?> build() async => 'en';
 }

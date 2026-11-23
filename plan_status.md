@@ -988,3 +988,10 @@ native tests. API 24 report, invoice, and quote flows passed; the task-photo
 flow exposed one stale `Task notes and photos` assertion. It now expects the
 catalog title `Task notes & photos`. API 35 was skipped after the API 24
 failure. No local build, test, formatter or analysis ran.
+
+Exact-head run [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515)
+on `a692dd0` passed the task comment and camera-photo device flow, plus prior
+catalog, localization, analysis, build, and native checks. The Help navigation
+integration inherited a saved device language while asserting English. It now
+pins the test language to English. API 35 and invoice-viewer checks were skipped.
+No local build, test, formatter or analysis ran.
