@@ -989,9 +989,9 @@ flow exposed one stale `Task notes and photos` assertion. It now expects the
 catalog title `Task notes & photos`. API 35 was skipped after the API 24
 failure. No local build, test, formatter or analysis ran.
 
-Exact-head run [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515)
-on `a692dd0` passed the task comment and camera-photo device flow, plus prior
-catalog, localization, analysis, build, and native checks. The Help navigation
-integration inherited a saved device language while asserting English. It now
-pins the test language to English. API 35 and invoice-viewer checks were skipped.
-No local build, test, formatter or analysis ran.
+Exact-head runs [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515)
+and [45210857943](https://github.com/centerionware/Clockrove/actions/runs/45210857943)
+passed the task-photo device flow but failed Help navigation at its `Settings`
+text finder, even after the test pinned English. The test now opens the menu by
+widget type and selects its stable `settings` route value. API 35 and viewer
+checks were skipped. No local build, test, formatter or analysis ran.

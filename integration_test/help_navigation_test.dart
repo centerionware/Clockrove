@@ -24,9 +24,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('App settings and customers'));
+    await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is PopupMenuItem<String> && widget.value == 'settings',
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(HelpButton));
     await tester.pumpAndSettle();
