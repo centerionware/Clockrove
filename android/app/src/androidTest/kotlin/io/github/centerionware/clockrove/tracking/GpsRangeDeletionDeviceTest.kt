@@ -4,7 +4,9 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -328,6 +330,49 @@ class GpsRangeDeletionDeviceTest {
         automation.waitForIdle(200, 3000)
     }
 
+    private fun reveal(label: String) {
+        repeat(24) {
+            if (find(label) != null) return
+            val root = automation.rootInActiveWindow
+            fun scroll(node: AccessibilityNodeInfo): Boolean {
+                if (node.isVisibleToUser && node.isScrollable && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true
+                for (index in 0 until node.childCount) {
+                    node.getChild(index)?.let { if (scroll(it)) return true }
+                }
+                return false
+            }
+            root?.let(::scroll)
+            swipeUp()
+            SystemClock.sleep(180)
+        }
+        waitFor(label, 1000)
+    }
+
+    private fun swipeUp() {
+        val root = automation.rootInActiveWindow ?: return
+        val bounds = android.graphics.Rect().also(root::getBoundsInScreen)
+        val x = bounds.centerX().toFloat()
+        val startY = (bounds.bottom - 240).toFloat()
+        val endY = (bounds.top + 320).toFloat()
+        val downTime = SystemClock.uptimeMillis()
+        fun inject(action: Int, eventTime: Long, y: Float) {
+            val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+            try {
+                event.source = InputDevice.SOURCE_TOUCHSCREEN
+                automation.injectInputEvent(event, true)
+            } finally {
+                event.recycle()
+            }
+        }
+        inject(MotionEvent.ACTION_DOWN, downTime, startY)
+        for (step in 1..8) {
+            val y = startY + (endY - startY) * step / 8
+            inject(MotionEvent.ACTION_MOVE, SystemClock.uptimeMillis() + 16, y)
+            SystemClock.sleep(16)
+        }
+        inject(MotionEvent.ACTION_UP, SystemClock.uptimeMillis(), endY)
+    }
+
     private fun openReportAndReturnToHistory(
         expectedMapLabel: String,
         reportCapture: String,
@@ -338,7 +383,7 @@ class GpsRangeDeletionDeviceTest {
         click("Work report")
         waitFor("Work report")
         waitFor("Export CSV")
-        waitFor(expectedMapLabel)
+        reveal(expectedMapLabel)
         capture(reportCapture)
         if (mapCapture != null) {
             click(expectedMapLabel)

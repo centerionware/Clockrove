@@ -917,3 +917,14 @@ Flutter aliases across locales, and the device test follows the visible label.
 API 35 rendering and invoice-viewer validation were skipped after API 24
 failed; the exact-head PR check records validation of these follow-up fixes.
 No local build, test, formatter or analysis ran.
+
+Exact-head run [45132754657](https://github.com/centerionware/Clockrove/actions/runs/45132754657)
+on `98a7d3e` passed the localization/resource checks, formatting, analysis,
+all 311 behavior tests, Android/release compilation, instrumentation APK
+assembly and all 759 native unit tests. The API 24 suite passed the PDF format
+case and the earlier CSV label assertion, leaving one GPS device failure: the
+map button is below the report scroll viewport, and that test waited without
+revealing it. The GPS test now uses the same accessibility scroll and swipe
+reveal as the passing report-map device test. API 35 and invoice-viewer checks
+were skipped after the API 24 failure; the exact-head PR check validates this
+last test adjustment. No local build, test, formatter or analysis ran.
