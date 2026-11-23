@@ -67,8 +67,9 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   final visitor = _StringVisitor();
   parsed.unit.accept(visitor);
   return [
-    for (final (offset, text) in visitor.strings)
-      if (!_isMachineDartValue(source, offset, text) && _looksLikeCopy(text))
+    for (final (offset, end, text) in visitor.strings)
+      if (!_isMachineDartValue(source, offset, end, text) &&
+          _looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
 }
@@ -107,6 +108,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text.endsWith('.invoices') ||
           text.endsWith('.pdf') ||
           text == 'task-captures' ||
+          RegExp(r'^clockrove-[a-z0-9-]+$').hasMatch(text) ||
           text.startsWith('io.github.') ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
@@ -140,11 +142,11 @@ Iterable<({int line, String text})> auditAndroidPresentationXml(
 }
 
 class _StringVisitor extends RecursiveAstVisitor<void> {
-  final strings = <(int, String)>[];
+  final strings = <(int, int, String)>[];
 
   @override
   void visitSimpleStringLiteral(SimpleStringLiteral node) {
-    strings.add((node.offset, node.value));
+    strings.add((node.offset, node.end, node.value));
   }
 
   @override
@@ -153,7 +155,7 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
     if (value == null) {
       super.visitAdjacentStrings(node);
     } else {
-      strings.add((node.offset, value));
+      strings.add((node.offset, node.end, value));
     }
   }
 
@@ -163,16 +165,24 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
         .whereType<InterpolationString>()
         .map((element) => element.value)
         .join(' ');
-    strings.add((node.offset, text));
+    strings.add((node.offset, node.end, text));
     super.visitStringInterpolation(node);
   }
 }
 
-bool _isMachineDartValue(String source, int offset, String text) {
+bool _isMachineDartValue(String source, int offset, int end, String text) {
   final prefix = source.substring(0, offset);
   final contextStart = (prefix.length - 160).clamp(0, prefix.length).toInt();
   final context = prefix.substring(contextStart);
   final value = text.trim();
+  final formatStart = context.lastIndexOf('.format(');
+  final formatMapStart = context.lastIndexOf('{');
+  final isFormatParameter =
+      RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(value) &&
+      RegExp(r'[A-Z0-9_]').hasMatch(value) &&
+      source.substring(end).trimLeft().startsWith(':') &&
+      formatStart >= 0 &&
+      formatMapStart > formatStart;
   final isUriHost =
       RegExp(r'^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$').hasMatch(value) &&
       RegExp(r'Uri\s*\.\s*https\s*\(\s*$').hasMatch(context);
@@ -182,7 +192,7 @@ bool _isMachineDartValue(String source, int offset, String text) {
   final isPlatformPackage =
       value == 'io.github.centerionware.clockrove' &&
       RegExp(r'userAgentPackageName\s*:\s*$').hasMatch(context);
-  return isUriHost || isUriFragment || isPlatformPackage;
+  return isFormatParameter || isUriHost || isUriFragment || isPlatformPackage;
 }
 
 bool _looksLikeCopy(String value) {

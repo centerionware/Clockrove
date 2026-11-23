@@ -36,10 +36,23 @@ void openMap() {
     ]);
   });
 
+  test('catalog format parameter keys are not presentation copy', () {
+    final findings = auditDart('lib/export.dart', r'''
+void buildProgress() {
+  AppMessage.exportSnapshotProgress.format(context, {
+    'mediaRead': '$mediaRead',
+  });
+  final message = 'Backup is ready';
+}
+''');
+    expect(findings.map((finding) => finding.text.trim()), ['Backup is ready']);
+  });
+
   test('Kotlin protocol values are excluded while prose is still audited', () {
     final findings = auditKotlinPresentation(r'''
 val channel = "clockrove/documents/v1"
 val mime = "image/png"
+val channelId = "clockrove-work-location"
 val quoteId = call.argument<String>("quoteId")
 val quote = call.method.endsWith("Quote")
 flow.write("Document copy")

@@ -766,3 +766,13 @@ in `tool/localization_audit.dart`; that exact correction is applied. Analysis,
 behavior tests, Android build/native tests, and API 24/35 PDF rendering were
 skipped. No local build, test, formatter or analysis ran; another exact-head
 Actions run is required.
+
+Exact-head run [45116893608](https://github.com/centerionware/Clockrove/actions/runs/45116893608)
+on `fc9576e` passed catalog checks, localization audits, formatting and
+analysis. The behavior suite reported 308 passing tests, 2 failures and 14
+skips. Both failures were audit false positives for a camelCase parameter key
+inside a catalog-format map and the native `clockrove-work-location`
+notification channel ID. The audit now recognizes those contexts/IDs, with
+fixtures that keep visible prose covered. Android build, native tests and API
+24/35 PDF rendering were skipped. No local build, test, formatter or analysis
+ran; another exact-head Actions run is required.
