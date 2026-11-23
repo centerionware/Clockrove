@@ -35,8 +35,10 @@ void openMap() {
     ]);
   });
 
-  test('catalog parameters and platform identifiers are not presentation copy', () {
-    final findings = auditDart('lib/export.dart', r'''
+  test(
+    'catalog parameters and platform identifiers are not presentation copy',
+    () {
+      final findings = auditDart('lib/export.dart', r'''
 export 'board/board_view.dart';
 void buildProgress() {
   AppMessage.exportSnapshotProgress.format(context, {
@@ -59,8 +61,11 @@ void buildProgress() {
   final message = 'Backup is ready';
 }
 ''');
-    expect(findings.map((finding) => finding.text.trim()), ['Backup is ready']);
-  });
+      expect(findings.map((finding) => finding.text.trim()), [
+        'Backup is ready',
+      ]);
+    },
+  );
 
   test('Kotlin protocol values are excluded while prose is still audited', () {
     final findings = auditKotlinPresentation(r'''
@@ -83,16 +88,19 @@ val message = "Invoice is ready"
     expect(findings.map((finding) => finding.text), ['Invoice is ready']);
   });
 
-  test('Kotlin widget routes, logging, and CSV escaping are machine values', () {
-    final findings = auditKotlinPresentation(r'''
+  test(
+    'Kotlin widget routes, logging, and CSV escaping are machine values',
+    () {
+      final findings = auditKotlinPresentation(r'''
 val route = "/widget-board"
 android.util.Log.d("ClockroveWidgetFactory", "Load failed: $detail")
 executeFromSurface("widget-stop-$id-$version")
 val escaped = "\"${protected.replace("\"", "\"\"")}\""
 val message = "Timer stopped"
 ''');
-    expect(findings.map((finding) => finding.text), ['Timer stopped']);
-  });
+      expect(findings.map((finding) => finding.text), ['Timer stopped']);
+    },
+  );
 
   test('resource lookups inside Kotlin interpolation are not literal copy', () {
     final findings = auditKotlinPresentation(r'''

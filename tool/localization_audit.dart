@@ -199,9 +199,12 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
       const {'jobId', 'taskOnly'}.contains(value) &&
       context.contains('widgetChannel');
   final isChannelMethod =
-      const {'companyLogo', 'pickLogo', 'applyLogo', 'removeLogo'}.contains(
-        value,
-      ) &&
+      const {
+        'companyLogo',
+        'pickLogo',
+        'applyLogo',
+        'removeLogo',
+      }.contains(value) &&
       (context.contains('invokeMapMethod') || context.contains('_change('));
   final isProtocolChannel = RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$')
       .hasMatch(value);
@@ -229,9 +232,7 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
 }
 
 bool _isDartDirectiveString(String source, int offset) {
-  final lineBreak = offset == 0
-      ? -1
-      : source.lastIndexOf('\n', offset - 1);
+  final lineBreak = offset == 0 ? -1 : source.lastIndexOf('\n', offset - 1);
   final lineStart = lineBreak + 1;
   final prefix = source.substring(lineStart, offset).trimLeft();
   return prefix.startsWith('import ') ||
