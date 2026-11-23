@@ -131,9 +131,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
     if (_noteError != null ||
         _confirmationError != null ||
         _selectionError != null) {
-      throw FormatException(
-        AppMessage.legacyCoverageFieldsInvalid.of(context),
-      );
+      throw FormatException(AppMessage.legacyCoverageFieldsInvalid.of(context));
     }
     final tasks = _tasks.toList()..sort();
     return LegacyInvoiceDraft(

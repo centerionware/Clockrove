@@ -304,7 +304,11 @@ Run
 passed catalog generation, audit and formatting, then Analyze found localized
 values inside const widgets, duplicate audit-test entries, and an import lost
 during the quote scope split. Corrected those source issues. Full-coverage
-acceptance stays open for exact-head CI and owner review of the results.
+acceptance stays open for exact-head CI and owner review of the results. Run
+[45102757199](https://github.com/centerionware/Clockrove/actions/runs/45102757199)
+passed catalog generation and the localization audit but found one final
+formatting adjustment in the legacy invoice review. Applied that exact
+workflow patch.
 
 The report below preserves earlier evidence and milestone history.
 
