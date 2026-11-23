@@ -81,12 +81,16 @@ internal track must still be confirmed on the owner's device.
 The owner clarified that automatic arrival failed at the monitored job, so they
 started it manually and installed the in-place setup patch while still clocked
 in. They later left without an automatic clock-out. The site used a 1-minute
-grace; the owner changed its radius to 150 m and waited about 20 minutes,
-seeing the GPS status icon twice. Settings and location permissions were already
-enabled, but the owner had to tap **Retry site monitoring**. The timing of any
-current-location save relative to the app update is not confirmed. The report
-does not include the health state after retry or native transition logs. A
-flashing GPS icon is not proof that Android delivered an exit event.
+grace; after updating the app, the owner changed its radius from 15 m to 150 m
+and waited about 20 minutes after leaving, seeing the GPS status icon twice.
+The site location was unchanged; 15 m had been set manually before this edit.
+Settings and location permissions were already enabled, but the owner had to
+tap **Retry site monitoring**. The previously reported current-location save
+was part of the failed-arrival flow before the app update; it cannot establish
+that the updated app received a fresh fix. No fresh fix was reported with the
+later radius-only edit, so that edit does not exercise the fix now under review.
+The report does not include the health state after retry or native transition
+logs. A flashing GPS icon is not proof that Android delivered an exit event.
 
 The owner separately created a 150 m site around home. Arrival eventually
 started the timer, later in the approach than the full radius. They manually
@@ -113,8 +117,15 @@ correction was applied. Follow-up run
 passed formatting, Analyze, Flutter tests and Android builds, then reported 757
 native tests with one failure: a label-only site rename rotated its geofence
 key. The invalidation condition was corrected to preserve that pre-existing
-behavior; the corrected head's Actions run and owner-device departure
-acceptance are pending.
+behavior. Corrected exact-head Validate run
+[45104682175](https://github.com/centerionware/Clockrove/actions/runs/45104682175)
+passed on `7b64341`: 757 native tests with zero failures, errors or skips;
+40 actual Android tests on each of API 24 and 35 with zero failures, errors or
+skips; plus formatting, Analyze, Flutter tests, Android builds and release Java.
+The owner's 15 m to 150 m radius-only edit does not exercise this code path: the
+location was not refreshed after the app update. Install the fixed build and
+save a fresh current-location fix at the site before using the owner device to
+check departure. Physical geofence callback delivery remains unverified.
 
 ### Cold-start callback investigation
 

@@ -22,8 +22,11 @@ Statuses describe evidence, not intent.
   location permissions were already enabled. They saw the GPS icon twice; this
   does not establish that Android delivered a geofence exit. A separate 150 m
   home test did auto-start after a delay, then was manually stopped while still
-  at home, so it did not test departure. Timing of the reported current-location
-  save relative to the app update and retry health after tapping are unconfirmed.
+  at home, so it did not test departure. The owner clarified the 15 m to 150 m
+  radius change followed the app update. The reported current-location save was
+  before that update; the later edit kept the site location and changed only
+  radius. No fresh fix was reported with that edit, so it does not exercise this
+  follow-up. Monitoring health after retry remains unconfirmed.
 - Source tracing found that site edits rotate registration keys and reset
   membership to `UNKNOWN`. Before this follow-up, a current fix saved with a
   site could not establish the baseline for a running session's departure. The
@@ -35,12 +38,15 @@ Statuses describe evidence, not intent.
   [45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
   passed formatting, Analyze, Flutter tests and Android builds, then found one
   native regression: label-only site rename incorrectly rotated the fence key.
-  The condition now preserves the previous behavior; the corrected-head run and
-  physical callback delivery are still pending.
-- PR #84's docs-only exact-head validation
-  [45095882626](https://github.com/centerionware/Clockrove/actions/runs/45095882626)
-  passed, but does not validate the code now being prepared. The evidence is being
-  combined with the source follow-up before merge.
+  The condition now preserves the previous behavior. Corrected exact-head
+  Validate run
+  [45104682175](https://github.com/centerionware/Clockrove/actions/runs/45104682175)
+  passed on `7b64341`: formatting, Analyze, Flutter tests, Android build and
+  release Java, 757 native tests with zero failures/errors/skips, and 40 actual
+  Android tests on each of API 24 and API 35 with zero failures/errors/skips.
+  Owner-device callback acceptance is still pending. The earlier docs-only
+  exact-head run [45095882626](https://github.com/centerionware/Clockrove/actions/runs/45095882626)
+  did not validate this code.
 
 ## November 22 release readiness update
 
