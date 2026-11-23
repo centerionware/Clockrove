@@ -25,9 +25,8 @@ const _entry = HistoryEntry(
 );
 
 String _mediumDate(WidgetTester tester) =>
-    MaterialLocalizations.of(
-      tester.element(find.byType(HistoryScreen).first),
-    ).formatMediumDate(DateTime(2026, 11, 1));
+    MaterialLocalizations.of(tester.element(find.byType(HistoryScreen).first))
+        .formatMediumDate(DateTime(2026, 11, 1));
 
 class _Timer extends TimerApi {
   _Timer([this.events = const Stream.empty()]);

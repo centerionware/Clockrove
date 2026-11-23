@@ -274,9 +274,7 @@ void main() {
       await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
-        find.text(
-          englishCopy(AppMessage.quoteQuantityInvalid),
-        ),
+        find.text(englishCopy(AppMessage.quoteQuantityInvalid)),
         findsOneWidget,
       );
       expect(find.text('Install kitchen tiles'), findsOneWidget);

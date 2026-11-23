@@ -316,9 +316,7 @@ void main() {
       expect(find.textContaining('This cannot be undone.'), findsOneWidget);
       expect(find.text('Delete permanently'), findsOneWidget);
       expect(
-        find.textContaining(
-          englishCopy(AppMessage.deleteJobWarning),
-        ),
+        find.textContaining(englishCopy(AppMessage.deleteJobWarning)),
         findsOneWidget,
       );
     },

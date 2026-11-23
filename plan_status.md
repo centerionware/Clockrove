@@ -320,7 +320,12 @@ messages, including quote and invoice totals. Corrected three audit false
 positives for internal invoice placeholder-map keys, the currency-format
 sentinel and the native PDF typeface constant. The behavior suite must pass on
 a fresh exact head before this localization source work can be marked complete.
-No build, test, formatter or analysis ran locally, per owner instruction.
+Run
+[45106126881](https://github.com/centerionware/Clockrove/actions/runs/45106126881)
+on `c359e84` passed catalog generation and the localization audit, then stopped
+at the clean-formatting gate. Applied the exact four-file formatter patch
+exported by that run. Analyze and behavior tests did not run. No build, test,
+formatter or analysis ran locally, per owner instruction.
 
 The report below preserves earlier evidence and milestone history.
 
