@@ -68,7 +68,7 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   parsed.unit.accept(visitor);
   return [
     for (final (offset, text) in visitor.strings)
-      if (!visitor.machineValueOffsets.contains(offset) &&
+      if (!_isMachineDartValue(source, offset, text) &&
           _looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
@@ -142,12 +142,10 @@ Iterable<({int line, String text})> auditAndroidPresentationXml(
 
 class _StringVisitor extends RecursiveAstVisitor<void> {
   final strings = <(int, String)>[];
-  final machineValueOffsets = <int>{};
 
   @override
   void visitSimpleStringLiteral(SimpleStringLiteral node) {
     strings.add((node.offset, node.value));
-    if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
   }
 
   @override
@@ -157,7 +155,6 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
       super.visitAdjacentStrings(node);
     } else {
       strings.add((node.offset, value));
-      if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
     }
   }
 
@@ -168,32 +165,25 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
         .map((element) => element.value)
         .join(' ');
     strings.add((node.offset, text));
-    if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
     super.visitStringInterpolation(node);
   }
 }
 
-bool _isMachineValueArgument(AstNode node) {
-  final parent = node.parent;
-  if (parent is ArgumentList) {
-    final invocation = parent.parent;
-    return parent.arguments.isNotEmpty &&
-        identical(parent.arguments.first, node) &&
-        invocation is MethodInvocation &&
-        invocation.methodName.name == 'https' &&
-        invocation.target?.toSource() == 'Uri';
-  }
-  if (parent is! NamedExpression || parent.parent is! ArgumentList) {
-    return false;
-  }
-  final arguments = parent.parent as ArgumentList;
-  final invocation = arguments.parent;
-  final name = parent.name.label.name;
-  return (name == 'fragment' &&
-          invocation is MethodInvocation &&
-          invocation.methodName.name == 'replace') ||
-      (name == 'userAgentPackageName' &&
-          invocation is InstanceCreationExpression);
+bool _isMachineDartValue(String source, int offset, String text) {
+  final prefix = source.substring(0, offset);
+  final contextStart = (prefix.length - 160).clamp(0, prefix.length).toInt();
+  final context = prefix.substring(contextStart);
+  final value = text.trim();
+  final isUriHost =
+      RegExp(r'^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$').hasMatch(value) &&
+      RegExp(r'Uri\s*\.\s*https\s*\(\s*$').hasMatch(context);
+  final isUriFragment =
+      value.startsWith('map=17/') &&
+      RegExp(r'\.replace\s*\(\s*fragment\s*:\s*$').hasMatch(context);
+  final isPlatformPackage =
+      value == 'io.github.centerionware.clockrove' &&
+      RegExp(r'userAgentPackageName\s*:\s*$').hasMatch(context);
+  return isUriHost || isUriFragment || isPlatformPackage;
 }
 
 bool _looksLikeCopy(String value) {

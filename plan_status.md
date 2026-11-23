@@ -749,3 +749,12 @@ recognizes those syntax contexts as machine values, with regression fixtures
 that retain checks for visible prose. Android build, native tests and API 24/35
 PDF rendering were skipped after the behavior failures. No local build, test,
 formatter or analysis ran; another exact-head Actions run is required.
+
+Exact-head run [45116071563](https://github.com/centerionware/Clockrove/actions/runs/45116071563)
+on `c6e0fa4` passed generated catalog checks but stopped compiling the audit:
+the pinned Analyzer 13 AST no longer exposes `NamedExpression`. No behavior or
+Android validation ran. The detector now checks source context around AST
+literal offsets for URI hosts/fragments and `userAgentPackageName`, avoiding
+that removed type; regression fixtures continue to assert real visible prose.
+No local build, test, formatter or analysis ran. A fresh exact-head Actions run
+is required.
