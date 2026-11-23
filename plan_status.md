@@ -841,3 +841,13 @@ names that are not generated. The map now uses the existing localized
 `report_pdf_cost_*` resources from all Android catalogs. Native tests and API
 24/35 PDF rendering were skipped after compilation failed. No local build,
 test, formatter or analysis ran; another exact-head run is required.
+
+Exact-head run [45122220513](https://github.com/centerionware/Clockrove/actions/runs/45122220513)
+on `ae0ac93` passed catalog generation, both localization audits,
+formatting, analysis, and the 311-test behavior suite. Android compilation
+then found a missing app-resource import in `InvoiceStore.kt` and three report
+payment resource IDs that were absent from Android catalogs. `InvoiceStore.kt`
+now imports `R`, and the CSV activity labels use existing localized report
+payment-title resources. Native tests and API 24/35 PDF rendering were skipped
+after compilation failed. No local build, test, formatter or analysis ran; a
+fresh exact-head run is required.

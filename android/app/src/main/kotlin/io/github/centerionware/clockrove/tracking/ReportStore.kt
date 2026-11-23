@@ -220,9 +220,9 @@ internal object ReportCsv {
     })
 
     private fun localizedCashActivity(context: Context, kind: String): String = context.getString(when (kind) {
-        "REVERSAL" -> R.string.report_csv_payment_correction
-        "TRANSFER" -> R.string.report_csv_credit_transfer
-        else -> R.string.report_csv_payment
+        "REVERSAL" -> R.string.report_pdf_payment_correction_title
+        "TRANSFER" -> R.string.report_pdf_credit_transfer_title
+        else -> R.string.report_pdf_payment_title
     })
 
     private fun localizedCostCategory(context: Context, category: String): String = context.getString(when (category) {
