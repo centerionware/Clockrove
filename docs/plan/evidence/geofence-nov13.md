@@ -53,14 +53,18 @@ formatting correction, rebased exact-head run
 passed formatting but Analyze stopped on a null-aware collection lint in the
 radius warning. The lint correction passed formatting and Analyze in
 [45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642),
-then Flutter reported 297 passed, 1 failed, and 14 skipped. The remaining
-success-message assertion exposed that immediate timer feedback could be
-off-screen at the top of the scrolled work-sites list. Clock-in outcomes now
-use visible snackbars. The active-timer regression checks the other-job warning,
-no clock-in prompt, and no timer command; the earlier ambiguous text finder is
-specific now. Fresh exact-head validation and owner-device arrival delivery
-remain pending. No native geofence behavior is claimed as fixed by this UI
-change.
+then Flutter reported 296 passed, 2 failed, and 14 skipped. One finder matched
+both the site subtitle and confirmation; the other expected an off-screen
+notice in the active-timer case. The test now targets the confirmation and
+checks the timer snapshot, with no prompt or command for another running job.
+Run [45087185929](https://github.com/centerionware/Clockrove/actions/runs/45087185929)
+passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
+skipped because the success notice was off-screen in the scrolled list.
+Clock-in outcomes now use visible snackbars. Run
+[45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
+stopped at formatting; the exact workflow correction is applied. Fresh
+exact-head validation and owner-device arrival delivery remain pending. No
+native geofence behavior is claimed as fixed by this UI change.
 
 ### Cold-start callback investigation
 

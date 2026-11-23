@@ -91,7 +91,8 @@ registration. The separate cancellation path verified the preexisting local
 job remained intact. No personal backup or location data was used.
 
 PR #79 merged as `4be7b83502da7c66a27cc5058336347f9112c7f4`. Merged-main
-validation is tracked in [Actions 45084756566](https://github.com/centerionware/Clockrove/actions/runs/45084756566).
+validation [45084756566](https://github.com/centerionware/Clockrove/actions/runs/45084756566)
+passed the full API 24/35 workflow.
 This is emulator/CI acceptance of the system-picker flow, not restore
 acceptance on the owner's physical device.
 

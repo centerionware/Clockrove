@@ -59,6 +59,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
+
   Future<bool> _write(Future<TimerOutcome> Function() action) async {
     if (_busy) return false;
     setState(() {
@@ -233,9 +234,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (!mounted) return;
     if (timer.running != null) {
       _feedback(
-        timer.running!.jobId == widget.jobId
-            ? 'This job is already running.'
-            : 'Another job is running. Clockrove will not switch jobs automatically.',
+        timer.running!.jobId == widget.jobId ? 'This job is already running.' : 'Another job is running. Clockrove will not switch jobs automatically.',
       );
       return;
     }
