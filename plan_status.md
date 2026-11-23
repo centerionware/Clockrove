@@ -989,12 +989,12 @@ flow exposed one stale `Task notes and photos` assertion. It now expects the
 catalog title `Task notes & photos`. API 35 was skipped after the API 24
 failure. No local build, test, formatter or analysis ran.
 
-Runs [45204928515](https://github.com/centerionware/Clockrove/actions/runs/45204928515),
-[45210857943](https://github.com/centerionware/Clockrove/actions/runs/45210857943),
-and [45216392006](https://github.com/centerionware/Clockrove/actions/runs/45216392006)
-failed Help navigation: the latest run could not find `PopupMenuButton<String>`.
-The test now pins `/`, asserts `TimerScreen`, and opens the overflow icon. CI
-collects Android suite failures across both APIs, continues independent workflow
-checks, and summarizes failures at the end. Exact-head validation is pending;
-no local build, test, formatter or analysis ran. Localization acceptance stays
-open.
+Run [45241249815](https://github.com/centerionware/Clockrove/actions/runs/45241249815)
+on `867878e` passed localization checks, formatting, analysis, 311 behavior
+tests, Android/release builds, instrumentation assembly, 759 native tests, and
+release tooling. Help navigation failed to find `TimerScreen` on both APIs.
+API 35 quote-PDF extraction left page footers inside a long total, stopping
+preview generation; dependent quote/task-media checks and five viewer cases
+then lacked quote preview files. Help now starts from its Help button with
+English catalogs; PDF assertions remove the full quote footer; CI includes
+failed-suite diagnostics in the final summary. Exact-head validation is pending; no local builds or tests ran, and localization acceptance stays open.

@@ -6,24 +6,30 @@ set -euo pipefail
 source "$GITHUB_WORKSPACE/scripts/ci-adb-install.sh"
 
 declare -a clockrove_validation_failures=()
+declare -a clockrove_validation_failure_logs=()
 
 clockrove_record_validation_failure() {
   local api="$1"
   local label="$2"
   local status="$3"
+  local log_path="${4:-}"
   local failure="API $api: $label (exit $status)"
   clockrove_validation_failures+=("$failure")
+  clockrove_validation_failure_logs+=("$log_path")
 }
 
 clockrove_run_validation_suite() {
   local api="$1"
   local label="$2"
   shift 2
-  if "$@"; then
+  local log_directory="$GITHUB_WORKSPACE/build/device-test-results/api-$api"
+  local log_path="$log_directory/validation-$label.log"
+  mkdir -p "$log_directory"
+  if "$@" 2>&1 | tee "$log_path"; then
     echo "Passed API $api: $label"
   else
     local status=$?
-    clockrove_record_validation_failure "$api" "$label" "$status"
+    clockrove_record_validation_failure "$api" "$label" "$status" "$log_path"
   fi
 }
 
@@ -169,12 +175,14 @@ for clockrove_api in 24 35; do
     cat "$clockrove_benchmark_log"
     if ! grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134601 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
       "$clockrove_benchmark_log"; then
-      clockrove_record_validation_failure "$clockrove_api" backup-crypto-benchmark-marker 1
+      clockrove_record_validation_failure \
+        "$clockrove_api" backup-crypto-benchmark-marker 1 "$clockrove_benchmark_log"
     fi
   else
     clockrove_benchmark_status=$?
     cat "$clockrove_benchmark_log"
-    clockrove_record_validation_failure "$clockrove_api" backup-crypto-benchmark "$clockrove_benchmark_status"
+    clockrove_record_validation_failure "$clockrove_api" backup-crypto-benchmark \
+      "$clockrove_benchmark_status" "$clockrove_benchmark_log"
   fi
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
@@ -227,7 +235,8 @@ for clockrove_api in 24 35; do
   mkdir -p "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures"
   timeout 30 adb -s emulator-5554 pull /sdcard/Android/data/io.github.centerionware.clockrove/files/widget-captures/. "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/widget-captures/" || true
   if [[ "$clockrove_instrumentation_failed" == true ]]; then
-    clockrove_record_validation_failure "$clockrove_api" native-instrumentation 1
+    clockrove_record_validation_failure "$clockrove_api" native-instrumentation 1 \
+      "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
   fi
   # Retain failing documents as well as successful ones before enforcing XML.
   mkdir -p "$GITHUB_WORKSPACE/build/native-ui-preview/pdf-api-$clockrove_api"
@@ -261,7 +270,8 @@ for classname, count in expected.items():
 print('Verified actual Android JUnit results:', root.attrib)
 PY_DEVICE
   then
-    clockrove_record_validation_failure "$clockrove_api" native-test-results-validation 1
+    clockrove_record_validation_failure "$clockrove_api" native-test-results-validation 1 \
+      "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/instrumentation.txt"
   fi
 for clockrove_settings_capture in location-recording-global-off location-recording-global-on; do
   clockrove_require_files "$clockrove_api" settings-captures \
@@ -301,16 +311,13 @@ done
   clockrove_run_validation_suite "$clockrove_api" backup-memory-benchmark \
     bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-memory-benchmark.sh" \
       "$clockrove_api" "$clockrove_validation_apk" "$clockrove_validation_test_apk"
-  if clockrove_run_flutter_integration_test "$clockrove_api" help-navigation \
+  clockrove_run_validation_suite "$clockrove_api" help-navigation \
+    clockrove_run_flutter_integration_test "$clockrove_api" help-navigation \
     'CLOCKROVE_HELP_NAVIGATION version_and_search=true' \
     -- flutter test --no-uninstall --no-pub integration_test/help_navigation_test.dart \
-      -d emulator-5554 --reporter expanded \
-    | tee "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"; then
-    :
-  else
-    clockrove_help_status=$?
-    clockrove_record_validation_failure "$clockrove_api" help-navigation "$clockrove_help_status"
-  fi
+      -d emulator-5554 --reporter expanded
+  cp "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/validation-help-navigation.log" \
+    "$GITHUB_WORKSPACE/build/device-test-results/api-$clockrove_api/help-navigation.txt"
   timeout --kill-after=5s 15s adb -s emulator-5554 emu kill || true
   clockrove_cleanup_emulator
   trap - EXIT
@@ -318,16 +325,34 @@ done
 
 if ((${#clockrove_validation_failures[@]})); then
   echo 'Android validation failures:' >&2
-  printf ' - %s\n' "${clockrove_validation_failures[@]}" >&2
   for clockrove_failure in "${clockrove_validation_failures[@]}"; do
     echo "::error title=Android validation failure::$clockrove_failure"
   done
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
       echo '## Android validation failures'
-      printf -- '- %s\n' "${clockrove_validation_failures[@]}"
+      for index in "${!clockrove_validation_failures[@]}"; do
+        echo
+        printf -- '- **%s**\n' "${clockrove_validation_failures[$index]}"
+        log_path="${clockrove_validation_failure_logs[$index]:-}"
+        if [[ -s "$log_path" ]]; then
+          echo '  Diagnostic output:'
+          echo '  ```text'
+          tail -n 30 "$log_path" | cut -c1-400 | sed 's/^/  /'
+          echo '  ```'
+        else
+          echo '  The check failed before writing diagnostic output.'
+        fi
+      done
     } >> "$GITHUB_STEP_SUMMARY"
   fi
+  for index in "${!clockrove_validation_failures[@]}"; do
+    printf -- '- %s\n' "${clockrove_validation_failures[$index]}" >&2
+    log_path="${clockrove_validation_failure_logs[$index]:-}"
+    if [[ -s "$log_path" ]]; then
+      tail -n 30 "$log_path" | cut -c1-400 >&2
+    fi
+  done
   exit 1
 fi
 

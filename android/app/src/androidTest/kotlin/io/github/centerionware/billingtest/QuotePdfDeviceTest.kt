@@ -39,8 +39,14 @@ class QuotePdfDeviceTest {
                     if (android.os.Build.VERSION.SDK_INT >= 35) {
                         val compact = CopyPdfTextApi35.read(page).filterNot { it.isWhitespace() }
                         assertTrue("Missing QUOTE heading on $name page ${index + 1}", compact.contains("QUOTE"))
-                        text.append(compact.replace("Page${index + 1}·${record.number}·Revision$revision", "")
-                            .replace("QUOTE", "").replace("${record.number}·Revision$revision", ""))
+                        text.append(
+                            compact
+                                .replace(
+                                    "Page${index + 1}·Quote${record.number}·Revision$revision",
+                                    "",
+                                )
+                                .replace("QUOTE", ""),
+                        )
                     }
                     if (index == 0 || index == pdf.pageCount - 1) {
                         val bitmap = Bitmap.createBitmap(1190, 1684, Bitmap.Config.ARGB_8888)

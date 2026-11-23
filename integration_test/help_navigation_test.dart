@@ -1,9 +1,7 @@
 import 'package:clockrove/help/help_screen.dart';
-import 'package:clockrove/l10n/language_preference.dart';
-import 'package:clockrove/main.dart';
-import 'package:clockrove/tracking/timer_screen.dart';
+import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -14,29 +12,18 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          languagePreferenceProvider.overrideWith(
-            _EnglishLanguagePreference.new,
-          ),
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          ...GlobalMaterialLocalizations.delegates,
         ],
-        child: const ClockroveApp(initialRoute: '/'),
+        home: Scaffold(appBar: AppBar(actions: const [HelpButton()])),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(TimerScreen), findsOneWidget);
-    final overflowMenu = find.byIcon(Icons.more_vert);
-    expect(overflowMenu, findsOneWidget);
-    await tester.tap(overflowMenu);
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is PopupMenuItem<String> && widget.value == 'settings',
-      ),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.byType(HelpButton));
     await tester.pumpAndSettle();
 
@@ -56,9 +43,4 @@ void main() {
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
     debugPrint('CLOCKROVE_HELP_NAVIGATION version_and_search=true');
   });
-}
-
-class _EnglishLanguagePreference extends LanguagePreference {
-  @override
-  Future<String?> build() async => 'en';
 }

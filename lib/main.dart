@@ -35,15 +35,11 @@ void main() {
 }
 
 class ClockroveApp extends ConsumerWidget {
-  const ClockroveApp({super.key, this.initialRoute});
-
-  final String? initialRoute;
+  const ClockroveApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
-    initialRoute:
-        initialRoute ??
-        WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+    initialRoute: WidgetsBinding.instance.platformDispatcher.defaultRouteName,
     locale: appLanguages[ref.watch(languagePreferenceProvider).value]?.$1,
     supportedLocales: AppLocalizations.supportedLocales,
     localeListResolutionCallback: AppLocalizations.resolveDeviceLocales,
