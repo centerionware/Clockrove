@@ -94,6 +94,8 @@ internal object GeofenceStore {
         }
         if (previous != null && previous.jobId != site.jobId) return "SITE_JOB_IMMUTABLE"
         val unchanged = previous?.copy(registrationKey = "") == site.copy(registrationKey = "")
+        val monitoringChanged = previous == null || previous.copy(name = site.name, registrationKey = "") !=
+            site.copy(registrationKey = "")
         val fix = currentFix?.takeIf { validCurrentFix(site, it, now) }
         if (unchanged && fix == null) return null
         val active = policies(db).firstOrNull { it.settings.jobId == site.jobId }?.settings?.enabled == true
@@ -112,7 +114,7 @@ internal object GeofenceStore {
             db, "work_sites", "site", BusinessSchema.siteColumns, now,
             jobColumn = "job_id", where = "id=?", args = arrayOf(site.id),
         )
-        if (!unchanged || fix != null) {
+        if (monitoringChanged || fix != null) {
             invalidate(db, site.jobId, now)
         }
         if (fix != null) seedMembershipFromCurrentFix(db, site, fix)

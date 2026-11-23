@@ -29,9 +29,14 @@ Statuses describe evidence, not intent.
   site could not establish the baseline for a running session's departure. The
   in-progress correction passes the measured fix to native state, seeds
   membership only when accuracy supports the classification, creates no session
-  or location-history point, and stores no raw fix in command receipts. It also
-  adds accuracy, active-session and no-false-departure regressions. Actions must
-  validate the new exact head; physical callback delivery remains unverified.
+  or location-history point, and stores the fix's accuracy/time in a digest in
+  the retry receipt. It also adds accuracy, active-session and no-false-departure
+  regressions. Run
+  [45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
+  passed formatting, Analyze, Flutter tests and Android builds, then found one
+  native regression: label-only site rename incorrectly rotated the fence key.
+  The condition now preserves the previous behavior; the corrected-head run and
+  physical callback delivery are still pending.
 - PR #84's docs-only exact-head validation
   [45095882626](https://github.com/centerionware/Clockrove/actions/runs/45095882626)
   passed, but does not validate the code now being prepared. The evidence is being

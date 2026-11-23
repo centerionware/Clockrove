@@ -101,13 +101,20 @@ included while saving a site during an already-running session, the old flow
 discarded that fix as transition state. The later first exit therefore could
 not qualify as a known inside-to-outside transition. The follow-up now passes
 the measured setup fix to the native repository and seeds membership only when
-the fix's accuracy supports it. It records no location-history point, does not
-start a timer, and stores only a digest of the fix in the command receipt. A
+the fix's accuracy supports it. It records no session location point and does
+not start a timer. The fix's accuracy and timestamp are bound into the command
+receipt via a digest; its coordinates remain the saved site center. A
 weak-accuracy fix remains `UNKNOWN`; it cannot create a false departure.
 Registration still reconciles after configuration changes, and the Retry
 control remains the recovery action when Android reports monitoring
-unavailable. Native and Flutter regressions are added; fresh GitHub Actions
-validation and owner-device departure acceptance are pending.
+unavailable. The first code run stopped at Dart formatting; the exported
+correction was applied. Follow-up run
+[45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
+passed formatting, Analyze, Flutter tests and Android builds, then reported 757
+native tests with one failure: a label-only site rename rotated its geofence
+key. The invalidation condition was corrected to preserve that pre-existing
+behavior; the corrected head's Actions run and owner-device departure
+acceptance are pending.
 
 ### Cold-start callback investigation
 
