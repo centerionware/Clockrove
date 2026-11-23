@@ -219,6 +219,12 @@ void main() {
     await _saveSiteFromCurrentLocation(tester);
     expect(timer.snapshotCalls, 1);
     expect(timer.value.running!.jobId, 'other-job');
+    expect(
+      find.text(
+        'Another job is running. Clockrove will not switch jobs automatically.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Clock in at this site now?'), findsNothing);
     expect(timer.calls, isEmpty);
   });

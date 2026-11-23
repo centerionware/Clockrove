@@ -22,12 +22,13 @@ Statuses describe evidence, not intent.
   passed formatting, then Analyze stopped on one null-aware collection lint;
   that source correction is pushed. Run
   [45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642)
-  passed formatting and Analyze, then reported two Flutter assertion failures:
-  one finder matched two visible arrival explanations, and the other asserted
-  UI notice text while checking the active-timer guard. The first finder is now
-  specific; the second asserts the fresh snapshot and absence of a clock-in
-  prompt or timer command. Exact-head validation and another physical arrival
-  check remain pending.
+  passed formatting and Analyze; its Flutter suite had 297 passed, 1 failed,
+  and 14 skipped. The remaining success-message assertion showed that immediate
+  timer feedback could sit off-screen at the top of the scrolled work-sites
+  list. Clock-in outcomes now use visible snackbars, and the active-timer test
+  checks that the other job warning appears without a prompt or timer command.
+  The initial ambiguous finder is also specific now. Fresh exact-head
+  validation and another physical arrival check remain pending.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
   are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)

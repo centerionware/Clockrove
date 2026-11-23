@@ -53,6 +53,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     'STALE_STATE' => 'Work changed while you were editing. Review the refreshed details and try again.',
     _ => 'This change could not be saved. Review the refreshed details and try again.',
   };
+  void _feedback(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
   Future<bool> _write(Future<TimerOutcome> Function() action) async {
     if (_busy) return false;
     setState(() {
@@ -219,17 +225,15 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     try {
       timer = await ref.read(timerApiProvider).snapshot();
     } catch (_) {
-      if (mounted) {
-        setState(
-          () => _notice = 'The current timer could not be checked. Use the Timer screen to clock in manually.',
-        );
-      }
+      _feedback(
+        'The current timer could not be checked. Use the Timer screen to clock in manually.',
+      );
       return;
     }
     if (!mounted) return;
     if (timer.running != null) {
-      setState(
-        () => _notice = timer.running!.jobId == widget.jobId
+      _feedback(
+        timer.running!.jobId == widget.jobId
             ? 'This job is already running.'
             : 'Another job is running. Clockrove will not switch jobs automatically.',
       );
@@ -260,8 +264,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (confirmed != true || !mounted) return;
     final actions = ref.read(timerActionsProvider);
     if (actions.working || actions.hasPending) {
-      setState(
-        () => _notice = 'Another timer action is still being confirmed. Check the Timer screen before starting work.',
+      _feedback(
+        'Another timer action is still being confirmed. Check the Timer screen before starting work.',
       );
       return;
     }
@@ -271,15 +275,15 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     if (!mounted) return;
     final outcome = ref.read(timerActionsProvider);
     if (outcome.pending != null || outcome.pendingJob != null) {
-      setState(
-        () => _notice = 'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
+      _feedback(
+        'Clock-in could not be confirmed. Open the Timer screen to review and retry the same action.',
       );
     } else if (outcome.conflict != null) {
-      setState(
-        () => _notice = 'Work changed before clock-in completed. Refresh the Timer screen and try again.',
+      _feedback(
+        'Work changed before clock-in completed. Refresh the Timer screen and try again.',
       );
     } else {
-      setState(() => _notice = 'Clocked in to ${widget.jobName}.');
+      _feedback('Clocked in to ${widget.jobName}.');
     }
     ref.invalidate(timerSnapshotProvider);
     ref.invalidate(automationSnapshotProvider(widget.jobId));
