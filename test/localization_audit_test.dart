@@ -290,9 +290,8 @@ flow.write(
     for (final path in nativeSurfaces) {
       final source = File(path).readAsStringSync();
       surfaceFindings.addAll(
-        auditKotlinPresentation(source).map(
-          (finding) => '$path:${finding.line}: ${finding.text}',
-        ),
+        auditKotlinPresentation(source)
+            .map((finding) => '$path:${finding.line}: ${finding.text}'),
       );
     }
 
@@ -302,9 +301,8 @@ flow.write(
       reportStore.indexOf('internal object ReportCsv {'),
     );
     surfaceFindings.addAll(
-      auditKotlinPresentation(reportCsv).map(
-        (finding) => 'ReportCsv:${finding.line}: ${finding.text}',
-      ),
+      auditKotlinPresentation(reportCsv)
+          .map((finding) => 'ReportCsv:${finding.line}: ${finding.text}'),
     );
 
     final xmlFiles = Directory('android/app/src/main')
@@ -313,9 +311,8 @@ flow.write(
         .where((file) => file.path.endsWith('.xml'));
     for (final file in xmlFiles) {
       surfaceFindings.addAll(
-        auditAndroidPresentationXml(file.readAsStringSync()).map(
-          (finding) => '${file.path}:${finding.line}: ${finding.text}',
-        ),
+        auditAndroidPresentationXml(file.readAsStringSync())
+            .map((finding) => '${file.path}:${finding.line}: ${finding.text}'),
       );
     }
     expect(surfaceFindings, isEmpty, reason: surfaceFindings.join('\n'));

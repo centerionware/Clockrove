@@ -795,3 +795,11 @@ native tests and API 24/35 PDF rendering were skipped. The Flutter and Android
 surface tests now aggregate findings across all scanned files, so the next
 exact-head run reports the remaining failures together. No local build, test,
 formatter or analysis ran; a fresh Actions run is required.
+
+Exact-head run [45118887120](https://github.com/centerionware/Clockrove/actions/runs/45118887120)
+on `69f625c` passed generated catalog checks and both localization audits,
+then stopped at clean formatting. The formatter exported three wrapping
+corrections in the aggregated Android surface scan; those exact changes are
+applied. Analyze, behavior tests and all Android build/device/PDF gates were
+skipped. No local build, test, formatter or analysis ran; a fresh exact-head
+Actions run is required.
