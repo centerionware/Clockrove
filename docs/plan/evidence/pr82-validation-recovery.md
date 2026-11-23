@@ -38,3 +38,13 @@ navigation, falls back to the visible settings tile when semantics are split,
 strips repeated quote headers from extracted text, and applies the formatter
 correction. Exact-head Actions remains the acceptance gate. No local build or
 test was run.
+
+The exact PR head `ce58783` passed run [45275793641](https://github.com/centerionware/Clockrove/actions/runs/45275793641).
+Merged-main run [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562)
+on `e2a0d18` failed only the API 24 backup-picker journey. Its screenshot shows
+DocumentsUI in the separate, empty Downloads provider while the fixture was
+shell-pushed under `/sdcard/Download/Clockrove-CI-Backup`; the test had silently
+treated that provider root as shared storage. The test now retries revealing
+the internal storage root, rejects the Downloads-provider fallback, and always
+opens the shared `Download/Clockrove-CI-Backup` path. Exact-main validation is
+pending. No local build or test was run.
