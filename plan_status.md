@@ -1,7 +1,7 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-22. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-23. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
 ## November 22 release readiness update
@@ -32,8 +32,16 @@ Statuses describe evidence, not intent.
   skipped because the successful clock-in notice was off-screen in the scrolled
   list. Clock-in outcomes now use snackbars. Run
   [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
-  stopped at formatting; the exact workflow correction is applied. Fresh
-  exact-head validation and another physical arrival check remain pending.
+  stopped at formatting; the exact workflow correction is applied. Exact-head
+  validation [45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
+  passed. PR #83 merged to main as `e126bf1`; merged-main validation
+  [45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
+  passed. Automatic internal Play delivery
+  [45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
+  completed successfully. The in-place setup prompt addresses clock-in while
+  already at a site; CI does not prove delivery of later native arrival
+  callbacks. The owner's 15 m site still needs physical-device acceptance, and
+  installation from the internal track is unverified.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
   are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
