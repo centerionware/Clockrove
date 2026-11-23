@@ -738,3 +738,14 @@ catalogs, and the audit treats fully qualified `io.github` class names as
 machine identifiers. The next exact-head Actions run must pass before this
 localization milestone can be marked complete. No local build, test, formatter
 or analysis ran.
+
+Exact-head run [45115331773](https://github.com/centerionware/Clockrove/actions/runs/45115331773)
+on `a2f29f5` passed generated catalog checks, both localization audits,
+formatting and analysis, then reported 306 passing tests, 2 failures and 14
+skips. Both remaining failures were audit false positives: URI host/fragment
+and Android package-name arguments in the site map picker, and invoice ID
+regular-expression patterns in the Android document provider. The audit now
+recognizes those syntax contexts as machine values, with regression fixtures
+that retain checks for visible prose. Android build, native tests and API 24/35
+PDF rendering were skipped after the behavior failures. No local build, test,
+formatter or analysis ran; another exact-head Actions run is required.

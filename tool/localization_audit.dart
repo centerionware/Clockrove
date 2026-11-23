@@ -68,7 +68,8 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   parsed.unit.accept(visitor);
   return [
     for (final (offset, text) in visitor.strings)
-      if (_looksLikeCopy(text))
+      if (!visitor.machineValueOffsets.contains(offset) &&
+          _looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
 }
@@ -91,6 +92,10 @@ Iterable<({int line, String text})> auditKotlinPresentation(
     }
     for (final match in _kotlinString.allMatches(line)) {
       final text = match[1]!;
+      final regexPattern = line
+          .substring(0, match.start)
+          .trimRight()
+          .endsWith('Regex(');
       final staticText = text.replaceAll(
         RegExp(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*'),
         ' ',
@@ -114,6 +119,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           line.contains('setClassName(') ||
           line.contains('createTempFile(');
       if (!localizedResourceLookupFragment &&
+          !regexPattern &&
           !machineValue &&
           !_machineDatePattern.hasMatch(text) &&
           _looksLikeCopy(staticText)) {
@@ -136,10 +142,12 @@ Iterable<({int line, String text})> auditAndroidPresentationXml(
 
 class _StringVisitor extends RecursiveAstVisitor<void> {
   final strings = <(int, String)>[];
+  final machineValueOffsets = <int>{};
 
   @override
   void visitSimpleStringLiteral(SimpleStringLiteral node) {
     strings.add((node.offset, node.value));
+    if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
   }
 
   @override
@@ -149,6 +157,7 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
       super.visitAdjacentStrings(node);
     } else {
       strings.add((node.offset, value));
+      if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
     }
   }
 
@@ -159,8 +168,32 @@ class _StringVisitor extends RecursiveAstVisitor<void> {
         .map((element) => element.value)
         .join(' ');
     strings.add((node.offset, text));
+    if (_isMachineValueArgument(node)) machineValueOffsets.add(node.offset);
     super.visitStringInterpolation(node);
   }
+}
+
+bool _isMachineValueArgument(AstNode node) {
+  final parent = node.parent;
+  if (parent is ArgumentList) {
+    final invocation = parent.parent;
+    return parent.arguments.isNotEmpty &&
+        identical(parent.arguments.first, node) &&
+        invocation is MethodInvocation &&
+        invocation.methodName.name == 'https' &&
+        invocation.target?.toSource() == 'Uri';
+  }
+  if (parent is! NamedExpression || parent.parent is! ArgumentList) {
+    return false;
+  }
+  final arguments = parent.parent as ArgumentList;
+  final invocation = arguments.parent;
+  final name = parent.name.label.name;
+  return (name == 'fragment' &&
+          invocation is MethodInvocation &&
+          invocation.methodName.name == 'replace') ||
+      (name == 'userAgentPackageName' &&
+          invocation is InstanceCreationExpression);
 }
 
 bool _looksLikeCopy(String value) {

@@ -22,6 +22,20 @@ void example(String name) {
     ]);
   });
 
+  test('URI and platform identifiers are not presentation copy', () {
+    final findings = auditDart('lib/map.dart', r'''
+void openMap() {
+  final uri = Uri.https('www.openstreetmap.org', '/', {})
+      .replace(fragment: 'map=17/$latitude/$longitude');
+  TileLayer(userAgentPackageName: 'io.github.centerionware.clockrove');
+  final message = 'Open this location in your browser';
+}
+''');
+    expect(findings.map((finding) => finding.text.trim()), [
+      'Open this location in your browser',
+    ]);
+  });
+
   test('Kotlin protocol values are excluded while prose is still audited', () {
     final findings = auditKotlinPresentation(r'''
 val channel = "clockrove/documents/v1"
@@ -31,6 +45,14 @@ val quote = call.method.endsWith("Quote")
 flow.write("Document copy")
 ''');
     expect(findings.map((finding) => finding.text), ['Document copy']);
+  });
+
+  test('Kotlin regular expression patterns are not presentation copy', () {
+    final findings = auditKotlinPresentation(r'''
+val invoiceId = Regex("[A-Za-z0-9_-]{1,140}")
+val message = "Invoice is ready"
+''');
+    expect(findings.map((finding) => finding.text), ['Invoice is ready']);
   });
 
   test('resource lookups inside Kotlin interpolation are not literal copy', () {
