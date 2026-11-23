@@ -9,14 +9,11 @@ import 'automation_api.dart';
 import 'site_map_picker.dart';
 
 class SiteEditResult {
-  const SiteEditResult(
-    this.site, {
-    this.remove = false,
-    this.usedCurrentLocation = false,
-  });
+  const SiteEditResult(this.site, {this.remove = false, this.currentPosition});
   final WorkSite site;
   final bool remove;
-  final bool usedCurrentLocation;
+  final SitePosition? currentPosition;
+  bool get usedCurrentLocation => currentPosition != null;
 }
 
 class SiteEditor extends ConsumerStatefulWidget {
@@ -186,7 +183,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
           double.parse(_radius.text.trim()),
           _enabled,
         ),
-        usedCurrentLocation: _position != null,
+        currentPosition: _position,
       ),
     );
   }

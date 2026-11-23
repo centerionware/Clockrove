@@ -38,7 +38,8 @@ class GeofencePolicyPersistenceTest {
             (it.toInt() and 255).toString(16).padStart(2, '0')
         }
     }
-    private fun saveSite(site: GeofenceStore.Site) = repository.saveSite("config-${counter++}", repository.snapshot().version, site)
+    private fun saveSite(site: GeofenceStore.Site, currentFix: GeofenceStore.CurrentFix? = null) =
+        repository.saveSite("config-${counter++}", repository.snapshot().version, site, currentFix)
     private fun settings(value: GeofenceStore.Settings) = repository.saveAutomation("settings-${counter++}", repository.snapshot().version, value)
     private fun configure(jobId: String = job, ids: List<String> = listOf("site"), grace: Int = 30, departure: Boolean = true) {
         ids.forEach { assertNull(saveSite(GeofenceStore.Site(it, jobId, "Synthetic $it", 10.0, 20.0)).conflict) }
@@ -84,6 +85,73 @@ class GeofencePolicyPersistenceTest {
         event("qualified-exit", OUTSIDE, 1500, "site")
         assertFalse(repository.automationPolicies().single().suppressed)
         assertNotNull(event("qualified-reentry", INSIDE, 1600, "site").startedSessionId)
+    }
+
+    @Test fun currentFixSavedDuringWorkSeedsPresenceSoExitStartsGrace() {
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
+        val remote = GeofenceStore.Site("remote", job, "Synthetic remote", 11.0, 21.0)
+        assertNull(saveSite(site).conflict)
+        assertNull(saveSite(remote).conflict)
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 1)).conflict)
+        assertNull(manualStart("manual-before-update", 1100).conflict)
+        val session = repository.snapshot().running!!.id
+
+        clock = 1300
+        val updatedSite = site.copy(radiusMeters = 200.0)
+        val fix = GeofenceStore.CurrentFix(10.0, 20.0, 12.0, 1250)
+        assertNull(repository.saveSite("save-current-site", repository.snapshot().version, updatedSite, fix).conflict)
+        assertEquals(session, repository.snapshot().running!!.id)
+        assertEquals(INSIDE, repository.automationPolicies().single().lastPresence)
+        assertFalse(repository.automationPolicies().single().armed)
+
+        event("exit-after-current-fix", OUTSIDE, 1400, "site")
+        val pending = repository.pendingDeparture()!!
+        assertEquals(TimerRepository.Departure(session, 1400, 61_400), pending)
+        clock = pending.deadlineUtcMillis
+        assertEquals(TimerRepository.DepartureResult.FINALIZED,
+            repository.finalizeDeparture(session, clock, pending.deadlineUtcMillis))
+        assertNull(repository.snapshot().running)
+        SQLiteDatabase.openOrCreateDatabase(
+            RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db"), null,
+        ).use { db ->
+            db.rawQuery("SELECT end_ms FROM sessions WHERE id=?", arrayOf(session)).use {
+                assertTrue(it.moveToFirst()); assertEquals(1400, it.getLong(0))
+            }
+            db.rawQuery("SELECT fingerprint FROM commands", null).use { rows ->
+                while (rows.moveToNext()) assertFalse(rows.getString(0).contains("1250"))
+            }
+        }
+    }
+
+    @Test fun currentFixSeedsInsideButStillRequiresExitThenEntryForAutoStart() {
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
+        assertNull(saveSite(site).conflict)
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 1)).conflict)
+        clock = 1300
+        assertNull(repository.saveSite("save-current-idle", repository.snapshot().version,
+            site.copy(radiusMeters = 200.0), GeofenceStore.CurrentFix(10.0, 20.0, 12.0, 1250)).conflict)
+        assertNull(repository.snapshot().running)
+        assertFalse(repository.automationPolicies().single().armed)
+        assertNull(event("initial-inside-after-fix", INSIDE, 1350, "site").startedSessionId)
+        assertNull(event("exit-after-fix", OUTSIDE, 1400, "site").startedSessionId)
+        assertNull(repository.snapshot().running)
+        assertNotNull(event("new-entry-after-fix", INSIDE, 1500, "site").startedSessionId)
+    }
+
+    @Test fun inaccurateCurrentFixCannotCreateFalseDepartureBaseline() {
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0, 50.0)
+        assertNull(saveSite(site).conflict)
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 1)).conflict)
+        assertNull(manualStart("manual-before-inaccurate-fix", 1100).conflict)
+        clock = 1300
+        assertNull(repository.saveSite("save-inaccurate-current-site", repository.snapshot().version,
+            site.copy(radiusMeters = 60.0), GeofenceStore.CurrentFix(10.0, 20.0, 100.0, 1250)).conflict)
+        assertEquals(UNKNOWN, repository.automationPolicies().single().lastPresence)
+
+        event("exit-after-inaccurate-fix", OUTSIDE, 1400, "site")
+
+        assertNull(repository.pendingDeparture())
+        assertNotNull(repository.snapshot().running)
     }
 
     @Test fun overlappingSitesUseLatestExitAndKnownTimelyReentryWinsOverDelayedWake() {

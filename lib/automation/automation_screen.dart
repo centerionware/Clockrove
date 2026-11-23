@@ -209,7 +209,13 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final saved = await _write(
       () => result.remove
           ? api.removeSite(id, state.version, result.site.id)
-          : api.saveSite(id, state.version, widget.jobId, result.site),
+          : api.saveSite(
+              id,
+              state.version,
+              widget.jobId,
+              result.site,
+              currentFix: result.currentPosition,
+            ),
     );
     if (saved &&
         !result.remove &&
@@ -477,7 +483,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     Text(
                       value.reviews.isNotEmpty
                           ? 'Automatic departure is paused while this work needs review. The timer keeps running; you can still clock out manually.'
-                          : 'This work is provisional. Returning before grace ends keeps the timer running. Otherwise, recorded work ends at departure. Android may handle this later.',
+                          : 'This work is provisional. Grace starts after Android confirms the exit. Returning before it ends keeps the timer running; otherwise, recorded work ends at departure. Android may handle this later.',
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -631,7 +637,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Departure grace'),
-                      subtitle: Text('${value.settings.graceMinutes} minutes'),
+                      subtitle: Text(
+                        '${value.settings.graceMinutes} minutes · Starts after Android confirms the exit',
+                      ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       enabled: !_locked && value.settings.enabled,
                       onTap: () => _grace(value),

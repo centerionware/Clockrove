@@ -62,9 +62,70 @@ passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
 skipped because the success notice was off-screen in the scrolled list.
 Clock-in outcomes now use visible snackbars. Run
 [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
-stopped at formatting; the exact workflow correction is applied. Fresh
-exact-head validation and owner-device arrival delivery remain pending. No
-native geofence behavior is claimed as fixed by this UI change.
+stopped at formatting; the exact workflow correction was applied. Final
+rebased exact-head validation
+[45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
+passed the full Validate workflow. PR #83 merged to main as `e126bf1`;
+merged-main validation
+[45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
+passed. Automatic internal Play delivery
+[45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
+completed successfully. The in-place setup prompt addresses clock-in while
+already at a site. CI does not establish native callback delivery at the
+owner's 15 m site; that physical-device check remains pending. No native
+geofence behavior is claimed as fixed by this UI change. Installation from the
+internal track must still be confirmed on the owner's device.
+
+### November 23 departure follow-up
+
+The owner clarified that automatic arrival failed at the monitored job, so they
+started it manually and installed the in-place setup patch while still clocked
+in. They later left without an automatic clock-out. The site used a 1-minute
+grace; after updating the app, the owner changed its radius from 15 m to 150 m
+and waited about 20 minutes after leaving, seeing the GPS status icon twice.
+The site location was unchanged; 15 m had been set manually before this edit.
+Settings and location permissions were already enabled, but the owner had to
+tap **Retry site monitoring**. The previously reported current-location save
+was part of the failed-arrival flow before the app update; it cannot establish
+that the updated app received a fresh fix. No fresh fix was reported with the
+later radius-only edit, so that edit does not exercise the fix now under review.
+The report does not include the health state after retry or native transition
+logs. A flashing GPS icon is not proof that Android delivered an exit event.
+
+The owner separately created a 150 m site around home. Arrival eventually
+started the timer, later in the approach than the full radius. They manually
+stopped it while still at home, so that is not a departure test. The 1-minute
+grace starts after Android reports a qualified exit; it does not poll for or
+guarantee an exit callback. Android recommends 100–150 m for more reliable
+transitions and may delay background delivery.
+
+Source tracing identified a missing departure baseline: every site edit rotates
+registration keys and resets old membership to `UNKNOWN`. When a current fix is
+included while saving a site during an already-running session, the old flow
+discarded that fix as transition state. The later first exit therefore could
+not qualify as a known inside-to-outside transition. The follow-up now passes
+the measured setup fix to the native repository and seeds membership only when
+the fix's accuracy supports it. It records no session location point and does
+not start a timer. The fix's accuracy and timestamp are bound into the command
+receipt via a digest; its coordinates remain the saved site center. A
+weak-accuracy fix remains `UNKNOWN`; it cannot create a false departure.
+Registration still reconciles after configuration changes, and the Retry
+control remains the recovery action when Android reports monitoring
+unavailable. The first code run stopped at Dart formatting; the exported
+correction was applied. Follow-up run
+[45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
+passed formatting, Analyze, Flutter tests and Android builds, then reported 757
+native tests with one failure: a label-only site rename rotated its geofence
+key. The invalidation condition was corrected to preserve that pre-existing
+behavior. Corrected exact-head Validate run
+[45104682175](https://github.com/centerionware/Clockrove/actions/runs/45104682175)
+passed on `7b64341`: 757 native tests with zero failures, errors or skips;
+40 actual Android tests on each of API 24 and 35 with zero failures, errors or
+skips; plus formatting, Analyze, Flutter tests, Android builds and release Java.
+The owner's 15 m to 150 m radius-only edit does not exercise this code path: the
+location was not refreshed after the app update. Install the fixed build and
+save a fresh current-location fix at the site before using the owner device to
+check departure. Physical geofence callback delivery remains unverified.
 
 ### Cold-start callback investigation
 

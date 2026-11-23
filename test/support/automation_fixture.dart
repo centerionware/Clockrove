@@ -30,6 +30,7 @@ class FixtureAutomationApi extends AutomationApi {
 
   int positionRequests = 0;
   int positionCancellations = 0;
+  SitePosition? savedCurrentFix;
   Future<SitePosition> Function()? positionResult;
   @override
   Future<SitePosition> currentPosition() async {
@@ -87,10 +88,12 @@ class FixtureAutomationApi extends AutomationApi {
     String id,
     int version,
     String jobId,
-    WorkSite site,
-  ) => _commit(id, version, () {
+    WorkSite site, {
+    SitePosition? currentFix,
+  }) => _commit(id, version, () {
     sites.removeWhere((value) => value.id == site.id);
     sites.add(site);
+    savedCurrentFix = currentFix;
   });
   @override
   Future<TimerOutcome> removeSite(String id, int version, String siteId) =>

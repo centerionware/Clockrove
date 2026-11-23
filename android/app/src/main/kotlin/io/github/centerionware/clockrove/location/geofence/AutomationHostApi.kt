@@ -99,7 +99,7 @@ class AutomationHostApi internal constructor(private val activity: Activity, mes
                                     requireNotNull(call.argument<String>("siteId")), requireNotNull(call.argument<String>("jobId")),
                                     requireNotNull(call.argument<String>("name")), requireNotNull(call.argument<Number>("latitude")).toDouble(),
                                     requireNotNull(call.argument<Number>("longitude")).toDouble(), requireNotNull(call.argument<Number>("radius")).toDouble(),
-                                    requireNotNull(call.argument<Boolean>("enabled"))))
+                                    requireNotNull(call.argument<Boolean>("enabled"))), currentFix(call.arguments))
                                 "removeSite" -> repository.removeSite(id, version, requireNotNull(call.argument<String>("siteId")))
                                 "acceptReview" -> repository.acceptGeofenceReview(id, version, requireNotNull(call.argument<String>("jobId")))
                                 else -> repository.saveAutomation(id, version, GeofenceStore.Settings(
@@ -133,6 +133,15 @@ class AutomationHostApi internal constructor(private val activity: Activity, mes
         return true
     }
     private fun precise() = activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    private fun currentFix(arguments: Any?): GeofenceStore.CurrentFix? {
+        val args = arguments as? Map<*, *> ?: return null
+        val raw = args["currentFix"] ?: return null
+        val values = raw as? Map<*, *> ?: throw IllegalArgumentException("INVALID_SITE_FIX")
+        fun number(key: String) = values[key] as? Number ?: throw IllegalArgumentException("INVALID_SITE_FIX")
+        val measured = number("measured").toLong()
+        return GeofenceStore.CurrentFix(number("latitude").toDouble(), number("longitude").toDouble(),
+            number("accuracy").toDouble(), measured)
+    }
     private fun permissions(): Map<String, Any?> = mapOf(
         "precise" to precise(), "background" to AndroidGeofencePlatform.hasPermission(activity),
         "backgroundLabel" to if (Build.VERSION.SDK_INT >= 30) activity.packageManager.backgroundPermissionOptionLabel.toString() else "Allow all the time",

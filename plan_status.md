@@ -1,39 +1,63 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-22. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-23. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
+
+## November 23 geofence departure follow-up
+
+- PR #83, the explicit in-place clock-in flow, merged to main as
+  `e126bf1c1119ad6ea968bfb2be0dd1c12d6fdf8d`. Exact-head validation
+  [45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
+  and merged-main validation
+  [45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
+  passed. Internal Play delivery
+  [45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
+  submitted the bundle; this does not prove installation or device geofence
+  delivery.
+- The owner reports that automatic arrival failed at a job, so they clocked in
+  manually and updated the app while still working. Later, after leaving, the
+  timer did not clock out. They had a 1-minute grace, raised the radius to 150 m,
+  waited about 20 minutes and tapped **Retry site monitoring**. Automation and
+  location permissions were already enabled. They saw the GPS icon twice; this
+  does not establish that Android delivered a geofence exit. A separate 150 m
+  home test did auto-start after a delay, then was manually stopped while still
+  at home, so it did not test departure. The owner clarified the 15 m to 150 m
+  radius change followed the app update. The reported current-location save was
+  before that update; the later edit kept the site location and changed only
+  radius. No fresh fix was reported with that edit, so it does not exercise this
+  follow-up. Monitoring health after retry remains unconfirmed.
+- Source tracing found that site edits rotate registration keys and reset
+  membership to `UNKNOWN`. Before this follow-up, a current fix saved with a
+  site could not establish the baseline for a running session's departure. The
+  in-progress correction passes the measured fix to native state, seeds
+  membership only when accuracy supports the classification, creates no session
+  or location-history point, and stores the fix's accuracy/time in a digest in
+  the retry receipt. It also adds accuracy, active-session and no-false-departure
+  regressions. Run
+  [45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
+  passed formatting, Analyze, Flutter tests and Android builds, then found one
+  native regression: label-only site rename incorrectly rotated the fence key.
+  The condition now preserves the previous behavior. Corrected exact-head
+  Validate run
+  [45104682175](https://github.com/centerionware/Clockrove/actions/runs/45104682175)
+  passed on `7b64341`: formatting, Analyze, Flutter tests, Android build and
+  release Java, 757 native tests with zero failures/errors/skips, and 40 actual
+  Android tests on each of API 24 and API 35 with zero failures/errors/skips.
+  Owner-device callback acceptance is still pending. The earlier docs-only
+  exact-head run [45095882626](https://github.com/centerionware/Clockrove/actions/runs/45095882626)
+  did not validate this code.
 
 ## November 22 release readiness update
 
 - Geofence regression: [PR #77](https://github.com/centerionware/Clockrove/pull/77)
-  merged as `abe6f5f`; its [native validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
-  and [merged-main validation](https://github.com/centerionware/Clockrove/actions/runs/45028310174)
-  passed. Internal delivery [45035168876](https://github.com/centerionware/Clockrove/actions/runs/45035168876)
-  was accepted, but the owner now reports automatic clock-in still failed at
-  the work site. A 15 m radius is below Android's 100–150 m guidance. Saving a
-  current location while already there resets entry detection and waits for a
-  confirmed exit and fresh entry; the current flow did not offer a direct
-  clock-in. Follow-up UI, Help and test changes are in
-  [PR #83](https://github.com/centerionware/Clockrove/pull/83). Its first
-  Actions run found formatting differences, corrected from the workflow
-  artifact. Rebased run
-  [45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
-  passed formatting, then Analyze stopped on one null-aware collection lint;
-  that source correction is pushed. Run
-  [45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642)
-  passed formatting and Analyze, then reported 296 passed, 2 failed, and 14
-  skipped. One finder matched both the site subtitle and confirmation; the
-  other expected an off-screen notice in the active-timer case. The test now
-  targets the confirmation and checks the timer snapshot, with no prompt or
-  command for another running job. Run
-  [45087185929](https://github.com/centerionware/Clockrove/actions/runs/45087185929)
-  passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
-  skipped because the successful clock-in notice was off-screen in the scrolled
-  list. Clock-in outcomes now use snackbars. Run
-  [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
-  stopped at formatting; the exact workflow correction is applied. Fresh
-  exact-head validation and another physical arrival check remain pending.
+  merged as `abe6f5f`; its native and merged-main validation passed. The
+  subsequent in-place setup UI, Help and test changes are in
+  [PR #83](https://github.com/centerionware/Clockrove/pull/83), now merged as
+  `e126bf1`. Earlier failed formatting, lint and widget-test runs were corrected
+  on the way to the passing exact-head, main and internal-delivery runs recorded
+  above. Android's 100–150 m guidance informs the 150 m default; smaller saved
+  radii remain supported and may miss transitions.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
   are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
@@ -318,7 +342,7 @@ there.
 | Email invoice handoff always reports failure | Source fix implemented; full Android/device acceptance pending | Email used `ACTION_SEND` with an `ACTION_SENDTO` selector while attaching a PDF; changed it to attachment-capable `ACTION_SEND`. The validated source head f088d0e passed formatting, analysis, Flutter behavior, Android build and native test steps; the complete device stage has not passed. Owner device acceptance remains required. |
 | Report map is blank with 49 recorded samples | Root cause reproduced in API-24 Actions; source fix and API-24/35 rerun pending | Run 43579662428 captured the actual red-screen exception: `Unsupported operation: Cannot modify unmodifiable map`. `NetworkTileProvider` receives a `const` headers map, then flutter_map mutates it to inject the package User-Agent. The provider now creates a fresh mutable headers map. The same run added a real job → report → map journey with 49 synthetic persisted samples and deterministic failed-tile widget coverage, but the new device journey stopped at the reproduced exception. A later WidgetHost assertion also failed; its relationship is unconfirmed. The map journey now closes its activities and removes its synthetic job/session in `finally`. Need exact-head Actions on API 24/35 and inspect captured maps before claiming repair. |
 | Manual clock-in does not record GPS | Source fix implemented; full Android/device acceptance pending | TimerHostApi now requests the foreground location service after a committed manual start/switch when permission exists; service also requests one fresh real fix and keeps 10-minute sampling. The current full Actions device stage does not pass; native/device delivery evidence remains pending. |
-| Small worksite radius | Source/schema change implemented; full Android/device acceptance pending | Radius now supports 1.8–10,000 m, defaults to 30 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m are documented as best-effort; the current full device stage does not pass, so migration and site-editor acceptance remain pending. |
+| Small worksite radius | Source/schema change implemented; owner-device transition acceptance pending | Radius supports 1.8–10,000 m, new sites default to 150 m, and the v9 migration rebuilds old site constraints without changing site records. Android geofences under 100–150 m remain best-effort. The owner's 150 m home test eventually auto-started; their manual stop while still inside did not test departure. |
 | Task and task-comment images | Moved into M6.5; increased-limit and multi-photo source/UI/device coverage pending Actions | Existing-image selection supports up to 10 items per batch; the complete batch is reviewed and committed atomically after explicit **Attach photos** acceptance. Source limit is 50 MB/250 MP; each normalized private PNG is at most 5 MB, with 30 MB per selection, 20 per task and 100 MB per job. Camera photos retain review/retake/cancel. Full-screen viewing starts at the chosen image and swipes chronologically across task and comment photos. Migration, count/size, batch atomicity, metadata stripping, removal and parent cleanup require exact-head Actions evidence. |
 | Full app UI/E2E screenshots and Cloudflare Pages documentation | Split into M7.6 and final public-release docs stage | The complete end-to-end inventory and reviewed per-screen/option screenshots now gate closed testing. Static user guides on Cloudflare Pages remain part of the full public release. |
 

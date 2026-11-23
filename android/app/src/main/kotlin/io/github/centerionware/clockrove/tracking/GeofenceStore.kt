@@ -9,6 +9,8 @@ internal object GeofenceStore {
     data class Site(val id: String, val jobId: String, val name: String,
         val latitude: Double, val longitude: Double, val radiusMeters: Double = 150.0,
         val enabled: Boolean = true, val registrationKey: String = "")
+    data class CurrentFix(val latitude: Double, val longitude: Double, val accuracyMeters: Double,
+        val measuredUtcMillis: Long)
     data class Settings(val jobId: String, val enabled: Boolean = false,
         val autoStart: Boolean = false, val automaticDeparture: Boolean = true,
         val graceMinutes: Int = 30)
@@ -81,7 +83,7 @@ internal object GeofenceStore {
         db.execSQL("DELETE FROM pending_departure WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(jobId))
     }
 
-    fun saveSite(db: SQLiteDatabase, site: Site, now: Long): String? {
+    fun saveSite(db: SQLiteDatabase, site: Site, now: Long, currentFix: CurrentFix? = null): String? {
         if (site.id.isBlank() || site.name.isBlank() || !site.latitude.isFinite() || site.latitude !in -90.0..90.0 ||
             !site.longitude.isFinite() || site.longitude !in -180.0..180.0 ||
             !site.radiusMeters.isFinite() || site.radiusMeters !in 1.8..10000.0) return "INVALID_SITE"
@@ -91,27 +93,87 @@ internal object GeofenceStore {
                 it.getDouble(3), it.getDouble(4), it.getDouble(5), it.getInt(6) != 0, it.getString(7))
         }
         if (previous != null && previous.jobId != site.jobId) return "SITE_JOB_IMMUTABLE"
-        if (previous?.copy(registrationKey = "") == site.copy(registrationKey = "")) return null
+        val unchanged = previous?.copy(registrationKey = "") == site.copy(registrationKey = "")
+        val monitoringChanged = previous == null || previous.copy(name = site.name, registrationKey = "") !=
+            site.copy(registrationKey = "")
+        val fix = currentFix?.takeIf { validCurrentFix(site, it, now) }
+        if (unchanged && fix == null) return null
         val active = policies(db).firstOrNull { it.settings.jobId == site.jobId }?.settings?.enabled == true
         val projected = sites(db, true).size - (if (active && previous?.enabled == true) 1 else 0) +
             (if (active && site.enabled) 1 else 0)
         if (projected > 100) return "SITE_CAPACITY_EXCEEDED"
-        if (previous == null) {
+        if (!unchanged && previous == null) {
             db.execSQL("INSERT INTO work_sites(id,job_id,name,latitude,longitude,radius,enabled,registration_key) VALUES (?,?,?,?,?,?,?,?)",
                 arrayOf<Any?>(site.id, site.jobId, site.name, site.latitude, site.longitude, site.radiusMeters,
                     if (site.enabled) 1 else 0, UUID.randomUUID().toString()))
-        } else {
+        } else if (!unchanged) {
             db.execSQL("UPDATE work_sites SET name=?,latitude=?,longitude=?,radius=?,enabled=? WHERE id=?",
                 arrayOf<Any?>(site.name, site.latitude, site.longitude, site.radiusMeters, if (site.enabled) 1 else 0, site.id))
         }
-        RevisionStore.snapshotRows(
+        if (!unchanged) RevisionStore.snapshotRows(
             db, "work_sites", "site", BusinessSchema.siteColumns, now,
             jobColumn = "job_id", where = "id=?", args = arrayOf(site.id),
         )
-        if (previous == null || previous.copy(name = site.name, registrationKey = "") != site.copy(registrationKey = "")) {
+        if (monitoringChanged || fix != null) {
             invalidate(db, site.jobId, now)
         }
+        if (fix != null) seedMembershipFromCurrentFix(db, site, fix)
         return null
+    }
+
+    private fun validCurrentFix(site: Site, fix: CurrentFix, now: Long): Boolean =
+        site.enabled && fix.latitude.isFinite() && fix.latitude in -90.0..90.0 &&
+            fix.longitude.isFinite() && fix.longitude in -180.0..180.0 &&
+            fix.accuracyMeters.isFinite() && fix.accuracyMeters >= 0.0 &&
+            fix.measuredUtcMillis > 0 && fix.measuredUtcMillis <= now &&
+            now - fix.measuredUtcMillis <= CURRENT_FIX_MAX_AGE_MS &&
+            site.latitude == fix.latitude && site.longitude == fix.longitude
+
+    /** A fresh setup fix seeds membership only; it never creates work or location history. */
+    private fun seedMembershipFromCurrentFix(db: SQLiteDatabase, selected: Site, fix: CurrentFix) {
+        val policy = policies(db).firstOrNull { it.settings.jobId == selected.jobId } ?: return
+        if (!policy.settings.enabled) return
+        val activeSites = sites(db, true).filter { it.jobId == selected.jobId }
+        if (activeSites.none { it.id == selected.id }) return
+        val seeded = activeSites.associate { candidate ->
+            candidate.registrationKey to proximity(fix, candidate)
+        }
+        activeSites.forEach { candidate ->
+            val presence = seeded.getValue(candidate.registrationKey)
+            db.execSQL("UPDATE work_sites SET presence=?,observed_ms=? WHERE id=?",
+                arrayOf<Any?>(presence.name,
+                    if (presence == GeofenceMembership.Presence.UNKNOWN) null else fix.measuredUtcMillis,
+                    candidate.id))
+        }
+        val jobPresence = when {
+            seeded.values.any { it == GeofenceMembership.Presence.INSIDE } -> GeofenceMembership.Presence.INSIDE
+            seeded.values.all { it == GeofenceMembership.Presence.OUTSIDE } -> GeofenceMembership.Presence.OUTSIDE
+            else -> GeofenceMembership.Presence.UNKNOWN
+        }
+        db.execSQL("UPDATE automation_policies SET last_presence=?,facts_since_ms=? WHERE job_id=?",
+            arrayOf<Any?>(jobPresence.name, fix.measuredUtcMillis, selected.jobId))
+    }
+
+    private fun proximity(fix: CurrentFix, site: Site): GeofenceMembership.Presence {
+        val distance = distanceMeters(fix.latitude, fix.longitude, site.latitude, site.longitude)
+        return when {
+            distance - fix.accuracyMeters > site.radiusMeters -> GeofenceMembership.Presence.OUTSIDE
+            distance + fix.accuracyMeters < site.radiusMeters -> GeofenceMembership.Presence.INSIDE
+            else -> GeofenceMembership.Presence.UNKNOWN
+        }
+    }
+
+    private fun distanceMeters(latitude: Double, longitude: Double, otherLatitude: Double, otherLongitude: Double): Double {
+        val earthRadius = 6_371_000.0
+        val lat1 = Math.toRadians(latitude)
+        val lat2 = Math.toRadians(otherLatitude)
+        val deltaLat = lat2 - lat1
+        val deltaLon = Math.toRadians(otherLongitude - longitude)
+        val rawA = kotlin.math.sin(deltaLat / 2) * kotlin.math.sin(deltaLat / 2) +
+            kotlin.math.cos(lat1) * kotlin.math.cos(lat2) *
+            kotlin.math.sin(deltaLon / 2) * kotlin.math.sin(deltaLon / 2)
+        val a = rawA.coerceIn(0.0, 1.0)
+        return 2 * earthRadius * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
     }
 
     fun saveSettings(db: SQLiteDatabase, settings: Settings, now: Long): String? {
@@ -248,4 +310,6 @@ internal object GeofenceStore {
         "SELECT d.session_id FROM finalized_departures d JOIN sessions s ON s.id=d.session_id WHERE s.job_id=? AND d.detected_ms<=? AND d.deadline_ms>?",
         arrayOf(jobId, observed.toString(), observed.toString()),
     ).use { buildSet { while (it.moveToNext()) add(it.getString(0)) } }
+
+    private const val CURRENT_FIX_MAX_AGE_MS = 120_000L
 }
