@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../history_api.dart';
 import 'history_revisions_screen.dart';
 
@@ -39,7 +40,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
       }
       setState(() {
         if (more && _page?.version != page.version) {
-          _error = 'Work changed. Refresh change history before loading more.';
+          _error = AppMessage.historyLoadChanged.of(context);
         } else {
           if (!more) {
             _events.clear();
@@ -51,8 +52,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error =
-              'Could not load change history. Retry to read saved changes.',
+          () => _error = AppMessage.historyLoadFailed.of(context),
         );
       }
     } finally {
@@ -65,10 +65,10 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Change history'),
+      title: Text(AppMessage.historyAuditTitle.of(context)),
       actions: [
         IconButton(
-          tooltip: 'Refresh changes',
+          tooltip: AppMessage.historyRefresh.of(context),
           onPressed: _busy ? null : () => _load(),
           icon: const Icon(Icons.refresh),
         ),
@@ -77,9 +77,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
-          'Includes deleted work entries. Changes are ordered by when they were saved locally. This history is an audit aid, not tamper-proof evidence.',
-        ),
+        Text(AppMessage.historyAuditDisclosure.of(context)),
         if (_busy) const LinearProgressIndicator(),
         if (_error != null)
           Text(
@@ -87,9 +85,9 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         if (_page != null && _events.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('No saved changes yet.'),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(AppMessage.historyNoChanges.of(context)),
           ),
         for (final event in _events)
           HistoryRevisionTile(
@@ -107,7 +105,7 @@ class _HistoryAuditScreenState extends ConsumerState<HistoryAuditScreen> {
         if (_page?.next != null)
           OutlinedButton(
             onPressed: _busy ? null : () => _load(more: true),
-            child: const Text('Load older changes'),
+            child: Text(AppMessage.historyLoadOlder.of(context)),
           ),
       ],
     ),

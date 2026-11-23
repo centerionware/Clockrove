@@ -76,7 +76,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
       lon = double.tryParse(_longitude.text);
       if (!canCenter(lat, lon)) {
         setState(() {
-          _notice = 'The map needs a current location or coordinates. Allow precise location, try Use current location again, or enter coordinates.';
+          _notice = AppMessage.siteMapNeedsLocation.of(context);
         });
         return;
       }
@@ -111,10 +111,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Use your current location?'),
-        content: const Text(
-          'Get one location fix to position this site. It is not saved as work history. Android may ask for precise location. You can use the map or coordinates instead.',
-        ),
+        title: Text(AppMessage.siteUseLocationTitle.of(context)),
+        content: Text(AppMessage.siteUseLocationHelp.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -151,7 +149,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _notice = 'No fresh location is available. You can choose on the map or enter coordinates.',
+          () => _notice = AppMessage.siteNoFreshLocation.of(context),
         );
       }
     } finally {
@@ -167,7 +165,10 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
         ? min.toStringAsFixed(0)
         : min.toString();
     return value == null || !value.isFinite || value < min || value > max
-        ? 'Enter a number from $minLabel to ${max.toStringAsFixed(0)}.'
+        ? AppMessage.siteNumberRange.format(context, {
+            'min': minLabel,
+            'max': max.toStringAsFixed(0),
+          })
         : null;
   }
 
@@ -193,10 +194,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     final approved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove work site?'),
-        content: const Text(
-          'This removes site monitoring for this place. Recorded work stays saved and any running timer keeps going.',
-        ),
+        title: Text(AppMessage.siteRemoveTitle.of(context)),
+        content: Text(AppMessage.siteRemoveHelp.of(context)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -217,7 +216,11 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.site == null ? 'New work site' : 'Edit work site'),
+      title: Text(
+        widget.site == null
+            ? AppMessage.siteNewTitle.of(context)
+            : AppMessage.siteEditTitle.of(context),
+      ),
     ),
     body: Center(
       child: ConstrainedBox(
@@ -230,39 +233,44 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'A place where you work',
+                  AppMessage.siteDescription.of(context),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Use a circular area around the site. Use 150 m for more reliable automatic arrival and departure. Smaller radii may miss transitions.',
-                ),
+                Text(AppMessage.siteRadiusGuidance.of(context)),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Site name'),
+                  decoration: InputDecoration(
+                    labelText: AppMessage.siteName.of(context),
+                  ),
                   textCapitalization: TextCapitalization.words,
                   maxLength: 120,
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter a site name.'
+                      ? AppMessage.siteNameRequired.of(context)
                       : null,
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _locating ? null : _map,
                   icon: const Icon(Icons.map_outlined),
-                  label: const Text('Choose on map'),
+                  label: Text(AppMessage.siteChooseOnMap.of(context)),
                 ),
                 TextButton.icon(
                   onPressed: _locating ? null : _current,
                   icon: const Icon(Icons.my_location_rounded),
-                  label: const Text('Use current location'),
+                  label: Text(AppMessage.siteUseCurrentLocation.of(context)),
                 ),
                 if (_locating) const LinearProgressIndicator(),
                 if (_notice != null) Text(_notice!),
                 if (_position case final position?)
                   Text(
-                    'Current fix: ${position.accuracy.toStringAsFixed(0)} m accuracy · ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(position.measuredUtc.toLocal()))}',
+                    AppMessage.siteCurrentFix.format(context, {
+                      'accuracy': position.accuracy.toStringAsFixed(0),
+                      'time': MaterialLocalizations.of(context).formatTimeOfDay(
+                        TimeOfDay.fromDateTime(position.measuredUtc.toLocal()),
+                      ),
+                    }),
                   ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -270,8 +278,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   enabled: !_locating,
                   onChanged: (_) => setState(() => _position = null),
                   decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                    helperText: 'Decimal degrees, from −90 to 90',
+                    labelText: AppMessage.siteLatitude.of(context),
+                    helperText: AppMessage.siteLatitudeHelp.of(context),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -285,8 +293,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   enabled: !_locating,
                   onChanged: (_) => setState(() => _position = null),
                   decoration: const InputDecoration(
-                    labelText: 'Longitude',
-                    helperText: 'Decimal degrees, from −180 to 180',
+                    labelText: AppMessage.siteLongitude.of(context),
+                    helperText: AppMessage.siteLongitudeHelp.of(context),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -298,8 +306,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                 TextFormField(
                   controller: _radius,
                   decoration: const InputDecoration(
-                    labelText: 'Radius in metres',
-                    helperText: '1.8–10,000 m. Android recommends 100–150 m for geofences; tight radii can miss automatic arrival or departure.',
+                    labelText: AppMessage.siteRadius.of(context),
+                    helperText: AppMessage.siteRadiusHelp.of(context),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -309,18 +317,16 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                 const SizedBox(height: 16),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Use this site'),
+                  title: Text(AppMessage.siteUseSite.of(context)),
                   value: _enabled,
                   onChanged: (value) => setState(() => _enabled = value),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Saving resets site detection for this job and clears any pending departure. A running timer keeps going.',
-                ),
+                Text(AppMessage.automationResetHelp.of(context)),
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: _locating ? null : _save,
-                  child: const Text('Save site'),
+                  child: Text(AppMessage.siteSave.of(context)),
                 ),
                 if (widget.site != null)
                   TextButton(
@@ -354,7 +360,7 @@ class _DepartureGraceDialogState extends State<DepartureGraceDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Departure grace'),
+    title: Text(AppMessage.automationGraceTitle.of(context)),
     content: Form(
       key: _form,
       child: TextFormField(
@@ -362,13 +368,13 @@ class _DepartureGraceDialogState extends State<DepartureGraceDialog> {
         autofocus: true,
         keyboardType: TextInputType.number,
         decoration: const InputDecoration(
-          labelText: 'Minutes',
-          helperText: '0–1,440; default 30',
+          labelText: AppMessage.siteGraceMinutesLabel.of(context),
+          helperText: AppMessage.siteGraceMinutesHelp.of(context),
         ),
         validator: (value) {
           final n = int.tryParse(value?.trim() ?? '');
           return n == null || n < 0 || n > 1440
-              ? 'Enter a whole number from 0 to 1,440.'
+              ? AppMessage.automationInvalidGrace.of(context)
               : null;
         },
       ),

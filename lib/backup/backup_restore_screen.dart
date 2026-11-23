@@ -10,6 +10,7 @@ import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_import_api.dart';
 import 'backup_restore_importer.dart';
+import 'backup_restore_preview.dart';
 
 typedef BackupRestorePreviewRunner =
     Future<BackupRestoreImportResult> Function({
@@ -543,12 +544,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   ],
                   if (preview != null) ...[
                     const SizedBox(height: 20),
-                    _previewSummary(preview),
+                    BackupRestorePreviewSummary(preview: preview),
                     if (preview.openSessionCount > 0) ...[
                       const SizedBox(height: 12),
-                      const _NoticeCard(
+                      _NoticeCard(
                         icon: Icons.timer_off_outlined,
-                        text: 'This backup contains open/provisional sessions. The available restore choice is to omit them. Restore will not clock them out, invent an end time, or start a timer.',
+                        text: AppMessage.restoreOpenSessionsOmitted.of(context),
                       ),
                     ],
                     if (preview.localOpenSessionCount > 0) ...[
@@ -654,71 +655,6 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  Widget _previewSummary(BackupImportPreview preview) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppMessage.restorePreview.of(context),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          _CountLine(
-            label: AppMessage.restoreRecordCount,
-            count: preview.recordCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreAdditions,
-            count: preview.addedCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreChanges,
-            count: preview.changedCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreDeletionMarkers,
-            count: preview.deletedCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreUnchanged,
-            count: preview.unchangedCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreConflicts,
-            count: preview.conflictCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreReferenceConflicts,
-            count: preview.unresolvedReferenceCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreOverlapConflicts,
-            count: preview.timeOverlapCount,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(AppMessage.restoreDeletionCountNote.of(context)),
-          ),
-          _CountLine(
-            label: AppMessage.restoreMediaFiles,
-            count: preview.mediaCount,
-          ),
-          _CountLine(
-            label: AppMessage.restoreMediaData,
-            value: AppMessage.restoreMebibytes.format(context, {
-              'size': (preview.mediaBytes / (1024 * 1024)).toStringAsFixed(1),
-            }),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Restore merges saved records. It does not start timers, enable geofences, or import map credentials and device registrations.',
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 final class _ConflictCard extends StatelessWidget {
@@ -748,7 +684,6 @@ final class _ConflictCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
-            Text('${_humanize(conflict.table)} · ${_humanize(conflict.kind)}'),
             if (conflict.localSummary.isNotEmpty ||
                 conflict.backupSummary.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -836,31 +771,10 @@ final class _SummaryColumn extends StatelessWidget {
           ),
           for (final entry in values.entries)
             Text(
-              '${_humanize(entry.key)}: ${_scalarText(context, entry.value)}',
+              '${_summaryFieldLabel(context, entry.key)}: ${_summaryValueText(context, entry.key, entry.value)}',
             ),
         ],
       ),
-    ),
-  );
-}
-
-final class _CountLine extends StatelessWidget {
-  const _CountLine({required this.label, this.count, this.value});
-
-  final AppMessage label;
-  final int? count;
-  final String? value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        Expanded(child: Text(label.of(context))),
-        Text(
-          value ?? MaterialLocalizations.of(context).formatDecimal(count ?? 0),
-        ),
-      ],
     ),
   );
 }
@@ -941,25 +855,72 @@ String _conflictTitle(BuildContext context, BackupImportConflict conflict) {
     'DEPENDENT_ON_CONFLICT' => AppMessage.restoreSkippedDependency,
     _ => null,
   };
-  return message?.of(context) ??
-      AppMessage.restoreTableConflict.format(context, {
-        'table': _humanize(conflict.table),
-      });
+  return message?.of(context) ?? AppMessage.restoreRecordConflict.of(context);
 }
 
-String _humanize(String value) => value
-    .replaceAll('_', ' ')
-    .split(' ')
-    .where((word) => word.isNotEmpty)
-    .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
-    .join(' ');
+String _summaryFieldLabel(BuildContext context, String field) => switch (field) {
+  'identifier' => AppMessage.restoreSummaryFieldIdentifier.of(context),
+  'id' => AppMessage.restoreSummaryFieldId.of(context),
+  'name' => AppMessage.restoreSummaryFieldName.of(context),
+  'job_name' => AppMessage.restoreSummaryFieldJobName.of(context),
+  'customer_name' => AppMessage.restoreSummaryFieldCustomerName.of(context),
+  'number' => AppMessage.restoreSummaryFieldNumber.of(context),
+  'title' => AppMessage.restoreSummaryFieldTitle.of(context),
+  'start_ms' => AppMessage.restoreSummaryFieldStartMs.of(context),
+  'end_ms' => AppMessage.restoreSummaryFieldEndMs.of(context),
+  'occurred_ms' => AppMessage.restoreSummaryFieldOccurredMs.of(context),
+  'amount_minor' => AppMessage.restoreSummaryFieldAmountMinor.of(context),
+  'currency' => AppMessage.restoreSummaryFieldCurrency.of(context),
+  'kind' => AppMessage.restoreSummaryFieldKind.of(context),
+  'category' => AppMessage.restoreSummaryFieldCategory.of(context),
+  _ => AppMessage.restoreSummaryFieldIdentifier.of(context),
+};
 
-String _scalarText(BuildContext context, Object? value) {
+String _summaryValueText(BuildContext context, String field, Object? value) {
   if (value == null) return '—';
   if (value is bool) {
     return (value ? AppMessage.yes : AppMessage.no).of(context);
   }
-  if (value is num || value is String) return '$value';
+  if (value is num) {
+    return MaterialLocalizations.of(context).formatDecimal(value.toInt());
+  }
+  if (value is String) {
+    if (field == 'identifier') {
+      final message = switch (value) {
+        'ON_DEVICE' => AppMessage.restoreOnDevice,
+        'LOCAL_DELETION' => AppMessage.restorePreserveLocalDeletion,
+        'BACKUP_RECORD' => AppMessage.restoreInBackup,
+        'GPS_DELETION' || 'GPS_LOCAL_POINTS' || 'GPS_BACKUP_POINTS' =>
+          AppMessage.restoreDeletedGps,
+        'GPS_DELETION_UNAVAILABLE' => AppMessage.actualCostLinkUnavailable,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+    }
+    if (field == 'kind') {
+      final message = switch (value) {
+        'ITEM' => AppMessage.quoteChargeSupplies,
+        'HOURS' => AppMessage.quoteChargeLabor,
+        'HOURLY' => AppMessage.quoteScopeHourlyMode,
+        'TASK' => AppMessage.billingPerTask,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+      return AppMessage.restoreSummaryFieldKind.of(context);
+    }
+    if (field == 'category') {
+      final message = switch (value) {
+        'MATERIALS' => AppMessage.actualCostMaterials,
+        'SUBCONTRACT_LABOR' => AppMessage.actualCostSubcontractLabor,
+        'OTHER_DIRECT' => AppMessage.actualCostOtherDirect,
+        'OVERHEAD' => AppMessage.actualCostOverhead,
+        _ => null,
+      };
+      if (message != null) return message.of(context);
+      return AppMessage.restoreSummaryFieldCategory.of(context);
+    }
+    return value;
+  }
   return '—';
 }
 

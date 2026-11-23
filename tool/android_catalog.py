@@ -11,11 +11,15 @@ CATALOGS = Path("localizations/android")
 RESOURCES = Path("android/app/src/main/res")
 
 
-def resource_xml(messages):
+def resource_xml(messages, english, aliases):
     rows = []
     for key, value in messages.items():
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{key}: expected nonempty copy")
+        if key in aliases:
+            names = list(dict.fromkeys(re.findall(r"\{([a-z_]+)\}", english[key])))
+            for index, name in enumerate(names, start=1):
+                value = value.replace("{" + name + "}", f"%{index}$s")
         quoted = escape(value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n"))
         rows.append(f'    <string name="{key}">"{quoted}"</string>')
     return (
@@ -29,7 +33,25 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    english = read_catalog(CATALOGS / "en.yaml")
+    def catalog(tag):
+        messages = read_catalog(CATALOGS / f"{tag}.yaml")
+        flutter = read_catalog(Path("localizations") / f"{tag}.yaml")
+        resolved = {}
+        aliases = set()
+        for key, value in messages.items():
+            alias = re.fullmatch(r"@flutter:([a-z][a-zA-Z0-9]*)", value)
+            if alias:
+                aliases.add(key)
+                reference = alias[1]
+                if reference not in flutter:
+                    parser.error(
+                        f"{CATALOGS / f'{tag}.yaml'}: {key} references missing Flutter key {reference}"
+                    )
+                value = flutter[reference]
+            resolved[key] = value
+        return resolved, aliases
+
+    english, _ = catalog("en")
     tags = set(locale_names())
     actual_tags = {path.stem for path in CATALOGS.glob("*.yaml")}
     if tags != actual_tags:
@@ -37,7 +59,7 @@ def main():
     stale = []
     for tag in sorted(tags):
         source = CATALOGS / f"{tag}.yaml"
-        messages = read_catalog(source)
+        messages, aliases = catalog(tag)
         if messages.keys() != english.keys():
             parser.error(f"{source}: catalog keys differ from English")
         for key, value in messages.items():
@@ -54,7 +76,7 @@ def main():
         qualifier = f"b+{tag.replace('-', '+')}" if "-" in tag else tag
         directory = "values" if tag == "en" else f"values-{qualifier}"
         target = RESOURCES / directory / "widget_catalog.xml"
-        xml = resource_xml(messages)
+        xml = resource_xml(messages, english, aliases)
         if args.check:
             if not target.is_file() or target.read_text(encoding="utf-8") != xml:
                 stale.append(str(target))

@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.centerionware.clockrove.R
 import java.util.Currency
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,7 +32,7 @@ internal object QuoteScopeStore {
     } }
     private fun used(db: SQLiteDatabase, table: String, kind: String, value: String): Boolean = db.rawQuery(
         "SELECT id FROM $table WHERE id=? UNION ALL SELECT entity_id FROM entity_heads WHERE kind=? AND entity_id=? LIMIT 1", arrayOf(value, kind, value)).use { it.moveToFirst() }
-    fun apply(db: SQLiteDatabase, value: Draft, at: Long): String? {
+    fun apply(db: SQLiteDatabase, value: Draft, at: Long, strings: Context): String? {
         if (!value.confirmed || value.revision < 1 || value.note.length > 2000 || '\u0000' in value.note || at < 0 ||
             !id.matches(value.jobId) || value.items.size !in 1..2000 || value.items.map { it.lineId }.toSet().size != value.items.size ||
             value.items.map { it.taskId }.toSet().size != value.items.size || value.items.any { !id.matches(it.taskId) || it.title.isBlank() || it.title.length > 240 || '\u0000' in it.title }) return "INVALID_QUOTE_SCOPE"
@@ -92,7 +94,10 @@ internal object QuoteScopeStore {
                 if (!item.existing) {
                     // Reusable definitions contain no quote IDs/history. The
                     // retained scope tables carry provenance independently.
-                    val description = listOf(line.detail, if (kind == "HOURS") "Estimated ${TaskQuantityStore.format(line.quantity.toLong())} hours. Record actual work with the job timer; this planning task is not a charge." else "").filter { it.isNotEmpty() }.joinToString("\n\n")
+                    val description = listOf(line.detail, if (kind == "HOURS") strings.getString(
+                        R.string.quote_scope_estimated_work,
+                        TaskQuantityStore.format(line.quantity.toLong()),
+                    ) else "").filter { it.isNotEmpty() }.joinToString("\n\n")
                     checkNull(BoardStore.saveCard(db, BoardStore.Draft(item.taskId, value.jobId, requireNotNull(column), item.title, description,
                         billable = kind == "ITEM", priceMinor = if (kind == "ITEM") MoneyMath.parse(line.unitPrice) else null, currency = source.currency,
                         quantityUnits = if (kind == "ITEM") line.quantity.toLong() else TaskQuantityStore.one,

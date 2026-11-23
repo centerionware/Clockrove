@@ -72,14 +72,23 @@ internal class DocumentHostApi(
                         val expected = (rawVersion as Number).toLong()
                         if (snapshot.version != expected) { result.error("STALE_STATE", "Work changed. Refresh the report before exporting.", null); return@setMethodCallHandler }
                         val gps = requireNotNull(call.argument<Boolean>("gps"))
-                        val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(snapshot.report)).toByteArray(Charsets.UTF_8)
+                        val strings = localizedContext(activity)
+                        val filenameResource = if (gps) R.string.report_filename_gps
+                            else R.string.report_filename_work
+                        val filename = strings.getString(
+                            filenameResource,
+                            strings.getString(R.string.app_name),
+                            selection.firstDate,
+                            selection.lastDate,
+                        )
+                        val bytes = (if (gps) io.github.centerionware.clockrove.tracking.ReportCsv.gps(strings, snapshot.report) else io.github.centerionware.clockrove.tracking.ReportCsv.work(strings, snapshot.report)).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(bytes, result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, "Clockrove-${if (gps) "gps" else "work"}-${selection.firstDate}-${selection.lastDate}.csv")
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, filename)
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -102,9 +111,17 @@ internal class DocumentHostApi(
                             return@setMethodCallHandler
                         }
                         val pdf = requireNotNull(call.argument<Boolean>("pdf"))
-                        val bytes = if (pdf) BusinessReportPdf.generate(snapshot.report)
-                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(snapshot.report).toByteArray(Charsets.UTF_8)
-                        val extension = if (pdf) "pdf" else "csv"
+                        val strings = localizedContext(activity)
+                        val filenameResource = if (pdf) R.string.business_report_filename_pdf
+                            else R.string.business_report_filename_csv
+                        val filename = strings.getString(
+                            filenameResource,
+                            strings.getString(R.string.app_name),
+                            selection.firstDate,
+                            selection.lastDate,
+                        )
+                        val bytes = if (pdf) BusinessReportPdf.generate(strings, snapshot.report)
+                            else io.github.centerionware.clockrove.tracking.ReportCsv.business(strings, snapshot.report).toByteArray(Charsets.UTF_8)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your report", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
@@ -113,7 +130,7 @@ internal class DocumentHostApi(
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                     addCategory(Intent.CATEGORY_OPENABLE)
                                     type = if (pdf) "application/pdf" else "text/csv"
-                                    putExtra(Intent.EXTRA_TITLE, "Clockrove-business-${selection.firstDate}-${selection.lastDate}.$extension")
+                                    putExtra(Intent.EXTRA_TITLE, filename)
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -129,7 +146,7 @@ internal class DocumentHostApi(
                             else {
                                 save = Save(requireNotNull(record.pdf), result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(record))
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(activity, record))
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }

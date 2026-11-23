@@ -1,6 +1,8 @@
 package io.github.centerionware.clockrove.tracking
 
 import android.database.sqlite.SQLiteDatabase
+import android.content.res.Configuration
+import io.github.centerionware.clockrove.R
 import java.math.BigInteger
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -107,8 +109,16 @@ class BusinessReportStoreTest {
         assertEquals(1, customerReport.costs.size)
         assertEquals(1, customerReport.excludedUnknownCustomerCostCount)
         assertEquals(BigInteger.ZERO, customerReport.summaries.single().overhead)
-        val csv = ReportCsv.business(report)
-        assertTrue(csv.contains("sales_minor_text"))
+        val csv = ReportCsv.business(app, report)
+        assertTrue(csv.contains(app.getString(R.string.report_csv_col_sales)))
+        val spanish = app.createConfigurationContext(
+            Configuration(app.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag("es"))
+            },
+        )
+        val spanishCsv = ReportCsv.business(spanish, report)
+        assertTrue(spanishCsv.contains(spanish.getString(R.string.report_csv_col_sales)))
+        assertTrue(spanishCsv.contains(spanish.getString(R.string.report_csv_issued)))
         assertTrue(csv.contains("'15000"))
         assertTrue(csv.contains("'=1+2"))
     }

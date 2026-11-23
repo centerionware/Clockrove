@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "न्यूनतम घंटे, फिर सटीक समय"
+billingModeRoundTotalUp: "कुल समय को अगले घंटे तक ऊपर करें"
+minimumHoursSummary: "{hours} घंटे"

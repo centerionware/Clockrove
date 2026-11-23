@@ -278,13 +278,13 @@ final jobPreferencesProvider = FutureProvider.family<JobPreferences, String>((
   return ref.watch(businessSettingsApiProvider).job(id);
 });
 
-String? accountingEmailError(String input) {
+bool isValidAccountingEmail(String input) {
   final value = input.trim();
-  if (value.isEmpty) return null;
+  if (value.isEmpty) return true;
   if (value.length > 254 ||
       value.codeUnits.any((c) => c <= 32 || c == 127) ||
       !RegExp(r'^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$').hasMatch(value)) {
-    return 'Enter one email address, or leave blank to use the company email.';
+    return false;
   }
-  return null;
+  return true;
 }

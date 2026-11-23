@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:yaml/yaml.dart';
 
 part 'app_languages.g.dart';
+part 'app_localization_overlays.g.dart';
 part 'app_messages.g.dart';
 
 extension AppMessageTranslation on AppMessage {
@@ -47,7 +48,17 @@ class AppLocalizations {
   static Future<Map<String, String>> loadCatalog(String tag) async {
     final source = await rootBundle.loadString('localizations/$tag.yaml');
     final yaml = loadYaml(source);
-    return Map<String, String>.unmodifiable((yaml as YamlMap).cast());
+    final messages = Map<String, String>.from((yaml as YamlMap).cast());
+    for (final asset in appLocalizationOverlays[tag] ?? const <String>[]) {
+      final overlay = loadYaml(await rootBundle.loadString(asset)) as YamlMap;
+      for (final entry in overlay.entries) {
+        if (messages.containsKey(entry.key)) {
+          throw FormatException('Duplicate localization key: ${entry.key}');
+        }
+        messages[entry.key as String] = entry.value as String;
+      }
+    }
+    return Map<String, String>.unmodifiable(messages);
   }
 }
 

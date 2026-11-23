@@ -173,7 +173,7 @@ replacementTotals(
       lines.any(
         (line) => line.amount != null && !canonical.hasMatch(line.amount!),
       )) {
-    throw const FormatException('Review exact line amounts, credit and tax.');
+    throw const FormatException('INVALID_REPLACEMENT_TOTALS');
   }
   final subtotal =
       lines.fold(
@@ -186,11 +186,11 @@ replacementTotals(
       BigInt.from(1000000);
   final total = subtotal + tax, credit = BigInt.parse(paid);
   if (total.toString().length > 4096) {
-    throw const FormatException('The replacement amount is too long.');
+    throw const FormatException('REPLACEMENT_AMOUNT_TOO_LARGE');
   }
   if (total < credit) {
     throw const FormatException(
-      'The replacement total cannot be below the existing payment credit.',
+      'REPLACEMENT_BELOW_PAYMENT_CREDIT',
     );
   }
   return (

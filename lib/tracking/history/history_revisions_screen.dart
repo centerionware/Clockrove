@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../history_api.dart';
 import 'history_time_format.dart';
 
@@ -25,7 +26,7 @@ class _HistoryRevisionsScreenState
       .revisions(widget.jobId, widget.sessionId);
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Entry changes')),
+    appBar: AppBar(title: Text(AppMessage.historyEntryChangesTitle.of(context))),
     body: FutureBuilder(
       future: _data,
       builder: (context, snapshot) {
@@ -37,7 +38,7 @@ class _HistoryRevisionsScreenState
                     .read(historyApiProvider)
                     .revisions(widget.jobId, widget.sessionId),
               ),
-              child: const Text('Retry entry changes'),
+              child: Text(AppMessage.historyRetryEntryChanges.of(context)),
             ),
           );
         }
@@ -47,11 +48,9 @@ class _HistoryRevisionsScreenState
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text(
-              'Corrections and deletions keep their local revision history. Prepared invoices and exported copies keep the values captured when they were created.',
-            ),
+            Text(AppMessage.historyRevisionDisclosure.of(context)),
             if (snapshot.data!.isEmpty)
-              const Text('No retained changes for this entry.'),
+              Text(AppMessage.historyNoRetainedChanges.of(context)),
             for (final revision in snapshot.data!)
               HistoryRevisionTile(revision: revision),
           ],
@@ -65,17 +64,22 @@ class HistoryRevisionTile extends StatelessWidget {
   const HistoryRevisionTile({super.key, required this.revision, this.onTap});
   final HistoryRevision revision;
   final VoidCallback? onTap;
-  String _summary() {
+  String _summary(BuildContext context) {
     try {
       final data = jsonDecode(revision.payload ?? '{}') as Map<String, dynamic>;
       final start = data['start_ms'], end = data['end_ms'];
-      return start is int
-          ? '${historyUtc(start)}\n${end is int ? historyUtc(end) : 'Running when saved'}\n${data['timezone'] ?? ''}'
-          : revision.deleted
-          ? 'Work entry removed'
-          : 'No retained time details';
+      if (start is int) {
+        final endLabel = end is int
+            ? historyUtc(context, end)
+            : AppMessage.historyRunningWhenSaved.of(context);
+        return '${historyUtc(context, start)}\n$endLabel\n'
+            '${data['timezone'] ?? ''}';
+      }
+      return revision.deleted
+          ? AppMessage.historyWorkEntryRemoved.of(context)
+          : AppMessage.historyNoTimeDetails.of(context);
     } catch (_) {
-      return 'Saved change details unavailable';
+      return AppMessage.historySavedDetailsUnavailable.of(context);
     }
   }
 
@@ -85,8 +89,10 @@ class HistoryRevisionTile extends StatelessWidget {
       leading: Icon(
         revision.deleted ? Icons.delete_outline : Icons.edit_outlined,
       ),
-      title: Text(revision.origin.replaceAll('_', ' ').toLowerCase()),
-      subtitle: Text('${historyUtc(revision.changed)}\n${_summary()}'),
+      title: Text(AppMessage.historySavedChange.of(context)),
+      subtitle: Text(
+        '${historyUtc(context, revision.changed)}\n${_summary(context)}',
+      ),
       trailing: onTap == null ? null : const Icon(Icons.chevron_right),
       onTap: onTap,
     ),

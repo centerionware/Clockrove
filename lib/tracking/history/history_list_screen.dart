@@ -11,6 +11,18 @@ import 'history_audit_screen.dart';
 import 'history_editor_screen.dart';
 import 'history_time_format.dart';
 
+String _historyEntrySummary(BuildContext context, HistoryEntry entry) {
+  final start = historyUtc(context, entry.start);
+  final end = entry.end == null
+      ? AppMessage.historyRunningWhenSaved.of(context)
+      : historyUtc(context, entry.end!);
+  final origin = historyOriginLabel(context, entry.origin);
+  final review = entry.needsReview
+      ? ' · ${AppMessage.historyNeedsReview.of(context)}'
+      : '';
+  return '$start\n$end\n${entry.timezone} · $origin$review';
+}
+
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key, required this.jobId, required this.jobName});
   final String jobId, jobName;
@@ -65,7 +77,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
       }
       if (more && _page?.version != page.version) {
         setState(
-          () => _error = 'Work changed while loading. Refresh the list before loading more.',
+          () => _error = AppMessage.historyLoadChanged.of(context),
         );
       } else {
         setState(() {
@@ -79,8 +91,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error =
-              'Work history could not be loaded. Your saved work is unchanged.',
+          () => _error = AppMessage.historyListLoadFailed.of(context),
         );
       }
     } finally {
@@ -125,9 +136,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           start: DateTime(today.year, today.month, today.day - 6),
           end: today,
         ),
-        helpText: 'Select GPS dates',
-        saveText: 'Review',
-        confirmText: 'Review',
+        helpText: AppMessage.historyGpsSelectDates.of(context),
+        saveText: AppMessage.historyGpsReview.of(context),
+        confirmText: AppMessage.historyGpsReview.of(context),
       );
       if (selected == null || !mounted) return;
 
@@ -164,10 +175,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'GPS history could not be prepared. No data was deleted.',
-            ),
+          SnackBar(
+            content: Text(AppMessage.historyGpsPrepareFailed.of(context)),
           ),
         );
       }
@@ -183,15 +192,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
     });
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Work history'),
+        title: Text(AppMessage.historyListTitle.of(context)),
         actions: [
           IconButton(
-            tooltip: 'Refresh work history',
+            tooltip: AppMessage.historyRefresh.of(context),
             onPressed: _busy ? null : () => _load(),
             icon: const Icon(Icons.refresh),
           ),
           IconButton(
-            tooltip: 'Change history, including deleted entries',
+            tooltip: AppMessage.historyOpenAudit.of(context),
             icon: const Icon(Icons.history),
             onPressed: () => Navigator.push(
               context,
@@ -210,20 +219,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Recorded times below use UTC. Open an entry to edit in its saved timezone. Manual changes keep a local change history and never create GPS observations.',
-          ),
+          Text(AppMessage.historyListGuidance.of(context)),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: _busy ? null : () => _edit(),
             icon: const Icon(Icons.add),
-            label: const Text('Add work entry'),
+            label: Text(AppMessage.historyAddWorkEntry.of(context)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _busy ? null : _deleteGpsByRange,
             icon: const Icon(Icons.delete_sweep_outlined),
-            label: const Text('Delete GPS by date range'),
+            label: Text(AppMessage.historyDeleteGpsByRange.of(context)),
           ),
           if (_error != null)
             Padding(
@@ -235,9 +242,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
             ),
           if (_busy) const LinearProgressIndicator(),
           if (_page != null && _entries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Text('No work entries yet.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Text(AppMessage.historyNoEntries.of(context)),
             ),
           for (final entry in _entries)
             Card(
@@ -251,12 +258,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
                 ),
                 title: Text(
                   entry.end == null
-                      ? 'Running · clock out before editing'
-                      : reportDuration('${entry.end! - entry.start}'),
+                      ? AppMessage.historyRunningClockOut.of(context)
+                      : reportDuration(context, '${entry.end! - entry.start}'),
                 ),
-                subtitle: Text(
-                  '${historyUtc(entry.start)}\n${entry.end == null ? 'Still running' : historyUtc(entry.end!)}\n${entry.timezone} · ${entry.origin.toLowerCase()}${entry.needsReview ? ' · needs review' : ''}',
-                ),
+                subtitle: Text(_historyEntrySummary(context, entry)),
                 isThreeLine: true,
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _edit(entry),
@@ -265,7 +270,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           if (_page?.next != null)
             OutlinedButton(
               onPressed: _busy ? null : () => _load(more: true),
-              child: const Text('Load older entries'),
+              child: Text(AppMessage.historyLoadOlderEntries.of(context)),
             ),
         ],
       ),
@@ -329,8 +334,7 @@ class _GpsRangeDeletionDialogState
     } catch (_) {
       if (mounted && scope == _scopeJobId) {
         setState(
-          () => _error =
-              'The point count could not be loaded. No data was deleted.',
+          () => _error = AppMessage.historyPointCountFailed.of(context),
         );
       }
     } finally {
@@ -348,9 +352,7 @@ class _GpsRangeDeletionDialogState
   }
 
   String _calendarDate(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
+      MaterialLocalizations.of(context).formatMediumDate(value);
 
   @override
   Widget build(BuildContext context) {
@@ -359,19 +361,26 @@ class _GpsRangeDeletionDialogState
     });
     final preview = _preview;
     final count = preview?.pointCount ?? 0;
-    final label = count == 1 ? '1 GPS point' : '$count GPS points';
+    final label = count == 1
+        ? AppMessage.historyOneGpsPoint.of(context)
+        : AppMessage.historyManyGpsPoints.format(context, {
+            'count': MaterialLocalizations.of(context).formatDecimal(count),
+          });
     return PopScope(
       canPop: !_pending,
       child: AlertDialog(
-        title: const Text('Delete GPS history?'),
+        title: Text(AppMessage.historyDeleteGpsTitle.of(context)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${_calendarDate(widget.startDate)} through '
-                '${_calendarDate(widget.endDate)} · ${widget.timezone}',
+                AppMessage.historyGpsDateRange.format(context, {
+                  'first': _calendarDate(widget.startDate),
+                  'last': _calendarDate(widget.endDate),
+                  'timezone': widget.timezone,
+                }),
               ),
               const SizedBox(height: 8),
               RadioGroup<String?>(
@@ -387,7 +396,9 @@ class _GpsRangeDeletionDialogState
                       contentPadding: EdgeInsets.zero,
                       value: widget.jobId,
                       enabled: !_loading && !_pending,
-                      title: Text('This job only · ${widget.jobName}'),
+                      title: Text(AppMessage.historyThisJobOnly.format(context, {
+                        'job': widget.jobName,
+                      })),
                     ),
                     RadioListTile<String?>(
                       contentPadding: EdgeInsets.zero,
@@ -406,24 +417,24 @@ class _GpsRangeDeletionDialogState
                 ),
                 TextButton(
                   onPressed: _loading || _pending ? null : _refreshPreview,
-                  child: const Text('Refresh point count'),
+                  child: Text(AppMessage.historyRefreshPointCount.of(context)),
                 ),
               ],
               if (!_loading && _error == null && preview != null) ...[
-                Text('Matching saved GPS points: $label.'),
+                Text(AppMessage.historyMatchingGpsPoints.format(context, {
+                  'label': label,
+                })),
                 const SizedBox(height: 8),
                 Text(
                   count == 0
-                      ? 'No points match now. A deletion marker will still be saved so an older backup cannot silently restore points in these dates.'
-                      : 'Only GPS points are removed. Work entries and timesheets remain.',
+                      ? AppMessage.historyGpsNoPointsWarning.of(context)
+                      : AppMessage.historyGpsOnlyDeletion.of(context),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Existing exported files and backup files are not erased. Older backups that contain these points will require an explicit restore choice.',
-                ),
+                Text(AppMessage.historyGpsBackupWarning.of(context)),
                 TextButton(
                   onPressed: _loading || _pending ? null : _refreshPreview,
-                  child: const Text('Refresh point count'),
+                  child: Text(AppMessage.historyRefreshPointCount.of(context)),
                 ),
               ],
             ],
@@ -442,7 +453,7 @@ class _GpsRangeDeletionDialogState
               ),
             ),
             child: BusinessCommand(
-              label: 'Delete GPS points',
+              label: AppMessage.historyDeleteGpsPoints.of(context),
               enabled: !_loading && !_pending && preview != null,
               onPendingChanged: (value) {
                 if (mounted) setState(() => _pending = value);

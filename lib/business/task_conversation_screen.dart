@@ -49,7 +49,9 @@ class _TaskConversationScreenState
 
   String _date(int millis) {
     final value = DateTime.fromMillisecondsSinceEpoch(millis).toLocal();
-    return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+    final localizations = MaterialLocalizations.of(context);
+    return '${localizations.formatMediumDate(value)} · '
+        '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(value))}';
   }
 
   Future<void> _choosePhoto(
@@ -64,10 +66,10 @@ class _TaskConversationScreenState
         images = await _photoChannel.invokeListMethod<Uint8List>(
           camera ? 'captureTaskPhoto' : 'pickTaskPhoto',
         );
-      } on PlatformException catch (error) {
+      } on PlatformException catch (_) {
         if (mounted) {
           setState(
-            () => _notice = error.message ?? 'The photo could not be opened.',
+            () => _notice = AppMessage.taskPhotoOpenFailed.of(context),
           );
         }
         return;
@@ -83,8 +85,11 @@ class _TaskConversationScreenState
           builder: (dialogContext, setDialogState) => AlertDialog(
             title: Text(
               selectedImages.length == 1
-                  ? 'Review photo'
-                  : 'Review ${selectedImages.length} photos',
+                  ? AppMessage.taskPhotoReviewOne.of(dialogContext)
+                  : AppMessage.taskPhotoReviewMany.format(dialogContext, {
+                      'count': MaterialLocalizations.of(dialogContext)
+                          .formatDecimal(selectedImages.length),
+                    }),
             ),
             content: ConstrainedBox(
               constraints: BoxConstraints(
@@ -98,7 +103,12 @@ class _TaskConversationScreenState
                   children: [
                     if (selectedImages.length > 1) ...[
                       Text(
-                        'Photo ${reviewIndex + 1} of ${selectedImages.length}',
+                        AppMessage.taskPhotoPage.format(dialogContext, {
+                          'page': MaterialLocalizations.of(dialogContext)
+                              .formatDecimal(reviewIndex + 1),
+                          'total': MaterialLocalizations.of(dialogContext)
+                              .formatDecimal(selectedImages.length),
+                        }),
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -129,12 +139,12 @@ class _TaskConversationScreenState
                   onPressed: () =>
                       Navigator.pop(dialogContext, _PhotoReviewResult.retake),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retake'),
+                  label: Text(AppMessage.taskPhotoRetake.of(dialogContext)),
                 ),
               BusinessCommand(
                 label: selectedImages.length == 1
-                    ? 'Attach photo'
-                    : 'Attach photos',
+                    ? AppMessage.taskPhotoAttachOne.of(dialogContext)
+                    : AppMessage.taskPhotoAttachMany.of(dialogContext),
                 create: () {
                   final id = newBusinessId();
                   final attachments = [
@@ -165,12 +175,21 @@ class _TaskConversationScreenState
         // over the newly attached image or consume the next Back action.
         FocusManager.instance.primaryFocus?.unfocus();
         _refresh();
+        final count = MaterialLocalizations.of(context)
+            .formatDecimal(selectedImages.length);
+        final attached = commentId == null
+            ? selectedImages.length == 1
+                  ? AppMessage.taskPhotoAttachedTaskOne.of(context)
+                  : AppMessage.taskPhotoAttachedTaskMany.format(context, {
+                      'count': count,
+                    })
+            : selectedImages.length == 1
+                ? AppMessage.taskPhotoAttachedCommentOne.of(context)
+                : AppMessage.taskPhotoAttachedCommentMany.format(context, {
+                    'count': count,
+                  });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${selectedImages.length == 1 ? 'Photo' : '${selectedImages.length} photos'} attached to this ${commentId == null ? 'task' : 'comment'}.',
-            ),
-          ),
+          SnackBar(content: Text(attached)),
         );
       }
       return;
@@ -240,17 +259,15 @@ class _TaskConversationScreenState
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Remove photo?'),
-      content: const Text(
-        'This permanently removes the attached image from this task.',
-      ),
+      title: Text(AppMessage.taskPhotoRemoveTitle.of(dialogContext)),
+      content: Text(AppMessage.taskPhotoRemoveBody.of(dialogContext)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
           child: Text(AppMessage.cancel.of(dialogContext)),
         ),
         BusinessCommand(
-          label: 'Remove photo',
+          label: AppMessage.taskPhotoRemove.of(dialogContext),
           create: () {
             final id = newBusinessId();
             final api = ref.read(businessApiProvider);
@@ -272,15 +289,15 @@ class _TaskConversationScreenState
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Delete comment?'),
-      content: const Text('This also removes photos attached to this comment.'),
+      title: Text(AppMessage.taskCommentDeleteTitle.of(dialogContext)),
+      content: Text(AppMessage.taskCommentDeleteBody.of(dialogContext)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
           child: Text(AppMessage.cancel.of(dialogContext)),
         ),
         BusinessCommand(
-          label: 'Delete comment',
+          label: AppMessage.taskCommentDelete.of(dialogContext),
           create: () {
             final id = newBusinessId();
             final api = ref.read(businessApiProvider);
@@ -298,7 +315,7 @@ class _TaskConversationScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Task notes & photos')),
+    appBar: AppBar(title: Text(AppMessage.taskConversationTitle.of(context))),
     body: FutureBuilder<TaskConversation>(
       future: _data,
       builder: (context, snapshot) {
@@ -307,7 +324,7 @@ class _TaskConversationScreenState
             child: TextButton.icon(
               onPressed: _refresh,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry task details'),
+              label: Text(AppMessage.taskConversationRetry.of(context)),
             ),
           );
         }
@@ -327,8 +344,8 @@ class _TaskConversationScreenState
             const SizedBox(height: 8),
             Text(
               readOnly
-                  ? 'Archived tasks keep their notes and photos for reference.'
-                  : 'Keep progress notes and job-site photos with this task. They stay private and are not printed on invoices.',
+                  ? AppMessage.taskConversationArchivedHelp.of(context)
+                  : AppMessage.taskConversationPrivacyHelp.of(context),
             ),
             if (_notice != null) ...[
               const SizedBox(height: 12),
@@ -338,7 +355,10 @@ class _TaskConversationScreenState
               ),
             ],
             const SizedBox(height: 20),
-            Text('Task photos', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              AppMessage.taskConversationPhotosTitle.of(context),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             _attachments(conversation, conversation.taskAttachments),
             if (!readOnly) ...[
@@ -349,26 +369,27 @@ class _TaskConversationScreenState
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: false),
                     icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Choose photos'),
+                    label: Text(AppMessage.taskConversationChoosePhotos.of(context)),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _choosePhoto(conversation, camera: true),
                     icon: const Icon(Icons.camera_alt_outlined),
-                    label: const Text('Take photo'),
+                    label: Text(AppMessage.taskConversationTakePhoto.of(context)),
                   ),
                 ],
               ),
             ],
             const SizedBox(height: 24),
-            Text('Comments', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              AppMessage.taskConversationCommentsTitle.of(context),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             if (comments.isEmpty)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'No comments yet. Add a note about progress or materials.',
-                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Text(AppMessage.taskConversationNoComments.of(context)),
                 ),
               ),
             for (final comment in comments)
@@ -387,19 +408,19 @@ class _TaskConversationScreenState
                             ),
                           ),
                           if (comment.updatedMillis > comment.createdMillis)
-                            const Padding(
-                              padding: EdgeInsets.only(right: 8),
-                              child: Text('Edited'),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Text(AppMessage.taskConversationEdited.of(context)),
                             ),
                           if (!readOnly)
                             IconButton(
-                              tooltip: 'Edit comment',
+                              tooltip: AppMessage.taskConversationEditComment.of(context),
                               onPressed: () => _edit(comment),
                               icon: const Icon(Icons.edit_outlined),
                             ),
                           if (!readOnly)
                             IconButton(
-                              tooltip: 'Delete comment',
+                              tooltip: AppMessage.taskCommentDelete.of(context),
                               onPressed: () =>
                                   _confirmRemoveComment(conversation, comment),
                               icon: const Icon(Icons.delete_outline),
@@ -422,7 +443,10 @@ class _TaskConversationScreenState
                                 camera: false,
                               ),
                               icon: const Icon(Icons.photo_library_outlined),
-                              label: const Text('Choose photos for comment'),
+                              label: Text(
+                                AppMessage.taskConversationChooseCommentPhotos
+                                    .of(context),
+                              ),
                             ),
                             TextButton.icon(
                               onPressed: () => _choosePhoto(
@@ -431,7 +455,10 @@ class _TaskConversationScreenState
                                 camera: true,
                               ),
                               icon: const Icon(Icons.add_a_photo_outlined),
-                              label: const Text('Take photo for comment'),
+                              label: Text(
+                                AppMessage.taskConversationTakeCommentPhoto
+                                    .of(context),
+                              ),
                             ),
                           ],
                         ),
@@ -451,9 +478,9 @@ class _TaskConversationScreenState
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: _editing == null
-                        ? 'Add a comment'
-                        : 'Edit comment',
-                    hintText: 'Write a short update…',
+                        ? AppMessage.taskConversationAddCommentField.of(context)
+                        : AppMessage.taskConversationEditComment.of(context),
+                    hintText: AppMessage.taskConversationWriteUpdate.of(context),
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -463,11 +490,15 @@ class _TaskConversationScreenState
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _cancelEdit,
-                    child: const Text('Cancel edit'),
+                    child: Text(
+                      AppMessage.taskConversationCancelEdit.of(context),
+                    ),
                   ),
                 ),
               BusinessCommand(
-                label: _editing == null ? 'Add comment' : 'Save comment',
+                label: _editing == null
+                    ? AppMessage.taskConversationAddComment.of(context)
+                    : AppMessage.taskConversationSaveComment.of(context),
                 enabled:
                     _body.text.trim().isNotEmpty && _body.text.length <= 2000,
                 onPendingChanged: (_) {},
@@ -493,7 +524,7 @@ class _TaskConversationScreenState
             if (conversation.events.isNotEmpty) ...[
               const SizedBox(height: 24),
               Text(
-                'Recent activity',
+                AppMessage.taskConversationRecentActivity.of(context),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               for (final event in conversation.events)
@@ -506,9 +537,11 @@ class _TaskConversationScreenState
                     _ => Icons.delete_outline,
                   }),
                   title: Text(switch (event.action) {
-                    'ADDED' => 'Comment added',
-                    'EDITED' => 'Comment edited',
-                    _ => 'Comment deleted',
+                    'ADDED' =>
+                      AppMessage.taskConversationCommentAdded.of(context),
+                    'EDITED' =>
+                      AppMessage.taskConversationCommentEdited.of(context),
+                    _ => AppMessage.taskConversationCommentDeleted.of(context),
                   }),
                   subtitle: Text(_date(event.recordedMillis)),
                 ),
@@ -564,7 +597,14 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(
-          count == 1 ? 'Task photo' : 'Photo ${_index + 1} of $count',
+          count == 1
+              ? AppMessage.taskPhotoViewerOne.of(context)
+              : AppMessage.taskPhotoPage.format(context, {
+                  'page': MaterialLocalizations.of(context)
+                      .formatDecimal(_index + 1),
+                  'total': MaterialLocalizations.of(context)
+                      .formatDecimal(count),
+                }),
         ),
       ),
       body: PageView.builder(
@@ -578,9 +618,9 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
             builder: (context, snapshot) {
               if (snapshot.hasError ||
                   (snapshot.hasData && snapshot.data == null)) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'This photo is no longer available.',
+                    AppMessage.taskPhotoUnavailable.of(context),
                     style: TextStyle(color: Colors.white),
                   ),
                 );
@@ -593,7 +633,12 @@ class _TaskPhotoViewerState extends ConsumerState<_TaskPhotoViewer> {
               return Center(
                 child: Semantics(
                   image: true,
-                  label: 'Task photo ${index + 1} of $count',
+                  label: AppMessage.taskPhotoSemantics.format(context, {
+                    'page': MaterialLocalizations.of(context)
+                        .formatDecimal(index + 1),
+                    'total': MaterialLocalizations.of(context)
+                        .formatDecimal(count),
+                  }),
                   child: Image.memory(snapshot.data!, fit: BoxFit.contain),
                 ),
               );
@@ -637,8 +682,8 @@ class _TaskAttachmentThumb extends ConsumerWidget {
                 if (snapshot.hasData)
                   Semantics(
                     label: attachment.commentId == null
-                        ? 'Task photo attachment'
-                        : 'Comment photo attachment',
+                        ? AppMessage.taskPhotoTaskAttachment.of(context)
+                        : AppMessage.taskPhotoCommentAttachment.of(context),
                     button: true,
                     child: Image.memory(snapshot.data!, fit: BoxFit.cover),
                   )
@@ -649,7 +694,7 @@ class _TaskAttachmentThumb extends ConsumerWidget {
                     right: 0,
                     top: 0,
                     child: IconButton.filledTonal(
-                      tooltip: 'Remove photo',
+                      tooltip: AppMessage.taskPhotoRemove.of(context),
                       visualDensity: VisualDensity.compact,
                       iconSize: 18,
                       onPressed: onRemove,

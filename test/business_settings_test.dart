@@ -295,15 +295,15 @@ void main() {
       }).encode()['receivablesEmail'],
       'accounts@example.test',
     );
-    expect(accountingEmailError(''), isNull);
-    expect(accountingEmailError(' accounts@example.test '), isNull);
+    expect(isValidAccountingEmail(''), isTrue);
+    expect(isValidAccountingEmail(' accounts@example.test '), isTrue);
     for (final value in [
       'bad',
       'a@example.test;b@example.test',
       'a@example.test\nBcc:b@example.test',
       'a@example.test\u0000',
     ]) {
-      expect(accountingEmailError(value), isNotNull);
+      expect(isValidAccountingEmail(value), isFalse);
     }
   });
   testWidgets(

@@ -8,7 +8,20 @@ import 'business_command.dart';
 import 'invoice_lifecycle_api.dart';
 import 'payment_api.dart';
 import 'report_api.dart';
+import 'settings_validation_messages.dart';
 import 'tax_rate.dart';
+
+String _invoiceLifecycleFormatError(BuildContext context, FormatException e) =>
+    switch (e.message) {
+      'INVALID_REPLACEMENT_TOTALS' =>
+        AppMessage.invoiceLinePriceRequired.of(context),
+      'REPLACEMENT_AMOUNT_TOO_LARGE' => AppMessage.quoteInvoiceTooLarge.of(
+        context,
+      ),
+      'REPLACEMENT_BELOW_PAYMENT_CREDIT' =>
+        AppMessage.invoiceUseRefreshedBalance.of(context),
+      _ => localizedBusinessFormatError(context, e),
+    };
 
 class InvoiceLifecycleResult {
   const InvoiceLifecycleResult(this.replacementId);
@@ -247,7 +260,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
         });
       }
     } on FormatException catch (error) {
-      setState(() => _message = error.message);
+      setState(() => _message = _invoiceLifecycleFormatError(context, error));
       return;
     }
     final accepted = await showDialog<bool>(
@@ -327,7 +340,7 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
       try {
         totals = _totals(preview);
       } on FormatException catch (error) {
-        previewError = error.message;
+        previewError = _invoiceLifecycleFormatError(context, error);
       }
     }
     return PopScope(

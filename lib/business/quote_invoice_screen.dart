@@ -11,6 +11,7 @@ import 'quote_api.dart';
 import 'quote_invoice_api.dart';
 import 'quote_scope_api.dart';
 import 'quote_scope_screen.dart';
+import 'settings_validation_messages.dart';
 import 'tax_rate.dart';
 
 String _quoteInvoiceDuration(BuildContext context, String millis) {
@@ -252,7 +253,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       }
     } on FormatException catch (error) {
       if (mounted) {
-        setState(() => _message = error.message);
+        setState(() => _message = localizedBusinessFormatError(context, error));
       }
     } catch (_) {
       if (mounted) {
@@ -451,7 +452,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
       }
     } on FormatException catch (error) {
       if (mounted) {
-        setState(() => _message = error.message);
+        setState(() => _message = localizedBusinessFormatError(context, error));
       }
     } catch (_) {
       if (mounted) {
@@ -771,7 +772,11 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(AppMessage.quoteInvoiceAlreadyBilled.format(context, {'number': item.number})),
-                    subtitle: Text(item.title),
+                    subtitle: Text(
+                      item.title.isEmpty
+                          ? AppMessage.reportFinalizedTime.of(context)
+                          : item.title,
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: !_enabled ? null : () => _invoice(item.invoiceId),
                   ),

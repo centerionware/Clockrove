@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../tracking/history_screen.dart';
 import '../business_api.dart';
 import '../business_command.dart';
 import '../job_settings_screen.dart';
 import '../report_screen.dart';
+import '../settings_validation_messages.dart';
 import '../task_conversation_screen.dart';
 import 'reusable_task_library_screen.dart';
 
@@ -24,7 +26,7 @@ class JobScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Work history',
+            tooltip: AppMessage.historyListTitle.of(context),
             icon: const Icon(Icons.history),
             onPressed: () => Navigator.push(
               context,
@@ -37,7 +39,7 @@ class JobScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Job report',
+            tooltip: AppMessage.workReport.of(context),
             icon: const Icon(Icons.assessment_outlined),
             onPressed: () => Navigator.push(
               context,
@@ -47,7 +49,7 @@ class JobScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Job settings',
+            tooltip: AppMessage.jobSettings.of(context),
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.push(
               context,
@@ -64,7 +66,7 @@ class JobScreen extends ConsumerWidget {
         error: (_, _) => Center(
           child: FilledButton(
             onPressed: () => ref.invalidate(boardProvider(jobId)),
-            child: const Text('Retry job'),
+            child: Text(AppMessage.retryJobSettings.of(context)),
           ),
         ),
         data: (board) => _Board(board: board),
@@ -116,9 +118,7 @@ class _Board extends ConsumerWidget {
         .firstOrNull;
     if (moving == null || target == null || latest.archived) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This task or destination is no longer available.'),
-        ),
+        SnackBar(content: Text(AppMessage.boardMoveUnavailable.of(context))),
       );
       return;
     }
@@ -140,19 +140,13 @@ class _Board extends ConsumerWidget {
       if (!context.mounted || result.committed) return;
       ref.invalidate(boardProvider(board.jobId));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The board changed. Refresh and move the task again.'),
-        ),
+        SnackBar(content: Text(AppMessage.boardChangedMoveAgain.of(context))),
       );
     } catch (_) {
       if (!context.mounted) return;
       ref.invalidate(boardProvider(board.jobId));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not confirm the move. The board is refreshing; check the task location.',
-          ),
-        ),
+        SnackBar(content: Text(AppMessage.boardMoveUnconfirmed.of(context))),
       );
     }
   }
@@ -181,22 +175,29 @@ class _Board extends ConsumerWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              if (card.dueDate != null) Text('Due ${card.dueDate}'),
+              if (card.dueDate != null)
+                Text(AppMessage.boardDueDate.format(context, {'date': card.dueDate!})),
               Text(
                 !card.billable
-                    ? 'Nonbillable'
+                    ? AppMessage.boardNonbillable.of(context)
                     : card.priceMinor == null
-                    ? 'Price not set'
+                    ? AppMessage.boardPriceNotSet.of(context)
                     : '${board.currency} ${money(card.amountMinor, board.digits)}',
               ),
               if (card.priceMinor != null)
                 Text(
-                  '${taskQuantity(card.quantityUnits)} × ${card.currency} ${money(card.priceMinor, board.digits)} each',
+                  AppMessage.boardTaskUnitPrice.format(context, {
+                    'quantity': taskQuantity(card.quantityUnits),
+                    'currency': card.currency,
+                    'amount': money(card.priceMinor, board.digits),
+                  }),
                 ),
-              if (card.chargeType == 'SUPPLIES') const Text('Supplies'),
+              if (card.chargeType == 'SUPPLIES')
+                Text(AppMessage.quoteChargeSupplies.of(context)),
               if (card.chargeType == 'UNCLASSIFIED')
-                const Text('Needs labor or supplies classification'),
-              if (card.completedMillis != null) const Text('Completed'),
+                Text(AppMessage.boardUnclassifiedHelp.of(context)),
+              if (card.completedMillis != null)
+                Text(AppMessage.boardCompleted.of(context)),
             ],
           ),
         ),
@@ -204,13 +205,13 @@ class _Board extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Task notes and photos',
+              tooltip: AppMessage.taskConversationTitle.of(context),
               icon: const Icon(Icons.forum_outlined),
               onPressed: () => _conversation(context, card),
             ),
             if (!board.archived)
               PopupMenuButton<String>(
-                tooltip: 'Task actions',
+                tooltip: AppMessage.boardTaskActions.of(context),
                 onSelected: (value) {
                   if (value == 'edit') {
                     _task(context, card.columnId, card);
@@ -229,20 +230,20 @@ class _Board extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit task')),
+                  PopupMenuItem(value: 'edit', child: Text(AppMessage.boardEditTask.of(context))),
                   if (index > 0)
-                    const PopupMenuItem(value: 'up', child: Text('Move up')),
+                    PopupMenuItem(value: 'up', child: Text(AppMessage.boardMoveUp.of(context))),
                   if (index + 1 < inColumn.length)
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'down',
-                      child: Text('Move down'),
+                      child: Text(AppMessage.boardMoveDown.of(context)),
                     ),
                   for (final column in board.columns.where(
                     (c) => c.id != card.columnId,
                   ))
                     PopupMenuItem(
                       value: column.id,
-                      child: Text('Move to ${column.name}'),
+                      child: Text(AppMessage.boardMoveTo.format(context, {'column': column.name})),
                     ),
                 ],
               ),
@@ -268,11 +269,14 @@ class _Board extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Task board',
+                  AppMessage.boardTitle.of(context),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 Text(
-                  '${board.cards.where((c) => c.completedMillis != null).length} of ${board.cards.length} tasks complete',
+                  AppMessage.boardTaskProgress.format(context, {
+                    'complete': '${board.cards.where((c) => c.completedMillis != null).length}',
+                    'total': '${board.cards.length}',
+                  }),
                 ),
               ],
             ),
@@ -280,15 +284,15 @@ class _Board extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => _editColumn(context),
                 icon: const Icon(Icons.add),
-                label: const Text('Column'),
+                label: Text(AppMessage.boardColumn.of(context)),
               ),
           ],
         ),
       ),
       if (board.archived)
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text('Archived job · board is read-only'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(AppMessage.boardArchivedReadOnly.of(context)),
         ),
       Expanded(
         // This is a full-page board. Build tooltip-bearing cards during build,
@@ -328,13 +332,15 @@ class _Board extends ConsumerWidget {
                                 ),
                                 subtitle: Text(
                                   column.completed
-                                      ? 'Completes tasks'
-                                      : '${board.inColumn(column.id).length} tasks',
+                                      ? AppMessage.boardCompletesTasks.of(context)
+                                      : AppMessage.boardTaskCount.format(context, {
+                                          'count': '${board.inColumn(column.id).length}',
+                                        }),
                                 ),
                                 trailing: board.archived
                                     ? null
                                     : IconButton(
-                                        tooltip: 'Edit column',
+                                        tooltip: AppMessage.boardEditColumn.of(context),
                                         icon: const Icon(Icons.more_horiz),
                                         onPressed: () =>
                                             _editColumn(context, column),
@@ -439,17 +445,15 @@ class _Board extends ConsumerWidget {
                                                 CrossAxisAlignment.stretch,
                                             children: [
                                               if (candidates.isNotEmpty)
-                                                const Padding(
+                                                Padding(
                                                   padding: EdgeInsets.all(12),
-                                                  child: Text(
-                                                    'Drop to move here',
-                                                  ),
+                                                  child: Text(AppMessage.boardDropToMove.of(context)),
                                                 ),
                                               TextButton.icon(
                                                 onPressed: () =>
                                                     _task(context, column.id),
                                                 icon: const Icon(Icons.add),
-                                                label: const Text('Add task'),
+                                                label: Text(AppMessage.boardAddTask.of(context)),
                                               ),
                                               TextButton.icon(
                                                 onPressed: () => Navigator.push(
@@ -465,9 +469,7 @@ class _Board extends ConsumerWidget {
                                                 icon: const Icon(
                                                   Icons.copy_outlined,
                                                 ),
-                                                label: const Text(
-                                                  'Reuse a task',
-                                                ),
+                                                label: Text(AppMessage.boardReuseTask.of(context)),
                                               ),
                                             ],
                                           ),
@@ -534,10 +536,13 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
         parseTaskQuantity(_quantity.text),
       );
       return total == null
-          ? 'Task total: unit price not set'
-          : 'Task total: ${board.currency} ${money(total, board.digits)}';
+          ? AppMessage.boardTaskTotalMissing.of(context)
+          : AppMessage.boardTaskTotal.format(context, {
+              'currency': board.currency,
+              'amount': money(total, board.digits),
+            });
     } on FormatException {
-      return 'Task total: check unit price and quantity';
+      return AppMessage.boardTaskTotalCheck.of(context);
     }
   }
 
@@ -562,7 +567,11 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     final board = ref.watch(boardProvider(widget.jobId)).value;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.card == null ? 'New task' : 'Edit task'),
+        title: Text(
+          widget.card == null
+              ? AppMessage.boardNewTask.of(context)
+              : AppMessage.boardEditTask.of(context),
+        ),
       ),
       body: board == null
           ? const Center(child: CircularProgressIndicator())
@@ -575,19 +584,19 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                   children: [
                     TextFormField(
                       controller: _title,
-                      decoration: const InputDecoration(
-                        labelText: 'Task title',
+                      decoration: InputDecoration(
+                        labelText: AppMessage.boardTaskTitle.of(context),
                       ),
                       maxLength: 240,
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Enter a task title'
+                          ? AppMessage.boardTaskTitleRequired.of(context)
                           : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _description,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+                      decoration: InputDecoration(
+                        labelText: AppMessage.quoteLineDescription.of(context),
                       ),
                       minLines: 3,
                       maxLines: 8,
@@ -600,9 +609,10 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         controller: _price,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'Unit price (${board.currency})',
-                          helperText:
-                              'Blank: price not set. 0: explicitly free.',
+                          labelText: AppMessage.boardUnitPrice.format(context, {
+                            'currency': board.currency,
+                          }),
+                          helperText: AppMessage.boardPriceEntryHelp.of(context),
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -612,7 +622,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             parseMoney(v ?? '', board.digits);
                             return null;
                           } on FormatException catch (e) {
-                            return e.message;
+                            return localizedBusinessFormatError(context, e);
                           }
                         },
                       ),
@@ -622,9 +632,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       identifier: 'task-quantity',
                       child: TextFormField(
                         controller: _quantity,
-                        decoration: const InputDecoration(
-                          labelText: 'Quantity',
-                          helperText: 'How many units? Defaults to 1.',
+                        decoration: InputDecoration(
+                          labelText: AppMessage.quoteQuantity.of(context),
+                          helperText: AppMessage.boardQuantityHelp.of(context),
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -635,7 +645,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             parseTaskQuantity(v ?? '');
                             return null;
                           } on FormatException catch (e) {
-                            return e.message;
+                            return localizedBusinessFormatError(context, e);
                           }
                         },
                       ),
@@ -647,29 +657,27 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Billable task'),
+                      title: Text(AppMessage.boardBillableTask.of(context)),
                       value: _billable,
                       onChanged: (v) => setState(() => _billable = v),
                     ),
                     if (_chargeType == 'UNCLASSIFIED') ...[
                       const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Choose how this existing task is classified for reports.',
-                        ),
+                        child: Text(AppMessage.boardClassificationPrompt.of(context)),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         children: [
                           ChoiceChip(
-                            label: const Text('Labor'),
+                            label: Text(AppMessage.quoteChargeLabor.of(context)),
                             selected: _chargeType == 'LABOR',
                             onSelected: (_) =>
                                 setState(() => _chargeType = 'LABOR'),
                           ),
                           ChoiceChip(
-                            label: const Text('Supplies'),
+                            label: Text(AppMessage.quoteChargeSupplies.of(context)),
                             selected: _chargeType == 'SUPPLIES',
                             onSelected: (_) =>
                                 setState(() => _chargeType = 'SUPPLIES'),
@@ -679,10 +687,8 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     ] else
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Supplies'),
-                        subtitle: const Text(
-                          'Turn on for materials. Off means labor.',
-                        ),
+                        title: Text(AppMessage.quoteChargeSupplies.of(context)),
+                        subtitle: Text(AppMessage.boardSuppliesHelp.of(context)),
                         value: _chargeType == 'SUPPLIES',
                         onChanged: (value) => setState(
                           () => _chargeType = value ? 'SUPPLIES' : 'LABOR',
@@ -691,29 +697,25 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.calendar_today_outlined),
-                      title: Text(_due ?? 'No due date'),
+                      title: Text(_due ?? AppMessage.boardNoDueDate.of(context)),
                       onTap: _pickDate,
                       trailing: _due == null
                           ? null
                           : IconButton(
-                              tooltip: 'Remove due date',
+                              tooltip: AppMessage.boardRemoveDueDate.of(context),
                               icon: const Icon(Icons.close),
                               onPressed: () => setState(() => _due = null),
                             ),
                     ),
                     const SizedBox(height: 24),
                     BusinessCommand(
-                      label: 'Save task',
+                      label: AppMessage.save.of(context),
                       create: () {
                         if (!_form.currentState!.validate()) {
-                          throw const FormatException(
-                            'Check the highlighted fields.',
-                          );
+                          throw FormatException(AppMessage.boardCheckFields.of(context));
                         }
                         if (_chargeType == 'UNCLASSIFIED') {
-                          throw const FormatException(
-                            'Choose Labor or Supplies before saving.',
-                          );
+                          throw FormatException(AppMessage.boardChooseChargeType.of(context));
                         }
                         final command = newBusinessId();
                         final card = TaskCard(
@@ -748,13 +750,11 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             context: context,
                             barrierDismissible: false,
                             builder: (dialog) => AlertDialog(
-                              title: const Text('Delete task?'),
-                              content: const Text(
-                                'The reusable template is kept in your task library.',
-                              ),
+                              title: Text(AppMessage.boardDeleteTaskQuestion.of(dialog)),
+                              content: Text(AppMessage.boardKeepReusableTemplate.of(dialog)),
                               actions: [
                                 BusinessCommand(
-                                  label: 'Delete task',
+                                  label: AppMessage.boardDeleteTask.of(dialog),
                                   create: () {
                                     final id = newBusinessId();
                                     return () => ref
@@ -770,7 +770,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             ),
                           ),
                           icon: const Icon(Icons.delete_outline),
-                          label: const Text('Delete task'),
+                          label: Text(AppMessage.boardDeleteTask.of(context)),
                         ),
                       ),
                   ],
@@ -805,7 +805,11 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
     final column = widget.column;
     return Scaffold(
       appBar: AppBar(
-        title: Text(column == null ? 'New column' : 'Column settings'),
+        title: Text(
+          column == null
+              ? AppMessage.boardNewColumn.of(context)
+              : AppMessage.boardColumnSettings.of(context),
+        ),
       ),
       body: board == null
           ? const Center(child: CircularProgressIndicator())
@@ -815,23 +819,23 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                 TextField(
                   controller: _name,
                   maxLength: 120,
-                  decoration: const InputDecoration(labelText: 'Column name'),
+                  decoration: InputDecoration(
+                    labelText: AppMessage.boardColumnName.of(context),
+                  ),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Tasks in this column are completed'),
-                  subtitle: const Text(
-                    'Moving a task here records its completion date. Moving it out reopens it.',
-                  ),
+                  title: Text(AppMessage.boardColumnCompleteTitle.of(context)),
+                  subtitle: Text(AppMessage.boardColumnCompleteHelp.of(context)),
                   value: _completed,
                   onChanged: (v) => setState(() => _completed = v),
                 ),
                 const SizedBox(height: 16),
                 BusinessCommand(
-                  label: 'Save column',
+                  label: AppMessage.save.of(context),
                   create: () {
                     if (_name.text.trim().isEmpty) {
-                      throw const FormatException('Enter a column name.');
+                      throw FormatException(AppMessage.boardColumnNameRequired.of(context));
                     }
                     final id = newBusinessId();
                     final columnId = column?.id ?? newBusinessId();
@@ -846,7 +850,7 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                 if (column != null) ...[
                   const SizedBox(height: 32),
                   Text(
-                    'Column order',
+                    AppMessage.boardColumnOrder.of(context),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   for (final offset in [-1, 1])
@@ -860,8 +864,8 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                         padding: const EdgeInsets.only(top: 12),
                         child: BusinessCommand(
                           label: offset < 0
-                              ? 'Move column left'
-                              : 'Move column right',
+                              ? AppMessage.boardMoveColumnLeft.of(context)
+                              : AppMessage.boardMoveColumnRight.of(context),
                           create: () {
                             final ids = board.columns.map((c) => c.id).toList();
                             final index = ids.indexOf(column.id);
@@ -878,7 +882,7 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                   if (board.columns.length > 1) ...[
                     const SizedBox(height: 32),
                     Text(
-                      'Delete column',
+                      AppMessage.boardDeleteColumn.of(context),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -887,8 +891,8 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                       DropdownButtonFormField<String>(
                         initialValue: _destination,
                         isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Move existing tasks to',
+                        decoration: InputDecoration(
+                          labelText: AppMessage.boardMoveTasksTo.of(context),
                         ),
                         items: [
                           for (final c in board.columns.where(
@@ -900,7 +904,7 @@ class _ColumnEditorState extends ConsumerState<_ColumnEditor> {
                       ),
                     const SizedBox(height: 12),
                     BusinessCommand(
-                      label: 'Delete column and move tasks',
+                      label: AppMessage.boardDeleteColumnMoveTasks.of(context),
                       enabled:
                           board.inColumn(column.id).isEmpty ||
                           _destination != null,

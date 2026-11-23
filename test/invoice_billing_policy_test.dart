@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:clockrove/business/invoice_billing_policy.dart';
+import 'package:clockrove/l10n/app_localizations.dart';
 
 void main() {
   test('minimum hours accepts exact decimal text without floating point', () {
@@ -14,11 +15,11 @@ void main() {
 
   test('billing mode labels remain understandable', () {
     expect(
-      billingModeLabel(minimumThenExactBilling),
+      billingModeMessage(minimumThenExactBilling).english,
       'Minimum hours, then exact time',
     );
     expect(
-      billingModeLabel(roundTotalUpBilling),
+      billingModeMessage(roundTotalUpBilling).english,
       'Round total time up to the next hour',
     );
   });

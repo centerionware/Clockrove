@@ -348,7 +348,9 @@ final class _BackupExportScreenState extends State<BackupExportScreen> {
         '${now.year.toString().padLeft(4, '0')}'
         '${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}';
-    return 'Clockrove-backup-$date.clockrove';
+    return AppMessage.backupSuggestedFilename.format(context, {
+      'date': date,
+    });
   }
 
   AppMessage _platformFailureMessage(PlatformException error) =>

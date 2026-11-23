@@ -194,8 +194,7 @@ class QuoteRelatedInvoice {
   QuoteRelatedInvoice(Map<Object?, Object?> value)
     : id = value['invoiceId'] as String,
       number = value['number'] as String,
-      createdLabel =
-          value['createdLabel'] as String? ?? 'Creation date unavailable',
+      createdLabel = value['createdLabel'] as String? ?? '',
       revision = value['revision'] as int,
       originalId = value['originalInvoiceId'] as String,
       created = value['created'] as int;

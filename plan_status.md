@@ -269,6 +269,27 @@ sources and continues to check catalog keys and placeholders.
 Remaining Flutter screens, Help, notifications, and generated document
 copy are still pending. See [translation instructions](localizations/README.md).
 
+## 2026-11-23 localization source update
+
+The source-coverage test now walks Flutter screen, dialog, and control files
+plus the shared presentation surfaces. It also checks Android PDF, invoice,
+quote, widget, notification, and XML presentation copy. The catalog test checks
+every Flutter message and named placeholder in all 17 locales. Android resource
+generation checks locale keys and placeholders and resolves
+`@flutter:<messageKey>` aliases into native resources. Work and GPS CSV headers,
+business CSV labels and record values, actual-cost categories, and the business
+report PDF now use these catalogs. Business-format and quote error fallbacks use
+localized text instead of exposing raw error strings.
+
+The branch was rebased onto current main through `e126bf1`. The in-place worksite
+clock-in prompt, small-radius warning, and updated Help details from PR #83 now
+have translations. The restore preview and quote scope form were split into
+focused files so the edited maintained Dart sources stay below 1,000 lines.
+Catalog generators and whitespace review completed locally; no build or test
+ran here per owner instruction. Full-coverage acceptance stays open until the
+single GitHub Actions validation completes and its localization audit is
+reviewed.
+
 The report below preserves earlier evidence and milestone history.
 
 **M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run

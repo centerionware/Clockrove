@@ -77,10 +77,13 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text('${widget.number} · Revision ${widget.revision}'),
+      title: Text(AppMessage.quoteInvoiceRevisionRef.format(context, {
+        'number': widget.number,
+        'revision': widget.revision.toString(),
+      })),
       actions: [
         IconButton(
-          tooltip: 'Refresh quote PDF',
+          tooltip: AppMessage.quoteRefreshPdf.of(context),
           onPressed: _busy
               ? null
               : () => setState(() {
@@ -100,7 +103,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                 onPressed: () => setState(() {
                   _page = _load(0);
                 }),
-                child: const Text('Retry quote PDF'),
+                child: Text(AppMessage.quoteRetryPdf.of(context)),
               ),
             );
           }
@@ -117,12 +120,12 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Quote · estimate only',
+                      Text(
+                        AppMessage.quoteDocumentEstimate.of(context),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const Text(
-                        'This issued revision is retained. Opening an email draft does not record acceptance or payment.',
+                      Text(
+                        AppMessage.quoteDocumentAcceptanceNotice.of(context),
                       ),
                       if (page.notice != null)
                         Padding(

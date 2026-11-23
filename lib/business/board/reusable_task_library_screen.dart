@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../business_api.dart';
 import '../business_command.dart';
 
@@ -28,7 +29,7 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Reusable tasks')),
+    appBar: AppBar(title: Text(AppMessage.reusableTasks.of(context))),
     body: Column(
       children: [
         Padding(
@@ -36,9 +37,9 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
           child: TextField(
             controller: _search,
             decoration: InputDecoration(
-              labelText: 'Search task library',
+              labelText: AppMessage.searchTaskLibrary.of(context),
               suffixIcon: IconButton(
-                tooltip: 'Search',
+                tooltip: AppMessage.helpSearch.of(context),
                 icon: const Icon(Icons.search),
                 onPressed: () => setState(
                   () => _data = ref
@@ -52,11 +53,9 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Reusable content includes tasks saved from archived or deleted jobs. Each copy is a new task with no old due date or completion.',
-          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(AppMessage.reusableLibraryHelp.of(context)),
         ),
         Expanded(
           child: FutureBuilder<List<TaskTemplate>>(
@@ -70,7 +69,7 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                           .read(businessApiProvider)
                           .templates(_search.text),
                     ),
-                    child: const Text('Retry library'),
+                    child: Text(AppMessage.retryTaskLibrary.of(context)),
                   ),
                 );
               }
@@ -78,7 +77,7 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.data!.isEmpty) {
-                return const Center(child: Text('No saved tasks yet.'));
+                return Center(child: Text(AppMessage.noSavedTasks.of(context)));
               }
               return ListView(
                 padding: const EdgeInsets.all(20),
@@ -88,11 +87,11 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                       child: ListTile(
                         title: Text(task.title),
                         subtitle: Text(
-                          '${task.source ?? 'Saved template'} · ${task.chargeType == 'SUPPLIES'
-                              ? 'Supplies'
+                          '${task.source ?? AppMessage.savedTemplate.of(context)} · ${task.chargeType == 'SUPPLIES'
+                              ? AppMessage.quoteChargeSupplies.of(context)
                               : task.chargeType == 'LABOR'
-                              ? 'Labor'
-                              : 'Unclassified'} · quantity ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · price not set' : ''}',
+                              ? AppMessage.quoteChargeLabor.of(context)
+                              : AppMessage.boardUnclassified.of(context)} · ${AppMessage.quoteQuantity.of(context)} ${taskQuantity(task.quantityUnits)} · ${task.currency}${task.priceMinor == null ? ' · ${AppMessage.boardPriceNotSetLong.of(context)}' : ''}',
                         ),
                         onTap: () {
                           final board = ref
@@ -110,11 +109,11 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                                   children: [
                                     Text(task.description),
                                     SwitchListTile(
-                                      title: const Text('Copy price'),
+                                      title: Text(AppMessage.copyTaskPrice.of(dialog)),
                                       subtitle: Text(
                                         task.currency == board.currency
-                                            ? 'A new independent task will be created.'
-                                            : 'Different currency: copy content without price.',
+                                            ? AppMessage.copyTaskIndependent.of(dialog)
+                                            : AppMessage.copyTaskDifferentCurrency.of(dialog),
                                       ),
                                       value: copyPrice,
                                       onChanged: task.currency != board.currency
@@ -125,7 +124,7 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                                 ),
                                 actions: [
                                   BusinessCommand(
-                                    label: 'Use template',
+                                    label: AppMessage.useTaskTemplate.of(dialog),
                                     create: () {
                                       final id = newBusinessId();
                                       final cardId = newBusinessId();
@@ -152,19 +151,17 @@ class _TemplatesState extends ConsumerState<ReusableTaskLibraryScreen> {
                           );
                         },
                         trailing: IconButton(
-                          tooltip: 'Remove reusable template',
+                          tooltip: AppMessage.removeReusableTemplate.of(context),
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => showDialog<void>(
                             context: context,
                             barrierDismissible: false,
                             builder: (dialog) => AlertDialog(
-                              title: const Text('Remove saved template?'),
-                              content: const Text(
-                                'Existing task cards keep their content.',
-                              ),
+                              title: Text(AppMessage.removeSavedTemplateQuestion.of(dialog)),
+                              content: Text(AppMessage.existingCardsRetained.of(dialog)),
                               actions: [
                                 BusinessCommand(
-                                  label: 'Remove template',
+                                  label: AppMessage.removeTaskTemplate.of(dialog),
                                   create: () {
                                     final id = newBusinessId();
                                     final version = ref

@@ -1,0 +1,2 @@
+durationHoursMinutes: "{hours} س {minutes} د"
+durationHoursMinutesSeconds: "{hours} س {minutes} د {seconds} ث"

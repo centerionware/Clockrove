@@ -43,7 +43,7 @@ internal object InvoiceLifecycleStore {
     }
     fun claims(db: SQLiteDatabase, invoiceId: String): List<Claim> = buildList {
         db.rawQuery("SELECT c.id,c.task_id,t.title FROM invoice_task_claims c LEFT JOIN kanban_cards t ON t.id=c.task_id AND t.job_id=c.job_id WHERE c.invoice_id=? AND c.released_ms IS NULL ORDER BY c.id", arrayOf(invoiceId)).use {
-            while (it.moveToNext()) add(Claim(it.getString(0), taskId = it.getString(1), label = (if (it.isNull(2)) "Unavailable task" else it.getString(2)) + " · " + it.getString(1)))
+            while (it.moveToNext()) add(Claim(it.getString(0), taskId = it.getString(1), label = (if (it.isNull(2)) "" else it.getString(2)) + " · " + it.getString(1)))
         }
         db.rawQuery("SELECT id,session_id,start_ms,end_ms,timezone FROM invoice_time_claims WHERE invoice_id=? AND released_ms IS NULL ORDER BY start_ms,id", arrayOf(invoiceId)).use {
             while (it.moveToNext()) add(Claim(it.getString(0), sessionId = it.getString(1), start = it.getLong(2), end = it.getLong(3), timezone = it.getString(4)))
@@ -96,11 +96,19 @@ internal object InvoiceLifecycleStore {
                 val price = try { MoneyMath.parse(requireNotNull(line.unitPriceMinor)) } catch (_: IllegalArgumentException) { return "INVALID_MONEY" }
                 if (TaskQuantityStore.amount(price, quantity) != amount) return "INVALID_REPLACEMENT_AMOUNT"
                 // Price/quantity captions are derived, never stale text from the predecessor.
-                detail = "${TaskQuantityStore.format(quantity)} × ${InvoiceStore.amount(price, source.digits)} ${source.currency} each" +
+                detail = strings.getString(
+                    R.string.invoice_task_line_basis,
+                    TaskQuantityStore.format(quantity),
+                    strings.getString(
+                        R.string.invoice_unit_price_each,
+                        InvoiceStore.amount(price, source.digits),
+                        source.currency,
+                    ),
+                ) +
                     line.detail.substringAfter('\n', "").let { if (it.isBlank()) "" else "\n$it" }
             }
             if (line.quantityUnits == null && amount != null && detail == old.detail && amount != PaymentMath.parseMajor(old.amount, source.digits)) {
-                detail = "Adjusted amount. Original basis:\n$detail"
+                detail = strings.getString(R.string.invoice_adjusted_amount_basis, detail)
             }
             edited.add(InvoiceStore.Line(line.title, detail, amount?.let { InvoiceStore.amount(it, source.digits) }.orEmpty(), line.quantityUnits, line.unitPriceMinor, old.chargeType))
         }
@@ -114,7 +122,7 @@ internal object InvoiceLifecycleStore {
             if (preview.report.totals.single().currency != source.currency) return "PAYMENT_CURRENCY_MISMATCH"
             preview.report
         }
-        if (added != null) edited.addAll(InvoiceStore.billableLines(added))
+        if (added != null) edited.addAll(InvoiceStore.billableLines(added, strings))
         if (edited.size > 7000 || edited.none { it.amount.isNotBlank() }) return "NO_BILLABLE_ITEMS"
         val subtotal = edited.filter { it.amount.isNotBlank() }.fold(BigInteger.ZERO) { sum, line ->
             sum.add(PaymentMath.parseMajor(line.amount, source.digits))
@@ -148,9 +156,9 @@ internal object InvoiceLifecycleStore {
             subtotal = InvoiceStore.amount(subtotal, source.digits), taxRateUnits = value.taxUnits, taxAmount = InvoiceStore.amount(tax, source.digits), total = formatted,
             subject = InvoiceEmailTemplate.renderDefaultAware(strings, company, tokens, true),
             body = InvoiceEmailTemplate.renderDefaultAware(strings, company, tokens, false) + "\n\n" + notice,
-            basis = "Replacement of ${source.number} · reviewed line amounts · tax rounded half up",
+            basis = strings.getString(R.string.invoice_replacement_basis, source.number),
             statement = InvoiceStore.Statement("REPLACEMENT", balance.status, at, InvoiceStore.amount(balance.paid, source.digits), InvoiceStore.amount(balance.due, source.digits),
-                listOf(InvoiceStore.Line("Credit from ${source.number}", "Existing payments transferred; no new cash received.", InvoiceStore.amount(balance.paid, source.digits))), "Replaces ${source.number}"),
+                listOf(InvoiceStore.Line(strings.getString(R.string.invoice_credit_from, source.number), strings.getString(R.string.invoice_credit_transfer_description), InvoiceStore.amount(balance.paid, source.digits))), strings.getString(R.string.invoice_replaces, source.number)),
             billingPolicy = billingPolicy)
         val payload = replacement.encode()
         if (payload.toByteArray(Charsets.UTF_8).size > 1_000_000) return "INVOICE_TOO_LARGE"

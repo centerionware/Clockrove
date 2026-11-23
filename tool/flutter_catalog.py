@@ -10,6 +10,7 @@ from catalog_source import LANGUAGE_TAG, locale_names, read_catalog
 SOURCE = Path("localizations/en.yaml")
 MESSAGES_TARGET = Path("lib/l10n/app_messages.g.dart")
 LOCALES_TARGET = Path("lib/l10n/app_languages.g.dart")
+OVERLAYS_TARGET = Path("lib/l10n/app_localization_overlays.g.dart")
 
 
 def generate_messages():
@@ -59,6 +60,26 @@ def generate_locales():
     return "\n".join(lines) + "\n"
 
 
+def generate_overlays():
+    names = locale_names()
+    lines = [
+        "// Generated from localizations/flutter by tool/flutter_catalog.py.",
+        "// dart format off",
+        "part of 'app_localizations.dart';",
+        "",
+        "const appLocalizationOverlays = {",
+    ]
+    for tag in names:
+        overlays = sorted(
+            Path("localizations/flutter", tag).glob("*.yaml"),
+        )
+        assets = [f"localizations/flutter/{tag}/{path.name}" for path in overlays]
+        literal = json.dumps(assets, ensure_ascii=False).replace("$", r"\$")
+        lines.append(f"  '{tag}': {literal},")
+    lines.append("};")
+    return "\n".join(lines) + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
@@ -66,6 +87,7 @@ def main():
     outputs = {
         MESSAGES_TARGET: generate_messages(),
         LOCALES_TARGET: generate_locales(),
+        OVERLAYS_TARGET: generate_overlays(),
     }
     for path, expected in outputs.items():
         if args.check:

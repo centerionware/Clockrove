@@ -8,6 +8,7 @@ const _localizedDart = 'lib/l10n/app_localizations.dart';
 final _words = RegExp(r'[A-Za-z]{2,}');
 final _technical = RegExp(r'^(?:[A-Z][A-Z0-9_]+|[a-z][a-z0-9_]*)$');
 final _kotlinString = RegExp(r'"((?:\\.|[^"\\])*)"');
+final _machineDatePattern = RegExp(r"^[yMdHhmsSZX'T:./+ -]+$");
 final _androidText = RegExp(
   r'android:(?:text|hint|contentDescription|label)="([^"@?][^"]*)"',
 );
@@ -75,6 +76,44 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
       if (_looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
+}
+
+Iterable<({int line, String text})> auditKotlinPresentation(String source) sync* {
+  final lines = source.split('\n');
+  for (var index = 0; index < lines.length; index++) {
+    final line = lines[index];
+    final trimmed = line.trimLeft();
+    if (trimmed.startsWith('//') ||
+        line.contains('result.error(') ||
+        line.contains('FileNotFoundException(') ||
+        line.contains('throw ') ||
+        line.contains('check(') ||
+        line.contains('require(') ||
+        (trimmed.startsWith('"') && trimmed.contains('->'))) {
+      continue;
+    }
+    for (final match in _kotlinString.allMatches(line)) {
+      final text = match[1]!;
+      final staticText = text.replaceAll(
+        RegExp(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*'),
+        ' ',
+      );
+      if (!_machineDatePattern.hasMatch(text) && _looksLikeCopy(staticText)) {
+        yield (line: index + 1, text: text);
+      }
+    }
+  }
+}
+
+Iterable<({int line, String text})> auditAndroidPresentationXml(
+  String source,
+) sync* {
+  final lines = source.split('\n');
+  for (var index = 0; index < lines.length; index++) {
+    for (final match in _androidText.allMatches(lines[index])) {
+      yield (line: index + 1, text: match[1]!);
+    }
+  }
 }
 
 class _StringVisitor extends RecursiveAstVisitor<void> {

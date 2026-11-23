@@ -42,12 +42,30 @@ internal object InvoiceDocuments {
     fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
     fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.quoteRevision != null) Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("quotes").appendPath(record.id).appendPath(record.quoteRevision.toString()).build()
         else if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
-    fun filename(record: InvoiceStore.Record): String {
-        if (record.quoteRevision != null) return "${record.number}-revision-${record.quoteRevision}.pdf"
+    fun filename(context: Context, record: InvoiceStore.Record): String {
+        val strings = localizedContext(context)
+        if (record.quoteRevision != null) return strings.getString(
+            R.string.document_filename_quote_revision,
+            record.number,
+            strings.getString(R.string.document_filename_revision),
+            record.quoteRevision,
+        )
         if (record.copyId == null) return "${record.number}.pdf"
         val statement = requireNotNull(InvoiceStore.Snapshot.decode(record.payload).statement)
         val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(statement.created))
-        return "${record.number}-${record.documentKind.lowercase(java.util.Locale.ROOT)}-$date-${record.copyId.takeLast(8)}.pdf"
+        val kind = strings.getString(when (record.documentKind) {
+            "RECEIPT" -> R.string.invoice_copy_caption_receipt
+            "CORRECTION" -> R.string.invoice_copy_caption_correction
+            "VOID" -> R.string.pdf_void_invoice_title
+            else -> R.string.invoice_copy_caption_balance
+        })
+        return strings.getString(
+            R.string.document_filename_copy,
+            record.number,
+            kind,
+            date,
+            record.copyId.takeLast(8),
+        )
     }
     fun historicalNotice(context: Context, repository: TimerRepository, record: InvoiceStore.Record): String? {
         val strings = localizedContext(context)

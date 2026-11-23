@@ -1,0 +1,2 @@
+durationHoursMinutes: "{hours} sa {minutes} dk"
+durationHoursMinutesSeconds: "{hours} sa {minutes} dk {seconds} sn"

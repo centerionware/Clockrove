@@ -58,22 +58,15 @@ class ClockroveApp extends ConsumerWidget {
         screen = const WidgetConfigurationScreen();
       } else if (uri.path == '/widget-board' &&
           uri.queryParameters['job'] != null) {
-        screen = JobScreen(
-          jobId: uri.queryParameters['job']!,
-          jobName: uri.queryParameters['name'] ?? 'Job board',
-        );
-      } else if (uri.path == '/widget-unavailable') {
-        screen = Scaffold(
-          appBar: AppBar(title: const Text('Job unavailable')),
-          body: const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'This job was archived or removed. Refresh the widget or choose an active job in widget settings.',
-              ),
-            ),
+        screen = Builder(
+          builder: (context) => JobScreen(
+            jobId: uri.queryParameters['job']!,
+            jobName:
+                uri.queryParameters['name'] ?? AppMessage.boardTitle.of(context),
           ),
         );
+      } else if (uri.path == '/widget-unavailable') {
+        screen = const _WidgetUnavailableScreen();
       } else {
         screen = const TimerScreen();
       }
@@ -84,5 +77,20 @@ class ClockroveApp extends ConsumerWidget {
         ),
       ];
     },
+  );
+}
+
+class _WidgetUnavailableScreen extends StatelessWidget {
+  const _WidgetUnavailableScreen();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(AppMessage.commandJobUnavailable.of(context))),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(AppMessage.widgetSelectedJobUnavailable.of(context)),
+      ),
+    ),
   );
 }

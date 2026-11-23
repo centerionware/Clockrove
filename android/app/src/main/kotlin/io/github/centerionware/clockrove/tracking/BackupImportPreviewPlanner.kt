@@ -131,7 +131,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 handle, conflictOrdinal, ordinal, table, keyJson, "ACTIVE_JOB_DELETION",
                                 listOf("KEEP_LOCAL"), null,
                                 localIdentifier = values["id"]?.toString(),
-                                localSummary = mapOf("identifier" to "Live local job"),
+                                localSummary = mapOf("identifier" to "ON_DEVICE"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -157,7 +157,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     handle, conflictOrdinal, ordinal, table, keyJson, "BACKUP_COMMENT_DELETION",
                                     choices, "KEEP_LOCAL".takeIf { choices.isNotEmpty() },
                                     localIdentifier = commentId,
-                                    localSummary = mapOf("identifier" to "Live local comment"),
+                                    localSummary = mapOf("identifier" to "ON_DEVICE"),
                                     backupSummary = safeSummary(values),
                                 )
                                 continue
@@ -171,7 +171,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 handle, conflictOrdinal, ordinal, table, keyJson, "JOB_DELETION_TOMBSTONE",
                                 listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
                                 localIdentifier = values["id"]?.toString(),
-                                localSummary = mapOf("identifier" to "Permanently deleted job"),
+                                localSummary = mapOf("identifier" to "LOCAL_DELETION"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -207,7 +207,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 handle, conflictOrdinal, ordinal, table, keyJson, "ENTITY_DELETION_TOMBSTONE",
                                 choices, "PRESERVE_LOCAL_DELETION".takeIf { canPreserveDeletion },
                                 localIdentifier = tombstoneId,
-                                localSummary = mapOf("identifier" to "Deleted local entity"),
+                                localSummary = mapOf("identifier" to "LOCAL_DELETION"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -222,7 +222,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 handle, conflictOrdinal, ordinal, table, keyJson, "UNIQUE_VALUE_IN_USE",
                             listOf("KEEP_LOCAL", "OMIT_BACKUP_RECORD"), "KEEP_LOCAL",
                                 localIdentifier = "BACKUP:${earlierBackupDuplicate.first}",
-                                localSummary = mapOf("identifier" to "Earlier backup record"),
+                                localSummary = mapOf("identifier" to "BACKUP_RECORD"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -235,11 +235,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                 choices,
                                 if (canPreserveDeletion) "PRESERVE_DELETION" else null,
                                 localSummary = mapOf(
-                                    "identifier" to if (canPreserveDeletion) {
-                                        "Deletion coverage"
-                                    } else {
-                                        "No local point or tombstone can preserve this deletion"
-                                    },
+                                    "identifier" to if (canPreserveDeletion) "GPS_DELETION" else "GPS_DELETION_UNAVAILABLE",
                                 ),
                                 backupSummary = safeSummary(values),
                             )
@@ -249,7 +245,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                             conflictOrdinal = addConflict(
                                 handle, conflictOrdinal, ordinal, table, keyJson, "GPS_TOMBSTONE",
                                 listOf("PRESERVE_LOCAL_DELETION"), "PRESERVE_LOCAL_DELETION",
-                                localSummary = mapOf("identifier" to "Point deletion"),
+                                localSummary = mapOf("identifier" to "GPS_DELETION"),
                                 backupSummary = safeSummary(values),
                             )
                             continue
@@ -263,11 +259,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                     handle, conflictOrdinal, ordinal, table, keyJson, "GPS_DELETION_COVERAGE",
                                     choices, null,
                                     localSummary = mapOf(
-                                        "identifier" to if (hasUnprovenLocalPoints) {
-                                            "Unproven local GPS points are covered"
-                                        } else {
-                                            "Unproven backup GPS points are covered"
-                                        },
+                                        "identifier" to if (hasUnprovenLocalPoints) "GPS_LOCAL_POINTS" else "GPS_BACKUP_POINTS",
                                     ),
                                     backupSummary = safeSummary(values),
                                 )
@@ -465,7 +457,7 @@ internal fun BackupImportStore.buildPreview(db: SQLiteDatabase, handle: PreviewP
                                             else -> "KEEP_LOCAL"
                                         },
                                         localSummary = if (localEntityDeletionCanBePreserved) {
-                                            mapOf("identifier" to "Deleted local entity")
+                                            mapOf("identifier" to "LOCAL_DELETION")
                                         } else {
                                             safeSummary(local.values)
                                         },
@@ -909,7 +901,7 @@ internal fun BackupImportStore.addDependentReferenceConflicts(
                             "DEPENDENT_ON_CONFLICT",
                             dependentChoices,
                             null,
-                            localSummary = mapOf("identifier" to "A referenced backup record requires a choice"),
+                            localSummary = mapOf("identifier" to "BACKUP_RECORD"),
                             backupSummary = safeSummary(values),
                         )
                         passAdded++

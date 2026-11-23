@@ -112,7 +112,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The map could not be opened.')),
+        SnackBar(content: Text(AppMessage.mapNoExternalApp.of(context))),
       );
     }
   }
@@ -155,27 +155,23 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Tap the map to choose the centre of your work site.',
-                      ),
+                      Text(AppMessage.siteMapIntro.of(context)),
                       Text(AppMessage.mapPrivacy.of(context)),
-                      Text(
-                        'Radius: ${widget.radius.toStringAsFixed(widget.radius < 10 ? 1 : 0)} m. Accuracy and arrival/departure delivery can vary.',
-                      ),
+                      Text(AppMessage.siteMapRadiusHelp.format(context, {
+                        'radius': widget.radius.toStringAsFixed(
+                          widget.radius < 10 ? 1 : 0,
+                        ),
+                      })),
                       if (widget.latitude != null &&
                           widget.latitude!.abs() > 85)
-                        const Text(
-                          'This map cannot display polar locations. You can keep or edit those coordinates in the site form.',
-                        ),
+                        Text(AppMessage.siteMapPolarHelp.of(context)),
                       if (_failed)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const Text(
-                                'Map tiles are unavailable. Go back to enter coordinates or use current location.',
-                              ),
+                              Text(AppMessage.siteMapTilesUnavailable.of(context)),
                               if (_point != null)
                                 TextButton.icon(
                                   onPressed: _openExternalMap,
@@ -255,7 +251,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                                 width: 48,
                                 height: 48,
                                 child: Semantics(
-                                  label: 'Selected site centre',
+                                  label: AppMessage.siteMapSelectedCentre.of(context),
                                   child: const DecoratedBox(
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -320,7 +316,7 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                         onPressed: _point == null || _failed
                             ? null
                             : () => Navigator.pop(context, _point),
-                        child: const Text('Use this centre'),
+                        child: Text(AppMessage.siteMapUseCentre.of(context)),
                       ),
                     ),
                   ],

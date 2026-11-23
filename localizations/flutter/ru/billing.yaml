@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "Минимум часов, затем точное время"
+billingModeRoundTotalUp: "Округлять общее время до следующего часа"
+minimumHoursSummary: "{hours} ч"

@@ -1,0 +1,2 @@
+durationHoursMinutes: "{hours} j {minutes} m"
+durationHoursMinutesSeconds: "{hours} j {minutes} m {seconds} dtk"

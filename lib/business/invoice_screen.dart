@@ -139,10 +139,10 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                 children: [
                   Text(
                     widget.copyId == null
-                        ? 'This invoice is a saved snapshot. Later job, rate or company changes will not rewrite it.'
+                        ? AppMessage.invoiceScreenSnapshot.of(context)
                         : widget.copyId!.startsWith('void-')
-                        ? 'This copy records the invoice cancellation and credit transferred to a replacement. No payment is due on the cancelled invoice.'
-                        : 'This copy records the paid amount and balance when it was created. Later payments or corrections do not rewrite it.',
+                        ? AppMessage.invoiceScreenCancellationCopy.of(context)
+                        : AppMessage.invoiceScreenPaymentCopy.of(context),
                   ),
                   if (_notice != null)
                     Text(
@@ -196,7 +196,7 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                   return Center(
                     child: TextButton(
                       onPressed: () => setState(() => _page = _preview(0)),
-                      child: const Text('Retry PDF preview'),
+                      child: Text(AppMessage.invoiceScreenRetryPdf.of(context)),
                     ),
                   );
                 }
@@ -214,8 +214,13 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                           child: Image.memory(
                             page.png,
                             fit: BoxFit.contain,
-                            semanticLabel:
-                                'Invoice page ${page.index + 1} of ${page.pages}',
+                            semanticLabel: AppMessage.documentPage.format(
+                              context,
+                              {
+                                'page': '${page.index + 1}',
+                                'total': '${page.pages}',
+                              },
+                            ),
                           ),
                         ),
                       ),

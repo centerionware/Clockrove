@@ -1,0 +1,3 @@
+billingModeMinimumThenExact: "最低時間を適用し、その後は実時間で計算"
+billingModeRoundTotalUp: "合計時間を次の1時間単位に切り上げ"
+minimumHoursSummary: "{hours} 時間"

@@ -9,10 +9,13 @@ import 'invoice_review_screen.dart';
 import 'invoice_history_screen.dart';
 import 'report_api.dart';
 import 'report_map.dart';
+import '../tracking/history/history_time_format.dart';
 
 String reportDate(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-String reportDuration(String millis) {
+({Map<String, String> arguments, bool hasSeconds}) reportDurationParts(
+  String millis,
+) {
   final value = BigInt.parse(millis);
   final hour = BigInt.from(3600000);
   final minute = BigInt.from(60000);
@@ -25,7 +28,19 @@ String reportDuration(String millis) {
       .toString()
       .padLeft(3, '0')
       .replaceFirst(RegExp(r'0+$'), '');
-  return '${hours}h ${minutes}m${remaining == BigInt.zero ? '' : ' $seconds${fraction.isEmpty ? '' : '.$fraction'}s'}';
+  final arguments = <String, String>{
+    'hours': '$hours',
+    'minutes': '$minutes',
+    'seconds': '$seconds${fraction.isEmpty ? '' : '.$fraction'}',
+  };
+  return (arguments: arguments, hasSeconds: remaining != BigInt.zero);
+}
+
+String reportDuration(BuildContext context, String millis) {
+  final parts = reportDurationParts(millis);
+  return parts.hasSeconds
+      ? AppMessage.durationHoursMinutesSeconds.format(context, parts.arguments)
+      : AppMessage.durationHoursMinutes.format(context, parts.arguments);
 }
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -85,7 +100,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
         );
       });
     } catch (_) {
-      if (mounted) setState(() => _error = 'Reports could not be loaded.');
+      if (mounted) {
+        setState(() => _error = AppMessage.reportUnavailable.of(context));
+      }
     }
   }
 
@@ -241,9 +258,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'This report is unavailable. Retry or choose a smaller selection.',
-                          ),
+                          Text(AppMessage.reportUnavailable.of(context)),
                           TextButton(
                             onPressed: _range,
                             child: Text(AppMessage.reportChangeDates.of(context)),
@@ -272,14 +287,26 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             onPressed: _invoicePending ? null : _range,
                             icon: const Icon(Icons.date_range),
                             label: Text(
-                              '${selection.firstDate} – ${selection.lastDate}',
+                              AppMessage.dateRangeLabel.format(context, {
+                                'first': MaterialLocalizations.of(context)
+                                    .formatCompactDate(
+                                      DateTime.parse(selection.firstDate),
+                                    ),
+                                'last': MaterialLocalizations.of(context)
+                                    .formatCompactDate(
+                                      DateTime.parse(selection.lastDate),
+                                    ),
+                              }),
                             ),
                           ),
                           OutlinedButton.icon(
                             onPressed: _invoicePending ? null : _jobs,
                             icon: const Icon(Icons.filter_list),
                             label: Text(
-                              '${selection.jobs.length} job${selection.jobs.length == 1 ? '' : 's'}',
+                              AppMessage.reportSelectedJobs.format(context, {
+                                'count': MaterialLocalizations.of(context)
+                                    .formatDecimal(selection.jobs.length),
+                              }),
                             ),
                           ),
                         ],
@@ -287,7 +314,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Text(
-                          'Report timezone: ${selection.timezone}. Only finalized selected work contributes to hourly totals.',
+                          AppMessage.reportTimezoneHourlyHelp.format(context, {
+                            'timezone': selection.timezone,
+                          }),
                         ),
                       ),
                       Align(
@@ -302,7 +331,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           icon: const Icon(
                             Icons.account_balance_wallet_outlined,
                           ),
-                          label: const Text('Actual cost ledger'),
+                          label: Text(AppMessage.reportDirectCosts.of(context)),
                         ),
                       ),
                       Align(
@@ -317,7 +346,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             ),
                           ),
                           icon: const Icon(Icons.assessment_outlined),
-                          label: const Text('Tax & financial report'),
+                          label: Text(AppMessage.taxFinances.of(context)),
                         ),
                       ),
                       for (final total in report.totals)
@@ -362,7 +391,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                       AppMessage.reportHourlyBreakdown.format(
                                         context,
                                         {
-                                          'duration': reportDuration(total.duration),
+                                          'duration': reportDuration(context, total.duration),
                                           'currency': total.currency,
                                           'rate': money(rate, total.digits),
                                         },
@@ -373,7 +402,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                   Text(
                                     AppMessage.reportTaskDuration.format(
                                       context,
-                                      {'duration': reportDuration(total.duration)},
+                                      {'duration': reportDuration(context, total.duration)},
                                     ),
                                   ),
                                 if (total.mode == 'HOURLY')
@@ -393,7 +422,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ? null
                                 : () => _csv(report, false),
                             icon: const Icon(Icons.file_download_outlined),
-                            label: const Text('CSV export'),
+                            label: Text(AppMessage.reportExportCsv.of(context)),
                           ),
                           if (report.totals.length == 1)
                             SizedBox(
@@ -415,16 +444,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                                 ? null
                                 : () => _csv(report, true),
                             icon: const Icon(Icons.location_on_outlined),
-                            label: const Text('GPS CSV'),
+                            label: Text(AppMessage.reportExportGpsCsv.of(context)),
                           ),
                         ],
                       ),
                       if (report.totals.length != 1)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: Text(
-                            'Select one job to prepare a customer invoice. Currencies remain separate.',
-                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(AppMessage.reportInvoiceScopeHelp.of(context)),
                         ),
                       if (selection.jobs.length == 1)
                         TextButton.icon(
@@ -436,7 +463,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                             ),
                           ),
                           icon: const Icon(Icons.receipt_long_outlined),
-                          label: const Text('Prepared invoices'),
+                          label: Text(AppMessage.reportPreparedInvoices.of(context)),
                         ),
                       const SizedBox(height: 24),
                       OutlinedButton.icon(
@@ -502,12 +529,13 @@ class _ReportScreenState extends ConsumerState<ReportScreen>
                           child: ListTile(
                             title: Text('${interval.date} · ${interval.name}'),
                             subtitle: Text(
-                              '${interval.startLabel}\n${interval.endLabel}\n${interval.origin.toLowerCase()}',
+                              '${interval.startLabel}\n${interval.endLabel}\n${historyOriginLabel(context, interval.origin)}',
                             ),
                             trailing: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 120),
                               child: Text(
                                 reportDuration(
+                                  context,
                                   (interval.end - interval.start).toString(),
                                 ),
                                 textAlign: TextAlign.end,
@@ -569,7 +597,7 @@ class _InvoiceButton extends StatelessWidget {
   final ValueChanged<bool> onPendingChanged;
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
-    label: const Text('PDF invoice'),
+    label: Text(AppMessage.reportExportPdf.of(context)),
     icon: const Icon(Icons.receipt_long_outlined),
     onPressed: () => Navigator.push(
       context,
