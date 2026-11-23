@@ -1,6 +1,7 @@
 import 'package:clockrove/help/help_screen.dart';
 import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -24,12 +25,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final helpList = find.byType(Scrollable).first;
-    final version = find.textContaining('Clockrove version ');
-    await tester.scrollUntilVisible(version, 180, scrollable: helpList);
+    final versionValue = await const MethodChannel('clockrove/help/v1')
+        .invokeMethod<String>('appVersion');
+    expect(versionValue, isNotEmpty);
+    await tester.pumpAndSettle();
+
+    final helpList = find.byType(ListView).first;
+    final version = find.text('Clockrove version $versionValue');
+    for (var attempt = 0; attempt < 8 && version.evaluate().isEmpty; attempt++) {
+      await tester.drag(helpList, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
     expect(version, findsOneWidget);
     final search = find.byType(TextField);
-    await tester.scrollUntilVisible(search, -180, scrollable: helpList);
+    await tester.drag(helpList, const Offset(0, 1200));
+    await tester.pumpAndSettle();
     await tester.enterText(search, 'sample missing topic');
     await tester.pumpAndSettle();
     expect(find.text('No matching help topics.'), findsOneWidget);

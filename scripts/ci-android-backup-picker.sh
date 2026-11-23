@@ -8,14 +8,13 @@ api="${1:?Android API required}"
 app_apk="${2:?Validation APK required}"
 test_apk="${3:?Instrumentation APK required}"
 package=io.github.centerionware.clockrove
-# Use a distinct folder in primary shared storage, separate from the Downloads provider.
-shared_directory=/sdcard/Clockrove-CI-Backup
+# Use the Downloads root, which remains available in recent Android DocumentsUI versions.
+shared_directory=/sdcard/Download/Clockrove-CI-Backup
 shared_fixture="$shared_directory/clockrove-picker-fixture.clockrove"
 results="$GITHUB_WORKSPACE/build/device-test-results/api-$api"
 mkdir -p "$results"
 fixture_log="$results/backup-picker-fixture.txt"
 fixture_file="$(mktemp "$RUNNER_TEMP/clockrove-picker.XXXXXX")"
-trap 'rm -f "$fixture_file"' EXIT
 clear_fixture_app() {
   local result
   if ! result="$(timeout 30 adb -s emulator-5554 shell pm clear "$package" 2>&1)" ||
@@ -24,6 +23,18 @@ clear_fixture_app() {
     return 1
   fi
 }
+cleanup_picker() {
+  local status=$?
+  trap - EXIT
+  timeout 30 adb -s emulator-5554 shell am force-stop com.android.documentsui >/dev/null 2>&1 || true
+  timeout 30 adb -s emulator-5554 shell am force-stop com.google.android.documentsui >/dev/null 2>&1 || true
+  timeout 30 adb -s emulator-5554 shell pm clear "$package" >/dev/null 2>&1 || true
+  timeout 30 adb -s emulator-5554 shell rm -f "$shared_fixture" >/dev/null 2>&1 || true
+  timeout 30 adb -s emulator-5554 shell rmdir "$shared_directory" >/dev/null 2>&1 || true
+  rm -f "$fixture_file"
+  exit "$status"
+}
+trap cleanup_picker EXIT
 
 # Flutter's preceding crypto benchmark uninstalls its APK after completion.
 clockrove_install_apk "$api" app "$app_apk"

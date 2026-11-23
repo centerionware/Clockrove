@@ -195,6 +195,7 @@ internal object InvoicePdf {
         private fun wrapOversizedWords(value: CharSequence, textPaint: TextPaint, available: Int): CharSequence {
             val source = value.toString()
             val breaks = mutableListOf<Int>()
+            val maxCodePointsPerLine = 48
             var wordStart = 0
             while (wordStart < source.length) {
                 while (wordStart < source.length && source[wordStart].isWhitespace()) wordStart++
@@ -204,16 +205,22 @@ internal object InvoicePdf {
 
                 var lineStart = wordStart
                 while (lineStart < wordEnd) {
+                    val remainingCodePoints = Character.codePointCount(source, lineStart, wordEnd)
+                    val boundedEnd = Character.offsetByCodePoints(
+                        source,
+                        lineStart,
+                        minOf(maxCodePointsPerLine, remainingCodePoints),
+                    )
                     val count = textPaint.breakText(
                         source,
                         lineStart,
-                        wordEnd,
+                        boundedEnd,
                         true,
                         available.toFloat(),
                         null,
                     )
-                    if (count >= wordEnd - lineStart) break
-                    var lineEnd = lineStart + count
+                    if (remainingCodePoints <= maxCodePointsPerLine && count >= wordEnd - lineStart) break
+                    var lineEnd = if (count >= boundedEnd - lineStart) boundedEnd else lineStart + count
                     if (lineEnd < wordEnd && lineEnd > lineStart &&
                         Character.isHighSurrogate(source[lineEnd - 1]) &&
                         Character.isLowSurrogate(source[lineEnd])

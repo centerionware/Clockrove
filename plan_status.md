@@ -990,11 +990,11 @@ then lacked quote preview files. Help now starts from its Help button with
 English catalogs; PDF assertions remove the full quote footer; CI includes
 failed-suite diagnostics in the final summary. Exact-head validation is pending; no local builds or tests ran, and localization acceptance stays open.
 
-Exact-head run [45249620359](https://github.com/centerionware/Clockrove/actions/runs/45249620359)
-on `9c8043b` passed localization, formatting, analysis, 311 Dart behavior
-tests, Android/release compilation, 759 native tests, release tooling, and API
-24 journeys. Help navigation still failed to find `HelpButton` on both APIs;
-API 35 PDF rendering clipped the tail of an oversized quote amount, causing quote-copy and five dependent viewer previews to fail. Help integration
-now opens `HelpScreen` directly; PDF paragraphs explicitly wrap oversized
-words at measured character boundaries. Exact-head Actions validation is
-pending; no local builds or tests ran. Localization acceptance stays open.
+Runs [45249620359](https://github.com/centerionware/Clockrove/actions/runs/45249620359)
+(`9c8043b`) and [45257518080](https://github.com/centerionware/Clockrove/actions/runs/45257518080)
+(`eef2e4f`) passed static, Dart, build, native, and release checks. The latter
+failed Help navigation on API 24/35, API 35 backup picker, and wide quote PDF
+text. Settings/result-capture and later API 35 journey failures followed the
+picker aborting with DocumentsUI foreground; five viewer failures followed
+clipped quote output. Repairs are recorded in [PR #82 validation recovery](docs/plan/evidence/pr82-validation-recovery.md).
+No local build/test ran. Localization acceptance stays open.

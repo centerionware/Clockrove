@@ -243,7 +243,7 @@ class BackupPickerDeviceTest {
     }
 
     private fun sharedStorageRoot(): AccessibilityNodeInfo? =
-        findLabel(Build.MODEL) ?: findLabel("Internal storage")
+        findLabel("Downloads") ?: findLabel(Build.MODEL) ?: findLabel("Internal storage")
 
     private fun pressBack() = runShellInput("keyevent KEYCODE_BACK")
 
