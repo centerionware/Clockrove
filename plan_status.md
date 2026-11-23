@@ -758,3 +758,11 @@ literal offsets for URI hosts/fragments and `userAgentPackageName`, avoiding
 that removed type; regression fixtures continue to assert real visible prose.
 No local build, test, formatter or analysis ran. A fresh exact-head Actions run
 is required.
+
+Exact-head run [45116524069](https://github.com/centerionware/Clockrove/actions/runs/45116524069)
+on `eefbb6d` passed generated catalog checks and compiled/completed the
+localization audit. The clean-formatting gate exported one line-wrap correction
+in `tool/localization_audit.dart`; that exact correction is applied. Analysis,
+behavior tests, Android build/native tests, and API 24/35 PDF rendering were
+skipped. No local build, test, formatter or analysis ran; another exact-head
+Actions run is required.

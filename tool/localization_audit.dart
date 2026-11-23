@@ -68,8 +68,7 @@ Iterable<({int line, String text})> auditDart(String path, String source) {
   parsed.unit.accept(visitor);
   return [
     for (final (offset, text) in visitor.strings)
-      if (!_isMachineDartValue(source, offset, text) &&
-          _looksLikeCopy(text))
+      if (!_isMachineDartValue(source, offset, text) && _looksLikeCopy(text))
         (line: parsed.lineInfo.getLocation(offset).lineNumber, text: text),
   ];
 }
