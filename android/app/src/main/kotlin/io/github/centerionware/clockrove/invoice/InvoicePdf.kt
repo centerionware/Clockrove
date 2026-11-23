@@ -12,6 +12,7 @@ import android.graphics.pdf.PdfDocument
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.style.StyleSpan
@@ -183,8 +184,55 @@ internal object InvoicePdf {
         fun next() { finish(); start() }
         fun ensure(space: Float) { if (y + space > bottom) next() }
         fun space(value: Float) { if (y + value <= bottom) y += value else next() }
-        fun layout(value: CharSequence, size: Float, bold: Boolean, available: Int, alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL): StaticLayout = StaticLayout.Builder.obtain(value, 0, value.length, paint(size, bold), available)
-            .setAlignment(alignment).setIncludePad(false).setLineSpacing(2f, 1f).build()
+        fun layout(value: CharSequence, size: Float, bold: Boolean, available: Int, alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL): StaticLayout {
+            val textPaint = paint(size, bold)
+            val wrapped = wrapOversizedWords(value, textPaint, available)
+            return StaticLayout.Builder.obtain(wrapped, 0, wrapped.length, textPaint, available)
+                .setAlignment(alignment).setIncludePad(false).setLineSpacing(2f, 1f).build()
+        }
+
+        /** StaticLayout does not reliably wrap a long word, so explicitly break it before drawing. */
+        private fun wrapOversizedWords(value: CharSequence, textPaint: TextPaint, available: Int): CharSequence {
+            val source = value.toString()
+            val breaks = mutableListOf<Int>()
+            var wordStart = 0
+            while (wordStart < source.length) {
+                while (wordStart < source.length && source[wordStart].isWhitespace()) wordStart++
+                if (wordStart == source.length) break
+                var wordEnd = wordStart
+                while (wordEnd < source.length && !source[wordEnd].isWhitespace()) wordEnd++
+
+                var lineStart = wordStart
+                while (lineStart < wordEnd) {
+                    val count = textPaint.breakText(
+                        source,
+                        lineStart,
+                        wordEnd,
+                        true,
+                        available.toFloat(),
+                        null,
+                    )
+                    if (count >= wordEnd - lineStart) break
+                    var lineEnd = lineStart + count
+                    if (lineEnd < wordEnd && lineEnd > lineStart &&
+                        Character.isHighSurrogate(source[lineEnd - 1]) &&
+                        Character.isLowSurrogate(source[lineEnd])
+                    ) {
+                        lineEnd--
+                    }
+                    if (lineEnd == lineStart) {
+                        lineEnd = Character.offsetByCodePoints(source, lineStart, 1)
+                    }
+                    breaks += lineEnd
+                    lineStart = lineEnd
+                }
+                wordStart = wordEnd
+            }
+            if (breaks.isEmpty()) return value
+            return SpannableStringBuilder(value).also { wrapped ->
+                for (offset in breaks.asReversed()) wrapped.insert(offset, "\n")
+            }
+        }
 
         /** Keep customer and company details side by side without allowing either to take over the page. */
         fun parties(snapshot: InvoiceStore.Snapshot, customerHeading: String) {

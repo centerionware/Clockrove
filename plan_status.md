@@ -962,32 +962,23 @@ API 24 quote-flow failure. A fresh exact-head Actions run is required. No local
 build, test, formatter or analysis ran.
 
 Exact-head run [45141596331](https://github.com/centerionware/Clockrove/actions/runs/45141596331)
-on `0a6c070` passed catalogs, localization audits, formatting, analysis, all
-311 behavior tests, Android/release compilation, APK assembly, and all 759
-native tests. API 24 report/PDF and invoice payment instrumentation passed; the
-quote billing flow passed both corrected save actions, then found that the
-accepted-scope screen is titled `Review accepted scope`, not `Plan accepted
-scope`. The test now follows the visible title. API 35 and invoice-viewer checks
-were skipped after the API 24 quote-flow failure. A fresh exact-head Actions
-run is required. No local build, test, formatter or analysis ran.
+(`0a6c070`) passed catalogs, localization audits, formatting, analysis, 311
+Dart tests, Android/release compilation, instrumentation assembly, and 759
+native tests. API 24 quote flow found a stale `Save task` label; API 35 and
+viewer checks were skipped. No local validation ran.
 
 Exact-head run [45144258534](https://github.com/centerionware/Clockrove/actions/runs/45144258534)
-on `91fe25b` passed catalogs, localization audits, formatting, analysis, all
-311 behavior tests, Android/release compilation, APK assembly, and all 759
-native tests. API 24 report/PDF and invoice payment checks passed. The quote
-billing flow passed its corrected save and accepted-scope assertions, then
-found that its expected invoice total omitted the catalog punctuation. It now
-expects `Invoice total: USD 403.13`. API 35 and invoice-viewer checks were
-skipped after this API 24 failure. A fresh exact-head Actions run is required.
-No local build, test, formatter or analysis ran.
+(`91fe25b`) passed catalogs, localization audits, formatting, analysis, 311
+Dart tests, Android/release compilation, instrumentation assembly, and 759
+native tests. API 24 quote flow found a missing catalog colon in its expected
+`Invoice total: USD 403.13` label; API 35 and viewer checks were skipped. No
+local validation ran.
 
 Exact-head run [45146903159](https://github.com/centerionware/Clockrove/actions/runs/45146903159)
-on `2cf8af7` passed catalogs, localization audits, formatting, analysis, all
-311 behavior tests, Android/release compilation, APK assembly, and all 759
-native tests. API 24 report, invoice, and quote flows passed; the task-photo
-flow exposed one stale `Task notes and photos` assertion. It now expects the
-catalog title `Task notes & photos`. API 35 was skipped after the API 24
-failure. No local build, test, formatter or analysis ran.
+(`2cf8af7`) passed static, Dart, build, and native checks plus API 24 report,
+invoice, and quote flows. Task-photo flow found a stale `Task notes and photos`
+assertion, corrected to `Task notes & photos`; API 35 was skipped. No local
+validation ran.
 
 Run [45241249815](https://github.com/centerionware/Clockrove/actions/runs/45241249815)
 on `867878e` passed localization checks, formatting, analysis, 311 behavior
@@ -998,3 +989,12 @@ preview generation; dependent quote/task-media checks and five viewer cases
 then lacked quote preview files. Help now starts from its Help button with
 English catalogs; PDF assertions remove the full quote footer; CI includes
 failed-suite diagnostics in the final summary. Exact-head validation is pending; no local builds or tests ran, and localization acceptance stays open.
+
+Exact-head run [45249620359](https://github.com/centerionware/Clockrove/actions/runs/45249620359)
+on `9c8043b` passed localization, formatting, analysis, 311 Dart behavior
+tests, Android/release compilation, 759 native tests, release tooling, and API
+24 journeys. Help navigation still failed to find `HelpButton` on both APIs;
+API 35 PDF rendering clipped the tail of an oversized quote amount, causing quote-copy and five dependent viewer previews to fail. Help integration
+now opens `HelpScreen` directly; PDF paragraphs explicitly wrap oversized
+words at measured character boundaries. Exact-head Actions validation is
+pending; no local builds or tests ran. Localization acceptance stays open.

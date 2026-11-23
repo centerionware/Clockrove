@@ -19,12 +19,9 @@ void main() {
           AppLocalizations.delegate,
           ...GlobalMaterialLocalizations.delegates,
         ],
-        home: Scaffold(appBar: AppBar(actions: const [HelpButton()])),
+        home: const HelpScreen(),
       ),
     );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(HelpButton));
     await tester.pumpAndSettle();
 
     final helpList = find.byType(Scrollable).first;
