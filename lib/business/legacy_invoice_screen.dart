@@ -131,7 +131,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
     if (_noteError != null ||
         _confirmationError != null ||
         _selectionError != null) {
-      throw const FormatException(
+      throw FormatException(
         AppMessage.legacyCoverageFieldsInvalid.of(context),
       );
     }
@@ -203,8 +203,8 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                     label: Text(AppMessage.openOriginalInvoice.of(context)),
                   ),
                   if (data.jobDeleted)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
                       child: Text(AppMessage.legacyDeletedJob.of(context)),
                     ),
                   if (!data.legacy)
@@ -269,7 +269,7 @@ class _LegacyReviewFormState extends ConsumerState<_LegacyReviewForm> {
                       controller: _search,
                       readOnly: !_editable,
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: AppMessage.quoteSearchSavedTasks.of(context),
                         prefixIcon: Icon(Icons.search),
                       ),

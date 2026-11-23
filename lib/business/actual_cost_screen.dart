@@ -149,17 +149,17 @@ class _ActualCostScreenState extends ConsumerState<ActualCostScreen>
             ),
           )
         : _entries.isEmpty
-        ? const Center(
+        ? Center(
             child: Padding(
-              padding: EdgeInsets.all(32),
+              padding: const EdgeInsets.all(32),
               child: Text(AppMessage.actualCostsEmpty.of(context)),
             ),
           )
         : ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
                 child: Text(AppMessage.actualCostsSeparate.of(context)),
               ),
               for (final entry in _entries)
@@ -429,7 +429,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostAmount.of(context),
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
@@ -455,7 +455,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                       setState(() => _currencyValid = null);
                       _setCurrencyDigits(value);
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostCurrency.of(context),
                       hintText: AppMessage.currencyCodeExample.of(context),
                     ),
@@ -480,7 +480,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: _category,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostCategory.of(context),
                     ),
                     items: [
@@ -502,11 +502,11 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedJob,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.optionalLinkedJob.of(context),
                     ),
                     items: [
-                      const DropdownMenuItem<String?>(
+                      DropdownMenuItem<String?>(
                         value: null,
                         child: Text(AppMessage.actualCostGeneral.of(context)),
                       ),
@@ -542,13 +542,13 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                           ),
                           data: (board) => DropdownButtonFormField<String?>(
                             initialValue: _taskId,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: AppMessage.actualCostTaskOptional.of(
                                 context,
                               ),
                             ),
                             items: [
-                              const DropdownMenuItem<String?>(
+                              DropdownMenuItem<String?>(
                                 value: null,
                                 child: Text(
                                   AppMessage.actualCostNoTask.of(context),
@@ -589,7 +589,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   ),
                   TextFormField(
                     controller: _vendor,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostVendorOptional.of(
                         context,
                       ),
@@ -597,7 +597,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                   ),
                   TextFormField(
                     controller: _reference,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostReceiptOptional.of(
                         context,
                       ),
@@ -607,7 +607,7 @@ class _ActualCostEditorState extends ConsumerState<ActualCostEditor> {
                     controller: _note,
                     minLines: 2,
                     maxLines: 4,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: AppMessage.actualCostNotesOptional.of(context),
                     ),
                   ),

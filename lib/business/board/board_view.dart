@@ -698,7 +698,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       onChanged: (v) => setState(() => _billable = v),
                     ),
                     if (_chargeType == 'UNCLASSIFIED') ...[
-                      const Align(
+                      Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           AppMessage.boardClassificationPrompt.of(context),

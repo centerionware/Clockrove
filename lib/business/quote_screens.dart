@@ -160,8 +160,8 @@ class _QuotesScreenState extends ConsumerState<QuotesScreen> {
             ),
           ],
           if (!_busy && _error == null && _entries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
               child: Text(AppMessage.quoteEmpty.of(context)),
             ),
           for (final quote in _entries)

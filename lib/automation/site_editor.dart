@@ -275,7 +275,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   controller: _latitude,
                   enabled: !_locating,
                   onChanged: (_) => setState(() => _position = null),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: AppMessage.siteLatitude.of(context),
                     helperText: AppMessage.siteLatitudeHelp.of(context),
                   ),
@@ -290,7 +290,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   controller: _longitude,
                   enabled: !_locating,
                   onChanged: (_) => setState(() => _position = null),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: AppMessage.siteLongitude.of(context),
                     helperText: AppMessage.siteLongitudeHelp.of(context),
                   ),
@@ -303,7 +303,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _radius,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: AppMessage.siteRadius.of(context),
                     helperText: AppMessage.siteRadiusHelp.of(context),
                   ),
@@ -365,7 +365,7 @@ class _DepartureGraceDialogState extends State<DepartureGraceDialog> {
         controller: _input,
         autofocus: true,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: AppMessage.siteGraceMinutesLabel.of(context),
           helperText: AppMessage.siteGraceMinutesHelp.of(context),
         ),

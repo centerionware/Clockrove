@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import 'business_api.dart';
 import 'business_command.dart';
+import 'job_screen.dart';
 import 'quote_scope_api.dart';
 import 'quote_api.dart';
 import 'settings_validation_messages.dart';
@@ -12,6 +13,7 @@ import 'tax_rate.dart';
 
 class QuoteScopeFormScreen extends ConsumerStatefulWidget {
   const QuoteScopeFormScreen({
+    super.key,
     required this.initial,
     required this.groupKey,
     this.createNewJob = false,
@@ -137,15 +139,14 @@ class _ScopeFormState extends ConsumerState<QuoteScopeFormScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_nameLocalized) return;
-    _name
-      ..text = AppMessage.quoteScopeNewJobTitle.format(context, {
-        'title': _data.issued.draft.title,
-        'group':
-            (_group.kind == 'ITEM'
-                    ? AppMessage.quoteScopeTasksSuffix
-                    : AppMessage.quoteScopeHourlySuffix)
-                .of(context),
-      });
+    _name.text = AppMessage.quoteScopeNewJobTitle.format(context, {
+      'title': _data.issued.draft.title,
+      'group':
+          (_group.kind == 'ITEM'
+                  ? AppMessage.quoteScopeTasksSuffix
+                  : AppMessage.quoteScopeHourlySuffix)
+              .of(context),
+    });
     _nameLocalized = true;
   }
 

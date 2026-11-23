@@ -6,7 +6,6 @@ import 'business_api.dart';
 import 'job_screen.dart';
 import 'quote_scope_api.dart';
 import 'quote_scope_form_screen.dart';
-import 'tax_rate.dart';
 
 class QuoteScopeScreen extends ConsumerStatefulWidget {
   const QuoteScopeScreen({

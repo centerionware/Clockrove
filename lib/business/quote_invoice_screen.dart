@@ -860,7 +860,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                 create: () {
                   final reviewed = _reviewed;
                   if (reviewed == null || !_ready) {
-                    throw const FormatException(
+                    throw FormatException(
                       AppMessage.quoteInvoiceReviewBeforePrepare.of(context),
                     );
                   }

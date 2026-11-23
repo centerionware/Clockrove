@@ -616,7 +616,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               try {
                 parseTaskQuantity(value ?? '');
                 return null;
-              } on FormatException catch (error) {
+              } on FormatException {
                 return AppMessage.quoteQuantityInvalid.of(context);
               }
             },

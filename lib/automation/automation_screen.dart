@@ -230,6 +230,7 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     try {
       timer = await ref.read(timerApiProvider).snapshot();
     } catch (_) {
+      if (!mounted) return;
       _feedback(AppMessage.automationCurrentTimerReadFailed.of(context));
       return;
     }
@@ -557,8 +558,8 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   if (value.sites.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
                         AppMessage.automationAddPlacesHelp.of(context),
                       ),

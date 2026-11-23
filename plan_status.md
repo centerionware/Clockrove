@@ -299,8 +299,12 @@ split into focused files to remain below 1,000 lines. Run
 [45101858207](https://github.com/centerionware/Clockrove/actions/runs/45101858207)
 passed catalog generation and the localization audit but found one final wrap
 in the extracted invoice review dialog. Applied its exact formatter patch.
-Full-coverage acceptance stays open for exact-head CI and owner review of the
-results.
+Run
+[45102205997](https://github.com/centerionware/Clockrove/actions/runs/45102205997)
+passed catalog generation, audit and formatting, then Analyze found localized
+values inside const widgets, duplicate audit-test entries, and an import lost
+during the quote scope split. Corrected those source issues. Full-coverage
+acceptance stays open for exact-head CI and owner review of the results.
 
 The report below preserves earlier evidence and milestone history.
 
