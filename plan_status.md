@@ -928,3 +928,15 @@ revealing it. The GPS test now uses the same accessibility scroll and swipe
 reveal as the passing report-map device test. API 35 and invoice-viewer checks
 were skipped after the API 24 failure; the exact-head PR check validates this
 last test adjustment. No local build, test, formatter or analysis ran.
+
+Exact-head run [45134781152](https://github.com/centerionware/Clockrove/actions/runs/45134781152)
+on `04207c1` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, all 759 native
+unit tests, and all 30 API 24 report/PDF device tests, including the GPS map
+reveal and literal-percent PDF fix. The invoice-billing device flow then found
+its task editor button is `Save`, not `Save task`. Its later report/review
+assertions also used superseded copy; they now follow `Export PDF` and `No
+eligible work in this selection.` API 35 and invoice-viewer validation did not
+run after the API 24 invoice-billing failure; the exact-head PR check validates
+these invoice-flow label corrections. No local build, test, formatter or
+analysis ran.

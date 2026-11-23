@@ -430,7 +430,7 @@ class InvoiceBillingDeviceTest {
             waitFor("Edit task")
             enter("Unit price (USD)", "1000000000000000000.00"); enter("Quantity", "26")
             reveal("Supplies"); click("Supplies"); capture("supplies-classification")
-            reveal("Save task"); click("Save task")
+            reveal("Save"); click("Save")
             until("Wide unit price was narrowed during actual UI save") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.priceMinor == java.math.BigInteger("100000000000000000000")
             }
@@ -438,14 +438,14 @@ class InvoiceBillingDeviceTest {
             click("Install 1 sq ft tile"); waitFor("Edit task"); reveal("Unit price (USD)", true)
             assertTrue("Wide unit price did not reopen exactly", waitFor("Unit price (USD)", true).text?.toString()?.contains("1000000000000000000.00") == true)
             enter("Unit price (USD)", "5.00")
-            reveal("Save task"); capture("quantity-editor"); click("Save task")
+            reveal("Save"); capture("quantity-editor"); click("Save")
             until("Actual task editor did not commit quantity and unit price") {
                 repository.boardSnapshot(job).board.cards.single { it.id == "new-task" }.let {
                     it.quantityUnits == 260000L && it.priceMinor == java.math.BigInteger.valueOf(500) && it.chargeType == "SUPPLIES"
                 }
             }
             waitFor("Task board"); capture("quantity-board")
-            click("Work report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
+            click("Work report"); reveal("Export PDF"); click("Export PDF"); waitFor("Review invoice")
             waitFor("USD 130.00"); waitFor("USD 9.75"); waitFor("USD 139.75")
             capture("unbilled-tax-review")
             reveal("Create invoice"); click("Create invoice"); waitFor("Prepared invoice")
@@ -460,8 +460,8 @@ class InvoiceBillingDeviceTest {
             assertTrue(requireNotNull(repository.invoice(issued.id).pdf).size > 1000)
             assertEquals(1002L, sequence())
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            waitFor("Work report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
-            reveal("No unbilled work remains in these dates. Previously invoiced work is excluded.")
+            waitFor("Work report"); reveal("Export PDF"); click("Export PDF"); waitFor("Review invoice")
+            reveal("No eligible work in this selection.")
             capture("already-billed")
             assertEquals(1002L, sequence()); assertEquals(2, repository.invoices(job).invoices.size)
 
