@@ -940,3 +940,13 @@ eligible work in this selection.` API 35 and invoice-viewer validation did not
 run after the API 24 invoice-billing failure; the exact-head PR check validates
 these invoice-flow label corrections. No local build, test, formatter or
 analysis ran.
+
+Exact-head run [45137008771](https://github.com/centerionware/Clockrove/actions/runs/45137008771)
+on `439e332` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, and all 759
+native unit tests. Real Android invoice payment instrumentation found one more
+stale English assertion: invalid precision is now exposed as the catalog-backed
+`Enter an amount with up to 2 decimal places.` API 35 rendering and invoice-viewer
+checks were skipped after this API 24 failure. The test now expects the current
+message; a fresh exact-head Actions run is required. No local build, test,
+formatter or analysis ran.

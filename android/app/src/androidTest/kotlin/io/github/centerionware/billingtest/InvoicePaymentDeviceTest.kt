@@ -275,7 +275,7 @@ class InvoicePaymentDeviceTest {
             waitFor("Payment amount (USD)", true)
             enter("Payment amount (USD)", "30.001")
             reveal("Confirm payment"); click("Confirm payment")
-            reveal("This currency allows 2 decimal places.")
+            reveal("Enter an amount with up to 2 decimal places.")
             assertTrue(repository.invoicePayments("payment-invoice").second.payments.isEmpty())
             scrollToStart(); reveal("Payment amount (USD)", true)
             assertEquals("30.001", waitFor("Payment amount (USD)", true).text.toString())
