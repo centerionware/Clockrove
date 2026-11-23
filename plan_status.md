@@ -882,3 +882,12 @@ Android catalog templates include the quote revision value, and generated
 resources have been refreshed. API 24/35 PDF rendering was skipped after the
 native failures. No local build, test, formatter or analysis ran; a fresh
 exact-head run is required.
+
+Exact-head run [45127419079](https://github.com/centerionware/Clockrove/actions/runs/45127419079)
+on `3d5a5bb` passed generated catalogs, both localization audits, formatting,
+analysis and all 311 behavior tests. The Android app build retried but could
+not download `org.jetbrains:annotations:13.0` because Maven Central returned
+HTTP 429. Android compilation, native tests and API 24/35 PDF rendering were
+skipped. No local build, test, formatter or analysis ran; the Android and
+document-validation gates need a fresh exact-head run after dependency
+resolution is available.
