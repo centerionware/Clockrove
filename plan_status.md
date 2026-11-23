@@ -980,3 +980,11 @@ found that its expected invoice total omitted the catalog punctuation. It now
 expects `Invoice total: USD 403.13`. API 35 and invoice-viewer checks were
 skipped after this API 24 failure. A fresh exact-head Actions run is required.
 No local build, test, formatter or analysis ran.
+
+Exact-head run [45146903159](https://github.com/centerionware/Clockrove/actions/runs/45146903159)
+on `2cf8af7` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, and all 759
+native tests. API 24 report, invoice, and quote flows passed; the task-photo
+flow exposed one stale `Task notes and photos` assertion. It now expects the
+catalog title `Task notes & photos`. API 35 was skipped after the API 24
+failure. No local build, test, formatter or analysis ran.
