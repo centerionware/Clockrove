@@ -342,7 +342,7 @@ class QuoteBillingDeviceTest {
             scrollToStart(); reveal("Invoice actual work"); click("Invoice actual work")
             waitFor("Load available work"); enter("First date (YYYY-MM-DD)", completedDate); enter("Last date (YYYY-MM-DD)", completedDate)
             reveal("Load available work"); click("Load available work"); reveal("Install tile"); click("Install tile"); capture("actual-source-selection")
-            reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total USD 403.13"); capture("actual-invoice-review")
+            reveal("Review actual-work invoice"); click("Review actual-work invoice"); waitFor("Invoice total: USD 403.13"); capture("actual-invoice-review")
             click("Keep editing"); assertEquals(0, count("invoices"))
             reveal("Review actual-work invoice"); click("Review actual-work invoice"); click("Confirm invoice review")
             until("Invoice review left the keyboard open over the prepare action") { !keyboardVisible() }

@@ -970,3 +970,13 @@ accepted-scope screen is titled `Review accepted scope`, not `Plan accepted
 scope`. The test now follows the visible title. API 35 and invoice-viewer checks
 were skipped after the API 24 quote-flow failure. A fresh exact-head Actions
 run is required. No local build, test, formatter or analysis ran.
+
+Exact-head run [45144258534](https://github.com/centerionware/Clockrove/actions/runs/45144258534)
+on `91fe25b` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, and all 759
+native tests. API 24 report/PDF and invoice payment checks passed. The quote
+billing flow passed its corrected save and accepted-scope assertions, then
+found that its expected invoice total omitted the catalog punctuation. It now
+expects `Invoice total: USD 403.13`. API 35 and invoice-viewer checks were
+skipped after this API 24 failure. A fresh exact-head Actions run is required.
+No local build, test, formatter or analysis ran.
