@@ -119,7 +119,10 @@ void main() {
       expect(api.saved?.amountMinor, '1234');
       expect(api.saved?.currency, 'USD');
       expect(api.saved?.timezone, 'America/Los_Angeles');
-      expect(find.text('Actual costs'), findsOneWidget);
+      expect(
+        find.text(englishCopy(AppMessage.reportDirectCosts)),
+        findsOneWidget,
+      );
       expect(find.text('USD 12.34'), findsOneWidget);
     },
   );

@@ -14,7 +14,7 @@ import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.TaxRate
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import java.math.BigInteger
-import java.text.SimpleDateFormat
+import java.text.DateFormat
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Currency
@@ -154,21 +154,47 @@ internal object InvoiceDocuments {
         val tax = TaxRate.amount(subtotal, 75000)
         val total = subtotal.add(tax)
         val now = System.currentTimeMillis()
-        val day = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(now))
+        val strings = localizedContext(context)
+        val locale = strings.resources.configuration.locales[0] ?: Locale.getDefault()
+        val day = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date(now))
+        val sampleNumber = strings.getString(R.string.invoice_preview_sample_number)
+        val unit = strings.getString(R.string.invoice_preview_square_feet)
+        val amount = InvoiceStore.amount(unitPrice, digits)
+        val basis = strings.getString(
+            R.string.invoice_preview_sample_basis,
+            "26",
+            unit,
+            amount,
+            currency,
+        )
+        val lineDetail = strings.getString(
+            R.string.invoice_preview_sample_line_detail,
+            "26",
+            unit,
+            amount,
+            currency,
+            day,
+        )
         val snapshot = InvoiceStore.Snapshot(
-            number = "INV-SAMPLE-1000", created = now, style = style, currency = currency, digits = digits,
-            company = "Sample Company LLC",
-            companyContact = "billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test",
-            customer = "Taylor Morgan",
-            customerContact = "taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210",
-            job = "Kitchen tile installation", period = "$day — $day · UTC",
-            basis = "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft",
-            header = "Thank you for choosing us for your project.",
-            footer = "Payment due within 14 days. Sample preview only — no payment is due.",
-            total = InvoiceStore.amount(total, digits), email = "taylor.morgan@example.test",
-            subject = "Invoice INV-SAMPLE-1000", body = "Please find your sample invoice attached.",
-            lines = listOf(InvoiceStore.Line("Install porcelain tile",
-                "26 sq ft × ${InvoiceStore.amount(unitPrice, digits)} $currency per sq ft\nCompleted $day",
+            number = sampleNumber, created = now, style = style, currency = currency, digits = digits,
+            company = strings.getString(R.string.invoice_preview_sample_company),
+            companyContact = strings.getString(R.string.invoice_preview_sample_company_contact),
+            customer = strings.getString(R.string.invoice_preview_sample_customer),
+            customerContact = strings.getString(R.string.invoice_preview_sample_customer_contact),
+            job = strings.getString(R.string.invoice_preview_sample_job),
+            period = strings.getString(R.string.invoice_preview_sample_period, day, day),
+            basis = basis,
+            header = strings.getString(R.string.invoice_preview_sample_header),
+            footer = strings.getString(R.string.invoice_preview_sample_footer),
+            total = InvoiceStore.amount(total, digits),
+            email = strings.getString(R.string.invoice_preview_sample_email),
+            subject = strings.getString(R.string.invoice_preview_sample_email_subject, sampleNumber),
+            body = strings.getString(R.string.invoice_preview_sample_email_body),
+            lines = listOf(InvoiceStore.Line(
+                strings.getString(R.string.invoice_preview_sample_line),
+                lineDetail,
                 InvoiceStore.amount(subtotal, digits), "260000", unitPrice.toString())),
             subtotal = InvoiceStore.amount(subtotal, digits), taxRateUnits = 75000,
             taxAmount = InvoiceStore.amount(tax, digits),

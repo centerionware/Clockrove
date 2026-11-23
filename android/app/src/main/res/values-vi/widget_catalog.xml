@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"Lợi nhuận ròng ước tính: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"Thặng dư tiền mặt ước tính: %1$s"</string>
     <string name="actual_cost_unknown_category">"Danh mục khác hoặc không xác định"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"Công ty Mẫu LLC"</string>
+    <string name="invoice_preview_sample_job">"Lắp đặt gạch lát bếp"</string>
+    <string name="invoice_preview_square_feet">"ft²"</string>
+    <string name="invoice_preview_sample_header">"Cảm ơn bạn đã chọn chúng tôi cho dự án của mình."</string>
+    <string name="invoice_preview_sample_footer">"Hạn thanh toán trong 14 ngày. Đây chỉ là bản xem trước — không có khoản thanh toán nào đến hạn."</string>
+    <string name="invoice_preview_sample_email_subject">"Hóa đơn INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"Vui lòng xem hóa đơn mẫu đính kèm."</string>
+    <string name="invoice_preview_sample_line">"Lắp đặt gạch porcelain"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %3$s %4$s mỗi %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %3$s %4$s mỗi %2$s\nHoàn tất %5$s"</string>
 </resources>

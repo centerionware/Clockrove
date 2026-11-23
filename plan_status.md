@@ -331,6 +331,22 @@ on `957999d` passed catalog generation and localization audit but found one
 remaining formatter wrap in the board test. Applied that exact CI correction;
 Analyze and behavior tests again did not run.
 
+Actions run [45106822457](https://github.com/centerionware/Clockrove/actions/runs/45106822457)
+on `2a9336f` passed catalog generation, the localization audit, formatting and
+analysis, then reported 283 passing tests, 22 failures and 14 skips. The
+failures exposed a scroll-test finder that threw before lazy content appeared,
+several assertions still using pre-catalog copy, a record test comparing maps
+by identity, and stale file/API entries in the audit fixture. Those are
+corrected. The full native Settings invoice sample, including its example
+company, customer, line descriptions, email copy and locale-formatted dates,
+now comes from translated Android resources in all 17 locale catalogs. The
+audit ignores only file MIME, URI authority and temporary filename constants;
+sample document copy remains audited. The app now passes the platform default
+route explicitly so widget entry routes remain testable. Android resources
+were regenerated from the catalogs. No build, test, formatter or analysis ran
+locally. All changes still need one exact-head GitHub Actions validation; do
+not mark full localization coverage complete until it passes.
+
 The report below preserves earlier evidence and milestone history.
 
 **M6.5 source and CI are complete.** Exact head `c9d20cc` / Actions run

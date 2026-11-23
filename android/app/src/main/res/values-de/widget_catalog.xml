@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"Geschätzter Nettogewinn: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"Geschätzter Liquiditätsüberschuss: %1$s"</string>
     <string name="actual_cost_unknown_category">"Andere oder unbekannte Kategorie"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"Beispielunternehmen GmbH"</string>
+    <string name="invoice_preview_sample_job">"Küchenfliesen verlegen"</string>
+    <string name="invoice_preview_square_feet">"ft²"</string>
+    <string name="invoice_preview_sample_header">"Vielen Dank, dass Sie uns für Ihr Projekt gewählt haben."</string>
+    <string name="invoice_preview_sample_footer">"Zahlbar innerhalb von 14 Tagen. Nur eine Beispielvorschau — es ist keine Zahlung fällig."</string>
+    <string name="invoice_preview_sample_email_subject">"Rechnung INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"Anbei finden Sie Ihre Beispielrechnung."</string>
+    <string name="invoice_preview_sample_line">"Feinsteinzeugfliesen verlegen"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s pro %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s pro %2$s\nAbgeschlossen am %5$s"</string>
 </resources>

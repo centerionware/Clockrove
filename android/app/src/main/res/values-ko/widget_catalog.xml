@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"예상 순이익: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"예상 현금 잉여: %1$s"</string>
     <string name="actual_cost_unknown_category">"기타 또는 알 수 없는 분류"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"샘플 회사"</string>
+    <string name="invoice_preview_sample_job">"주방 타일 시공"</string>
+    <string name="invoice_preview_square_feet">"제곱피트"</string>
+    <string name="invoice_preview_sample_header">"프로젝트를 맡겨 주셔서 감사합니다."</string>
+    <string name="invoice_preview_sample_footer">"14일 이내 결제해 주세요. 샘플 미리보기이며 결제 금액은 없습니다."</string>
+    <string name="invoice_preview_sample_email_subject">"청구서 INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"샘플 청구서를 첨부했습니다."</string>
+    <string name="invoice_preview_sample_line">"포세린 타일 시공"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s / %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s / %2$s\n완료일 %5$s"</string>
 </resources>

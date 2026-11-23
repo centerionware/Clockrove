@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"Perkiraan laba bersih: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"Perkiraan surplus kas: %1$s"</string>
     <string name="actual_cost_unknown_category">"Kategori lain atau tidak diketahui"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"Perusahaan Contoh LLC"</string>
+    <string name="invoice_preview_sample_job">"Pemasangan ubin dapur"</string>
+    <string name="invoice_preview_square_feet">"kaki²"</string>
+    <string name="invoice_preview_sample_header">"Terima kasih telah memilih kami untuk proyek Anda."</string>
+    <string name="invoice_preview_sample_footer">"Jatuh tempo dalam 14 hari. Hanya pratinjau contoh — tidak ada pembayaran yang harus dibayar."</string>
+    <string name="invoice_preview_sample_email_subject">"Faktur INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"Terlampir faktur contoh Anda."</string>
+    <string name="invoice_preview_sample_line">"Pemasangan ubin porselen"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %3$s %4$s per %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %3$s %4$s per %2$s\nSelesai %5$s"</string>
 </resources>

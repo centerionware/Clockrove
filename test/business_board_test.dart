@@ -324,7 +324,7 @@ void main() {
       await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
-        find.text('Choose Labor or Supplies before saving.'),
+        find.text(englishCopy(AppMessage.boardChooseChargeType)),
         findsOneWidget,
       );
       await tester.tap(find.widgetWithText(ChoiceChip, 'Supplies'));

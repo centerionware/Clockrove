@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"预计净利润: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"预计现金盈余: %1$s"</string>
     <string name="actual_cost_unknown_category">"其他或未知类别"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"示例公司"</string>
+    <string name="invoice_preview_sample_job">"厨房瓷砖安装"</string>
+    <string name="invoice_preview_square_feet">"平方英尺"</string>
+    <string name="invoice_preview_sample_header">"感谢您选择我们为您的项目提供服务。"</string>
+    <string name="invoice_preview_sample_footer">"请在14天内付款。此内容仅为示例预览，无需付款。"</string>
+    <string name="invoice_preview_sample_email_subject">"发票 INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"随附您的示例发票。"</string>
+    <string name="invoice_preview_sample_line">"瓷砖安装"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s／每 %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s／每 %2$s\n完成日期：%5$s"</string>
 </resources>

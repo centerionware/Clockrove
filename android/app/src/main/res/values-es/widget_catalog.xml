@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"Beneficio neto estimado: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"Excedente de caja estimado: %1$s"</string>
     <string name="actual_cost_unknown_category">"Otra categoría o categoría desconocida"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"Empresa de ejemplo S. L."</string>
+    <string name="invoice_preview_sample_job">"Instalación de azulejos de cocina"</string>
+    <string name="invoice_preview_square_feet">"pies²"</string>
+    <string name="invoice_preview_sample_header">"Gracias por confiar en nosotros para su proyecto."</string>
+    <string name="invoice_preview_sample_footer">"Vence en 14 días. Solo es una vista previa de ejemplo: no hay ningún pago pendiente."</string>
+    <string name="invoice_preview_sample_email_subject">"Factura INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"Adjuntamos su factura de ejemplo."</string>
+    <string name="invoice_preview_sample_line">"Instalación de baldosas de porcelana"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s por %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s por %2$s\nCompletado el %5$s"</string>
 </resources>

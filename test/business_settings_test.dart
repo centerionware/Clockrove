@@ -176,7 +176,9 @@ Future<void> _reveal(WidgetTester tester, String label) async {
   tester.state<ScrollableState>(scrollable).position.jumpTo(0);
   await tester.pumpAndSettle();
   await tester.scrollUntilVisible(
-    find.text(label).last,
+    // `last` throws while a lazy ListView has not built the offscreen target.
+    // The first match remains a valid finder as the list scrolls it into view.
+    find.text(label).first,
     250,
     scrollable: scrollable,
   );

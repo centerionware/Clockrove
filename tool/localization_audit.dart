@@ -100,7 +100,13 @@ Iterable<({int line, String text})> auditKotlinPresentation(
         RegExp(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*'),
         ' ',
       );
-      if (!_machineDatePattern.hasMatch(text) && _looksLikeCopy(staticText)) {
+      final machineValue =
+          text == 'application/pdf' ||
+          text.endsWith('.invoices') ||
+          line.contains('createTempFile(');
+      if (!machineValue &&
+          !_machineDatePattern.hasMatch(text) &&
+          _looksLikeCopy(staticText)) {
         yield (line: index + 1, text: text);
       }
     }

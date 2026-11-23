@@ -486,7 +486,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.deletions, isEmpty);
       await tester.tap(
-        find.text(englishCopy(AppMessage.historyDeleteWorkEntry)),
+        find.text(englishCopy(AppMessage.historyDeleteWorkEntry)).last,
       );
       await tester.pumpAndSettle();
       expect(

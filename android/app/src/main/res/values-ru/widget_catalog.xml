@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"Оценочная чистая прибыль: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"Оценочный денежный остаток: %1$s"</string>
     <string name="actual_cost_unknown_category">"Другая или неизвестная категория"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"Образец компании ООО"</string>
+    <string name="invoice_preview_sample_job">"Укладка кухонной плитки"</string>
+    <string name="invoice_preview_square_feet">"кв. фут"</string>
+    <string name="invoice_preview_sample_header">"Спасибо, что выбрали нас для своего проекта."</string>
+    <string name="invoice_preview_sample_footer">"Срок оплаты — 14 дней. Это только образец для предварительного просмотра — оплата не требуется."</string>
+    <string name="invoice_preview_sample_email_subject">"Счёт INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"Во вложении образец счёта."</string>
+    <string name="invoice_preview_sample_line">"Укладка керамогранита"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s за %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s за %2$s\nВыполнено %5$s"</string>
 </resources>

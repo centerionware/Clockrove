@@ -307,7 +307,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.calls, isEmpty);
       expect(
-        find.text(englishCopy(AppMessage.paymentAmountFormat, {'digits': '0'})),
+        find.text(englishCopy(AppMessage.quoteUnitPriceInvalid)),
         findsOneWidget,
       );
       await _reveal(tester, price, -400);

@@ -39,6 +39,7 @@ class ClockroveApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
+    initialRoute: WidgetsBinding.instance.platformDispatcher.defaultRouteName,
     locale: appLanguages[ref.watch(languagePreferenceProvider).value]?.$1,
     supportedLocales: AppLocalizations.supportedLocales,
     localeListResolutionCallback: AppLocalizations.resolveDeviceLocales,

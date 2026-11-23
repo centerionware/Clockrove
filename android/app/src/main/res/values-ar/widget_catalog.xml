@@ -283,4 +283,20 @@
     <string name="report_pdf_net_profit_amount">"صافي الربح المقدّر: %1$s"</string>
     <string name="report_pdf_cash_surplus_amount">"الفائض النقدي المقدّر: %1$s"</string>
     <string name="actual_cost_unknown_category">"فئة أخرى أو غير معروفة"</string>
+    <string name="invoice_preview_sample_number">"INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_company_contact">"billing@example.test\n+1 555 0100\n123 Sample Street\nExample City, CA 90210\nexample.test"</string>
+    <string name="invoice_preview_sample_customer">"Taylor Morgan"</string>
+    <string name="invoice_preview_sample_customer_contact">"taylor.morgan@example.test\n+1 555 0126\n410 Example Avenue\nSampletown, CA 90210"</string>
+    <string name="invoice_preview_sample_email">"taylor.morgan@example.test"</string>
+    <string name="invoice_preview_sample_company">"شركة نموذجية ذ.م.م."</string>
+    <string name="invoice_preview_sample_job">"تركيب بلاط المطبخ"</string>
+    <string name="invoice_preview_square_feet">"قدم مربع"</string>
+    <string name="invoice_preview_sample_header">"شكرًا لاختياركم خدماتنا لمشروعكم."</string>
+    <string name="invoice_preview_sample_footer">"يستحق الدفع خلال 14 يومًا. هذه معاينة نموذجية فقط — لا يوجد مبلغ مستحق."</string>
+    <string name="invoice_preview_sample_email_subject">"فاتورة INV-SAMPLE-1000"</string>
+    <string name="invoice_preview_sample_email_body">"يرجى الاطلاع على فاتورتك النموذجية المرفقة."</string>
+    <string name="invoice_preview_sample_line">"تركيب بلاط البورسلين"</string>
+    <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s لكل %2$s"</string>
+    <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
+    <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s لكل %2$s\nاكتمل في %5$s"</string>
 </resources>

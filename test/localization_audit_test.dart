@@ -42,10 +42,6 @@ void example(String name) {
       'legacy_covered_time_dialog',
       'business_command',
       'task_conversation_screen',
-      'history_audit_screen',
-      'history_revisions_screen',
-      'history_list_screen',
-      'history_editor_screen',
     };
     const identifiers = {
       'balance-',
@@ -121,8 +117,6 @@ void example(String name) {
       'work_location_map.dart',
       'elapsed_display.dart',
       'business_command.dart',
-      'business_api.dart',
-      'settings_api.dart',
       'settings_validation_messages.dart',
       'actual_cost_labels.dart',
       'quote_screens.dart',

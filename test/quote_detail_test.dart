@@ -159,10 +159,14 @@ void main() {
       await _show(tester, api);
       await _tap(tester, 'Review quote for issue');
       expect(
-        find.text(englishCopy(AppMessage.quoteEstimatedTotalLabel)),
+        find.text(
+          englishCopy(AppMessage.invoiceAmountLine, {
+            'label': englishCopy(AppMessage.quoteEstimatedTotalLabel),
+            'amount': 'USD 349.38',
+          }),
+        ),
         findsOneWidget,
       );
-      expect(find.text('USD 349.38'), findsOneWidget);
       await _tap(tester, 'Keep editing');
       expect(api.issues, isEmpty);
       await _tap(tester, 'Review quote for issue');
