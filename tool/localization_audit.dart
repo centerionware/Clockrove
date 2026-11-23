@@ -109,6 +109,8 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text.endsWith('.pdf') ||
           text == 'task-captures' ||
           RegExp(r'^clockrove-[a-z0-9-]+$').hasMatch(text) ||
+          (text.startsWith('widget-stop-') &&
+              line.contains('executeFromSurface(')) ||
           text.startsWith('io.github.') ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
@@ -175,14 +177,23 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
   final contextStart = (prefix.length - 160).clamp(0, prefix.length).toInt();
   final context = prefix.substring(contextStart);
   final value = text.trim();
+  final isCamelCaseIdentifier =
+      RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(value) &&
+      RegExp(r'[A-Z0-9_]').hasMatch(value);
   final formatStart = context.lastIndexOf('.format(');
   final formatMapStart = context.lastIndexOf('{');
   final isFormatParameter =
-      RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(value) &&
-      RegExp(r'[A-Z0-9_]').hasMatch(value) &&
+      isCamelCaseIdentifier &&
       source.substring(end).trimLeft().startsWith(':') &&
       formatStart >= 0 &&
       formatMapStart > formatStart;
+  final isBridgeField =
+      isCamelCaseIdentifier &&
+      (RegExp(r'config\s*\[\s*$').hasMatch(context) ||
+          (source.substring(end).trimLeft().startsWith(':') &&
+              context.contains('invokeMapMethod')));
+  final isProtocolChannel =
+      RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(value);
   final isUriHost =
       RegExp(r'^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$').hasMatch(value) &&
       RegExp(r'Uri\s*\.\s*https\s*\(\s*$').hasMatch(context);
@@ -192,7 +203,12 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
   final isPlatformPackage =
       value == 'io.github.centerionware.clockrove' &&
       RegExp(r'userAgentPackageName\s*:\s*$').hasMatch(context);
-  return isFormatParameter || isUriHost || isUriFragment || isPlatformPackage;
+  return isFormatParameter ||
+      isBridgeField ||
+      isProtocolChannel ||
+      isUriHost ||
+      isUriFragment ||
+      isPlatformPackage;
 }
 
 bool _looksLikeCopy(String value) {

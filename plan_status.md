@@ -776,3 +776,13 @@ notification channel ID. The audit now recognizes those contexts/IDs, with
 fixtures that keep visible prose covered. Android build, native tests and API
 24/35 PDF rendering were skipped. No local build, test, formatter or analysis
 ran; another exact-head Actions run is required.
+
+Exact-head run [45117654345](https://github.com/centerionware/Clockrove/actions/runs/45117654345)
+on `31af1ef` passed generated catalogs, both localization audits, formatting
+and analysis. The behavior suite reported 309 passing tests, 2 audit failures
+and 14 skips. Findings were the Flutter widget method-channel name and its
+native configuration field keys, plus the native `widget-stop` idempotency key.
+The audit now treats channel names, bridge fields and that command key as
+machine values; fixtures continue to require visible prose to be found.
+Android build, native tests and API 24/35 PDF rendering were skipped. No local
+build, test, formatter or analysis ran; another exact-head run is required.

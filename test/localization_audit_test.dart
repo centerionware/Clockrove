@@ -18,7 +18,6 @@ void example(String name) {
     expect(findings.map((finding) => finding.text.trim()), [
       'Record your work location.',
       'Hello,',
-      'clockrove/language/v1',
     ]);
   });
 
@@ -42,6 +41,10 @@ void buildProgress() {
   AppMessage.exportSnapshotProgress.format(context, {
     'mediaRead': '$mediaRead',
   });
+  widgetChannel.invokeMapMethod<String, Object?>('save', {
+    'jobId': job,
+  });
+  final tasksOnly = config['taskOnly'];
   final message = 'Backup is ready';
 }
 ''');
@@ -55,6 +58,7 @@ val mime = "image/png"
 val channelId = "clockrove-work-location"
 val quoteId = call.argument<String>("quoteId")
 val quote = call.method.endsWith("Quote")
+executeFromSurface("widget-stop-$id-$version")
 flow.write("Document copy")
 ''');
     expect(findings.map((finding) => finding.text), ['Document copy']);
