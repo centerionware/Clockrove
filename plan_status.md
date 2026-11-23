@@ -786,3 +786,12 @@ The audit now treats channel names, bridge fields and that command key as
 machine values; fixtures continue to require visible prose to be found.
 Android build, native tests and API 24/35 PDF rendering were skipped. No local
 build, test, formatter or analysis ran; another exact-head run is required.
+
+Exact-head run [45118304505](https://github.com/centerionware/Clockrove/actions/runs/45118304505)
+on `99cbe98` passed generated catalog checks and both localization audits,
+then the clean-formatting gate found one wrap in the protocol-channel pattern.
+That exact correction is applied. Analyze, behavior tests, Android build,
+native tests and API 24/35 PDF rendering were skipped. The Flutter and Android
+surface tests now aggregate findings across all scanned files, so the next
+exact-head run reports the remaining failures together. No local build, test,
+formatter or analysis ran; a fresh Actions run is required.

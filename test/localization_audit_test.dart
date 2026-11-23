@@ -256,6 +256,7 @@ flow.write(
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart') && isSurface(file));
     expect(files, isNotEmpty);
+    final surfaceFindings = <String>[];
     for (final file in files) {
       final path = file.path;
       final source = file.readAsStringSync();
@@ -263,8 +264,11 @@ flow.write(
       final findings = auditDart(path, source).where(
         (finding) => !isInternalLiteral(finding.text, lines, finding.line),
       );
-      expect(findings, isEmpty, reason: path);
+      surfaceFindings.addAll(
+        findings.map((finding) => '$path:${finding.line}: ${finding.text}'),
+      );
     }
+    expect(surfaceFindings, isEmpty, reason: surfaceFindings.join('\n'));
   });
 
   test('Android presentation surfaces use localized resources', () {
@@ -282,9 +286,14 @@ flow.write(
       '$root/widget/WidgetTasksService.kt',
       '$root/widget/WidgetActivities.kt',
     ];
+    final surfaceFindings = <String>[];
     for (final path in nativeSurfaces) {
       final source = File(path).readAsStringSync();
-      expect(auditKotlinPresentation(source), isEmpty, reason: path);
+      surfaceFindings.addAll(
+        auditKotlinPresentation(source).map(
+          (finding) => '$path:${finding.line}: ${finding.text}',
+        ),
+      );
     }
 
     final reportStore = File('$root/tracking/ReportStore.kt')
@@ -292,18 +301,23 @@ flow.write(
     final reportCsv = reportStore.substring(
       reportStore.indexOf('internal object ReportCsv {'),
     );
-    expect(auditKotlinPresentation(reportCsv), isEmpty, reason: 'ReportCsv');
+    surfaceFindings.addAll(
+      auditKotlinPresentation(reportCsv).map(
+        (finding) => 'ReportCsv:${finding.line}: ${finding.text}',
+      ),
+    );
 
     final xmlFiles = Directory('android/app/src/main')
         .listSync(recursive: true, followLinks: false)
         .whereType<File>()
         .where((file) => file.path.endsWith('.xml'));
     for (final file in xmlFiles) {
-      expect(
-        auditAndroidPresentationXml(file.readAsStringSync()),
-        isEmpty,
-        reason: file.path,
+      surfaceFindings.addAll(
+        auditAndroidPresentationXml(file.readAsStringSync()).map(
+          (finding) => '${file.path}:${finding.line}: ${finding.text}',
+        ),
       );
     }
+    expect(surfaceFindings, isEmpty, reason: surfaceFindings.join('\n'));
   });
 }

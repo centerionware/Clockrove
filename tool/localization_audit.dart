@@ -192,8 +192,8 @@ bool _isMachineDartValue(String source, int offset, int end, String text) {
       (RegExp(r'config\s*\[\s*$').hasMatch(context) ||
           (source.substring(end).trimLeft().startsWith(':') &&
               context.contains('invokeMapMethod')));
-  final isProtocolChannel =
-      RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(value);
+  final isProtocolChannel = RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$')
+      .hasMatch(value);
   final isUriHost =
       RegExp(r'^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$').hasMatch(value) &&
       RegExp(r'Uri\s*\.\s*https\s*\(\s*$').hasMatch(context);
