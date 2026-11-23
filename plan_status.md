@@ -716,3 +716,14 @@ checks the catalog-backed validator output before submission, then confirms no
 command is sent and the pasted input remains. Android build/native/PDF gates did
 not run. No local build, test, formatter or analysis ran. A fresh exact-head
 Actions run is required.
+
+Exact-head run [45113784426](https://github.com/centerionware/Clockrove/actions/runs/45113784426)
+on `e3dd5bd` passed catalog generation, both localization audit commands,
+formatting and analysis. The behavior suite reached 306 passing tests, 2 audit
+failures and 14 skips. Remaining findings were Android protocol/file identifiers
+and the root method-channel keys, plus the actual task-photo chooser label and
+pending attachment messages. The eight attachment/document handoff messages are
+now translated in all 17 Android catalogs and loaded through native resources;
+the audit recognizes only the documented machine-value forms. Android catalogs
+were regenerated. The next exact-head Actions run must pass before localization
+coverage can be marked complete. No local build, test, formatter or analysis ran.

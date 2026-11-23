@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %3$s %4$s mỗi %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %3$s %4$s mỗi %2$s\nHoàn tất %5$s"</string>
+    <string name="document_host_task_photo_label">"Ảnh công việc Clockrove"</string>
+    <string name="document_host_photo_activity_unavailable">"Mở lại Clockrove để đính kèm ảnh công việc"</string>
+    <string name="document_host_photo_invalid_image">"Chọn ảnh PNG, JPEG hoặc WebP tối đa 50 MB và 250 megapixel"</string>
+    <string name="document_host_logo_activity_unavailable">"Mở lại ứng dụng để chọn logo"</string>
+    <string name="document_host_invoice_activity_unavailable">"Mở lại ứng dụng để lưu hóa đơn"</string>
+    <string name="document_host_no_photos_selected">"Chưa chọn ảnh nào"</string>
+    <string name="document_host_photo_selection_limit">"Chọn tối đa 10 ảnh mỗi lần"</string>
+    <string name="document_host_photo_batch_size_limit">"Chọn ít ảnh hơn (tối đa 30 MB mỗi lần chọn)"</string>
 </resources>

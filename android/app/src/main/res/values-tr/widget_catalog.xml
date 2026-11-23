@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %3$s %4$s / %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %3$s %4$s / %2$s\nTamamlandı: %5$s"</string>
+    <string name="document_host_task_photo_label">"Clockrove görev fotoğrafı"</string>
+    <string name="document_host_photo_activity_unavailable">"Görev fotoğrafı eklemek için Clockrove’u yeniden açın"</string>
+    <string name="document_host_photo_invalid_image">"En fazla 50 MB ve 250 megapiksel boyutunda PNG, JPEG veya WebP görseli seçin"</string>
+    <string name="document_host_logo_activity_unavailable">"Logo seçmek için uygulamayı yeniden açın"</string>
+    <string name="document_host_invoice_activity_unavailable">"Faturanızı kaydetmek için uygulamayı yeniden açın"</string>
+    <string name="document_host_no_photos_selected">"Hiç fotoğraf seçilmedi"</string>
+    <string name="document_host_photo_selection_limit">"Tek seferde en fazla 10 fotoğraf seçin"</string>
+    <string name="document_host_photo_batch_size_limit">"Daha küçük bir fotoğraf grubu seçin (seçim başına en fazla 30 MB)"</string>
 </resources>

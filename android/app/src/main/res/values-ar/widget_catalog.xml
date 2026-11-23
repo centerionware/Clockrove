@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s لكل %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s لكل %2$s\nاكتمل في %5$s"</string>
+    <string name="document_host_task_photo_label">"صورة مهمة في Clockrove"</string>
+    <string name="document_host_photo_activity_unavailable">"أعد فتح Clockrove لإرفاق صورة بالمهمة"</string>
+    <string name="document_host_photo_invalid_image">"اختر صورة PNG أو JPEG أو WebP بحجم يصل إلى 50 ميغابايت و250 ميغابكسل"</string>
+    <string name="document_host_logo_activity_unavailable">"أعد فتح التطبيق لاختيار شعار"</string>
+    <string name="document_host_invoice_activity_unavailable">"أعد فتح التطبيق لحفظ فاتورتك"</string>
+    <string name="document_host_no_photos_selected">"لم يتم اختيار أي صور"</string>
+    <string name="document_host_photo_selection_limit">"اختر ما يصل إلى 10 صور في المرة الواحدة"</string>
+    <string name="document_host_photo_batch_size_limit">"اختر مجموعة أصغر من الصور (بحد أقصى 30 ميغابايت لكل عملية اختيار)"</string>
 </resources>

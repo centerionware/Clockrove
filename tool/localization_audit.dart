@@ -102,6 +102,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text == 'application/pdf' ||
           text.endsWith('.invoices') ||
           text.endsWith('.pdf') ||
+          text == 'task-captures' ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
           RegExp(
@@ -109,6 +110,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
             caseSensitive: false,
           ).hasMatch(text) ||
           (text == 'Quote' && line.contains('call.method.endsWith')) ||
+          line.contains('setClassName(') ||
           line.contains('createTempFile(');
       if (!localizedResourceLookupFragment &&
           !machineValue &&

@@ -179,6 +179,9 @@ flow.write(
       'quote-editor-',
       'clockrove/help/v1',
       'appVersion',
+      'clockrove/debug/v1',
+      'flutterError',
+      '/widget-configuration',
     };
 
     bool isSurface(File file) {

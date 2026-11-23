@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %3$s %4$s प्रति %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %3$s %4$s प्रति %2$s\nपूरा हुआ: %5$s"</string>
+    <string name="document_host_task_photo_label">"Clockrove कार्य फ़ोटो"</string>
+    <string name="document_host_photo_activity_unavailable">"कार्य की फ़ोटो जोड़ने के लिए Clockrove फिर से खोलें"</string>
+    <string name="document_host_photo_invalid_image">"50 MB और 250 मेगापिक्सेल तक की PNG, JPEG या WebP छवि चुनें"</string>
+    <string name="document_host_logo_activity_unavailable">"लोगो चुनने के लिए ऐप फिर से खोलें"</string>
+    <string name="document_host_invoice_activity_unavailable">"अपना चालान सहेजने के लिए ऐप फिर से खोलें"</string>
+    <string name="document_host_no_photos_selected">"कोई फ़ोटो नहीं चुनी गई"</string>
+    <string name="document_host_photo_selection_limit">"एक बार में अधिकतम 10 फ़ोटो चुनें"</string>
+    <string name="document_host_photo_batch_size_limit">"फ़ोटो का छोटा समूह चुनें (हर चयन में अधिकतम 30 MB)"</string>
 </resources>

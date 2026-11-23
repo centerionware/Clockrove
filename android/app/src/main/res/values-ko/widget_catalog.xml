@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s / %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s / %2$s\n완료일 %5$s"</string>
+    <string name="document_host_task_photo_label">"Clockrove 작업 사진"</string>
+    <string name="document_host_photo_activity_unavailable">"작업 사진을 첨부하려면 Clockrove를 다시 여세요"</string>
+    <string name="document_host_photo_invalid_image">"50MB 및 2억 5천만 픽셀 이하의 PNG, JPEG 또는 WebP 이미지를 선택하세요"</string>
+    <string name="document_host_logo_activity_unavailable">"로고를 선택하려면 앱을 다시 여세요"</string>
+    <string name="document_host_invoice_activity_unavailable">"청구서를 저장하려면 앱을 다시 여세요"</string>
+    <string name="document_host_no_photos_selected">"선택한 사진이 없습니다"</string>
+    <string name="document_host_photo_selection_limit">"한 번에 사진을 최대 10장까지 선택하세요"</string>
+    <string name="document_host_photo_batch_size_limit">"더 적은 사진을 선택하세요 (한 번에 최대 30MB)"</string>
 </resources>

@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s por %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s por %2$s\nCompletado el %5$s"</string>
+    <string name="document_host_task_photo_label">"Foto de tarea de Clockrove"</string>
+    <string name="document_host_photo_activity_unavailable">"Vuelve a abrir Clockrove para adjuntar una foto a la tarea"</string>
+    <string name="document_host_photo_invalid_image">"Elige una imagen PNG, JPEG o WebP de hasta 50 MB y 250 megapíxeles"</string>
+    <string name="document_host_logo_activity_unavailable">"Vuelve a abrir la aplicación para elegir un logotipo"</string>
+    <string name="document_host_invoice_activity_unavailable">"Vuelve a abrir la aplicación para guardar tu factura"</string>
+    <string name="document_host_no_photos_selected">"No se seleccionaron fotos"</string>
+    <string name="document_host_photo_selection_limit">"Elige hasta 10 fotos a la vez"</string>
+    <string name="document_host_photo_batch_size_limit">"Selecciona un grupo más pequeño de fotos (máximo 30 MB por selección)"</string>
 </resources>

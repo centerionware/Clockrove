@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s／每 %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s／每 %2$s\n完成日期：%5$s"</string>
+    <string name="document_host_task_photo_label">"Clockrove 任務照片"</string>
+    <string name="document_host_photo_activity_unavailable">"重新開啟 Clockrove 以附加任務照片"</string>
+    <string name="document_host_photo_invalid_image">"請選擇不超過 50 MB 和 2.5 億像素的 PNG、JPEG 或 WebP 圖片"</string>
+    <string name="document_host_logo_activity_unavailable">"重新開啟應用程式以選擇標誌"</string>
+    <string name="document_host_invoice_activity_unavailable">"重新開啟應用程式以儲存發票"</string>
+    <string name="document_host_no_photos_selected">"未選擇任何照片"</string>
+    <string name="document_host_photo_selection_limit">"每次最多選擇 10 張照片"</string>
+    <string name="document_host_photo_batch_size_limit">"請選擇較少的照片（每次最多 30 MB）"</string>
 </resources>

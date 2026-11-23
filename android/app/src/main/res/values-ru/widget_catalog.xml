@@ -299,4 +299,12 @@
     <string name="invoice_preview_sample_basis">"%1$s %2$s × %4$s %3$s за %2$s"</string>
     <string name="invoice_preview_sample_period">"%1$s — %2$s · UTC"</string>
     <string name="invoice_preview_sample_line_detail">"%1$s %2$s × %4$s %3$s за %2$s\nВыполнено %5$s"</string>
+    <string name="document_host_task_photo_label">"Фото задачи Clockrove"</string>
+    <string name="document_host_photo_activity_unavailable">"Откройте Clockrove повторно, чтобы прикрепить фото к задаче"</string>
+    <string name="document_host_photo_invalid_image">"Выберите изображение PNG, JPEG или WebP размером до 50 МБ и 250 мегапикселей"</string>
+    <string name="document_host_logo_activity_unavailable">"Откройте приложение повторно, чтобы выбрать логотип"</string>
+    <string name="document_host_invoice_activity_unavailable">"Откройте приложение повторно, чтобы сохранить счёт"</string>
+    <string name="document_host_no_photos_selected">"Фотографии не выбраны"</string>
+    <string name="document_host_photo_selection_limit">"Выберите не более 10 фотографий за раз"</string>
+    <string name="document_host_photo_batch_size_limit">"Выберите меньше фотографий (не более 30 МБ за один выбор)"</string>
 </resources>

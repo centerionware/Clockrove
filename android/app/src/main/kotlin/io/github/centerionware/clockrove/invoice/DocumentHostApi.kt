@@ -189,7 +189,7 @@ internal class DocumentHostApi(
 
     private fun launchTaskPhoto(result: MethodChannel.Result, camera: Boolean) = main.post {
         if (!attached || activity.isFinishing) {
-            result.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null)
+            result.error("ACTIVITY_UNAVAILABLE", localizedContext(activity).getString(R.string.document_host_photo_activity_unavailable), null)
             return@post
         }
         if (externalActionPending()) {
@@ -205,7 +205,7 @@ internal class DocumentHostApi(
                 photoCaptureFile = file
                 Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
                     putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
-                    clipData = ClipData.newUri(activity.contentResolver, "Clockrove task photo", uri)
+                    clipData = ClipData.newUri(activity.contentResolver, localizedContext(activity).getString(R.string.document_host_task_photo_label), uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
             } else {
@@ -254,6 +254,7 @@ internal class DocumentHostApi(
             val camera = code == 0xcc45
             val file = photoCaptureFile
             photoCaptureFile = null
+            val strings = localizedContext(activity)
             if (status != Activity.RESULT_OK) {
                 file?.delete()
                 pending.success(null)
@@ -269,9 +270,9 @@ internal class DocumentHostApi(
                             (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
                         } ?: listOfNotNull(data?.data)
                         val uris = selected.distinctBy { it.toString() }
-                        if (uris.isEmpty()) throw TaskPhotoImportException("PHOTO_SOURCE_UNAVAILABLE", "No photos were selected")
+                        if (uris.isEmpty()) throw TaskPhotoImportException("PHOTO_SOURCE_UNAVAILABLE", strings.getString(R.string.document_host_no_photos_selected))
                         if (uris.size > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGES_PER_SELECTION) {
-                            throw TaskPhotoImportException("TASK_IMAGE_SELECTION_LIMIT", "Choose up to 10 photos at a time")
+                            throw TaskPhotoImportException("TASK_IMAGE_SELECTION_LIMIT", strings.getString(R.string.document_host_photo_selection_limit))
                         }
                         val normalized = ArrayList<ByteArray>(uris.size)
                         var totalBytes = 0L
@@ -280,17 +281,17 @@ internal class DocumentHostApi(
                             val bytes = input.use { LogoImages.normalize(activity, it).bytes }
                             totalBytes += bytes.size
                             if (totalBytes > io.github.centerionware.clockrove.tracking.ImageLimits.TASK_IMAGE_BATCH_BYTES) {
-                                throw TaskPhotoImportException("TASK_IMAGE_BATCH_STORAGE_LIMIT", "Select a smaller group of photos (30 MB maximum per selection)")
+                                throw TaskPhotoImportException("TASK_IMAGE_BATCH_STORAGE_LIMIT", strings.getString(R.string.document_host_photo_batch_size_limit))
                             }
                             normalized.add(bytes)
                         }
                         normalized
                     }
-                    main.post { if (attached) pending.success(images) else pending.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to attach a task photo", null) }
+                    main.post { if (attached) pending.success(images) else pending.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_photo_activity_unavailable), null) }
                 } catch (failure: TaskPhotoImportException) {
                     main.post { pending.error(failure.code, failure.message, null) }
                 } catch (_: Exception) {
-                    main.post { pending.error("INVALID_TASK_PHOTO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) }
+                    main.post { pending.error("INVALID_TASK_PHOTO", strings.getString(R.string.document_host_photo_invalid_image), null) }
                 } finally {
                     file?.delete()
                 }
@@ -303,12 +304,13 @@ internal class DocumentHostApi(
             logoResult = null
             val uri = data?.data
             if (status != Activity.RESULT_OK || uri == null) { pending.success(null); return true }
+            val strings = localizedContext(activity)
             writer.execute {
                 try {
                     val asset = requireNotNull(activity.contentResolver.openInputStream(uri)).use { LogoImages.normalize(activity, it) }
                     LogoImages.remember(activity, asset)
                     main.post { pending.success(mapOf("token" to asset.id, "width" to asset.width, "height" to asset.height, "png" to asset.bytes)) }
-                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", "Choose a PNG, JPEG or WebP image up to 50 MB and 250 megapixels", null) } }
+                } catch (_: Exception) { main.post { pending.error("INVALID_LOGO", strings.getString(R.string.document_host_photo_invalid_image), null) } }
             }
             return true
         }
@@ -331,11 +333,12 @@ internal class DocumentHostApi(
 
     fun detach() {
         attached = false
-        logoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to choose a logo", null)
+        val strings = localizedContext(activity)
+        logoResult?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_logo_activity_unavailable), null)
         logoResult = null
-        save?.result?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
+        save?.result?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_invoice_activity_unavailable), null)
         save = null
-        photoResult?.error("ACTIVITY_UNAVAILABLE", "Reopen the app to attach a task photo", null)
+        photoResult?.error("ACTIVITY_UNAVAILABLE", strings.getString(R.string.document_host_photo_activity_unavailable), null)
         photoResult = null
         photoCaptureFile?.delete()
         photoCaptureFile = null
