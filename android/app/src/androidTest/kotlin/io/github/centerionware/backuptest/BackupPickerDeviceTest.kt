@@ -1,12 +1,15 @@
 package io.github.centerionware.backuptest
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
+import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.provider.MediaStore
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -15,6 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.MainActivity
 import io.github.centerionware.clockrove.tracking.TimerRepository
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -26,9 +30,11 @@ import java.io.File
 class BackupPickerDeviceTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val automation get() = instrumentation.uiAutomation
+    private var downloadsFixtureUri: android.net.Uri? = null
 
     @Test fun documentPickerRestoresIntoAnIndependentDatabase() {
         val app = instrumentation.targetContext
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) publishFixtureInDownloads(app)
         val repository = TimerRepository.get(app)
         assertTrue(repository.snapshot().jobs.isEmpty())
         val existingJob = repository.createJob("Synthetic destination job")
@@ -86,6 +92,42 @@ class BackupPickerDeviceTest {
         assertTrue("Imported site must not be registered", repository.sitesToRegister().isEmpty())
     }
 
+    @After fun removePublishedFixture() {
+        downloadsFixtureUri?.let {
+            instrumentation.targetContext.contentResolver.delete(it, null, null)
+        }
+        downloadsFixtureUri = null
+    }
+
+    private fun publishFixtureInDownloads(app: android.content.Context) {
+        val source = File(requireNotNull(app.getExternalFilesDir(null)), FIXTURE)
+        assertTrue("The CI backup fixture was not staged for the system picker", source.isFile)
+        val resolver = app.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, FIXTURE)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+            put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                "${Environment.DIRECTORY_DOWNLOADS}/$FIXTURE_DIRECTORY/",
+            )
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = requireNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values))
+        downloadsFixtureUri = uri
+        try {
+            requireNotNull(resolver.openOutputStream(uri, "w")).use { output ->
+                source.inputStream().use { it.copyTo(output) }
+            }
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            assertEquals(1, resolver.update(uri, values, null, null))
+        } catch (error: Throwable) {
+            resolver.delete(uri, null, null)
+            downloadsFixtureUri = null
+            throw error
+        }
+    }
+
     private fun enterBackupPassword() {
         val password = waitFor("backup password field", ::findPasswordField)
         touchNode(password)
@@ -108,26 +150,12 @@ class BackupPickerDeviceTest {
         automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun openSharedFixtureDirectory() {
-        showPickerRoots()
-        if (sharedStorageRoot() == null) {
-            val window = requireNotNull(automation.rootInActiveWindow)
-            val bounds = Rect().also(window::getBoundsInScreen)
-            // Tapping the dimmed pane closes the roots drawer without exiting Documents.
-            runShellInput("tap ${bounds.right - 8} ${bounds.centerY()}")
-            waitForClosedPickerRoots()
-            val overflow = waitFor("Documents options button") { findLabel("More options") }
-            if (!performAccessibilityClick(overflow)) tapPickerNode(overflow)
-            val showStorage = waitFor("Show internal storage in Documents options") {
-                (sequenceOf(automation.rootInActiveWindow) + automation.windows.asSequence().map { it.root })
-                    .filterNotNull()
-                    .filter { it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES }
-                    .mapNotNull { root -> findLabel("Show internal storage", root = root) }
-                    .firstOrNull { it.isEnabled }
+        val downloadsProvider = selectSharedStorageRoot()
+        if (!downloadsProvider) {
+            openDocumentRow("Download", "the shared Download directory") {
+                findDocumentTitle(FIXTURE_DIRECTORY)
             }
-            if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
-            showPickerRoots()
         }
-        selectSharedStorageRoot()
         // List rows expose a title separate from the selection icon.
         val listView = findLabel("List view") ?: findLabel("View as list")
         if (listView != null) {
@@ -139,19 +167,43 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun selectSharedStorageRoot() {
-        automation.waitForIdle(250, 5_000)
-        var nextTap = 0L
-        waitFor("shared storage directory after selecting its root") {
-            findDocumentTitle(FIXTURE_DIRECTORY)?.let { return@waitFor it }
-            if (SystemClock.uptimeMillis() >= nextTap && findLabel("Open from") != null) {
-                sharedStorageRoot()?.let { root ->
-                    if (!performAccessibilityClick(root)) touchNode(root)
-                    nextTap = SystemClock.uptimeMillis() + 1_000
-                }
+    private fun selectSharedStorageRoot(): Boolean {
+        showPickerRoots()
+        if (sharedStorageRoot() == null) {
+            closePickerRoots()
+            val overflow = waitFor("Documents options button") { findLabel("More options") }
+            if (!performAccessibilityClick(overflow)) tapPickerNode(overflow)
+            automation.waitForIdle(250, 5_000)
+            val showStorage = (sequenceOf(automation.rootInActiveWindow) +
+                automation.windows.asSequence().map { it.root })
+                .filterNotNull()
+                .filter { it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES }
+                .mapNotNull { root -> findLabel("Show internal storage", root = root) }
+                .firstOrNull { it.isEnabled }
+            if (showStorage != null) {
+                if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
+                showPickerRoots()
+            } else {
+                pressBack()
+                showPickerRoots()
             }
-            null
         }
+        val root = waitFor("shared storage or Downloads root") {
+            sharedStorageRoot() ?: downloadsRoot()
+        }
+        val downloadsProvider = root.text?.toString() == "Downloads" ||
+            root.contentDescription?.toString() == "Downloads"
+        if (!performAccessibilityClick(root)) touchNode(root)
+        if (findLabel("Open from") != null) closePickerRoots()
+        waitForClosedPickerRoots()
+        return downloadsProvider
+    }
+
+    private fun closePickerRoots() {
+        val window = automation.rootInActiveWindow ?: return
+        val bounds = Rect().also(window::getBoundsInScreen)
+        // Tapping the dimmed pane closes the roots drawer without exiting Documents.
+        runShellInput("tap ${bounds.right - 8} ${bounds.centerY()}")
         waitForClosedPickerRoots()
     }
 
@@ -243,7 +295,9 @@ class BackupPickerDeviceTest {
     }
 
     private fun sharedStorageRoot(): AccessibilityNodeInfo? =
-        findLabel("Downloads") ?: findLabel(Build.MODEL) ?: findLabel("Internal storage")
+        findLabel(Build.MODEL) ?: findLabel("Internal storage")
+
+    private fun downloadsRoot(): AccessibilityNodeInfo? = findLabel("Downloads")
 
     private fun pressBack() = runShellInput("keyevent KEYCODE_BACK")
 

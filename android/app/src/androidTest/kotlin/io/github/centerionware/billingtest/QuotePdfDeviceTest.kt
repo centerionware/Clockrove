@@ -45,6 +45,7 @@ class QuotePdfDeviceTest {
                                     "Page${index + 1}·Quote${record.number}·Revision$revision",
                                     "",
                                 )
+                                .replace("Quote${record.number}·Revision$revision", "")
                                 .replace("QUOTE", ""),
                         )
                     }

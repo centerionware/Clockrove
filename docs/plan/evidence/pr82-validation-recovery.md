@@ -22,3 +22,19 @@ clean the app and document-picker state on every exit, wait for the native Help
 version before asserting it and drag the visible list, and split oversized PDF
 words into at most 48 code points per line. These changes await a fresh exact-
 head Actions run. No build or test was run locally.
+
+Run [45265770690](https://github.com/centerionware/Clockrove/actions/runs/45265770690)
+on `bacad38` passed localization checks, analysis, Flutter behavior tests,
+Android builds, 759 native tests, and release checks. The combined API 24/35
+journey and document-preview steps reported four root failures: the picker used
+the Downloads shortcut instead of API 24's internal storage root, API 35 did
+not index the shell-pushed fixture, the settings test could not find the
+location row as a checkable node, and quote extraction included repeated page
+headers inside a multi-page amount. Five viewer failures were downstream from
+the quote test stopping before all style previews were generated. The follow-
+up now uses internal storage when available, publishes the API 35 fixture
+through MediaStore Downloads, closes the picker drawer before checking
+navigation, falls back to the visible settings tile when semantics are split,
+strips repeated quote headers from extracted text, and applies the formatter
+correction. Exact-head Actions remains the acceptance gate. No local build or
+test was run.

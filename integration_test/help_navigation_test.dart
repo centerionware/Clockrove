@@ -32,7 +32,11 @@ void main() {
 
     final helpList = find.byType(ListView).first;
     final version = find.text('Clockrove version $versionValue');
-    for (var attempt = 0; attempt < 8 && version.evaluate().isEmpty; attempt++) {
+    for (
+      var attempt = 0;
+      attempt < 8 && version.evaluate().isEmpty;
+      attempt++
+    ) {
       await tester.drag(helpList, const Offset(0, -400));
       await tester.pumpAndSettle();
     }
