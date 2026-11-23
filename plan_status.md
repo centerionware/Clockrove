@@ -674,3 +674,12 @@ The chronological validation record is preserved in the following files, split a
 - [2026-11-14 — second settings visit and PR #45 merge through 2026-11-15 — owner decision: Google Maps deferred beyond launch](docs/plan/status-history/validation-history-06.md)
 
 See [maintainability-audit.md](docs/plan/maintainability-audit.md) for oversized source/test files and their safe split sequence.
+
+Exact-head run [45110440339](https://github.com/centerionware/Clockrove/actions/runs/45110440339)
+on `7bf6d44` passed catalog generation and the localization audit, then stopped
+at the clean-formatting gate. The CI formatter identified two Dart formatting
+corrections in the widget configuration test and localization audit CLI; those
+exact changes are applied. Analyze, behavior tests, Android build, native tests,
+and API 24/35 document rendering were skipped after the formatting failure. No
+build, test, formatter or analysis ran locally. A fresh exact-head Actions run is
+required to close the localization source and CI milestone.

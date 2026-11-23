@@ -103,32 +103,29 @@ void main() {
       },
     );
   }
-  testWidgets(
-    'Full app opens widget setup with one initial route',
-    (tester) async {
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(
-        widgetChannel,
-        (call) async => {'jobId': null, 'taskOnly': false},
-      );
-      addTearDown(
-        () => messenger.setMockMethodCallHandler(widgetChannel, null),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [timerApiProvider.overrideWithValue(_Timer())],
-          child: const ClockroveApp(initialRoute: '/widget-configuration'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(WidgetConfigurationScreen), findsOneWidget);
-      expect(find.text('Synthetic work'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      expect(navigator.canPop(), false);
-    },
-  );
+  testWidgets('Full app opens widget setup with one initial route', (
+    tester,
+  ) async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      widgetChannel,
+      (call) async => {'jobId': null, 'taskOnly': false},
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(widgetChannel, null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [timerApiProvider.overrideWithValue(_Timer())],
+        child: const ClockroveApp(initialRoute: '/widget-configuration'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(WidgetConfigurationScreen), findsOneWidget);
+    expect(find.text('Synthetic work'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(navigator.canPop(), false);
+  });
   testWidgets(
     'Widget save retries the same command after a lost response and locks its choice',
     (tester) async {

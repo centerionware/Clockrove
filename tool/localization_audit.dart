@@ -29,9 +29,7 @@ void main(List<String> arguments) {
     }
   }
   for (final file in _files('android/app/src/main/kotlin', '.kt')) {
-    for (final candidate in auditKotlinPresentation(
-      file.readAsStringSync(),
-    )) {
+    for (final candidate in auditKotlinPresentation(file.readAsStringSync())) {
       report('${file.path}:${candidate.line}', candidate.text);
     }
   }
