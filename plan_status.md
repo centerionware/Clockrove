@@ -956,7 +956,17 @@ on `c4a5103` passed catalog checks, both localization audits, formatting,
 analysis, all 311 behavior tests, Android/release compilation, instrumentation
 APK assembly, and all 759 native unit tests. API 24 report/PDF and invoice
 payment instrumentation advanced past the corrected precision assertion; the
-quote billing device flow then found two stale `Save task` labels. Those now
-follow the task editor's visible `Save` action. API 35 and invoice-viewer checks
-were skipped after the API 24 quote-flow failure. A fresh exact-head Actions run
-is required. No local build, test, formatter or analysis ran.
+quote billing device flow then found two stale `Save task` labels. The save
+actions now use `Save`. API 35 and invoice-viewer checks were skipped after the
+API 24 quote-flow failure. A fresh exact-head Actions run is required. No local
+build, test, formatter or analysis ran.
+
+Exact-head run [45141596331](https://github.com/centerionware/Clockrove/actions/runs/45141596331)
+on `0a6c070` passed catalogs, localization audits, formatting, analysis, all
+311 behavior tests, Android/release compilation, APK assembly, and all 759
+native tests. API 24 report/PDF and invoice payment instrumentation passed; the
+quote billing flow passed both corrected save actions, then found that the
+accepted-scope screen is titled `Review accepted scope`, not `Plan accepted
+scope`. The test now follows the visible title. API 35 and invoice-viewer checks
+were skipped after the API 24 quote-flow failure. A fresh exact-head Actions
+run is required. No local build, test, formatter or analysis ran.

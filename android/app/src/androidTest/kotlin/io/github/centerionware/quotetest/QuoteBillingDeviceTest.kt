@@ -338,7 +338,7 @@ class QuoteBillingDeviceTest {
             assertEquals(BigInteger("999"), repository.boardSnapshot(binding.jobId).board.cards.single().priceMinor)
             assertEquals(0, count("sessions")); assertEquals(0, count("invoices"))
             val completedDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).apply { timeZone = java.util.TimeZone.getDefault() }.format(java.util.Date(requireNotNull(repository.boardSnapshot(binding.jobId).board.cards.single().completedMillis)))
-            back(); waitFor("Create job from quote"); back(); waitFor("Plan accepted scope")
+            back(); waitFor("Create job from quote"); back(); waitFor("Review accepted scope")
             scrollToStart(); reveal("Invoice actual work"); click("Invoice actual work")
             waitFor("Load available work"); enter("First date (YYYY-MM-DD)", completedDate); enter("Last date (YYYY-MM-DD)", completedDate)
             reveal("Load available work"); click("Load available work"); reveal("Install tile"); click("Install tile"); capture("actual-source-selection")
