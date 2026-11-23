@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"第 %1$s 頁"</string>
     <string name="report_pdf_credit_amount">"信用額：%1$s"</string>
     <string name="report_pdf_date_range">"%1$s 至 %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"毛利率 %1$s% · 淨利率 %2$s%"</string>
+    <string name="report_pdf_margin_pair">"毛利率 %1$s%% · 淨利率 %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"已記錄成本 %1$s 筆 · 未關聯工作項目 %2$s 筆"</string>
     <string name="report_pdf_invoice_activity">"發票開立及作廢活動 · %1$s"</string>
     <string name="report_pdf_cash_events">"現金與貸項變動 · %1$s"</string>

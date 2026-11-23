@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"الصفحة %1$s"</string>
     <string name="report_pdf_credit_amount">"الرصيد الدائن: %1$s"</string>
     <string name="report_pdf_date_range">"من %1$s إلى %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"هامش الربح الإجمالي %1$s% · هامش الربح الصافي %2$s%"</string>
+    <string name="report_pdf_margin_pair">"هامش الربح الإجمالي %1$s%% · هامش الربح الصافي %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"قيود التكلفة المسجلة: %1$s · غير مرتبطة بعمل: %2$s"</string>
     <string name="report_pdf_invoice_activity">"عمليات إصدار الفواتير وإلغائها · %1$s"</string>
     <string name="report_pdf_cash_events">"عمليات النقد والرصيد الدائن · %1$s"</string>

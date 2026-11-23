@@ -18,6 +18,9 @@ def resource_xml(messages, english, aliases):
             raise ValueError(f"{key}: expected nonempty copy")
         if key in aliases:
             names = list(dict.fromkeys(re.findall(r"\{([a-z_]+)\}", english[key])))
+            if names:
+                # Android String.format needs literal percent signs escaped when arguments exist.
+                value = value.replace("%", "%%")
             for index, name in enumerate(names, start=1):
                 value = value.replace("{" + name + "}", f"%{index}$s")
         quoted = escape(value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n"))

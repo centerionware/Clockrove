@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Página %1$s"</string>
     <string name="report_pdf_credit_amount">"Crédito: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s a %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Margem bruta %1$s% · margem líquida %2$s%"</string>
+    <string name="report_pdf_margin_pair">"Margem bruta %1$s%% · margem líquida %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"Registos de custos: %1$s · sem trabalho: %2$s"</string>
     <string name="report_pdf_invoice_activity">"Emissão e anulação de faturas · %1$s"</string>
     <string name="report_pdf_cash_events">"Movimentos de caixa e crédito · %1$s"</string>

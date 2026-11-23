@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"পৃষ্ঠা %1$s"</string>
     <string name="report_pdf_credit_amount">"ক্রেডিট: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s থেকে %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"মোট মুনাফার হার %1$s% · নিট মুনাফার হার %2$s%"</string>
+    <string name="report_pdf_margin_pair">"মোট মুনাফার হার %1$s%% · নিট মুনাফার হার %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"রেকর্ড করা খরচ: %1$s · কাজের সঙ্গে যুক্ত নয়: %2$s"</string>
     <string name="report_pdf_invoice_activity">"চালান ইস্যু ও বাতিল · %1$s"</string>
     <string name="report_pdf_cash_events">"নগদ ও ক্রেডিট লেনদেন · %1$s"</string>

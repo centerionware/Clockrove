@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Trang %1$s"</string>
     <string name="report_pdf_credit_amount">"Tín dụng: %1$s"</string>
     <string name="report_pdf_date_range">"Từ %1$s đến %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Biên lợi nhuận gộp %1$s% · biên lợi nhuận ròng %2$s%"</string>
+    <string name="report_pdf_margin_pair">"Biên lợi nhuận gộp %1$s%% · biên lợi nhuận ròng %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"Chi phí đã ghi: %1$s · không gắn với công việc: %2$s"</string>
     <string name="report_pdf_invoice_activity">"Hoạt động phát hành và hủy hóa đơn · %1$s"</string>
     <string name="report_pdf_cash_events">"Giao dịch tiền mặt và tín dụng · %1$s"</string>

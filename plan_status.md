@@ -905,3 +905,15 @@ The invoice billing device flow used the same obsolete label and now targets
 API 35 rendering and invoice-viewer validation did not run after the API 24
 failures. No local build, test, formatter or analysis ran; another exact-head
 Actions run is required.
+
+Exact-head run [45130659210](https://github.com/centerionware/Clockrove/actions/runs/45130659210)
+on `8ab3e16` passed catalog checks, localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, instrumentation APK
+assembly, and all 759 native unit tests. API 24 PDF/device instrumentation
+still found an unescaped literal percent in the localized report-margin format
+and one GPS test waiting for `CSV export` instead of the visible `Export CSV`.
+The Android catalog generator now escapes literal percent signs in formatted
+Flutter aliases across locales, and the device test follows the visible label.
+API 35 rendering and invoice-viewer validation were skipped after API 24
+failed; the exact-head PR check records validation of these follow-up fixes.
+No local build, test, formatter or analysis ran.

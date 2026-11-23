@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"पृष्ठ %1$s"</string>
     <string name="report_pdf_credit_amount">"क्रेडिट: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s से %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"सकल मार्जिन %1$s% · शुद्ध मार्जिन %2$s%"</string>
+    <string name="report_pdf_margin_pair">"सकल मार्जिन %1$s%% · शुद्ध मार्जिन %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"दर्ज लागतें: %1$s · बिना काम से जुड़ी लागतें: %2$s"</string>
     <string name="report_pdf_invoice_activity">"चालान जारी करने और रद्द करने की गतिविधि · %1$s"</string>
     <string name="report_pdf_cash_events">"नकद और क्रेडिट लेनदेन · %1$s"</string>

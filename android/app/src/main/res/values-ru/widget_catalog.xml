@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Страница %1$s"</string>
     <string name="report_pdf_credit_amount">"Кредит: %1$s"</string>
     <string name="report_pdf_date_range">"С %1$s по %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Валовая маржа %1$s% · чистая маржа %2$s%"</string>
+    <string name="report_pdf_margin_pair">"Валовая маржа %1$s%% · чистая маржа %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"Записи расходов: %1$s · без работы: %2$s"</string>
     <string name="report_pdf_invoice_activity">"Выставление и аннулирование счетов · %1$s"</string>
     <string name="report_pdf_cash_events">"Денежные операции и зачёты · %1$s"</string>

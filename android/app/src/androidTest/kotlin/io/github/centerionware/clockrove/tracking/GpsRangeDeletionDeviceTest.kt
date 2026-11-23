@@ -337,7 +337,7 @@ class GpsRangeDeletionDeviceTest {
         waitFor("Synthetic GPS deletion journey")
         click("Work report")
         waitFor("Work report")
-        waitFor("CSV export")
+        waitFor("Export CSV")
         waitFor(expectedMapLabel)
         capture(reportCapture)
         if (mapCapture != null) {

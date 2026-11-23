@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Seite %1$s"</string>
     <string name="report_pdf_credit_amount">"Guthaben: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s bis %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Bruttomarge %1$s% · Nettomarge %2$s%"</string>
+    <string name="report_pdf_margin_pair">"Bruttomarge %1$s%% · Nettomarge %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"%1$s erfasste Kostenposten · %2$s ohne Auftrag"</string>
     <string name="report_pdf_invoice_activity">"Rechnungserstellung und Stornierung · %1$s"</string>
     <string name="report_pdf_cash_events">"Zahlungen und Guthabenbewegungen · %1$s"</string>

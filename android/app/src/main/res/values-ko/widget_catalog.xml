@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"페이지 %1$s"</string>
     <string name="report_pdf_credit_amount">"크레딧: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s~%2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"매출총이익률 %1$s% · 순이익률 %2$s%"</string>
+    <string name="report_pdf_margin_pair">"매출총이익률 %1$s%% · 순이익률 %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"기록된 비용 %1$s건 · 작업 미지정 %2$s건"</string>
     <string name="report_pdf_invoice_activity">"청구서 발행 및 무효화 · %1$s건"</string>
     <string name="report_pdf_cash_events">"현금 및 크레딧 내역 · %1$s건"</string>

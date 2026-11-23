@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Halaman %1$s"</string>
     <string name="report_pdf_credit_amount">"Kredit: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s sampai %2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Margin kotor %1$s% · margin bersih %2$s%"</string>
+    <string name="report_pdf_margin_pair">"Margin kotor %1$s%% · margin bersih %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"Catatan biaya: %1$s · tanpa pekerjaan: %2$s"</string>
     <string name="report_pdf_invoice_activity">"Penerbitan dan pembatalan faktur · %1$s"</string>
     <string name="report_pdf_cash_events">"Peristiwa kas dan kredit · %1$s"</string>

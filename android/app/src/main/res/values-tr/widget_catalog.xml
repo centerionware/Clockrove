@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"Sayfa %1$s"</string>
     <string name="report_pdf_credit_amount">"Kredi: %1$s"</string>
     <string name="report_pdf_date_range">"%1$s–%2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"Brüt marj %%1$s · net marj %%2$s"</string>
+    <string name="report_pdf_margin_pair">"Brüt marj %%%1$s · net marj %%%2$s"</string>
     <string name="report_pdf_cost_attribution">"Kayıtlı maliyet: %1$s · işe bağlı olmayan: %2$s"</string>
     <string name="report_pdf_invoice_activity">"Fatura düzenleme ve iptal işlemleri · %1$s"</string>
     <string name="report_pdf_cash_events">"Nakit ve kredi hareketleri · %1$s"</string>

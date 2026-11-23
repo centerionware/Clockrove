@@ -245,7 +245,7 @@
     <string name="report_pdf_page">"ページ %1$s"</string>
     <string name="report_pdf_credit_amount">"クレジット：%1$s"</string>
     <string name="report_pdf_date_range">"%1$s～%2$s · %3$s"</string>
-    <string name="report_pdf_margin_pair">"粗利益率 %1$s% · 純利益率 %2$s%"</string>
+    <string name="report_pdf_margin_pair">"粗利益率 %1$s%% · 純利益率 %2$s%%"</string>
     <string name="report_pdf_cost_attribution">"費用の記録：%1$s件 · 仕事に未割り当て：%2$s件"</string>
     <string name="report_pdf_invoice_activity">"請求書の発行と無効化 · %1$s件"</string>
     <string name="report_pdf_cash_events">"入金とクレジットの履歴 · %1$s件"</string>
