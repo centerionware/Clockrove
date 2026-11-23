@@ -103,6 +103,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text.endsWith('.invoices') ||
           text.endsWith('.pdf') ||
           text == 'task-captures' ||
+          text.startsWith('io.github.') ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
           RegExp(

@@ -1,2 +1,3 @@
 durationHoursMinutes: "{hours}小時 {minutes}分鐘"
 durationHoursMinutesSeconds: "{hours}小時 {minutes}分鐘 {seconds}秒"
+timeUtcOffset: " (UTC{offset})"

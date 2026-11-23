@@ -1528,7 +1528,8 @@ enum AppMessage {
   taskPhotoTaskAttachment("Task photo attachment"),
   taskPhotoCommentAttachment("Comment photo attachment"),
   durationHoursMinutes("{hours}h {minutes}m"),
-  durationHoursMinutesSeconds("{hours}h {minutes}m {seconds}s");
+  durationHoursMinutesSeconds("{hours}h {minutes}m {seconds}s"),
+  timeUtcOffset(" (UTC{offset})");
 
   const AppMessage(this.english);
   final String english;

@@ -331,9 +331,12 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     final zone =
         '${offset < 0 ? "−" : "+"}${(offset.abs() ~/ 60).toString().padLeft(2, '0')}:${(offset.abs() % 60).toString().padLeft(2, '0')}';
     final labels = MaterialLocalizations.of(context);
+    final utcOffset = AppMessage.timeUtcOffset.format(context, {
+      'offset': zone,
+    });
     return '${labels.formatMediumDate(local)}, ${local.year} '
         '${labels.formatTimeOfDay(TimeOfDay.fromDateTime(local), alwaysUse24HourFormat: true)}:'
-        '${local.second.toString().padLeft(2, '0')} (UTC$zone)';
+        '${local.second.toString().padLeft(2, '0')}$utcOffset';
   }
 
   String _health(BuildContext context, AutomationSnapshot value) {

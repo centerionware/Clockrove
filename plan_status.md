@@ -727,3 +727,14 @@ now translated in all 17 Android catalogs and loaded through native resources;
 the audit recognizes only the documented machine-value forms. Android catalogs
 were regenerated. The next exact-head Actions run must pass before localization
 coverage can be marked complete. No local build, test, formatter or analysis ran.
+
+Exact-head run [45114817097](https://github.com/centerionware/Clockrove/actions/runs/45114817097)
+on `c7c278b` passed catalog generation, both localization audit commands,
+formatting and analysis, then reported 306 passing tests, 2 audit failures and
+14 skips. The last findings were a literal UTC suffix assembled in the
+automation time display and the fully qualified CI-only camera fixture class.
+The UTC suffix now comes from the time-format overlay in all 17 Flutter
+catalogs, and the audit treats fully qualified `io.github` class names as
+machine identifiers. The next exact-head Actions run must pass before this
+localization milestone can be marked complete. No local build, test, formatter
+or analysis ran.
