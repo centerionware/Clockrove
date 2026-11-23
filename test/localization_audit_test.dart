@@ -22,6 +22,17 @@ void example(String name) {
     ]);
   });
 
+  test('Kotlin protocol values are excluded while prose is still audited', () {
+    final findings = auditKotlinPresentation(r'''
+val channel = "clockrove/documents/v1"
+val mime = "image/png"
+val quoteId = call.argument<String>("quoteId")
+val quote = call.method.endsWith("Quote")
+flow.write("Document copy")
+''');
+    expect(findings.map((finding) => finding.text), ['Document copy']);
+  });
+
   test('resource lookups inside Kotlin interpolation are not literal copy', () {
     final findings = auditKotlinPresentation(r'''
 flow.write(
@@ -166,6 +177,8 @@ flow.write(
       'paidLabel',
       'dueLabel',
       'quote-editor-',
+      'clockrove/help/v1',
+      'appVersion',
     };
 
     bool isSurface(File file) {

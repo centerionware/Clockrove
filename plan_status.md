@@ -702,3 +702,17 @@ on `c9253da`, again passed catalog generation and the full localization audit,
 then stopped at formatting. The formatter's exact two test-file corrections are
 applied. The behavior suite and all Android build/device gates were skipped; a
 fresh exact-head Actions run is needed.
+
+Exact-head run [45112812265](https://github.com/centerionware/Clockrove/actions/runs/45112812265)
+on `d18cce5` passed generated catalog checks, both localization audits,
+formatting and analysis. The behavior gate again reported 303 passed, 4 failed
+and 14 skipped. The remaining failures were the mounted-widget assertion for
+platform route setup, two audit false positives for Android channel/MIME/
+protocol values and main's channel/version keys, and a quote test looking for
+validation feedback while its lazy field was offscreen. The route test now checks
+the app's platform route and generated route builder directly; the audit filters
+machine protocol values while retaining a prose assertion; and the quote test
+checks the catalog-backed validator output before submission, then confirms no
+command is sent and the pasted input remains. Android build/native/PDF gates did
+not run. No local build, test, formatter or analysis ran. A fresh exact-head
+Actions run is required.

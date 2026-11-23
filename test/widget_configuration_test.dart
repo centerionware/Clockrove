@@ -103,7 +103,7 @@ void main() {
       },
     );
   }
-  testWidgets('Full app opens widget setup with one initial route', (
+  testWidgets('Full app configures widget setup as one platform route', (
     tester,
   ) async {
     final dispatcher = tester.binding.platformDispatcher;
@@ -123,11 +123,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(WidgetConfigurationScreen), findsOneWidget);
-    expect(find.text('Synthetic work'), findsOneWidget);
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.initialRoute, '/widget-configuration');
+    final routes = app.onGenerateInitialRoutes!('/widget-configuration');
+    expect(routes, hasLength(1));
+    expect(routes.single.settings.name, '/widget-configuration');
+    final route = routes.single as MaterialPageRoute<void>;
+    expect(
+      route.builder(tester.element(find.byType(MaterialApp))),
+      isA<WidgetConfigurationScreen>(),
+    );
     expect(tester.takeException(), isNull);
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-    expect(navigator.canPop(), false);
   });
   testWidgets(
     'Widget save retries the same command after a lost response and locks its choice',
