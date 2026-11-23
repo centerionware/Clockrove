@@ -870,3 +870,15 @@ argument on `RuntimeEnvironment.getApplication`. Those call sites now pass the
 Android context or use the updated API. Native execution and API 24/35 PDF
 rendering were skipped after test compilation failed. No local build, test,
 formatter or analysis ran; a fresh exact-head run is required.
+
+Exact-head run [45125375290](https://github.com/centerionware/Clockrove/actions/runs/45125375290)
+on `c29b1a1` passed catalogs, both localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, and instrumentation
+APK assembly. Native JUnit completed 759 tests with 8 failures: invoice and
+quote tests still assumed English-only copy, and quote filenames exposed a
+missing third format placeholder in every Android locale. The tests now read
+localized expectations and assert locale-independent filename structure; all
+Android catalog templates include the quote revision value, and generated
+resources have been refreshed. API 24/35 PDF rendering was skipped after the
+native failures. No local build, test, formatter or analysis ran; a fresh
+exact-head run is required.

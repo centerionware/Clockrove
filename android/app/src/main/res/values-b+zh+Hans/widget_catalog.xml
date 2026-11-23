@@ -143,7 +143,7 @@
     <string name="report_filename_gps">"%1$s-GPS-%2$s-%3$s.csv"</string>
     <string name="business_report_filename_csv">"%1$s-业务-%2$s-%3$s.csv"</string>
     <string name="business_report_filename_pdf">"%1$s-业务-%2$s-%3$s.pdf"</string>
-    <string name="document_filename_quote_revision">"%1$s-版本-%2$s.pdf"</string>
+    <string name="document_filename_quote_revision">"%1$s-%2$s-%3$s.pdf"</string>
     <string name="document_filename_copy">"%1$s-%2$s-%3$s-%4$s.pdf"</string>
     <string name="document_filename_revision">"版本"</string>
     <string name="csv_session_id">"会话 ID"</string>

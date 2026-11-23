@@ -6,6 +6,7 @@ import android.content.pm.ProviderInfo
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
+import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.tracking.InvoiceStore
 import io.github.centerionware.clockrove.tracking.ReportStore
 import io.github.centerionware.clockrove.tracking.TimerRepository
@@ -91,7 +92,13 @@ class InvoiceHandoffTest {
         assertTrue(intent.getStringExtra(Intent.EXTRA_SUBJECT)!!.startsWith("Payment receipt"))
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Original total:"))
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Balance due:"))
-        assertTrue(InvoiceDocuments.filename(context, ready).startsWith("INV-1000-receipt-"))
+        val filename = InvoiceDocuments.filename(context, ready)
+        assertTrue(
+            filename.startsWith(
+                "${ready.number}-${context.getString(R.string.invoice_copy_caption_receipt)}-",
+            ),
+        )
+        assertTrue(filename.endsWith("-${ready.copyId!!.takeLast(8)}.pdf"))
         try { InvoiceDocuments.ensure(context, repository, "other-invoice", "receipt-payment"); fail("Wrong invoice copy accepted") } catch (_: IllegalArgumentException) { }
         assertArrayEquals(synthetic, repository.invoice("invoice").pdf)
     }
