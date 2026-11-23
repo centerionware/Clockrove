@@ -60,6 +60,8 @@ void example(String name) {
       'task-comment-body',
       'task-attachment-',
       'clockrove/documents/v1',
+      'clockrove/help/v1',
+      'appVersion',
       'paidLabel',
       'dueLabel',
       'captureTaskPhoto',

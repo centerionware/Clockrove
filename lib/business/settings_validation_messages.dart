@@ -20,6 +20,18 @@ String localizedBusinessFormatError(
   BuildContext context,
   FormatException error,
 ) {
+  final message = error.message;
+  for (final catalogMessage in AppMessage.values) {
+    final template = catalogMessage.of(context);
+    if (template == message) return message;
+    if (!AppLocalizations.placeholder.hasMatch(template)) continue;
+    final pattern = template.splitMapJoin(
+      AppLocalizations.placeholder,
+      onMatch: (_) => r'[\s\S]*?',
+      onNonMatch: RegExp.escape,
+    );
+    if (RegExp('^$pattern\$').hasMatch(message)) return message;
+  }
   if (error.message.startsWith('CURRENCY_DECIMAL_PLACES')) {
     return AppMessage.paymentAmountFormat.format(context, {
       'digits': error.message.split(':').last,

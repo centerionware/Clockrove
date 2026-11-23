@@ -342,10 +342,22 @@ company, customer, line descriptions, email copy and locale-formatted dates,
 now comes from translated Android resources in all 17 locale catalogs. The
 audit ignores only file MIME, URI authority and temporary filename constants;
 sample document copy remains audited. The app now passes the platform default
-route explicitly so widget entry routes remain testable. Android resources
-were regenerated from the catalogs. No build, test, formatter or analysis ran
-locally. All changes still need one exact-head GitHub Actions validation; do
-not mark full localization coverage complete until it passes.
+route by default and accepts an explicit route for widget-entry tests. Android
+resources were regenerated from the catalogs. No build, test, formatter or
+analysis ran locally.
+
+Exact-head validation [45109023541](https://github.com/centerionware/Clockrove/actions/runs/45109023541)
+on `eb65676` passed catalog generation, localization audit, formatting and
+analysis, then reported 288 passing tests, 17 failures and 14 skips. The
+remaining failures showed that indexed finders still throw before lazy list
+children exist, the audit fixture treated a Help method-channel name and the
+`.pdf` extension as visible prose, and the shared validation formatter replaced
+already-localized catalog messages with a generic fallback. The settings test
+now scrolls until a text element is actually built; validation preserves a
+message only when it matches a catalog entry (including its placeholders);
+the audit recognizes those machine identifiers; and the widget route test
+passes its entry path explicitly. These fixes need another exact-head Actions
+run before full localization coverage can be marked complete.
 
 The report below preserves earlier evidence and milestone history.
 

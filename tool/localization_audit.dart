@@ -29,13 +29,10 @@ void main(List<String> arguments) {
     }
   }
   for (final file in _files('android/app/src/main/kotlin', '.kt')) {
-    final lines = file.readAsLinesSync();
-    for (var index = 0; index < lines.length; index++) {
-      if (lines[index].trimLeft().startsWith('//')) continue;
-      for (final match in _kotlinString.allMatches(lines[index])) {
-        final text = match[1]!;
-        if (_looksLikeCopy(text)) report('${file.path}:${index + 1}', text);
-      }
+    for (final candidate in auditKotlinPresentation(
+      file.readAsStringSync(),
+    )) {
+      report('${file.path}:${candidate.line}', candidate.text);
     }
   }
   for (final file in _files('android/app/src/main', '.xml')) {
@@ -103,6 +100,7 @@ Iterable<({int line, String text})> auditKotlinPresentation(
       final machineValue =
           text == 'application/pdf' ||
           text.endsWith('.invoices') ||
+          text.endsWith('.pdf') ||
           line.contains('createTempFile(');
       if (!machineValue &&
           !_machineDatePattern.hasMatch(text) &&

@@ -175,13 +175,15 @@ Future<void> _reveal(WidgetTester tester, String label) async {
   final scrollable = find.byType(Scrollable).first;
   tester.state<ScrollableState>(scrollable).position.jumpTo(0);
   await tester.pumpAndSettle();
-  await tester.scrollUntilVisible(
-    // `last` throws while a lazy ListView has not built the offscreen target.
-    // The first match remains a valid finder as the list scrolls it into view.
-    find.text(label).first,
-    250,
-    scrollable: scrollable,
-  );
+  List<Element> matches = [];
+  for (var attempts = 0; attempts < 40; attempts++) {
+    matches = find.text(label).evaluate().toList();
+    if (matches.isNotEmpty) break;
+    await tester.drag(scrollable, const Offset(0, -250));
+    await tester.pumpAndSettle();
+  }
+  expect(matches, isNotEmpty, reason: 'Could not reveal "$label".');
+  await tester.ensureVisible(find.byWidget(matches.last.widget));
   await tester.pumpAndSettle();
 }
 
