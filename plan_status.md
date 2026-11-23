@@ -325,7 +325,11 @@ Run
 on `c359e84` passed catalog generation and the localization audit, then stopped
 at the clean-formatting gate. Applied the exact four-file formatter patch
 exported by that run. Analyze and behavior tests did not run. No build, test,
-formatter or analysis ran locally, per owner instruction.
+formatter or analysis ran locally, per owner instruction. Follow-up run
+[45106534384](https://github.com/centerionware/Clockrove/actions/runs/45106534384)
+on `957999d` passed catalog generation and localization audit but found one
+remaining formatter wrap in the board test. Applied that exact CI correction;
+Analyze and behavior tests again did not run.
 
 The report below preserves earlier evidence and milestone history.
 

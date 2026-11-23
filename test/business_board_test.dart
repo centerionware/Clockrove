@@ -366,9 +366,7 @@ void main() {
       await tester.tap(find.text(englishCopy(AppMessage.save)));
       await tester.pumpAndSettle();
       expect(
-        find.text(
-          englishCopy(AppMessage.paymentAmountFormat, {'digits': '2'}),
-        ),
+        find.text(englishCopy(AppMessage.paymentAmountFormat, {'digits': '2'})),
         findsOneWidget,
       );
       expect(find.text('Install kitchen tiles'), findsOneWidget);
