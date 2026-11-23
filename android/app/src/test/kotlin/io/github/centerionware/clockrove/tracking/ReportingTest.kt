@@ -141,7 +141,7 @@ class ReportingTest {
         assertEquals(at("2026-11-01T04:00:00.000Z"), report.days.single().start)
         assertEquals(BigInteger.valueOf(25L * 3600000), report.totals.single().durationMillis)
         assertEquals(BigInteger.valueOf(150000), report.totals.single().amountMinor)
-        val context = RuntimeEnvironment.getApplication<android.content.Context>()
+        val context = RuntimeEnvironment.getApplication()
         assertTrue(ReportCsv.work(context, report).contains("2026-11-01T00:00:00.000-04:00"))
     }
     @Test fun finalSupportedCalendarDateTerminatesAtTheFollowingExclusiveBoundary() {

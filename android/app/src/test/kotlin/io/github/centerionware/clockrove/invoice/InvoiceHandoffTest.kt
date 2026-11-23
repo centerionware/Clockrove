@@ -91,7 +91,7 @@ class InvoiceHandoffTest {
         assertTrue(intent.getStringExtra(Intent.EXTRA_SUBJECT)!!.startsWith("Payment receipt"))
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Original total:"))
         assertTrue(intent.getStringExtra(Intent.EXTRA_TEXT)!!.contains("Balance due:"))
-        assertTrue(InvoiceDocuments.filename(ready).startsWith("INV-1000-receipt-"))
+        assertTrue(InvoiceDocuments.filename(context, ready).startsWith("INV-1000-receipt-"))
         try { InvoiceDocuments.ensure(context, repository, "other-invoice", "receipt-payment"); fail("Wrong invoice copy accepted") } catch (_: IllegalArgumentException) { }
         assertArrayEquals(synthetic, repository.invoice("invoice").pdf)
     }

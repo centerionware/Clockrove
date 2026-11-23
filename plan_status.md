@@ -860,3 +860,13 @@ assembly then found that `InvoiceBlobStorageDeviceTest` still called
 now passes its instrumentation target context. Native tests and API 24/35 PDF
 rendering were skipped after test APK compilation failed. No local build, test,
 formatter or analysis ran; a fresh exact-head run is required.
+
+Exact-head run [45124237399](https://github.com/centerionware/Clockrove/actions/runs/45124237399)
+on `24212c2` passed catalogs, both localization audits, formatting, analysis,
+all 311 behavior tests, Android app compilation, release Java compilation, and
+instrumentation APK assembly. Native unit-test compilation found two tests
+using the old one-argument localized filename API and one obsolete generic type
+argument on `RuntimeEnvironment.getApplication`. Those call sites now pass the
+Android context or use the updated API. Native execution and API 24/35 PDF
+rendering were skipped after test compilation failed. No local build, test,
+formatter or analysis ran; a fresh exact-head run is required.

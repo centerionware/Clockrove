@@ -56,7 +56,7 @@ class QuoteDocumentTest {
         assertEquals(before, version)
         val cached = repository.quoteDocument("quote", 1); assertArrayEquals(bytes, cached.pdf)
         val uri = InvoiceDocuments.uri(app, cached); assertEquals(listOf("quotes", "quote", "1"), uri.pathSegments)
-        assertEquals("Q-1000-revision-1.pdf", InvoiceDocuments.filename(cached))
+        assertEquals("Q-1000-revision-1.pdf", InvoiceDocuments.filename(app, cached))
         val email = InvoiceDocuments.email(app, cached, repository.businessSnapshot().settings.copy(receivablesEmail = "accounts@example.test"))
         assertArrayEquals(arrayOf("customer@example.test"), email.getStringArrayExtra(Intent.EXTRA_EMAIL))
         assertArrayEquals(arrayOf("accounts@example.test"), email.getStringArrayExtra(Intent.EXTRA_CC))
