@@ -851,3 +851,12 @@ now imports `R`, and the CSV activity labels use existing localized report
 payment-title resources. Native tests and API 24/35 PDF rendering were skipped
 after compilation failed. No local build, test, formatter or analysis ran; a
 fresh exact-head run is required.
+
+Exact-head run [45123098879](https://github.com/centerionware/Clockrove/actions/runs/45123098879)
+on `55a32e1` passed catalog generation, both localization audits, formatting,
+analysis, all 311 behavior tests, and the Android app build. Instrumentation APK
+assembly then found that `InvoiceBlobStorageDeviceTest` still called
+`InvoiceCopyStore.read` without its required Android context. The device test
+now passes its instrumentation target context. Native tests and API 24/35 PDF
+rendering were skipped after test APK compilation failed. No local build, test,
+formatter or analysis ran; a fresh exact-head run is required.

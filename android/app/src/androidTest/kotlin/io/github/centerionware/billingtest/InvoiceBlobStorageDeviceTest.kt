@@ -65,7 +65,7 @@ class InvoiceBlobStorageDeviceTest {
                 val record = InvoiceStore.read(db, "original")
                 assertArrayEquals(quote, InvoiceBlobs.quote(db, "quote:1"))
                 assertEquals(payload, record.payload); assertArrayEquals(original, record.pdf); assertArrayEquals(logo, record.logo)
-                val savedCopy = InvoiceCopyStore.read(db, "balance-storage")
+                val savedCopy = InvoiceCopyStore.read(db, "balance-storage", app)
                 assertArrayEquals(copy, savedCopy.pdf); assertArrayEquals(logo, savedCopy.logo)
                 assertEquals("0.00", InvoiceStore.Snapshot.decode(savedCopy.payload).statement!!.paid)
                 assertNull(InvoiceStore.read(db, "original", includePdf = false).pdf)
