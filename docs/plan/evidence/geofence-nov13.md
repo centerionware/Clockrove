@@ -22,6 +22,50 @@ and add a separate 150 m site as a comparison. Record the app version before
 and after upgrade, the monitoring status, and whether a fresh exit/re-entry
 is delivered. No affected-device transition log is available yet.
 
+### November 22 in-place setup follow-up
+
+The owner reports automatic clock-in still fails at the site with work-site
+automation enabled. A one-shot current-location fix was saved at the site, but
+the timer still did not start. No private coordinates or device diagnostics
+were collected.
+
+Source tracing explains why saving the current position does not itself start
+work: changing a site invalidates old membership facts and disarms auto-start.
+The current-location fix is setup input, not a geofence transition. A fresh
+confirmed exit and later entry are still required, by design; the product
+contract also requires an explicit start offer for the already-at-site case.
+The old flow explained the reset but did not make that start action available.
+
+The existing 15 m radius is supported for small properties, but Android
+recommends 100–150 m for more reliable transitions. This is a plausible
+contributor to missed normal arrivals; it does not prove the owner device's
+original November 13 regression cause. Android location services may use
+network location and may delay geofence notifications, so CI cannot establish
+the affected phone's callback behavior.
+
+The follow-up source adds an explicit confirmation after saving a current
+location with auto-start enabled, routes acceptance through the serialized
+manual timer command, warns about enabled sites under 100 m, and expands the
+in-app Help explanation. Flutter coverage is added for accept, timer-command
+identity, the small-radius warning and Help copy. After the first run's
+formatting correction, rebased exact-head run
+[45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
+passed formatting but Analyze stopped on a null-aware collection lint in the
+radius warning. The lint correction passed formatting and Analyze in
+[45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642),
+then Flutter reported 296 passed, 2 failed, and 14 skipped. One finder matched
+both the site subtitle and confirmation; the other expected an off-screen
+notice in the active-timer case. The test now targets the confirmation and
+checks the timer snapshot, with no prompt or command for another running job.
+Run [45087185929](https://github.com/centerionware/Clockrove/actions/runs/45087185929)
+passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
+skipped because the success notice was off-screen in the scrolled list.
+Clock-in outcomes now use visible snackbars. Run
+[45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
+stopped at formatting; the exact workflow correction is applied. Fresh
+exact-head validation and owner-device arrival delivery remain pending. No
+native geofence behavior is claimed as fixed by this UI change.
+
 ### Cold-start callback investigation
 
 Source tracing found that a callback can launch the app process after its

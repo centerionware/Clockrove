@@ -87,6 +87,11 @@ site or keep any real site details out of shared evidence.
 4. Repeat with a separate 150 m synthetic site if the 15 m site misses an
    event. Compare monitoring status and delivery for each radius. Use
    **Refresh site monitoring** once and record whether delivery returns.
+5. Save a work site using **Use current location** while the phone is already
+   at that site. Confirm that the app offers an explicit clock-in from now;
+   accepting must use the serialized manual timer command, while declining
+   must leave the timer stopped. Automatic arrival must still wait for a
+   confirmed exit and a later fresh entry.
 
 Ordinary background process termination and Android force-stop are separate
 scenarios. Force-stop can prevent Android from delivering callbacks until the

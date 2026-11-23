@@ -1,8 +1,10 @@
 # M7.3 streamed backup restore UI
 
-Status as of 2026-11-17: source and exact-head GitHub Actions validation are
-green on PR #74. On-device SAF-provider acceptance and the remaining M7.3/M7.6
-gates are still open.
+Status updated 2026-11-22: PR #74's Settings route passed exact-head GitHub
+Actions validation and was merged. PR #79 then passed a synthetic,
+data-changing Android system-picker restore on API 24 and 35 and was merged as
+`4be7b83`. Owner-device restore acceptance and the remaining M7.3/M7.6 gates
+are still open.
 
 ## Scope
 
@@ -75,16 +77,40 @@ Green run `44027991208` on `e8dcf8f`:
 
 No build, test, formatter, or analyzer ran on the development VM.
 
+## System picker data-changing restore
+
+PR #79 exact head `04fb07005447fc32b04d876c18338b1de5bb8170` passed full
+Validate run [45081595207](https://github.com/centerionware/Clockrove/actions/runs/45081595207).
+The `documentPickerRestoresIntoAnIndependentDatabase` instrumentation journey
+passed on both API 24 and API 35. It opened the Android Documents picker,
+authenticated the synthetic encrypted fixture, resolved a settings conflict,
+and verified the committed restore in an independent database. Assertions
+covered imported completed-session boundaries and timezone, a restored site,
+two jobs, a stopped timer, and imported automation disabled with no site
+registration. The separate cancellation path verified the preexisting local
+job remained intact. No personal backup or location data was used.
+
+PR #79 merged as `4be7b83502da7c66a27cc5058336347f9112c7f4`. Merged-main
+validation [45084756566](https://github.com/centerionware/Clockrove/actions/runs/45084756566)
+passed the full API 24/35 workflow.
+This is emulator/CI acceptance of the system-picker flow, not restore
+acceptance on the owner's physical device.
+
 ## Remaining M7.3 gaps
 
 - The native preview API returns aggregate counts and conflict pages, so the
-  screen cannot itemize individual additions, unchanged records, and deletions.
-- Preview requires explicit omission for imported open sessions. The product
-  contract permits omission, and the restore flow offers no close-time editor.
-- The Android system document picker acceptance run is pending. Cancellation
-  cannot interrupt an in-flight method-channel read.
-- Data-changing restore acceptance and M7.6 remain open. The near-limit
-  preview and replay results follow below.
+  screen cannot itemize all individual additions, changes, and deletions.
+- Imported open sessions can be omitted but offer no explicit close-time
+  choice.
+- Table-specific deletion choices remain incomplete outside the supported
+  conflict families; see [native deletion-resolution evidence](m73-native-deletion-resolution.md).
+- Owner-device restore acceptance remains separate from the passing emulator
+  journey. Settings export also remains withheld pending the full-path memory
+  gate, and M7.6 whole-app UI/E2E acceptance remains open.
+
+The validation chronology below records earlier attempts; its pending notes
+describe status at the time of each run and are superseded by the PR #79 result
+above.
 
 ### Near-limit restore preview and apply
 

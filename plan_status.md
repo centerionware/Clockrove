@@ -1,64 +1,50 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-16. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-22. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
 ## November 22 release readiness update
 
 - Geofence regression: [PR #77](https://github.com/centerionware/Clockrove/pull/77)
-  preserves existing 15 m sites and fixes cold-start handling of delayed
-  Android events. Its [validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
-  passed. The PR remains open and the owner’s physical site is unverified.
+  merged as `abe6f5f`; its [native validation](https://github.com/centerionware/Clockrove/actions/runs/45018944228)
+  and [merged-main validation](https://github.com/centerionware/Clockrove/actions/runs/45028310174)
+  passed. Internal delivery [45035168876](https://github.com/centerionware/Clockrove/actions/runs/45035168876)
+  was accepted, but the owner now reports automatic clock-in still failed at
+  the work site. A 15 m radius is below Android's 100–150 m guidance. Saving a
+  current location while already there resets entry detection and waits for a
+  confirmed exit and fresh entry; the current flow did not offer a direct
+  clock-in. Follow-up UI, Help and test changes are in
+  [PR #83](https://github.com/centerionware/Clockrove/pull/83). Its first
+  Actions run found formatting differences, corrected from the workflow
+  artifact. Rebased run
+  [45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
+  passed formatting, then Analyze stopped on one null-aware collection lint;
+  that source correction is pushed. Run
+  [45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642)
+  passed formatting and Analyze, then reported 296 passed, 2 failed, and 14
+  skipped. One finder matched both the site subtitle and confirmation; the
+  other expected an off-screen notice in the active-timer case. The test now
+  targets the confirmation and checks the timer snapshot, with no prompt or
+  command for another running job. Run
+  [45087185929](https://github.com/centerionware/Clockrove/actions/runs/45087185929)
+  passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
+  skipped because the successful clock-in notice was off-screen in the scrolled
+  list. Clock-in outcomes now use snackbars. Run
+  [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
+  stopped at formatting; the exact workflow correction is applied. Fresh
+  exact-head validation and another physical arrival check remain pending.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
-  passed exact-head checks and was merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
-  verified near-limit replay on API 24 and 35. Its system-picker flow still
-  needs passing evidence for a data-changing merge on both API levels.
-  [Validation on `d393395`](https://github.com/centerionware/Clockrove/actions/runs/45039652393/attempts/1)
-  failed in the Android resolver when the visible **Just once** button could
-  not be activated through accessibility. The instrumentation test now taps
-  the enabled button by its on-screen bounds and waits for DocumentsUI.
-  [Validation on `5640595`](https://github.com/centerionware/Clockrove/actions/runs/45062942453)
-  passed API 24 authenticated streaming preview and fixture export, then failed
-  when the system picker could not activate Download. The follow-up uses a
-  dedicated shared-storage fixture folder and screen taps for system controls.
-  [Validation on `5e97816`](https://github.com/centerionware/Clockrove/actions/runs/45065306259)
-  passed the API 24 crypto benchmark, then failed clearing Clockrove before
-  picker fixture export. The benchmark uninstalls its APK, so the picker setup
-  now installs the validation APK before clearing the database.
-  [Validation on `4336bb3`](https://github.com/centerionware/Clockrove/actions/runs/45066553727)
-  passed API 24 setup and fixture export. The failure capture showed Documents
-  back on Recent with its overflow menu closed. The test now waits for the
-  roots drawer to settle and searches Documents' interactive windows for the
-  storage menu item. [Validation on `dac46b8`](https://github.com/centerionware/Clockrove/actions/runs/45068063907)
-  reached the primary storage root on API 24. The failure capture showed the
-  fixture directory still visible in the grid after the attempted tap. The
-  test targets title rows with explicit finger events and waits for each
-  navigation result. Android 7 shell taps leave the tool type unknown, while
-  DocumentsUI's row handler requires a finger or stylus. [Validation on `74bd9cd`](https://github.com/centerionware/Clockrove/actions/runs/45069638407)
-  passed cancellation and staged the selected archive on API 24. Its failure
-  capture showed an empty password field after Android acknowledged the text
-  action. The journey now focuses the field and verifies masked text after
-  typing through Android input. A later [API 24 run](https://github.com/centerionware/Clockrove/actions/runs/45071323428)
-  showed the device root still visible after the drawer tap. The test now
-  waits for the root to settle and confirms it opened the fixture directory
-  listing. [Validation on `ccc007f`](https://github.com/centerionware/Clockrove/actions/runs/45072383275)
-  recorded one passing real picker restore on each API (24 and 35), including
-  the committed merge and imported automation checks. The separate API 35
-  Settings journey failed entering its default tax value. Its test now verifies
-  focus and falls back to keyboard entry if accessibility text entry fails.
-  The [next validation](https://github.com/centerionware/Clockrove/actions/runs/45074473731)
-  passed the API 24 picker and native suite. On API 35 the picker test scrolled
-  past the restore button while Settings was opening. It now waits for the top
-  backup section and uses the visible restore button. Both picker cases passed
-  again in [Actions 45077308191](https://github.com/centerionware/Clockrove/actions/runs/45077308191).
-  Its API 35 Settings screenshot and activity logs showed the tax-field tap
-  hit Android Home. The test now prefers semantic focus and clips fallback
-  touches to the app content area. [Actions 45079558909](https://github.com/centerionware/Clockrove/actions/runs/45079558909)
-  passed the API 24 picker and native suite. On API 35 the Documents drawer
-  stayed closed after the first menu tap. The test now confirms the drawer
-  opened and uses finger input if accessibility activation does not open it.
-  Full validation remains pending.
+  and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
+  are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
+  passed full exact-head validation on `04fb070`, including the Android system
+  Documents picker journey that authenticated and transactionally restored a
+  synthetic backup on API 24 and 35. The test verified imported sessions and
+  site, a stopped timer, and disabled imported automation with no site
+  registration. PR #79 merged as `4be7b83`; merged-main validation
+  [45084756566](https://github.com/centerionware/Clockrove/actions/runs/45084756566)
+  passed. Owner-device restore acceptance, full M7.3 conflict coverage, and
+  M7.6 remain separate gates.
 - Documentation: [PR #78](https://github.com/centerionware/Clockrove/pull/78)
   contains offline Help, the static website and draft policy and store copy.
   [Website source validation](https://github.com/centerionware/Clockrove/actions/runs/45023185584)
@@ -103,22 +89,17 @@ M7.6 before moving from internal to closed testing. Owner-device and upgrade
 checks remain separate launch-readiness work under M8.2. iOS and future service
 remain deferred.
 
-M7.3's Settings restore route passed its original Flutter and Android checks
-in [Actions 44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208).
-[PR #74](https://github.com/centerionware/Clockrove/pull/74) passed exact-head
-[Actions 44031580892](https://github.com/centerionware/Clockrove/actions/runs/44031580892)
-and merged as `cd2f0a6`. Settings includes encrypted export and restore. The
-restore preview provides aggregate counts, conflict details and explicit omission
-of open imported sessions. Near-limit archive replay passed on API 24 and API 35
-in [Actions 45013742618](https://github.com/centerionware/Clockrove/actions/runs/45013742618).
-The system picker and data-changing merge still need passing evidence on both API
-levels. See [restore validation history](docs/plan/evidence/m73-restore-ui.md).
-[PR #75](https://github.com/centerionware/Clockrove/pull/75) merged comment and
-attachment deletion/restoration and causal local-preservation choices for
-eligible records. Other entity families still need review for applying the
-backup side of divergent deletion safely. A passing system-picker journey
-will verify the tested merge, while those distinct conflict paths retain
-their own acceptance work.
+M7.3's Settings restore route and screen passed exact-head validation.
+Rebased head `e8dcf8f` / Validate run
+[44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208)
+passed formatting, Analyze, Flutter behavior (285 passed, 14 skipped), Android
+and release builds, 823 native tests with zero failures, and 38 actual Android
+tests on each of API 24 and 35 with zero failures. PR #79 later passed a
+data-changing Android Documents picker journey on API 24 and 35, including
+authentication, conflict resolution and committed-state assertions. Itemized
+add/change/deletion review, a close-time choice for imported open sessions,
+full deletion-choice coverage, and owner-device acceptance remain open.
+Details: [restore UI evidence](docs/plan/evidence/m73-restore-ui.md).
 
 PR #70 fixed the invoice PDF action visibility failure. Exact head
 `58ca416dfe8c3b82fff8d58898db9ca7acc86a26` passed Validate run
@@ -218,9 +199,9 @@ exact-head rerun. Google Maps is deferred beyond launch by the owner decision da
 | Follow-on: task comments, supplies and costs | Comments/images merged #43; classification and cost ledger pass Actions source checks; actual Android journey pending | M6.5 implements private task/comment conversations and image attachments. M6.6 adds Labor/Supplies classification with legacy values retained as Unclassified, plus a native actual-cost ledger and UI for exact-money entries. Run [43599388270](https://github.com/centerionware/Clockrove/actions/runs/43599388270) passed all 602 native tests plus Flutter behavior and Android build checks. Supplies task labels never auto-book costs. Actual cost CRUD, migration, exact-money and paging cases passed; device coverage did not run because the earlier billing journey failed. Templates do not copy comments, attachments or costs. |
 | Follow-on: company/tax-preparation reports | Source and tests underway; first exact-head run stopped in analysis | Main-menu Reports entry now opens a tax/financial screen with date/timezone, job/customer filters, separate currency summaries, issue/void sales, payment/correction cash, tax billed/collected, as-of outstanding, Labor/Supplies/Unclassified values, recorded direct/overhead costs, estimated profits/margins/cash surplus, historical drilldowns and CSV/PDF export. New-cost customer snapshots migrate without guessing historical attribution. CSV amounts are exact minor-unit integers as text; PDF has bounded page generation. Native reconciliation/date/currency/CSV-safety, Flutter filter/export, and on-device PDF rendering tests are added. Run [43604844157](https://github.com/centerionware/Clockrove/actions/runs/43604844157) passed formatting then Analyze found a missing-braces lint, so behavior/native/device tests did not run. The fix requires a new exact-head Actions pass. |
 | M7.1 Crypto/KDF selection and device benchmark | 1 MiB benchmark and full-device PR #52 validation passed; maximum-size crypto-only peak memory is too high for enablement | PR #52 merged to `main` as `cc6870931920016e7ee9bc4f5fc4be6e96b26523`. Exact-head run [43697591557](https://github.com/centerionware/Clockrove/actions/runs/43697591557) on `defb4e6` passed formatting, analysis, Flutter behavior tests, Android/instrumentation builds, 635 native tests, device tests, invoice-viewer checks and locked release tooling; JUnit reports 38 actual Android tests on each API 24 and 35 with zero failures/errors/skips. The 1 MiB benchmark measured 755/301 ms encrypt/decrypt on API 24 and 869/273 ms on API 35; envelopes were 1,048,648 bytes. PR #59 head `02931e5` / run [43700311041](https://github.com/centerionware/Clockrove/actions/runs/43700311041) exercised the 67,108,936-byte envelope: API 24 measured encrypt/decrypt 12,593/12,134 ms, baseline/peak VmHWM 274,336/823,572 KiB; API 35 measured 13,746/12,211 ms, baseline/peak 409,484/951,840 KiB. This is crypto-only memory, before the full exporter copies. Keep user-facing export withheld pending streaming or materially lower memory. |
-| M7.2 Encrypted archive/schema/preview and user-directed export | Encrypted archive, schema boundary, codec, SAF bridge, and native streamed-restore path are merged and Actions-validated; Settings export remains withheld pending full-path memory evidence; user-facing restore integration and M7.3/M7.6 remain incomplete | PR #71 exact head `def60fad` passed Validate run [43885189418, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43885189418/attempts/2): 732 native tests and 29 actual Android tests on each of API 24 and 35, all with zero failures/errors/skips. The run validated the native post-commit version and close-failure cleanup regressions; PR merged as `d032f16`. Full evidence: `docs/plan/status-history/validation-history-06.md` and `docs/plan/evidence/app-plan-evidence-04.md`. Earlier codec, archive-size, memory and SAF evidence remains in the linked history; the maximum-size crypto-only RSS still blocks Settings export. |
-| M7.3 Conflict/ancestry/tombstone/transactional merge | Incomplete; PR #75 adds causal local-preservation choices for eligible deletion conflicts; exact-head Actions pending. Deletion choices remain incomplete across entity kinds. No Settings/SAF restore route, Dart apply coordinator, or end-to-end restore acceptance is integrated | Prior PR #71 run [43885189418, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43885189418/attempts/2) passed 732 native tests and 29/29 actual Android tests on API 24 and 35. PR #75's earlier exact-head run [43905954272](https://github.com/centerionware/Clockrove/actions/runs/43905954272) on `1a316da` exposed two unresolved comment/image graph choices, a raw test database missing production foreign-key enforcement, an incorrect time-overlap expectation for a uniqueness-only conflict, missing Robolectric setup on a summary test, and an invalid close-result expectation after rejected apply. The follow-up adds separate causal-preserve choices in both deletion directions, both-parent `BACKUP_MERGE` heads, ancestry-based replay handling, scoped comment/image choices, and focused regressions. Its exact-head Actions gate is pending; no local build/test/formatter/analyzer ran. The opposite-side delete/restore adapters remain absent for job, customer, site, column, card, session, template, automation, tax/money/cost, billing/location policy, quote draft, and logo kinds; one generic destructive adapter is unsafe across FK/cascade, media, timer, and immutable-trigger behavior. Keep M7.3 open and queue focused table-family adapters after PR #75 validates. The Settings/SAF restore route, Dart apply coordinator, and end-to-end restore acceptance remain outstanding. Evidence: [M7.3 native deletion-resolution follow-up](docs/plan/evidence/m73-native-deletion-resolution.md). |
-| M7 backup and safe merge | Pending; remains before closed-testing gate | Add comments and task/comment image bytes to the authenticated bounded backup archive, then verify migration, merge integrity, wrong-password, tampering, rollback and cleanup. |
+| M7.2 Encrypted archive/schema/preview and user-directed export | Encrypted archive, schema boundary, codec, SAF bridge, Settings export and user-facing streamed restore are integrated; Settings export remains withheld pending full-path memory evidence; M7.3 conflict coverage and M7.6 remain incomplete | PR #71 exact head `def60fad` passed Validate run [43885189418, attempt 2](https://github.com/centerionware/Clockrove/actions/runs/43885189418/attempts/2): 732 native tests and 29 actual Android tests on each of API 24 and 35, all with zero failures/errors/skips. PR #74 added Settings restore/export and passed its exact-head source/device matrix. PR #79 exact head `04fb070` / [run 45081595207](https://github.com/centerionware/Clockrove/actions/runs/45081595207) passed the real system-picker data-changing restore on both APIs, as well as near-limit replay; merged as `4be7b83`. Merged-main validation [45084756566](https://github.com/centerionware/Clockrove/actions/runs/45084756566) passed. The maximum-size crypto-only RSS still blocks enabling Settings export. Full evidence: `docs/plan/status-history/validation-history-06.md`, `docs/plan/evidence/app-plan-evidence-04.md`, and [restore UI evidence](docs/plan/evidence/m73-restore-ui.md). |
+| M7.3 Conflict/ancestry/tombstone/transactional merge | Incomplete; Settings/SAF route and Dart apply coordinator are integrated; a synthetic data-changing Android restore passed on API 24 and 35; deletion choices and review coverage remain incomplete | PR #75 adds causal local-preservation choices for eligible deletion conflicts and passed Actions run [44012769802](https://github.com/centerionware/Clockrove/actions/runs/44012769802), with 741 native tests. Opposite-side delete/restore adapters remain absent for job, site, column, card, session, template, automation, tax/money/cost, billing/location policy, quote draft, and logo kinds; one generic destructive adapter is unsafe across foreign-key/cascade, media, timer, and immutable-trigger behavior. PR #74 exact-head run [44027991208](https://github.com/centerionware/Clockrove/actions/runs/44027991208) passed its Settings restore route tests. PR #79 exact-head run [45081595207](https://github.com/centerionware/Clockrove/actions/runs/45081595207), on merged PRs #74/#75, passed an authenticated Documents picker restore with explicit conflict resolution and committed-state checks on API 24 and 35. Preview still cannot itemize all additions/changes/deletions, and imported open sessions lack an explicit close-time choice. Owner-device acceptance and M7.6 remain open. Evidence: [M7.3 native deletion-resolution follow-up](docs/plan/evidence/m73-native-deletion-resolution.md) and [restore UI evidence](docs/plan/evidence/m73-restore-ui.md). |
+| M7 backup and safe merge | Integrated and data-changing restore is Actions-validated; milestone remains incomplete before closed-testing gate | PRs #71/#74/#75/#79 integrate the encrypted archive, Settings export/restore UI, native transactional merge, and device picker journey. The synthetic fixture test confirms authentication, conflict resolution, committed session/site state, stopped timer, and automation disabled after import on API 24 and 35. Remaining contract work includes itemized preview and open-session resolution, table-specific deletion choices, owner-device acceptance, and M7.6 whole-app UI/E2E coverage. Settings export remains withheld pending the full-path memory gate. |
 | M7.6 full UI overhaul and exhaustive E2E/screenshots | Required after M6.5/M6.6/M7; inventory prepared, implementation not started | `docs/M7_6_UI_INVENTORY.md` records the current route/screen/option/state surface as preparation only. After remaining launch features are complete, overhaul first-use UX across the entire app and add actual-app journeys that assert native persistence/side effects and reviewed screenshots for every inventory item on API 24 and the current Play-supported stable API, including fresh install/upgrade, themes, large text, cancellation/retry and failure paths. This remains the mandatory gate before moving from internal to closed testing. Cloudflare Pages documentation remains a full public-release deliverable. |
 | M8.1 Accessibility/privacy/support/store assets | Pending | Complete launch features first |
 | M8.2 Device/dependency/release/upgrade validation | PR #58 release validation and PR #61 current-main validation/internal delivery passed; owner-device install, upgrade and full launch matrix remain pending | PR #58 exact head `a51fcd7` passed [43703761294](https://github.com/centerionware/Clockrove/actions/runs/43703761294), including release-aware configuration and no-signing release Java compilation; it merged to main as `fefdcdf`. Merged-main Validate [43706417644](https://github.com/centerionware/Clockrove/actions/runs/43706417644) passed with 38 actual Android tests on each API 24/35 and zero failures/errors/skips. Main Play run [43701872698](https://github.com/centerionware/Clockrove/actions/runs/43701872698) failed release Java compilation because the generated registrant included dev-only `integration_test`; it did not produce or upload an AAB. Guarded Play delivery run [43708670483](https://github.com/centerionware/Clockrove/actions/runs/43708670483) accepted the internal AAB submission for `fefdcdf` at 11:30:34 UTC; tester installation, owner physical installation, upgrade and full launch-feature matrix remain unproven |

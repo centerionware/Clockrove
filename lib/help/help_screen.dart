@@ -12,9 +12,13 @@ enum HelpTopic {
     'Location and site automation',
     'Open a job’s settings to add a work site and enable automation. '
         'Allow precise location and, where Android requires it, background '
-        'location. If an arrival is missed, check that the site is enabled '
-        'and use Refresh site monitoring or Retry site monitoring if shown. '
-        'Once monitoring is ready, leave the site and return for a new arrival. '
+        'location. If clock-in on arrival is enabled and you save a site with '
+        'Use current location, Clockrove offers to start work now. Saving a '
+        'changed site resets arrival detection and waits for a confirmed exit '
+        'and fresh entry. Android recommends a 100–150 m radius; smaller '
+        'radii can miss arrivals. If an arrival is missed, check that the site '
+        'is enabled and use Refresh site monitoring or Retry site monitoring '
+        'if shown. '
         'You can clock in or out manually while troubleshooting.',
   ),
   backups(

@@ -16,8 +16,30 @@ import 'support/automation_fixture.dart';
 import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
+  final calls = <TimerIntent>[];
+  int snapshotCalls = 0;
+  TimerSnapshot value = const TimerSnapshot(1, [
+    JobSummary('job', 'Studio renovation'),
+  ], null);
   @override
   Stream<int> get committedVersions => const Stream.empty();
+
+  @override
+  Future<TimerSnapshot> snapshot() async {
+    snapshotCalls++;
+    return value;
+  }
+
+  @override
+  Future<TimerOutcome> execute({
+    required String id,
+    required int version,
+    required TimerAction action,
+    String? jobId,
+  }) async {
+    calls.add(TimerIntent(id, version, action, jobId));
+    return TimerOutcome(version + 1, null);
+  }
 }
 
 Future<void> _show(
@@ -26,6 +48,7 @@ Future<void> _show(
   bool dark = false,
   Widget? home,
   Key? boundary,
+  TimerApi? timerApi,
 }) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
@@ -35,7 +58,7 @@ Future<void> _show(
       child: ProviderScope(
         overrides: [
           automationApiProvider.overrideWithValue(api),
-          timerApiProvider.overrideWithValue(_Timer()),
+          timerApiProvider.overrideWithValue(timerApi ?? _Timer()),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -68,6 +91,20 @@ Future<void> _reveal(WidgetTester tester, String label) async {
 FixtureAutomationApi _configured() => FixtureAutomationApi()
   ..sites.add(const WorkSite('site', 'Riverside studio', 51.5, -0.1, 150, true))
   ..settings = const SiteSettings(enabled: true, autoStart: true);
+
+Future<void> _saveSiteFromCurrentLocation(WidgetTester tester) async {
+  await _reveal(tester, 'Riverside studio');
+  await tester.tap(find.text('Riverside studio'));
+  await tester.pumpAndSettle();
+  await _reveal(tester, 'Use current location');
+  await tester.tap(find.text('Use current location'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continue'));
+  await tester.pumpAndSettle();
+  await _reveal(tester, 'Save site');
+  await tester.tap(find.text('Save site'));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets(
@@ -130,6 +167,80 @@ void main() {
       expect(api.sites, isEmpty);
     },
   );
+  testWidgets('saving a current location offers an explicit clock-in command', (
+    tester,
+  ) async {
+    final api = _configured();
+    final timer = _Timer();
+    await _show(tester, api, timerApi: timer);
+    // Open and save after taking the one-shot setup fix.
+    await _saveSiteFromCurrentLocation(tester);
+    expect(api.positionRequests, 1);
+    expect(find.text('Clock in at this site now?'), findsOneWidget);
+    expect(timer.calls, isEmpty);
+    expect(
+      find.textContaining(
+        'Changing a site while you are here resets arrival detection',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Clock in now'));
+    await tester.pumpAndSettle();
+    expect(timer.calls, hasLength(1));
+    expect(timer.calls.single.action, TimerAction.start);
+    expect(timer.calls.single.jobId, 'job');
+    expect(find.text('Clocked in to Studio renovation.'), findsOneWidget);
+  });
+  testWidgets('declining the in-place clock-in offer leaves work stopped', (
+    tester,
+  ) async {
+    final timer = _Timer();
+    await _show(tester, _configured(), timerApi: timer);
+    await _saveSiteFromCurrentLocation(tester);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(timer.calls, isEmpty);
+  });
+  testWidgets('in-place offer never switches another running job', (
+    tester,
+  ) async {
+    final timer = _Timer()
+      ..value = TimerSnapshot(
+        1,
+        const [JobSummary('job', 'Studio renovation')],
+        RunningSession(
+          'other-session',
+          'other-job',
+          'Other job',
+          DateTime.utc(2026, 11, 22),
+        ),
+      );
+    await _show(tester, _configured(), timerApi: timer);
+    await _saveSiteFromCurrentLocation(tester);
+    expect(timer.snapshotCalls, 1);
+    expect(timer.value.running!.jobId, 'other-job');
+    expect(
+      find.text(
+        'Another job is running. Clockrove will not switch jobs automatically.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Clock in at this site now?'), findsNothing);
+    expect(timer.calls, isEmpty);
+  });
+  testWidgets('small radius warns that Android may miss arrivals', (
+    tester,
+  ) async {
+    final api = FixtureAutomationApi()
+      ..sites.add(const WorkSite('site', 'Tight site', 51.5, -0.1, 15, true))
+      ..settings = const SiteSettings(enabled: true, autoStart: true);
+    await _show(tester, api);
+    await _reveal(tester, 'Tight site');
+    expect(
+      find.textContaining('Android may miss arrivals at this radius'),
+      findsOneWidget,
+    );
+  });
   testWidgets(
     'permission explanation can be declined without enabling automation',
     (tester) async {

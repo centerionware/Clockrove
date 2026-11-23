@@ -92,6 +92,7 @@ representative first-use journeys in the full-release E2E and screenshot review.
 - Geofence events never silently change the running job.
 - At manual clock-out, suppress auto-start for that job until the device has exited all its sites and subsequently re-entered. Persist this suppression. A later explicit manual start is allowed.
 - Turning on automation while already inside does not silently start a timer: offer explicit start and wait for a subsequent qualified entry for automatic start.
+- When a user saves an enabled site using a current-location fix while arrival clock-in is enabled, offer an explicit **Clock in now** action. Acceptance starts work from that point through the shared manual command; declining leaves the timer stopped. Automatic arrival still waits for a confirmed exit and later fresh entry.
 
 Each job selects one departure mode:
 

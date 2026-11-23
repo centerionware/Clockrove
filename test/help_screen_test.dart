@@ -57,6 +57,12 @@ void main() {
     expect(find.text(HelpTopic.backups.content), findsOneWidget);
   });
 
+  test('automation help explains in-place setup and small radii', () {
+    expect(HelpTopic.automation.content, contains('offers to start work now'));
+    expect(HelpTopic.automation.content, contains('100–150 m radius'));
+    expect(HelpTopic.automation.content, contains('fresh entry'));
+  });
+
   testWidgets('keeps Help readable and scrollable at large text sizes', (
     tester,
   ) async {
