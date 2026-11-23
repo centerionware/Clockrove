@@ -22,6 +22,19 @@ void example(String name) {
     ]);
   });
 
+  test(
+    'resource lookups inside Kotlin interpolation are not literal copy',
+    () {
+      final findings = auditKotlinPresentation(r'''
+flow.write(
+    "${strings.getString(R.string.report_pdf_cash_amount, "${money(amount, digits)} ${currency}")} · " +
+        strings.getString(R.string.report_pdf_no_cash_activity),
+)
+''');
+      expect(findings, isEmpty);
+    },
+  );
+
   test('invoice, payment, and quote invoice screens use catalog copy', () {
     const screens = {
       'invoice_detail_screen',
@@ -155,6 +168,7 @@ void example(String name) {
       'task-attachment-',
       'paidLabel',
       'dueLabel',
+      'quote-editor-',
     };
 
     bool isSurface(File file) {

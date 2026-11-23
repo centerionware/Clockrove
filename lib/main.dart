@@ -35,15 +35,11 @@ void main() {
 }
 
 class ClockroveApp extends ConsumerWidget {
-  const ClockroveApp({super.key, this.initialRoute});
-
-  final String? initialRoute;
+  const ClockroveApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
-    initialRoute:
-        initialRoute ??
-        WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+    initialRoute: WidgetsBinding.instance.platformDispatcher.defaultRouteName,
     locale: appLanguages[ref.watch(languagePreferenceProvider).value]?.$1,
     supportedLocales: AppLocalizations.supportedLocales,
     localeListResolutionCallback: AppLocalizations.resolveDeviceLocales,
@@ -55,7 +51,10 @@ class ClockroveApp extends ConsumerWidget {
     onGenerateTitle: AppMessage.appName.of,
     theme: ClockroveTheme.light(),
     darkTheme: ClockroveTheme.dark(),
-    routes: {'/': (_) => const TimerScreen()},
+    routes: {
+      '/': (_) => const TimerScreen(),
+      '/widget-configuration': (_) => const WidgetConfigurationScreen(),
+    },
     onGenerateInitialRoutes: (name) {
       final uri = Uri.parse(name);
       final Widget screen;

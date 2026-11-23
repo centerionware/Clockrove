@@ -683,3 +683,16 @@ exact changes are applied. Analyze, behavior tests, Android build, native tests,
 and API 24/35 document rendering were skipped after the formatting failure. No
 build, test, formatter or analysis ran locally. A fresh exact-head Actions run is
 required to close the localization source and CI milestone.
+
+After main advanced to `d88595b`, the localization branch was rebased and pushed
+as `42dd406`. Exact-head run
+[45111136795](https://github.com/centerionware/Clockrove/actions/runs/45111136795)
+passed catalog generation, the full localization audit, formatting and analysis.
+The behavior gate found four failures: two audit false positives for a quote
+field identifier and localized Android report amount lookups inside a Kotlin
+interpolation; the widget route launch test did not resolve its configured
+route; and the zero-decimal quote test expected the generic field message while
+the command path reports the precision-specific catalog message. These are
+corrected in the pending source update. Android build, native unit tests, and
+API 24/35 PDF rendering did not run. No build, test, formatter or analysis ran
+locally. Full coverage still needs a green exact-head Actions run.

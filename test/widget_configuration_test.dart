@@ -106,6 +106,9 @@ void main() {
   testWidgets('Full app opens widget setup with one initial route', (
     tester,
   ) async {
+    final dispatcher = tester.binding.platformDispatcher;
+    dispatcher.defaultRouteNameTestValue = '/widget-configuration';
+    addTearDown(() => dispatcher.defaultRouteNameTestValue = '/');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(
@@ -116,7 +119,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [timerApiProvider.overrideWithValue(_Timer())],
-        child: const ClockroveApp(initialRoute: '/widget-configuration'),
+        child: const ClockroveApp(),
       ),
     );
     await tester.pumpAndSettle();

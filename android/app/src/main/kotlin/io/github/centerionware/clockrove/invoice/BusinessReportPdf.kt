@@ -149,10 +149,16 @@ internal object BusinessReportPdf {
                 val tax = value.taxMinor?.let { money(it, value.digits) }
                     ?: strings.getString(R.string.report_pdf_amount_unavailable)
                 flow.write("$title · $occurred", 10f, true)
+                val cashAmount = strings.getString(
+                    R.string.report_pdf_cash_amount,
+                    "${money(value.cashMinor, value.digits)} ${value.currency}",
+                )
+                val creditAmount = strings.getString(
+                    R.string.report_pdf_credit_amount,
+                    "${money(value.creditMinor, value.digits)} ${value.currency}",
+                )
                 flow.write(
-                    "${value.customer.ifBlank { value.job }} · " +
-                        "${strings.getString(R.string.report_pdf_cash_amount, "${money(value.cashMinor, value.digits)} ${value.currency}")} · " +
-                        "${strings.getString(R.string.report_pdf_credit_amount, "${money(value.creditMinor, value.digits)} ${value.currency}")} · " +
+                    "${value.customer.ifBlank { value.job }} · $cashAmount · $creditAmount · " +
                         strings.getString(R.string.report_pdf_tax_amount, tax),
                     9f,
                 )
