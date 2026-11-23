@@ -198,8 +198,9 @@ class AutomationApi {
     String id,
     int version,
     String jobId,
-    WorkSite site,
-  ) => _write('saveSite', {
+    WorkSite site, {
+    SitePosition? currentFix,
+  }) => _write('saveSite', {
     'id': id,
     'version': version,
     'jobId': jobId,
@@ -209,6 +210,14 @@ class AutomationApi {
     'longitude': site.longitude,
     'radius': site.radius,
     'enabled': site.enabled,
+    'currentFix': currentFix == null
+        ? null
+        : {
+            'latitude': currentFix.latitude,
+            'longitude': currentFix.longitude,
+            'accuracy': currentFix.accuracy,
+            'measured': currentFix.measuredUtc.millisecondsSinceEpoch,
+          },
   });
   Future<TimerOutcome> removeSite(String id, int version, String siteId) =>
       _write('removeSite', {'id': id, 'version': version, 'siteId': siteId});

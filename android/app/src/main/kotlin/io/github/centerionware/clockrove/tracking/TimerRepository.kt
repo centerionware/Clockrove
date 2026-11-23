@@ -386,10 +386,14 @@ class TimerRepository internal constructor(context: Context,
     internal fun geofenceReviewJobs(): Set<String> = GeofenceStore.unresolvedJobs(helper.readableDatabase)
 
     @Synchronized
-    internal fun saveSite(id: String, version: Long, site: GeofenceStore.Site): Outcome = changeConfiguration(id,
+    internal fun saveSite(id: String, version: Long, site: GeofenceStore.Site,
+        currentFix: GeofenceStore.CurrentFix? = null): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "SITE_SAVE", site.id, site.jobId, site.name,
-            site.latitude.toString(), site.longitude.toString(), site.radiusMeters.toString(), site.enabled)).toString(), version) {
-        val conflict = GeofenceStore.saveSite(it, site, wallClock())
+            site.latitude.toString(), site.longitude.toString(), site.radiusMeters.toString(), site.enabled,
+            currentFix?.let { fix -> OpaqueReceipt.compact(org.json.JSONArray(listOf(
+                fix.latitude, fix.longitude, fix.accuracyMeters, fix.measuredUtcMillis,
+            )).toString()) })).toString(), version) {
+        val conflict = GeofenceStore.saveSite(it, site, wallClock(), currentFix)
         if (conflict == null) RevisionStore.snapshotRows(it, "work_sites", "site", BusinessSchema.siteColumns,
             wallClock(), "job_id", "id=?", arrayOf(site.id))
         conflict

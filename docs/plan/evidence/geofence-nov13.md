@@ -63,9 +63,11 @@ skipped because the success notice was off-screen in the scrolled list.
 Clock-in outcomes now use visible snackbars. Run
 [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
 stopped at formatting; the exact workflow correction was applied. Final
-rebased exact-head validation [45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
+rebased exact-head validation
+[45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
 passed the full Validate workflow. PR #83 merged to main as `e126bf1`;
-merged-main validation [45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
+merged-main validation
+[45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
 passed. Automatic internal Play delivery
 [45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
 completed successfully. The in-place setup prompt addresses clock-in while
@@ -73,6 +75,39 @@ already at a site. CI does not establish native callback delivery at the
 owner's 15 m site; that physical-device check remains pending. No native
 geofence behavior is claimed as fixed by this UI change. Installation from the
 internal track must still be confirmed on the owner's device.
+
+### November 23 departure follow-up
+
+The owner clarified that automatic arrival failed at the monitored job, so they
+started it manually and installed the in-place setup patch while still clocked
+in. They later left without an automatic clock-out. The site used a 1-minute
+grace; the owner changed its radius to 150 m and waited about 20 minutes,
+seeing the GPS status icon twice. Settings and location permissions were already
+enabled, but the owner had to tap **Retry site monitoring**. The timing of any
+current-location save relative to the app update is not confirmed. The report
+does not include the health state after retry or native transition logs. A
+flashing GPS icon is not proof that Android delivered an exit event.
+
+The owner separately created a 150 m site around home. Arrival eventually
+started the timer, later in the approach than the full radius. They manually
+stopped it while still at home, so that is not a departure test. The 1-minute
+grace starts after Android reports a qualified exit; it does not poll for or
+guarantee an exit callback. Android recommends 100–150 m for more reliable
+transitions and may delay background delivery.
+
+Source tracing identified a missing departure baseline: every site edit rotates
+registration keys and resets old membership to `UNKNOWN`. When a current fix is
+included while saving a site during an already-running session, the old flow
+discarded that fix as transition state. The later first exit therefore could
+not qualify as a known inside-to-outside transition. The follow-up now passes
+the measured setup fix to the native repository and seeds membership only when
+the fix's accuracy supports it. It records no location-history point, does not
+start a timer, and stores only a digest of the fix in the command receipt. A
+weak-accuracy fix remains `UNKNOWN`; it cannot create a false departure.
+Registration still reconciles after configuration changes, and the Retry
+control remains the recovery action when Android reports monitoring
+unavailable. Native and Flutter regressions are added; fresh GitHub Actions
+validation and owner-device departure acceptance are pending.
 
 ### Cold-start callback investigation
 

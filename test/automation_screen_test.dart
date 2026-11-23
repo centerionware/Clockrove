@@ -228,6 +228,31 @@ void main() {
     expect(find.text('Clock in at this site now?'), findsNothing);
     expect(timer.calls, isEmpty);
   });
+  testWidgets(
+    'saving a current fix while this job runs keeps it without a second clock-in',
+    (tester) async {
+      final api = _configured();
+      final timer = _Timer()
+        ..value = TimerSnapshot(
+          1,
+          const [JobSummary('job', 'Studio renovation')],
+          RunningSession(
+            'session',
+            'job',
+            'Studio renovation',
+            DateTime.utc(2026, 11, 22),
+          ),
+        );
+      await _show(tester, api, timerApi: timer);
+      await _saveSiteFromCurrentLocation(tester);
+      expect(api.savedCurrentFix, isNotNull);
+      expect(api.savedCurrentFix!.accuracy, 25);
+      expect(timer.snapshotCalls, 1);
+      expect(timer.calls, isEmpty);
+      expect(find.text('This job is already running.'), findsOneWidget);
+      expect(find.text('Clock in at this site now?'), findsNothing);
+    },
+  );
   testWidgets('small radius warns that Android may miss arrivals', (
     tester,
   ) async {
