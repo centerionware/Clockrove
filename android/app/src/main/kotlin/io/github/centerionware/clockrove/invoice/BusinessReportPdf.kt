@@ -35,8 +35,8 @@ internal object BusinessReportPdf {
         val rowCount = report.summaries.size + report.invoices.size + report.cash.size + report.costs.size
         require(rowCount <= 10_000) { "BUSINESS_REPORT_PDF_TOO_LARGE" }
         val document = PdfDocument()
+        val flow = Flow(document, strings)
         try {
-            val flow = Flow(document, strings)
             flow.start()
             flow.write("${strings.getString(R.string.app_name)} · ${strings.getString(R.string.report_pdf_business_report)}", 22f, true)
             val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, locale).apply {
@@ -199,7 +199,11 @@ internal object BusinessReportPdf {
             flow.finish()
             return ByteArrayOutputStream().also { document.writeTo(it) }.toByteArray()
         } finally {
-            document.close()
+            try {
+                flow.finish()
+            } finally {
+                document.close()
+            }
         }
     }
 

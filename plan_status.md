@@ -891,3 +891,17 @@ HTTP 429. Android compilation, native tests and API 24/35 PDF rendering were
 skipped. No local build, test, formatter or analysis ran; the Android and
 document-validation gates need a fresh exact-head run after dependency
 resolution is available.
+
+Exact-head run [45128133481](https://github.com/centerionware/Clockrove/actions/runs/45128133481)
+on `0d1ea6e` cleared catalogs, localization audits, formatting, analysis,
+all 311 behavior tests, Android and release compilation, instrumentation APK
+assembly, and all 759 native unit tests. API 24 document/device instrumentation
+reported three failures: the business-report PDF left a page open when an
+earlier exception occurred, and two history/map tests still searched for the
+old `Job report` tab label instead of the current `Work report`. PDF cleanup
+now finishes an active page, and those tests target the visible tab label.
+The invoice billing device flow used the same obsolete label and now targets
+`Work report` as well.
+API 35 rendering and invoice-viewer validation did not run after the API 24
+failures. No local build, test, formatter or analysis ran; another exact-head
+Actions run is required.

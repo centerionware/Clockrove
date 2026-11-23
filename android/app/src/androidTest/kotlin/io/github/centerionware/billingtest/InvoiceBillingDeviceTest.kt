@@ -445,7 +445,7 @@ class InvoiceBillingDeviceTest {
                 }
             }
             waitFor("Task board"); capture("quantity-board")
-            click("Job report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
+            click("Work report"); reveal("PDF invoice"); click("PDF invoice"); waitFor("Review invoice")
             waitFor("USD 130.00"); waitFor("USD 9.75"); waitFor("USD 139.75")
             capture("unbilled-tax-review")
             reveal("Create invoice"); click("Create invoice"); waitFor("Prepared invoice")

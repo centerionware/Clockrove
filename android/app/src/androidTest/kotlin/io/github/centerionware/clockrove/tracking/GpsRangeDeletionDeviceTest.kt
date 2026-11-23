@@ -335,7 +335,7 @@ class GpsRangeDeletionDeviceTest {
     ) {
         back()
         waitFor("Synthetic GPS deletion journey")
-        click("Job report")
+        click("Work report")
         waitFor("Work report")
         waitFor("CSV export")
         waitFor(expectedMapLabel)
