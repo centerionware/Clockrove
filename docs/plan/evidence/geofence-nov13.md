@@ -62,9 +62,17 @@ passed formatting and Analyze, then reported 297 passed, 1 failed, and 14
 skipped because the success notice was off-screen in the scrolled list.
 Clock-in outcomes now use visible snackbars. Run
 [45087756279](https://github.com/centerionware/Clockrove/actions/runs/45087756279)
-stopped at formatting; the exact workflow correction is applied. Fresh
-exact-head validation and owner-device arrival delivery remain pending. No
-native geofence behavior is claimed as fixed by this UI change.
+stopped at formatting; the exact workflow correction was applied. Final
+rebased exact-head validation [45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
+passed the full Validate workflow. PR #83 merged to main as `e126bf1`;
+merged-main validation [45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
+passed. Automatic internal Play delivery
+[45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
+completed successfully. The in-place setup prompt addresses clock-in while
+already at a site. CI does not establish native callback delivery at the
+owner's 15 m site; that physical-device check remains pending. No native
+geofence behavior is claimed as fixed by this UI change. Installation from the
+internal track must still be confirmed on the owner's device.
 
 ### Cold-start callback investigation
 
