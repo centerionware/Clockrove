@@ -17,6 +17,7 @@ import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
   final calls = <TimerIntent>[];
+  int snapshotCalls = 0;
   TimerSnapshot value = const TimerSnapshot(1, [
     JobSummary('job', 'Studio renovation'),
   ], null);
@@ -24,7 +25,10 @@ class _Timer extends TimerApi {
   Stream<int> get committedVersions => const Stream.empty();
 
   @override
-  Future<TimerSnapshot> snapshot() async => value;
+  Future<TimerSnapshot> snapshot() async {
+    snapshotCalls++;
+    return value;
+  }
 
   @override
   Future<TimerOutcome> execute({
@@ -174,7 +178,12 @@ void main() {
     expect(api.positionRequests, 1);
     expect(find.text('Clock in at this site now?'), findsOneWidget);
     expect(timer.calls, isEmpty);
-    expect(find.textContaining('a fresh entry'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Changing a site while you are here resets arrival detection',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Clock in now'));
     await tester.pumpAndSettle();
     expect(timer.calls, hasLength(1));
@@ -208,12 +217,8 @@ void main() {
       );
     await _show(tester, _configured(), timerApi: timer);
     await _saveSiteFromCurrentLocation(tester);
-    expect(
-      find.text(
-        'Another job is running. Clockrove will not switch jobs automatically.',
-      ),
-      findsOneWidget,
-    );
+    expect(timer.snapshotCalls, 1);
+    expect(timer.value.running!.jobId, 'other-job');
     expect(find.text('Clock in at this site now?'), findsNothing);
     expect(timer.calls, isEmpty);
   });

@@ -20,8 +20,14 @@ Statuses describe evidence, not intent.
   artifact. Rebased run
   [45085754438](https://github.com/centerionware/Clockrove/actions/runs/45085754438)
   passed formatting, then Analyze stopped on one null-aware collection lint;
-  that source correction is pushed and a fresh exact-head run is pending.
-  Another physical arrival check remains open.
+  that source correction is pushed. Run
+  [45086050642](https://github.com/centerionware/Clockrove/actions/runs/45086050642)
+  passed formatting and Analyze, then reported two Flutter assertion failures:
+  one finder matched two visible arrival explanations, and the other asserted
+  UI notice text while checking the active-timer guard. The first finder is now
+  specific; the second asserts the fresh snapshot and absence of a clock-in
+  prompt or timer command. Exact-head validation and another physical arrival
+  check remain pending.
 - Backup and restore: [PR #74](https://github.com/centerionware/Clockrove/pull/74)
   and native deletion follow-up [PR #75](https://github.com/centerionware/Clockrove/pull/75)
   are merged. [PR #79](https://github.com/centerionware/Clockrove/pull/79)
