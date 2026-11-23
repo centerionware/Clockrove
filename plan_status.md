@@ -696,3 +696,9 @@ the command path reports the precision-specific catalog message. These are
 corrected in the pending source update. Android build, native unit tests, and
 API 24/35 PDF rendering did not run. No build, test, formatter or analysis ran
 locally. Full coverage still needs a green exact-head Actions run.
+
+The next exact-head run, [45112466600](https://github.com/centerionware/Clockrove/actions/runs/45112466600)
+on `c9253da`, again passed catalog generation and the full localization audit,
+then stopped at formatting. The formatter's exact two test-file corrections are
+applied. The behavior suite and all Android build/device gates were skipped; a
+fresh exact-head Actions run is needed.
