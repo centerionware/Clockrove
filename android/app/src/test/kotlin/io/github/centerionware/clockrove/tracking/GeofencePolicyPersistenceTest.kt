@@ -451,7 +451,7 @@ class GeofencePolicyPersistenceTest {
     @Test fun resavingTheSameConfigurationDoesNotStartButEnablingAutoStartDoes() {
         val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
         assertNull(repository.saveSite("site-with-fix", repository.snapshot().version, site,
-            GeofenceStore.CurrentFix(10.0, 20.0, 5.0, 1050)).conflict)
+            GeofenceStore.CurrentFix(10.0, 20.0, 5.0, 990)).conflict)
         clock = 1100
         val manualOnly = GeofenceStore.Settings(job, true, false, true, 30)
         assertNull(settings(manualOnly).conflict)

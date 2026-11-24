@@ -18,7 +18,6 @@ import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
   final calls = <TimerIntent>[];
-  int snapshotCalls = 0;
   TimerSnapshot value = const TimerSnapshot(1, [
     JobSummary('job', 'Studio renovation'),
   ], null);
@@ -26,10 +25,7 @@ class _Timer extends TimerApi {
   Stream<int> get committedVersions => const Stream.empty();
 
   @override
-  Future<TimerSnapshot> snapshot() async {
-    snapshotCalls++;
-    return value;
-  }
+  Future<TimerSnapshot> snapshot() async => value;
 
   @override
   Future<TimerOutcome> execute({
@@ -185,6 +181,7 @@ void main() {
   testWidgets('saving a current location never switches another running job', (
     tester,
   ) async {
+    final api = _configured();
     final timer = _Timer()
       ..value = TimerSnapshot(
         1,
@@ -196,11 +193,12 @@ void main() {
           DateTime.utc(2026, 11, 22),
         ),
       );
-    await _show(tester, _configured(), timerApi: timer);
+    await _show(tester, api, timerApi: timer);
     await _saveSiteFromCurrentLocation(tester);
-    expect(timer.snapshotCalls, 1);
-    expect(timer.value.running!.jobId, 'other-job');
+    // The save is a site update, not a job switch: the other session is never commanded.
+    expect(api.savedCurrentFix, isNotNull);
     expect(timer.calls, isEmpty);
+    expect(timer.value.running!.jobId, 'other-job');
     expect(find.byType(AlertDialog), findsNothing);
   });
   testWidgets('small radius warns that Android may miss arrivals', (
