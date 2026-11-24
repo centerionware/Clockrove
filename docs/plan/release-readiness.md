@@ -28,7 +28,7 @@ Account creation, owner credentials, concrete license review, and physical devic
 | CI/security | Fork validation has no secrets; pinned actions; tag/main validation; unique build numbers; no private files in artifacts |
 | Full-release E2E | Every feature, screen and selectable option has an actual-app journey, persisted/native assertions, and a reviewed screenshot on minimum and current release APIs |
 | End-user documentation | Versioned static guides cover every shipped feature with reviewed screenshots; deployed on Cloudflare Pages for public release with synthetic data only |
-| Store | Reviewed privacy policy reachable in-app and at a public URL, completed Data safety declaration before closed testing, internal install/upgrade, applicable closed testing, and submission and approval recorded separately |
+| Store | Reviewed privacy policy reachable in-app and at a public URL, completed Data safety declaration before closed testing, internal install/upgrade, applicable closed testing, and submission and approval recorded separately. The static pages exist at `website/legal/privacy.html`, `data-use.html`, `terms.html` and `license.html`; deployment, the store contact/effective-date confirmation and the in-app policy link are still open |
 
 Use unit/domain tests, native integration tests, widget/UI tests and physical-device tests according to the behavior being checked. Keep private traces in ignored `device-evidence/` and summarize sanitized results publicly. Do not add superficial tests that only assert documentation wording or mirror implementation statements.
 

@@ -1,3 +1,8 @@
+> **Adopted.** The owner's source-available intent is now published as the
+> repository `LICENSE` (Clockrove Source-Available License 1.0) and mirrored at
+> `website/legal/license.html`. This file records the proposal that led to it;
+> the `LICENSE` file is canonical. It is not an open-source license.
+
 # Proposed Clockrove source terms — pending owner review
 
 This document is a proposal, not a license grant. Public publication is blocked

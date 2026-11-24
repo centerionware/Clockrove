@@ -1,3 +1,8 @@
+> **Published.** The current Terms of Use is the static page at `website/legal/terms.html` in the
+> website and is the copy linked from the Play Store listing. This file is the
+> review draft and is superseded; update the published page and this draft in the
+> same change.
+
 # Clockrove Terms of Use
 
 **Release draft.** Confirm the developer name, support contact, effective date,

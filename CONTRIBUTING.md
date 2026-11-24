@@ -1,8 +1,9 @@
 # Contributing
 
-Publication and external contributions are pending owner review of
-[the proposed source terms](docs/SOURCE_TERMS_DRAFT.md). No contribution license
-agreement is currently in force. Do not assume an open-source license.
+Clockrove's source is governed by the [Clockrove Source-Available License](LICENSE),
+which is not an open-source license: audit, personal noncommercial use and
+contribution forks are allowed, but redistribution and commercial use are not.
+Contributions are accepted under section 3 of that license.
 
 Read AGENTS.md and app_plan.md. Implement one milestone at a time and record
 actual validation in plan_status.md and the plan evidence ledger. Use synthetic
