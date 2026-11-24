@@ -123,19 +123,19 @@ class GeofencePolicyPersistenceTest {
         }
     }
 
-    @Test fun currentFixSeedsInsideButStillRequiresExitThenEntryForAutoStart() {
+    @Test fun savingACurrentInsideFixStartsWorkWithoutAReentryCallback() {
         val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
         assertNull(saveSite(site).conflict)
         assertNull(settings(GeofenceStore.Settings(job, true, true, true, 1)).conflict)
         clock = 1300
         assertNull(repository.saveSite("save-current-idle", repository.snapshot().version,
             site.copy(radiusMeters = 200.0), GeofenceStore.CurrentFix(10.0, 20.0, 12.0, 1250)).conflict)
-        assertNull(repository.snapshot().running)
-        assertFalse(repository.automationPolicies().single().armed)
-        assertNull(event("initial-inside-after-fix", INSIDE, 1350, "site").startedSessionId)
-        assertNull(event("exit-after-fix", OUTSIDE, 1400, "site").startedSessionId)
-        assertNull(repository.snapshot().running)
-        assertNotNull(event("new-entry-after-fix", INSIDE, 1500, "site").startedSessionId)
+        assertEquals(job, repository.snapshot().running?.jobId)
+        assertEquals(1300L, repository.snapshot().running?.startUtcMillis)
+        // The fix still proves membership, so the matching exit starts the grace period.
+        assertNull(event("inside-confirmation", INSIDE, 1350, "site").startedSessionId)
+        event("exit-after-fix", OUTSIDE, 1400, "site")
+        assertEquals(1400 + 60_000L, repository.pendingDeparture()?.deadlineUtcMillis)
     }
 
     @Test fun inaccurateCurrentFixCannotCreateFalseDepartureBaseline() {
@@ -415,17 +415,64 @@ class GeofencePolicyPersistenceTest {
         assertNull(repository.snapshot().running)
     }
 
-    @Test fun reenablingAutomationWhileInsideStillRequiresExitThenEntry() {
+    @Test fun reenablingAutomationWhileAwayArmsTheNextArrival() {
         configure(grace = 0)
         event("outside", OUTSIDE, 1100, "site")
         clock = 1200
         assertNull(settings(GeofenceStore.Settings(job, enabled = false)).conflict)
         clock = 1250
         assertNull(settings(GeofenceStore.Settings(job, true, true, true, 0)).conflict)
-        assertFalse(repository.automationPolicies().single().armed)
-        assertNull(event("inside-after-reenable", INSIDE, 1300, "site").startedSessionId)
-        event("outside-after-reenable", OUTSIDE, 1400, "site")
-        assertNotNull(event("arrival-after-reenable", INSIDE, 1500, "site").startedSessionId)
+        assertTrue(repository.automationPolicies().single().armed)
+        assertNotNull(event("arrival-after-reenable", INSIDE, 1300, "site").startedSessionId)
+    }
+
+    @Test fun savingAPositionThenEnablingStartsTheClockWithoutAReentry() {
+        clock = 1100
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
+        assertNull(saveSite(site, GeofenceStore.CurrentFix(10.0, 20.0, 8.0, 1090)).conflict)
+        assertNull(repository.snapshot().running)
+        clock = 1200
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 30)).conflict)
+        assertEquals(job, repository.snapshot().running?.jobId)
+    }
+
+    @Test fun enablingThenSavingAPositionStartsTheClockWithoutAReentry() {
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
+        assertNull(saveSite(site).conflict)
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 30)).conflict)
+        assertNull(repository.snapshot().running)
+        clock = 1300
+        assertNull(repository.saveSite("fix-after-enable", repository.snapshot().version, site,
+            GeofenceStore.CurrentFix(10.0, 20.0, 6.0, 1290)).conflict)
+        assertEquals(job, repository.snapshot().running?.jobId)
+        assertEquals(1300L, repository.snapshot().running?.startUtcMillis)
+    }
+
+    @Test fun resavingTheSameConfigurationDoesNotStartButEnablingAutoStartDoes() {
+        val site = GeofenceStore.Site("site", job, "Synthetic work", 10.0, 20.0)
+        assertNull(repository.saveSite("site-with-fix", repository.snapshot().version, site,
+            GeofenceStore.CurrentFix(10.0, 20.0, 5.0, 1050)).conflict)
+        clock = 1100
+        val manualOnly = GeofenceStore.Settings(job, true, false, true, 30)
+        assertNull(settings(manualOnly).conflict)
+        assertNull(repository.snapshot().running)
+        clock = 1150
+        assertNull(settings(manualOnly).conflict)
+        assertNull(repository.snapshot().running)
+        clock = 1200
+        assertNull(settings(manualOnly.copy(autoStart = true)).conflict)
+        assertEquals(job, repository.snapshot().running?.jobId)
+    }
+
+    @Test fun aManualStopInsideKeepsSuppressionSoEditingSettingsDoesNotRestart() {
+        configure(grace = 30)
+        event("outside", OUTSIDE, 1100, "site")
+        assertNotNull(event("entry", INSIDE, 1200, "site").startedSessionId)
+        assertNull(stop("manual-stop-inside", 1300).conflict)
+        assertTrue(repository.automationPolicies().single().suppressed)
+        clock = 1400
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 45)).conflict)
+        assertNull(repository.snapshot().running)
     }
 
     @Test fun capacityValidationPreservesSettingsAndRegistrationKeysAndKeepsRetryOutcome() {

@@ -12,8 +12,10 @@ import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import io.github.centerionware.clockrove.location.WorkLocationService
 import io.github.centerionware.clockrove.tracking.GeofenceStore
 import io.github.centerionware.clockrove.tracking.TimerRepository
+import io.github.centerionware.clockrove.widget.TimerWidget
 
 /** Settings commands carry expected versions and never accept a caller-selected event origin. */
 class AutomationHostApi internal constructor(private val activity: Activity, messenger: BinaryMessenger,
@@ -106,6 +108,13 @@ class AutomationHostApi internal constructor(private val activity: Activity, mes
                                     requireNotNull(call.argument<String>("jobId")), requireNotNull(call.argument<Boolean>("enabled")),
                                     requireNotNull(call.argument<Boolean>("autoStart")), requireNotNull(call.argument<Boolean>("automaticDeparture")),
                                     requireNotNull(call.argument<Number>("graceMinutes")).toInt()))
+                            }
+                            // A configuration save can also start or stop work (a current fix
+                            // inside the area, or an exit it finalizes), so refresh the desktop
+                            // widgets and the foreground recorder like a native callback does.
+                            if (outcome.conflict == null) main.post {
+                                runCatching { TimerWidget.refreshAll(activity.applicationContext) }
+                                runCatching { WorkLocationService.reconcile(activity.applicationContext, repository) }
                             }
                             mapOf("version" to outcome.version, "conflict" to outcome.conflict)
                         }

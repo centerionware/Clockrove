@@ -215,76 +215,9 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
               currentFix: result.currentPosition,
             ),
     );
-    if (saved &&
-        !result.remove &&
-        result.usedCurrentLocation &&
-        result.site.enabled &&
-        state.settings.enabled &&
-        state.settings.autoStart) {
-      await _offerClockInNow();
-    }
-  }
-
-  Future<void> _offerClockInNow() async {
-    TimerSnapshot timer;
-    try {
-      timer = await ref.read(timerApiProvider).snapshot();
-    } catch (_) {
-      if (!mounted) return;
-      _feedback(AppMessage.automationCurrentTimerReadFailed.of(context));
-      return;
-    }
-    if (!mounted) return;
-    if (timer.running != null) {
-      _feedback(
-        timer.running!.jobId == widget.jobId
-            ? AppMessage.automationJobAlreadyRunning.of(context)
-            : AppMessage.automationOtherJobRunning.of(context),
-      );
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppMessage.automationClockInNowTitle.of(context)),
-        content: Text(AppMessage.automationClockInNowBody.of(context)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppMessage.notNow.of(context)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppMessage.clockIn.of(context)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    final actions = ref.read(timerActionsProvider);
-    if (actions.working || actions.hasPending) {
-      _feedback(AppMessage.automationTimerActionPending.of(context));
-      return;
-    }
-    await ref
-        .read(timerActionsProvider.notifier)
-        .submit(timer, TimerAction.start, jobId: widget.jobId);
-    if (!mounted) return;
-    final outcome = ref.read(timerActionsProvider);
-    if (outcome.pending != null || outcome.pendingJob != null) {
-      _feedback(AppMessage.automationClockInUnconfirmed.of(context));
-    } else if (outcome.conflict != null) {
-      _feedback(AppMessage.automationClockInConflict.of(context));
-    } else {
-      _feedback(
-        AppMessage.automationClockInSuccess.format(context, {
-          'job': widget.jobName,
-        }),
-      );
-    }
-    ref.invalidate(timerSnapshotProvider);
-    ref.invalidate(automationSnapshotProvider(widget.jobId));
+    // Saving a position inside an armed job starts the clock in the same committed
+    // command, so this screen only needs the refreshed status below.
+    if (saved && !result.remove) _refresh();
   }
 
   Future<void> _grace(AutomationSnapshot state) async {

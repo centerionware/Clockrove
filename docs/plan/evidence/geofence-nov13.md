@@ -194,13 +194,28 @@ barriers still advance, so stale callbacks remain ignored. A recorded exit is
 kept for radius, label and grace edits and its deadline is recomputed from the
 new grace; a moved centre, a disabled or removed site, a disabled or
 non-automatic policy, explicit review acceptance and archive/restore still clear
-it. First enablement still resets membership, so enabling while inside does not
-start work.
+it.
 
-Five native cases are added: settings edit while away keeps arming for the next
-arrival, radius edit while clocked in still clocks out on exit, manual stop then
-settings edit then restart still clocks out on exit, grace edit while away keeps
-the recorded exit with the new deadline, and re-enabling automation while inside
-still requires a fresh exit and entry. These changes await a full Actions run;
-no local build or test ran, and Android callback delivery on the owner device
-remains a physical gate.
+The owner then reported the complementary case: setting a position fix to the
+spot they were standing on, or enabling the automation toggles, while already
+inside the area did not clock them in, in either order. A configuration save now
+counts as the entry the worker already made. After the save commits, if the job
+is known INSIDE, `enabled` and `autoStart` are on, no session is open, the job is
+not suppressed and no history review is unresolved, `TimerRepository` starts a
+session at the save time through `validate`/`applyTimerRows` with origin
+`GEOFENCE`, inside the same configuration transaction and version bump. A no-op
+save (identical site or settings) does not start anything. Re-enabling a job
+while known OUTSIDE now re-arms it, so the next arrival starts without an extra
+exit and entry. A manual stop inside still sets suppression, so editing settings
+afterwards never restarts work.
+
+Ten native cases cover this: a current inside fix starts work without a
+re-entry callback and its matching exit still opens the grace period; saving a
+position then enabling starts the clock; enabling then saving a position starts
+the clock; resaving identical settings does not start work but turning on
+`autoStart` does; a manual stop inside keeps suppression across a settings edit;
+settings edit while away keeps arming; radius edit while clocked in still clocks
+out on exit; grace edit while away keeps the recorded exit with the new deadline;
+and re-enabling automation while away arms the next arrival. These changes await
+a full Actions run; no local build or test ran, and Android callback delivery on
+the owner device remains a physical gate.

@@ -206,11 +206,13 @@ internal object GeofenceStore {
         val enabledChanged = previous?.settings?.enabled != settings.enabled
         val departureChanged = previous?.settings?.automaticDeparture != settings.automaticDeparture
         val graceChanged = previous?.settings?.graceMinutes != settings.graceMinutes
-        // Editing a monitored job keeps its known membership and arming. First enablement still
-        // starts from a fresh qualified entry, and a disabled or non-automatic policy has no
-        // recorded exit to finalize.
-        invalidate(db, settings.jobId, now, resetMembership = enabledChanged && settings.enabled,
-            clearDeparture = enabledChanged || departureChanged)
+        // Editing or enabling a monitored job keeps its known membership: a worker configuring the
+        // area they already stand in has entered it, and a worker configuring it from outside needs
+        // the next arrival to count. A disabled or non-automatic policy has no exit to finalize.
+        invalidate(db, settings.jobId, now, clearDeparture = enabledChanged || departureChanged)
+        if (settings.enabled && settings.autoStart)
+            db.execSQL("UPDATE automation_policies SET armed=1 WHERE job_id=? AND last_presence=? AND suppressed=0",
+                arrayOf<Any?>(settings.jobId, GeofenceMembership.Presence.OUTSIDE.name))
         if (graceChanged && !enabledChanged && !departureChanged)
             db.execSQL("UPDATE pending_departure SET deadline_ms=detected_ms+? WHERE session_id IN (SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL)",
                 arrayOf<Any?>(settings.graceMinutes * 60_000L, settings.jobId))
