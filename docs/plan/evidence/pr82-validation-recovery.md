@@ -48,3 +48,21 @@ treated that provider root as shared storage. The test now retries revealing
 the internal storage root, rejects the Downloads-provider fallback, and always
 opens the shared `Download/Clockrove-CI-Backup` path. Exact-main validation is
 pending. No local build or test was run.
+
+### November 24 widget copy follow-up
+
+The owner reported widget copy such as "Due soon" staying in English regardless
+of the language set in the app. Source history shows the widget and notification
+copy already resolve through `localizedContext` from the saved language
+(commit `a8f4304`, merged with PR #82), so a build before that commit still shows
+the phone language. The remaining gap in that path was the task date: the widget
+printed the stored ISO `due_date` unchanged in every language.
+
+The task widget now formats a stored due date with the saved language's medium
+date format and falls back to the stored value when it cannot be parsed. A
+widget refresh also notifies the collection adapter, so the rows reload instead
+of keeping the previous factory's strings after a language change. Two native
+cases extend `LanguageResourcesTest`: the "Due soon" header and "today" copy
+follow the saved override while the phone stays English, and due dates use the
+chosen language's format. Exact-head Actions validation is pending; no local
+build or test ran.
