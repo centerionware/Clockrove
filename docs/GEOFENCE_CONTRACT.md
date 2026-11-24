@@ -8,8 +8,15 @@ Site/settings mutations require command ID and expected version. Their results
 share the timer command ledger. Capacity is checked across every enabled job,
 before edits inside the same transaction. Rejected commands preserve settings and
 registration keys; unexpected storage failures roll back the transaction. Successful
-geometry/enabled/settings changes rotate registration IDs and disarm the job;
-label edits preserve current facts. Site IDs cannot change jobs. The inventory
+geometry/enabled/settings changes rotate registration IDs and advance the fact and
+configuration barriers; they keep the job's last known presence, arming and
+suppression, because editing a monitored job does not move the worker. A stale
+callback from an old registration is still ignored. A recorded exit survives a
+radius, label or grace edit and is recomputed against the new grace, but a moved
+centre, a disabled or removed site, a disabled or non-automatic policy, an
+explicit review acceptance and archive/restore still clear it. First enablement
+still requires a fresh qualified entry, so enabling while inside does not start
+work. Site IDs cannot change jobs. The inventory
 returned by sitesToRegister is requested configuration, not platform registration
 proof. A future adapter must report the actual registration task result separately.
 

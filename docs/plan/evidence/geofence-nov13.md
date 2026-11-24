@@ -169,3 +169,38 @@ passed. The [internal delivery attempt](https://github.com/centerionware/Clockro
 stopped before uploading a bundle because its signing job did not install
 CI’s Flutter Gradle repository setup. The follow-up applies the same setup
 to the trusted Play workflow. The signed upload and owner-device check remain open.
+
+### November 24 settings-edit arrival and departure follow-up
+
+The owner reported a geofence clock-in that later stopped responding: after a
+manual clock-out from inside the site, the app showed "Watching for your next
+arrival", but the next arrival did not start work and the status changed to
+"Waiting for a fresh exit and entry". The site now uses a 150 m radius and a
+zero-minute departure grace. No app update, reboot or deliberate restart was
+involved; the widget was on screen during a recording attempt.
+
+Source tracing found the remaining common path: every site or settings save ran
+`GeofenceStore.invalidate`, which reset `last_presence` to `UNKNOWN`, cleared
+`armed`/`suppressed`, and deleted any pending departure. The rotated registration
+is correct, but the reset turned the next arrival into an initial, non-transition
+observation, so it could not start work; the same reset removed the inside
+baseline a later exit needs and discarded an already recorded exit. Editing the
+grace to zero or the radius to 150 m is exactly such a save, and previous
+owner-device sessions changed both settings around these checks.
+
+The fix keeps the last known presence, arming and suppression across site and
+settings edits. Registration keys still rotate and the fact/configuration
+barriers still advance, so stale callbacks remain ignored. A recorded exit is
+kept for radius, label and grace edits and its deadline is recomputed from the
+new grace; a moved centre, a disabled or removed site, a disabled or
+non-automatic policy, explicit review acceptance and archive/restore still clear
+it. First enablement still resets membership, so enabling while inside does not
+start work.
+
+Five native cases are added: settings edit while away keeps arming for the next
+arrival, radius edit while clocked in still clocks out on exit, manual stop then
+settings edit then restart still clocks out on exit, grace edit while away keeps
+the recorded exit with the new deadline, and re-enabling automation while inside
+still requires a fresh exit and entry. These changes await a full Actions run;
+no local build or test ran, and Android callback delivery on the owner device
+remains a physical gate.

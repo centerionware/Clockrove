@@ -71,16 +71,26 @@ internal object GeofenceStore {
         "SELECT id FROM jobs WHERE id=? AND archived=0", arrayOf(id),
     ).use { it.moveToFirst() }
 
-    /** Configuration changes invalidate every old registration for this job. */
-    internal fun invalidate(db: SQLiteDatabase, jobId: String, now: Long) {
+    /**
+     * Configuration changes invalidate every old registration for this job. Editing a monitored
+     * job does not move the worker, so the last known presence, arming and suppression survive:
+     * rotated keys and the advanced fact barrier still reject stale callbacks, while the next real
+     * arrival or exit can act immediately instead of demanding another physical exit and entry.
+     * [resetMembership] is reserved for explicit review acceptance, archive/restore and first
+     * enablement; [clearDeparture] for changes that invalidate a recorded exit boundary.
+     */
+    internal fun invalidate(db: SQLiteDatabase, jobId: String, now: Long,
+        resetMembership: Boolean = false, clearDeparture: Boolean = false) {
         ensurePolicy(db, jobId, now)
         sites(db).filter { it.jobId == jobId }.forEach {
             db.execSQL("UPDATE work_sites SET registration_key=?,presence='UNKNOWN',observed_ms=NULL WHERE id=?",
                 arrayOf(UUID.randomUUID().toString(), it.id))
         }
-        db.execSQL("UPDATE automation_policies SET armed=0,last_presence='UNKNOWN',configured_ms=?,facts_since_ms=? WHERE job_id=?",
+        val membership = if (resetMembership) ",armed=0,suppressed=0,last_presence='UNKNOWN'" else ""
+        db.execSQL("UPDATE automation_policies SET configured_ms=?,facts_since_ms=?$membership WHERE job_id=?",
             arrayOf<Any?>(now, now, jobId))
-        db.execSQL("DELETE FROM pending_departure WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(jobId))
+        if (clearDeparture)
+            db.execSQL("DELETE FROM pending_departure WHERE session_id IN (SELECT id FROM sessions WHERE job_id=?)", arrayOf(jobId))
     }
 
     fun saveSite(db: SQLiteDatabase, site: Site, now: Long, currentFix: CurrentFix? = null): String? {
@@ -115,7 +125,11 @@ internal object GeofenceStore {
             jobColumn = "job_id", where = "id=?", args = arrayOf(site.id),
         )
         if (monitoringChanged || fix != null) {
-            invalidate(db, site.jobId, now)
+            // A radius or label change keeps a recorded exit; only a moved centre, a disabled
+            // site or a removed site invalidates where and when the worker left.
+            val centerMoved = previous != null &&
+                (previous.latitude != site.latitude || previous.longitude != site.longitude)
+            invalidate(db, site.jobId, now, clearDeparture = !site.enabled || centerMoved)
         }
         if (fix != null) seedMembershipFromCurrentFix(db, site, fix)
         return null
@@ -189,7 +203,17 @@ internal object GeofenceStore {
         db.execSQL("UPDATE automation_policies SET enabled=?,auto_start=?,automatic_departure=?,grace_minutes=? WHERE job_id=?",
             arrayOf<Any?>(if (settings.enabled) 1 else 0, if (settings.autoStart) 1 else 0,
                 if (settings.automaticDeparture) 1 else 0, settings.graceMinutes, settings.jobId))
-        invalidate(db, settings.jobId, now)
+        val enabledChanged = previous?.settings?.enabled != settings.enabled
+        val departureChanged = previous?.settings?.automaticDeparture != settings.automaticDeparture
+        val graceChanged = previous?.settings?.graceMinutes != settings.graceMinutes
+        // Editing a monitored job keeps its known membership and arming. First enablement still
+        // starts from a fresh qualified entry, and a disabled or non-automatic policy has no
+        // recorded exit to finalize.
+        invalidate(db, settings.jobId, now, resetMembership = enabledChanged && settings.enabled,
+            clearDeparture = enabledChanged || departureChanged)
+        if (graceChanged && !enabledChanged && !departureChanged)
+            db.execSQL("UPDATE pending_departure SET deadline_ms=detected_ms+? WHERE session_id IN (SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL)",
+                arrayOf<Any?>(settings.graceMinutes * 60_000L, settings.jobId))
         return null
     }
 
@@ -200,7 +224,7 @@ internal object GeofenceStore {
             db, "site", siteId, site.jobId,
             mapOf("id" to siteId, "job_id" to site.jobId), now, deleted = true,
         )
-        invalidate(db, site.jobId, now)
+        invalidate(db, site.jobId, now, clearDeparture = true)
         return null
     }
 
@@ -216,7 +240,7 @@ internal object GeofenceStore {
     fun acceptCurrentHistory(db: SQLiteDatabase, jobId: String, now: Long): String? {
         if (!jobAvailable(db, jobId)) return "JOB_UNAVAILABLE"
         db.execSQL("DELETE FROM geofence_conflicts WHERE job_id=?", arrayOf(jobId))
-        invalidate(db, jobId, now)
+        invalidate(db, jobId, now, resetMembership = true, clearDeparture = true)
         db.execSQL("UPDATE automation_policies SET manual_barrier_ms=CASE WHEN manual_barrier_ms IS NULL OR manual_barrier_ms<? THEN ? ELSE manual_barrier_ms END WHERE job_id=?", arrayOf<Any?>(now, now, jobId))
         return null
     }

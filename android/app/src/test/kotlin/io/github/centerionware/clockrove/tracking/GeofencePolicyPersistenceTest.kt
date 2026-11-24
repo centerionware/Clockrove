@@ -354,6 +354,80 @@ class GeofencePolicyPersistenceTest {
         assertEquals(session, repository.snapshot().running!!.id)
     }
 
+    @Test fun settingsEditWhileAwayKeepsArmingForTheNextArrival() {
+        configure()
+        event("outside", OUTSIDE, 1100, "site")
+        assertTrue(repository.automationPolicies().single().armed)
+        clock = 1200
+        // Changing the departure grace while away must not demand another exit and entry.
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 0)).conflict)
+        val policy = repository.automationPolicies().single()
+        assertTrue(policy.armed)
+        assertEquals(OUTSIDE, policy.lastPresence)
+        assertNotNull(event("arrival-after-settings-edit", INSIDE, 1300, "site").startedSessionId)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+    }
+
+    @Test fun radiusEditWhileClockedInStillClocksOutOnExit() {
+        configure(grace = 0)
+        event("outside", OUTSIDE, 1100, "site")
+        val session = event("entry", INSIDE, 1300, "site").startedSessionId!!
+        clock = 1400
+        assertNull(saveSite(repository.sites().single().copy(radiusMeters = 200.0)).conflict)
+        assertEquals(INSIDE, repository.automationPolicies().single().lastPresence)
+        event("exit-after-radius-edit", OUTSIDE, 1500, "site")
+        assertNull(repository.snapshot().running)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+        SQLiteDatabase.openOrCreateDatabase(
+            RuntimeEnvironment.getApplication().getDatabasePath("clockrove.db"), null,
+        ).use { db ->
+            db.rawQuery("SELECT end_ms FROM sessions WHERE id=?", arrayOf(session)).use {
+                assertTrue(it.moveToFirst()); assertEquals(1500L, it.getLong(0))
+            }
+        }
+    }
+
+    @Test fun manualStopThenSettingsEditThenRestartStillClocksOutOnExit() {
+        configure(grace = 5)
+        event("outside", OUTSIDE, 1100, "site")
+        val first = event("entry", INSIDE, 1300, "site").startedSessionId!!
+        assertNull(stop("manual-stop-inside", 1400).conflict)
+        clock = 1450
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 0)).conflict)
+        assertTrue(repository.automationPolicies().single().suppressed)
+        assertNull(manualStart("manual-restart-inside", 1500).conflict)
+        assertNotEquals(first, repository.snapshot().running!!.id)
+        event("exit-after-restart", OUTSIDE, 1600, "site")
+        assertNull(repository.snapshot().running)
+        assertTrue(repository.geofenceReviewJobs().isEmpty())
+    }
+
+    @Test fun graceEditWhileAwayKeepsTheRecordedExitAndAppliesTheNewDeadline() {
+        configure(grace = 30)
+        event("outside", OUTSIDE, 1100, "site")
+        val session = event("entry", INSIDE, 1300, "site").startedSessionId!!
+        event("exit", OUTSIDE, 1400, "site")
+        assertEquals(TimerRepository.Departure(session, 1400, 1400 + 30 * 60_000L), repository.pendingDeparture())
+        clock = 1500
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 0)).conflict)
+        assertEquals(TimerRepository.Departure(session, 1400, 1400), repository.pendingDeparture())
+        assertEquals(TimerRepository.DepartureResult.FINALIZED, repository.finalizeDeparture(session, 1600))
+        assertNull(repository.snapshot().running)
+    }
+
+    @Test fun reenablingAutomationWhileInsideStillRequiresExitThenEntry() {
+        configure(grace = 0)
+        event("outside", OUTSIDE, 1100, "site")
+        clock = 1200
+        assertNull(settings(GeofenceStore.Settings(job, enabled = false)).conflict)
+        clock = 1250
+        assertNull(settings(GeofenceStore.Settings(job, true, true, true, 0)).conflict)
+        assertFalse(repository.automationPolicies().single().armed)
+        assertNull(event("inside-after-reenable", INSIDE, 1300, "site").startedSessionId)
+        event("outside-after-reenable", OUTSIDE, 1400, "site")
+        assertNotNull(event("arrival-after-reenable", INSIDE, 1500, "site").startedSessionId)
+    }
+
     @Test fun capacityValidationPreservesSettingsAndRegistrationKeysAndKeepsRetryOutcome() {
         configure(ids = (1..100).map { "site-$it" })
         val before = repository.sites()
