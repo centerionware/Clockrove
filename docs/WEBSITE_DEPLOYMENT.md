@@ -1,9 +1,14 @@
 # Documentation site deployment
 
-The Clockrove help site is static HTML and CSS in `website/`. It has no build step,
-no runtime Worker, and no backend. Cloudflare Pages uploads the directory as-is, so
-`website/legal/` is published at `/legal/` and the four policy pages keep the stable
-URLs the Play Store listing uses:
+The Clockrove help site is static HTML and CSS in `website/`. There is no build step,
+no bundler, no runtime Worker code, and no backend. Deployment is configured on the
+Cloudflare side from this repository; **there is no GitHub Actions deploy job and no
+deploy secret in this repository.**
+
+Because Cloudflare publishes whatever the configured build output directory contains,
+the rule that matters is simple: **the output directory must be `website` itself**, not
+a hand-picked set of files. Then `website/legal/` is published at `/legal/` and the four
+policy pages keep the stable URLs the Play Store listing uses:
 
 - `https://<site>/legal/privacy.html` — Play Store privacy policy URL
 - `https://<site>/legal/data-use.html`
@@ -11,52 +16,36 @@ URLs the Play Store listing uses:
 - `https://<site>/legal/license.html`
 - `https://<site>/legal/` — hub linked from the Help site header and footer
 
-## One-time owner setup
+A deployment that only serves `/` and `styles.css` means the Cloudflare build is
+publishing selected files rather than the `website` directory.
 
-Both credentials are supplied manually by the owner; nothing in this repository
-contains them, and pull requests from forks never deploy.
+## Cloudflare settings
 
-1. Create the Pages project on a direct-upload project with `main` as its production
-   branch:
+Set these once in the Cloudflare project (Pages, or a Worker with static assets built
+from this repository):
 
-   ```sh
-   npx wrangler@4.167.0 pages project create clockrove --production-branch=main
-   ```
+| Setting | Value |
+| --- | --- |
+| Repository | `centerionware/Clockrove`, production branch `main` |
+| Root directory | repository root |
+| Build command | *(empty — nothing to build)* |
+| Build output directory | `website` |
+| Production branch | `main` |
 
-2. Create a Cloudflare API token with the **Cloudflare Pages: Edit** permission for
-   the account that owns the project.
-3. Add repository secrets under **Settings → Secrets and variables → Actions**:
-   - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
-4. Optionally add repository variables to change defaults:
-   - `CLOUDFLARE_PAGES_PROJECT` (default `clockrove`)
-   - `CLOCKROVE_SITE_URL` (default `https://clockrove.pages.dev`; set it to the custom
-     domain once one is attached)
-5. Attach the custom domain in the Pages project before changing the Play Store links.
+Two consequences of the empty build:
+- Nothing is minified or fingerprinted, so the cache policy below keeps browser reuse
+  short enough that a corrected legal page is visible immediately.
+- The repository's Python checks are not part of the deploy. They run in
+  `Validate documentation site` on pull requests, which is validation, not CI/CD for
+  publishing.
 
-No secret belongs in a workflow file, `.env`, or a commit. If the secrets are absent
-the deploy job still validates the site and posts a notice that publishing was
-skipped, instead of failing `main`.
-
-## What a deploy does
-
-`.github/workflows/deploy-website.yml` runs on every push to `main` that touches
-`website/`. It:
-
-1. Runs the link check and the deployment check
-   (`scripts/check-website-deploy.py`), which fails if a page is not linked from the
-   index, if `_headers` names a file that is not published, or if the workflow stops
-   pinning Wrangler.
-2. Uploads `website/` with `npx wrangler@4.167.0 pages deploy website --branch=main`.
-3. Requests `/`, `/legal/` and the four policy pages from the live site and fails the
-   run if any of them is not reachable or the privacy page does not serve its text.
-
-`npx --yes` is used with an exact version so the tooling is pinned; there is no
-floating `latest`.
+For a Worker with static assets, the same directory is declared in the project's
+configuration on the Cloudflare side; keep the repository free of a duplicate
+`wrangler.jsonc` that could disagree with the dashboard.
 
 ## Caching and headers
 
-`website/_headers` is read by Pages on every request:
+`website/_headers` sets the cache policy and security headers for the published site:
 
 | Path | Cache policy | Why |
 | --- | --- | --- |
@@ -66,30 +55,43 @@ floating `latest`.
 
 The same file sets a strict `Content-Security-Policy` (`default-src 'none'` with only
 same-origin styles and images, so a future inline script stays blocked),
-`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
-`Permissions-Policy`, `Cross-Origin-Opener-Policy` and HSTS.
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`,
+`Cross-Origin-Opener-Policy` and HSTS.
 
-Cloudflare's edge caches the uploaded assets and revalidates against the uploaded
-copy, so a reader behind the CDN does not need a cache purge after a deploy.
+Cloudflare's edge caches the published assets and revalidates against the uploaded copy,
+so a reader behind the CDN does not need a cache purge after a deploy. If the project is
+configured as a Worker with static assets and the `_headers` file is not applied, set the
+same two `Cache-Control` values in a Cloudflare Cache Rule for the site host and keep the
+repository file as the record of the intended policy.
 
-## Reviewing a change before it ships
+## Checking a deployment
 
-- `Validate documentation site` runs the link check and deployment check on any pull
-  request that touches `website/`.
-- Open the preview build of the branch, or run the workflow manually with
-  **Actions → Deploy documentation site → Run workflow** after merging.
-- Confirm the policy page in a private window, at mobile width, with the browser's
-  network panel showing `cf-cache-status`.
-- Play Store submission uses the custom-domain URL only after it returns the page.
+Run the read-only check from any machine after a Cloudflare build finishes:
+
+```sh
+python3 scripts/check-live-site.py https://clockrove.pages.dev
+```
+
+It requests `/`, `/legal/` and the four policy pages, prints each `Cache-Control`
+header, and fails if a page is missing or the privacy page does not serve its text.
+Use a private window at mobile width for the visual check, and confirm the Play Store
+privacy-policy URL only after this passes.
+
+## Reviewing a change before merging
+
+`Validate documentation site` runs on pull requests that touch `website/`:
+
+- `scripts/check-documentation-links.py` — every local link, fragment and image.
+- `scripts/check-published-site.py` — every page is linked from the index (so a page
+  cannot be uploaded but unreachable), and `_headers` names only published paths.
 
 ## Rollback
 
-Pages keeps prior deployments. In the Cloudflare dashboard open the project,
-**Deployments**, pick the last good one and **Rollback**. No repository change is
-needed, and the next push to `main` publishes the site again.
+The Cloudflare project keeps prior deployments. Choose the last good deployment in the
+dashboard and roll back; the next build from `main` publishes the site again. No
+repository change or secret rotation is involved.
 
-## Not covered here
+## Still open
 
-Publishing still needs the owner's Cloudflare account and token, the custom domain,
-and the store-listing link update. Those remain open in the release checklist; the
-repository pipeline is ready before the account exists.
+The first publish, the custom domain, and the store-listing URL update are owner
+actions in the Cloudflare and Play dashboards. They stay open in the release checklist.

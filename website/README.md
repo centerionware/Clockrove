@@ -4,11 +4,13 @@ The website uses static HTML and CSS with no build step or runtime backend.
 For Cloudflare Pages, use `website` as the output directory. Keep release
 publishing disabled while reviewing this source.
 
-`.github/workflows/deploy-website.yml` uploads this directory to Cloudflare Pages
-on every push to `main` that changes it, then checks that `/legal/` and the four
-policy pages answer. `_headers` sets the cache policy and security headers; see
-[website deployment](../docs/WEBSITE_DEPLOYMENT.md) for the owner setup, the
-caching table and rollback.
+Cloudflare builds and deploys this directory on its own, with no GitHub Actions
+deploy job: the project's build output directory must be `website` itself so that
+`legal/` is published with the rest of the site. `_headers` sets the cache policy
+and security headers, and `python3 scripts/check-live-site.py <site-url>` confirms
+the deployed legal pages answer. See
+[website deployment](../docs/WEBSITE_DEPLOYMENT.md) for the Cloudflare settings,
+the caching table and rollback.
 
 Before public deployment, add the reviewed version-specific screenshots and
 guides, publish the approved policy texts at stable URLs, and verify links,

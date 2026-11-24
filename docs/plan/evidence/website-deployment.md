@@ -2,36 +2,38 @@
 
 ## Report
 
-The static site had no deployment configuration in the repository, so the published
-site did not reliably include `website/legal/` and nothing checked that the Play
-Store policy URLs answered.
+The static site is built and deployed on the Cloudflare side. The repository had no
+publishable-site contract, so a build that publishes selected files instead of the
+`website` directory leaves `website/legal/` unexposed and breaks the Play Store policy
+URLs, with nothing to catch it.
 
 ## Change
 
-- `.github/workflows/deploy-website.yml` uploads `website/` to Cloudflare Pages on
-  every push to `main` that changes the site, using a pinned `wrangler@4.167.0` on
-  pinned Node 22.12.0. It runs the link and deployment checks first, then requests
-  `/`, `/legal/` and the four policy pages from the live URL and fails if any is not
-  reachable or the privacy page does not serve its text.
+- `docs/WEBSITE_DEPLOYMENT.md` records the Cloudflare project settings (root directory
+  the repository root, empty build command, output directory `website`, production
+  branch `main`), the cache table, the review checks and dashboard rollback. It states
+  explicitly that there is no GitHub Actions deploy job and no deployment secret in the
+  repository.
 - `website/_headers` sets the cache policy (HTML revalidated, CSS one hour, images a
   week) and security headers including a `default-src 'none'` CSP.
-- `scripts/check-website-deploy.py` fails when a page is not linked from the index,
-  when `_headers` names an unpublished path, or when the workflow stops pinning
-  Wrangler. It runs in the `Validate documentation site` workflow.
-- `docs/WEBSITE_DEPLOYMENT.md` records the one-time owner setup, the cache table,
-  review steps and rollback.
+- `scripts/check-published-site.py` fails when a page is not linked from the index or
+  when `_headers` names an unpublished path. It runs in
+  `Validate documentation site`, which validates and does not deploy.
+- `scripts/check-live-site.py` is the read-only post-deploy check the owner runs
+  against the Cloudflare URL; it verifies `/`, `/legal/` and the four policy pages and
+  prints each `Cache-Control`.
 
 ## Verification
 
 - `python3 scripts/check-documentation-links.py` — 6 pages checked, no errors.
-- `python3 scripts/check-website-deploy.py` — 6 pages reachable, headers and workflow
-  pinned, no errors.
-- Not verified: an actual Pages upload and the live-URL check, because the owner's
-  Cloudflare project, token and account ID are not available to CI. The job reports a
-  notice instead of failing while they are missing.
+- `python3 scripts/check-published-site.py` — 6 pages reachable, headers reference only
+  published paths, no errors.
+- Not verified: the live deployment, the `_headers` result and the Cloudflare build
+  output directory, because those live in the owner's Cloudflare account. The live check
+  script has not been run against a real URL.
 
 ## Remaining
 
-- Owner creates the Pages project on production branch `main`, adds
-  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, then attaches the custom domain
-  and points the Play Store privacy-policy URL at it.
+- Owner confirms the Cloudflare build publishes the `website` directory itself, so
+  `legal/` is included, then runs `scripts/check-live-site.py` against the site.
+- Custom domain and the Play Store privacy-policy URL still need the owner.

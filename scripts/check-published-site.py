@@ -1,15 +1,14 @@
-"""Check the static site is deployable to Cloudflare Pages as a cached site.
+"""Check the static site is publishable as a cached Cloudflare site.
 
-Fails when a page exists but nothing links to it, when `_headers` names a file that
-is not published, or when the deploy workflow stops pinning Wrangler.
+Cloudflare builds and deploys the site itself, so the repository only has to keep the
+publishable directory self-contained: fails when a page exists but nothing links to
+it, or when `_headers` names a file that is not published.
 """
-import re
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 root = Path("website")
-workflow = Path(".github/workflows/deploy-website.yml")
 errors = []
 
 
@@ -88,15 +87,6 @@ else:
         if not published.is_file() and not published.is_dir():
             errors.append(f"website/_headers: rule for {pattern} matches nothing in the published site.")
 
-if not workflow.is_file():
-    errors.append(f"{workflow} is missing, so pushes to main do not publish the site.")
-else:
-    text = workflow.read_text(encoding="utf-8")
-    if "pages deploy website" not in text:
-        errors.append(f"{workflow}: must deploy the website directory with `wrangler pages deploy`.")
-    if not re.search(r"wrangler@\d+\.\d+\.\d+\b", text):
-        errors.append(f"{workflow}: pin an exact Wrangler version such as `wrangler@4.167.0`.")
-
 if errors:
     raise SystemExit("\n".join(errors))
-print(f"Checked deployment files for {len(pages)} pages.")
+print(f"Checked publishing files for {len(pages)} pages.")
