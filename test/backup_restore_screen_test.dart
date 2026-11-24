@@ -422,9 +422,7 @@ void main() {
     expect(find.text(englishCopy(AppMessage.restoreFailed)), findsOneWidget);
     // A failed restore names the gate that stopped it so the report is actionable.
     expect(
-      find.text(
-        englishCopy(AppMessage.restoreErrorCode, {'code': 'format'}),
-      ),
+      find.text(englishCopy(AppMessage.restoreErrorCode, {'code': 'format'})),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('restore-selected-file')), findsOneWidget);

@@ -209,16 +209,17 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         });
       } else {
         await restore.close();
-      }      } on Object catch (error) {
-        if (mounted) {
-          setState(() {
-            _error = _safeError(error);
-            _errorCode = backupRestoreFailureCode(error);
-            _message = null;
-          });
-        }
-      } finally {
-        if (restore != null || !mounted) {
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _errorCode = backupRestoreFailureCode(error);
+          _message = null;
+        });
+      }
+    } finally {
+      if (restore != null || !mounted) {
         try {
           await document.close();
         } on Object {
