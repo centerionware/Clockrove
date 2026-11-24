@@ -150,11 +150,9 @@ class BackupPickerDeviceTest {
         automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun openSharedFixtureDirectory() {
-        val downloadsProvider = selectSharedStorageRoot()
-        if (!downloadsProvider) {
-            openDocumentRow("Download", "the shared Download directory") {
-                findDocumentTitle(FIXTURE_DIRECTORY)
-            }
+        selectSharedStorageRoot()
+        openDocumentRow("Download", "the shared Download directory") {
+            findDocumentTitle(FIXTURE_DIRECTORY)
         }
         // List rows expose a title separate from the selection icon.
         val listView = findLabel("List view") ?: findLabel("View as list")
@@ -167,9 +165,10 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun selectSharedStorageRoot(): Boolean {
+    private fun selectSharedStorageRoot() {
         showPickerRoots()
-        if (sharedStorageRoot() == null) {
+        var attempts = 0
+        while (sharedStorageRoot() == null && attempts < 3) {
             closePickerRoots()
             val overflow = waitFor("Documents options button") { findLabel("More options") }
             if (!performAccessibilityClick(overflow)) tapPickerNode(overflow)
@@ -182,21 +181,19 @@ class BackupPickerDeviceTest {
                 .firstOrNull { it.isEnabled }
             if (showStorage != null) {
                 if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
-                showPickerRoots()
             } else {
+                // The menu can render before its storage action becomes accessible.
                 pressBack()
-                showPickerRoots()
             }
+            showPickerRoots()
+            attempts++
         }
-        val root = waitFor("shared storage or Downloads root") {
-            sharedStorageRoot() ?: downloadsRoot()
-        }
-        val downloadsProvider = root.text?.toString() == "Downloads" ||
-            root.contentDescription?.toString() == "Downloads"
+        // Downloads is a separate indexed provider. It cannot see a file pushed
+        // directly into /sdcard/Download by the API 24 CI fixture setup.
+        val root = waitFor("internal shared-storage root") { sharedStorageRoot() }
         if (!performAccessibilityClick(root)) touchNode(root)
         if (findLabel("Open from") != null) closePickerRoots()
         waitForClosedPickerRoots()
-        return downloadsProvider
     }
 
     private fun closePickerRoots() {
@@ -296,8 +293,6 @@ class BackupPickerDeviceTest {
 
     private fun sharedStorageRoot(): AccessibilityNodeInfo? =
         findLabel(Build.MODEL) ?: findLabel("Internal storage")
-
-    private fun downloadsRoot(): AccessibilityNodeInfo? = findLabel("Downloads")
 
     private fun pressBack() = runShellInput("keyevent KEYCODE_BACK")
 

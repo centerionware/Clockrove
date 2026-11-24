@@ -990,10 +990,11 @@ then lacked quote preview files. Help now starts from its Help button with
 English catalogs; PDF assertions remove the full quote footer; CI includes
 failed-suite diagnostics in the final summary. Exact-head validation is pending; no local builds or tests ran, and localization acceptance stays open.
 
-Run [45265770690](https://github.com/centerionware/Clockrove/actions/runs/45265770690)
-(`bacad38`) passed localization, analysis, Flutter behavior, Android build,
-native, and release checks, but failed formatting and four device root cases:
-picker setup on API 24/35, settings accessibility, and multi-page quote text.
-Five viewer misses followed preview generation stopping. The current repair
-covers all listed failures; see [PR #82 validation recovery](docs/plan/evidence/pr82-validation-recovery.md).
-Exact-head Actions remains the evidence gate. No local build/test ran; localization acceptance stays open.
+Run [45265770690](https://github.com/centerionware/Clockrove/actions/runs/45265770690) (`bacad38`) passed static, Dart, build,
+native, and release checks; it failed formatting, API 24/35 picker setup, settings accessibility, and quote PDF text. Five
+viewer misses followed preview generation stopping. See [PR #82 evidence](docs/plan/evidence/pr82-validation-recovery.md).
+
+Exact PR-head [45275793641](https://github.com/centerionware/Clockrove/actions/runs/45275793641) (`ce58783`) passed.
+Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562) (`e2a0d18`) failed only API 24
+picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
+requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
