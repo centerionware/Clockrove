@@ -172,6 +172,7 @@ restoreDeletionCountNote: "El total cuenta las marcas de eliminación de la copi
 restoreCancelled: "Vista previa cancelada. No se cambiaron registros locales."
 restoreCleanupFailed: "No se pudieron eliminar los datos temporales de restauración. Cierra y vuelve a abrir Clockrove antes de reintentar."
 restoreFailed: "No se pudo procesar la copia. Comprueba el archivo seleccionado y vuelve a intentarlo."
+restoreErrorCode: "Código de error: {code}"
 restoreUnlockFailed: "No se pudo desbloquear la copia. Comprueba la contraseña y el archivo."
 restoreAllConflictsReviewed: "Se revisaron todas las páginas de conflictos. Al aplicar, se comprueba la versión local y se guardan todas las opciones en una transacción."
 help: "Ayuda"

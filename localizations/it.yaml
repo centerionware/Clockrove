@@ -172,6 +172,7 @@ restoreDeletionCountNote: "Il totale conta i contrassegni di eliminazione del ba
 restoreCancelled: "Anteprima annullata. Nessun record locale è stato modificato."
 restoreCleanupFailed: "Impossibile rimuovere i dati temporanei del ripristino. Chiudi e riapri Clockrove prima di riprovare."
 restoreFailed: "Impossibile elaborare il backup. Controlla il file selezionato e riprova."
+restoreErrorCode: "Codice errore: {code}"
 restoreUnlockFailed: "Impossibile sbloccare il backup. Controlla password e file."
 restoreAllConflictsReviewed: "Tutte le pagine dei conflitti sono state verificate. L’app verifica la versione locale e salva tutte le scelte in una transazione."
 help: "Aiuto"

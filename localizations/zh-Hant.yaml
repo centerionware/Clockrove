@@ -172,6 +172,7 @@ restoreDeletionCountNote: "此數量僅計算備份中的刪除標記，並非�
 restoreCancelled: "已取消預覽。未變更任何本機記錄。"
 restoreCleanupFailed: "無法清理還原暫存資料。請關閉並重新開啟 Clockrove 後再試一次。"
 restoreFailed: "無法處理備份。請檢查所選檔案後再試一次。"
+restoreErrorCode: "錯誤代碼：{code}"
 restoreUnlockFailed: "無法解鎖備份。請檢查密碼和檔案。"
 restoreAllConflictsReviewed: "已審查所有衝突頁面。套用時會檢查本機版本，並在一個交易中儲存所有選擇。"
 help: "說明"

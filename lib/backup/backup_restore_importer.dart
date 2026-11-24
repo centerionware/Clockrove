@@ -2,6 +2,32 @@ import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_file_api.dart';
 import 'package:clockrove/backup/backup_import_api.dart';
+import 'package:flutter/services.dart';
+
+/// Stable, developer-facing reason a restore attempt stopped. Codes are short
+/// ASCII tokens and never contain file contents, paths or personal data, so the
+/// owner can copy one into a bug report.
+final class BackupRestoreReason implements Exception {
+  const BackupRestoreReason(this.code);
+
+  final String code;
+
+  @override
+  String toString() => 'BackupRestoreReason($code)';
+}
+
+/// Short reason shown next to a failed restore so a report names the exact gate.
+String backupRestoreFailureCode(Object error) => switch (error) {
+  BackupRestoreReason(:final code) => code,
+  BackupUnlockException() => 'unlock',
+  BackupCryptoV2CancelledException() => 'cancelled',
+  BackupRestoreImportCleanupException() ||
+  BackupCryptoV2CleanupException() => 'cleanup',
+  FormatException() => 'format',
+  PlatformException(:final code) => 'native-$code',
+  StateError() => 'state',
+  _ => 'unknown',
+};
 
 final class BackupRestoreImportResult {
   BackupRestoreImportResult({
@@ -51,7 +77,7 @@ final class BackupRestoreImporter {
   }) async {
     if (encryptedEnvelope.totalBytes < 1 ||
         encryptedEnvelope.totalBytes > maxEncryptedBackupBytes) {
-      throw const FormatException('The encrypted backup size is unsupported.');
+      throw const BackupRestoreReason('file-size');
     }
     // The native stage's identity includes the archive digest. Authenticate a
     // first bounded pass to learn that digest without retaining plaintext, then
@@ -78,13 +104,21 @@ final class BackupRestoreImporter {
       authenticatedArchiveBytes: authenticated.archiveBytes,
       authenticatedArchiveSha256: authenticated.archiveSha256,
       onHeader: (header) async {
-        if (header.schemaVersion != currentBackupImportSchemaVersion ||
-            header.recordCount > maxBackupImportRows ||
-            header.mediaCount > maxBackupImportMediaCount ||
-            header.mediaBytes > maxBackupImportMediaBytes) {
-          throw const FormatException(
-            'This backup exceeds the supported restore limits.',
+        // Name the exact gate that rejected the archive so a failure report is
+        // actionable instead of a generic "could not be processed".
+        if (header.schemaVersion != currentBackupImportSchemaVersion) {
+          throw BackupRestoreReason(
+            'schema-${header.schemaVersion}-of-$currentBackupImportSchemaVersion',
           );
+        }
+        if (header.recordCount > maxBackupImportRows) {
+          throw const BackupRestoreReason('row-limit');
+        }
+        if (header.mediaCount > maxBackupImportMediaCount) {
+          throw const BackupRestoreReason('media-count-limit');
+        }
+        if (header.mediaBytes > maxBackupImportMediaBytes) {
+          throw const BackupRestoreReason('media-bytes-limit');
         }
         started = await _api.begin(
           archiveFormatVersion: header.formatVersion,
@@ -126,9 +160,7 @@ final class BackupRestoreImporter {
           !_sameDigest(streamed.archiveSha256, authenticated.archiveSha256) ||
           metrics.archiveBytes != streamed.archiveBytes ||
           !_sameDigest(metrics.archiveSha256, streamed.archiveSha256)) {
-        throw const FormatException(
-          'The authenticated backup changed between verification passes.',
-        );
+        throw const BackupRestoreReason('archive-changed');
       }
       final handle = started;
       if (handle == null) throw StateError('Backup import was not started.');
@@ -144,9 +176,7 @@ final class BackupRestoreImporter {
           preview.mediaBytes != metrics.mediaBytes ||
           preview.stagedRecordBytes + preview.mediaBytes >
               maxBackupImportStagedBytes) {
-        throw const FormatException(
-          'The native preview does not match the authenticated archive.',
-        );
+        throw const BackupRestoreReason('stage-mismatch');
       }
       retainPreviewHandle = true;
     } on Object catch (error, stackTrace) {

@@ -44,6 +44,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _furthestReviewedPage = -1;
   BackupCryptoCancellationToken? _cancellationToken;
   AppMessage? _error;
+  String? _errorCode;
   AppMessage? _message;
   AppMessage? _passwordError;
   bool _busy = false;
@@ -97,6 +98,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
       _message = null;
     });
     BackupEncryptedDocument? selected;
@@ -152,7 +154,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           // The input stage expires and is removed by native lifecycle cleanup.
         }
       }
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _errorCode = backupRestoreFailureCode(error);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -178,6 +185,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
       _message = AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
@@ -201,16 +209,16 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         });
       } else {
         await restore.close();
-      }
-    } on Object catch (error) {
-      if (mounted) {
-        setState(() {
-          _error = _safeError(error);
-          _message = null;
-        });
-      }
-    } finally {
-      if (restore != null || !mounted) {
+      }      } on Object catch (error) {
+        if (mounted) {
+          setState(() {
+            _error = _safeError(error);
+            _errorCode = backupRestoreFailureCode(error);
+            _message = null;
+          });
+        }
+      } finally {
+        if (restore != null || !mounted) {
         try {
           await document.close();
         } on Object {
@@ -248,6 +256,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
     });
     try {
       final page = await restore.api.readConflicts(
@@ -262,7 +271,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       });
       _recordPageReview(index, page);
     } on Object catch (error) {
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _errorCode = backupRestoreFailureCode(error);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -285,6 +299,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
     });
     try {
       await restore.api.resolveConflict(
@@ -323,7 +338,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         _recordPageReview(_pageIndex, updated);
       }
     } on Object catch (error) {
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _errorCode = backupRestoreFailureCode(error);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -373,6 +393,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
       _message = AppMessage.restoreApplying;
     });
     try {
@@ -395,9 +416,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           if (_requiresFreshPreview(error)) {
             _previewNeedsRefresh = true;
             _error = AppMessage.restorePreviewStale;
+            _errorCode = null;
             _message = AppMessage.restoreReviewAgain;
           } else {
             _error = _safeError(error);
+            _errorCode = backupRestoreFailureCode(error);
             _message = AppMessage.restoreMergeUnconfirmed;
           }
         });
@@ -412,6 +435,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorCode = null;
     });
     try {
       if (restore != null) await restore.close();
@@ -432,7 +456,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         _furthestReviewedPage = -1;
       });
     } on Object catch (error) {
-      if (mounted) setState(() => _error = _safeError(error));
+      if (mounted) {
+        setState(() {
+          _error = _safeError(error);
+          _errorCode = backupRestoreFailureCode(error);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -545,6 +574,16 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         color: Theme.of(context).colorScheme.error,
                       ),
                     ),
+                    if (_errorCode case final code?) ...[
+                      const SizedBox(height: 4),
+                      SelectableText(
+                        AppMessage.restoreErrorCode.format(context, {
+                          'code': code,
+                        }),
+                        key: const ValueKey('restore-error-code'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
                   if (preview != null) ...[
                     const SizedBox(height: 20),
