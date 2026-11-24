@@ -1,3 +1,8 @@
+> **Published.** The current Data Use Policy is the static page at `website/legal/data-use.html` in the
+> website and is the copy linked from the Play Store listing. This file is the
+> review draft and is superseded; update the published page and this draft in the
+> same change.
+
 # Clockrove Data Usage Policy
 
 **Release draft.** This guide describes the controls in the Android app.

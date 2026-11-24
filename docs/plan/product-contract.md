@@ -10,7 +10,7 @@
 | Price | USD $5.99 one-time paid store download |
 | Future service | Optional team service, tentatively USD $1.99/month/user; not implemented at launch |
 | Storage | Local-first, single-user, no account or server required |
-| Public source | Audit/personal-use source-available rights, not an open-source license |
+| Public source | Open source text for audit and personal builds; not a free license, so the built app and forks may not be published, redistributed, sold or used commercially |
 | Reuse intent | Private personal builds and changes permitted; redistribution/commercial reuse require permission; contributions permitted |
 | Timer | Exactly one active job, editable timesheets and manual entries, local change history |
 | Location history | Recording on by default; global setting with per-job inherit/on/off; ten-minute target with a five-minute ordinary-sample floor; only while clocked in |
@@ -22,7 +22,7 @@
 | Release automation | Main to internal testing; version tags to production submission once setup is ready |
 | Agent artifacts | Public `AGENTS.md`; local skills ignored by Git |
 
-Exact-source-license wording, the name check, and store identity/account setup are explicit readiness gates. Do not quietly choose MIT/GPL/Apache in place of the owner's selected rights. Draft consistent source-available and contribution terms before public source publication, including the GitHub fork/PR permissions needed for contributions. Avoid a contradiction between a blanket redistribution prohibition and permitted GitHub contribution forks. Obtain owner review of the concrete terms; no license text is supplied by this handoff.
+The source-available terms are now published as the repository `LICENSE` (Clockrove Source-Available License 1.0) with a mirrored reader page at `website/legal/license.html`; the source is open for reading, audit and personal builds, but the terms are not a free or OSI-approved license: the built app and any fork may not be published, redistributed, sold or used commercially, and only GitHub contribution forks are permitted. Do not quietly choose MIT/GPL/Apache in place of the owner's selected rights. The owner must still confirm the legal identity, contact address, effective date, governing-law statement and counsel review before store publication, and the name check and store identity/account setup remain readiness gates. The Privacy Policy, Data Use Policy and Terms of Use are published under `website/legal/` as the pages the Play listing links to.
 
 ## 3. User-facing behavior
 

@@ -1,3 +1,8 @@
+> **Published.** The current Privacy Policy is the static page at `website/legal/privacy.html` in the
+> website and is the copy linked from the Play Store listing. This file is the
+> review draft and is superseded; update the published page and this draft in the
+> same change.
+
 # Clockrove Privacy Policy
 
 **Release draft.** Before publishing, confirm the developer identity shown in

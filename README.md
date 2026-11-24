@@ -8,9 +8,17 @@ and actual validation in [plan_status.md](plan_status.md).
 
 ## Rights and contribution
 
-Proposed source-available personal-use and contribution terms await owner review
-in [docs/SOURCE_TERMS_DRAFT.md](docs/SOURCE_TERMS_DRAFT.md). The repository is public by explicit owner instruction; the draft is not an
-effective license and does not grant open-source rights. Read [CONTRIBUTING.md](CONTRIBUTING.md).
+Clockrove's source is open under the [Clockrove Source-Available License](LICENSE):
+reading, audit, personal noncommercial builds and contribution forks are
+allowed. It is not a free license: the built app and forks may not be published,
+redistributed, sold or used commercially, and competing distribution needs
+written permission. Third-party components keep their own licenses. Read
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+The public legal documents live in the static site and are the pages linked from
+the Play Store listing: [Privacy Policy](website/legal/privacy.html),
+[Data Use Policy](website/legal/data-use.html), [Terms of Use](website/legal/terms.html)
+and [Source-Available License](website/legal/license.html).
 
 ## Toolchain and setup
 
