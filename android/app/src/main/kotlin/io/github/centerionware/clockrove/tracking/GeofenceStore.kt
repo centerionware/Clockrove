@@ -143,11 +143,13 @@ internal object GeofenceStore {
             now - fix.measuredUtcMillis <= CURRENT_FIX_MAX_AGE_MS &&
             site.latitude == fix.latitude && site.longitude == fix.longitude
 
-    /** A fresh setup fix seeds membership only; it never creates work or location history. */
+    /**
+     * A fresh setup fix seeds membership only; it never creates work or location history. The areas
+     * keep the observation even before the job has automation settings, so enabling the toggles
+     * afterwards still proves the worker is already inside instead of demanding a re-entry.
+     */
     private fun seedMembershipFromCurrentFix(db: SQLiteDatabase, selected: Site, fix: CurrentFix) {
-        val policy = policies(db).firstOrNull { it.settings.jobId == selected.jobId } ?: return
-        if (!policy.settings.enabled) return
-        val activeSites = sites(db, true).filter { it.jobId == selected.jobId }
+        val activeSites = sites(db).filter { it.jobId == selected.jobId && it.enabled }
         if (activeSites.none { it.id == selected.id }) return
         val seeded = activeSites.associate { candidate ->
             candidate.registrationKey to proximity(fix, candidate)
@@ -159,13 +161,15 @@ internal object GeofenceStore {
                     if (presence == GeofenceMembership.Presence.UNKNOWN) null else fix.measuredUtcMillis,
                     candidate.id))
         }
-        val jobPresence = when {
-            seeded.values.any { it == GeofenceMembership.Presence.INSIDE } -> GeofenceMembership.Presence.INSIDE
-            seeded.values.all { it == GeofenceMembership.Presence.OUTSIDE } -> GeofenceMembership.Presence.OUTSIDE
-            else -> GeofenceMembership.Presence.UNKNOWN
-        }
         db.execSQL("UPDATE automation_policies SET last_presence=?,facts_since_ms=? WHERE job_id=?",
-            arrayOf<Any?>(jobPresence.name, fix.measuredUtcMillis, selected.jobId))
+            arrayOf<Any?>(jobPresence(seeded.values).name, fix.measuredUtcMillis, selected.jobId))
+    }
+
+    private fun jobPresence(presences: Collection<GeofenceMembership.Presence>) = when {
+        presences.any { it == GeofenceMembership.Presence.INSIDE } -> GeofenceMembership.Presence.INSIDE
+        presences.isNotEmpty() && presences.all { it == GeofenceMembership.Presence.OUTSIDE } ->
+            GeofenceMembership.Presence.OUTSIDE
+        else -> GeofenceMembership.Presence.UNKNOWN
     }
 
     private fun proximity(fix: CurrentFix, site: Site): GeofenceMembership.Presence {

@@ -54,13 +54,6 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     'STALE_STATE' => AppMessage.automationStaleState.of(context),
     _ => AppMessage.automationSaveFailed.of(context),
   };
-  void _feedback(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<bool> _write(Future<TimerOutcome> Function() action) async {
     if (_busy) return false;
     setState(() {
