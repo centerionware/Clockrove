@@ -14,12 +14,10 @@ import 'package:clockrove/business/settings_screen.dart';
 import 'package:clockrove/business/report_api.dart';
 import 'package:clockrove/business/invoice_style_preview_screen.dart';
 import 'package:clockrove/business/invoice_billing_policy.dart';
-import 'package:clockrove/l10n/app_localizations.dart';
 import 'package:clockrove/tracking/timer_api.dart';
 import 'package:clockrove/tracking/timer_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -151,14 +149,10 @@ Future<void> _show(
           if (reportApi != null) reportApiProvider.overrideWithValue(reportApi),
         ],
         child: MaterialApp(
-          // Mirror the app's locale so native previews receive the app language
-          // instead of the test host's default locale.
+          // Mirror the app's resolved locale so native previews receive the
+          // language the screen is showing, not the test host's default.
           locale: const Locale('en'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            ...GlobalMaterialLocalizations.delegates,
-          ],
+          supportedLocales: const [Locale('en')],
           debugShowCheckedModeBanner: false,
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
           builder: (_, child) => MediaQuery(
@@ -180,7 +174,6 @@ Future<void> _show(
       ),
     ),
   );
-  // Let the localization catalog load before the first navigation.
   await tester.pumpAndSettle();
   await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
