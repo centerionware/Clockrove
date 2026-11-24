@@ -1,0 +1,30 @@
+# Cloudflare Pages headers for the static Clockrove site.
+# Rules are matched in order and the first matching rule sets each header, so the
+# asset rules come before the site-wide security block.
+#
+# There is no build step and no fingerprinted filenames, so browser caching stays
+# short enough that a corrected legal page is visible the same day. Cloudflare's
+# edge keeps serving the cached copy while it revalidates.
+
+/*.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/*.svg
+  Cache-Control: public, max-age=604800
+  Content-Type: image/svg+xml
+
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  Cache-Control: public, max-age=604800
+
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY

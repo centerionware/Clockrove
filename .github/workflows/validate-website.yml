@@ -4,12 +4,14 @@ on:
     paths:
       - 'website/**'
       - 'scripts/check-documentation-links.py'
+      - 'scripts/check-published-site.py'
       - '.github/workflows/validate-website.yml'
   push:
     branches: [main]
     paths:
       - 'website/**'
       - 'scripts/check-documentation-links.py'
+      - 'scripts/check-published-site.py'
       - '.github/workflows/validate-website.yml'
 
 permissions:
@@ -24,3 +26,4 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/check-documentation-links.py
+      - run: python3 scripts/check-published-site.py

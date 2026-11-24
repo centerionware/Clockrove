@@ -267,6 +267,10 @@ the release candidate.
   Configure Cloudflare Pages to host the static site and deploy the public docs
   as part of full public release; validate links, mobile layout and image loading
   in the Pages deployment. No runtime backend is needed for documentation.
+  Cloudflare builds and deploys the site itself from this repository; the cache and
+  security headers, the publishable-site check and the read-only live check are in
+  place, and the Cloudflare project settings are recorded in
+  `docs/WEBSITE_DEPLOYMENT.md`. Confirming the deployed legal pages remains open.
 - Acceptance: every inventory item has a passing end-to-end case and reviewed
   screenshot; the public static docs build and Pages deployment are verified.
 
