@@ -72,6 +72,9 @@ open class TimerWidget : AppWidgetProvider() {
                 val landscape = viewsForSize(context, bound, id, provider, maxWidth, minHeight)
                 val views = RemoteViews(landscape, portrait)
                 manager.updateAppWidget(id, views)
+                // A language or data change must also reload the collection rows; some
+                // launchers keep the old factory until the adapter is notified.
+                manager.notifyAppWidgetViewDataChanged(id, R.id.widget_tasks)
                 } catch (_: Exception) {
                     // A failed refresh must not crash an already committed timer/settings command.
                     val unavailable = RemoteViews(context.packageName, R.layout.timer_widget).apply {

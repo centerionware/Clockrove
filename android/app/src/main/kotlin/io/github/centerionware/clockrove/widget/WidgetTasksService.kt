@@ -8,6 +8,18 @@ import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.TimerRepository
 import io.github.centerionware.clockrove.tracking.WidgetTasksStore
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
+
+/** Stored due dates are ISO; the widget shows the app language's short date instead. */
+internal fun formatDueDate(isoDate: String, locale: Locale): String = try {
+    val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }.parse(isoDate)
+        ?: return isoDate
+    DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(parsed)
+} catch (_: java.text.ParseException) {
+    isoDate
+}
 
 /** Launcher collections scroll natively without keeping Flutter or a timer service alive. */
 class WidgetTasksService : RemoteViewsService() {
@@ -53,10 +65,11 @@ class WidgetTasksService : RemoteViewsService() {
                 return views
             }
             val item = data.items.getOrNull(position) ?: return null
+            val due = formatDueDate(item.due, strings.resources.configuration.locales[0])
             val date = when {
-                item.due < data.today -> strings.getString(R.string.widget_overdue, item.due)
+                item.due < data.today -> strings.getString(R.string.widget_overdue, due)
                 item.due == data.today -> strings.getString(R.string.widget_today)
-                else -> item.due
+                else -> due
             }
             views.setTextViewText(R.id.widget_task_title, item.title)
             views.setTextViewText(R.id.widget_task_detail, if (data.filtered) date else "${item.jobName} · $date")
