@@ -1,8 +1,9 @@
 # Contributing
 
-Clockrove's source is governed by the [Clockrove Source-Available License](LICENSE),
-which is not an open-source license: audit, personal noncommercial use and
-contribution forks are allowed, but redistribution and commercial use are not.
+Clockrove's source is open under the [Clockrove Source-Available License](LICENSE).
+It is not a free license: reading, audit, personal noncommercial builds and
+contribution forks are allowed, but publishing or redistributing the built app
+or a fork, and commercial use, are not.
 Contributions are accepted under section 3 of that license.
 
 Read AGENTS.md and app_plan.md. Implement one milestone at a time and record

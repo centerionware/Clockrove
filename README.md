@@ -8,10 +8,11 @@ and actual validation in [plan_status.md](plan_status.md).
 
 ## Rights and contribution
 
-Clockrove is published under the [Clockrove Source-Available License](LICENSE):
-audit, personal noncommercial use and contribution forks are allowed;
-redistribution, commercial use and competing distribution are not. It is not an
-open-source license. Third-party components keep their own licenses. Read
+Clockrove's source is open under the [Clockrove Source-Available License](LICENSE):
+reading, audit, personal noncommercial builds and contribution forks are
+allowed. It is not a free license: the built app and forks may not be published,
+redistributed, sold or used commercially, and competing distribution needs
+written permission. Third-party components keep their own licenses. Read
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The public legal documents live in the static site and are the pages linked from

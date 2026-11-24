@@ -1,7 +1,9 @@
 > **Adopted.** The owner's source-available intent is now published as the
 > repository `LICENSE` (Clockrove Source-Available License 1.0) and mirrored at
 > `website/legal/license.html`. This file records the proposal that led to it;
-> the `LICENSE` file is canonical. It is not an open-source license.
+> the `LICENSE` file is canonical. The source is open to read, audit and build,
+> but this is not a free license: the built app and forks are not free to
+> publish, redistribute, sell or use commercially.
 
 # Proposed Clockrove source terms — pending owner review
 
@@ -30,4 +32,5 @@ third-party components remain governed by their own licenses.
 
 Owner review must confirm the intended scope of personal use, the contribution
 fork exception, contribution relicensing rights, and warranty/liability wording.
-These source-available terms are not an OSI open-source license.
+These source-available terms are not a free or OSI-approved open-source license: the
+built app and forks may not be published, redistributed, sold or used commercially.

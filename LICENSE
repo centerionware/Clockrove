@@ -2,9 +2,12 @@ Clockrove Source-Available License 1.0
 
 Copyright (c) 2026 Clockrove. All rights reserved.
 
-This license is not an open-source license. It grants no rights except those
-stated below. Open-source licenses such as MIT, Apache-2.0 and GPL are not
-applied to Clockrove's original code and documentation.
+Clockrove's source is open: you may read, audit and build it. This is not a
+free license, and it grants no rights except those stated below. The built app
+and any fork build are not free to do whatever: they may not be published,
+redistributed, sold or used commercially. Free-software licenses such as MIT,
+Apache-2.0 and GPL are not applied to Clockrove's original code and
+documentation.
 
 This license covers Clockrove's original source code, documentation and assets
 in this repository. Third-party components, dependencies, fonts, map data and
