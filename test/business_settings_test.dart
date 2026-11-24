@@ -180,6 +180,8 @@ Future<void> _show(
       ),
     ),
   );
+  // Let the localization catalog load before the first navigation.
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
 }
