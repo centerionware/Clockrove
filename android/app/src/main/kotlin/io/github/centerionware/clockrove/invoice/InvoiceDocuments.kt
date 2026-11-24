@@ -144,7 +144,11 @@ internal object InvoiceDocuments {
     }
 
     /** Real native sample document for Settings; it consumes no invoice number and writes no records. */
-    fun settingsPreview(context: Context, style: String, currency: String, digits: Int, logoBytes: ByteArray? = null): ByteArray {
+    fun settingsPreview(context: Context, style: String, currency: String, digits: Int, logoBytes: ByteArray? = null, languageTag: String? = null): ByteArray =
+        InvoicePdf.generate(context, sampleSnapshot(context, style, currency, digits, languageTag), logoBytes, languageTag = languageTag)
+
+    /** Sample content in [languageTag] (or the saved preference), so tests can check the copy. */
+    internal fun sampleSnapshot(context: Context, style: String, currency: String, digits: Int, languageTag: String? = null): InvoiceStore.Snapshot {
         require(style in setOf("MINIMAL", "CLASSIC", "MODERN"))
         val currencyDigits = Currency.getInstance(currency).defaultFractionDigits
         require(digits == currencyDigits && digits in 0..3)
@@ -154,7 +158,7 @@ internal object InvoiceDocuments {
         val tax = TaxRate.amount(subtotal, 75000)
         val total = subtotal.add(tax)
         val now = System.currentTimeMillis()
-        val strings = localizedContext(context)
+        val strings = localizedContext(context, languageTag)
         val locale = strings.resources.configuration.locales[0] ?: Locale.getDefault()
         val day = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
             .apply { timeZone = TimeZone.getTimeZone("UTC") }
@@ -199,6 +203,6 @@ internal object InvoiceDocuments {
             subtotal = InvoiceStore.amount(subtotal, digits), taxRateUnits = 75000,
             taxAmount = InvoiceStore.amount(tax, digits),
         )
-        return InvoicePdf.generate(context, snapshot, logoBytes)
+        return snapshot
     }
 }

@@ -49,8 +49,16 @@ internal class LanguageHostApi(context: Context, messenger: BinaryMessenger) {
 internal fun languagePreferences(context: Context) =
     context.applicationContext.getSharedPreferences("clockrove-language", Context.MODE_PRIVATE)
 
-internal fun localizedContext(context: Context): Context {
-    val tag = languagePreferences(context).getString("language", null) ?: return context
+/**
+ * Resources in the app's language. [languageTag] is the locale the UI is showing right now, so a
+ * generated document matches the screen beside it even when the saved preference lags behind
+ * (Android per-app language, a language change that has not been written back, or a cleared
+ * override on a phone whose language differs).
+ */
+internal fun localizedContext(context: Context, languageTag: String? = null): Context {
+    val tag = languageTag?.takeIf { it.isNotBlank() }
+        ?: languagePreferences(context).getString("language", null)
+        ?: return context
     val locale = Locale.forLanguageTag(tag)
     val configuration = Configuration(context.resources.configuration).apply { setLocale(locale) }
     return context.createConfigurationContext(configuration)

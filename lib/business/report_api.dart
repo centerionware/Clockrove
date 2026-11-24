@@ -723,6 +723,7 @@ class ReportApi {
     required int digits,
     required Uint8List? logo,
     required int page,
+    required String languageTag,
   }) async {
     final value = (await _documents.invokeMapMethod<Object?, Object?>(
       'settingsInvoicePreview',
@@ -732,6 +733,8 @@ class ReportApi {
         'digits': digits,
         'logo': logo,
         'page': page,
+        // The sample document follows the language the screen is showing.
+        'languageTag': languageTag,
       },
     ))!;
     return InvoicePage(

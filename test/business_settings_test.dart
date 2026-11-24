@@ -41,6 +41,7 @@ class _PreviewReportApi extends ReportApi {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
   );
   final styles = <String>[];
+  final languages = <String>[];
 
   @override
   Future<InvoicePage> previewStyle({
@@ -49,8 +50,10 @@ class _PreviewReportApi extends ReportApi {
     required int digits,
     required Uint8List? logo,
     required int page,
+    required String languageTag,
   }) async {
     styles.add(style);
+    languages.add(languageTag);
     return InvoicePage(page, 1, Uint8List.fromList(pixel));
   }
 }
@@ -243,6 +246,8 @@ void main() {
     );
     expect(find.text('Page 1 of 1'), findsOneWidget);
     expect(reports.styles, ['CLASSIC']);
+    // The native sample document follows the app language, not the phone default.
+    expect(reports.languages, ['en']);
     expect(tester.takeException(), isNull);
   });
 
