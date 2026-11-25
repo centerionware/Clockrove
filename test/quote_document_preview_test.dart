@@ -20,7 +20,12 @@ class _QuotePage extends QuoteApi {
   final Uint8List bytes;
   final calls = <String>[];
   @override
-  Future<InvoicePage> preview(String id, int revision, int page) async {
+  Future<InvoicePage> preview(
+    String id,
+    int revision,
+    int page, {
+    required String languageTag,
+  }) async {
     calls.add('preview/$id/$revision/$page');
     return InvoicePage(
       0,
@@ -31,12 +36,20 @@ class _QuotePage extends QuoteApi {
   }
 
   @override
-  Future<void> email(String id, int revision) async {
+  Future<void> email(
+    String id,
+    int revision, {
+    required String languageTag,
+  }) async {
     calls.add('email/$id/$revision');
   }
 
   @override
-  Future<bool> savePdf(String id, int revision) async {
+  Future<bool> savePdf(
+    String id,
+    int revision, {
+    required String languageTag,
+  }) async {
     calls.add('save/$id/$revision');
     return false;
   }

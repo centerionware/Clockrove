@@ -36,14 +36,15 @@ for case in root.findall('testcase'):
     detail = ' '.join(part for part in [failure.get('message', ''), (failure.text or '').strip()] if part)
     detail = detail[:3000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
     print(f"::error title=Android PDF acceptance::{case.attrib.get('name', 'unknown test')}: {detail}")
-assert int(root.attrib['tests']) == 5, root.attrib
+assert int(root.attrib['tests']) == 6, root.attrib
 assert all(int(root.attrib[k]) == 0 for k in ['failures', 'errors', 'skipped']), root.attrib
 cases = root.findall('testcase')
-assert len(cases) == 5
+assert len(cases) == 6
 assert {(c.attrib['classname'], c.attrib['name']) for c in cases} == {
     ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'settingsStylePreviewRendersSamplePdfWithoutChangingBusinessState'),
     ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'invoicePartiesUseWrappedColumnsAndSubtotalTaxNumbersEndAtTheRightEdge'),
     ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'nativePaymentsProduceAllStylePartialPaidBalanceCorrectionAndWideCopies'),
+    ('io.github.centerionware.billingtest.InvoiceCopiesPdfTest', 'documentSampleRendersInTheLanguageTheScreenReports'),
     ('io.github.centerionware.billingtest.InvoiceBlobStorageDeviceTest', 'originalCopyAndLogoBytesSurviveActualCursorWindowLimit'),
     ('io.github.centerionware.billingtest.QuotePdfDeviceTest', 'allStylesPreserveIssuedRevisionsAndExactWideEstimatesWithoutBillingWork'),
 }

@@ -312,6 +312,50 @@ class InvoiceCopiesPdfTest {
             assertNull(repository.saveBusinessSettings("copy-pdf-restore-settings", version, before).conflict)
         }
     }
+    /**
+     * The screen's language must reach the renderer, not only the saved preference.
+     * This uses the sample document so it never consumes an invoice or quote number.
+     */
+    @Test fun documentSampleRendersInTheLanguageTheScreenReports() {
+        if (android.os.Build.VERSION.SDK_INT < 35) return
+        for ((tag, expected, absent) in listOf(
+            Triple("de", listOf("RECHNUNG", "RECHNUNGAN", "Ausgestellt", "Zwischensumme", "SUMME"), listOf("BILLTO", "Subtotal", "Issued")),
+            Triple("fr", listOf("FACTURE", "FACTURÉÀ", "Sous-total"), listOf("INVOICE", "BILLTO")),
+        )) {
+            val text = extractedText(
+                InvoiceDocuments.settingsPreview(app, "MODERN", "USD", 2, languageTag = tag),
+            ).filterNot { it.isWhitespace() }
+            for (value in expected) {
+                assertTrue(
+                    "$tag sample is missing $value; extracted text: ${text.take(2000)}",
+                    text.contains(value),
+                )
+            }
+            for (value in absent) {
+                assertFalse(
+                    "$tag sample still shows English $value; extracted text: ${text.take(2000)}",
+                    text.contains(value),
+                )
+            }
+        }
+    }
+
+    private fun extractedText(pdf: ByteArray): String {
+        val file = File.createTempFile("document-language-", ".pdf", app.cacheDir)
+        try {
+            file.writeBytes(pdf)
+            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    buildString {
+                        for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                            append(CopyPdfTextApi35.read(page))
+                            append('\n')
+                        }
+                    }
+                }
+            }
+        } finally { file.delete() }
+    }
 }
 
 /** Isolate API-35-only PDF APIs from Android 7. */

@@ -22,11 +22,18 @@ class InvoiceScreen extends ConsumerStatefulWidget {
 
 class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   String? _notice;
+  String? _languageTag;
   Future<InvoicePage> _preview(int page) async {
     final api = ref.read(reportApiProvider), copy = widget.copyId;
+    final languageTag = Localizations.localeOf(context).toLanguageTag();
     final result = await (copy == null
-        ? api.preview(widget.invoiceId, page)
-        : api.previewCopy(widget.invoiceId, copy, page));
+        ? api.preview(widget.invoiceId, page, languageTag: languageTag)
+        : api.previewCopy(
+            widget.invoiceId,
+            copy,
+            page,
+            languageTag: languageTag,
+          ));
     if (mounted && result.notice != _notice) {
       setState(() => _notice = result.notice);
     }
@@ -34,6 +41,17 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
   }
 
   late Future<InvoicePage> _page = _preview(0);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tag = Localizations.localeOf(context).toLanguageTag();
+    if (_languageTag != null && _languageTag != tag) {
+      _page = _preview(0);
+      _notice = null;
+    }
+    _languageTag = tag;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -54,26 +72,32 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
     });
     try {
       final api = ref.read(reportApiProvider);
+      final languageTag = Localizations.localeOf(context).toLanguageTag();
+      final copy = widget.copyId;
       AppMessage message;
       if (kind == 'email') {
-        if (widget.copyId == null) {
-          await api.email(widget.invoiceId);
+        if (copy == null) {
+          await api.email(widget.invoiceId, languageTag: languageTag);
         } else {
-          await api.emailCopy(widget.invoiceId, widget.copyId!);
+          await api.emailCopy(widget.invoiceId, copy, languageTag: languageTag);
         }
         message = AppMessage.invoiceEmailOpened;
       } else if (kind == 'share') {
-        if (widget.copyId == null) {
-          await api.share(widget.invoiceId);
+        if (copy == null) {
+          await api.share(widget.invoiceId, languageTag: languageTag);
         } else {
-          await api.shareCopy(widget.invoiceId, widget.copyId!);
+          await api.shareCopy(widget.invoiceId, copy, languageTag: languageTag);
         }
         message = AppMessage.documentShareOpened;
       } else {
         message =
-            await (widget.copyId == null
-                ? api.save(widget.invoiceId)
-                : api.saveCopy(widget.invoiceId, widget.copyId!))
+            await (copy == null
+                ? api.save(widget.invoiceId, languageTag: languageTag)
+                : api.saveCopy(
+                    widget.invoiceId,
+                    copy,
+                    languageTag: languageTag,
+                  ))
             ? AppMessage.reportPdfSaved
             : AppMessage.invoiceSaveCancelled;
       }

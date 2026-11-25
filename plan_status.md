@@ -191,7 +191,13 @@ Android resources. Stored PDFs and saved email template expansions are
 preserved. New quote and invoice PDFs and the Settings sample use localized
 document titles, party labels, issue dates and page footers. Already cached
 PDF bytes are reused. For a document whose PDF has yet to be cached, the
-first render uses the device's current effective app language. Line-item
+first render uses the device's current effective app language. Document
+preview, save, email and share calls now carry the language the screen is
+showing, and quote documents rebuild their payload copy in that language,
+so a document is never rendered in a language different from the one on
+screen at the moment it is generated. A new instrumented check renders an
+invoice and the Settings sample in German and French and asserts the
+extracted labels; it awaits GitHub Actions. Line-item
 headings, amount fallbacks, subtotal, tax, total, payment state, balances,
 credit labels, and cancellation notices use translated Android resources.
 The PDF renderer reserves width for translated total labels before drawing

@@ -28,7 +28,11 @@ class _Invoices extends ReportApi {
     ),
   ];
   @override
-  Future<InvoicePage> preview(String id, int page) async => throw StateError(
+  Future<InvoicePage> preview(
+    String id,
+    int page, {
+    required String languageTag,
+  }) async => throw StateError(
     'Real PDF validation runs on Android; no mock document success',
   );
 }
