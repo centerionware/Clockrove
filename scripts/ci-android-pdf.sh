@@ -111,6 +111,14 @@ for clockrove_api in 24 35; do
   timeout --kill-after=10s 120s "$sdkmanager" --sdk_root="$ANDROID_HOME" --list_installed > "$RUNNER_TEMP/clockrove-installed-$clockrove_api.txt"
   echo "Creating API $clockrove_api test AVD"
   echo no | timeout --kill-after=10s 120s "$avdmanager" create avd --force --name "clockrove-pdf-$clockrove_api" --package "system-images;android-$clockrove_api;default;x86_64" --device pixel_2
+  # Pixel AVDs default to a hardware keyboard, which suppresses the software
+  # IME. The task-comment journey must observe the real keyboard window.
+  clockrove_avd_config="$ANDROID_AVD_HOME/clockrove-pdf-$clockrove_api.avd/config.ini"
+  if grep -q '^hw.keyboard=' "$clockrove_avd_config"; then
+    sed -i 's/^hw.keyboard=.*/hw.keyboard=no/' "$clockrove_avd_config"
+  else
+    printf 'hw.keyboard=no\n' >> "$clockrove_avd_config"
+  fi
   echo "Starting API $clockrove_api emulator"
   "$ANDROID_HOME/emulator/emulator" -avd "clockrove-pdf-$clockrove_api" -port 5554 -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 -feature -Vulkan > "$RUNNER_TEMP/clockrove-pdf-emulator-$clockrove_api.log" 2>&1 &
   clockrove_emulator_pid=$!
@@ -187,6 +195,7 @@ for clockrove_api in 24 35; do
   adb -s emulator-5554 shell settings put global window_animation_scale 0
   adb -s emulator-5554 shell settings put global transition_animation_scale 0
   adb -s emulator-5554 shell settings put global animator_duration_scale 0
+  adb -s emulator-5554 shell settings put secure show_ime_with_hard_keyboard 1
   # Run the picker before other device journeys mutate app and picker state.
   clockrove_run_validation_suite "$clockrove_api" backup-picker \
     bash "$GITHUB_WORKSPACE/scripts/ci-android-backup-picker.sh" \
