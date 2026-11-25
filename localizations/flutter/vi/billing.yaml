@@ -1,3 +1,3 @@
 billingModeMinimumThenExact: "Số giờ tối thiểu, sau đó tính thời gian chính xác"
-billingModeRoundTotalUp: "Làm tròn tổng thời gian lên giờ tiếp theo"
+billingModeRoundTotalUp: "Làm tròn tổng thời gian đến giờ gần nhất"
 minimumHoursSummary: "{hours} giờ"

@@ -5,17 +5,13 @@ import android.database.sqlite.SQLiteDatabase
 import org.json.JSONObject
 
 /**
- * Older job purges tombstoned or redacted revisions for records that are still
- * retained: actual costs, invoice coverage and claims, payment destinations, and
- * quote links. Export validates only graph structure, so that damage surfaced as
- * INVALID_REVISION_GRAPH when the owner restored a fresh archive. Rebuild each
- * retained row's head from the row itself before the next export.
+ * Older migrations and job purges could leave a row's revision head tombstoned,
+ * redacted, or frozen before later columns existed. Export validates only graph
+ * structure, so the damage surfaced as INVALID_REVISION_GRAPH when a fresh
+ * archive was restored. Rebuild every revision-backed row's head from the row
+ * itself before the next export; unchanged rows are skipped.
  */
-internal object RetainedFinancialRevisionRepair {
-    private val repairableKinds = setOf(
-        "actual_cost", "invoice_coverage", "invoice_task_claim", "invoice_time_claim",
-        "payment_destination", "quote_draft", "quote_decision", "quote_invoice_link",
-    )
+internal object RevisionDataRepair {
 
     private data class Head(val jobId: String?, val payload: String?, val deleted: Boolean)
 
@@ -30,32 +26,33 @@ internal object RetainedFinancialRevisionRepair {
     fun repair(db: SQLiteDatabase, at: Long) {
         val pending = mutableListOf<Pending>()
         BackupImportStore.revisionDataTables.forEach { (kind, table) ->
-            if (kind !in JobLifecycleStore.financialRevisionKinds || kind !in repairableKinds) return@forEach
             val payloadColumns = BackupImportStore.revisionDataColumns[kind] ?: return@forEach
-            val queryColumns = if (kind == "quote_draft") listOf("quote_id", "payload") else payloadColumns
+            val queryColumns = when (kind) {
+                "settings_money", "job_money", "card_money", "template_money" ->
+                    listOf("id", "minor_text")
+                "task_quantity" -> listOf("card_id", "quantity_units")
+                "template_quantity" -> listOf("template_id", "quantity_units")
+                "quote_draft" -> listOf("quote_id", "payload")
+                else -> payloadColumns
+            }
             db.query(table, queryColumns.toTypedArray(), null, null, null, null, null).use { rows ->
                 while (rows.moveToNext()) {
                     val row = queryColumns.mapIndexed { index, name ->
                         name to cursorValue(rows, index)
                     }.toMap()
-                    // Draft revisions identify the quote as id while the table stores quote_id.
-                    val values = if (kind == "quote_draft") {
-                        mapOf("id" to row["quote_id"], "payload" to row["payload"])
-                    } else {
-                        row
-                    }
-                    val entityId = if (kind == "quote_draft") {
-                        values["id"]?.toString()
-                    } else {
-                        entityIdFor(table, values)
-                    } ?: continue
+                    val entityId = entityIdFor(table, row) ?: continue
                     val head = head(db, kind, entityId) ?: continue
-                    val expectedDeleted = values["deleted_ms"] != null
+                    val expectedDeleted = row["deleted_ms"] != null
                     val expected = payloadColumns.toSet()
                     if (head.deleted == expectedDeleted && head.payload != null &&
                         payloadCovers(head.payload, expected, optionalPayloadKeys(kind))) {
                         continue
                     }
+                    // Money and quantity revisions derive columns such as job_id from
+                    // their parent row, so rebuild through the same projection used by
+                    // the import validator.
+                    val values = payloadValuesForDataRow(db, null, kind, row)
+                        ?: continue
                     pending.add(
                         Pending(
                             kind, entityId, head.jobId,

@@ -55,7 +55,7 @@ internal object InvoiceCoverageStore {
             db.rawQuery("SELECT i.id,i.number FROM invoices i LEFT JOIN invoice_coverage c ON c.invoice_id=i.id WHERE i.job_id=? AND (c.invoice_id IS NULL OR c.state='LEGACY') AND NOT EXISTS(SELECT 1 FROM invoice_voids v WHERE v.invoice_id=i.id) ORDER BY i.created_ms,i.id", arrayOf(job)).use { rows ->
                 while (rows.moveToNext()) legacy.add(rows.getString(0) to rows.getString(1))
             }
-            val claims = db.rawQuery("SELECT c.invoice_id,i.number,c.start_ms,c.end_ms FROM invoice_time_claims c JOIN invoices i ON i.id=c.invoice_id WHERE c.job_id=? AND c.released_ms IS NULL AND c.start_ms<? AND c.end_ms>? ORDER BY c.start_ms,c.end_ms,c.id",
+            val claims = db.rawQuery("SELECT c.invoice_id,i.number,c.start_ms,c.end_ms FROM invoice_time_claims c JOIN invoices i ON i.id=c.invoice_id WHERE c.job_id=? AND c.released_ms IS NULL AND NOT EXISTS(SELECT 1 FROM invoice_voids v WHERE v.invoice_id=c.invoice_id) AND c.start_ms<? AND c.end_ms>? ORDER BY c.start_ms,c.end_ms,c.id",
                 arrayOf(job, source.days.last().end.toString(), source.days.first().start.toString())).use { rows ->
                 buildList { while (rows.moveToNext()) add(TimeClaim(rows.getString(0), rows.getString(1), rows.getLong(2), rows.getLong(3))) }
             }
@@ -73,7 +73,7 @@ internal object InvoiceCoverageStore {
                 }
                 if (cursor < interval.end) intervals.add(interval.copy(start = cursor))
             }
-            val taskClaims = db.rawQuery("SELECT c.task_id,c.invoice_id,i.number FROM invoice_task_claims c JOIN invoices i ON i.id=c.invoice_id WHERE c.job_id=? AND c.released_ms IS NULL", arrayOf(job)).use { rows ->
+            val taskClaims = db.rawQuery("SELECT c.task_id,c.invoice_id,i.number FROM invoice_task_claims c JOIN invoices i ON i.id=c.invoice_id WHERE c.job_id=? AND c.released_ms IS NULL AND NOT EXISTS(SELECT 1 FROM invoice_voids v WHERE v.invoice_id=c.invoice_id)", arrayOf(job)).use { rows ->
                 buildMap { while (rows.moveToNext()) put(rows.getString(0), rows.getString(1) to rows.getString(2)) }
             }
             source.tasks.filter { it.jobId == job }.forEach { task ->
@@ -90,7 +90,7 @@ internal object InvoiceCoverageStore {
             if (total.mode == "HOURLY") {
                 val charge = InvoiceBillingPolicy.hourlyCharge(duration, total.hourlyMinor ?: BigInteger.ZERO,
                     policy.hourlyMode, policy.minimumHours)
-                val rule = if (policy.hourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP) "Round total time up to the next hour" else "Minimum hours, then exact time"
+                val rule = if (policy.hourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP) "Round total time to the nearest hour" else "Minimum hours, then exact time"
                 total.copy(durationMillis = duration, amountMinor = charge.amountMinor.takeIf { total.hourlyMinor != null }, missingPrices = missing,
                     billedHours = charge.billedHours, billingRule = rule, policyHourlyMode = policy.hourlyMode,
                     policyMinimumHours = policy.minimumHours, policyTaskMinimumMinor = policy.taskMinimumMinor)
@@ -103,7 +103,18 @@ internal object InvoiceCoverageStore {
                     policyTaskMinimumMinor = policy.taskMinimumMinor)
             }
         }
-        return Preview(source.copy(intervals = intervals, tasks = tasks, totals = totals), excluded, legacy)
+        // One active invoice can own several claim segments for the same selected
+        // work. Present it once, spanning every segment, so review screens do
+        // not repeat the same invoice for each reserved interval.
+        val uniqueExcluded = excluded.groupBy { it.invoiceId }.map { (_, rows) ->
+            val first = rows.first()
+            first.copy(
+                sessionId = rows.mapNotNull { it.sessionId }.distinct().singleOrNull(),
+                start = rows.mapNotNull { it.start }.minOrNull(),
+                end = rows.mapNotNull { it.end }.maxOrNull(),
+            )
+        }
+        return Preview(source.copy(intervals = intervals, tasks = tasks, totals = totals), uniqueExcluded, legacy.distinct())
     }
 
     /** Caller holds the same transaction that inserts the immutable invoice. */

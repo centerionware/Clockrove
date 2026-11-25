@@ -17,14 +17,24 @@ class InvoiceBillingPolicyTest {
         val hourAndMinute = InvoiceBillingPolicy.hourlyCharge(BigInteger.valueOf(3_660_000), rate,
             InvoiceBillingPolicy.MINIMUM_THEN_EXACT, "1")
         assertEquals(BigInteger.valueOf(10_167), hourAndMinute.amountMinor)
-        assertEquals("1.016666667", hourAndMinute.billedHours)
+        assertEquals("1.02", hourAndMinute.billedHours)
     }
 
-    @Test fun roundUpAppliesToTheAggregatedDurationAndHonorsLargerMinimum() {
+    @Test fun nearestHourRoundsTheAggregatedDurationAndHonorsLargerMinimum() {
         val oneHourOneMinute = InvoiceBillingPolicy.hourlyCharge(BigInteger.valueOf(3_660_000), rate,
             InvoiceBillingPolicy.ROUND_TOTAL_UP, "0")
-        assertEquals(BigInteger.valueOf(20_000), oneHourOneMinute.amountMinor)
-        assertEquals("2", oneHourOneMinute.billedHours)
+        assertEquals(BigInteger.valueOf(10_000), oneHourOneMinute.amountMinor)
+        assertEquals("1", oneHourOneMinute.billedHours)
+
+        val twentyNineMinutes = InvoiceBillingPolicy.hourlyCharge(minute * BigInteger.valueOf(29), rate,
+            InvoiceBillingPolicy.ROUND_TOTAL_UP, "0")
+        assertEquals(BigInteger.ZERO, twentyNineMinutes.amountMinor)
+        assertEquals("0", twentyNineMinutes.billedHours)
+
+        val thirtyMinutes = InvoiceBillingPolicy.hourlyCharge(minute * BigInteger.valueOf(30), rate,
+            InvoiceBillingPolicy.ROUND_TOTAL_UP, "0")
+        assertEquals(BigInteger.valueOf(10_000), thirtyMinutes.amountMinor)
+        assertEquals("1", thirtyMinutes.billedHours)
 
         val underMinimum = InvoiceBillingPolicy.hourlyCharge(BigInteger.valueOf(3_600_000), rate,
             InvoiceBillingPolicy.ROUND_TOTAL_UP, "2.5")

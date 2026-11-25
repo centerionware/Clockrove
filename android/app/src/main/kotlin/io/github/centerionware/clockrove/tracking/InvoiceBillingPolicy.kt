@@ -28,8 +28,8 @@ internal object InvoiceBillingPolicy {
         val minimum = BigDecimal(minimumHours)
         val minimumNumerator = minimum.unscaledValue()
         val minimumDenominator = BigInteger.TEN.pow(minimum.scale())
-        val actualAtLeastMinimum = durationMillis.multiply(minimumDenominator) >= minimumNumerator.multiply(hourMillis)
         if (mode == MINIMUM_THEN_EXACT) {
+            val actualAtLeastMinimum = durationMillis.multiply(minimumDenominator) >= minimumNumerator.multiply(hourMillis)
             return if (actualAtLeastMinimum) {
                 HourlyCharge(roundHalfUp(durationMillis.multiply(rateMinor), hourMillis), formatHours(durationMillis, hourMillis))
             } else {
@@ -37,10 +37,13 @@ internal object InvoiceBillingPolicy {
             }
         }
 
-        val roundedHours = durationMillis.add(hourMillis).subtract(BigInteger.ONE).divide(hourMillis)
-        val roundedAtLeastMinimum = roundedHours.multiply(minimumDenominator) >= minimumNumerator
+        // Round the aggregated duration to the nearest whole hour, half up.
+        // The legacy stored value is kept so existing settings and backups
+        // continue to load; the customer-facing rule is nearest-hour billing.
+        val nearestHours = durationMillis.add(hourMillis.divide(BigInteger.valueOf(2))).divide(hourMillis)
+        val roundedAtLeastMinimum = nearestHours.multiply(minimumDenominator) >= minimumNumerator
         return if (roundedAtLeastMinimum) {
-            HourlyCharge(roundedHours.multiply(rateMinor), roundedHours.toString())
+            HourlyCharge(nearestHours.multiply(rateMinor), nearestHours.toString())
         } else {
             HourlyCharge(roundHalfUp(minimumNumerator.multiply(rateMinor), minimumDenominator), canonicalHours(minimumHours))
         }
@@ -55,5 +58,5 @@ internal object InvoiceBillingPolicy {
         numerator.add(denominator.divide(BigInteger.valueOf(2))).divide(denominator)
 
     private fun formatHours(durationMillis: BigInteger, hour: BigInteger): String =
-        BigDecimal(durationMillis).divide(BigDecimal(hour), 9, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        BigDecimal(durationMillis).divide(BigDecimal(hour), 2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 }

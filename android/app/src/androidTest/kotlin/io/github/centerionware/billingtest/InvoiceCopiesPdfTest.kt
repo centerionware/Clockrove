@@ -241,6 +241,21 @@ class InvoiceCopiesPdfTest {
                 val id = invoice(style, token, BigInteger.valueOf(10000))
                 val original = InvoiceDocuments.ensure(app, repository, id)
                 if (style == "MINIMAL") assertEquals("INV-1000", original.number)
+                if (style == "MINIMAL" && android.os.Build.VERSION.SDK_INT >= 35) {
+                    // The English bytes are already cached above. A preview in Spanish
+                    // must render again, and the emailed URI must serve the same language.
+                    val spanish = requireNotNull(InvoiceDocuments.ensure(app, repository, id, languageTag = "es").pdf)
+                    val text = extractedText(spanish).filterNot { it.isWhitespace() }.uppercase(Locale.ROOT)
+                    for (value in listOf("FACTURA", "FACTURARA", "IMPUESTO", "DESCRIPCIÓN", "SUBTOTAL", "TOTALDELAFACTURA")) {
+                        assertTrue("Spanish invoice is missing $value; extracted text: ${text.take(2000)}", text.contains(value))
+                    }
+                    assertFalse("Spanish invoice still shows English BILLTO", text.contains("BILLTO"))
+                    app.contentResolver.openInputStream(InvoiceDocuments.uri(app, original, "es"))!!.use { input ->
+                        val served = extractedText(input.readBytes()).filterNot { it.isWhitespace() }.uppercase(Locale.ROOT)
+                        assertTrue("Spanish attachment is missing FACTURA", served.contains("FACTURA"))
+                        assertFalse("Spanish attachment still shows English BILLTO", served.contains("BILLTO"))
+                    }
+                }
                 pay(id, "$token-first", BigInteger.valueOf(3000))
                 val partial = render(id, "receipt-$token-first", "clockrove-receipt-partial-$token",
                     listOf("PaidtodateUSD30.00", "BALANCEDUEUSD77.50", "USD107.50", "Syntheticpaymentreference"))

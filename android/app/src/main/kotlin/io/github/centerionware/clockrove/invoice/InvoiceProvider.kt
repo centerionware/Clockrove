@@ -24,16 +24,19 @@ class InvoiceProvider() : ContentProvider() {
         if (uri.scheme != "content" || uri.authority != "${requireNotNull(context).packageName}.invoices" || (!quote && !invoice)) throw FileNotFoundException("Invoice unavailable")
         // The language travels in the URI so an attachment renders in the language it was shared from.
         val languageTag = uri.getQueryParameter("lang")?.takeIf { LANGUAGE_TAG.matches(it) }
-        return try { val repository = injectedRepository ?: TimerRepository.get(requireNotNull(context))
-            (if (quote) repository.quoteDocument(parts[1], parts[2].toInt(), languageTag)
-                else if (parts[0] == "copies") repository.invoiceCopy(parts[1], languageTag) else repository.invoice(parts[1]))
-                .also { if (it.pdf == null) throw FileNotFoundException("Invoice unavailable") } }
+        return try { val app = requireNotNull(context); val repository = injectedRepository ?: TimerRepository.get(app)
+            // A shared or emailed attachment follows the language in the URI, not
+            // whichever language happened to cache the PDF first.
+            if (quote) InvoiceDocuments.ensureQuote(app, repository, parts[1], parts[2].toInt(), languageTag)
+            else if (parts[0] == "copies") InvoiceDocuments.ensureCopy(app, repository, parts[1], languageTag)
+            else InvoiceDocuments.ensure(app, repository, parts[1], languageTag = languageTag) }
             catch (_: Exception) { throw FileNotFoundException("Invoice unavailable") }
     }
     override fun getType(uri: Uri): String { record(uri); return "application/pdf" }
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         val invoice = record(uri); val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
-        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> InvoiceDocuments.filename(requireNotNull(context), invoice); OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray<Any?>()) }
+        val languageTag = uri.getQueryParameter("lang")?.takeIf { LANGUAGE_TAG.matches(it) }
+        return MatrixCursor(columns).apply { addRow(columns.map { when (it) { OpenableColumns.DISPLAY_NAME -> InvoiceDocuments.filename(requireNotNull(context), invoice, languageTag); OpenableColumns.SIZE -> requireNotNull(invoice.pdf).size; else -> null } }.toTypedArray<Any?>()) }
     }
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         if (mode != "r") throw FileNotFoundException("Read only")

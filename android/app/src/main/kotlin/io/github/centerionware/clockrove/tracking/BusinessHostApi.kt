@@ -2,6 +2,7 @@ package io.github.centerionware.clockrove.tracking
 
 import android.content.Context
 import io.flutter.plugin.common.BinaryMessenger
+import io.github.centerionware.clockrove.R
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.github.centerionware.clockrove.widget.TimerWidget
@@ -233,7 +234,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         return when (call.method) {
             "prepareQuoteInvoice" -> repository.prepareQuoteInvoice(id, version, QuoteInvoiceStore.Draft(v.string("invoiceId"),
                 quoteInvoiceRequest(Input(requireNotNull(v.value["request"] as? Map<*, *>))),
-                quoteInvoiceChoices(Input(requireNotNull(v.value["choices"] as? Map<*, *>)))))
+                quoteInvoiceChoices(Input(requireNotNull(v.value["choices"] as? Map<*, *>)))), v.nullable("languageTag"))
             "applyQuoteScope" -> {
                 val rows = requireNotNull(v.value["items"] as? List<*>); require(rows.size in 1..2000)
                 val items = rows.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { item ->
@@ -250,7 +251,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 repository.saveQuote(id, version, QuoteStore.Draft(v.string("quoteId"), v.nullable("customerId"), v.nullable("jobId"),
                     v.string("title"), v.string("currency"), v.int("taxUnits"), lines, v.nullable("validUntil"), v.string("terms"), v.string("notes")))
             }
-            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"))
+            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"), v.nullable("languageTag"))
             "decideQuote" -> repository.decideQuote(id, version, v.string("quoteId"), v.int("revision"), v.string("decision"), v.string("note"), v.bool("confirmed"))
             "voidInvoice" -> repository.voidInvoice(id, version, InvoiceLifecycleStore.VoidDraft(v.string("invoiceId"), v.string("reason"), v.string("timezone"), v.bool("confirmed")))
             "replaceInvoice" -> {
@@ -262,7 +263,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                     (raw as? Map<*, *>)?.let { Input(it).let { selection -> ReportStore.Selection(selection.string("firstDate"), selection.string("lastDate"), selection.string("timezone"), selection.strings("jobIds")) } }
                 }
                 repository.replaceInvoice(id, version, InvoiceLifecycleStore.ReplacementDraft(v.string("invoiceId"), v.string("replacementId"), lines,
-                    v.int("taxUnits"), v.string("reason"), v.string("timezone"), v.bool("confirmed"), v.strings("releaseClaimIds"), added))
+                    v.int("taxUnits"), v.string("reason"), v.string("timezone"), v.bool("confirmed"), v.strings("releaseClaimIds"), added), v.nullable("languageTag"))
             }
             "createManualSession", "correctSession" -> {
                 val draft = SessionHistoryStore.Draft(v.string("sessionId"), v.string("jobId"), v.integer("start"), v.integer("end"), v.string("timezone"), v.int("offsetSeconds"))
@@ -304,7 +305,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "recordInvoicePayment" -> repository.recordInvoicePayment(id, version, InvoicePaymentStore.Draft(v.string("paymentId"), v.string("invoiceId"), v.string("amountMinor"), v.string("currency"), v.integer("received"), v.string("timezone"), v.string("method"), v.string("reference"), v.string("note")))
             "reverseInvoicePayment" -> repository.reverseInvoicePayment(id, version, InvoicePaymentStore.Reversal(v.string("reversalId"), v.string("invoiceId"), v.string("paymentId"), v.integer("effective"), v.string("timezone"), v.string("note")))
             "prepareInvoiceBalanceCopy" -> repository.prepareInvoiceBalanceCopy(id, version, v.string("copyToken"), v.string("invoiceId"))
-            "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
+            "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")), v.nullable("languageTag"))
             "reconcileInvoiceCoverage" -> {
                 val raw = requireNotNull(v.value["spans"] as? List<*>); require(raw.size <= 1000)
                 val spans = raw.map { entry -> Input(requireNotNull(entry as? Map<*, *>)).let { span -> LegacyInvoiceStore.Span(span.integer("start"), span.integer("end"), span.string("timezone")) } }
@@ -376,8 +377,12 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         "currency" to v.currency, "fractionDigits" to Currency.getInstance(v.currency).defaultFractionDigits, "hourlyRateMinor" to v.hourlyRateMinor?.toString(), "customerId" to v.customerId, "customerEmailOverride" to v.customerEmailOverride, "taxUnits" to v.taxUnits,
         "locationRecordingOverride" to v.locationRecordingOverride, "hourlyBillingMode" to v.hourlyBillingMode,
         "minimumBillableHours" to v.minimumBillableHours, "minimumTaskFeeMinor" to v.minimumTaskFeeMinor?.toString())
+    private fun minuteInstant(value: Long, zone: String): String = java.text.SimpleDateFormat(
+        "yyyy-MM-dd HH:mm XXX", java.util.Locale.ROOT,
+    ).apply { timeZone = java.util.TimeZone.getTimeZone(zone) }.format(java.util.Date(value))
     private fun invoiceBillingPreview(s: TimerRepository.InvoiceBillingPreview): Map<String, Any?> {
         val preview = s.preview; val report = preview.report; val total = report.totals.single()
+        val strings = repository.localizedStrings()
         val digits = Currency.getInstance(total.currency).defaultFractionDigits
         val subtotal = total.amountMinor?.takeIf { preview.legacy.isEmpty() }
         val tax = subtotal?.takeIf { TaxRate.valid(s.taxUnits) }?.let { TaxRate.amount(it, s.taxUnits) }
@@ -386,9 +391,9 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "taxUnits" to s.taxUnits, "subtotal" to subtotal?.let { InvoiceStore.amount(it, digits) },
             "tax" to tax?.let { InvoiceStore.amount(it, digits) }, "total" to tax?.let { InvoiceStore.amount(requireNotNull(subtotal).add(it), digits) },
             "problem" to problem, "mode" to total.mode,
-            "lines" to (if (problem == "INVOICE_TOO_LARGE") emptyList() else InvoiceStore.billableLines(report, repository.localizedStrings())).map { mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount) },
+            "lines" to (if (problem == "INVOICE_TOO_LARGE") emptyList() else InvoiceStore.billableLines(report, strings)).map { mapOf("title" to it.title, "detail" to it.detail, "amount" to it.amount) },
             "excluded" to preview.excluded.map { mapOf("invoiceId" to it.invoiceId, "number" to it.number, "title" to it.title,
-                "detail" to if (it.taskId != null) "Previously invoiced task" else "${ReportCsv.instant(requireNotNull(it.start), report.selection.timezone)} — ${ReportCsv.instant(requireNotNull(it.end), report.selection.timezone)}") },
+                "detail" to if (it.taskId != null) strings.getString(R.string.invoice_previously_invoiced_task) else "${minuteInstant(requireNotNull(it.start), report.selection.timezone)} — ${minuteInstant(requireNotNull(it.end), report.selection.timezone)}") },
             "legacy" to preview.legacy.map { mapOf("invoiceId" to it.first, "number" to it.second) })
     }
     private fun legacyInvoiceContext(s: TimerRepository.LegacyInvoiceContext): Map<String, Any?> {

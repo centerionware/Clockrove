@@ -77,6 +77,29 @@ class InvoicePreviewTest {
         assertEquals("107.50", issued.total)
     }
 
+    @Test fun nearestHourInvoiceUsesOneRoundedLineWithoutIntervalBreakdown() {
+        val settings = repository.businessSnapshot().settings
+        assertNull(repository.saveBusinessSettings("nearest-hour", version,
+            settings.copy(hourlyBillingMode = InvoiceBillingPolicy.ROUND_TOTAL_UP)).conflict)
+        val start = 1793491200000L
+        assertNull(repository.createManualSession("long-session", version,
+            SessionHistoryStore.Draft("long-session", job, start, start + 3_660_000, "UTC", 0)).conflict)
+
+        val draft = preview()
+        val line = (draft["lines"] as List<*>).single() as Map<*, *>
+        assertEquals("Finalized work", line["title"])
+        assertEquals("1 h", line["detail"])
+        assertEquals("100.00", line["amount"])
+        assertEquals("100.00", draft["subtotal"])
+
+        assertNull(repository.prepareInvoice("prepare-nearest-hour", version, "nearest-hour-invoice", selection).conflict)
+        val issued = InvoiceStore.Snapshot.decode(repository.invoice("nearest-hour-invoice").payload)
+        assertEquals(1, issued.lines.size)
+        assertEquals("1 h", issued.lines.single().detail)
+        assertFalse(issued.basis.contains("actual"))
+        assertFalse(issued.basis.contains("billed"))
+    }
+
     @Test fun taskMinimumFeeIsVisibleAndJobZeroOverrideSuppressesTheGlobalFee() {
         val taskJob = repository.jobDetail(job).job.settings.copy(billingMode = "TASK")
         assertNull(repository.saveJobSettings("task-mode", version, taskJob).conflict)

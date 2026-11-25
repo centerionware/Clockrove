@@ -313,12 +313,16 @@ class QuoteApi {
 
   Future<TimerOutcome> save(String id, int version, QuoteDraft value) =>
       _change('saveQuote', id, version, value.encode());
-  Future<TimerOutcome> issue(String id, int version, String quoteId) => _change(
-    'issueQuote',
-    id,
-    version,
-    {'quoteId': quoteId, 'confirmed': true},
-  );
+  Future<TimerOutcome> issue(
+    String id,
+    int version,
+    String quoteId, {
+    required String languageTag,
+  }) => _change('issueQuote', id, version, {
+    'quoteId': quoteId,
+    'confirmed': true,
+    'languageTag': languageTag,
+  });
   Future<TimerOutcome> decide(
     String id,
     int version,

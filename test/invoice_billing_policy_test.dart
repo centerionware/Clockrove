@@ -19,7 +19,7 @@ void main() {
     );
     expect(
       billingModeMessage(roundTotalUpBilling).english,
-      'Round total time up to the next hour',
+      'Round total time to the nearest hour',
     );
   });
 }

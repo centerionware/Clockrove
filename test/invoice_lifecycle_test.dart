@@ -50,8 +50,9 @@ class _Lifecycle extends InvoiceLifecycleApi {
   Future<TimerOutcome> replace(
     String id,
     int version,
-    InvoiceReplacementDraft draft,
-  ) async {
+    InvoiceReplacementDraft draft, {
+    required String languageTag,
+  }) async {
     replacements.add((id: id, version: version, draft: draft));
     return onReplace == null ? const TimerOutcome(2, null) : await onReplace!();
   }

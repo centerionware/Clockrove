@@ -654,8 +654,15 @@ class _QuoteDetailState extends ConsumerState<_QuoteDetail> {
                           }
                           final id = newBusinessId(),
                               api = ref.read(quoteApiProvider),
-                              quoteId = widget.id;
-                          return () => api.issue(id, version, quoteId);
+                              quoteId = widget.id,
+                              languageTag = Localizations.localeOf(context)
+                                  .toLanguageTag();
+                          return () => api.issue(
+                            id,
+                            version,
+                            quoteId,
+                            languageTag: languageTag,
+                          );
                         },
                         onCommitted: _refresh,
                       ),

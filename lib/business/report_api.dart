@@ -650,14 +650,19 @@ class ReportApi {
     String id,
     int version,
     String invoiceId,
-    ReportSelection selection,
-  ) async {
+    ReportSelection selection, {
+    required String languageTag,
+  }) async {
     final v = (await _channel.invokeMapMethod<String, Object?>(
       'prepareInvoice',
       {
         'id': id,
         'version': version,
-        'value': {...selection.encode(), 'invoiceId': invoiceId},
+        'value': {
+          ...selection.encode(),
+          'invoiceId': invoiceId,
+          'languageTag': languageTag,
+        },
       },
     ))!;
     return TimerOutcome(v['version'] as int, v['conflict'] as String?);

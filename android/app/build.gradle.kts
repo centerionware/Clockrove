@@ -68,6 +68,16 @@ android {
             if (signingReady) signingConfig = signingConfigs.getByName("upload")
         }
     }
+
+    bundle {
+        language {
+            // Settings offers an in-app language picker. Play's default language
+            // split would install only the phone's language, leaving native PDF,
+            // email, widget and notification copy in English when the app is
+            // switched to another catalog.
+            enableSplit = false
+        }
+    }
 }
 
 kotlin {

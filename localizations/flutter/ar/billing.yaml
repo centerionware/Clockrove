@@ -1,3 +1,3 @@
 billingModeMinimumThenExact: "الحد الأدنى للساعات، ثم الوقت الفعلي"
-billingModeRoundTotalUp: "تقريب إجمالي الوقت إلى الساعة التالية"
+billingModeRoundTotalUp: "تقريب إجمالي الوقت إلى أقرب ساعة"
 minimumHoursSummary: "{hours} ساعة"

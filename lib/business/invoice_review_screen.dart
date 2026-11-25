@@ -194,8 +194,15 @@ class _InvoiceReviewScreenState extends ConsumerState<InvoiceReviewScreen> {
                             version = data.version;
                         _invoiceId = invoice;
                         final api = ref.read(reportApiProvider);
-                        return () =>
-                            api.prepare(id, version, invoice, selection);
+                        final languageTag = Localizations.localeOf(context)
+                            .toLanguageTag();
+                        return () => api.prepare(
+                          id,
+                          version,
+                          invoice,
+                          selection,
+                          languageTag: languageTag,
+                        );
                       },
                       onCommitted: () => Navigator.pushReplacement(
                         context,
