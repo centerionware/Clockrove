@@ -86,6 +86,19 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
                 ),
             ).conflict,
         )
+        // A removed cost keeps its row with deleted_ms set and a tombstone head.
+        assertNull(
+            repository.saveActualCost(
+                "round-trip-removed-cost",
+                version,
+                ActualCostStore.Draft(
+                    "round-trip-removed-cost", job, null, "500", "USD", ActualCostStore.MATERIALS,
+                    sessionStart, "UTC", "Synthetic supplier", "Synthetic receipt", "Synthetic removed cost",
+                ),
+            ).conflict,
+        )
+        assertNull(repository.removeActualCost("round-trip-remove-cost", version, "round-trip-removed-cost").conflict)
+
         val archived = repository.createJob("Synthetic archived job")
         assertNull(repository.archiveJob("round-trip-archive", version, archived).conflict)
 
@@ -145,6 +158,7 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         assertTrue(repository.invoice("invoice").payload.isNotEmpty())
         assertEquals("349.38", InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload).total)
         assertTrue(repository.actualCosts().page.entries.any { it.id == "round-trip-cost" })
+        assertTrue(repository.actualCosts().page.entries.none { it.id == "round-trip-removed-cost" })
 
         // Repeat the cycle so restore-time normalization revisions are exercised too;
         // this is extra coverage, not a claim that the owner had restored before.
@@ -152,5 +166,6 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         assertEquals("349.38", InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload).total)
         assertTrue(repository.quotes().page.entries.any { it.id == "quote" })
         assertTrue(repository.actualCosts().page.entries.any { it.id == "round-trip-cost" })
+        assertTrue(repository.actualCosts().page.entries.none { it.id == "round-trip-removed-cost" })
     }
 }

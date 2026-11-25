@@ -78,50 +78,66 @@ internal object ActualCostStore {
         db.execSQL("ALTER TABLE actual_costs ADD COLUMN customer_name TEXT NOT NULL DEFAULT ''")
         db.execSQL("CREATE INDEX actual_costs_customer_date ON actual_costs(customer_id,occurred_ms,id)")
         // Schema-14 heads predate these columns. Snapshot them now so an exported
-        // archive's live cost rows still match their head payload on restore.
-        RevisionStore.snapshotRows(
-            db, "actual_costs", "actual_cost", revisionColumns, at, origin = "MIGRATION",
-        )
+        // archive's cost rows still match their head payload on restore.
+        snapshotRetained(db, at, "MIGRATION")
     }
 
     /**
-     * Retained costs must keep a live head whose payload has every current column.
+     * Retained costs must keep a head that matches the row: live while the row is
+     * live, a tombstone once it is removed, and a payload with every current column.
      * Older builds redacted or tombstoned cost revisions when their job was purged,
      * and schema-14 heads lack the customer columns. Repair those heads from the
-     * live row so a fresh export can be restored. [RevisionStore.record] is
-     * idempotent, so this is safe to run whenever the database opens.
+     * row so a fresh export can be restored. [RevisionStore.record] is idempotent,
+     * so this is safe to run whenever the database opens.
      */
     fun repairRetainedHeads(db: SQLiteDatabase, at: Long) {
         val expected = revisionColumns.toSet()
-        val pending = db.rawQuery(
-            "SELECT a.id,r.payload,r.deleted FROM actual_costs a " +
+        val needsRepair = db.rawQuery(
+            "SELECT a.id,r.payload,r.deleted,a.deleted_ms FROM actual_costs a " +
                 "LEFT JOIN entity_heads h ON h.kind='actual_cost' AND h.entity_id=a.id " +
-                "LEFT JOIN entity_revisions r ON r.id=h.revision_id " +
-                "WHERE a.deleted_ms IS NULL",
+                "LEFT JOIN entity_revisions r ON r.id=h.revision_id",
             null,
         ).use { rows ->
-            buildList {
-                while (rows.moveToNext()) {
-                    val payload = if (rows.isNull(1)) null else rows.getString(1)
-                    val deleted = rows.isNull(2) || rows.getLong(2) != 0L
-                    if (deleted || payload == null || !payloadHasColumns(payload, expected)) {
-                        add(rows.getString(0))
-                    }
+            var pending = false
+            while (rows.moveToNext()) {
+                val payload = if (rows.isNull(1)) null else rows.getString(1)
+                val expectedDeleted = !rows.isNull(3)
+                val headMissing = rows.isNull(2)
+                val headDeleted = !headMissing && rows.getLong(2) != 0L
+                if (headMissing || headDeleted != expectedDeleted || payload == null ||
+                    !payloadHasColumns(payload, expected)) {
+                    pending = true
                 }
             }
+            pending
         }
-        if (pending.isEmpty()) return
+        if (!needsRepair) return
         db.beginTransaction()
         try {
-            pending.forEach { id ->
-                RevisionStore.snapshotRows(
-                    db, "actual_costs", "actual_cost", revisionColumns, at,
-                    where = "id=?", args = arrayOf(id), origin = "REPAIR",
-                )
-            }
+            snapshotRetained(db, at, "REPAIR")
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
+        }
+    }
+
+    private fun snapshotRetained(db: SQLiteDatabase, at: Long, origin: String) {
+        db.query("actual_costs", revisionColumns.toTypedArray(), null, null, null, null, "id").use { rows ->
+            while (rows.moveToNext()) {
+                val values = revisionColumns.mapIndexed { index, name ->
+                    name to when (rows.getType(index)) {
+                        android.database.Cursor.FIELD_TYPE_NULL -> null
+                        android.database.Cursor.FIELD_TYPE_INTEGER -> rows.getLong(index)
+                        android.database.Cursor.FIELD_TYPE_FLOAT -> rows.getDouble(index)
+                        else -> rows.getString(index)
+                    }
+                }.toMap()
+                val id = requireNotNull(values["id"]).toString()
+                RevisionStore.record(
+                    db, "actual_cost", id, values["job_id"] as String?, values, at,
+                    deleted = values["deleted_ms"] != null, origin = origin,
+                )
+            }
         }
     }
 
