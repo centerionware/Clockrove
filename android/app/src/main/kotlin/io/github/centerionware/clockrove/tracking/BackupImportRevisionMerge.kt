@@ -250,6 +250,13 @@ internal fun BackupImportStore.revisionPayloadValuesForDataRow(
         handle: RevisionMergeHandle?,
         kind: String,
         rowValues: Map<String, Any?>,
+    ): Map<String, Any?>? = payloadValuesForDataRow(db, handle, kind, rowValues)
+
+internal fun BackupImportStore.Companion.payloadValuesForDataRow(
+        db: SQLiteDatabase,
+        handle: RevisionMergeHandle?,
+        kind: String,
+        rowValues: Map<String, Any?>,
     ): Map<String, Any?>? {
         fun value(column: String): Any? = rowValues[column]
 

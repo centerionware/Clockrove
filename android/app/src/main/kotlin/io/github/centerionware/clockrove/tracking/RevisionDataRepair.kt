@@ -44,7 +44,7 @@ internal object RevisionDataRepair {
                     // Money and quantity revisions derive columns such as job_id from
                     // their parent row, so rebuild through the same projection used by
                     // the import validator.
-                    val values = BackupImportStore.revisionPayloadValuesForDataRow(db, null, kind, row)
+                    val values = BackupImportStore.Companion.payloadValuesForDataRow(db, null, kind, row)
                         ?: continue
                     pending.add(
                         Pending(

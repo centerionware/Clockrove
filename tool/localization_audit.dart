@@ -115,6 +115,9 @@ Iterable<({int line, String text})> auditKotlinPresentation(
           text.startsWith('widget-stop-') ||
           text.startsWith('/widget-') ||
           text.startsWith('io.github.') ||
+          text.startsWith(r'invoice:$') ||
+          text.startsWith(r'copy:$') ||
+          text.startsWith(r'quote:$') ||
           RegExp(r'^clockrove/[a-z0-9_-]+/v\d+$').hasMatch(text) ||
           RegExp(r'^[a-z]+(?:[A-Z][A-Za-z0-9]*)+$').hasMatch(text) ||
           RegExp(
