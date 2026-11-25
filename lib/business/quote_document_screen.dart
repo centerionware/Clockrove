@@ -42,6 +42,7 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
     if (_languageTag != null && _languageTag != tag) _page = _load(0);
     _languageTag = tag;
   }
+
   void _feedback(AppMessage message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()

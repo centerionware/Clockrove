@@ -356,24 +356,18 @@ class QuoteApi {
     );
   }
 
-  Future<void> email(
-    String id,
-    int revision, {
-    required String languageTag,
-  }) => _documents.invokeMethod<void>('emailQuote', {
-    'quoteId': id,
-    'revision': revision,
-    'languageTag': languageTag,
-  });
-  Future<void> share(
-    String id,
-    int revision, {
-    required String languageTag,
-  }) => _documents.invokeMethod<void>('shareQuote', {
-    'quoteId': id,
-    'revision': revision,
-    'languageTag': languageTag,
-  });
+  Future<void> email(String id, int revision, {required String languageTag}) =>
+      _documents.invokeMethod<void>('emailQuote', {
+        'quoteId': id,
+        'revision': revision,
+        'languageTag': languageTag,
+      });
+  Future<void> share(String id, int revision, {required String languageTag}) =>
+      _documents.invokeMethod<void>('shareQuote', {
+        'quoteId': id,
+        'revision': revision,
+        'languageTag': languageTag,
+      });
   Future<bool> savePdf(
     String id,
     int revision, {

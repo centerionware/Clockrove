@@ -312,25 +312,32 @@ class InvoiceCopiesPdfTest {
             assertNull(repository.saveBusinessSettings("copy-pdf-restore-settings", version, before).conflict)
         }
     }
-    /** The screen's language must reach the renderer, not only the saved preference. */
-    @Test fun documentsRenderInTheLanguageTheScreenReports() {
+    /**
+     * The screen's language must reach the renderer, not only the saved preference.
+     * This uses the sample document so it never consumes an invoice or quote number.
+     */
+    @Test fun documentSampleRendersInTheLanguageTheScreenReports() {
         if (android.os.Build.VERSION.SDK_INT < 35) return
-        val invoiceId = invoice("MODERN", "language", BigInteger.valueOf(125000))
-        val record = InvoiceDocuments.ensure(app, repository, invoiceId, languageTag = "de")
-        val german = extractedText(requireNotNull(record.pdf)).filterNot { it.isWhitespace() }
-        for (value in listOf("RECHNUNG", "RECHNUNGAN", "Ausgestellt", "Zwischensumme", "SUMME")) {
-            assertTrue("German invoice is missing $value; extracted text: ${german.take(2000)}", german.contains(value))
+        for ((tag, expected, absent) in listOf(
+            Triple("de", listOf("RECHNUNG", "RECHNUNGAN", "Ausgestellt", "Zwischensumme", "SUMME"), listOf("BILLTO", "Subtotal", "Issued")),
+            Triple("fr", listOf("FACTURE", "FACTURÉÀ", "Sous-total"), listOf("INVOICE", "BILLTO")),
+        )) {
+            val text = extractedText(
+                InvoiceDocuments.settingsPreview(app, "MODERN", "USD", 2, languageTag = tag),
+            ).filterNot { it.isWhitespace() }
+            for (value in expected) {
+                assertTrue(
+                    "$tag sample is missing $value; extracted text: ${text.take(2000)}",
+                    text.contains(value),
+                )
+            }
+            for (value in absent) {
+                assertFalse(
+                    "$tag sample still shows English $value; extracted text: ${text.take(2000)}",
+                    text.contains(value),
+                )
+            }
         }
-        for (value in listOf("BILLTO", "Subtotal", "Issued")) {
-            assertFalse("German invoice still shows English $value; extracted text: ${german.take(2000)}", german.contains(value))
-        }
-        val frenchSample = extractedText(
-            InvoiceDocuments.settingsPreview(app, "MODERN", "USD", 2, languageTag = "fr"),
-        ).filterNot { it.isWhitespace() }
-        for (value in listOf("FACTURE", "FACTURÉÀ", "Sous-total")) {
-            assertTrue("French sample is missing $value; extracted text: ${frenchSample.take(2000)}", frenchSample.contains(value))
-        }
-        assertFalse("French sample still shows English INVOICE; extracted text: ${frenchSample.take(2000)}", frenchSample.contains("INVOICE"))
     }
 
     private fun extractedText(pdf: ByteArray): String {

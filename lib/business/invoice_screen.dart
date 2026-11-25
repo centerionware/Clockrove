@@ -79,22 +79,14 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
         if (copy == null) {
           await api.email(widget.invoiceId, languageTag: languageTag);
         } else {
-          await api.emailCopy(
-            widget.invoiceId,
-            copy,
-            languageTag: languageTag,
-          );
+          await api.emailCopy(widget.invoiceId, copy, languageTag: languageTag);
         }
         message = AppMessage.invoiceEmailOpened;
       } else if (kind == 'share') {
         if (copy == null) {
           await api.share(widget.invoiceId, languageTag: languageTag);
         } else {
-          await api.shareCopy(
-            widget.invoiceId,
-            copy,
-            languageTag: languageTag,
-          );
+          await api.shareCopy(widget.invoiceId, copy, languageTag: languageTag);
         }
         message = AppMessage.documentShareOpened;
       } else {
