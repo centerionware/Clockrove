@@ -252,7 +252,37 @@ internal fun BackupImportStore.revisionPayloadValuesForDataRow(
         rowValues: Map<String, Any?>,
     ): Map<String, Any?>? = payloadValuesForDataRow(db, handle, kind, rowValues)
 
-internal fun BackupImportStore.Companion.payloadValuesForDataRow(
+private fun revisionJsonArray(values: List<Any?>): String = JSONArray().apply {
+        values.forEach { put(it ?: JSONObject.NULL) }
+    }.toString()
+
+private fun revisionJsonValue(value: Any?): Any? = when {
+        value == null || value === JSONObject.NULL -> null
+        value is JSONObject -> {
+            val result = LinkedHashMap<String, Any?>()
+            val keys = value.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                result[key] = revisionJsonValue(value.get(key))
+            }
+            result
+        }
+        value is JSONArray -> (0 until value.length()).map { revisionJsonValue(value.get(it)) }
+        value is String || value is Number || value is Boolean -> value
+        else -> null
+    }
+
+private fun revisionQuote(identifier: String): String = "\"" + identifier.replace("\"", "\"\"") + "\""
+
+private fun revisionCursorValue(cursor: Cursor, index: Int): Any? = when (cursor.getType(index)) {
+        Cursor.FIELD_TYPE_NULL -> null
+        Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(index)
+        Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
+        Cursor.FIELD_TYPE_STRING -> cursor.getString(index)
+        else -> null
+    }
+
+internal fun payloadValuesForDataRow(
         db: SQLiteDatabase,
         handle: RevisionMergeHandle?,
         kind: String,
@@ -265,21 +295,21 @@ internal fun BackupImportStore.Companion.payloadValuesForDataRow(
             val key = keyValue.toString()
             val staged = handle?.database?.rawQuery(
                 "SELECT row_json FROM import_rows WHERE table_name=? AND primary_key=? LIMIT 1",
-                arrayOf(table, jsonArray(listOf(key))),
+                arrayOf(table, revisionJsonArray(listOf(key))),
             )?.use { rows ->
                 if (!rows.moveToFirst()) null else {
                     val row = JSONObject(rows.getString(0)).getJSONObject("values")
-                    if (!row.has(valueColumn) || row.isNull(valueColumn)) null else jsonValue(row.get(valueColumn))
+                    if (!row.has(valueColumn) || row.isNull(valueColumn)) null else revisionJsonValue(row.get(valueColumn))
                 }
             }
             if (staged != null) return staged
             return db.rawQuery(
-                "SELECT ${quote(valueColumn)} FROM ${quote(table)} WHERE ${quote(keyColumn)}=? LIMIT 1",
+                "SELECT ${revisionQuote(valueColumn)} FROM ${revisionQuote(table)} WHERE ${revisionQuote(keyColumn)}=? LIMIT 1",
                 arrayOf(key),
-            ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else cursorValue(rows, 0) }
+            ).use { rows -> if (!rows.moveToFirst() || rows.isNull(0)) null else revisionCursorValue(rows, 0) }
         }
 
-        val columns = revisionDataColumns[kind] ?: return null
+        val columns = BackupImportStore.revisionDataColumns[kind] ?: return null
         val values = when (kind) {
             "settings_money", "job_money", "card_money", "template_money" -> {
                 val id = value("id") ?: return null
