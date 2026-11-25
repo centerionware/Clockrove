@@ -1,8 +1,37 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-23. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-25. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
+
+## November 25 backup restore repair
+
+- PR #97 exact head `9d33866` / Validate run
+  [45541877722](https://github.com/centerionware/Clockrove/actions/runs/45541877722)
+  passed and merged as `1558340`. Its language sample made the Android copies
+  suite run six tests; the exact-count guard was updated rather than weakening
+  the test.
+- PR #98 exact head `126a726` / Validate run
+  [45558471514](https://github.com/centerionware/Clockrove/actions/runs/45558471514)
+  passed formatting, analysis, Flutter behavior, Android debug/release builds,
+  instrumentation assembly, 778 native tests with zero failures/errors/skips,
+  41 actual Android tests on each of API 24 and API 35 with zero
+  failures/errors/skips, invoice-viewer validation, and locked release tooling.
+- The restore validator rejected retained financial rows whose revision head an
+  older job purge had tombstoned or redacted, including actual costs, invoice
+  coverage/claims, payment destinations, and quote records. Schema-14 cost heads
+  also lacked the customer columns, and a removed cost's tombstone was rejected
+  even though its row was correctly soft-deleted. The branch treats actual costs
+  as financial history, snapshots schema-14 heads, repairs retained financial
+  heads when the database opens, accepts matching tombstones for soft-deleted
+  rows, and avoids a false deletion conflict when the archive names the current
+  local head.
+- The round trip now purges a job with a retained cost, damages a cost and
+  invoice-coverage head like an upgraded install, reopens the database, exports,
+  and restores immediately and again. Owner-device acceptance remains open. A
+  fresh export from the updated build is restorable; an older archive containing
+  a live retained row whose old head was tombstoned or redacted still needs a
+  fresh backup after the repair has run.
 
 ## November 23 geofence departure follow-up
 
