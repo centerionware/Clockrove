@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import org.json.JSONObject
 
@@ -35,7 +36,7 @@ internal object RetainedFinancialRevisionRepair {
             db.query(table, queryColumns.toTypedArray(), null, null, null, null, null).use { rows ->
                 while (rows.moveToNext()) {
                     val row = queryColumns.mapIndexed { index, name ->
-                        name to with(BackupImportStore) { cursorValue(rows, index) }
+                        name to cursorValue(rows, index)
                     }.toMap()
                     // Draft revisions identify the quote as id while the table stores quote_id.
                     val values = if (kind == "quote_draft") {
@@ -46,13 +47,13 @@ internal object RetainedFinancialRevisionRepair {
                     val entityId = if (kind == "quote_draft") {
                         values["id"]?.toString()
                     } else {
-                        with(BackupImportStore) { revisionEntityIdForDataRow(table, values) }
+                        entityIdFor(table, values)
                     } ?: continue
                     val head = head(db, kind, entityId) ?: continue
                     val expectedDeleted = values["deleted_ms"] != null
                     val expected = payloadColumns.toSet()
                     if (head.deleted == expectedDeleted && head.payload != null &&
-                        payloadCovers(head.payload, expected, with(BackupImportStore) { optionalRevisionPayloadKeys(kind) })) {
+                        payloadCovers(head.payload, expected, optionalPayloadKeys(kind))) {
                         continue
                     }
                     pending.add(
@@ -78,6 +79,29 @@ internal object RetainedFinancialRevisionRepair {
         } finally {
             db.endTransaction()
         }
+    }
+
+    private fun entityIdFor(table: String, values: Map<String, Any?>): String? {
+        val kind = BackupImportStore.revisionDataKinds[table] ?: return null
+        val keyValues = (BackupImportStore.revisionDataKeyColumns[kind] ?: listOf("id")).map { column ->
+            values[column]?.toString() ?: return null
+        }
+        return when (kind) {
+            "quote_decision" -> "${keyValues[0]}:${keyValues[1]}"
+            else -> keyValues.singleOrNull()
+        }
+    }
+
+    private fun optionalPayloadKeys(kind: String): Set<String> = when (kind) {
+        "invoice_coverage", "payment_destination" -> setOf("predecessor_id")
+        else -> emptySet()
+    }
+
+    private fun cursorValue(cursor: Cursor, index: Int): Any? = when (cursor.getType(index)) {
+        Cursor.FIELD_TYPE_NULL -> null
+        Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(index)
+        Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
+        else -> cursor.getString(index)
     }
 
     private fun head(db: SQLiteDatabase, kind: String, entityId: String): Head? = db.rawQuery(
@@ -108,7 +132,7 @@ internal object RetainedFinancialRevisionRepair {
 
     /** Keep fields the row has no column for, such as invoice replacement provenance. */
     private fun optionalPayloadValues(payload: String?, kind: String): Map<String, Any?> {
-        val optional = with(BackupImportStore) { optionalRevisionPayloadKeys(kind) }
+        val optional = optionalPayloadKeys(kind)
         if (payload == null || optional.isEmpty()) return emptyMap()
         return try {
             val json = JSONObject(payload)
