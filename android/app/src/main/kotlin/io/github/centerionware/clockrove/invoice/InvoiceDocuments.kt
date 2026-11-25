@@ -24,26 +24,39 @@ import java.util.TimeZone
 
 internal object InvoiceDocuments {
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
-    fun ensure(context: Context, repository: TimerRepository, id: String, copyId: String? = null): InvoiceStore.Record {
-        fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
+    fun ensure(context: Context, repository: TimerRepository, id: String, copyId: String? = null, languageTag: String? = null): InvoiceStore.Record {
+        fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId, languageTag)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
         val before = read()
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo)
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, languageTag = languageTag)
         if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
         return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
     }
-    fun ensureQuote(context: Context, repository: TimerRepository, id: String, revision: Int): InvoiceStore.Record {
-        val before = repository.quoteDocument(id, revision)
+    fun ensureQuote(context: Context, repository: TimerRepository, id: String, revision: Int, languageTag: String? = null): InvoiceStore.Record {
+        val before = repository.quoteDocument(id, revision, languageTag)
         if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE")
+        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE", languageTag)
         repository.cacheQuotePdf(id, revision, before.payload, bytes)
-        return repository.quoteDocument(id, revision).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
+        return repository.quoteDocument(id, revision, languageTag).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
     }
-    fun uri(context: Context, id: String): Uri = Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id).build()
-    fun uri(context: Context, record: InvoiceStore.Record): Uri = if (record.quoteRevision != null) Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("quotes").appendPath(record.id).appendPath(record.quoteRevision.toString()).build()
-        else if (record.copyId == null) uri(context, record.id) else Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId).build()
-    fun filename(context: Context, record: InvoiceStore.Record): String {
-        val strings = localizedContext(context)
+    fun uri(context: Context, id: String, languageTag: String? = null): Uri = withLanguage(
+        Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id), languageTag,
+    )
+    fun uri(context: Context, record: InvoiceStore.Record, languageTag: String? = null): Uri = when {
+        record.quoteRevision != null -> withLanguage(
+            Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("quotes").appendPath(record.id).appendPath(record.quoteRevision.toString()), languageTag,
+        )
+        record.copyId == null -> uri(context, record.id, languageTag)
+        else -> withLanguage(
+            Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("copies").appendPath(record.copyId), languageTag,
+        )
+    }
+    private fun withLanguage(builder: Uri.Builder, languageTag: String?): Uri {
+        val tag = languageTag?.takeIf { it.isNotBlank() }
+        return (if (tag == null) builder else builder.appendQueryParameter("lang", tag)).build()
+    }
+    fun filename(context: Context, record: InvoiceStore.Record, languageTag: String? = null): String {
+        val strings = localizedContext(context, languageTag)
         if (record.quoteRevision != null) return strings.getString(
             R.string.document_filename_quote_revision,
             record.number,
@@ -67,8 +80,8 @@ internal object InvoiceDocuments {
             record.copyId.takeLast(8),
         )
     }
-    fun historicalNotice(context: Context, repository: TimerRepository, record: InvoiceStore.Record): String? {
-        val strings = localizedContext(context)
+    fun historicalNotice(context: Context, repository: TimerRepository, record: InvoiceStore.Record, languageTag: String? = null): String? {
+        val strings = localizedContext(context, languageTag)
         if (record.quoteRevision != null) {
             val latest = repository.quote(record.id).latest ?: return null
             return if (latest.revision == record.quoteRevision) null else strings.getString(
@@ -88,10 +101,10 @@ internal object InvoiceDocuments {
             strings.getString(R.string.historical_invoice_records_retained),
         ).joinToString(" ")
     }
-    fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings, notice: String? = null): Intent {
+    fun email(context: Context, record: InvoiceStore.Record, company: BusinessStore.Settings, notice: String? = null, languageTag: String? = null): Intent {
         val snapshot = InvoiceStore.Snapshot.decode(record.payload)
         require(BusinessStore.validEmail(snapshot.email)) { "INVALID_RECIPIENT" }
-        val strings = localizedContext(context)
+        val strings = localizedContext(context, languageTag)
         val subject = if (notice == null) snapshot.subject
             else strings.getString(R.string.historical_email_subject, snapshot.subject)
         val body = if (notice == null) snapshot.body else "$notice\n\n${snapshot.body}"
@@ -100,7 +113,7 @@ internal object InvoiceDocuments {
         val accounting = company.receivablesEmail.ifEmpty { company.companyEmail }
         require(BusinessStore.validEmail(accounting)) { "INVALID_ACCOUNTS_RECEIVABLE_EMAIL" }
         val cc = if (accounting.isEmpty() || accounting.equals(snapshot.email, ignoreCase = true)) emptyArray<String>() else arrayOf(accounting)
-        val uri = uri(context, record)
+        val uri = uri(context, record, languageTag)
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_EMAIL, if (snapshot.email.isEmpty()) emptyArray<String>() else arrayOf(snapshot.email))
@@ -108,16 +121,16 @@ internal object InvoiceDocuments {
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
             putExtra(Intent.EXTRA_STREAM, uri)
-            clipData = ClipData.newRawUri(attachmentLabel(context, record), uri)
+            clipData = ClipData.newRawUri(attachmentLabel(context, record, languageTag), uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
-    fun share(context: Context, record: InvoiceStore.Record, notice: String? = null): Intent {
-        val uri = uri(context, record)
-        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(attachmentLabel(context, record), uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+    fun share(context: Context, record: InvoiceStore.Record, notice: String? = null, languageTag: String? = null): Intent {
+        val uri = uri(context, record, languageTag)
+        return Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; if (notice != null) putExtra(Intent.EXTRA_TEXT, notice); putExtra(Intent.EXTRA_STREAM, uri); clipData = ClipData.newRawUri(attachmentLabel(context, record, languageTag), uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
-    private fun attachmentLabel(context: Context, record: InvoiceStore.Record): String =
-        localizedContext(context).getString(
+    private fun attachmentLabel(context: Context, record: InvoiceStore.Record, languageTag: String? = null): String =
+        localizedContext(context, languageTag).getString(
             if (record.quoteRevision == null) R.string.invoice_pdf_attachment else R.string.quote_pdf_attachment,
         )
 

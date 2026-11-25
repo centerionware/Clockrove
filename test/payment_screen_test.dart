@@ -64,13 +64,22 @@ class _Documents extends ReportApi {
   final emailed = <String>[];
   final previewed = <({String invoice, String copy})>[];
   @override
-  Future<InvoicePage> previewCopy(String id, String copyId, int page) async {
+  Future<InvoicePage> previewCopy(
+    String id,
+    String copyId,
+    int page, {
+    required String languageTag,
+  }) async {
     previewed.add((invoice: id, copy: copyId));
     throw StateError('Actual PDF validation runs on Android');
   }
 
   @override
-  Future<void> emailCopy(String id, String copyId) async {
+  Future<void> emailCopy(
+    String id,
+    String copyId, {
+    required String languageTag,
+  }) async {
     emailed.add(copyId);
   }
 }

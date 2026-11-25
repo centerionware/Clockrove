@@ -19,15 +19,18 @@ class _ActualPage extends ReportApi {
   final Uint8List bytes;
   int emailCalls = 0, saveCalls = 0;
   @override
-  Future<InvoicePage> preview(String id, int page) async =>
-      InvoicePage(0, 1, bytes);
+  Future<InvoicePage> preview(
+    String id,
+    int page, {
+    required String languageTag,
+  }) async => InvoicePage(0, 1, bytes);
   @override
-  Future<void> email(String id) async {
+  Future<void> email(String id, {required String languageTag}) async {
     emailCalls++;
   }
 
   @override
-  Future<bool> save(String id) async {
+  Future<bool> save(String id, {required String languageTag}) async {
     saveCalls++;
     return false;
   }

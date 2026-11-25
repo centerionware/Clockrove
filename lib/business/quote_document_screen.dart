@@ -23,8 +23,26 @@ class QuoteDocumentScreen extends ConsumerStatefulWidget {
 class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
   late Future<InvoicePage> _page = _load(0);
   bool _busy = false;
-  Future<InvoicePage> _load(int page) =>
-      ref.read(quoteApiProvider).preview(widget.quoteId, widget.revision, page);
+  String? _languageTag;
+  String get _documentLanguage =>
+      Localizations.localeOf(context).toLanguageTag();
+  Future<InvoicePage> _load(int page) => ref
+      .read(quoteApiProvider)
+      .preview(
+        widget.quoteId,
+        widget.revision,
+        page,
+        languageTag: _documentLanguage,
+      );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tag = _documentLanguage;
+    if (_languageTag != null && _languageTag != tag) _page = _load(0);
+    _languageTag = tag;
+  }
+
   void _feedback(AppMessage message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -38,15 +56,28 @@ class _QuoteDocumentScreenState extends ConsumerState<QuoteDocumentScreen> {
     setState(() => _busy = true);
     final api = ref.read(quoteApiProvider);
     try {
+      final languageTag = _documentLanguage;
       if (action == 'email') {
-        await api.email(widget.quoteId, widget.revision);
+        await api.email(
+          widget.quoteId,
+          widget.revision,
+          languageTag: languageTag,
+        );
         if (mounted) {
           _feedback(AppMessage.quoteEmailOpened);
         }
       } else if (action == 'share') {
-        await api.share(widget.quoteId, widget.revision);
+        await api.share(
+          widget.quoteId,
+          widget.revision,
+          languageTag: languageTag,
+        );
       } else {
-        final saved = await api.savePdf(widget.quoteId, widget.revision);
+        final saved = await api.savePdf(
+          widget.quoteId,
+          widget.revision,
+          languageTag: languageTag,
+        );
         if (mounted) {
           _feedback(
             saved ? AppMessage.quotePdfSaved : AppMessage.quoteSaveCancelled,

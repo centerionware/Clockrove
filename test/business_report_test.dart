@@ -109,7 +109,11 @@ class _Reports extends ReportApi {
   }
 
   @override
-  Future<InvoicePage> preview(String id, int page) async =>
+  Future<InvoicePage> preview(
+    String id,
+    int page, {
+    required String languageTag,
+  }) async =>
       throw StateError('Synthetic unavailable preview; no mocked PDF success');
   @override
   Future<bool> saveCsv(ReportSelection s, int version, bool gps) async {

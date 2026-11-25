@@ -333,10 +333,20 @@ class QuoteApi {
     'note': note,
     'confirmed': true,
   });
-  Future<InvoicePage> preview(String id, int revision, int page) async {
+  Future<InvoicePage> preview(
+    String id,
+    int revision,
+    int page, {
+    required String languageTag,
+  }) async {
     final value = (await _documents.invokeMapMethod<Object?, Object?>(
       'quotePreview',
-      {'quoteId': id, 'revision': revision, 'page': page},
+      {
+        'quoteId': id,
+        'revision': revision,
+        'page': page,
+        'languageTag': languageTag,
+      },
     ))!;
     return InvoicePage(
       value['page'] as int,
@@ -346,16 +356,27 @@ class QuoteApi {
     );
   }
 
-  Future<void> email(String id, int revision) => _documents.invokeMethod<void>(
-    'emailQuote',
-    {'quoteId': id, 'revision': revision},
-  );
-  Future<void> share(String id, int revision) => _documents.invokeMethod<void>(
-    'shareQuote',
-    {'quoteId': id, 'revision': revision},
-  );
-  Future<bool> savePdf(String id, int revision) async => (await _documents
-      .invokeMethod<bool>('saveQuote', {'quoteId': id, 'revision': revision}))!;
+  Future<void> email(String id, int revision, {required String languageTag}) =>
+      _documents.invokeMethod<void>('emailQuote', {
+        'quoteId': id,
+        'revision': revision,
+        'languageTag': languageTag,
+      });
+  Future<void> share(String id, int revision, {required String languageTag}) =>
+      _documents.invokeMethod<void>('shareQuote', {
+        'quoteId': id,
+        'revision': revision,
+        'languageTag': languageTag,
+      });
+  Future<bool> savePdf(
+    String id,
+    int revision, {
+    required String languageTag,
+  }) async => (await _documents.invokeMethod<bool>('saveQuote', {
+    'quoteId': id,
+    'revision': revision,
+    'languageTag': languageTag,
+  }))!;
 }
 
 final quoteApiProvider = Provider<QuoteApi>((ref) => const QuoteApi());
