@@ -37,8 +37,9 @@ internal class TimerDatabase(context: Context, private val now: () -> Long) : SQ
         db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
     }
     override fun onOpen(db: SQLiteDatabase) {
-        // Repair retained cost heads damaged by older job purges or schema-14 payloads.
-        ActualCostStore.repairRetainedHeads(db, now())
+        // Repair retained financial heads damaged by older job purges or schema-14
+        // cost payloads before an export can copy the inconsistent graph.
+        if (!db.isReadOnly) RetainedFinancialRevisionRepair.repair(db, now())
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

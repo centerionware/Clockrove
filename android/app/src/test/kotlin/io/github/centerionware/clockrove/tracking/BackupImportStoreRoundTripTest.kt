@@ -1,5 +1,6 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.database.sqlite.SQLiteDatabase
 import java.math.BigInteger
 import org.junit.Assert.*
 import org.junit.Test
@@ -119,6 +120,27 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         assertNull(repository.archiveJob("round-trip-archive-cost-job", version, costJob).conflict)
         database.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf<Any?>(costJob))
         assertNull(repository.deleteJob("round-trip-delete-cost-job", version, costJob).conflict)
+
+        // Simulate an install upgraded from an older release: retained rows keep a
+        // live head whose payload the old purge redacted. Opening the database must
+        // repair them before the export copies the graph.
+        listOf("actual_cost" to "round-trip-cost", "invoice_coverage" to "invoice").forEach { (kind, entityId) ->
+            database.execSQL(
+                "UPDATE entity_revisions SET payload=NULL WHERE id=" +
+                    "(SELECT revision_id FROM entity_heads WHERE kind=? AND entity_id=?)",
+                arrayOf<Any?>(kind, entityId),
+            )
+        }
+        database.close()
+        repository.close()
+        repository = TimerRepository(app, wallClock = { now })
+        repository.snapshot()
+        database = SQLiteDatabase.openDatabase(
+            app.getDatabasePath("clockrove.db").path,
+            null,
+            SQLiteDatabase.OPEN_READWRITE,
+        )
+        database.setForeignKeyConstraintsEnabled(true)
     }
 
     /** One export -> stage -> preview -> apply cycle against the live database. */

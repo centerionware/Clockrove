@@ -170,7 +170,7 @@ class ActualCostStoreTest {
     }
 
     @Test fun purgedJobKeepsRetainedCostHeadsLive() {
-        assertNull(repository.saveActualCost("cost-before-purge", version, draft()))
+        assertNull(repository.saveActualCost("cost-before-purge", version, draft()).conflict)
         assertNull(repository.archiveJob("archive-cost-job", version, jobId).conflict)
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
             db.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf<Any?>(jobId))

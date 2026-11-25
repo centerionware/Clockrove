@@ -3,7 +3,6 @@ package io.github.centerionware.clockrove.tracking
 import android.database.sqlite.SQLiteDatabase
 import java.math.BigInteger
 import java.util.TimeZone
-import org.json.JSONObject
 
 /** Exact, auditable cash costs. Job/task names are snapshots so deletion never erases accounting history. */
 internal object ActualCostStore {
@@ -82,45 +81,6 @@ internal object ActualCostStore {
         snapshotRetained(db, at, "MIGRATION")
     }
 
-    /**
-     * Retained costs must keep a head that matches the row: live while the row is
-     * live, a tombstone once it is removed, and a payload with every current column.
-     * Older builds redacted or tombstoned cost revisions when their job was purged,
-     * and schema-14 heads lack the customer columns. Repair those heads from the
-     * row so a fresh export can be restored. [RevisionStore.record] is idempotent,
-     * so this is safe to run whenever the database opens.
-     */
-    fun repairRetainedHeads(db: SQLiteDatabase, at: Long) {
-        val expected = revisionColumns.toSet()
-        val needsRepair = db.rawQuery(
-            "SELECT a.id,r.payload,r.deleted,a.deleted_ms FROM actual_costs a " +
-                "LEFT JOIN entity_heads h ON h.kind='actual_cost' AND h.entity_id=a.id " +
-                "LEFT JOIN entity_revisions r ON r.id=h.revision_id",
-            null,
-        ).use { rows ->
-            var pending = false
-            while (rows.moveToNext()) {
-                val payload = if (rows.isNull(1)) null else rows.getString(1)
-                val expectedDeleted = !rows.isNull(3)
-                val headMissing = rows.isNull(2)
-                val headDeleted = !headMissing && rows.getLong(2) != 0L
-                if (headMissing || headDeleted != expectedDeleted || payload == null ||
-                    !payloadHasColumns(payload, expected)) {
-                    pending = true
-                }
-            }
-            pending
-        }
-        if (!needsRepair) return
-        db.beginTransaction()
-        try {
-            snapshotRetained(db, at, "REPAIR")
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
-        }
-    }
-
     private fun snapshotRetained(db: SQLiteDatabase, at: Long, origin: String) {
         db.query("actual_costs", revisionColumns.toTypedArray(), null, null, null, null, "id").use { rows ->
             while (rows.moveToNext()) {
@@ -139,18 +99,6 @@ internal object ActualCostStore {
                 )
             }
         }
-    }
-
-    private fun payloadHasColumns(payload: String, expected: Set<String>): Boolean {
-        val keys = try {
-            val iterator = JSONObject(payload).keys()
-            mutableSetOf<String>().apply {
-                while (iterator.hasNext()) add(iterator.next())
-            }
-        } catch (_: Exception) {
-            return false
-        }
-        return keys == expected
     }
 
     fun list(db: SQLiteDatabase, before: Cursor? = null, limit: Int = 100): Page {
