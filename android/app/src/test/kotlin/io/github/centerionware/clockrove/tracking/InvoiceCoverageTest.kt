@@ -51,6 +51,19 @@ class InvoiceCoverageTest {
         assertEquals("INV-1000", remaining.excluded.single().number)
         assertEquals("one", remaining.excluded.single().sessionId)
     }
+    @Test fun oneInvoiceWithSeveralClaimSegmentsAppearsOnceInReview() {
+        work("first", midnight, midnight + hour)
+        work("second", midnight + hour, midnight + 2 * hour)
+        assertNull(prepare("combined").conflict)
+        val remaining = preview()
+        assertTrue(remaining.report.intervals.isEmpty())
+        val excluded = remaining.excluded.single()
+        assertEquals("INV-1000", excluded.number)
+        assertNull(excluded.sessionId)
+        assertEquals(midnight, excluded.start)
+        assertEquals(midnight + 2 * hour, excluded.end)
+    }
+
     @Test fun overlappingDateAndTimezoneSelectionsBillOnlyExactUtcRemainder() {
         work("cross-day", midnight - hour, midnight + hour)
         assertNull(prepare("today").conflict)

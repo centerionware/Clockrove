@@ -95,9 +95,12 @@
     <string name="quote_pdf_terms">"Condizioni"</string>
     <string name="quote_pdf_notes">"Note"</string>
     <string name="invoice_duration_seconds">"%1$s secondi"</string>
+    <string name="invoice_duration_minutes">"%1$s minuti"</string>
+    <string name="invoice_hours_count">"%1$s h"</string>
     <string name="invoice_unit_price_each">"%1$s %2$s ciascuno"</string>
     <string name="invoice_unit_price_unset">"Prezzo unitario non impostato"</string>
     <string name="invoice_task_line_detail">"%1$s × %2$s · %3$s"</string>
+    <string name="invoice_previously_invoiced_task">"Attività già fatturata"</string>
     <string name="invoice_task_line_basis">"%1$s × %2$s"</string>
     <string name="invoice_completed_at">"Completato il %1$s"</string>
     <string name="invoice_task_minimum_fee">"Tariffa minima per attività"</string>
@@ -108,7 +111,7 @@
     <string name="invoice_billing_basis">"%1$s · %2$s"</string>
     <string name="invoice_rate_per_hour">"%1$s %2$s/ora"</string>
     <string name="invoice_hourly_rate_unset">"Tariffa oraria non impostata"</string>
-    <string name="invoice_round_time_up">"Arrotonda il tempo totale all’ora successiva"</string>
+    <string name="invoice_round_time_up">"Arrotonda il tempo totale all'ora più vicina"</string>
     <string name="invoice_minimum_then_exact">"Ore minime, poi tempo esatto"</string>
     <string name="invoice_interval_detail">"%1$s — %2$s · %3$s"</string>
     <string name="invoice_task_basis">"Attività fatturabili completate · quantità × prezzo unitario · arrotondamento per eccesso delle righe"</string>

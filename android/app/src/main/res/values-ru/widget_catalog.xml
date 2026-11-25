@@ -95,9 +95,12 @@
     <string name="quote_pdf_terms">"Условия"</string>
     <string name="quote_pdf_notes">"Примечания"</string>
     <string name="invoice_duration_seconds">"%1$s с"</string>
+    <string name="invoice_duration_minutes">"%1$s минут"</string>
+    <string name="invoice_hours_count">"%1$s ч"</string>
     <string name="invoice_unit_price_each">"%1$s %2$s за единицу"</string>
     <string name="invoice_unit_price_unset">"Цена за единицу не задана"</string>
     <string name="invoice_task_line_detail">"%1$s × %2$s · %3$s"</string>
+    <string name="invoice_previously_invoiced_task">"Ранее выставленная задача"</string>
     <string name="invoice_task_line_basis">"%1$s × %2$s"</string>
     <string name="invoice_completed_at">"Завершено %1$s"</string>
     <string name="invoice_task_minimum_fee">"Минимальная плата за задачи"</string>
@@ -108,7 +111,7 @@
     <string name="invoice_billing_basis">"%1$s · %2$s"</string>
     <string name="invoice_rate_per_hour">"%1$s %2$s/час"</string>
     <string name="invoice_hourly_rate_unset">"Почасовая ставка не задана"</string>
-    <string name="invoice_round_time_up">"Округлить общее время до следующего часа"</string>
+    <string name="invoice_round_time_up">"Округлить общее время до ближайшего часа"</string>
     <string name="invoice_minimum_then_exact">"Минимум часов, затем точное время"</string>
     <string name="invoice_interval_detail">"%1$s — %2$s · %3$s"</string>
     <string name="invoice_task_basis">"Выполненные оплачиваемые задачи · количество × цена за единицу · округление каждой строки вверх"</string>

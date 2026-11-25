@@ -95,9 +95,12 @@
     <string name="quote_pdf_terms">"শর্তাবলি"</string>
     <string name="quote_pdf_notes">"নোট"</string>
     <string name="invoice_duration_seconds">"%1$s সেকেন্ড"</string>
+    <string name="invoice_duration_minutes">"%1$s মিনিট"</string>
+    <string name="invoice_hours_count">"%1$s ঘণ্টা"</string>
     <string name="invoice_unit_price_each">"প্রতি একক %1$s %2$s"</string>
     <string name="invoice_unit_price_unset">"একক মূল্য সেট করা নেই"</string>
     <string name="invoice_task_line_detail">"%1$s × %2$s · %3$s"</string>
+    <string name="invoice_previously_invoiced_task">"পূর্বে ইনভয়েস করা কাজ"</string>
     <string name="invoice_task_line_basis">"%1$s × %2$s"</string>
     <string name="invoice_completed_at">"সম্পন্ন হয়েছে %1$s"</string>
     <string name="invoice_task_minimum_fee">"টাস্ক-রেট ন্যূনতম ফি"</string>
@@ -108,7 +111,7 @@
     <string name="invoice_billing_basis">"%1$s · %2$s"</string>
     <string name="invoice_rate_per_hour">"%1$s %2$s/ঘণ্টা"</string>
     <string name="invoice_hourly_rate_unset">"প্রতি ঘণ্টার হার সেট করা নেই"</string>
-    <string name="invoice_round_time_up">"মোট সময় পরের ঘণ্টায় বাড়িয়ে নিন"</string>
+    <string name="invoice_round_time_up">"মোট সময় নিকটতম ঘণ্টায় রাউন্ড করুন"</string>
     <string name="invoice_minimum_then_exact">"ন্যূনতম ঘণ্টা, এরপর সঠিক সময়"</string>
     <string name="invoice_interval_detail">"%1$s — %2$s · %3$s"</string>
     <string name="invoice_task_basis">"সম্পন্ন বিলযোগ্য কাজ · পরিমাণ × একক মূল্য · প্রতিটি লাইন অর্ধেক হলে উপরে রাউন্ড"</string>

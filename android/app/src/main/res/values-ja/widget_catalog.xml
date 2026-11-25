@@ -95,9 +95,12 @@
     <string name="quote_pdf_terms">"条件"</string>
     <string name="quote_pdf_notes">"備考"</string>
     <string name="invoice_duration_seconds">"%1$s秒"</string>
+    <string name="invoice_duration_minutes">"%1$s分"</string>
+    <string name="invoice_hours_count">"%1$s時間"</string>
     <string name="invoice_unit_price_each">"1個あたり %2$s %1$s"</string>
     <string name="invoice_unit_price_unset">"単価未設定"</string>
     <string name="invoice_task_line_detail">"%1$s × %2$s · %3$s"</string>
+    <string name="invoice_previously_invoiced_task">"請求済みのタスク"</string>
     <string name="invoice_task_line_basis">"%1$s × %2$s"</string>
     <string name="invoice_completed_at">"完了日時 %1$s"</string>
     <string name="invoice_task_minimum_fee">"タスク料金の最低料金"</string>
@@ -108,7 +111,7 @@
     <string name="invoice_billing_basis">"%1$s · %2$s"</string>
     <string name="invoice_rate_per_hour">"%1$s %2$s/時間"</string>
     <string name="invoice_hourly_rate_unset">"時間単価未設定"</string>
-    <string name="invoice_round_time_up">"合計時間を次の1時間単位に切り上げ"</string>
+    <string name="invoice_round_time_up">"合計時間を最も近い時間に四捨五入する"</string>
     <string name="invoice_minimum_then_exact">"最低時間の後に実時間"</string>
     <string name="invoice_interval_detail">"%1$s — %2$s · %3$s"</string>
     <string name="invoice_task_basis">"完了した請求可能なタスク・数量×単価・各項目を四捨五入"</string>

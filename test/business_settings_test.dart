@@ -546,7 +546,7 @@ void main() {
             .first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Round total time up to the next hour').last);
+      await tester.tap(find.text('Round total time to the nearest hour').last);
       await tester.pumpAndSettle();
       await _reveal(tester, 'Minimum per-task invoice fee (USD)');
       await tester.enterText(
@@ -630,7 +630,7 @@ void main() {
           .first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Round total time up to the next hour').last);
+    await tester.tap(find.text('Round total time to the nearest hour').last);
     await tester.pumpAndSettle();
 
     await _reveal(tester, 'Use default minimum billable hours');

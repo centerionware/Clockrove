@@ -57,10 +57,10 @@ internal object InvoiceStore {
         }
     }
     fun amount(value: BigInteger, digits: Int): String = BigDecimal(value, digits).toPlainString()
-    private fun instant(value: Long, zone: String): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS XXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
+    private fun instant(value: Long, zone: String): String = SimpleDateFormat("yyyy-MM-dd HH:mm XXX", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone(zone) }.format(Date(value))
     private fun duration(value: BigInteger, strings: Context): String = strings.getString(
-        R.string.invoice_duration_seconds,
-        BigDecimal(value, 3).stripTrailingZeros().toPlainString(),
+        R.string.invoice_duration_minutes,
+        value.add(BigInteger.valueOf(30_000)).divide(BigInteger.valueOf(60_000)).toString(),
     )
     fun billableLines(report: ReportStore.Report, strings: Context): List<Line> {
         val total = report.totals.single()
@@ -90,6 +90,11 @@ internal object InvoiceStore {
                 amount(fee, digits),
             )
         })
+        else if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP) listOf(Line(
+            strings.getString(R.string.invoice_finalized_work),
+            strings.getString(R.string.invoice_hours_count, total.billedHours ?: "0"),
+            total.amountMinor?.let { amount(it, digits) }.orEmpty(), chargeType = TaskClassification.LABOR,
+        ))
         else listOf(Line(strings.getString(R.string.invoice_finalized_work), listOf(
             strings.getString(
                 R.string.invoice_actual_work_duration,
@@ -98,11 +103,7 @@ internal object InvoiceStore {
             strings.getString(R.string.invoice_billed_hours, total.billedHours ?: "0"),
             strings.getString(
                 R.string.invoice_billing_basis,
-                strings.getString(
-                    if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP)
-                        R.string.invoice_round_time_up
-                    else R.string.invoice_minimum_then_exact,
-                ),
+                strings.getString(R.string.invoice_minimum_then_exact),
                 total.hourlyMinor?.let {
                     strings.getString(
                         R.string.invoice_rate_per_hour,
@@ -184,19 +185,9 @@ internal object InvoiceStore {
                 selection.lastDate,
                 selection.timezone,
             ),
-            listOfNotNull(
+            (if (total.mode == "TASK") listOfNotNull(
                 quoteCaption,
-                if (total.mode == "TASK") strings.getString(R.string.invoice_task_basis)
-                else strings.getString(
-                    R.string.invoice_time_basis,
-                    strings.getString(
-                        if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP)
-                            R.string.invoice_round_time_up
-                        else R.string.invoice_minimum_then_exact,
-                    ),
-                    duration(total.durationMillis, strings),
-                    total.billedHours ?: "0",
-                ),
+                strings.getString(R.string.invoice_task_basis),
                 if (total.minimumTaskAdjustmentMinor.signum() > 0)
                     strings.getString(
                         R.string.invoice_minimum_fee_adjustment,
@@ -205,7 +196,29 @@ internal object InvoiceStore {
                     )
                 else null,
                 strings.getString(R.string.invoice_currency_rounding, digits.toString()),
-            ).joinToString(" · "),
+            ) else if (total.policyHourlyMode == InvoiceBillingPolicy.ROUND_TOTAL_UP) listOfNotNull(
+                quoteCaption,
+                strings.getString(
+                    R.string.invoice_billing_basis,
+                    strings.getString(R.string.invoice_round_time_up),
+                    total.hourlyMinor?.let {
+                        strings.getString(
+                            R.string.invoice_rate_per_hour,
+                            amount(it, digits),
+                            total.currency,
+                        )
+                    } ?: strings.getString(R.string.invoice_hourly_rate_unset),
+                ),
+            ) else listOfNotNull(
+                quoteCaption,
+                strings.getString(
+                    R.string.invoice_time_basis,
+                    strings.getString(R.string.invoice_minimum_then_exact),
+                    duration(total.durationMillis, strings),
+                    total.billedHours ?: "0",
+                ),
+                strings.getString(R.string.invoice_currency_rounding, digits.toString()),
+            )).joinToString(" · "),
             company.invoiceHeader, company.invoiceFooter, formatted, email,
             InvoiceEmailTemplate.renderDefaultAware(strings, company, values, true),
             InvoiceEmailTemplate.renderDefaultAware(strings, company, values, false), lines,

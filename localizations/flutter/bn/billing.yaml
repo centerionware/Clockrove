@@ -1,3 +1,3 @@
 billingModeMinimumThenExact: "সর্বনিম্ন ঘণ্টা, তারপর সঠিক সময়"
-billingModeRoundTotalUp: "মোট সময় পরের ঘণ্টায় উন্নীত করুন"
+billingModeRoundTotalUp: "মোট সময় নিকটতম ঘণ্টায় রাউন্ড করুন"
 minimumHoursSummary: "{hours} ঘণ্টা"

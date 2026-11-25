@@ -95,9 +95,12 @@
     <string name="quote_pdf_terms">"الشروط"</string>
     <string name="quote_pdf_notes">"ملاحظات"</string>
     <string name="invoice_duration_seconds">"%1$s ثانية"</string>
+    <string name="invoice_duration_minutes">"%1$s دقيقة"</string>
+    <string name="invoice_hours_count">"%1$s ساعة"</string>
     <string name="invoice_unit_price_each">"%1$s %2$s لكل وحدة"</string>
     <string name="invoice_unit_price_unset">"لم يتم تحديد سعر الوحدة"</string>
     <string name="invoice_task_line_detail">"%1$s × %2$s · %3$s"</string>
+    <string name="invoice_previously_invoiced_task">"مهمة مفوترة سابقًا"</string>
     <string name="invoice_task_line_basis">"%1$s × %2$s"</string>
     <string name="invoice_completed_at">"اكتمل في %1$s"</string>
     <string name="invoice_task_minimum_fee">"الحد الأدنى لرسوم المهام"</string>
@@ -108,7 +111,7 @@
     <string name="invoice_billing_basis">"%1$s · %2$s"</string>
     <string name="invoice_rate_per_hour">"%1$s %2$s/ساعة"</string>
     <string name="invoice_hourly_rate_unset">"لم يتم تحديد سعر الساعة"</string>
-    <string name="invoice_round_time_up">"تقريب إجمالي الوقت إلى الساعة التالية"</string>
+    <string name="invoice_round_time_up">"تقريب إجمالي الوقت إلى أقرب ساعة"</string>
     <string name="invoice_minimum_then_exact">"الحد الأدنى من الساعات ثم الوقت الفعلي"</string>
     <string name="invoice_interval_detail">"%1$s — %2$s · %3$s"</string>
     <string name="invoice_task_basis">"المهام المكتملة القابلة للفوترة · الكمية × سعر الوحدة · تقريب كل بند إلى النصف للأعلى"</string>
