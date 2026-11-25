@@ -144,7 +144,9 @@ internal object ActualCostStore {
     private fun payloadHasColumns(payload: String, expected: Set<String>): Boolean {
         val keys = try {
             val iterator = JSONObject(payload).keys()
-            buildSet { while (iterator.hasNext()) add(iterator.next()) }
+            mutableSetOf<String>().apply {
+                while (iterator.hasNext()) add(iterator.next())
+            }
         } catch (_: Exception) {
             return false
         }
