@@ -312,6 +312,43 @@ class InvoiceCopiesPdfTest {
             assertNull(repository.saveBusinessSettings("copy-pdf-restore-settings", version, before).conflict)
         }
     }
+    /** The screen's language must reach the renderer, not only the saved preference. */
+    @Test fun documentsRenderInTheLanguageTheScreenReports() {
+        if (android.os.Build.VERSION.SDK_INT < 35) return
+        val invoiceId = invoice("MODERN", "language", BigInteger.valueOf(125000))
+        val record = InvoiceDocuments.ensure(app, repository, invoiceId, languageTag = "de")
+        val german = extractedText(requireNotNull(record.pdf)).filterNot { it.isWhitespace() }
+        for (value in listOf("RECHNUNG", "RECHNUNGAN", "Ausgestellt", "Zwischensumme", "SUMME")) {
+            assertTrue("German invoice is missing $value; extracted text: ${german.take(2000)}", german.contains(value))
+        }
+        for (value in listOf("BILLTO", "Subtotal", "Issued")) {
+            assertFalse("German invoice still shows English $value; extracted text: ${german.take(2000)}", german.contains(value))
+        }
+        val frenchSample = extractedText(
+            InvoiceDocuments.settingsPreview(app, "MODERN", "USD", 2, languageTag = "fr"),
+        ).filterNot { it.isWhitespace() }
+        for (value in listOf("FACTURE", "FACTURÉÀ", "Sous-total")) {
+            assertTrue("French sample is missing $value; extracted text: ${frenchSample.take(2000)}", frenchSample.contains(value))
+        }
+        assertFalse("French sample still shows English INVOICE; extracted text: ${frenchSample.take(2000)}", frenchSample.contains("INVOICE"))
+    }
+
+    private fun extractedText(pdf: ByteArray): String {
+        val file = File.createTempFile("document-language-", ".pdf", app.cacheDir)
+        try {
+            file.writeBytes(pdf)
+            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    buildString {
+                        for (index in 0 until renderer.pageCount) renderer.openPage(index).use { page ->
+                            append(CopyPdfTextApi35.read(page))
+                            append('\n')
+                        }
+                    }
+                }
+            }
+        } finally { file.delete() }
+    }
 }
 
 /** Isolate API-35-only PDF APIs from Android 7. */

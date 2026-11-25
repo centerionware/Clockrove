@@ -672,12 +672,12 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun quoteCurrencyDigits(id: String?, currency: String): Int = QuoteStore.currencyDigits(helper.readableDatabase, id, currency)
     @Synchronized
-    internal fun quoteDocument(id: String, revision: Int): InvoiceStore.Record =
+    internal fun quoteDocument(id: String, revision: Int, languageTag: String? = null): InvoiceStore.Record =
         QuoteStore.document(
             helper.readableDatabase,
             id,
             revision,
-            localizedContext(appContext),
+            localizedContext(appContext, languageTag),
         )
     internal fun localizedStrings(): Context = localizedContext(appContext)
     @Synchronized
@@ -810,7 +810,8 @@ class TimerRepository internal constructor(context: Context,
     @Synchronized
     internal fun invoiceCopies(invoiceId: String): List<InvoiceCopyStore.Summary> = InvoiceCopyStore.list(helper.readableDatabase, invoiceId)
     @Synchronized
-    internal fun invoiceCopy(copyId: String): InvoiceStore.Record = InvoiceCopyStore.read(helper.readableDatabase, copyId, localizedContext(appContext))
+    internal fun invoiceCopy(copyId: String, languageTag: String? = null): InvoiceStore.Record =
+        InvoiceCopyStore.read(helper.readableDatabase, copyId, localizedContext(appContext, languageTag))
     @Synchronized
     internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray): Boolean {
         require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))

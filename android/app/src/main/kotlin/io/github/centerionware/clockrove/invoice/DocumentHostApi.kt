@@ -62,9 +62,13 @@ internal class DocumentHostApi(
                     "invoicePreview", "quotePreview" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "quotePreview") "quoteId" else "invoiceId"))
                         val index = requireNotNull(call.argument<Int>("page"))
+                        val languageTag = call.argument<String>("languageTag")
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
-                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf("notice" to InvoiceDocuments.historicalNotice(activity, repository, record)))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision")), languageTag)
+                            else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"), languageTag)
+                        result.success(InvoiceDocuments.preview(activity, record, index) + mapOf(
+                            "notice" to InvoiceDocuments.historicalNotice(activity, repository, record, languageTag),
+                        ))
                     }
                     "saveReport" -> {
                         val selection = io.github.centerionware.clockrove.tracking.ReportStore.Selection(requireNotNull(call.argument<String>("firstDate")), requireNotNull(call.argument<String>("lastDate")), requireNotNull(call.argument<String>("timezone")), requireNotNull(call.argument<List<*>>("jobIds")).map { requireNotNull(it as? String) })
@@ -139,15 +143,17 @@ internal class DocumentHostApi(
                     }
                     "saveInvoice", "saveQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method == "saveQuote") "quoteId" else "invoiceId"))
+                        val languageTag = call.argument<String>("languageTag")
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision")), languageTag)
+                            else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"), languageTag)
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to save your invoice", null)
                             else if (externalActionPending()) result.error("DOCUMENT_PICKER_OPEN", "Finish the open document or photo action first", null)
                             else {
                                 save = Save(requireNotNull(record.pdf), result)
                                 try { activity.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(activity, record))
+                                    addCategory(Intent.CATEGORY_OPENABLE); type = "application/pdf"; putExtra(Intent.EXTRA_TITLE, InvoiceDocuments.filename(activity, record, languageTag))
                                 }, 0xcc42) }
                                 catch (_: ActivityNotFoundException) { save = null; result.error("NO_DOCUMENT_PICKER", "No document picker is installed", null) }
                             }
@@ -155,16 +161,18 @@ internal class DocumentHostApi(
                     }
                     "emailInvoice", "shareInvoice", "emailQuote", "shareQuote" -> {
                         val id = requireNotNull(call.argument<String>(if (call.method.endsWith("Quote")) "quoteId" else "invoiceId"))
+                        val languageTag = call.argument<String>("languageTag")
                         val quote = call.method == "quotePreview" || call.method.endsWith("Quote")
-                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision"))) else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"))
-                        val notice = InvoiceDocuments.historicalNotice(activity, repository, record)
+                        val record = if (quote) InvoiceDocuments.ensureQuote(activity, repository, id, requireNotNull(call.argument<Int>("revision")), languageTag)
+                            else InvoiceDocuments.ensure(activity, repository, id, call.argument<String>("copyId"), languageTag)
+                        val notice = InvoiceDocuments.historicalNotice(activity, repository, record, languageTag)
                         val intent = if (call.method == "emailInvoice" || call.method == "emailQuote") {
-                            InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice)
+                            InvoiceDocuments.email(activity, record, repository.businessSnapshot().settings, notice, languageTag)
                         } else {
-                            val title = localizedContext(activity).getString(
+                            val title = localizedContext(activity, languageTag).getString(
                                 if (quote) R.string.share_quote else R.string.share_invoice,
                             )
-                            Intent.createChooser(InvoiceDocuments.share(activity, record, notice), title)
+                            Intent.createChooser(InvoiceDocuments.share(activity, record, notice, languageTag), title)
                         }
                         main.post {
                             if (!attached || activity.isFinishing) result.error("ACTIVITY_UNAVAILABLE", "Reopen the app to share your invoice", null)

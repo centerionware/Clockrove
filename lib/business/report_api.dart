@@ -691,10 +691,14 @@ class ReportApi {
     }).toList();
   }
 
-  Future<InvoicePage> preview(String id, int page) async {
+  Future<InvoicePage> preview(
+    String id,
+    int page, {
+    required String languageTag,
+  }) async {
     final v = (await _documents.invokeMapMethod<Object?, Object?>(
       'invoicePreview',
-      {'invoiceId': id, 'page': page},
+      {'invoiceId': id, 'page': page, 'languageTag': languageTag},
     ))!;
     return InvoicePage(
       v['page'] as int,
@@ -704,10 +708,20 @@ class ReportApi {
     );
   }
 
-  Future<InvoicePage> previewCopy(String id, String copyId, int page) async {
+  Future<InvoicePage> previewCopy(
+    String id,
+    String copyId,
+    int page, {
+    required String languageTag,
+  }) async {
     final value = (await _documents.invokeMapMethod<Object?, Object?>(
       'invoicePreview',
-      {'invoiceId': id, 'copyId': copyId, 'page': page},
+      {
+        'invoiceId': id,
+        'copyId': copyId,
+        'page': page,
+        'languageTag': languageTag,
+      },
     ))!;
     return InvoicePage(
       value['page'] as int,
@@ -744,21 +758,46 @@ class ReportApi {
     );
   }
 
-  Future<void> emailCopy(String id, String copyId) => _documents
-      .invokeMethod<void>('emailInvoice', {'invoiceId': id, 'copyId': copyId});
-  Future<void> shareCopy(String id, String copyId) => _documents
-      .invokeMethod<void>('shareInvoice', {'invoiceId': id, 'copyId': copyId});
-  Future<bool> saveCopy(String id, String copyId) async =>
+  Future<void> emailCopy(
+    String id,
+    String copyId, {
+    required String languageTag,
+  }) => _documents.invokeMethod<void>('emailInvoice', {
+    'invoiceId': id,
+    'copyId': copyId,
+    'languageTag': languageTag,
+  });
+  Future<void> shareCopy(
+    String id,
+    String copyId, {
+    required String languageTag,
+  }) => _documents.invokeMethod<void>('shareInvoice', {
+    'invoiceId': id,
+    'copyId': copyId,
+    'languageTag': languageTag,
+  });
+  Future<bool> saveCopy(
+    String id,
+    String copyId, {
+    required String languageTag,
+  }) async =>
       await _documents.invokeMethod<bool>('saveInvoice', {
         'invoiceId': id,
         'copyId': copyId,
+        'languageTag': languageTag,
       }) ??
       false;
 
-  Future<void> email(String id) =>
-      _documents.invokeMethod<void>('emailInvoice', {'invoiceId': id});
-  Future<void> share(String id) =>
-      _documents.invokeMethod<void>('shareInvoice', {'invoiceId': id});
+  Future<void> email(String id, {required String languageTag}) =>
+      _documents.invokeMethod<void>('emailInvoice', {
+        'invoiceId': id,
+        'languageTag': languageTag,
+      });
+  Future<void> share(String id, {required String languageTag}) =>
+      _documents.invokeMethod<void>('shareInvoice', {
+        'invoiceId': id,
+        'languageTag': languageTag,
+      });
   Future<bool> saveCsv(
     ReportSelection selection,
     int version,
@@ -781,8 +820,11 @@ class ReportApi {
         'pdf': pdf,
       }) ??
       false;
-  Future<bool> save(String id) async =>
-      await _documents.invokeMethod<bool>('saveInvoice', {'invoiceId': id}) ??
+  Future<bool> save(String id, {required String languageTag}) async =>
+      await _documents.invokeMethod<bool>('saveInvoice', {
+        'invoiceId': id,
+        'languageTag': languageTag,
+      }) ??
       false;
 }
 
