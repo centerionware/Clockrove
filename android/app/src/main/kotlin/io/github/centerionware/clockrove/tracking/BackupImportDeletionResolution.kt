@@ -142,9 +142,13 @@ internal object BackupImportDeletionResolution {
             "SELECT origin FROM entity_revisions WHERE id=?", arrayOf(localRevision),
         ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else return false }
         val involvesDeletion = local.deleted == 1L || backup.deleted == 1L
+        // An export of the current database names the same head. That is not a
+        // conflict, even though the deletion predates any backup merge.
+        val sameHead = localRevision == backupRevision
         return local.kind == kind && local.entityId == entityId && involvesDeletion &&
-            backup.kind == kind && backup.entityId == entityId && localOrigin == "BACKUP_MERGE" &&
-            store.revisionHeadRelationship(db, handle, localRevision, backupRevision) == "BACKUP_ANCESTOR"
+            backup.kind == kind && backup.entityId == entityId &&
+            (sameHead || (localOrigin == "BACKUP_MERGE" &&
+                store.revisionHeadRelationship(db, handle, localRevision, backupRevision) == "BACKUP_ANCESTOR"))
     }
 
     fun alreadyMergedCommentDeletion(

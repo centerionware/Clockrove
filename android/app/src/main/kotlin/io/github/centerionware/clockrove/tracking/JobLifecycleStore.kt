@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 internal object JobLifecycleStore {
     const val retentionMillis = 30L * 24 * 60 * 60 * 1000
     internal val financialRevisionKinds = setOf(
-        "invoice", "invoice_coverage", "invoice_task_claim", "invoice_time_claim", "invoice_payment",
+        "actual_cost", "invoice", "invoice_coverage", "invoice_task_claim", "invoice_time_claim", "invoice_payment",
         "payment_destination", "invoice_payment_reversal", "invoice_payment_event", "invoice_copy",
         "invoice_void", "quote_draft", "quote_revision", "quote_decision", "quote_scope_line",
         "quote_scope_revision", "quote_invoice_link",

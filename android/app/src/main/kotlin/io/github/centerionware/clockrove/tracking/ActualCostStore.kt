@@ -6,6 +6,12 @@ import java.util.TimeZone
 
 /** Exact, auditable cash costs. Job/task names are snapshots so deletion never erases accounting history. */
 internal object ActualCostStore {
+    /** Columns frozen into every revision payload; keep aligned with the backup validator. */
+    internal val revisionColumns = listOf(
+        "id", "job_id", "job_name", "customer_id", "customer_name", "task_id", "task_name",
+        "amount_minor", "currency", "category", "occurred_ms", "timezone", "offset_seconds",
+        "vendor", "reference", "note", "created_ms", "updated_ms", "deleted_ms",
+    )
     const val MATERIALS = "MATERIALS"
     const val SUBCONTRACT_LABOR = "SUBCONTRACT_LABOR"
     const val OTHER_DIRECT = "OTHER_DIRECT"
@@ -66,10 +72,33 @@ internal object ActualCostStore {
     }
 
     /** Existing costs deliberately stay customer-unattributed; historical ownership is unknown. */
-    fun migrateCustomerSnapshot(db: SQLiteDatabase) {
+    fun migrateCustomerSnapshot(db: SQLiteDatabase, at: Long) {
         db.execSQL("ALTER TABLE actual_costs ADD COLUMN customer_id TEXT")
         db.execSQL("ALTER TABLE actual_costs ADD COLUMN customer_name TEXT NOT NULL DEFAULT ''")
         db.execSQL("CREATE INDEX actual_costs_customer_date ON actual_costs(customer_id,occurred_ms,id)")
+        // Schema-14 heads predate these columns. Snapshot them now so an exported
+        // archive's cost rows still match their head payload on restore.
+        snapshotRetained(db, at, "MIGRATION")
+    }
+
+    private fun snapshotRetained(db: SQLiteDatabase, at: Long, origin: String) {
+        db.query("actual_costs", revisionColumns.toTypedArray(), null, null, null, null, "id").use { rows ->
+            while (rows.moveToNext()) {
+                val values = revisionColumns.mapIndexed { index, name ->
+                    name to when (rows.getType(index)) {
+                        android.database.Cursor.FIELD_TYPE_NULL -> null
+                        android.database.Cursor.FIELD_TYPE_INTEGER -> rows.getLong(index)
+                        android.database.Cursor.FIELD_TYPE_FLOAT -> rows.getDouble(index)
+                        else -> rows.getString(index)
+                    }
+                }.toMap()
+                val id = requireNotNull(values["id"]).toString()
+                RevisionStore.record(
+                    db, "actual_cost", id, values["job_id"] as String?, values, at,
+                    deleted = values["deleted_ms"] != null, origin = origin,
+                )
+            }
+        }
     }
 
     fun list(db: SQLiteDatabase, before: Cursor? = null, limit: Int = 100): Page {

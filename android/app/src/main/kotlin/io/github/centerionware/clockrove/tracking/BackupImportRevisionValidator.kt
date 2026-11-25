@@ -409,7 +409,16 @@ internal fun BackupImportStore.validateRevisionedDataCoverage(localDb: SQLiteDat
                     val payloadValues = revisionPayloadValuesForDataRow(
                         localDb, handle, kind, values,
                     ) ?: invalidRevisionGraph()
-                    if (!validLiveRevision(revision, kind, entityId) ||
+                    // Retained rows can be soft-deleted (actual costs keep deleted_ms) while
+                    // still being exported. Their head must be the matching tombstone, not
+                    // a live revision, or every archive with a removed cost would fail.
+                    val rowDeleted = values["deleted_ms"] is Number
+                    val revisionStateValid = if (rowDeleted) {
+                        revision.deleted == 1L && revision.payload != null
+                    } else {
+                        validLiveRevision(revision, kind, entityId)
+                    }
+                    if (!revisionStateValid ||
                         !revisionJobMatchesData(
                             localDb, handle, kind, revision.jobId, values, payloadValues, preferStaged = true,
                         ) ||
