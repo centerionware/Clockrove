@@ -6,8 +6,8 @@ Statuses describe evidence, not intent.
 
 ## November 25 invoice localization, rounding and backup repair
 
-PR #100 exact head `93c5248` / Validate run
-[45609863413](https://github.com/centerionware/Clockrove/actions/runs/45609863413)
+PR #100 exact head `a676a30` / Validate run
+[45680167213](https://github.com/centerionware/Clockrove/actions/runs/45680167213)
 passed 312 Flutter tests, 783 native tests, all API 24/35 journeys, and the
 actual-document viewer. It localizes invoice/quote documents, rounds the
 rounding mode to the nearest hour, deduplicates already-invoiced review rows,
