@@ -27,7 +27,14 @@ internal object RevisionDataRepair {
         val pending = mutableListOf<Pending>()
         BackupImportStore.revisionDataTables.forEach { (kind, table) ->
             val payloadColumns = BackupImportStore.revisionDataColumns[kind] ?: return@forEach
-            val queryColumns = if (kind == "quote_draft") listOf("quote_id", "payload") else payloadColumns
+            val queryColumns = when (kind) {
+                "settings_money", "job_money", "card_money", "template_money" ->
+                    listOf("id", "minor_text")
+                "task_quantity" -> listOf("card_id", "quantity_units")
+                "template_quantity" -> listOf("template_id", "quantity_units")
+                "quote_draft" -> listOf("quote_id", "payload")
+                else -> payloadColumns
+            }
             db.query(table, queryColumns.toTypedArray(), null, null, null, null, null).use { rows ->
                 while (rows.moveToNext()) {
                     val row = queryColumns.mapIndexed { index, name ->
