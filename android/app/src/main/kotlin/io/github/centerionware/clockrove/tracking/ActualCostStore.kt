@@ -3,9 +3,16 @@ package io.github.centerionware.clockrove.tracking
 import android.database.sqlite.SQLiteDatabase
 import java.math.BigInteger
 import java.util.TimeZone
+import org.json.JSONObject
 
 /** Exact, auditable cash costs. Job/task names are snapshots so deletion never erases accounting history. */
 internal object ActualCostStore {
+    /** Columns frozen into every revision payload; keep aligned with the backup validator. */
+    internal val revisionColumns = listOf(
+        "id", "job_id", "job_name", "customer_id", "customer_name", "task_id", "task_name",
+        "amount_minor", "currency", "category", "occurred_ms", "timezone", "offset_seconds",
+        "vendor", "reference", "note", "created_ms", "updated_ms", "deleted_ms",
+    )
     const val MATERIALS = "MATERIALS"
     const val SUBCONTRACT_LABOR = "SUBCONTRACT_LABOR"
     const val OTHER_DIRECT = "OTHER_DIRECT"
@@ -66,10 +73,66 @@ internal object ActualCostStore {
     }
 
     /** Existing costs deliberately stay customer-unattributed; historical ownership is unknown. */
-    fun migrateCustomerSnapshot(db: SQLiteDatabase) {
+    fun migrateCustomerSnapshot(db: SQLiteDatabase, at: Long) {
         db.execSQL("ALTER TABLE actual_costs ADD COLUMN customer_id TEXT")
         db.execSQL("ALTER TABLE actual_costs ADD COLUMN customer_name TEXT NOT NULL DEFAULT ''")
         db.execSQL("CREATE INDEX actual_costs_customer_date ON actual_costs(customer_id,occurred_ms,id)")
+        // Schema-14 heads predate these columns. Snapshot them now so an exported
+        // archive's live cost rows still match their head payload on restore.
+        RevisionStore.snapshotRows(
+            db, "actual_costs", "actual_cost", revisionColumns, at, origin = "MIGRATION",
+        )
+    }
+
+    /**
+     * Retained costs must keep a live head whose payload has every current column.
+     * Older builds redacted or tombstoned cost revisions when their job was purged,
+     * and schema-14 heads lack the customer columns. Repair those heads from the
+     * live row so a fresh export can be restored. [RevisionStore.record] is
+     * idempotent, so this is safe to run whenever the database opens.
+     */
+    fun repairRetainedHeads(db: SQLiteDatabase, at: Long) {
+        val expected = revisionColumns.toSet()
+        val pending = db.rawQuery(
+            "SELECT a.id,r.payload,r.deleted FROM actual_costs a " +
+                "LEFT JOIN entity_heads h ON h.kind='actual_cost' AND h.entity_id=a.id " +
+                "LEFT JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE a.deleted_ms IS NULL",
+            null,
+        ).use { rows ->
+            buildList {
+                while (rows.moveToNext()) {
+                    val payload = if (rows.isNull(1)) null else rows.getString(1)
+                    val deleted = rows.isNull(2) || rows.getLong(2) != 0L
+                    if (deleted || payload == null || !payloadHasColumns(payload, expected)) {
+                        add(rows.getString(0))
+                    }
+                }
+            }
+        }
+        if (pending.isEmpty()) return
+        db.beginTransaction()
+        try {
+            pending.forEach { id ->
+                RevisionStore.snapshotRows(
+                    db, "actual_costs", "actual_cost", revisionColumns, at,
+                    where = "id=?", args = arrayOf(id), origin = "REPAIR",
+                )
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun payloadHasColumns(payload: String, expected: Set<String>): Boolean {
+        val keys = try {
+            val iterator = JSONObject(payload).keys()
+            buildSet { while (iterator.hasNext()) add(iterator.next()) }
+        } catch (_: Exception) {
+            return false
+        }
+        return keys == expected
     }
 
     fun list(db: SQLiteDatabase, before: Cursor? = null, limit: Int = 100): Page {

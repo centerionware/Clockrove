@@ -36,6 +36,11 @@ internal class TimerDatabase(context: Context, private val now: () -> Long) : SQ
         db.execSQL("CREATE TABLE pending_departure(session_id TEXT PRIMARY KEY REFERENCES sessions(id),detected_ms INTEGER NOT NULL,deadline_ms INTEGER NOT NULL CHECK(deadline_ms>=detected_ms))")
         db.execSQL("CREATE UNIQUE INDEX one_departure_candidate ON pending_departure((1))")
     }
+    override fun onOpen(db: SQLiteDatabase) {
+        // Repair retained cost heads damaged by older job purges or schema-14 payloads.
+        ActualCostStore.repairRetainedHeads(db, now())
+    }
+
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         check(oldVersion in 1..16 && newVersion == 17) { "Unsupported schema upgrade $oldVersion -> $newVersion" }
         if (oldVersion < 2) createLocationTable(db)
@@ -54,7 +59,7 @@ internal class TimerDatabase(context: Context, private val now: () -> Long) : SQ
         if (oldVersion < 12) TaskClassificationStore.install(db, now())
         if (oldVersion < 13) TaskConversationStore.migrateImageByteLimit(db)
         if (oldVersion < 14) ActualCostStore.install(db)
-        if (oldVersion == 14) ActualCostStore.migrateCustomerSnapshot(db)
+        if (oldVersion == 14) ActualCostStore.migrateCustomerSnapshot(db, now())
         if (oldVersion >= 4) GeofenceStore.migrateSmallSiteRadius(db)
         GpsDeletionStore.migrate(db, now())
         TaskConversationStore.backfillEntityRevisions(db, now())

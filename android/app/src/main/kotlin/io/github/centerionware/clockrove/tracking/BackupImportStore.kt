@@ -295,11 +295,7 @@ internal class BackupImportStore(
             "automation" to listOf("job_id", "enabled", "auto_start", "automatic_departure", "grace_minutes"),
             "task_comment" to listOf("id", "task_id", "body", "created_ms", "updated_ms"),
             "task_attachment" to listOf("id", "task_id", "comment_id", "created_ms", "mime"),
-            "actual_cost" to listOf(
-                "id", "job_id", "job_name", "customer_id", "customer_name", "task_id", "task_name",
-                "amount_minor", "currency", "category", "occurred_ms", "timezone", "offset_seconds",
-                "vendor", "reference", "note", "created_ms", "updated_ms", "deleted_ms",
-            ),
+            "actual_cost" to ActualCostStore.revisionColumns,
             "settings" to BusinessSchema.settingsColumns,
             "job_tax_rate" to listOf("job_id", "tax_units"),
             "billing_tax_settings" to listOf("id", "default_tax_units"),

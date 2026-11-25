@@ -129,6 +129,17 @@ class ActualCostStoreTest {
             db.execSQL("CREATE INDEX actual_costs_date ON actual_costs(occurred_ms,id)")
             db.execSQL("CREATE INDEX actual_costs_job_date ON actual_costs(job_id,occurred_ms,id)")
             db.execSQL("DROP TABLE location_deletion_ranges") // Added in schema 16.
+            // Real schema-14 heads predate the customer columns; remove them here too.
+            val legacyHeads = db.rawQuery(
+                "SELECT id,payload FROM entity_revisions WHERE kind='actual_cost'", null,
+            ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(0) to rows.getString(1)) } }
+            legacyHeads.forEach { (id, payload) ->
+                val stripped = org.json.JSONObject(payload).apply {
+                    remove("customer_id")
+                    remove("customer_name")
+                }.toString()
+                db.execSQL("UPDATE entity_revisions SET payload=? WHERE id=?", arrayOf<Any?>(stripped, id))
+            }
             db.version = 14
         }
 
@@ -144,6 +155,38 @@ class ActualCostStoreTest {
         SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
             assertEquals(17, db.version)
             assertEquals(1, db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='actual_costs_customer_date'", null).use { it.moveToFirst(); it.getInt(0) })
+            db.rawQuery(
+                "SELECT r.payload,r.deleted FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                    "WHERE h.kind='actual_cost' AND h.entity_id='legacy-cost'",
+                null,
+            ).use { rows ->
+                assertTrue(rows.moveToFirst())
+                assertEquals(0, rows.getInt(1))
+                val head = org.json.JSONObject(rows.getString(0))
+                assertTrue(head.has("customer_id"))
+                assertTrue(head.has("customer_name"))
+            }
+        }
+    }
+
+    @Test fun purgedJobKeepsRetainedCostHeadsLive() {
+        assertNull(repository.saveActualCost("cost-before-purge", version, draft()))
+        assertNull(repository.archiveJob("archive-cost-job", version, jobId).conflict)
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            db.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf<Any?>(jobId))
+        }
+        assertNull(repository.deleteJob("purge-cost-job", version, jobId).conflict)
+        assertEquals(1, repository.actualCosts().page.entries.size)
+        SQLiteDatabase.openDatabase(app.getDatabasePath("clockrove.db").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            db.rawQuery(
+                "SELECT r.payload,r.deleted FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                    "WHERE h.kind='actual_cost' AND h.entity_id='cost-one'",
+                null,
+            ).use { rows ->
+                assertTrue(rows.moveToFirst())
+                assertEquals(0, rows.getInt(1))
+                assertTrue(org.json.JSONObject(rows.getString(0)).has("customer_name"))
+            }
         }
     }
 

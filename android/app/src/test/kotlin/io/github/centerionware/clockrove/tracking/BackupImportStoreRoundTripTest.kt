@@ -88,6 +88,24 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         )
         val archived = repository.createJob("Synthetic archived job")
         assertNull(repository.archiveJob("round-trip-archive", version, archived).conflict)
+
+        // A retained cost must survive its job's permanent deletion and still restore:
+        // purging the job used to tombstone the cost's revision head while the row
+        // remained live, so the freshly exported archive failed INVALID_REVISION_GRAPH.
+        val costJob = repository.createJob("Synthetic purged cost job")
+        assertNull(
+            repository.saveActualCost(
+                "round-trip-cost",
+                version,
+                ActualCostStore.Draft(
+                    "round-trip-cost", costJob, null, "1234", "USD", ActualCostStore.MATERIALS,
+                    sessionStart, "UTC", "Synthetic supplier", "Synthetic receipt", "Synthetic cost",
+                ),
+            ).conflict,
+        )
+        assertNull(repository.archiveJob("round-trip-archive-cost-job", version, costJob).conflict)
+        database.execSQL("UPDATE jobs SET archived_ms=0 WHERE id=?", arrayOf<Any?>(costJob))
+        assertNull(repository.deleteJob("round-trip-delete-cost-job", version, costJob).conflict)
     }
 
     /** One export -> stage -> preview -> apply cycle against the live database. */
@@ -126,11 +144,13 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         restore()
         assertTrue(repository.invoice("invoice").payload.isNotEmpty())
         assertEquals("349.38", InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload).total)
+        assertTrue(repository.actualCosts().page.entries.any { it.id == "round-trip-cost" })
 
-        // The owner's failing case re-exported a state that an earlier restore had already
-        // read, so the second cycle also has to validate the normalization revisions.
+        // Repeat the cycle so restore-time normalization revisions are exercised too;
+        // this is extra coverage, not a claim that the owner had restored before.
         restore()
         assertEquals("349.38", InvoiceStore.Snapshot.decode(repository.quoteDocument("quote", 2).payload).total)
         assertTrue(repository.quotes().page.entries.any { it.id == "quote" })
+        assertTrue(repository.actualCosts().page.entries.any { it.id == "round-trip-cost" })
     }
 }
