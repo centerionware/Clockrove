@@ -131,6 +131,15 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
                 arrayOf<Any?>(kind, entityId),
             )
         }
+        // A long-lived install also has rows whose head predates later columns.
+        // Their payloads are valid JSON but no longer cover the exported row.
+        listOf("settings", "customer", "session", "job").forEach { kind ->
+            database.execSQL(
+                "UPDATE entity_revisions SET payload='{}' WHERE id IN " +
+                    "(SELECT revision_id FROM entity_heads WHERE kind=?)",
+                arrayOf<Any?>(kind),
+            )
+        }
         database.close()
         repository.close()
         repository = TimerRepository(app, wallClock = { now })
