@@ -59,7 +59,7 @@
     <string name="pdf_tax_rate">"Impuesto (%1$s%%)"</string>
     <string name="pdf_invoice_tax_rate">"Impuesto de la factura (%1$s%%)"</string>
     <string name="pdf_estimated_total">"TOTAL ESTIMADO"</string>
-    <string name="pdf_total">"TOTAL"</string>
+    <string name="pdf_total">"TOTAL DE LA FACTURA"</string>
     <string name="pdf_original_invoice_total">"TOTAL DE LA FACTURA ORIGINAL"</string>
     <string name="pdf_invoice_total">"TOTAL DE LA FACTURA"</string>
     <string name="pdf_payment_recorded">"Estado de pago registrado el %1$s"</string>
