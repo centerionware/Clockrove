@@ -35,7 +35,7 @@ internal object RetainedFinancialRevisionRepair {
             db.query(table, queryColumns.toTypedArray(), null, null, null, null, null).use { rows ->
                 while (rows.moveToNext()) {
                     val row = queryColumns.mapIndexed { index, name ->
-                        name to BackupImportStore.cursorValue(rows, index)
+                        name to with(BackupImportStore) { cursorValue(rows, index) }
                     }.toMap()
                     // Draft revisions identify the quote as id while the table stores quote_id.
                     val values = if (kind == "quote_draft") {
@@ -46,13 +46,13 @@ internal object RetainedFinancialRevisionRepair {
                     val entityId = if (kind == "quote_draft") {
                         values["id"]?.toString()
                     } else {
-                        BackupImportStore.revisionEntityIdForDataRow(table, values)
+                        with(BackupImportStore) { revisionEntityIdForDataRow(table, values) }
                     } ?: continue
                     val head = head(db, kind, entityId) ?: continue
                     val expectedDeleted = values["deleted_ms"] != null
                     val expected = payloadColumns.toSet()
                     if (head.deleted == expectedDeleted && head.payload != null &&
-                        payloadCovers(head.payload, expected, BackupImportStore.optionalRevisionPayloadKeys(kind))) {
+                        payloadCovers(head.payload, expected, with(BackupImportStore) { optionalRevisionPayloadKeys(kind) })) {
                         continue
                     }
                     pending.add(
@@ -108,7 +108,7 @@ internal object RetainedFinancialRevisionRepair {
 
     /** Keep fields the row has no column for, such as invoice replacement provenance. */
     private fun optionalPayloadValues(payload: String?, kind: String): Map<String, Any?> {
-        val optional = BackupImportStore.optionalRevisionPayloadKeys(kind)
+        val optional = with(BackupImportStore) { optionalRevisionPayloadKeys(kind) }
         if (payload == null || optional.isEmpty()) return emptyMap()
         return try {
             val json = JSONObject(payload)
