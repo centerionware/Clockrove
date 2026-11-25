@@ -692,7 +692,14 @@ class _LifecycleEditorState extends ConsumerState<_LifecycleEditor> {
                       releasedClaims: _released.toList(),
                       addedWork: _added,
                     );
-                    return () => api.replace(id, version, draft);
+                    final languageTag = Localizations.localeOf(context)
+                        .toLanguageTag();
+                    return () => api.replace(
+                      id,
+                      version,
+                      draft,
+                      languageTag: languageTag,
+                    );
                   },
                   onCommitted: () {
                     ref.invalidate(invoicePaymentsProvider(_invoice.invoiceId));

@@ -196,8 +196,9 @@ class _Invoices extends QuoteInvoiceApi {
     int version,
     String invoiceId,
     QuoteInvoiceRequest request,
-    QuoteInvoiceChoices choices,
-  ) async {
+    QuoteInvoiceChoices choices, {
+    required String languageTag,
+  }) async {
     calls.add((
       id: id,
       version: version,

@@ -66,6 +66,7 @@ void main() {
           'invoice',
           request,
           choices,
+          languageTag: 'es',
         )).committed,
         isTrue,
       );
@@ -74,6 +75,7 @@ void main() {
       expect(arguments['version'], 7);
       final value = arguments['value'] as Map;
       expect(value['invoiceId'], 'invoice');
+      expect(value['languageTag'], 'es');
       expect(value['request'], request.encode());
       final encoded = value['choices'] as Map;
       expect(encoded['taskIds'], ['task']);

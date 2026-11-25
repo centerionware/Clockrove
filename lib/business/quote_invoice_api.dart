@@ -249,8 +249,9 @@ class QuoteInvoiceApi {
     int version,
     String invoiceId,
     QuoteInvoiceRequest request,
-    QuoteInvoiceChoices choices,
-  ) async {
+    QuoteInvoiceChoices choices, {
+    required String languageTag,
+  }) async {
     final value = (await _channel.invokeMapMethod<Object?, Object?>(
       'prepareQuoteInvoice',
       {
@@ -260,6 +261,7 @@ class QuoteInvoiceApi {
           'invoiceId': invoiceId,
           'request': request.encode(),
           'choices': choices.encode(),
+          'languageTag': languageTag,
         },
       },
     ))!;

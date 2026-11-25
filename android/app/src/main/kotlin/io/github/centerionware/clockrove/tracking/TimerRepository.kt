@@ -681,14 +681,14 @@ class TimerRepository internal constructor(context: Context,
         )
     internal fun localizedStrings(): Context = localizedContext(appContext)
     @Synchronized
-    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray): Boolean =
+    internal fun cacheQuotePdf(id: String, revision: Int, payload: String, bytes: ByteArray, languageTag: String? = null): Boolean =
         QuoteStore.cachePdf(
             helper.writableDatabase,
             id,
             revision,
             payload,
             bytes,
-            localizedContext(appContext),
+            localizedContext(appContext, languageTag),
         )
     @Synchronized
     internal fun quoteHistory(id: String, before: Int? = null, limit: Int = 20): List<QuoteStore.RevisionSummary> =
@@ -736,9 +736,9 @@ class TimerRepository internal constructor(context: Context,
     internal fun calculateQuoteInvoice(request: QuoteInvoiceReviewStore.Request, choices: QuoteInvoiceReviewStore.Choices): QuoteInvoiceCalculation =
         QuoteInvoiceCalculation(readSnapshot(helper.readableDatabase).version, QuoteInvoiceReviewStore.review(helper.readableDatabase, request, choices))
     @Synchronized
-    internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft): Outcome =
+    internal fun prepareQuoteInvoice(id: String, version: Long, value: QuoteInvoiceStore.Draft, languageTag: String? = null): Outcome =
         changeConfiguration(id, OpaqueReceipt.compact(org.json.JSONArray(listOf(version, "QUOTE_INVOICE_PREPARE", value.fingerprint())).toString()), version) {
-            QuoteInvoiceStore.prepare(it, value, wallClock(), localizedContext(appContext))
+            QuoteInvoiceStore.prepare(it, value, wallClock(), localizedContext(appContext, languageTag))
         }
     @Synchronized
     internal fun quoteInvoices(id: String, before: Pair<Long, String>? = null, limit: Int = 20): List<QuoteInvoiceStore.Summary> = QuoteInvoiceStore.links(helper.readableDatabase, id, before, limit)
@@ -746,25 +746,25 @@ class TimerRepository internal constructor(context: Context,
     internal fun saveQuote(id: String, version: Long, value: QuoteStore.Draft): Outcome =
         boardChange(id, version, "QUOTE_SAVE", listOf(value.encode())) { QuoteStore.save(it, value, wallClock()) }
     @Synchronized
-    internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean): Outcome =
+    internal fun issueQuote(id: String, version: Long, quoteId: String, confirmed: Boolean, languageTag: String? = null): Outcome =
         boardChange(id, version, "QUOTE_ISSUE", listOf(quoteId, confirmed)) {
-            QuoteStore.issue(it, quoteId, confirmed, wallClock(), localizedContext(appContext))
+            QuoteStore.issue(it, quoteId, confirmed, wallClock(), localizedContext(appContext, languageTag))
         }
     @Synchronized
     internal fun decideQuote(id: String, version: Long, quoteId: String, revision: Int, decision: String, note: String, confirmed: Boolean): Outcome =
         boardChange(id, version, "QUOTE_DECIDE", listOf(quoteId, revision, decision, note, confirmed)) { QuoteStore.decide(it, quoteId, revision, decision, note, confirmed, wallClock()) }
     @Synchronized
-    internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection): Outcome =
+    internal fun prepareInvoice(id: String, version: Long, invoiceId: String, selection: ReportStore.Selection, languageTag: String? = null): Outcome =
         boardChange(id, version, "INVOICE_PREPARE", listOf(invoiceId, selection.firstDate, selection.lastDate, selection.timezone, org.json.JSONArray(selection.jobIds))) {
-            InvoiceStore.prepare(it, invoiceId, selection, wallClock(), localizedContext(appContext))
+            InvoiceStore.prepare(it, invoiceId, selection, wallClock(), localizedContext(appContext, languageTag))
         }
     @Synchronized
     internal fun voidInvoice(id: String, version: Long, value: InvoiceLifecycleStore.VoidDraft): Outcome =
         boardChange(id, version, "INVOICE_VOID", value.values()) { InvoiceLifecycleStore.void(it, value, wallClock()) }
     @Synchronized
-    internal fun replaceInvoice(id: String, version: Long, value: InvoiceLifecycleStore.ReplacementDraft): Outcome =
+    internal fun replaceInvoice(id: String, version: Long, value: InvoiceLifecycleStore.ReplacementDraft, languageTag: String? = null): Outcome =
         boardChange(id, version, "INVOICE_REPLACE", value.values()) {
-            InvoiceLifecycleStore.replace(it, value, wallClock(), localizedContext(appContext))
+            InvoiceLifecycleStore.replace(it, value, wallClock(), localizedContext(appContext, languageTag))
         }
     @Synchronized
     internal fun invoicePayments(invoiceId: String): Pair<Long, InvoicePaymentStore.Snapshot> =
@@ -813,10 +813,10 @@ class TimerRepository internal constructor(context: Context,
     internal fun invoiceCopy(copyId: String, languageTag: String? = null): InvoiceStore.Record =
         InvoiceCopyStore.read(helper.readableDatabase, copyId, localizedContext(appContext, languageTag))
     @Synchronized
-    internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray): Boolean {
+    internal fun cacheInvoiceCopyPdf(copyId: String, payload: String, bytes: ByteArray, languageTag: String? = null): Boolean {
         require(bytes.size in 5..20_000_000 && bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray(Charsets.US_ASCII)))
         val db = helper.writableDatabase
-        if (InvoiceCopyStore.read(db, copyId, localizedContext(appContext)).payload != payload) return false
+        if (InvoiceCopyStore.read(db, copyId, localizedContext(appContext, languageTag)).payload != payload) return false
         return db.update("invoice_copies", android.content.ContentValues().apply { put("pdf", bytes) }, "id=? AND pdf IS NULL", arrayOf(copyId)) == 1
     }
     internal data class InvoiceSummary(val id: String, val number: String, val created: Long, val total: String, val currency: String, val style: String,

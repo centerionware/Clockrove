@@ -144,8 +144,12 @@ class InvoiceLifecycleApi {
   Future<TimerOutcome> replace(
     String id,
     int version,
-    InvoiceReplacementDraft draft,
-  ) => _save('replaceInvoice', id, version, draft.encode());
+    InvoiceReplacementDraft draft, {
+    required String languageTag,
+  }) => _save('replaceInvoice', id, version, {
+    ...draft.encode(),
+    'languageTag': languageTag,
+  });
 }
 
 final invoiceLifecycleApiProvider = Provider<InvoiceLifecycleApi>(

@@ -866,7 +866,9 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                   }
                   final api = ref.read(quoteInvoiceApiProvider),
                       operation = newBusinessId(),
-                      invoice = newBusinessId();
+                      invoice = newBusinessId(),
+                      languageTag = Localizations.localeOf(context)
+                          .toLanguageTag();
                   return () async {
                     final outcome = await api.prepare(
                       operation,
@@ -874,6 +876,7 @@ class _QuoteInvoiceFormState extends ConsumerState<_QuoteInvoiceForm> {
                       invoice,
                       reviewed.request,
                       reviewed.choices,
+                      languageTag: languageTag,
                     );
                     if (outcome.committed) {
                       _preparedInvoice = invoice;

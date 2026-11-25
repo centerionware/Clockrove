@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.util.LruCache
 import io.github.centerionware.clockrove.R
 import io.github.centerionware.clockrove.localizedContext
 import io.github.centerionware.clockrove.tracking.BusinessStore
@@ -23,21 +24,62 @@ import java.util.Locale
 import java.util.TimeZone
 
 internal object InvoiceDocuments {
+    /**
+     * A stored PDF was rendered in whichever language generated it first. Preview,
+     * save, email and share must follow the language on screen, so a requested
+     * language always renders again. The small cache keeps page navigation from
+     * rebuilding the whole document for every page.
+     */
+    private const val RENDER_CACHE_BYTES = 16 * 1024 * 1024
+    private val rendered = object : LruCache<String, ByteArray>(RENDER_CACHE_BYTES) {
+        override fun sizeOf(key: String, value: ByteArray) = value.size
+    }
+
+    private fun render(key: String, languageTag: String?, generate: () -> ByteArray): ByteArray {
+        if (languageTag == null) return generate()
+        synchronized(rendered) { rendered.get(key) }?.let { return it }
+        return generate().also { bytes -> synchronized(rendered) { rendered.put(key, bytes) } }
+    }
+
     /** Concurrent renders may finish together; only the first derived PDF is retained. */
     fun ensure(context: Context, repository: TimerRepository, id: String, copyId: String? = null, languageTag: String? = null): InvoiceStore.Record {
-        fun read() = (if (copyId == null) repository.invoice(id) else repository.invoiceCopy(copyId, languageTag)).also { require(it.id == id) { "INVOICE_COPY_MISMATCH" } }
-        val before = read()
-        if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, languageTag = languageTag)
-        if (copyId == null) repository.cacheInvoicePdf(id, before.payload, bytes) else repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes)
-        return read().also { check(it.pdf != null) { "INVOICE_UNAVAILABLE" } }
+        if (copyId == null) return ensureInvoice(context, repository, id, languageTag)
+        val before = repository.invoiceCopy(copyId, languageTag)
+        require(before.id == id) { "INVOICE_COPY_MISMATCH" }
+        return renderCopy(context, repository, copyId, before, languageTag)
     }
+
+    /** Content provider entry point: a copy URI carries the copy id, not its invoice id. */
+    fun ensureCopy(context: Context, repository: TimerRepository, copyId: String, languageTag: String? = null): InvoiceStore.Record =
+        renderCopy(context, repository, copyId, repository.invoiceCopy(copyId, languageTag), languageTag)
+
+    private fun ensureInvoice(context: Context, repository: TimerRepository, id: String, languageTag: String?): InvoiceStore.Record {
+        val before = repository.invoice(id)
+        if (before.pdf != null && languageTag == null) return before
+        val bytes = render("invoice:$id:$languageTag", languageTag) {
+            InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, languageTag = languageTag)
+        }
+        if (before.pdf == null) repository.cacheInvoicePdf(id, before.payload, bytes)
+        return before.copy(pdf = bytes)
+    }
+
+    private fun renderCopy(context: Context, repository: TimerRepository, copyId: String, before: InvoiceStore.Record, languageTag: String?): InvoiceStore.Record {
+        if (before.pdf != null && languageTag == null) return before
+        val bytes = render("copy:$copyId:$languageTag", languageTag) {
+            InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, languageTag = languageTag)
+        }
+        if (before.pdf == null) repository.cacheInvoiceCopyPdf(copyId, before.payload, bytes, languageTag)
+        return before.copy(pdf = bytes)
+    }
+
     fun ensureQuote(context: Context, repository: TimerRepository, id: String, revision: Int, languageTag: String? = null): InvoiceStore.Record {
         val before = repository.quoteDocument(id, revision, languageTag)
-        if (before.pdf != null) return before
-        val bytes = InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE", languageTag)
-        repository.cacheQuotePdf(id, revision, before.payload, bytes)
-        return repository.quoteDocument(id, revision, languageTag).also { check(it.pdf != null) { "QUOTE_UNAVAILABLE" } }
+        if (before.pdf != null && languageTag == null) return before
+        val bytes = render("quote:$id:$revision:$languageTag", languageTag) {
+            InvoicePdf.generate(context, InvoiceStore.Snapshot.decode(before.payload), before.logo, "QUOTE", languageTag)
+        }
+        if (before.pdf == null) repository.cacheQuotePdf(id, revision, before.payload, bytes, languageTag)
+        return before.copy(pdf = bytes)
     }
     fun uri(context: Context, id: String, languageTag: String? = null): Uri = withLanguage(
         Uri.Builder().scheme("content").authority("${context.packageName}.invoices").appendPath("invoices").appendPath(id), languageTag,

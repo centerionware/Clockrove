@@ -45,6 +45,16 @@ class InvoiceSnapshotTest {
         }.toString()
         assertTrue(InvoiceStore.Snapshot.decode(olderPayload).lines.all { it.chargeType == TaskClassification.UNCLASSIFIED })
     }
+    @Test fun preparedInvoiceSnapshotFollowsTheOnScreenLanguage() {
+        assertNull(repository.prepareInvoice("spanish", version, "spanish-invoice", selection, "es").conflict)
+        val data = InvoiceStore.Snapshot.decode(repository.invoice("spanish-invoice").payload)
+        assertTrue(data.basis.startsWith("Tiempo finalizado"))
+        assertEquals("Trabajo finalizado", data.lines.first().title)
+        assertTrue(data.lines.first().detail.contains("Horas facturadas"))
+        assertTrue(data.subject.startsWith("Factura "))
+        assertTrue(data.body.contains("Adjuntamos la factura"))
+    }
+
     @Test fun taskInvoiceFreezesSuppliesClassificationForLaterReports() {
         repository.saveJobSettings("task-rate", version, repository.jobDetail(job).job.settings.copy(billingMode = "TASK"))
         val board = repository.boardSnapshot(job).board

@@ -97,8 +97,9 @@ class _Reports extends ReportApi {
     String id,
     int expected,
     String invoiceId,
-    ReportSelection s,
-  ) async {
+    ReportSelection s, {
+    required String languageTag,
+  }) async {
     attempts.add((id, expected, invoiceId));
     if (attempts.length == 1) {
       version = 2;

@@ -73,7 +73,12 @@ class _Quotes extends QuoteApi {
   @override
   Future<List<QuoteHistoryEntry>> history(String id, {int? before}) async => [];
   @override
-  Future<TimerOutcome> issue(String id, int version, String quoteId) async {
+  Future<TimerOutcome> issue(
+    String id,
+    int version,
+    String quoteId, {
+    required String languageTag,
+  }) async {
     issues.add((id: id, version: version, quote: quoteId));
     current = QuoteData(
       2,

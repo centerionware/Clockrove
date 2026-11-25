@@ -233,7 +233,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
         return when (call.method) {
             "prepareQuoteInvoice" -> repository.prepareQuoteInvoice(id, version, QuoteInvoiceStore.Draft(v.string("invoiceId"),
                 quoteInvoiceRequest(Input(requireNotNull(v.value["request"] as? Map<*, *>))),
-                quoteInvoiceChoices(Input(requireNotNull(v.value["choices"] as? Map<*, *>)))))
+                quoteInvoiceChoices(Input(requireNotNull(v.value["choices"] as? Map<*, *>)))), v.nullable("languageTag"))
             "applyQuoteScope" -> {
                 val rows = requireNotNull(v.value["items"] as? List<*>); require(rows.size in 1..2000)
                 val items = rows.map { row -> Input(requireNotNull(row as? Map<*, *>)).let { item ->
@@ -250,7 +250,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                 repository.saveQuote(id, version, QuoteStore.Draft(v.string("quoteId"), v.nullable("customerId"), v.nullable("jobId"),
                     v.string("title"), v.string("currency"), v.int("taxUnits"), lines, v.nullable("validUntil"), v.string("terms"), v.string("notes")))
             }
-            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"))
+            "issueQuote" -> repository.issueQuote(id, version, v.string("quoteId"), v.bool("confirmed"), v.nullable("languageTag"))
             "decideQuote" -> repository.decideQuote(id, version, v.string("quoteId"), v.int("revision"), v.string("decision"), v.string("note"), v.bool("confirmed"))
             "voidInvoice" -> repository.voidInvoice(id, version, InvoiceLifecycleStore.VoidDraft(v.string("invoiceId"), v.string("reason"), v.string("timezone"), v.bool("confirmed")))
             "replaceInvoice" -> {
@@ -262,7 +262,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
                     (raw as? Map<*, *>)?.let { Input(it).let { selection -> ReportStore.Selection(selection.string("firstDate"), selection.string("lastDate"), selection.string("timezone"), selection.strings("jobIds")) } }
                 }
                 repository.replaceInvoice(id, version, InvoiceLifecycleStore.ReplacementDraft(v.string("invoiceId"), v.string("replacementId"), lines,
-                    v.int("taxUnits"), v.string("reason"), v.string("timezone"), v.bool("confirmed"), v.strings("releaseClaimIds"), added))
+                    v.int("taxUnits"), v.string("reason"), v.string("timezone"), v.bool("confirmed"), v.strings("releaseClaimIds"), added), v.nullable("languageTag"))
             }
             "createManualSession", "correctSession" -> {
                 val draft = SessionHistoryStore.Draft(v.string("sessionId"), v.string("jobId"), v.integer("start"), v.integer("end"), v.string("timezone"), v.int("offsetSeconds"))
@@ -304,7 +304,7 @@ internal class BusinessDispatch(private val repository: TimerRepository, private
             "recordInvoicePayment" -> repository.recordInvoicePayment(id, version, InvoicePaymentStore.Draft(v.string("paymentId"), v.string("invoiceId"), v.string("amountMinor"), v.string("currency"), v.integer("received"), v.string("timezone"), v.string("method"), v.string("reference"), v.string("note")))
             "reverseInvoicePayment" -> repository.reverseInvoicePayment(id, version, InvoicePaymentStore.Reversal(v.string("reversalId"), v.string("invoiceId"), v.string("paymentId"), v.integer("effective"), v.string("timezone"), v.string("note")))
             "prepareInvoiceBalanceCopy" -> repository.prepareInvoiceBalanceCopy(id, version, v.string("copyToken"), v.string("invoiceId"))
-            "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")))
+            "prepareInvoice" -> repository.prepareInvoice(id, version, v.string("invoiceId"), ReportStore.Selection(v.string("firstDate"), v.string("lastDate"), v.string("timezone"), v.strings("jobIds")), v.nullable("languageTag"))
             "reconcileInvoiceCoverage" -> {
                 val raw = requireNotNull(v.value["spans"] as? List<*>); require(raw.size <= 1000)
                 val spans = raw.map { entry -> Input(requireNotNull(entry as? Map<*, *>)).let { span -> LegacyInvoiceStore.Span(span.integer("start"), span.integer("end"), span.string("timezone")) } }
