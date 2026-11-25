@@ -41,6 +41,7 @@ class _PreviewReportApi extends ReportApi {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
   );
   final styles = <String>[];
+  final languages = <String>[];
 
   @override
   Future<InvoicePage> previewStyle({
@@ -49,8 +50,10 @@ class _PreviewReportApi extends ReportApi {
     required int digits,
     required Uint8List? logo,
     required int page,
+    required String languageTag,
   }) async {
     styles.add(style);
+    languages.add(languageTag);
     return InvoicePage(page, 1, Uint8List.fromList(pixel));
   }
 }
@@ -146,6 +149,10 @@ Future<void> _show(
           if (reportApi != null) reportApiProvider.overrideWithValue(reportApi),
         ],
         child: MaterialApp(
+          // Mirror the app's resolved locale so native previews receive the
+          // language the screen is showing, not the test host's default.
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en')],
           debugShowCheckedModeBanner: false,
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
           builder: (_, child) => MediaQuery(
@@ -167,6 +174,7 @@ Future<void> _show(
       ),
     ),
   );
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
 }
@@ -243,6 +251,8 @@ void main() {
     );
     expect(find.text('Page 1 of 1'), findsOneWidget);
     expect(reports.styles, ['CLASSIC']);
+    // The native sample document follows the app language, not the phone default.
+    expect(reports.languages, ['en']);
     expect(tester.takeException(), isNull);
   });
 

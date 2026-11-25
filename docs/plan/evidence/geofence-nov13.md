@@ -169,3 +169,53 @@ passed. The [internal delivery attempt](https://github.com/centerionware/Clockro
 stopped before uploading a bundle because its signing job did not install
 CI’s Flutter Gradle repository setup. The follow-up applies the same setup
 to the trusted Play workflow. The signed upload and owner-device check remain open.
+
+### November 24 settings-edit arrival and departure follow-up
+
+The owner reported a geofence clock-in that later stopped responding: after a
+manual clock-out from inside the site, the app showed "Watching for your next
+arrival", but the next arrival did not start work and the status changed to
+"Waiting for a fresh exit and entry". The site now uses a 150 m radius and a
+zero-minute departure grace. No app update, reboot or deliberate restart was
+involved; the widget was on screen during a recording attempt.
+
+Source tracing found the remaining common path: every site or settings save ran
+`GeofenceStore.invalidate`, which reset `last_presence` to `UNKNOWN`, cleared
+`armed`/`suppressed`, and deleted any pending departure. The rotated registration
+is correct, but the reset turned the next arrival into an initial, non-transition
+observation, so it could not start work; the same reset removed the inside
+baseline a later exit needs and discarded an already recorded exit. Editing the
+grace to zero or the radius to 150 m is exactly such a save, and previous
+owner-device sessions changed both settings around these checks.
+
+The fix keeps the last known presence, arming and suppression across site and
+settings edits. Registration keys still rotate and the fact/configuration
+barriers still advance, so stale callbacks remain ignored. A recorded exit is
+kept for radius, label and grace edits and its deadline is recomputed from the
+new grace; a moved centre, a disabled or removed site, a disabled or
+non-automatic policy, explicit review acceptance and archive/restore still clear
+it.
+
+The owner then reported the complementary case: setting a position fix to the
+spot they were standing on, or enabling the automation toggles, while already
+inside the area did not clock them in, in either order. A configuration save now
+counts as the entry the worker already made. After the save commits, if the job
+is known INSIDE, `enabled` and `autoStart` are on, no session is open, the job is
+not suppressed and no history review is unresolved, `TimerRepository` starts a
+session at the save time through `validate`/`applyTimerRows` with origin
+`GEOFENCE`, inside the same configuration transaction and version bump. A no-op
+save (identical site or settings) does not start anything. Re-enabling a job
+while known OUTSIDE now re-arms it, so the next arrival starts without an extra
+exit and entry. A manual stop inside still sets suppression, so editing settings
+afterwards never restarts work.
+
+Ten native cases cover this: a current inside fix starts work without a
+re-entry callback and its matching exit still opens the grace period; saving a
+position then enabling starts the clock; enabling then saving a position starts
+the clock; resaving identical settings does not start work but turning on
+`autoStart` does; a manual stop inside keeps suppression across a settings edit;
+settings edit while away keeps arming; radius edit while clocked in still clocks
+out on exit; grace edit while away keeps the recorded exit with the new deadline;
+and re-enabling automation while away arms the next arrival. These changes await
+a full Actions run; no local build or test ran, and Android callback delivery on
+the owner device remains a physical gate.

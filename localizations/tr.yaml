@@ -172,6 +172,7 @@ restoreDeletionCountNote: "Silme sayısı, yedekteki silme işaretlerini sayar. 
 restoreCancelled: "Önizleme iptal edildi. Yerel kayıtlar değiştirilmedi."
 restoreCleanupFailed: "Geçici geri yükleme verileri temizlenemedi. Tekrar denemeden önce Clockrove’u kapatıp açın."
 restoreFailed: "Yedek işlenemedi. Seçilen dosyayı kontrol edip tekrar deneyin."
+restoreErrorCode: "Hata kodu: {code}"
 restoreUnlockFailed: "Yedeğin kilidi açılamadı. Parolayı ve dosyayı kontrol edin."
 restoreAllConflictsReviewed: "Tüm çakışma sayfaları incelendi. Uygulama sırasında yerel sürüm kontrol edilir ve tüm seçimler tek işlemde kaydedilir."
 help: "Yardım"

@@ -394,9 +394,14 @@ class TimerRepository internal constructor(context: Context,
             currentFix?.let { fix -> OpaqueReceipt.compact(org.json.JSONArray(listOf(
                 fix.latitude, fix.longitude, fix.accuracyMeters, fix.measuredUtcMillis,
             )).toString()) })).toString(), version) {
+        val previous = GeofenceStore.sites(it).firstOrNull { saved -> saved.id == site.id }
+        val configuring = currentFix != null || previous?.copy(registrationKey = "") != site.copy(registrationKey = "")
         val conflict = GeofenceStore.saveSite(it, site, wallClock(), currentFix)
-        if (conflict == null) RevisionStore.snapshotRows(it, "work_sites", "site", BusinessSchema.siteColumns,
-            wallClock(), "job_id", "id=?", arrayOf(site.id))
+        if (conflict == null) {
+            RevisionStore.snapshotRows(it, "work_sites", "site", BusinessSchema.siteColumns,
+                wallClock(), "job_id", "id=?", arrayOf(site.id))
+            if (configuring) startKnownInside(it, id, site.jobId, wallClock())
+        }
         conflict
     }
     @Synchronized
@@ -412,9 +417,39 @@ class TimerRepository internal constructor(context: Context,
     internal fun saveAutomation(id: String, version: Long, settings: GeofenceStore.Settings): Outcome = changeConfiguration(id,
         org.json.JSONArray(listOf(version, "AUTOMATION_SAVE", settings.jobId, settings.enabled,
             settings.autoStart, settings.automaticDeparture, settings.graceMinutes)).toString(), version) {
+        val previous = GeofenceStore.policies(it).firstOrNull { policy -> policy.settings.jobId == settings.jobId }
+        val configuring = previous?.settings != settings
         val conflict = GeofenceStore.saveSettings(it, settings, wallClock())
-        if (conflict == null) BusinessSchema.snapshotAutomation(it, settings.jobId, wallClock())
+        if (conflict == null) {
+            BusinessSchema.snapshotAutomation(it, settings.jobId, wallClock())
+            if (configuring) startKnownInside(it, id, settings.jobId, wallClock())
+        }
         conflict
+    }
+
+    /**
+     * Saving the configuration of an area the worker already stands in is the entry itself, so the
+     * clock starts now instead of waiting for a redundant re-entry callback. The live-callback
+     * guards still win: one open session, an explicit stop, unresolved history and a disabled or
+     * non-starting policy all keep manual control.
+     */
+    private fun startKnownInside(db: SQLiteDatabase, id: String, jobId: String, at: Long): Boolean {
+        val state = readSnapshot(db)
+        if (state.running != null) return false
+        val policy = GeofenceStore.policies(db).firstOrNull { it.settings.jobId == jobId } ?: return false
+        if (!policy.settings.enabled || !policy.settings.autoStart || policy.suppressed) return false
+        if (policy.lastPresence != io.github.centerionware.clockrove.location.geofence.GeofenceMembership.Presence.INSIDE)
+            return false
+        if (jobId in GeofenceStore.unresolvedJobs(db)) return false
+        val command = Command("$id/known-inside", state.version, Action.START, jobId, at,
+            "Etc/UTC", 0, Origin.GEOFENCE)
+        if (validate(db, state, command, qualifiedAutomation = true) != null) return false
+        applyTimerRows(db, state, command)
+        db.execSQL("INSERT OR IGNORE INTO commands(id,fingerprint,version,conflict) VALUES (?,?,?,?)",
+            arrayOf<Any?>(command.id, OpaqueReceipt.compact(org.json.JSONArray(listOf(
+                state.version, Action.START.name, jobId, at, "Etc/UTC", 0, Origin.GEOFENCE.name,
+            )).toString()), state.version, null))
+        return true
     }
 
     @Synchronized

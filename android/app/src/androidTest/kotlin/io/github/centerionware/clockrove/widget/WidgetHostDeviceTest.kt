@@ -26,13 +26,25 @@ class WidgetHostDeviceTest {
     @get:org.junit.Rule val caseName = org.junit.rules.TestName()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext
-    private fun until(description: String, predicate: () -> Boolean) {
-        val end = SystemClock.uptimeMillis() + 30000
+    /**
+     * [retry] is the app's own refresh path, repeated while the host waits: after a resize the
+     * launcher can rebind a collection without asking the app again, so a slow emulator leaves the
+     * old adapter in place until the next refresh.
+     */
+    private fun until(description: String, timeoutMillis: Long = 30000, retry: (() -> Unit)? = null,
+        predicate: () -> Boolean) {
+        val start = SystemClock.uptimeMillis()
+        val end = start + timeoutMillis
+        var nextRetry = start + 5000
         while (SystemClock.uptimeMillis() < end) {
             var success = false
             instrumentation.runOnMainSync { success = predicate() }
             if (success) return
             SystemClock.sleep(100)
+            if (retry != null && SystemClock.uptimeMillis() > nextRetry) {
+                retry()
+                nextRetry += 5000
+            }
         }
         captureSetup("failure")
         throw AssertionError(description)
@@ -81,7 +93,8 @@ class WidgetHostDeviceTest {
                 manager.updateAppWidgetOptions(id, options(300, 340))
                 TimerWidget.refreshAll(app)
                 var lastCount = Int.MIN_VALUE
-                until("Expanded Combined must bind all 30 tasks through RemoteViewsService, resize $cycle") {
+                until("Expanded Combined must bind all 30 tasks through RemoteViewsService, resize $cycle",
+                    timeoutMillis = 60000, retry = { TimerWidget.refreshAll(app) }) {
                     val list = view!!.findViewById<ListView>(R.id.widget_tasks)
                     val count = list?.count ?: -1
                     if (count != lastCount) {

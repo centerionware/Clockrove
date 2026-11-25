@@ -27,6 +27,15 @@ class InvoiceStylePreviewScreen extends ConsumerStatefulWidget {
 class _InvoiceStylePreviewScreenState
     extends ConsumerState<InvoiceStylePreviewScreen> {
   late Future<InvoicePage> _page = _load(0);
+  String? _languageTag;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tag = Localizations.localeOf(context).toLanguageTag();
+    if (_languageTag != null && _languageTag != tag) _page = _load(0);
+    _languageTag = tag;
+  }
 
   Future<InvoicePage> _load(int index) => ref
       .read(reportApiProvider)
@@ -36,6 +45,8 @@ class _InvoiceStylePreviewScreenState
         digits: widget.digits,
         logo: widget.logo,
         page: index,
+        // The sample invoice is rendered natively, so pass the locale this screen is showing.
+        languageTag: Localizations.localeOf(context).toLanguageTag(),
       );
 
   String _styleName(BuildContext context) => switch (widget.style) {

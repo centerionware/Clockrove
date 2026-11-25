@@ -18,7 +18,6 @@ import 'support/map_preview.dart';
 
 class _Timer extends TimerApi {
   final calls = <TimerIntent>[];
-  int snapshotCalls = 0;
   TimerSnapshot value = const TimerSnapshot(1, [
     JobSummary('job', 'Studio renovation'),
   ], null);
@@ -26,10 +25,7 @@ class _Timer extends TimerApi {
   Stream<int> get committedVersions => const Stream.empty();
 
   @override
-  Future<TimerSnapshot> snapshot() async {
-    snapshotCalls++;
-    return value;
-  }
+  Future<TimerSnapshot> snapshot() async => value;
 
   @override
   Future<TimerOutcome> execute({
@@ -168,43 +164,24 @@ void main() {
       expect(api.sites, isEmpty);
     },
   );
-  testWidgets('saving a current location offers an explicit clock-in command', (
+  testWidgets('saving a current location does not issue a second clock-in', (
     tester,
   ) async {
     final api = _configured();
     final timer = _Timer();
     await _show(tester, api, timerApi: timer);
-    // Open and save after taking the one-shot setup fix.
     await _saveSiteFromCurrentLocation(tester);
     expect(api.positionRequests, 1);
-    expect(find.text('Clock in at this site now?'), findsOneWidget);
+    expect(api.savedCurrentFix, isNotNull);
+    expect(api.savedCurrentFix!.accuracy, 25);
+    // The committed save is the entry: the editor neither prompts nor sends a timer command.
     expect(timer.calls, isEmpty);
-    expect(
-      find.textContaining(
-        'Changing a site while you are here resets arrival detection',
-      ),
-      findsOneWidget,
-    );
-    await tester.tap(find.text(englishCopy(AppMessage.clockIn)));
-    await tester.pumpAndSettle();
-    expect(timer.calls, hasLength(1));
-    expect(timer.calls.single.action, TimerAction.start);
-    expect(timer.calls.single.jobId, 'job');
-    expect(find.text('Clocked in to Studio renovation.'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
   });
-  testWidgets('declining the in-place clock-in offer leaves work stopped', (
+  testWidgets('saving a current location never switches another running job', (
     tester,
   ) async {
-    final timer = _Timer();
-    await _show(tester, _configured(), timerApi: timer);
-    await _saveSiteFromCurrentLocation(tester);
-    await tester.tap(find.text('Not now'));
-    await tester.pumpAndSettle();
-    expect(timer.calls, isEmpty);
-  });
-  testWidgets('in-place offer never switches another running job', (
-    tester,
-  ) async {
+    final api = _configured();
     final timer = _Timer()
       ..value = TimerSnapshot(
         1,
@@ -216,44 +193,14 @@ void main() {
           DateTime.utc(2026, 11, 22),
         ),
       );
-    await _show(tester, _configured(), timerApi: timer);
+    await _show(tester, api, timerApi: timer);
     await _saveSiteFromCurrentLocation(tester);
-    expect(timer.snapshotCalls, 1);
-    expect(timer.value.running!.jobId, 'other-job');
-    expect(
-      find.text(
-        'Another job is running. Clockrove will not switch jobs automatically.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Clock in at this site now?'), findsNothing);
+    // The save is a site update, not a job switch: the other session is never commanded.
+    expect(api.savedCurrentFix, isNotNull);
     expect(timer.calls, isEmpty);
+    expect(timer.value.running!.jobId, 'other-job');
+    expect(find.byType(AlertDialog), findsNothing);
   });
-  testWidgets(
-    'saving a current fix while this job runs keeps it without a second clock-in',
-    (tester) async {
-      final api = _configured();
-      final timer = _Timer()
-        ..value = TimerSnapshot(
-          1,
-          const [JobSummary('job', 'Studio renovation')],
-          RunningSession(
-            'session',
-            'job',
-            'Studio renovation',
-            DateTime.utc(2026, 11, 22),
-          ),
-        );
-      await _show(tester, api, timerApi: timer);
-      await _saveSiteFromCurrentLocation(tester);
-      expect(api.savedCurrentFix, isNotNull);
-      expect(api.savedCurrentFix!.accuracy, 25);
-      expect(timer.snapshotCalls, 1);
-      expect(timer.calls, isEmpty);
-      expect(find.text('This job is already running.'), findsOneWidget);
-      expect(find.text('Clock in at this site now?'), findsNothing);
-    },
-  );
   testWidgets('small radius warns that Android may miss arrivals', (
     tester,
   ) async {

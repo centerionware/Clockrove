@@ -172,6 +172,7 @@ restoreDeletionCountNote: "Jumlah ini menghitung penanda penghapusan dalam cadan
 restoreCancelled: "Pratinjau dibatalkan. Tidak ada catatan lokal yang diubah."
 restoreCleanupFailed: "Data pemulihan sementara tidak dapat dibersihkan. Tutup dan buka kembali Clockrove sebelum mencoba lagi."
 restoreFailed: "Cadangan tidak dapat diproses. Periksa file yang dipilih dan coba lagi."
+restoreErrorCode: "Kode kesalahan: {code}"
 restoreUnlockFailed: "Cadangan tidak dapat dibuka. Periksa kata sandi dan file."
 restoreAllConflictsReviewed: "Semua halaman konflik telah ditinjau. Saat diterapkan, versi lokal diperiksa dan semua pilihan disimpan dalam satu transaksi."
 help: "Bantuan"

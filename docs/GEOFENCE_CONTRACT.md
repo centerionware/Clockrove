@@ -8,8 +8,18 @@ Site/settings mutations require command ID and expected version. Their results
 share the timer command ledger. Capacity is checked across every enabled job,
 before edits inside the same transaction. Rejected commands preserve settings and
 registration keys; unexpected storage failures roll back the transaction. Successful
-geometry/enabled/settings changes rotate registration IDs and disarm the job;
-label edits preserve current facts. Site IDs cannot change jobs. The inventory
+geometry/enabled/settings changes rotate registration IDs and advance the fact and
+configuration barriers; they keep the job's last known presence, arming and
+suppression, because editing a monitored job does not move the worker. A stale
+callback from an old registration is still ignored. A recorded exit survives a
+radius, label or grace edit and is recomputed against the new grace, but a moved
+centre, a disabled or removed site, a disabled or non-automatic policy, an
+explicit review acceptance and archive/restore still clear it. A save that proves
+the worker is inside the area is itself the entry: saving a current position fix
+inside an armed job starts work at that moment, and so does enabling or editing
+automation while the last observation is still inside, in either order. A manual
+stop, an unresolved history review, a disabled or non-starting policy and an
+already open session still win over that start. Site IDs cannot change jobs. The inventory
 returned by sitesToRegister is requested configuration, not platform registration
 proof. A future adapter must report the actual registration task result separately.
 
@@ -23,8 +33,11 @@ IDs are ignored. Pre-configuration observations cannot establish a new transitio
 Manual/newer facts win over obsolete callbacks. Contradictions affecting recorded
 work require review; a pre-manual callback cannot create an idle approval loop.
 
-Enabling while inside does not start work. Known outside state arms a subsequent
-qualified entry. Manual stop/switch suppresses the previous job while inside or
+Configuring the area the worker already stands in starts work without waiting for a
+redundant entry callback, because the worker has not moved. Known outside state arms
+a subsequent qualified entry; re-enabling a job while away also re-arms it so the next
+arrival starts without an extra exit. Automation never fabricates membership: with no
+observation and no current fix, a save only records configuration. Manual stop/switch suppresses the previous job while inside or
 uncertain; an already-known outside job still requires a later fresh entry. Explicit
 manual start is always allowed subject to normal time/overlap checks. Auto-entry
 never switches an active session. Multiple eligible jobs yield choices for a

@@ -420,6 +420,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('restore-preview')));
     await tester.pumpAndSettle();
     expect(find.text(englishCopy(AppMessage.restoreFailed)), findsOneWidget);
+    // A failed restore names the gate that stopped it so the report is actionable.
+    expect(
+      find.text(englishCopy(AppMessage.restoreErrorCode, {'code': 'format'})),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('restore-selected-file')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

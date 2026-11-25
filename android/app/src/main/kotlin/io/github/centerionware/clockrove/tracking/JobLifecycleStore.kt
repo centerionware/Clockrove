@@ -21,7 +21,7 @@ internal object JobLifecycleStore {
         if (now < 0) return "INVALID_CLOCK"
         if (db.rawQuery("SELECT id FROM sessions WHERE job_id=? AND end_ms IS NULL", arrayOf(id)).use { it.moveToFirst() }) return "STOP_JOB_BEFORE_ARCHIVE"
         // Rotate before hiding from active queries. Preferences stay intact.
-        GeofenceStore.invalidate(db, id, now)
+        GeofenceStore.invalidate(db, id, now, resetMembership = true, clearDeparture = true)
         db.execSQL("UPDATE jobs SET archived=1,archived_ms=? WHERE id=?", arrayOf<Any?>(now, id))
         BusinessSchema.snapshotAutomation(db, id, now)
         RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, now, where = "id=?", args = arrayOf(id))
@@ -34,7 +34,7 @@ internal object JobLifecycleStore {
         val restoring = db.rawQuery("SELECT COUNT(*) FROM work_sites s JOIN automation_policies p ON p.job_id=s.job_id WHERE s.job_id=? AND s.enabled=1 AND p.enabled=1", arrayOf(id)).use { it.moveToFirst(); it.getInt(0) }
         if (GeofenceStore.sites(db, true).size + restoring > 100) return "SITE_CAPACITY_EXCEEDED"
         db.execSQL("UPDATE jobs SET archived=0,archived_ms=NULL WHERE id=?", arrayOf(id))
-        GeofenceStore.invalidate(db, id, now)
+        GeofenceStore.invalidate(db, id, now, resetMembership = true, clearDeparture = true)
         BusinessSchema.snapshotAutomation(db, id, now)
         RevisionStore.snapshotRows(db, "jobs", "job", BusinessSchema.jobColumns, now, where = "id=?", args = arrayOf(id))
         return null

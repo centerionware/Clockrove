@@ -41,7 +41,8 @@ internal class DocumentHostApi(
                         val currency = requireNotNull(call.argument<String>("currency"))
                         val digits = requireNotNull(call.argument<Int>("digits"))
                         val page = requireNotNull(call.argument<Int>("page"))
-                        val pdf = InvoiceDocuments.settingsPreview(activity, style, currency, digits, call.argument<ByteArray>("logo"))
+                        val pdf = InvoiceDocuments.settingsPreview(activity, style, currency, digits,
+                            call.argument<ByteArray>("logo"), call.argument<String>("languageTag"))
                         result.success(InvoiceDocuments.preview(activity, pdf, page))
                     }
                     "pickLogo" -> main.post {

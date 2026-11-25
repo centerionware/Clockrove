@@ -26,7 +26,7 @@ import java.io.ByteArrayOutputStream
 
 /** Three native, paginated layouts. Render on a worker, outside repository writes. */
 internal object InvoicePdf {
-    fun generate(context: Context, snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE"): ByteArray {
+    fun generate(context: Context, snapshot: InvoiceStore.Snapshot, logoBytes: ByteArray? = null, documentKind: String = "INVOICE", languageTag: String? = null): ByteArray {
         require(documentKind in setOf("INVOICE", "QUOTE"))
         val logo = logoBytes?.let {
             require(it.size <= ImageLimits.NORMALIZED_BYTES) { "INVALID_LOGO" }
@@ -38,7 +38,7 @@ internal object InvoicePdf {
         try {
             val document = PdfDocument()
             try {
-                val strings = localizedContext(context)
+                val strings = localizedContext(context, languageTag)
                 val flow = Flow(document, snapshot, logo, documentKind == "QUOTE", strings)
                 flow.start()
                 snapshot.statement?.let {
