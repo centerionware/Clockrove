@@ -16,6 +16,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [24, 35])
 class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
     private val version get() = repository.snapshot().version
+    private val sessionStart = 1_793_491_200_000L
+    private val sessionEnd = 1_793_498_400_000L
 
     private fun seedQuotes() {
         val draft = QuoteStore.Draft(
@@ -58,7 +60,7 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
             repository.execute(
                 TimerRepository.Command(
                     "round-trip-start", version, TimerRepository.Action.START, job,
-                    1793491200000, "UTC", 0, TimerRepository.Origin.MANUAL,
+                    sessionStart, "UTC", 0, TimerRepository.Origin.MANUAL,
                 ),
             ).conflict,
         )
@@ -66,7 +68,7 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
             repository.execute(
                 TimerRepository.Command(
                     "round-trip-stop", version, TimerRepository.Action.STOP, null,
-                    1793498400000, "UTC", 0, TimerRepository.Origin.MANUAL,
+                    sessionEnd, "UTC", 0, TimerRepository.Origin.MANUAL,
                 ),
             ).conflict,
         )
@@ -80,7 +82,7 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
                 version,
                 InvoicePaymentStore.Draft(
                     "round-trip-payment", "invoice", half.toString(), "USD",
-                    1793498400000, "UTC", "Bank transfer", "Synthetic reference", "Synthetic note",
+                    sessionEnd, "UTC", "Bank transfer", "Synthetic reference", "Synthetic note",
                 ),
             ).conflict,
         )
@@ -109,6 +111,8 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
 
     @Test
     fun exportedArchiveRestoresImmediatelyAndAgainAfterAnEarlierRestore() {
+        // The synthetic session ends at the test clock, so the payment is received on time.
+        now = sessionEnd
         assertNull(
             repository.saveCustomer(
                 "round-trip-customer",
