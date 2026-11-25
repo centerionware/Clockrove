@@ -4,78 +4,24 @@ Geofence candidate fix and pending acceptance are tracked in [November 13 regres
 Updated 2026-11-25. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
 
-## November 25 backup restore repair
+## November 25 invoice localization, rounding and backup repair
 
-- PR #97 exact head `9d33866` / Validate run
-  [45541877722](https://github.com/centerionware/Clockrove/actions/runs/45541877722)
-  passed and merged as `1558340`. Its language sample made the Android copies
-  suite run six tests; the exact-count guard was updated rather than weakening
-  the test.
-- PR #98 exact head `126a726` / Validate run
-  [45558471514](https://github.com/centerionware/Clockrove/actions/runs/45558471514)
-  passed formatting, analysis, Flutter behavior, Android debug/release builds,
-  instrumentation assembly, 778 native tests with zero failures/errors/skips,
-  41 actual Android tests on each of API 24 and API 35 with zero
-  failures/errors/skips, invoice-viewer validation, and locked release tooling.
-- The restore validator rejected retained financial rows whose revision head an
-  older job purge had tombstoned or redacted, including actual costs, invoice
-  coverage/claims, payment destinations, and quote records. Schema-14 cost heads
-  also lacked the customer columns, and a removed cost's tombstone was rejected
-  even though its row was correctly soft-deleted. The branch treats actual costs
-  as financial history, snapshots schema-14 heads, repairs retained financial
-  heads when the database opens, accepts matching tombstones for soft-deleted
-  rows, and avoids a false deletion conflict when the archive names the current
-  local head.
-- The round trip now purges a job with a retained cost, damages a cost and
-  invoice-coverage head like an upgraded install, reopens the database, exports,
-  and restores immediately and again. Owner-device acceptance remains open. A
-  fresh export from the updated build is restorable; an older archive containing
-  a live retained row whose old head was tombstoned or redacted still needs a
-  fresh backup after the repair has run.
+PR #100 exact head `93c5248` / Validate run
+[45609863413](https://github.com/centerionware/Clockrove/actions/runs/45609863413)
+passed 312 Flutter tests, 783 native tests, all API 24/35 journeys, and the
+actual-document viewer. It localizes invoice/quote documents, rounds the
+rounding mode to the nearest hour, deduplicates already-invoiced review rows,
+and repairs stale revision heads before a fresh backup is restored.
+
+Details: [November 25 evidence](docs/plan/evidence/nov25-invoice-localization.md).
 
 ## November 23 geofence departure follow-up
 
-- PR #83, the explicit in-place clock-in flow, merged to main as
-  `e126bf1c1119ad6ea968bfb2be0dd1c12d6fdf8d`. Exact-head validation
-  [45088251947](https://github.com/centerionware/Clockrove/actions/runs/45088251947)
-  and merged-main validation
-  [45091148930](https://github.com/centerionware/Clockrove/actions/runs/45091148930)
-  passed. Internal Play delivery
-  [45094669012](https://github.com/centerionware/Clockrove/actions/runs/45094669012)
-  submitted the bundle; this does not prove installation or device geofence
-  delivery.
-- The owner reports that automatic arrival failed at a job, so they clocked in
-  manually and updated the app while still working. Later, after leaving, the
-  timer did not clock out. They had a 1-minute grace, raised the radius to 150 m,
-  waited about 20 minutes and tapped **Retry site monitoring**. Automation and
-  location permissions were already enabled. They saw the GPS icon twice; this
-  does not establish that Android delivered a geofence exit. A separate 150 m
-  home test did auto-start after a delay, then was manually stopped while still
-  at home, so it did not test departure. The owner clarified the 15 m to 150 m
-  radius change followed the app update. The reported current-location save was
-  before that update; the later edit kept the site location and changed only
-  radius. No fresh fix was reported with that edit, so it does not exercise this
-  follow-up. Monitoring health after retry remains unconfirmed.
-- Source tracing found that site edits rotate registration keys and reset
-  membership to `UNKNOWN`. Before this follow-up, a current fix saved with a
-  site could not establish the baseline for a running session's departure. The
-  in-progress correction passes the measured fix to native state, seeds
-  membership only when accuracy supports the classification, creates no session
-  or location-history point, and stores the fix's accuracy/time in a digest in
-  the retry receipt. It also adds accuracy, active-session and no-false-departure
-  regressions. Run
-  [45103688030](https://github.com/centerionware/Clockrove/actions/runs/45103688030)
-  passed formatting, Analyze, Flutter tests and Android builds, then found one
-  native regression: label-only site rename incorrectly rotated the fence key.
-  The condition now preserves the previous behavior. Corrected exact-head
-  Validate run
-  [45104682175](https://github.com/centerionware/Clockrove/actions/runs/45104682175)
-  passed on `7b64341`: formatting, Analyze, Flutter tests, Android build and
-  release Java, 757 native tests with zero failures/errors/skips, and 40 actual
-  Android tests on each of API 24 and API 35 with zero failures/errors/skips.
-  Owner-device callback acceptance is still pending. The earlier docs-only
-  exact-head run [45095882626](https://github.com/centerionware/Clockrove/actions/runs/45095882626)
-  did not validate this code.
+PR #83 merged as `e126bf1c`; exact-head and merged-main validation passed,
+and internal Play delivery submitted the bundle. Owner-device callback
+acceptance remains pending.
+
+Details: [November 23 geofence evidence](docs/plan/evidence/geofence-nov23.md).
 
 ## November 22 release readiness update
 
