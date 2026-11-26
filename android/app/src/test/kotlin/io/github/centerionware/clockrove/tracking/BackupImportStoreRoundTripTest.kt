@@ -143,9 +143,10 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         // A damaged install can also lose an entity head entirely. Open-time repair
         // must recreate it, or a fresh archive still fails the coverage check.
         database.execSQL("DELETE FROM entity_heads WHERE kind='invoice_coverage' AND entity_id='invoice'")
-        // Older purges could leave a job scope on a kind that must not have one.
-        // A matching payload alone is not enough; repair must rebuild the head.
-        database.execSQL("UPDATE entity_revisions SET job_id='foreign-job' WHERE kind='settings'")
+        reopen()
+    }
+
+    private fun reopen() {
         database.close()
         repository.close()
         repository = TimerRepository(app, wallClock = { now })
@@ -204,5 +205,39 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         assertTrue(repository.quotes().page.entries.any { it.id == "quote" })
         assertTrue(repository.actualCosts().page.entries.any { it.id == "round-trip-cost" })
         assertTrue(repository.actualCosts().page.entries.none { it.id == "round-trip-removed-cost" })
+    }
+
+    @Test
+    fun currentSettingsPayloadWithWrongJobScopeIsRepaired() {
+        now = sessionEnd
+        // Make the settings head current before changing only its job scope, so
+        // this case cannot pass because repair detected a stale payload.
+        assertNull(
+            repository.saveBusinessSettings(
+                "scope-settings",
+                version,
+                repository.businessSnapshot().settings.copy(companyName = "Synthetic scope company"),
+            ).conflict,
+        )
+        val revisionId = database.rawQuery(
+            "SELECT revision_id FROM entity_heads WHERE kind='settings'",
+            null,
+        ).use { rows -> assertTrue(rows.moveToFirst()); rows.getString(0) }
+        database.execSQL(
+            "UPDATE entity_revisions SET job_id='foreign-job' WHERE id=?",
+            arrayOf<Any?>(revisionId),
+        )
+        reopen()
+
+        database.rawQuery(
+            "SELECT r.origin,r.job_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id " +
+                "WHERE h.kind='settings'",
+            null,
+        ).use { rows ->
+            assertTrue(rows.moveToFirst())
+            assertEquals("REPAIR", rows.getString(0))
+            assertTrue("Settings heads must be job-independent", rows.isNull(1))
+        }
+        restore()
     }
 }
