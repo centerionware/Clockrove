@@ -8,10 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 class TestMapProviderSettingsApi implements MapProviderSettingsApi {
-  const TestMapProviderSettingsApi();
+  const TestMapProviderSettingsApi({
+    this.settings = const MapProviderSettings(),
+  });
+
+  final MapProviderSettings settings;
 
   @override
-  Future<MapProviderSettings> read() async => const MapProviderSettings();
+  Future<MapProviderSettings> read() async => settings;
 
   @override
   Future<MapProviderSettings> reset() async => const MapProviderSettings();
