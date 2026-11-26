@@ -37,8 +37,10 @@ internal object TaskClassificationStore {
         val templateChanged = !hasColumn(db, "task_templates", "charge_type")
         if (templateChanged) {
             db.execSQL("ALTER TABLE task_templates ADD COLUMN charge_type TEXT NOT NULL DEFAULT 'UNCLASSIFIED' CHECK(charge_type IN('LABOR','SUPPLIES','UNCLASSIFIED'))")
+            // Templates are shared across jobs. Recording source_job_id here put
+            // an invalid job scope on the head and made later backups unrestorable.
             RevisionStore.snapshotRows(db, "task_templates", "template", BoardStore.templateColumns, at,
-                "source_job_id", origin = "MIGRATION")
+                origin = "MIGRATION")
         }
     }
 }
