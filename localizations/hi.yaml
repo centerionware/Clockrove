@@ -173,6 +173,7 @@ restoreCancelled: "प्रीव्यू रद्द हो गया। क
 restoreCleanupFailed: "बहाली का अस्थायी डेटा हटाया नहीं जा सका। फिर कोशिश करने से पहले Clockrove बंद करके खोलें।"
 restoreFailed: "बैकअप प्रोसेस नहीं हो सका। चुनी हुई फ़ाइल जाँचें और फिर कोशिश करें।"
 restoreErrorCode: "त्रुटि कोड: {code}"
+restoreErrorDetails: "विवरण: {detail}"
 restoreUnlockFailed: "बैकअप अनलॉक नहीं हुआ। पासवर्ड और फ़ाइल जाँचें।"
 restoreAllConflictsReviewed: "टकराव के सभी पेज देख लिए गए हैं। लागू करते समय स्थानीय वर्शन की जाँच करके सभी विकल्प एक ही ट्रांज़ैक्शन में सेव किए जाएँगे।"
 help: "सहायता"

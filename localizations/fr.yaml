@@ -173,6 +173,7 @@ restoreCancelled: "Aperçu annulé. Aucun enregistrement local n’a été modif
 restoreCleanupFailed: "Impossible de supprimer les données temporaires de restauration. Fermez puis rouvrez Clockrove avant de réessayer."
 restoreFailed: "Impossible de traiter la sauvegarde. Vérifiez le fichier sélectionné et réessayez."
 restoreErrorCode: "Code d’erreur : {code}"
+restoreErrorDetails: "Détails : {detail}"
 restoreUnlockFailed: "Impossible de déverrouiller la sauvegarde. Vérifiez le mot de passe et le fichier."
 restoreAllConflictsReviewed: "Toutes les pages de conflits ont été examinées. L’application vérifie la version locale et enregistre tous les choix dans une transaction."
 help: "Aide"

@@ -592,8 +592,11 @@ internal class BackupImportStore(
 
 
 
-    internal fun invalidRevisionGraph(): Nothing =
-        throw Failure("INVALID_REVISION_GRAPH", "The backup revision history is invalid.")
+    internal fun invalidRevisionGraph(detail: String = "unspecified"): Nothing =
+        throw Failure(
+            "INVALID_REVISION_GRAPH",
+            "The backup revision history is invalid (${safeDiagnostic(detail)}).",
+        )
 
     /** All writers serialize a JSON object; null is reserved for intentional redaction. */
 
@@ -603,8 +606,11 @@ internal class BackupImportStore(
     /** Every live revisioned row in a schema-17 archive must be backed by its exact head payload. */
 
 
-    internal fun invalidReference(): Nothing =
-        throw Failure("INVALID_REFERENCE", "The backup contains an unresolved record reference.")
+    internal fun invalidReference(detail: String = "unspecified"): Nothing =
+        throw Failure(
+            "INVALID_REFERENCE",
+            "The backup contains an unresolved record reference (${safeDiagnostic(detail)}).",
+        )
 
     /** Exercises the installed CHECK/NOT NULL/type rules against one staged row at a time. */
 
@@ -857,6 +863,15 @@ internal class BackupImportStore(
         if (!it.moveToFirst()) throw Failure("STORAGE_UNAVAILABLE", "The local backup state is unavailable.")
         it.getLong(0)
     }
+
+/** Keeps restore diagnostics single-line, bounded and free of archive payloads. */
+internal fun safeDiagnostic(value: String): String = value
+    .replace(Regex("[\\r\\n\\t]"), " ")
+    .replace(Regex("\\s+"), " ")
+    .trim()
+    .take(240)
+    .ifEmpty { "unspecified" }
+
 
     internal fun quote(identifier: String): String = "\"" + identifier.replace("\"", "\"\"") + "\""
 }

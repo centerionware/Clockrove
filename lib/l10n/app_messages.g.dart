@@ -178,6 +178,7 @@ enum AppMessage {
   restoreCleanupFailed("Restore staging could not be cleaned up. Close Clockrove and reopen it before trying again."),
   restoreFailed("The backup could not be processed. Check the selected file and try again."),
   restoreErrorCode("Error code: {code}"),
+  restoreErrorDetails("Details: {detail}"),
   restoreUnlockFailed("The backup could not be unlocked. Check the password and file."),
   restoreAllConflictsReviewed("All conflict pages have been reviewed. Applying sends the choices to the native repository, which checks the local version and commits atomically."),
   help("Help"),

@@ -20,6 +20,24 @@ import org.robolectric.annotation.Config
 @Config(sdk = [24])
 class BackupImportStoreRevisionMergeTest : BackupImportStoreTestBase() {
     @Test
+    fun missingHeadFailureNamesTheAffectedRevision() {
+        val started = stageImport(
+            listOf(revisionRecord("orphan-revision", "card", "orphan-card", null)),
+            synthesizeMissingRevisionHeads = false,
+        )
+        try {
+            val failure = assertThrows(BackupImportStore.Failure::class.java) {
+                importStore.finish(database, started.importId)
+            }
+            assertEquals("INVALID_REVISION_GRAPH", failure.code)
+            assertTrue(failure.message.orEmpty().contains("head-missing"))
+            assertTrue(failure.message.orEmpty().contains("card:orphan-card:orphan-revision"))
+        } finally {
+            importStore.close(started.importId)
+        }
+    }
+
+    @Test
     fun rejectsARevisionIdReusedForDifferentImmutableContent() {
         val kind = "quote_decision"
         val entityId = "revision-id-collision-entity"

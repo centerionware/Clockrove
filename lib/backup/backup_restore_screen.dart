@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'backup_crypto_v2.dart';
 import 'backup_file_api.dart';
 import 'backup_import_api.dart';
+import 'backup_restore_error_details.dart';
 import 'backup_restore_importer.dart';
 import 'backup_restore_preview.dart';
 
@@ -45,6 +46,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   BackupCryptoCancellationToken? _cancellationToken;
   AppMessage? _error;
   String? _errorCode;
+  String? _errorDetail;
   AppMessage? _message;
   AppMessage? _passwordError;
   bool _busy = false;
@@ -99,6 +101,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
       _message = null;
     });
     BackupEncryptedDocument? selected;
@@ -158,6 +161,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _error = _safeError(error);
           _errorCode = backupRestoreFailureCode(error);
+          _errorDetail = backupRestoreFailureDetail(error);
         });
       }
     } finally {
@@ -186,6 +190,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
       _message = AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
@@ -215,6 +220,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _error = _safeError(error);
           _errorCode = backupRestoreFailureCode(error);
+          _errorDetail = backupRestoreFailureDetail(error);
           _message = null;
         });
       }
@@ -258,6 +264,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
     });
     try {
       final page = await restore.api.readConflicts(
@@ -276,6 +283,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _error = _safeError(error);
           _errorCode = backupRestoreFailureCode(error);
+          _errorDetail = backupRestoreFailureDetail(error);
         });
       }
     } finally {
@@ -301,6 +309,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
     });
     try {
       await restore.api.resolveConflict(
@@ -343,6 +352,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _error = _safeError(error);
           _errorCode = backupRestoreFailureCode(error);
+          _errorDetail = backupRestoreFailureDetail(error);
         });
       }
     } finally {
@@ -395,6 +405,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
       _message = AppMessage.restoreApplying;
     });
     try {
@@ -418,10 +429,12 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             _previewNeedsRefresh = true;
             _error = AppMessage.restorePreviewStale;
             _errorCode = null;
+            _errorDetail = null;
             _message = AppMessage.restoreReviewAgain;
           } else {
             _error = _safeError(error);
             _errorCode = backupRestoreFailureCode(error);
+            _errorDetail = backupRestoreFailureDetail(error);
             _message = AppMessage.restoreMergeUnconfirmed;
           }
         });
@@ -437,6 +450,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _busy = true;
       _error = null;
       _errorCode = null;
+      _errorDetail = null;
     });
     try {
       if (restore != null) await restore.close();
@@ -461,6 +475,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _error = _safeError(error);
           _errorCode = backupRestoreFailureCode(error);
+          _errorDetail = backupRestoreFailureDetail(error);
         });
       }
     } finally {
@@ -575,16 +590,11 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         color: Theme.of(context).colorScheme.error,
                       ),
                     ),
-                    if (_errorCode case final code?) ...[
-                      const SizedBox(height: 4),
-                      SelectableText(
-                        AppMessage.restoreErrorCode.format(context, {
-                          'code': code,
-                        }),
-                        key: const ValueKey('restore-error-code'),
-                        style: Theme.of(context).textTheme.bodySmall,
+                    if (_errorCode case final code?)
+                      BackupRestoreErrorDetails(
+                        code: code,
+                        detail: _errorDetail,
                       ),
-                    ],
                   ],
                   if (preview != null) ...[
                     const SizedBox(height: 20),

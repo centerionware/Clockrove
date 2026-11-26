@@ -29,6 +29,16 @@ String backupRestoreFailureCode(Object error) => switch (error) {
   _ => 'unknown',
 };
 
+/// Native validation detail for a failed restore. The native layer reports the
+/// first failing graph edge, table and projected row so a report is actionable;
+/// keep it on one bounded line and only expose it for platform failures.
+String? backupRestoreFailureDetail(Object error) {
+  if (error is! PlatformException) return null;
+  final message = error.message?.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (message == null || message.isEmpty) return null;
+  return message.length <= 300 ? message : '${message.substring(0, 297)}...';
+}
+
 final class BackupRestoreImportResult {
   BackupRestoreImportResult({
     required this.preview,
