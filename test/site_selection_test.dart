@@ -71,6 +71,8 @@ Future<void> _show(
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en')],
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
           home:
               home ??
