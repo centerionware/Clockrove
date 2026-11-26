@@ -864,6 +864,11 @@ internal class BackupImportStore(
         it.getLong(0)
     }
 
+
+
+    internal fun quote(identifier: String): String = "\"" + identifier.replace("\"", "\"\"") + "\""
+}
+
 /** Keeps restore diagnostics single-line, bounded and free of archive payloads. */
 internal fun safeDiagnostic(value: String): String = value
     .replace(Regex("[\\r\\n\\t]"), " ")
@@ -871,7 +876,3 @@ internal fun safeDiagnostic(value: String): String = value
     .trim()
     .take(240)
     .ifEmpty { "unspecified" }
-
-
-    internal fun quote(identifier: String): String = "\"" + identifier.replace("\"", "\"\"") + "\""
-}
