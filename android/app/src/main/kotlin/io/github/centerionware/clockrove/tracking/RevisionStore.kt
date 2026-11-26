@@ -20,13 +20,14 @@ internal object RevisionStore {
         val payload = JSONObject(values.toSortedMap()).toString()
         var parent: String? = null
         var currentParents = emptySet<String>()
-        db.rawQuery("SELECT r.id,r.payload,r.deleted FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind=? AND h.entity_id=?", arrayOf(kind, id)).use {
+        db.rawQuery("SELECT r.id,r.payload,r.deleted,r.job_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind=? AND h.entity_id=?", arrayOf(kind, id)).use {
             if (it.moveToFirst()) {
                 parent = it.getString(0)
                 currentParents = db.rawQuery("SELECT parent_id FROM revision_parents WHERE revision_id=?", arrayOf(parent)).use { parents ->
                     buildSet { while (parents.moveToNext()) add(parents.getString(0)) }
                 }
-                if (it.getString(1) == payload && it.getInt(2) == (if (deleted) 1 else 0) &&
+                val sameJob = if (it.isNull(3)) jobId == null else it.getString(3) == jobId
+                if (it.getString(1) == payload && it.getInt(2) == (if (deleted) 1 else 0) && sameJob &&
                     additionalParents.all(currentParents::contains)) return requireNotNull(parent)
             }
         }

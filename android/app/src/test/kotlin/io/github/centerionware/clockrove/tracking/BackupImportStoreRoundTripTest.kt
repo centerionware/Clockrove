@@ -143,6 +143,9 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
         // A damaged install can also lose an entity head entirely. Open-time repair
         // must recreate it, or a fresh archive still fails the coverage check.
         database.execSQL("DELETE FROM entity_heads WHERE kind='invoice_coverage' AND entity_id='invoice'")
+        // Older purges could leave a job scope on a kind that must not have one.
+        // A matching payload alone is not enough; repair must rebuild the head.
+        database.execSQL("UPDATE entity_revisions SET job_id='foreign-job' WHERE kind='settings'")
         database.close()
         repository.close()
         repository = TimerRepository(app, wallClock = { now })
