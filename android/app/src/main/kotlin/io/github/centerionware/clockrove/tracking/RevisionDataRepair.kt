@@ -54,6 +54,7 @@ internal object RevisionDataRepair {
                     val values = payloadValuesForDataRow(db, null, kind, row)
                         ?: continue
                     val jobId = head?.jobId
+                        ?: previousJobId(db, kind, entityId)
                         ?: if (kind == "job") entityId else values["job_id"]?.toString()
                     pending.add(
                         Pending(
@@ -102,6 +103,13 @@ internal object RevisionDataRepair {
         Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
         else -> cursor.getString(index)
     }
+
+    /** A lost head can still inherit the job scope from its remaining revisions. */
+    private fun previousJobId(db: SQLiteDatabase, kind: String, entityId: String): String? = db.rawQuery(
+        "SELECT job_id FROM entity_revisions WHERE kind=? AND entity_id=? AND job_id IS NOT NULL " +
+            "ORDER BY changed_ms DESC LIMIT 1",
+        arrayOf(kind, entityId),
+    ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
 
     private fun head(db: SQLiteDatabase, kind: String, entityId: String): Head? = db.rawQuery(
         "SELECT r.job_id,r.payload,r.deleted FROM entity_heads h " +
