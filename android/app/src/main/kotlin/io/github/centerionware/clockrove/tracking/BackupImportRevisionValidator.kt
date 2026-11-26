@@ -89,19 +89,22 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
             db.execSQL("CREATE TABLE validation_reference_keys(parent_table TEXT NOT NULL,columns_json TEXT NOT NULL,values_json TEXT NOT NULL,PRIMARY KEY(parent_table,columns_json,values_json))")
 
             forEachImportedValues(handle, "entity_revisions") { values ->
+                val revisionId = revisionString(values["id"])
                 val deleted = revisionInteger(values["deleted"])
-                if (deleted !in 0L..1L) invalidRevisionGraph()
+                if (deleted !in 0L..1L) invalidRevisionGraph("revision-deleted:$revisionId:$deleted")
                 val kind = revisionString(values["kind"])
                 val entityId = revisionString(values["entity_id"])
-                if (kind !in supportedRevisionKinds) invalidRevisionGraph()
-                values["payload"]?.let(::validateRevisionObjectPayload)
+                if (kind !in supportedRevisionKinds) {
+                    invalidRevisionGraph("revision-kind:$revisionId:$kind")
+                }
+                values["payload"]?.let { validateRevisionObjectPayload(it, "revision:$revisionId") }
                 if (kind == "location" && values["payload"] != null) {
-                    validateLocationRevisionPayload(values["payload"], entityId)
+                    validateLocationRevisionPayload(values["payload"], entityId, revisionId)
                 }
                 db.execSQL(
                     "INSERT INTO validation_revisions VALUES(?,?,?,?,?,?,?)",
                     arrayOf<Any?>(
-                        revisionString(values["id"]), kind,
+                        revisionId, kind,
                         entityId, nullableRevisionString(values["job_id"]),
                         values["payload"]?.toString(),
                         deleted, revisionString(values["origin"]),
@@ -162,7 +165,11 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
                     "LEFT JOIN validation_revisions parent ON parent.id=p.parent_id " +
                     "WHERE child.id IS NULL OR parent.id IS NULL",
             )
-            if (missingLinkCount != 0L) invalidRevisionGraph()
+            if (missingLinkCount != 0L) {
+                invalidRevisionGraph(
+                    "parent-missing:$missingLinkCount:${diagnosticSample(db, "SELECT p.revision_id||'->'||p.parent_id FROM validation_parents p " + "LEFT JOIN validation_revisions child ON child.id=p.revision_id " + "LEFT JOIN validation_revisions parent ON parent.id=p.parent_id " + "WHERE child.id IS NULL OR parent.id IS NULL LIMIT 1")}",
+                )
+            }
 
             val invalidHeadCount = scalarLong(
                 db,
@@ -175,7 +182,16 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
                 "SELECT COUNT(*) FROM validation_revisions r WHERE NOT EXISTS(" +
                     "SELECT 1 FROM validation_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id)",
             )
-            if (invalidHeadCount != 0L || missingEntityHeadCount != 0L) invalidRevisionGraph()
+            if (invalidHeadCount != 0L) {
+                invalidRevisionGraph(
+                    "head-mismatch:$invalidHeadCount:${diagnosticSample(db, "SELECT h.kind||':'||h.entity_id||':'||h.revision_id FROM validation_heads h " + "LEFT JOIN validation_revisions r ON r.id=h.revision_id " + "WHERE r.id IS NULL OR r.kind<>h.kind OR r.entity_id<>h.entity_id LIMIT 1")}",
+                )
+            }
+            if (missingEntityHeadCount != 0L) {
+                invalidRevisionGraph(
+                    "head-missing:$missingEntityHeadCount:${diagnosticSample(db, "SELECT r.kind||':'||r.entity_id||':'||r.id FROM validation_revisions r WHERE NOT EXISTS(" + "SELECT 1 FROM validation_heads h WHERE h.kind=r.kind AND h.entity_id=r.entity_id) LIMIT 1")}",
+                )
+            }
 
             // Normal ancestry remains within one logical entity. GPS point tombstones
             // may also name the range revision whose deletion coverage caused them.
@@ -189,7 +205,11 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
                     "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " +
                     "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id)))",
             )
-            if (invalidParentCount != 0L) invalidRevisionGraph()
+            if (invalidParentCount != 0L) {
+                invalidRevisionGraph(
+                    "parent-ancestry:$invalidParentCount:${diagnosticSample(db, "SELECT p.revision_id||'->'||p.parent_id FROM validation_parents p " + "JOIN validation_revisions child ON child.id=p.revision_id " + "JOIN validation_revisions parent ON parent.id=p.parent_id " + "WHERE NOT ((child.kind=parent.kind AND child.entity_id=parent.entity_id) OR " + "(child.kind='location' AND child.deleted=1 AND child.origin='GPS_RANGE_DELETE' " + "AND child.job_id IS NOT NULL AND parent.kind='location_deletion_range' " + "AND parent.deleted=0 AND (parent.job_id IS NULL OR parent.job_id=child.job_id))) LIMIT 1")}",
+                )
+            }
 
             val invalidRangeCount = scalarLong(
                 db,
@@ -203,7 +223,11 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
                 "SELECT COUNT(*) FROM validation_revisions r WHERE r.kind='location_deletion_range' " +
                     "AND NOT EXISTS(SELECT 1 FROM validation_ranges d WHERE d.revision_id=r.id)",
             )
-            if (invalidRangeCount != 0L || missingRangeRowCount != 0L) invalidReference()
+            if (invalidRangeCount != 0L || missingRangeRowCount != 0L) {
+                invalidReference(
+                    "range:$invalidRangeCount/$missingRangeRowCount:${diagnosticSample(db, "SELECT d.id||':'||d.revision_id FROM validation_ranges d LEFT JOIN validation_revisions r " + "ON r.id=d.revision_id WHERE r.id IS NULL OR r.kind<>'location_deletion_range' " + "OR r.entity_id<>d.id OR r.deleted<>0 OR r.origin<>'GPS_RANGE_DELETE' " + "OR r.job_id IS NOT d.job_id LIMIT 1")}",
+                )
+            }
 
             forEachImportedValues(handle, "location_points") { values ->
                 val pointId = revisionString(values["id"])
@@ -231,7 +255,11 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
                     "ON h.kind='location_deletion_range' AND h.entity_id=d.id " +
                     "WHERE h.revision_id IS NULL OR h.revision_id<>d.revision_id",
             )
-            if (invalidRangeHeadCount != 0L) invalidReference()
+            if (invalidRangeHeadCount != 0L) {
+                invalidReference(
+                    "range-head:$invalidRangeHeadCount:${diagnosticSample(db, "SELECT d.id||':'||d.revision_id FROM validation_ranges d LEFT JOIN validation_heads h " + "ON h.kind='location_deletion_range' AND h.entity_id=d.id " + "WHERE h.revision_id IS NULL OR h.revision_id<>d.revision_id LIMIT 1")}",
+                )
+            }
             forEachImportedValues(handle, "location_deletion_ranges") { values ->
                 val jobId = nullableRevisionString(values["job_id"])
                 if (jobId != null &&
@@ -256,8 +284,10 @@ internal fun BackupImportStore.validateRevisionGraph(localDb: SQLiteDatabase, ha
             db.setTransactionSuccessful()
         } catch (failure: RevisionValidatorFailure) {
             throw failure
-        } catch (_: Exception) {
-            invalidRevisionGraph()
+        } catch (exception: Exception) {
+            invalidRevisionGraph(
+                "validator-error:${exception.javaClass.simpleName}:${safeDiagnostic(exception.message.orEmpty())}",
+            )
         } finally {
             db.endTransaction()
         }
@@ -304,8 +334,11 @@ internal fun BackupImportStore.validateRevisionAcyclicity(db: SQLiteDatabase) {
                     "SELECT revision_id FROM validation_revision_pending WHERE remaining_parents=0",
             )
         }
-        if (scalarLong(db, "SELECT COUNT(*) FROM validation_revision_pending") != 0L) {
-            invalidRevisionGraph()
+        val remaining = scalarLong(db, "SELECT COUNT(*) FROM validation_revision_pending")
+        if (remaining != 0L) {
+            invalidRevisionGraph(
+                "cycle:$remaining:${diagnosticSample(db, "SELECT r.kind||':'||r.entity_id||':'||r.id FROM validation_revision_pending p " + "LEFT JOIN validation_revisions r ON r.id=p.revision_id LIMIT 1")}",
+            )
         }
     }
 
@@ -337,7 +370,7 @@ internal fun BackupImportStore.forEachImportedValues(handle: RevisionValidatorHa
         ).use { rows ->
             while (rows.moveToNext()) {
                 val values = jsonValue(JSONObject(rows.getString(0)).getJSONObject("values")) as? Map<*, *>
-                    ?: invalidRevisionGraph()
+                    ?: invalidRevisionGraph("row-values:$table")
                 @Suppress("UNCHECKED_CAST")
                 action(values as Map<String, Any?>)
             }
@@ -359,22 +392,22 @@ internal fun BackupImportStore.revisionInteger(value: Any?): Long = when (value)
         else -> invalidRevisionGraph()
     }
 
-internal fun BackupImportStore.validateRevisionObjectPayload(payload: Any?) {
-        val jsonText = payload as? String ?: invalidRevisionGraph()
-        if (!jsonText.trimStart().startsWith("{")) invalidRevisionGraph()
+internal fun BackupImportStore.validateRevisionObjectPayload(payload: Any?, source: String) {
+        val jsonText = payload as? String ?: invalidRevisionGraph("payload-type:$source")
+        if (!jsonText.trimStart().startsWith("{")) invalidRevisionGraph("payload-format:$source")
         try {
             JSONObject(jsonText)
         } catch (_: Exception) {
-            invalidRevisionGraph()
+            invalidRevisionGraph("payload-json:$source")
         }
     }
 
-internal fun BackupImportStore.validateLocationRevisionPayload(payload: Any?, entityId: String) {
-        val jsonText = payload as? String ?: invalidRevisionGraph()
+internal fun BackupImportStore.validateLocationRevisionPayload(payload: Any?, entityId: String, revisionId: String) {
+        val jsonText = payload as? String ?: invalidRevisionGraph("location-payload-type:$revisionId")
         val json = try {
             JSONObject(jsonText)
         } catch (_: Exception) {
-            invalidRevisionGraph()
+            invalidRevisionGraph("location-payload-json:$revisionId")
         }
         val keys = mutableSetOf<String>()
         val iterator = json.keys()
@@ -382,7 +415,7 @@ internal fun BackupImportStore.validateLocationRevisionPayload(payload: Any?, en
         if (keys != setOf("id", "session_id") ||
             json.opt("id") !is String || json.optString("id") != entityId ||
             json.opt("session_id") !is String || json.optString("session_id").isBlank()) {
-            invalidRevisionGraph()
+            invalidRevisionGraph("location-payload-shape:$revisionId:$entityId")
         }
     }
 
@@ -396,19 +429,20 @@ internal fun BackupImportStore.validateRevisionedDataCoverage(localDb: SQLiteDat
                     val row = JSONObject(rows.getString(0))
                     @Suppress("UNCHECKED_CAST")
                     val values = jsonValue(row.getJSONObject("values")) as? Map<String, Any?>
-                        ?: invalidRevisionGraph()
-                    val entityId = revisionEntityIdForDataRow(table, values) ?: invalidRevisionGraph()
+                        ?: invalidRevisionGraph("data-values:$table")
+                    val entityId = revisionEntityIdForDataRow(table, values)
+                        ?: invalidRevisionGraph("data-key:$table")
                     val revisionId = handle.database.rawQuery(
                         "SELECT revision_id FROM validation_heads WHERE kind=? AND entity_id=?",
                         arrayOf(kind, entityId),
                     ).use { head -> if (head.moveToFirst()) head.getString(0) else null }
-                        ?: invalidRevisionGraph()
+                        ?: invalidRevisionGraph("data-head:$kind:$entityId")
                     val revision = revisionContent(
                         handle.database, "validation_revisions", revisionId,
-                    ) ?: invalidRevisionGraph()
+                    ) ?: invalidRevisionGraph("data-revision:$kind:$entityId:$revisionId")
                     val payloadValues = revisionPayloadValuesForDataRow(
                         localDb, handle, kind, values,
-                    ) ?: invalidRevisionGraph()
+                    ) ?: invalidRevisionGraph("data-projection:$kind:$entityId")
                     // Retained rows can be soft-deleted (actual costs keep deleted_ms) while
                     // still being exported. Their head must be the matching tombstone, not
                     // a live revision, or every archive with a removed cost would fail.
@@ -418,17 +452,23 @@ internal fun BackupImportStore.validateRevisionedDataCoverage(localDb: SQLiteDat
                     } else {
                         validLiveRevision(revision, kind, entityId)
                     }
-                    if (!revisionStateValid ||
-                        !revisionJobMatchesData(
+                    if (!revisionStateValid) {
+                        invalidRevisionGraph(
+                            "data-state:$kind:$entityId:$revisionId:${if (rowDeleted) "deleted" else "live"}",
+                        )
+                    }
+                    if (!revisionJobMatchesData(
                             localDb, handle, kind, revision.jobId, values, payloadValues, preferStaged = true,
-                        ) ||
-                        !revisionPayloadMatchesRow(
+                        )) {
+                        invalidRevisionGraph("data-job:$kind:$entityId:$revisionId")
+                    }
+                    if (!revisionPayloadMatchesRow(
                             revision.payload,
                             revisionDataColumns.getValue(kind),
                             payloadValues,
                             optionalRevisionPayloadKeys(kind),
                         )) {
-                        invalidRevisionGraph()
+                        invalidRevisionGraph("data-payload:$kind:$entityId:$revisionId")
                     }
                 }
             }
@@ -876,4 +916,10 @@ internal fun BackupImportStore.validateAppliedRevisionGraph(db: SQLiteDatabase) 
                 try { db.execSQL("DROP TABLE IF EXISTS ${quote(table)}") } catch (_: Exception) { }
             }
         }
+    }
+
+/** One bounded identifier sample lets a restore report name the failing graph edge. */
+private fun diagnosticSample(db: SQLiteDatabase, sql: String): String =
+    db.rawQuery(sql, null).use { rows ->
+        if (rows.moveToFirst()) safeDiagnostic(rows.getString(0).orEmpty()) else "none"
     }

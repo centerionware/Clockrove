@@ -173,6 +173,7 @@ restoreCancelled: "プレビューをキャンセルしました。端末上の�
 restoreCleanupFailed: "復元の一時データを削除できませんでした。再試行する前にClockroveを終了して開き直してください。"
 restoreFailed: "バックアップを処理できませんでした。選択したファイルを確認して再試行してください。"
 restoreErrorCode: "エラーコード: {code}"
+restoreErrorDetails: "詳細: {detail}"
 restoreUnlockFailed: "バックアップを解除できませんでした。パスワードとファイルを確認してください。"
 restoreAllConflictsReviewed: "すべての競合ページを確認しました。適用時に端末上のバージョンを確認し、すべての選択を1つのトランザクションで保存します。"
 help: "ヘルプ"

@@ -140,6 +140,9 @@ class BackupImportStoreRoundTripTest : BackupImportStoreTestBase() {
                 arrayOf<Any?>(kind),
             )
         }
+        // A damaged install can also lose an entity head entirely. Open-time repair
+        // must recreate it, or a fresh archive still fails the coverage check.
+        database.execSQL("DELETE FROM entity_heads WHERE kind='invoice_coverage' AND entity_id='invoice'")
         database.close()
         repository.close()
         repository = TimerRepository(app, wallClock = { now })

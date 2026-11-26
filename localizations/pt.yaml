@@ -173,6 +173,7 @@ restoreCancelled: "Pré-visualização cancelada. Nenhum registo local foi alter
 restoreCleanupFailed: "Não foi possível remover os dados temporários do restauro. Feche e reabra o Clockrove antes de tentar novamente."
 restoreFailed: "Não foi possível processar a cópia. Verifique o ficheiro selecionado e tente novamente."
 restoreErrorCode: "Código de erro: {code}"
+restoreErrorDetails: "Detalhes: {detail}"
 restoreUnlockFailed: "Não foi possível desbloquear a cópia. Verifique a palavra-passe e o ficheiro."
 restoreAllConflictsReviewed: "Todas as páginas de conflitos foram revistas. Ao aplicar, a versão local é verificada e as escolhas são guardadas numa única transação."
 help: "Ajuda"

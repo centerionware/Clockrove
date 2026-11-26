@@ -41,10 +41,10 @@ internal object RevisionDataRepair {
                         name to cursorValue(rows, index)
                     }.toMap()
                     val entityId = entityIdFor(table, row) ?: continue
-                    val head = head(db, kind, entityId) ?: continue
+                    val head = head(db, kind, entityId)
                     val expectedDeleted = row["deleted_ms"] != null
                     val expected = payloadColumns.toSet()
-                    if (head.deleted == expectedDeleted && head.payload != null &&
+                    if (head != null && head.deleted == expectedDeleted && head.payload != null &&
                         payloadCovers(head.payload, expected, optionalPayloadKeys(kind))) {
                         continue
                     }
@@ -53,10 +53,13 @@ internal object RevisionDataRepair {
                     // the import validator.
                     val values = payloadValuesForDataRow(db, null, kind, row)
                         ?: continue
+                    val jobId = head?.jobId
+                        ?: previousJobId(db, kind, entityId)
+                        ?: if (kind == "job") entityId else values["job_id"]?.toString()
                     pending.add(
                         Pending(
-                            kind, entityId, head.jobId,
-                            values + optionalPayloadValues(head.payload, kind),
+                            kind, entityId, jobId,
+                            values + optionalPayloadValues(head?.payload, kind),
                             expectedDeleted,
                         ),
                     )
@@ -100,6 +103,13 @@ internal object RevisionDataRepair {
         Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
         else -> cursor.getString(index)
     }
+
+    /** A lost head can still inherit the job scope from its remaining revisions. */
+    private fun previousJobId(db: SQLiteDatabase, kind: String, entityId: String): String? = db.rawQuery(
+        "SELECT job_id FROM entity_revisions WHERE kind=? AND entity_id=? AND job_id IS NOT NULL " +
+            "ORDER BY changed_ms DESC LIMIT 1",
+        arrayOf(kind, entityId),
+    ).use { rows -> if (rows.moveToFirst()) rows.getString(0) else null }
 
     private fun head(db: SQLiteDatabase, kind: String, entityId: String): Head? = db.rawQuery(
         "SELECT r.job_id,r.payload,r.deleted FROM entity_heads h " +

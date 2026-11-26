@@ -173,6 +173,7 @@ restoreCancelled: "미리 보기를 취소했습니다. 기기의 기록은 변�
 restoreCleanupFailed: "복원 임시 데이터를 정리하지 못했습니다. 다시 시도하기 전에 Clockrove를 닫았다가 여세요."
 restoreFailed: "백업을 처리하지 못했습니다. 선택한 파일을 확인하고 다시 시도하세요."
 restoreErrorCode: "오류 코드: {code}"
+restoreErrorDetails: "세부 정보: {detail}"
 restoreUnlockFailed: "백업을 잠금 해제하지 못했습니다. 비밀번호와 파일을 확인하세요."
 restoreAllConflictsReviewed: "모든 충돌 페이지를 검토했습니다. 적용할 때 기기의 버전을 확인하고 모든 선택을 하나의 트랜잭션으로 저장합니다."
 help: "도움말"

@@ -46,6 +46,28 @@ void main() {
     expect(backupRestoreFailureCode(Object()), 'unknown');
   });
 
+  test('native restore details are bounded to one readable line', () {
+    expect(
+      backupRestoreFailureDetail(
+        PlatformException(
+          code: 'INVALID_REVISION_GRAPH',
+          message: 'The backup revision history is invalid\n(data-head:invoice:one).',
+        ),
+      ),
+      'The backup revision history is invalid (data-head:invoice:one).',
+    );
+    expect(
+      backupRestoreFailureDetail(
+        PlatformException(code: 'INVALID_REVISION_GRAPH', message: '   '),
+      ),
+      isNull,
+    );
+    expect(
+      backupRestoreFailureDetail(const BackupRestoreReason('format')),
+      isNull,
+    );
+  });
+
   test(
     'an unsupported envelope size is reported before any cryptography',
     () async {

@@ -173,6 +173,7 @@ restoreCancelled: "Đã hủy bản xem trước. Không có bản ghi trên thi
 restoreCleanupFailed: "Không thể dọn dữ liệu khôi phục tạm thời. Đóng rồi mở lại Clockrove trước khi thử lại."
 restoreFailed: "Không thể xử lý bản sao lưu. Kiểm tra tệp đã chọn rồi thử lại."
 restoreErrorCode: "Mã lỗi: {code}"
+restoreErrorDetails: "Chi tiết: {detail}"
 restoreUnlockFailed: "Không thể mở khóa bản sao lưu. Hãy kiểm tra mật khẩu và tệp."
 restoreAllConflictsReviewed: "Đã xem tất cả các trang xung đột. Khi áp dụng, ứng dụng kiểm tra phiên bản trên thiết bị và lưu mọi lựa chọn trong một giao dịch."
 help: "Trợ giúp"
