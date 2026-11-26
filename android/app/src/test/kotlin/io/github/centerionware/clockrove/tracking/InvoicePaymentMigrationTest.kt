@@ -79,9 +79,10 @@ class InvoicePaymentMigrationTest {
                 assertTrue(it.moveToFirst()); assertEquals(TaskClassification.UNCLASSIFIED, org.json.JSONObject(it.getString(0)).getString("charge_type"))
                 assertEquals("MIGRATION", it.getString(1))
             }
-            db.rawQuery("SELECT r.payload,r.origin FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='template' AND h.entity_id='template'", null).use {
+            db.rawQuery("SELECT r.payload,r.origin,r.job_id FROM entity_heads h JOIN entity_revisions r ON r.id=h.revision_id WHERE h.kind='template' AND h.entity_id='template'", null).use {
                 assertTrue(it.moveToFirst()); assertEquals(TaskClassification.UNCLASSIFIED, org.json.JSONObject(it.getString(0)).getString("charge_type"))
                 assertEquals("MIGRATION", it.getString(1))
+                assertTrue("Templates must not carry a job scope", it.isNull(2))
             }
             db.rawQuery("PRAGMA foreign_key_check", null).use { assertFalse(it.moveToFirst()) }
         }

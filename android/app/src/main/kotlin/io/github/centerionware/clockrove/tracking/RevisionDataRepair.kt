@@ -13,6 +13,13 @@ import org.json.JSONObject
  */
 internal object RevisionDataRepair {
 
+    /** Kinds whose head must not name a job, matching revisionJobMatchesData. */
+    private val joblessKinds = setOf(
+        "customer", "template", "settings", "billing_tax_settings", "invoice_billing_defaults",
+        "invoice_accounting_settings", "settings_money", "template_money", "template_quantity",
+        "location_recording_settings",
+    )
+
     private data class Head(val jobId: String?, val payload: String?, val deleted: Boolean)
 
     private data class Pending(
@@ -44,7 +51,14 @@ internal object RevisionDataRepair {
                     val head = head(db, kind, entityId)
                     val expectedDeleted = row["deleted_ms"] != null
                     val expected = payloadColumns.toSet()
+                    val jobScopeKnown = kind == "job" || kind in joblessKinds
+                    val expectedJobId = when {
+                        kind == "job" -> entityId
+                        kind in joblessKinds -> null
+                        else -> head?.jobId
+                    }
                     if (head != null && head.deleted == expectedDeleted && head.payload != null &&
+                        (!jobScopeKnown || head.jobId == expectedJobId) &&
                         payloadCovers(head.payload, expected, optionalPayloadKeys(kind))) {
                         continue
                     }
@@ -53,9 +67,13 @@ internal object RevisionDataRepair {
                     // the import validator.
                     val values = payloadValuesForDataRow(db, null, kind, row)
                         ?: continue
-                    val jobId = head?.jobId
-                        ?: previousJobId(db, kind, entityId)
-                        ?: if (kind == "job") entityId else values["job_id"]?.toString()
+                    val jobId = if (jobScopeKnown) {
+                        expectedJobId
+                    } else {
+                        head?.jobId
+                            ?: previousJobId(db, kind, entityId)
+                            ?: values["job_id"]?.toString()
+                    }
                     pending.add(
                         Pending(
                             kind, entityId, jobId,
