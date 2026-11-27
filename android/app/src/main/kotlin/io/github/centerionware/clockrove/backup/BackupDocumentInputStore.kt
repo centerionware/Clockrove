@@ -10,7 +10,7 @@ import java.io.InputStream
 import java.io.RandomAccessFile
 import java.util.UUID
 
-/** Copies only encrypted SAF input into private, bounded staging. */
+/** Copies encrypted or plaintext SAF backup input into private, bounded staging. */
 internal class BackupDocumentInputStore(
     context: Context,
     private val elapsedClock: () -> Long = SystemClock::elapsedRealtime,
@@ -42,6 +42,7 @@ internal class BackupDocumentInputStore(
         private const val FILE_PREFIX = "encrypted-import-"
         private const val COPY_BUFFER_BYTES = 64 * 1024
         private val ENVELOPE_MAGIC = byteArrayOf(0x43, 0x4c, 0x4b, 0x52, 0x4f, 0x56, 0x45, 0x32)
+        private val PLAIN_ARCHIVE_MAGIC = byteArrayOf(0x43, 0x4c, 0x4b, 0x41, 0x52, 0x43, 0x48, 0x31)
         private val idPattern = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
     }
 
@@ -93,8 +94,8 @@ internal class BackupDocumentInputStore(
             if (total < 1L || stage.file.length() != total) {
                 throw Failure("INVALID_DOCUMENT_SIZE", "The selected backup file is empty or incomplete.")
             }
-            if (!hasSupportedEnvelopeMagic(stage.file)) {
-                throw Failure("UNSUPPORTED_BACKUP_ENVELOPE", "Choose a password-encrypted Clockrove backup.")
+            if (!hasSupportedBackupMagic(stage.file)) {
+                throw Failure("UNSUPPORTED_BACKUP_ENVELOPE", "Choose a Clockrove backup file.")
             }
             synchronized(this) {
                 checkCopyActiveLocked(stage)
@@ -287,7 +288,7 @@ internal class BackupDocumentInputStore(
         }
     }
 
-    private fun hasSupportedEnvelopeMagic(file: File): Boolean = try {
+    private fun hasSupportedBackupMagic(file: File): Boolean = try {
         FileInputStream(file).use { input ->
             val header = ByteArray(ENVELOPE_MAGIC.size)
             var offset = 0
@@ -296,7 +297,7 @@ internal class BackupDocumentInputStore(
                 if (count < 0) return false
                 offset += count
             }
-            header.contentEquals(ENVELOPE_MAGIC)
+            header.contentEquals(ENVELOPE_MAGIC) || header.contentEquals(PLAIN_ARCHIVE_MAGIC)
         }
     } catch (_: Exception) {
         false

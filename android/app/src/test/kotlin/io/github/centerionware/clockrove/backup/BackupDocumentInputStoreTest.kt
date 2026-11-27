@@ -21,6 +21,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [24])
 class BackupDocumentInputStoreTest {
     private val envelope = byteArrayOf(0x43, 0x4c, 0x4b, 0x52, 0x4f, 0x56, 0x45, 0x32, 2, 4, 6, 8, 10)
+    private val plainArchive = byteArrayOf(0x43, 0x4c, 0x4b, 0x41, 0x52, 0x43, 0x48, 0x31, 2, 4, 6, 8, 10)
     private class ManualScheduler(private val elapsed: () -> Long) : BackupFileScheduler {
         private data class Entry(
             val dueAt: Long,
@@ -107,7 +108,24 @@ class BackupDocumentInputStoreTest {
     }
 
     @Test
-    fun rejectsNonEncryptedFilesBeforeExposingAReadableHandle() {
+    fun stagesPlaintextArchivesWithoutAnEnvelope() {
+        store = BackupDocumentInputStore(
+            app,
+            elapsedClock = { elapsed },
+            idleTtlMillis = 60_000L,
+            scheduler = scheduler,
+            openInputStream = { ByteArrayInputStream(plainArchive) },
+            deleteFile = { file -> deletedFiles.add(file); file.delete() },
+        )
+        val opened = store.stage(Uri.parse("content://synthetic.provider/plaintext"))
+        assertEquals(plainArchive.size.toLong(), opened.totalBytes)
+        assertArrayEquals(plainArchive.copyOfRange(0, 8), store.readChunk(opened.documentId, 0, 8))
+        assertTrue(store.close(opened.documentId))
+        assertFalse(store.hasPendingAction())
+    }
+
+    @Test
+    fun rejectsUnsupportedFilesBeforeExposingAReadableHandle() {
         store = BackupDocumentInputStore(
             app,
             elapsedClock = { elapsed },
