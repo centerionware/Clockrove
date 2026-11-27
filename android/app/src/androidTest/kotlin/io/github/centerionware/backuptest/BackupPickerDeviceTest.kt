@@ -131,16 +131,22 @@ class BackupPickerDeviceTest {
     private fun enterBackupPassword() {
         val password = waitFor("backup password field", ::findPasswordField)
         touchNode(password)
-        waitFor("focused backup password and keyboard") {
-            findPasswordField()?.takeIf { it.isFocused && keyboardVisible() }
+        // Headless CI images sometimes have no IME package. The focused field
+        // still accepts key events, so do not make the restore assertion depend
+        // on an on-screen keyboard.
+        val keyboardDeadline = SystemClock.uptimeMillis() + 10_000
+        while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) {
+            SystemClock.sleep(100)
         }
         // Flutter on API 24 can acknowledge ACTION_SET_TEXT without updating the controller.
         instrumentation.sendStringSync(PASSWORD)
         waitFor("entered backup password") {
             findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
         }
-        pressBack()
-        waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
+        if (keyboardVisible()) {
+            pressBack()
+            waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
+        }
     }
 
     private fun findPasswordField(): AccessibilityNodeInfo? =
