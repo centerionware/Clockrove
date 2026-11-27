@@ -396,7 +396,7 @@ class BusinessApi {
     String? text,
   }) => _channel.invokeMethod<void>('shareTaskImages', {
     'attachmentIds': attachmentIds,
-    if (text != null) 'text': text,
+    'text': ?text,
   });
 
   Future<ActualCostsSnapshot> actualCosts({
