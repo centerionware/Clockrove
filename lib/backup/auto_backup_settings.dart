@@ -128,8 +128,9 @@ class MethodChannelAutoBackupSettingsApi implements AutoBackupSettingsApi {
         method,
         arguments,
       );
-      if (value == null)
+      if (value == null) {
         throw const AutoBackupException('SETTINGS_UNAVAILABLE');
+      }
       return AutoBackupSettings.decode(value);
     } on PlatformException catch (error) {
       throw AutoBackupException(error.code);

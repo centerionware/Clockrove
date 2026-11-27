@@ -441,7 +441,9 @@ void main() {
       );
 
       final legacy = await BackupArchiveCodec.decode(
-        _archive([_record('jobs', [const MapEntry('id', 'job-1')])], legacy: true),
+        _archive([
+          _record('jobs', [const MapEntry('id', 'job-1')]),
+        ], legacy: true),
       );
       expect(legacy.formatVersion, 1);
       expect(legacy.rows.single.table, 'jobs');
@@ -733,9 +735,7 @@ Uint8List _archive(
 }) {
   final encodedRecords = records.expand((record) => record).toList();
   final headerLength = legacy ? 48 : 56;
-  final result = Uint8List(
-    headerLength + encodedRecords.length + media.length,
-  );
+  final result = Uint8List(headerLength + encodedRecords.length + media.length);
   result.setRange(0, 8, const [0x43, 0x4c, 0x4b, 0x41, 0x52, 0x43, 0x48, 0x31]);
   final header = ByteData.sublistView(result);
   header.setUint16(8, legacy ? 1 : 2, Endian.big);
@@ -752,7 +752,11 @@ Uint8List _archive(
     header.setUint64(40, encodedRecords.length, Endian.big);
     header.setUint64(48, media.length, Endian.big);
   }
-  result.setRange(headerLength, headerLength + encodedRecords.length, encodedRecords);
+  result.setRange(
+    headerLength,
+    headerLength + encodedRecords.length,
+    encodedRecords,
+  );
   result.setRange(headerLength + encodedRecords.length, result.length, media);
   return result;
 }

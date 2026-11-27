@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -173,8 +171,9 @@ final class _AutoBackupSink implements BackupTransactionalByteSink {
 
   @override
   Future<void> commit() async {
-    if (_terminal)
+    if (_terminal) {
       throw StateError('The automatic backup is already terminal.');
+    }
     _terminal = true;
     final result = await channel.invokeMapMethod<String, Object?>(
       'finishDocument',

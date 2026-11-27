@@ -48,14 +48,8 @@ void main() {
     );
     expect(fields.getUint16(8, Endian.big), 3);
     expect(fields.getUint16(10, Endian.big), BackupCryptoV2.headerBytes);
-    expect(
-      fields.getUint64(32, Endian.big),
-      BackupCryptoV2.maxArchiveBytes,
-    );
-    expect(
-      BackupCryptoV2.maxArchiveBytes,
-      greaterThan(4 * 1024 * 1024 * 1024),
-    );
+    expect(fields.getUint64(32, Endian.big), BackupCryptoV2.maxArchiveBytes);
+    expect(BackupCryptoV2.maxArchiveBytes, greaterThan(4 * 1024 * 1024 * 1024));
     expect(
       BackupCryptoV2.envelopeLengthForArchiveBytes(
         BackupCryptoV2.maxArchiveBytes,
