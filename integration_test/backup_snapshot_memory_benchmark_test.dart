@@ -14,10 +14,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
+const _benchmarkArchiveBytes = 64 * 1024 * 1024;
 const _archiveSlackBytes = 64 * 1024;
-const _archiveMinimumBytes =
-    BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
-const _targetMediaBytes = BackupCryptoV2.maxArchiveBytes - _archiveSlackBytes;
+const _archiveMinimumBytes = _benchmarkArchiveBytes - _archiveSlackBytes;
+const _targetMediaBytes = _benchmarkArchiveBytes - _archiveSlackBytes;
 const _mediaToleranceBytes = 2 * 1024;
 const _rssSampleInterval = Duration(milliseconds: 20);
 const _maximumTaskImageBytes = 5_000_000;
@@ -37,7 +37,7 @@ void main() {
     final result = metrics!;
     expect(
       result.archiveBytes,
-      inInclusiveRange(_archiveMinimumBytes, BackupCryptoV2.maxArchiveBytes),
+      inInclusiveRange(_archiveMinimumBytes, _benchmarkArchiveBytes),
     );
     // ignore: avoid_print
     print(
@@ -116,15 +116,15 @@ void main() {
     expect(result.mediaCount, greaterThanOrEqualTo(14));
     expect(
       result.archiveBytes,
-      inInclusiveRange(_archiveMinimumBytes, BackupCryptoV2.maxArchiveBytes),
+      inInclusiveRange(_archiveMinimumBytes, _benchmarkArchiveBytes),
     );
     expect(
       result.stagedPlusMediaBytes,
-      lessThanOrEqualTo(maxBackupImportStagedBytes),
+      lessThanOrEqualTo(_benchmarkArchiveBytes + _archiveSlackBytes),
     );
     expect(
       result.stagedPlusMediaBytes,
-      greaterThanOrEqualTo(maxBackupImportStagedBytes - 2 * _archiveSlackBytes),
+      greaterThanOrEqualTo(_benchmarkArchiveBytes - 2 * _archiveSlackBytes),
     );
     expect(
       result.restorePeakDeltaRssKiB,
@@ -296,7 +296,7 @@ Future<_SeedMetrics> _seedSyntheticTaskMedia() async {
 Future<int> _fitFixtureArchiveWithinLimit(BusinessApi businessApi) async {
   final exporter = BackupSnapshotExporter();
   final before = await exporter.exportStream();
-  final delta = BackupCryptoV2.maxArchiveBytes - before.archiveByteLength;
+  final delta = _benchmarkArchiveBytes - before.archiveByteLength;
   await before.close();
   if (delta < 0 || delta > 80 * 1024) {
     throw StateError('The near-limit fixture has an unexpected archive gap.');
@@ -340,11 +340,11 @@ Future<int> _fitFixtureArchiveWithinLimit(BusinessApi businessApi) async {
   final exported = await exporter.exportStream();
   try {
     if (exported.archiveByteLength < _archiveMinimumBytes ||
-        exported.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
+        exported.archiveByteLength > _benchmarkArchiveBytes) {
       throw StateError(
         'The synthetic archive is ${exported.archiveByteLength} bytes; '
         'expected between $_archiveMinimumBytes and '
-        '${BackupCryptoV2.maxArchiveBytes}.',
+        '$_benchmarkArchiveBytes.',
       );
     }
     return exported.archiveByteLength;
@@ -392,7 +392,7 @@ Future<_BenchmarkMetrics> _measureFullBackupPath() async {
     if (export.mediaBytes != seedMediaBytes ||
         export.mediaCount != seedAttachmentCount ||
         export.archiveByteLength < _archiveMinimumBytes ||
-        export.archiveByteLength > BackupCryptoV2.maxArchiveBytes) {
+        export.archiveByteLength > _benchmarkArchiveBytes) {
       throw StateError(
         'Snapshot export did not match the isolated near-maximum fixture.',
       );
@@ -510,7 +510,10 @@ Future<_RestorePreviewMetrics> _measureStreamedRestorePreview() async {
   try {
     expect(exported.mediaBytes, mediaBytes);
     expect(exported.mediaCount, conversation.taskAttachments.length);
-    expect(exported.mediaBytes, lessThanOrEqualTo(maxBackupImportMediaBytes));
+    expect(
+      exported.mediaBytes,
+      lessThanOrEqualTo(_targetMediaBytes + _mediaToleranceBytes),
+    );
 
     final encrypted = await BackupCryptoV2.encrypt(
       password: 'synthetic-streamed-restore-passphrase',

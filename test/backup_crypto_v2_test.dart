@@ -13,16 +13,16 @@ void main() {
   test(
     'computes exact bounded envelope lengths before destination creation',
     () {
-      expect(BackupCryptoV2.envelopeLengthForArchiveBytes(1), 163);
+      expect(BackupCryptoV2.envelopeLengthForArchiveBytes(1), 171);
       expect(
         BackupCryptoV2.envelopeLengthForArchiveBytes(BackupCryptoV2.chunkBytes),
-        65698,
+        65706,
       );
       expect(
         BackupCryptoV2.envelopeLengthForArchiveBytes(
           BackupCryptoV2.chunkBytes + 1,
         ),
-        65724,
+        65732,
       );
       expect(
         BackupCryptoV2.envelopeLengthForArchiveBytes(
@@ -38,6 +38,31 @@ void main() {
       );
     },
   );
+
+  test('writes a v3 header with a 64-bit archive bound', () async {
+    final encrypted = await _encrypt(_pattern(1));
+    final fields = ByteData.sublistView(
+      encrypted,
+      0,
+      BackupCryptoV2.headerBytes,
+    );
+    expect(fields.getUint16(8, Endian.big), 3);
+    expect(fields.getUint16(10, Endian.big), BackupCryptoV2.headerBytes);
+    expect(
+      fields.getUint64(32, Endian.big),
+      BackupCryptoV2.maxArchiveBytes,
+    );
+    expect(
+      BackupCryptoV2.maxArchiveBytes,
+      greaterThan(4 * 1024 * 1024 * 1024),
+    );
+    expect(
+      BackupCryptoV2.envelopeLengthForArchiveBytes(
+        BackupCryptoV2.maxArchiveBytes,
+      ),
+      BackupCryptoV2.maxEnvelopeBytes,
+    );
+  });
 
   test('v2 streams split input into authenticated ordered frames', () async {
     final archive = _pattern(BackupCryptoV2.chunkBytes + 1);
@@ -521,7 +546,7 @@ Future<Uint8List> _encryptWithInvalidManifest(
   final header = Uint8List(BackupCryptoV2.headerBytes);
   header.setRange(0, 8, ascii.encode('CLKROVE2'));
   final headerFields = ByteData.sublistView(header);
-  headerFields.setUint16(8, 2, Endian.big);
+  headerFields.setUint16(8, 3, Endian.big);
   headerFields.setUint16(10, BackupCryptoV2.headerBytes, Endian.big);
   header[12] = 1;
   header[13] = 1;
@@ -532,9 +557,9 @@ Future<Uint8List> _encryptWithInvalidManifest(
   header[25] = 16;
   header[26] = BackupCryptoV2.tagBytes;
   headerFields.setUint32(28, BackupCryptoV2.chunkBytes, Endian.big);
-  headerFields.setUint32(32, BackupCryptoV2.maxArchiveBytes, Endian.big);
-  headerFields.setUint32(36, BackupCryptoV2.maxDataFrames, Endian.big);
-  header.setRange(40, 56, salt);
+  headerFields.setUint64(32, BackupCryptoV2.maxArchiveBytes, Endian.big);
+  headerFields.setUint32(40, BackupCryptoV2.maxDataFrames, Endian.big);
+  header.setRange(48, 64, salt);
 
   final key = await Argon2id(
     memory: 19 * 1024,

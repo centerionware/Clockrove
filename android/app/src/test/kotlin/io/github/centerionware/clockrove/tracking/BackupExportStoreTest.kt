@@ -87,7 +87,7 @@ class BackupExportStoreTest {
     @Test
     fun detachedSnapshotKeepsItsOriginalStateAndLeavesAnOpenSessionRunning() {
         assertEquals(
-            64L * 1024L * 1024L,
+            281_474_976_645_120L,
             exportStore.info(database).maxSnapshotBytes,
         )
         val beforeStart = repository.snapshot().version

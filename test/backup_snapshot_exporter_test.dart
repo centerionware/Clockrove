@@ -636,7 +636,7 @@ Map<String, Object?> _snapshotInfo({
   int maxBlobChunkBytes = 256 * 1024,
   List<String>? portableTables,
 }) => {
-  'archiveFormatVersion': 1,
+  'archiveFormatVersion': 2,
   'schemaVersion': schemaVersion,
   'stateVersion': 19,
   'maxSnapshotBytes': 64 * 1024 * 1024,
@@ -659,7 +659,7 @@ Map<String, Object?> _started({
   int stateVersion = 19,
 }) => {
   'snapshotId': 'snapshot-1',
-  'archiveFormatVersion': 1,
+  'archiveFormatVersion': 2,
   'schemaVersion': 15,
   'stateVersion': stateVersion,
   'capturedAtUtcMillis': 1700000000000,

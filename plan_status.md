@@ -979,3 +979,9 @@ Exact PR-head [45275793641](https://github.com/centerionware/Clockrove/actions/r
 Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562) (`e2a0d18`) failed only API 24
 picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
 requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
+
+M7.7 automatic backups and large archives are implemented in a new branch from
+`main`: WorkManager plus a headless Flutter worker, SAF folder + optional
+encryption, daily/weekly/monthly/yearly retention, plaintext restore, and
+64-bit archive lengths that remove the 4 GiB cap. CI/device evidence is pending;
+see [automatic-backup evidence](docs/plan/evidence/nov27-auto-backup.md).

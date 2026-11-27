@@ -123,7 +123,7 @@ final class BackupArchiveStreamPlan {
       emittedBytes += chunk.length;
       yield chunk;
     }
-    if (emittedBytes != 48 + recordsLength) {
+    if (emittedBytes != _headerBytes.length + recordsLength) {
       throw StateError('Backup archive record length did not match preflight.');
     }
 
@@ -261,7 +261,7 @@ final class BackupTrustedNativeArchiveReplayPlan {
       emittedBytes += chunk.length;
       yield chunk;
     }
-    if (emittedBytes != 48 + recordsLength) {
+    if (emittedBytes != _headerBytes.length + recordsLength) {
       throw StateError('Backup archive record length did not match preflight.');
     }
 
@@ -410,7 +410,8 @@ final class _ReplayStreamPreflight {
       prepared.encodedLength,
       maxBytes,
     );
-    if (48 + recordsLength + mediaLength > maxBytes) {
+    if (BackupArchiveCodec._headerLength + recordsLength + mediaLength >
+        maxBytes) {
       throw const FormatException(
         'The full backup exceeds the supported size. No media was omitted.',
       );
@@ -432,16 +433,15 @@ final class _ReplayStreamPreflight {
         mediaLength != expectedMediaBytes) {
       throw const FormatException('The backup snapshot counts do not match.');
     }
-    final totalLength = 48 + recordsLength + mediaLength;
-    if (totalLength > maxBytes ||
-        recordsLength > 0xffffffff ||
-        mediaLength > 0xffffffff) {
+    final totalLength =
+        BackupArchiveCodec._headerLength + recordsLength + mediaLength;
+    if (totalLength > maxBytes) {
       throw const FormatException(
         'The full backup exceeds the supported size. No media was omitted.',
       );
     }
 
-    final headerBytes = Uint8List(48);
+    final headerBytes = Uint8List(BackupArchiveCodec._headerLength);
     final header = ByteData.sublistView(headerBytes);
     headerBytes.setRange(0, 8, const [
       0x43,
@@ -454,14 +454,14 @@ final class _ReplayStreamPreflight {
       0x31,
     ]);
     header.setUint16(8, BackupArchiveCodec.currentFormatVersion, Endian.big);
-    header.setUint16(10, 48, Endian.big);
+    header.setUint16(10, BackupArchiveCodec._headerLength, Endian.big);
     header.setUint32(12, schemaVersion, Endian.big);
     header.setInt64(16, stateVersion, Endian.big);
     header.setInt64(24, capturedAtUtcMillis, Endian.big);
     header.setUint32(32, recordCount, Endian.big);
     header.setUint32(36, blobCount, Endian.big);
-    header.setUint32(40, recordsLength, Endian.big);
-    header.setUint32(44, mediaLength, Endian.big);
+    header.setUint64(40, recordsLength, Endian.big);
+    header.setUint64(48, mediaLength, Endian.big);
     return BackupTrustedNativeArchiveReplayPlan._(
       schemaVersion: schemaVersion,
       stateVersion: stateVersion,

@@ -15,6 +15,7 @@ import '../help/help_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/language_setting.dart';
 import '../maps/map_provider_settings_screen.dart';
+import '../backup/auto_backup_settings.dart';
 import '../backup/backup_export_screen.dart';
 import '../backup/backup_restore_screen.dart';
 import '../tracking/timer_providers.dart';
@@ -279,6 +280,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           icon: const Icon(Icons.restore),
           label: Text(AppMessage.restoreBackup.of(context)),
         ),
+        const SizedBox(height: 24),
+        const AutoBackupSettingsSection(),
         const SizedBox(height: 24),
         const LanguageSetting(),
         const SizedBox(height: 24),

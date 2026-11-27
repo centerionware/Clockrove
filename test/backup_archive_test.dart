@@ -434,11 +434,17 @@ void main() {
     test('rejects unsupported archive versions and tables', () async {
       final encoded = await _encodeJob();
       final badFormat = Uint8List.fromList(encoded);
-      ByteData.sublistView(badFormat).setUint16(8, 2, Endian.big);
+      ByteData.sublistView(badFormat).setUint16(8, 3, Endian.big);
       await expectLater(
         BackupArchiveCodec.decode(badFormat),
         throwsA(isA<FormatException>()),
       );
+
+      final legacy = await BackupArchiveCodec.decode(
+        _archive([_record('jobs', [const MapEntry('id', 'job-1')])], legacy: true),
+      );
+      expect(legacy.formatVersion, 1);
+      expect(legacy.rows.single.table, 'jobs');
 
       final futureSchema = Uint8List.fromList(encoded);
       ByteData.sublistView(futureSchema).setUint32(12, 18, Endian.big);
@@ -532,10 +538,10 @@ void main() {
           ],
         );
         final corruptDigest = Uint8List.fromList(valid);
-        // One row record begins after the 48-byte header. The digest follows
+        // One row record begins after the 56-byte header. The digest follows
         // type, table, primary key, blob count, blob ID, column and length.
         final digestOffset =
-            48 +
+            56 +
             1 +
             2 +
             'task_attachments'.length +
@@ -720,22 +726,34 @@ Future<Uint8List> _encodeJob() => BackupArchiveCodec.encode(
 _TestBlobDescriptor _blobDescriptor(String id, String column) =>
     _TestBlobDescriptor(id, column, 0, List.filled(32, 0));
 
-Uint8List _archive(List<List<int>> records, {List<int> media = const []}) {
+Uint8List _archive(
+  List<List<int>> records, {
+  List<int> media = const [],
+  bool legacy = false,
+}) {
   final encodedRecords = records.expand((record) => record).toList();
-  final result = Uint8List(48 + encodedRecords.length + media.length);
+  final headerLength = legacy ? 48 : 56;
+  final result = Uint8List(
+    headerLength + encodedRecords.length + media.length,
+  );
   result.setRange(0, 8, const [0x43, 0x4c, 0x4b, 0x41, 0x52, 0x43, 0x48, 0x31]);
   final header = ByteData.sublistView(result);
-  header.setUint16(8, 1, Endian.big);
-  header.setUint16(10, 48, Endian.big);
+  header.setUint16(8, legacy ? 1 : 2, Endian.big);
+  header.setUint16(10, headerLength, Endian.big);
   header.setUint32(12, 15, Endian.big);
   header.setInt64(16, 0, Endian.big);
   header.setInt64(24, 0, Endian.big);
   header.setUint32(32, records.length, Endian.big);
   header.setUint32(36, 0, Endian.big);
-  header.setUint32(40, encodedRecords.length, Endian.big);
-  header.setUint32(44, media.length, Endian.big);
-  result.setRange(48, 48 + encodedRecords.length, encodedRecords);
-  result.setRange(48 + encodedRecords.length, result.length, media);
+  if (legacy) {
+    header.setUint32(40, encodedRecords.length, Endian.big);
+    header.setUint32(44, media.length, Endian.big);
+  } else {
+    header.setUint64(40, encodedRecords.length, Endian.big);
+    header.setUint64(48, media.length, Endian.big);
+  }
+  result.setRange(headerLength, headerLength + encodedRecords.length, encodedRecords);
+  result.setRange(headerLength + encodedRecords.length, result.length, media);
   return result;
 }
 

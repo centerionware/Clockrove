@@ -11,8 +11,9 @@ const int minBackupImportConflictPageBytes = 1024;
 const int maxBackupImportBlobChunkBytes = 255 * 1024;
 const int maxBackupImportRows = 500000;
 const int maxBackupImportMediaCount = 10000;
-const int maxBackupImportMediaBytes = 64 * 1024 * 1024;
-const int maxBackupImportStagedBytes = 64 * 1024 * 1024;
+// Matches the largest CLKROVE2 archive; staging is disk-backed and streamed.
+const int maxBackupImportMediaBytes = 281474976645120;
+const int maxBackupImportStagedBytes = 281474976645120;
 
 /// Typed transport for the native, bounded backup staging and restore boundary.
 /// It never interprets archive contents or writes a local file path.
@@ -30,7 +31,8 @@ final class BackupImportApi {
     required int mediaCount,
     required int mediaBytes,
   }) async {
-    if (archiveFormatVersion != 1 ||
+    if (archiveFormatVersion < 1 ||
+        archiveFormatVersion > BackupArchiveCodec.currentFormatVersion ||
         schemaVersion != currentBackupImportSchemaVersion ||
         !_validDigest(archiveDigest) ||
         recordCount < 0 ||

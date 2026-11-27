@@ -181,7 +181,7 @@ for clockrove_api in 24 35; do
     -- flutter test --no-pub integration_test/backup_crypto_benchmark_test.dart \
     -d emulator-5554 --reporter expanded > "$clockrove_benchmark_log" 2>&1; then
     cat "$clockrove_benchmark_log"
-    if ! grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134601 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
+    if ! grep -Eq 'BACKUP_STREAMING_ENVELOPE_BENCHMARK encrypt_ms=[0-9]+ decrypt_ms=[0-9]+ archive_bytes=67108864 envelope_bytes=67134609 baseline_rss_kib=[0-9]+ peak_rss_kib=[0-9]+ peak_delta_rss_kib=[0-9]+' \
       "$clockrove_benchmark_log"; then
       clockrove_record_validation_failure \
         "$clockrove_api" backup-crypto-benchmark-marker 1 "$clockrove_benchmark_log"

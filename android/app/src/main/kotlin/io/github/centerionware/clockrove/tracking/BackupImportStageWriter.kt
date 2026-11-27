@@ -232,7 +232,7 @@ internal fun BackupImportStore.beginImportCore(
         ensureDirectory()
         retryPendingCleanup()
         if (active != null) throw StageWriterFailure("IMPORT_BUSY", "A backup import is already staged.")
-        if (archiveFormatVersion != BackupExportStore.ARCHIVE_FORMAT_VERSION ||
+        if (archiveFormatVersion !in 1..BackupExportStore.ARCHIVE_FORMAT_VERSION ||
             schemaVersion != BackupExportStore.CURRENT_SCHEMA_VERSION || db.version != schemaVersion) {
             throw StageWriterFailure("SCHEMA_UNSUPPORTED", "This backup version is not supported.")
         }

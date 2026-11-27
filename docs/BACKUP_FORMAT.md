@@ -91,16 +91,29 @@ complete untrusted revision graph.
 ## Limits and lifecycle
 
 - One active snapshot per process; concurrent starts fail with SNAPSHOT_BUSY.
-- Native detached staging input budget: 64 MiB, including framed UTF-8 row
-  records and media. This does not guarantee that the Dart archive encoding
-  will fit the final limit.
-- Restore media input may be as large as 64 MiB, but a completed preview must
-  report native normalized row JSON bytes (including the four-byte per-row
-  charge) plus media bytes at or below the same 64 MiB staging ceiling. Binary
-  archive record bytes are reported separately and are not used as a proxy for
-  native staged row bytes.
-- Final archive plaintext limit remains 64 MiB in the Dart crypto contract.
+- Native detached staging input budget: 256 TiB (the 64-bit CLKROVE2 v3
+  ceiling), disk-backed and streamed. The selected storage provider and free
+  space are the practical limits.
+- Restore media input and the completed preview use the same 256 TiB ceiling.
+  A preview must report native normalized row JSON bytes plus media bytes at or
+  below that ceiling. Binary archive record bytes are separate from native
+  staged row bytes.
+- Final archive plaintext limit: 256 TiB for v3. Legacy v1 archives remain
+  readable at their original 64 MiB limit.
 - Maximum 500,000 records and 10,000 media objects.
+
+### Current CLKROVE2 v3 header
+
+The v3 envelope keeps the magic, KDF/cipher IDs, 65,536-byte frames and
+64-byte AAD prefix layout but is 72 bytes. Version is 3, header length is 72,
+the archive bound is an unsigned 64-bit value at offset 32, and the data-frame
+count is an unsigned 32-bit value at offset 40. The 16-byte salt occupies offsets
+48–63; offsets 44–47 and 64–71 are zero. The maximum portable archive is
+281,474,976,645,120 bytes (256 TiB minus 64 KiB), so the maximum envelope is
+281,582,350,827,640 bytes. v2 headers (64 bytes, 64 MiB / 1,024 frames) remain
+accepted and are authenticated with their original AAD. The inner archive v2
+uses 64-bit record/media section lengths in a 56-byte header; v1 48-byte
+archives still decode.
 - Maximum encoded row size: 128 KiB.
 - Maximum encoded method-channel row page: 256 KiB, including the success
   envelope. A page request may be between 1 KiB and 256 KiB.

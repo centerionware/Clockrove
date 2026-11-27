@@ -71,15 +71,22 @@ final class BackupCryptoCancellationToken {
 
 /// Streaming CLKROVE2 envelope codec. CLKROVE1 remains in BackupCrypto.
 abstract final class BackupCryptoV2 {
-  static const int maxArchiveBytes = 64 * 1024 * 1024;
+  // v3 widens the archive length to 64 bits. The 32-bit frame counter still
+  // bounds a single envelope at 256 TiB of 64 KiB frames; that is the portable
+  // format ceiling, far above Google Drive/SAF per-file limits. v2 (64 MiB)
+  // envelopes remain readable.
+  static const int maxArchiveBytes = 281474976645120;
   static const int chunkBytes = 64 * 1024;
-  static const int maxDataFrames = 1024;
-  static const int headerBytes = 64;
+  static const int maxDataFrames = 0xffffffff;
+  static const int headerBytes = 72;
+  static const int legacyHeaderBytes = 64;
   static const int frameHeaderBytes = 9;
   static const int tagBytes = 16;
   static const int manifestBytes = 48;
   static const int maxTransportChunkBytes = 256 * 1024;
-  static const int maxEnvelopeBytes = 67134601;
+  static const int maxEnvelopeBytes = 281582350827640;
+  static const int _legacyMaxArchiveBytes = 64 * 1024 * 1024;
+  static const int _legacyMaxDataFrames = 1024;
 
   /// Exact CLKROVE2 envelope size for a plaintext archive of [archiveBytes].
   static int envelopeLengthForArchiveBytes(int archiveBytes) {
@@ -241,7 +248,7 @@ abstract final class BackupCryptoV2 {
     }
   }
 
-  /// Authenticates a v2 envelope and stages plaintext privately.
+  /// Authenticates a v2 or v3 envelope and stages plaintext privately.
   ///
   /// The destination must not expose staged bytes until [commit]. This method
   /// calls commit only after every frame, the final manifest and EOF validate.
@@ -264,13 +271,28 @@ abstract final class BackupCryptoV2 {
     var committed = false;
     try {
       _checkCancelled(isCancelled, cancellationToken);
-      final header = (await _readOrCancel(
-        () => reader.readExactly(headerBytes),
+      final prefix = (await _readOrCancel(
+        () => reader.readExactly(legacyHeaderBytes),
         cancellationToken: cancellationToken,
         cancelReader: reader.cancel,
       ))!;
+      final prefixFields = ByteData.sublistView(prefix);
+      final extraHeader = prefixFields.getUint16(10, Endian.big) == headerBytes
+          ? await _readOrCancel(
+              () => reader.readExactly(headerBytes - legacyHeaderBytes),
+              cancellationToken: cancellationToken,
+              cancelReader: reader.cancel,
+            )
+          : null;
+      final header = extraHeader == null
+          ? prefix
+          : Uint8List.fromList([...prefix, ...extraHeader]);
       _validateHeader(header);
-      final salt = Uint8List.sublistView(header, 40, 56);
+      final salt = Uint8List.sublistView(
+        header,
+        header.length == legacyHeaderBytes ? 40 : 48,
+        (header.length == legacyHeaderBytes ? 40 : 48) + 16,
+      );
       final key = await _deriveKey(password, salt);
       _checkCancelled(isCancelled, cancellationToken);
       final cipher = AesGcm.with256bits();
@@ -395,7 +417,7 @@ abstract final class BackupCryptoV2 {
     final result = Uint8List(headerBytes);
     result.setRange(0, _magic.length, _magic);
     final fields = ByteData.sublistView(result);
-    fields.setUint16(8, 2, Endian.big);
+    fields.setUint16(8, 3, Endian.big);
     fields.setUint16(10, headerBytes, Endian.big);
     result[12] = _kdfId;
     result[13] = _cipherId;
@@ -406,14 +428,14 @@ abstract final class BackupCryptoV2 {
     result[25] = _saltBytes;
     result[26] = tagBytes;
     fields.setUint32(28, chunkBytes, Endian.big);
-    fields.setUint32(32, maxArchiveBytes, Endian.big);
-    fields.setUint32(36, maxDataFrames, Endian.big);
-    result.setRange(40, 56, salt);
+    fields.setUint64(32, maxArchiveBytes, Endian.big);
+    fields.setUint32(40, maxDataFrames, Endian.big);
+    result.setRange(48, 64, salt);
     return result;
   }
 
   static void _validateHeader(Uint8List header) {
-    if (header.length != headerBytes) {
+    if (header.length != headerBytes && header.length != legacyHeaderBytes) {
       throw const FormatException('The backup header has an invalid size.');
     }
     for (var index = 0; index < _magic.length; index++) {
@@ -422,9 +444,25 @@ abstract final class BackupCryptoV2 {
       }
     }
     final fields = ByteData.sublistView(header);
-    if (fields.getUint16(8, Endian.big) != 2 ||
-        fields.getUint16(10, Endian.big) != headerBytes ||
-        header[12] != _kdfId ||
+    final version = fields.getUint16(8, Endian.big);
+    final length = fields.getUint16(10, Endian.big);
+    final legacy = version == 2 && length == legacyHeaderBytes;
+    final current = version == 3 && length == headerBytes;
+    if (!legacy && !current) {
+      throw const FormatException(
+        'This backup uses unsupported or unsafe encryption settings.',
+      );
+    }
+    final supportedArchiveBound = legacy
+        ? fields.getUint32(32, Endian.big) == _legacyMaxArchiveBytes &&
+              fields.getUint32(36, Endian.big) == _legacyMaxDataFrames
+        : fields.getUint64(32, Endian.big) == maxArchiveBytes &&
+              fields.getUint32(40, Endian.big) == maxDataFrames;
+    final trailingZero = legacy
+        ? !header.sublist(56).any((byte) => byte != 0)
+        : !header.sublist(44, 48).any((byte) => byte != 0) &&
+              !header.sublist(64).any((byte) => byte != 0);
+    if (header[12] != _kdfId ||
         header[13] != _cipherId ||
         header[14] != _nonceSchemeId ||
         header[15] != 0 ||
@@ -435,9 +473,8 @@ abstract final class BackupCryptoV2 {
         header[26] != tagBytes ||
         header[27] != 0 ||
         fields.getUint32(28, Endian.big) != chunkBytes ||
-        fields.getUint32(32, Endian.big) != maxArchiveBytes ||
-        fields.getUint32(36, Endian.big) != maxDataFrames ||
-        header.sublist(56).any((byte) => byte != 0)) {
+        !supportedArchiveBound ||
+        !trailingZero) {
       throw const FormatException(
         'This backup uses unsupported or unsafe encryption settings.',
       );

@@ -37,12 +37,12 @@ void main() {
       switch (call.method) {
         case 'beginBackupImport':
           final args = call.arguments as Map;
-          expect(args['archiveFormatVersion'], 1);
+          expect(args['archiveFormatVersion'], 2);
           expect(args['schemaVersion'], currentBackupImportSchemaVersion);
           expect(args['recordCount'], 1);
           return {
             'importId': importId,
-            'archiveFormatVersion': 1,
+            'archiveFormatVersion': 2,
             'schemaVersion': currentBackupImportSchemaVersion,
             'maxPageBytes': 255 * 1024,
             'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
@@ -115,7 +115,7 @@ void main() {
 
     final api = BackupImportApi(channel: channel);
     final started = await api.begin(
-      archiveFormatVersion: 1,
+      archiveFormatVersion: 2,
       schemaVersion: currentBackupImportSchemaVersion,
       archiveDigest: 'f' * 64,
       recordCount: 1,
@@ -182,7 +182,7 @@ void main() {
       final api = BackupImportApi(channel: channel);
       await expectLater(
         api.begin(
-          archiveFormatVersion: 1,
+          archiveFormatVersion: 2,
           schemaVersion: currentBackupImportSchemaVersion,
           archiveDigest: 'bad',
           recordCount: 0,
@@ -219,14 +219,14 @@ void main() {
     () async {
       respond = (call) async => {
         'importId': 'import-64m',
-        'archiveFormatVersion': 1,
+        'archiveFormatVersion': 2,
         'schemaVersion': currentBackupImportSchemaVersion,
         'maxPageBytes': 255 * 1024,
         'maxBlobChunkBytes': maxBackupImportBlobChunkBytes,
         'idleExpiryMillis': 60000,
       };
       final started = await BackupImportApi(channel: channel).begin(
-        archiveFormatVersion: 1,
+        archiveFormatVersion: 2,
         schemaVersion: currentBackupImportSchemaVersion,
         archiveDigest: 'f' * 64,
         recordCount: 1,
@@ -242,7 +242,7 @@ void main() {
     final api = BackupImportApi(channel: channel);
     await expectLater(
       api.begin(
-        archiveFormatVersion: 1,
+        archiveFormatVersion: 2,
         schemaVersion: currentBackupImportSchemaVersion - 1,
         archiveDigest: 'f' * 64,
         recordCount: 0,

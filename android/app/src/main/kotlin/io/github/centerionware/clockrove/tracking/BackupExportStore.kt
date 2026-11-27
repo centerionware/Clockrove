@@ -127,9 +127,9 @@ internal class BackupExportStore(
     )
 
     companion object {
-        const val ARCHIVE_FORMAT_VERSION = 1
+        const val ARCHIVE_FORMAT_VERSION = 2
         const val CURRENT_SCHEMA_VERSION = 17
-        const val MAX_SNAPSHOT_BYTES = 64L * 1024L * 1024L
+        const val MAX_SNAPSHOT_BYTES = 281_474_976_645_120L
         const val MAX_PAGE_BYTES = 256 * 1024
         const val MIN_PAGE_BYTES = 1024
         const val MAX_BLOB_CHUNK_BYTES = 256 * 1024
