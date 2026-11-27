@@ -4,6 +4,7 @@ import 'package:clockrove/app_theme.dart';
 import 'package:clockrove/automation/automation_api.dart';
 import 'package:clockrove/automation/automation_screen.dart';
 import 'package:clockrove/automation/site_map_picker.dart';
+import 'package:clockrove/maps/address_search.dart';
 import 'package:clockrove/maps/map_provider_settings.dart';
 import 'package:clockrove/maps/work_location_map.dart';
 import 'package:clockrove/tracking/timer_api.dart';
@@ -22,6 +23,25 @@ class _Timer extends TimerApi {
   Stream<int> get committedVersions => const Stream.empty();
 }
 
+class _AddressSearch implements AddressSearchApi {
+  final queries = <String>[];
+  final languages = <String>[];
+  List<AddressSearchResult> results = const [];
+  Object? error;
+
+  @override
+  Future<List<AddressSearchResult>> search(
+    String query, {
+    required String languageTag,
+  }) async {
+    queries.add(query);
+    languages.add(languageTag);
+    final failure = error;
+    if (failure != null) throw failure;
+    return results;
+  }
+}
+
 Future<void> _show(
   WidgetTester tester,
   FixtureAutomationApi api, {
@@ -29,6 +49,9 @@ Future<void> _show(
   bool dark = false,
   Widget? home,
   GlobalKey? boundary,
+  TestMapProviderSettingsApi mapSettingsApi =
+      const TestMapProviderSettingsApi(),
+  AddressSearchApi? addressSearch,
 }) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
@@ -39,15 +62,17 @@ Future<void> _show(
         overrides: [
           automationApiProvider.overrideWithValue(api),
           timerApiProvider.overrideWithValue(_Timer()),
-          mapProviderSettingsApiProvider.overrideWithValue(
-            const TestMapProviderSettingsApi(),
-          ),
+          mapProviderSettingsApiProvider.overrideWithValue(mapSettingsApi),
+          if (addressSearch != null)
+            addressSearchApiProvider.overrideWithValue(addressSearch),
           workMapTilesProvider.overrideWithValue(
             (_, _) => SyntheticTiles(fail: failTiles),
           ),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en')],
           theme: dark ? ClockroveTheme.dark() : ClockroveTheme.light(),
           home:
               home ??
@@ -92,7 +117,43 @@ Future<void> _current(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _openMap(WidgetTester tester) async {
+  await _reveal(tester, 'Choose on map');
+  await tester.tap(find.text('Choose on map'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continue'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _searchAddress(WidgetTester tester, String query) async {
+  await tester.enterText(
+    find.byKey(const ValueKey('site-address-search')),
+    query,
+  );
+  await tester.tap(find.byTooltip('Search'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('Open Zillow appears only after valid coordinates are set', (
+    tester,
+  ) async {
+    final api = FixtureAutomationApi();
+    await _show(tester, api);
+    await _newSite(tester);
+    expect(find.text('Open Zillow'), findsNothing);
+    await tester.enterText(find.byType(TextFormField).at(1), '51.5');
+    await tester.enterText(find.byType(TextFormField).at(2), '-0.1');
+    await tester.pumpAndSettle();
+    expect(find.text('Open Zillow'), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextFormField).at(2),
+      'not-a-coordinate',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Open Zillow'), findsNothing);
+  });
+
   testWidgets(
     'a single explained fix fills a draft and saves only after explicit confirmation',
     (tester) async {
@@ -322,6 +383,105 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets(
+    'address search centres the map and saves only after confirmation',
+    (tester) async {
+      final api = FixtureAutomationApi();
+      final search = _AddressSearch()
+        ..results = const [
+          AddressSearchResult(
+            displayName: '10 Downing Street, London',
+            latitude: 51.5034,
+            longitude: -0.1276,
+          ),
+        ];
+      await _show(tester, api, addressSearch: search);
+      await _newSite(tester);
+      await _openMap(tester);
+      await _searchAddress(tester, '10 Downing Street');
+      expect(search.queries, ['10 Downing Street']);
+      expect(search.languages, ['en']);
+      expect(find.text('10 Downing Street, London'), findsOneWidget);
+      await tester.ensureVisible(find.text('10 Downing Street, London'));
+      await tester.tap(find.text('10 Downing Street, London'));
+      await tester.pumpAndSettle();
+      final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
+      expect(
+        map.mapController!.camera.center.latitude,
+        closeTo(51.5034, 0.0001),
+      );
+      expect(
+        map.mapController!.camera.center.longitude,
+        closeTo(-0.1276, 0.0001),
+      );
+      expect(api.sites, isEmpty);
+      await tester.tap(find.text('Use this centre'));
+      await tester.pumpAndSettle();
+      await _reveal(tester, 'Save site');
+      await tester.tap(find.text('Save site'));
+      await tester.pumpAndSettle();
+      expect(api.sites.single.latitude, closeTo(51.5034, 0.0001));
+      expect(api.sites.single.longitude, closeTo(-0.1276, 0.0001));
+    },
+  );
+  testWidgets(
+    'address search works with a configured custom HTTPS tile provider',
+    (tester) async {
+      final api = FixtureAutomationApi();
+      final search = _AddressSearch()
+        ..results = const [
+          AddressSearchResult(
+            displayName: 'Berlin, Germany',
+            latitude: 52.52,
+            longitude: 13.405,
+          ),
+        ];
+      await _show(
+        tester,
+        api,
+        addressSearch: search,
+        mapSettingsApi: const TestMapProviderSettingsApi(
+          settings: MapProviderSettings(
+            provider: 'CUSTOM',
+            urlTemplate: 'https://tiles.example.com/{z}/{x}/{y}.png',
+            attribution: '© Example Maps',
+            attributionUrl: 'https://example.com/attribution',
+          ),
+        ),
+      );
+      await _newSite(tester);
+      await _openMap(tester);
+      await _searchAddress(tester, 'Berlin');
+      expect(search.queries, ['Berlin']);
+      expect(find.text('Berlin, Germany'), findsOneWidget);
+      expect(find.text('© Example Maps'), findsOneWidget);
+    },
+  );
+  testWidgets('address search explains short, empty and unavailable results', (
+    tester,
+  ) async {
+    final api = FixtureAutomationApi();
+    final search = _AddressSearch();
+    await _show(tester, api, addressSearch: search);
+    await _newSite(tester);
+    await _openMap(tester);
+    await _searchAddress(tester, 'ab');
+    expect(find.textContaining('at least 3 characters'), findsOneWidget);
+    expect(search.queries, isEmpty);
+    await _searchAddress(tester, 'Nowhere');
+    expect(find.textContaining('No matching address'), findsOneWidget);
+    expect(search.queries, ['Nowhere']);
+    search.error = const AddressSearchException(
+      AddressSearchFailure.unavailable,
+    );
+    await _searchAddress(tester, 'Broken');
+    expect(
+      find.textContaining('Address search is unavailable'),
+      findsOneWidget,
+    );
+    expect(find.text('Use this centre'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   for (final dark in [false, true]) {
     testWidgets('render accessible site map ${dark ? 'dark' : 'light'}', (
       tester,
