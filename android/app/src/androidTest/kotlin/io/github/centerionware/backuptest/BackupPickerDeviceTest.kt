@@ -131,31 +131,32 @@ class BackupPickerDeviceTest {
 
     private fun enterBackupPassword() {
         val password = waitFor("backup password field", ::findPasswordField)
+        password.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        password.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         touchNode(password)
-        // Headless CI images sometimes have no IME package. The focused field
-        // still accepts key events, so do not make the restore assertion depend
-        // on an on-screen keyboard.
+        // Headless CI images sometimes have no IME package. Focus and text
+        // commit still exercise the field, so do not require a keyboard window.
         val keyboardDeadline = SystemClock.uptimeMillis() + 10_000
         while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) {
             SystemClock.sleep(100)
         }
         val editable = waitFor("editable backup password field", ::findPasswordField)
         if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
-            assertTrue(
-                editable.performAction(
-                    AccessibilityNodeInfo.ACTION_SET_TEXT,
-                    Bundle().apply {
-                        putCharSequence(
-                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                            PASSWORD,
-                        )
-                    },
-                ),
+            editable.performAction(
+                AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        PASSWORD,
+                    )
+                },
             )
-        } else {
-            // Without an IME the input connection may not expose ACTION_SET_TEXT.
+        }
+        if (!passwordEntered(5_000)) {
+            // Without an IME the input connection may not commit set-text.
             instrumentation.sendStringSync(PASSWORD)
         }
+        if (!passwordEntered(5_000)) runShellInput("text $PASSWORD")
         waitFor("entered backup password") {
             findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
         }
@@ -163,6 +164,15 @@ class BackupPickerDeviceTest {
             pressBack()
             waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
         }
+    }
+
+    private fun passwordEntered(timeoutMs: Long): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (findPasswordField()?.text?.length == PASSWORD.length) return true
+            SystemClock.sleep(100)
+        }
+        return false
     }
 
     private fun findPasswordField(): AccessibilityNodeInfo? =
