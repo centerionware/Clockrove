@@ -100,7 +100,19 @@ complete untrusted revision graph.
   staged row bytes.
 - Final archive plaintext limit: 256 TiB for v3. Legacy v1 archives remain
   readable at their original 64 MiB limit.
-- Maximum 500,000 records and 10,000 media objects.
+- No configured record or media-object count cap. Both counts use the
+  unsigned 64-bit archive metadata range; disk capacity is the practical limit.
+- Maximum encoded row size: 128 KiB.
+- Maximum encoded method-channel row page: 256 KiB, including the success
+  envelope. A page request may be between 1 KiB and 256 KiB.
+- Maximum media transfer: 256 KiB per readBackupBlob call.
+- Idle handle expiry: 15 minutes using monotonic elapsed time. A scheduled
+  native cleanup removes staging files without waiting for another request.
+  Close, expiry, startup after process death, or an export failure also removes
+  staging files.
+- Staging files live under the application-private noBackupFilesDir; the
+  method channel never accepts a path. Files are deleted on close, expiry, or
+  next process startup after a crash.
 
 ### Current CLKROVE2 v3 header
 
@@ -114,17 +126,6 @@ count is an unsigned 32-bit value at offset 40. The 16-byte salt occupies offset
 accepted and are authenticated with their original AAD. The inner archive v2
 uses 64-bit record/media section lengths in a 56-byte header; v1 48-byte
 archives still decode.
-- Maximum encoded row size: 128 KiB.
-- Maximum encoded method-channel row page: 256 KiB, including the success
-  envelope. A page request may be between 1 KiB and 256 KiB.
-- Maximum media transfer: 256 KiB per readBackupBlob call.
-- Idle handle expiry: 15 minutes using monotonic elapsed time. A scheduled
-  native cleanup removes staging files without waiting for another request.
-  Close, expiry, startup after process death, or an export failure also removes
-  staging files.
-- Staging files live under the application-private noBackupFilesDir; the
-  method channel never accepts a path. Files are deleted on close, expiry, or
-  next process startup after a crash.
 
 The source database read transaction and repository serialization boundary are
 held only while the detached snapshot is constructed. Paging reads the staged

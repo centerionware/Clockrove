@@ -14,8 +14,11 @@ abstract final class BackupArchiveCodec {
   static const int latestSchemaVersion = 17;
   static const int maxArchiveBytes = 281474976645120;
   static const int maxRecordBytes = 256 * 1024;
-  static const int maxRecords = 1000000;
-  static const int maxMediaCount = 100000;
+  // Counts use the full 64-bit archive metadata range. There is no configured
+  // record or media-object cap; disk space and the archive byte ceiling are the
+  // practical limits.
+  static const int maxRecords = 0x7fffffffffffffff;
+  static const int maxMediaCount = 0x7fffffffffffffff;
   static const int _maxInt64 = 0x7fffffffffffffff;
   static const int _minInt64 = -0x7fffffffffffffff - 1;
   static const int _legacyHeaderLength = 48;

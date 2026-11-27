@@ -57,7 +57,7 @@ internal class BackupExportStore(
         val maxPageBytes: Int,
         val maxBlobChunkBytes: Int,
         val maxRecords: Long,
-        val maxMediaCount: Int,
+        val maxMediaCount: Long,
         val idleExpiryMillis: Long,
         val portableTables: List<String>,
     )
@@ -134,8 +134,10 @@ internal class BackupExportStore(
         const val MIN_PAGE_BYTES = 1024
         const val MAX_BLOB_CHUNK_BYTES = 256 * 1024
         const val MAX_ROW_BYTES = 128 * 1024
-        const val MAX_RECORDS = 500_000L
-        const val MAX_MEDIA_COUNT = 10_000
+        // No configured record/media count cap: both counts use the full signed
+        // 64-bit range, and snapshot storage capacity is the practical limit.
+        const val MAX_RECORDS = Long.MAX_VALUE
+        const val MAX_MEDIA_COUNT = Long.MAX_VALUE
         const val IDLE_EXPIRY_MILLIS = 15L * 60L * 1000L
         private const val STORAGE_BLOB_CHUNK_BYTES = 64 * 1024
         private const val MAX_RECORDS_PER_PAGE = 512

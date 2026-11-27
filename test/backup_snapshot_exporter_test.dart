@@ -642,8 +642,8 @@ Map<String, Object?> _snapshotInfo({
   'maxSnapshotBytes': 64 * 1024 * 1024,
   'maxPageBytes': maxPageBytes,
   'maxBlobChunkBytes': maxBlobChunkBytes,
-  'maxRecords': 500000,
-  'maxMediaCount': 10000,
+  'maxRecords': 0x7fffffffffffffff,
+  'maxMediaCount': 0x7fffffffffffffff,
   'idleExpiryMillis': 15 * 60 * 1000,
   'portableTables':
       portableTables ??

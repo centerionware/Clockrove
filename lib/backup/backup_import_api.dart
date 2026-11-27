@@ -9,8 +9,10 @@ const int maxBackupImportPageRecords = 512;
 const int maxBackupImportConflictPageBytes = 256 * 1024;
 const int minBackupImportConflictPageBytes = 1024;
 const int maxBackupImportBlobChunkBytes = 255 * 1024;
-const int maxBackupImportRows = 500000;
-const int maxBackupImportMediaCount = 10000;
+// The archive stores both counts as unsigned 64-bit values; no smaller app
+// limit is imposed on records or media objects.
+const int maxBackupImportRows = 0x7fffffffffffffff;
+const int maxBackupImportMediaCount = 0x7fffffffffffffff;
 // Matches the largest CLKROVE2 archive; staging is disk-backed and streamed.
 const int maxBackupImportMediaBytes = 281474976645120;
 const int maxBackupImportStagedBytes = 281474976645120;
