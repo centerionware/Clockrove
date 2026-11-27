@@ -56,7 +56,7 @@ class BackupPickerDeviceTest {
         openPicker()
         if (findDocumentTitle(FIXTURE) == null) openSharedFixtureDirectory()
         openDocumentRow(FIXTURE, "encrypted document staged") {
-            findLabel("Selected encrypted file", prefix = true)
+            findLabel("Selected backup", prefix = true)
         }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
