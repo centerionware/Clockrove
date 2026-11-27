@@ -130,17 +130,22 @@ class BackupPickerDeviceTest {
     }
 
     private fun enterBackupPassword() {
-        val password = waitFor("backup password field", ::findPasswordField)
+        // Obscured Flutter fields can reject synthetic focus on headless images.
+        // Revealing the field keeps the same controller and real text path.
+        findLabel("Show password")?.let(::clickNode)
+        val password = waitFor("backup password field", ::findBackupPasswordInput)
         password.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
         password.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         touchNode(password)
+        val bounds = Rect().also(password::getBoundsInScreen)
+        if (!bounds.isEmpty) runShellInput("tap ${bounds.centerX()} ${bounds.centerY()}")
         // Headless CI images sometimes have no IME package. Focus and text
         // commit still exercise the field, so do not require a keyboard window.
         val keyboardDeadline = SystemClock.uptimeMillis() + 10_000
         while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) {
             SystemClock.sleep(100)
         }
-        val editable = waitFor("editable backup password field", ::findPasswordField)
+        val editable = waitFor("editable backup password field", ::findBackupPasswordInput)
         if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
             editable.performAction(
                 AccessibilityNodeInfo.ACTION_SET_TEXT,
@@ -158,7 +163,7 @@ class BackupPickerDeviceTest {
         }
         if (!passwordEntered(5_000)) runShellInput("text $PASSWORD")
         waitFor("entered backup password") {
-            findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
+            findBackupPasswordInput()?.takeIf { it.text?.length == PASSWORD.length }
         }
         if (keyboardVisible()) {
             pressBack()
@@ -169,14 +174,14 @@ class BackupPickerDeviceTest {
     private fun passwordEntered(timeoutMs: Long): Boolean {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            if (findPasswordField()?.text?.length == PASSWORD.length) return true
+            if (findBackupPasswordInput()?.text?.length == PASSWORD.length) return true
             SystemClock.sleep(100)
         }
         return false
     }
 
-    private fun findPasswordField(): AccessibilityNodeInfo? =
-        findNode { it.isVisibleToUser && it.isEnabled && it.isEditable && it.isPassword }
+    private fun findBackupPasswordInput(): AccessibilityNodeInfo? =
+        findNode { it.isVisibleToUser && it.isEnabled && it.isEditable }
 
     private fun keyboardVisible(): Boolean =
         automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
