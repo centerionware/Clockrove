@@ -40,3 +40,5 @@ siteAddressSearchBusy: "ঠিকানা খোঁজা এখন ব্য�
 siteAddressSearchTooShort: "খুঁজতে কমপক্ষে ৩টি অক্ষর লিখুন।"
 siteAddressSearchPrivacy: "ঠিকানা খোঁজার সময় আপনি যে লেখা দেন তা OpenStreetMap-এর Nominatim পরিষেবায় পাঠানো হয়। কোনো অ্যাকাউন্ট প্রয়োজন নেই।"
 siteAddressSearchAttribution: "অনুসন্ধানের ফলাফল © OpenStreetMap অবদানকারী"
+siteOpenZillow: "Zillow খুলুন"
+siteZillowOpenFailed: "Zillow খোলা যায়নি।"

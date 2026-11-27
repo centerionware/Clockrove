@@ -40,3 +40,5 @@ siteAddressSearchBusy: "住所検索が混み合っています。少し待っ�
 siteAddressSearchTooShort: "検索するには3文字以上入力してください。"
 siteAddressSearchPrivacy: "住所検索では、入力したテキストが OpenStreetMap の Nominatim サービスに送信されます。アカウントは不要です。"
 siteAddressSearchAttribution: "検索結果 © OpenStreetMap コントリビューター"
+siteOpenZillow: "Zillow を開く"
+siteZillowOpenFailed: "Zillow を開けませんでした。"

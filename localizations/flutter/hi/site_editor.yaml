@@ -40,3 +40,5 @@ siteAddressSearchBusy: "पता खोज अभी व्यस्त है�
 siteAddressSearchTooShort: "खोजने के लिए कम से कम 3 अक्षर दर्ज करें।"
 siteAddressSearchPrivacy: "पता खोजने पर आपका दर्ज किया गया टेक्स्ट OpenStreetMap की Nominatim सेवा को भेजा जाता है। किसी खाते की आवश्यकता नहीं है।"
 siteAddressSearchAttribution: "खोज परिणाम © OpenStreetMap योगदानकर्ता"
+siteOpenZillow: "Zillow खोलें"
+siteZillowOpenFailed: "Zillow नहीं खोला जा सका।"
