@@ -141,6 +141,15 @@ class TaskConversationDeviceTest {
         }
     }
 
+    private fun commentTextEntered(value: String): Boolean {
+        val deadline = SystemClock.uptimeMillis() + 5_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (find("Add a comment", editable = true)?.text?.toString() == value) return true
+            SystemClock.sleep(100)
+        }
+        return false
+    }
+
     private fun keyboardVisible() = automation.windows.any {
         it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
     }
@@ -176,11 +185,17 @@ class TaskConversationDeviceTest {
             assertTrue(editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
             }))
-        } else {
-            // Without an IME the input connection may not expose ACTION_SET_TEXT.
-            // Key events still exercise the focused field on the headless AVD.
+        }
+        if (!commentTextEntered(value)) {
+            // Some API 24 images acknowledge set-text without committing it.
             instrumentation.sendStringSync(value)
         }
+        if (!commentTextEntered(value)) {
+            automation.executeShellCommand("input text ${value.replace(" ", "%s")}").use {
+                ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+            }
+        }
+        waitFor("entered comment") { find("Add a comment", editable = true)?.takeIf { it.text?.toString() == value } }
         hideKeyboard()
     }
 
