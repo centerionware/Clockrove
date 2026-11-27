@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -138,8 +139,23 @@ class BackupPickerDeviceTest {
         while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) {
             SystemClock.sleep(100)
         }
-        // Flutter on API 24 can acknowledge ACTION_SET_TEXT without updating the controller.
-        instrumentation.sendStringSync(PASSWORD)
+        val editable = waitFor("editable backup password field", ::findPasswordField)
+        if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
+            assertTrue(
+                editable.performAction(
+                    AccessibilityNodeInfo.ACTION_SET_TEXT,
+                    Bundle().apply {
+                        putCharSequence(
+                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                            PASSWORD,
+                        )
+                    },
+                ),
+            )
+        } else {
+            // Without an IME the input connection may not expose ACTION_SET_TEXT.
+            instrumentation.sendStringSync(PASSWORD)
+        }
         waitFor("entered backup password") {
             findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
         }
