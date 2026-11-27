@@ -6,7 +6,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
-import android.os.Bundle
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -14,7 +13,6 @@ import android.provider.MediaStore
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.MainActivity
@@ -56,15 +54,16 @@ class BackupPickerDeviceTest {
 
         openPicker()
         if (findDocumentTitle(FIXTURE) == null) openSharedFixtureDirectory()
-        openDocumentRow(FIXTURE, "encrypted document staged") {
+        openDocumentRow(FIXTURE, "backup document staged") {
             findLabel("Encrypted backup selected", prefix = true)
         }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
-        enterBackupPassword()
+        // The fixture is a plaintext archive: preview detects it without a
+        // password, which also avoids requiring an IME on headless images.
         click("Authenticate and preview", scroll = true)
-        val apply = waitFor("authenticated restore preview") {
-            findLabel("Backup authenticated", prefix = true)
+        val apply = waitFor("plaintext restore preview") {
+            findLabel("Backup ready to review", prefix = true)
         }
         assertTrue(apply.isVisibleToUser)
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
@@ -128,63 +127,6 @@ class BackupPickerDeviceTest {
             throw error
         }
     }
-
-    private fun enterBackupPassword() {
-        // Obscured Flutter fields can reject synthetic focus on headless images.
-        // Revealing the field keeps the same controller and real text path.
-        findLabel("Show password")?.let(::clickNode)
-        val password = waitFor("backup password field", ::findBackupPasswordInput)
-        password.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        password.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        touchNode(password)
-        val bounds = Rect().also(password::getBoundsInScreen)
-        if (!bounds.isEmpty) runShellInput("tap ${bounds.centerX()} ${bounds.centerY()}")
-        // Headless CI images sometimes have no IME package. Focus and text
-        // commit still exercise the field, so do not require a keyboard window.
-        val keyboardDeadline = SystemClock.uptimeMillis() + 10_000
-        while (!keyboardVisible() && SystemClock.uptimeMillis() < keyboardDeadline) {
-            SystemClock.sleep(100)
-        }
-        val editable = waitFor("editable backup password field", ::findBackupPasswordInput)
-        if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
-            editable.performAction(
-                AccessibilityNodeInfo.ACTION_SET_TEXT,
-                Bundle().apply {
-                    putCharSequence(
-                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                        PASSWORD,
-                    )
-                },
-            )
-        }
-        if (!passwordEntered(5_000)) {
-            // Without an IME the input connection may not commit set-text.
-            instrumentation.sendStringSync(PASSWORD)
-        }
-        if (!passwordEntered(5_000)) runShellInput("text $PASSWORD")
-        waitFor("entered backup password") {
-            findBackupPasswordInput()?.takeIf { it.text?.length == PASSWORD.length }
-        }
-        if (keyboardVisible()) {
-            pressBack()
-            waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
-        }
-    }
-
-    private fun passwordEntered(timeoutMs: Long): Boolean {
-        val deadline = SystemClock.uptimeMillis() + timeoutMs
-        while (SystemClock.uptimeMillis() < deadline) {
-            if (findBackupPasswordInput()?.text?.length == PASSWORD.length) return true
-            SystemClock.sleep(100)
-        }
-        return false
-    }
-
-    private fun findBackupPasswordInput(): AccessibilityNodeInfo? =
-        findNode { it.isVisibleToUser && it.isEnabled && it.isEditable }
-
-    private fun keyboardVisible(): Boolean =
-        automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun openSharedFixtureDirectory() {
         selectSharedStorageRoot()
@@ -464,6 +406,5 @@ class BackupPickerDeviceTest {
         private val DOCUMENT_PICKER_PACKAGES = setOf("com.android.documentsui", "com.google.android.documentsui")
         private const val FIXTURE_DIRECTORY = "Clockrove-CI-Backup"
         private const val FIXTURE = "clockrove-picker-fixture.clockrove"
-        private const val PASSWORD = "synthetic-document-fixture-password"
     }
 }
