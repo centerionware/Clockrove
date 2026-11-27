@@ -281,8 +281,6 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
           label: Text(AppMessage.restoreBackup.of(context)),
         ),
         const SizedBox(height: 24),
-        const AutoBackupSettingsSection(),
-        const SizedBox(height: 24),
         const LanguageSetting(),
         const SizedBox(height: 24),
         Text(
@@ -601,6 +599,8 @@ class _CompanyFormState extends ConsumerState<_CompanyForm> {
             Navigator.pop(context);
           },
         ),
+        const SizedBox(height: 24),
+        const AutoBackupSettingsSection(),
       ],
     );
   }
