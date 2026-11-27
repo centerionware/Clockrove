@@ -21,6 +21,8 @@ class _Business extends BusinessApi {
   final _events = <TaskCommentEvent>[];
   final _taskAttachments = <TaskAttachmentInfo>[];
   final _images = <String, Uint8List>{};
+  List<String>? sharedIds;
+  String? sharedText;
 
   void seedComment(String body) {
     _comments.add(
@@ -83,6 +85,15 @@ class _Business extends BusinessApi {
   @override
   Future<Uint8List?> taskAttachment(String attachmentId) async =>
       _images[attachmentId];
+
+  @override
+  Future<void> shareTaskImages({
+    required List<String> attachmentIds,
+    String? text,
+  }) async {
+    sharedIds = attachmentIds;
+    sharedText = text;
+  }
 
   @override
   Future<TimerOutcome> saveTaskComment(
@@ -412,6 +423,40 @@ void main() {
     expect(api._taskAttachments, hasLength(2));
     expect(api._images, hasLength(2));
     expect(find.text('2 photos attached to this task.'), findsOneWidget);
+  });
+
+  testWidgets('task photos and comments open the native share sheet', (
+    tester,
+  ) async {
+    final api = _Business()
+      ..seedTaskPhoto('task-photo-one', 10)
+      ..seedTaskPhoto('task-photo-two', 20)
+      ..seedComment('Progress update')
+      ..seedCommentPhoto('existing-comment', 'comment-photo', 30);
+    await show(tester, api);
+
+    await tester.tap(find.byKey(const ValueKey('task-share-photos')));
+    await tester.pumpAndSettle();
+    expect(api.sharedIds, ['task-photo-one', 'task-photo-two']);
+    expect(api.sharedText, isNull);
+
+    await tester.tap(
+      find.byKey(const ValueKey('task-share-comment-existing-comment')),
+    );
+    await tester.pumpAndSettle();
+    expect(api.sharedIds, ['comment-photo']);
+    expect(api.sharedText, 'Progress update');
+  });
+
+  testWidgets('text-only comments share as text', (tester) async {
+    final api = _Business()..seedComment('No photos here.');
+    await show(tester, api);
+    await tester.tap(
+      find.byKey(const ValueKey('task-share-comment-existing-comment')),
+    );
+    await tester.pumpAndSettle();
+    expect(api.sharedIds, isEmpty);
+    expect(api.sharedText, 'No photos here.');
   });
 
   testWidgets(

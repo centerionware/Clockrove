@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
+import '../maps/address_search.dart';
 import '../maps/map_provider_settings.dart';
 import '../maps/tile_backoff_client.dart';
 import '../maps/work_location_map.dart';
@@ -31,10 +32,15 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
     protectedHeaders: () =>
         ref.read(mapProviderSettingsApiProvider).tileAuthHeaders(),
   );
+  final _search = TextEditingController();
   MapProviderSettings? _tileSettings;
   TileProvider? _tiles;
   LatLng? _point;
   bool _failed = false;
+  bool _searching = false;
+  int _searchToken = 0;
+  List<AddressSearchResult>? _searchResults;
+  AppMessage? _searchNotice;
   @override
   void initState() {
     super.initState();
@@ -64,7 +70,99 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
   void dispose() {
     _client.close();
     _controller.dispose();
+    _search.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String _) {
+    _searchToken++;
+    setState(() {
+      _searching = false;
+      _searchResults = null;
+      _searchNotice = null;
+    });
+  }
+
+  Future<void> _searchAddress() async {
+    final query = _search.text.trim();
+    if (query.length < 3) {
+      setState(() {
+        _searchResults = null;
+        _searchNotice = AppMessage.siteAddressSearchTooShort;
+      });
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    final token = ++_searchToken;
+    setState(() {
+      _searching = true;
+      _searchResults = null;
+      _searchNotice = null;
+    });
+    try {
+      final results = await ref
+          .read(addressSearchApiProvider)
+          .search(
+            query,
+            languageTag: Localizations.localeOf(context).toLanguageTag(),
+          );
+      if (!mounted || token != _searchToken) return;
+      setState(() {
+        _searchResults = results;
+        _searchNotice = results.isEmpty
+            ? AppMessage.siteAddressSearchEmpty
+            : null;
+      });
+    } on AddressSearchException catch (error) {
+      if (!mounted || token != _searchToken) return;
+      setState(() {
+        _searchResults = null;
+        _searchNotice = switch (error.failure) {
+          AddressSearchFailure.tooShort => AppMessage.siteAddressSearchTooShort,
+          AddressSearchFailure.rateLimited => AppMessage.siteAddressSearchBusy,
+          AddressSearchFailure.unavailable =>
+            AppMessage.siteAddressSearchFailed,
+        };
+      });
+    } catch (_) {
+      if (!mounted || token != _searchToken) return;
+      setState(() {
+        _searchResults = null;
+        _searchNotice = AppMessage.siteAddressSearchFailed;
+      });
+    } finally {
+      if (mounted && token == _searchToken) {
+        setState(() => _searching = false);
+      }
+    }
+  }
+
+  void _chooseAddress(AddressSearchResult result) {
+    // The map cannot render polar centres even though Nominatim may return them.
+    final point = LatLng(result.latitude.clamp(-85.0, 85.0), result.longitude);
+    FocusScope.of(context).unfocus();
+    setState(() => _point = point);
+    _controller.move(point, 16);
+  }
+
+  Future<void> _openSearchAttribution() async {
+    try {
+      if (await launchUrl(
+        Uri.parse(defaultMapAttributionUrl),
+        mode: LaunchMode.externalApplication,
+      )) {
+        return;
+      }
+    } catch (_) {
+      /* Address search remains usable without a browser. */
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppMessage.mapAttributionLinkFailed.of(context)),
+        ),
+      );
+    }
   }
 
   void _failure() {
@@ -156,6 +254,73 @@ class _SiteMapPickerState extends ConsumerState<SiteMapPicker> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(AppMessage.siteMapIntro.of(context)),
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const ValueKey('site-address-search'),
+                        controller: _search,
+                        enabled: !_searching,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.search,
+                        onChanged: _onSearchChanged,
+                        onSubmitted: (_) => _searchAddress(),
+                        decoration: InputDecoration(
+                          labelText: AppMessage.siteAddressSearch.of(context),
+                          hintText: AppMessage.siteAddressSearchHint.of(
+                            context,
+                          ),
+                          suffixIcon: IconButton(
+                            tooltip: AppMessage.siteAddressSearchButton.of(
+                              context,
+                            ),
+                            onPressed: _searching ? null : _searchAddress,
+                            icon: const Icon(Icons.search),
+                          ),
+                        ),
+                      ),
+                      if (_searching) ...[
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          semanticsLabel: AppMessage.siteAddressSearching.of(
+                            context,
+                          ),
+                        ),
+                      ],
+                      if (_searchNotice case final notice?) ...[
+                        const SizedBox(height: 8),
+                        Text(notice.of(context)),
+                      ],
+                      if (_searchResults != null &&
+                          _searchResults!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Card(
+                          margin: EdgeInsets.zero,
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              for (final result in _searchResults!)
+                                ListTile(
+                                  leading: const Icon(Icons.place_outlined),
+                                  title: Text(result.displayName),
+                                  onTap: () => _chooseAddress(result),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        AppMessage.siteAddressSearchPrivacy.of(context),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton(
+                          onPressed: _openSearchAttribution,
+                          child: Text(
+                            AppMessage.siteAddressSearchAttribution.of(context),
+                          ),
+                        ),
+                      ),
                       Text(AppMessage.mapPrivacy.of(context)),
                       Text(
                         AppMessage.siteMapRadiusHelp.format(context, {

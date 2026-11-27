@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
+import '../maps/zillow_link.dart';
 import 'automation_api.dart';
 import 'site_map_picker.dart';
 
@@ -157,6 +159,38 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
     }
   }
 
+  (double, double)? get _coordinates {
+    final latitude = double.tryParse(_latitude.text.trim());
+    final longitude = double.tryParse(_longitude.text.trim());
+    if (latitude == null ||
+        longitude == null ||
+        !latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude.abs() > 90 ||
+        longitude.abs() > 180) {
+      return null;
+    }
+    return (latitude, longitude);
+  }
+
+  Future<void> _openZillow() async {
+    final coordinates = _coordinates;
+    if (coordinates == null) return;
+    try {
+      final opened = await launchUrl(
+        zillowUriForCoordinates(coordinates.$1, coordinates.$2),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        setState(() => _notice = AppMessage.siteZillowOpenFailed.of(context));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _notice = AppMessage.siteZillowOpenFailed.of(context));
+      }
+    }
+  }
+
   String? _number(String? raw, double min, double max) {
     final value = double.tryParse(raw?.trim() ?? '');
     final minLabel = min == min.truncateToDouble()
@@ -300,6 +334,18 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                   ),
                   validator: (v) => _number(v, -180, 180),
                 ),
+                if (_coordinates != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('site-open-zillow'),
+                      onPressed: _openZillow,
+                      icon: const Icon(Icons.open_in_new),
+                      label: Text(AppMessage.siteOpenZillow.of(context)),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _radius,

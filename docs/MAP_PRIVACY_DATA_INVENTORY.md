@@ -12,6 +12,8 @@ release candidate and selected tile provider before publication.
 | Default OSM tile request | Requested over HTTPS from `tile.openstreetmap.org`; attribution links to OSM copyright | OSM receives requested tile coordinates and network metadata. No account or API key is used | Confirm live tile load and attribution on supported device/network configurations |
 | Custom raster provider template and attribution | Saved in app-private settings | Tile coordinates and network metadata go to the user-selected host | Confirm provider identity, terms, attribution and privacy policy before configuration |
 | Custom provider authentication header | Android stores the configuration encrypted with AES-GCM under an Android Keystore key; public settings expose only credential presence, while a separate channel supplies the value for tile requests | The configured header goes to the chosen provider. Redirects are disabled so credentials cannot be forwarded to another host | Recheck Keystore round-trip, reset, redaction and redirect behavior in Actions/device evidence; confirm the selected provider's terms |
+| Site address lookup | The user explicitly submits a query in the site-centre picker; results are held only in screen memory and are not stored or backed up | The query text and ordinary network metadata go to `nominatim.openstreetmap.org` over HTTPS, regardless of the configured tile provider. No account, API key or stored location row is sent | Confirm an actual search on a device, visible OSM attribution, and that the tile provider receives no address query |
+| Open Zillow | The site editor shows the action only when valid latitude and longitude are entered; the URL is built from those coordinates | Tapping it opens `zillow.com` in the user's external browser and sends the coordinates in the URL. Clockrove does not call a Zillow API, send an account or send stored location history | Confirm on a device that the browser opens the intended coordinate search and that store disclosures cover this user-directed transfer |
 | Google Maps key and map requests | Google Maps is not an implemented provider. Current settings do not request or accept a Google SDK key | Clockrove's map screens make no Google Maps requests | Owner decision on 2026-11-15 deferred Google Maps beyond launch. The documented manifest-key/runtime-key findings below are historical research, not a launch gate |
 | Tile cache | `flutter_map` cache is local to the app and Android may clear it; no bulk download or prefetch is provided | Cache misses cause requests to the selected provider | Inspect release cache behavior and confirm relevant cached displays are cleared after location deletion as designed |
 
@@ -59,6 +61,9 @@ behavior before publishing the policy and store disclosure.
 - [ ] Inspect sanitized logs and diagnostics for credentials and sensitive tile
   URLs; do not retain real coordinates or personal backups in repository
   artifacts.
+- [ ] Submit a synthetic address search from the site-centre picker on a device;
+  verify results, OSM attribution, no account prompt, and that only
+  `nominatim.openstreetmap.org` receives the query.
 - [ ] Verify location-history deletion updates map/report displays and record
   cache behavior. Existing exports/backups are not retroactively erased.
 - [ ] Google Maps runtime-key and billing verification are deferred beyond

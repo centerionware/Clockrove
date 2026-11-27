@@ -41,7 +41,7 @@
 
 - Implement customizable boards and accessible card moves.
 - Build date selection, filtered list/totals, timezone handling and map history.
-- Add optional provider settings, credential handling, OSM attribution/caching, and CSV/document sharing.
+- Add optional provider settings, credential handling, OSM attribution/caching, an explicit keyless OpenStreetMap address lookup in the site-centre picker that works with either tile provider, and CSV/document sharing.
 - The base board/calendar/map/CSV foundation is implemented; user-reported map
   blank screens and GPS controls are addressed in M6.5 below.
 - Acceptance: board operations preserve cards; list/map/export filters agree; DST/range-boundary totals are correct; provider outage does not block local work; CSV formula/escaping tests pass.

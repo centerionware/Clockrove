@@ -1,8 +1,21 @@
 # Clockrove task status
 
 Geofence candidate fix and pending acceptance are tracked in [November 13 regression evidence](docs/plan/evidence/geofence-nov13.md).
-Updated 2026-11-25. Product contract: [app_plan.md](app_plan.md).
+Updated 2026-11-26. Product contract: [app_plan.md](app_plan.md).
 Statuses describe evidence, not intent.
+
+## November 26 worksite address lookup
+
+PR #103 exact code head `e00f1a5` / Validate run
+[45894307235](https://github.com/centerionware/Clockrove/actions/runs/45894307235)
+passed 321 Flutter tests, 786 native tests, all API 24/35 journeys, the
+actual-document viewer and release tooling. The site-centre picker now searches
+addresses only on explicit submit through keyless OpenStreetMap Nominatim for
+both default OSM and custom HTTPS tile providers; selecting a result does not
+save the site. New copy is translated in all 17 catalogs. Owner-device search
+acceptance remains open.
+
+Details: [November 26 evidence](docs/plan/evidence/nov26-site-address-search.md).
 
 ## November 25 invoice localization, rounding and backup repair
 
@@ -982,6 +995,11 @@ requires internal storage before opening the fixture directory. Exact-main Actio
 
 M7.7 automatic backups and large archives are implemented in a new branch from
 `main`: WorkManager plus a headless Flutter worker, SAF folder + optional
-encryption, daily/weekly/monthly/yearly retention, plaintext restore, and
-64-bit archive lengths that remove the 4 GiB cap. CI/device evidence is pending;
-see [automatic-backup evidence](docs/plan/evidence/nov27-auto-backup.md).
+encryption, daily/weekly/monthly/yearly retention, plaintext restore, 64-bit
+archive lengths that remove the 4 GiB cap, and no configured record/media-count
+cap. CI/device evidence is pending; see
+[automatic-backup evidence](docs/plan/evidence/nov27-auto-backup.md).
+
+M7.8 quick share (PR pending): task-level photos and comments/comment photos now open an Android chooser; text-only comments share as text. All 17 catalogs have the three new keys; Dart widget coverage added. No local build, analyzer, or device chooser test ran; CI is authoritative and receiving-app behavior remains unverified.
+
+M7.9 Zillow site link (PR pending): the site editor shows Open Zillow only for valid latitude/longitude and opens the external Zillow homes URL for those coordinates. All 17 catalogs have the label and failure copy. URL and visibility tests added; no local build, analyzer, or device browser check ran, and the live Zillow result is unverified.
