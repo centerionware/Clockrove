@@ -302,7 +302,7 @@ class BackupPickerDeviceTest {
     }
 
     private fun openPicker() {
-        click("Choose encrypted backup")
+        click("Choose backup")
         val picker = waitFor("Android document picker or resolver") {
             automation.rootInActiveWindow?.takeIf {
                 it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES ||
