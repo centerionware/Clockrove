@@ -60,6 +60,12 @@ clear_fixture_app
 if [[ "$api" == 24 ]]; then
   timeout 30 adb -s emulator-5554 shell mkdir -p "$shared_directory"
   timeout 30 adb -s emulator-5554 push "$fixture_file" "$shared_fixture"
+  # Downloads is a MediaStore-backed root. Index the pushed fixture so API 24
+  # DocumentsUI can expose it without relying on the hidden internal-storage root.
+  timeout 30 adb -s emulator-5554 shell am broadcast \
+    -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+    -d "file://$shared_fixture" >/dev/null
+  sleep 1
 else
   app_fixture_directory="/sdcard/Android/data/$package/files"
   timeout 30 adb -s emulator-5554 shell mkdir -p "$app_fixture_directory"
