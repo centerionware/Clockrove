@@ -354,7 +354,9 @@ class _AutoBackupSettingsSectionState
       );
     }
     if (settings == null) {
-      return const Center(child: CircularProgressIndicator());
+      // Loading must never animate forever; tests and the Settings list should
+      // stay settled while the native settings channel is unavailable.
+      return const SizedBox.shrink();
     }
     final colors = Theme.of(context).colorScheme;
     return Column(
