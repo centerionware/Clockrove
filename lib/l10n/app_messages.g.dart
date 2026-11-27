@@ -1529,6 +1529,9 @@ enum AppMessage {
   taskPhotoSemantics("Task photo {page} of {total}"),
   taskPhotoTaskAttachment("Task photo attachment"),
   taskPhotoCommentAttachment("Comment photo attachment"),
+  taskSharePhotos("Share task photos"),
+  taskShareComment("Share comment"),
+  taskShareFailed("Could not open the share menu."),
   durationHoursMinutes("{hours}h {minutes}m"),
   durationHoursMinutesSeconds("{hours}h {minutes}m {seconds}s"),
   timeUtcOffset(" (UTC{offset})");

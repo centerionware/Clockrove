@@ -979,3 +979,5 @@ Exact PR-head [45275793641](https://github.com/centerionware/Clockrove/actions/r
 Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562) (`e2a0d18`) failed only API 24
 picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
 requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
+
+M7.8 quick share (PR pending): task-level photos and comments/comment photos now open an Android chooser; text-only comments share as text. All 17 catalogs have the three new keys; Dart widget coverage added. No local build, analyzer, or device chooser test ran; CI is authoritative and receiving-app behavior remains unverified.

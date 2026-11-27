@@ -389,6 +389,16 @@ class BusinessApi {
     return value?['unavailable'] == true ? null : value?['image'] as Uint8List?;
   }
 
+  /// Opens the native share sheet. Images are shared by attachment id so the
+  /// chooser receives temporary read grants instead of a second byte copy.
+  Future<void> shareTaskImages({
+    required List<String> attachmentIds,
+    String? text,
+  }) => _channel.invokeMethod<void>('shareTaskImages', {
+    'attachmentIds': attachmentIds,
+    if (text != null) 'text': text,
+  });
+
   Future<ActualCostsSnapshot> actualCosts({
     ActualCostCursor? before,
     int limit = 100,
