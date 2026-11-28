@@ -27,9 +27,13 @@
 
 - Local: `dart format` parsed all changed Dart files; catalog generation and
   catalog parity passed for all 17 locales. No local build or test ran.
-- CI/device: pending this commit. WorkManager/headless-engine execution,
-  Google Drive SAF behavior, Keystore access after reboot, and retention against
-  a real provider are not yet evidenced.
+- CI/device: exact-head
+  [run 46102928746](https://github.com/centerionware/Clockrove/actions/runs/46102928746)
+  passed static, Dart, Android/release builds, native tests, and the API 24/35
+  device journeys, including plaintext backup selection and transactional restore.
+  WorkManager/headless-engine execution, Google Drive SAF behavior, Keystore
+  access after reboot, and retention against a real provider are not yet
+  evidenced.
 - Known limits: Android may delay periodic work under Doze/battery restrictions;
   a force-stop prevents unattended runs until the app is opened; Google Drive
   and the selected filesystem impose their own per-file and quota limits.

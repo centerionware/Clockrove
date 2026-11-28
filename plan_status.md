@@ -992,14 +992,7 @@ Exact PR-head [45275793641](https://github.com/centerionware/Clockrove/actions/r
 Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562) (`e2a0d18`) failed only API 24
 picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
 requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
+M7.7 automatic backups and large archives: WorkManager plus a headless Flutter worker, SAF folder + optional encryption, daily/weekly/monthly/yearly retention, plaintext restore, 64-bit archive lengths, and no configured record/media-count cap. Exact-head run [46102928746](https://github.com/centerionware/Clockrove/actions/runs/46102928746) passed all Android API 24/35 journeys; WorkManager/Drive/4 GiB owner checks remain open. See [evidence](docs/plan/evidence/nov27-auto-backup.md).
 
-M7.7 automatic backups and large archives are implemented in a new branch from
-`main`: WorkManager plus a headless Flutter worker, SAF folder + optional
-encryption, daily/weekly/monthly/yearly retention, plaintext restore, 64-bit
-archive lengths that remove the 4 GiB cap, and no configured record/media-count
-cap. CI/device evidence is pending; see
-[automatic-backup evidence](docs/plan/evidence/nov27-auto-backup.md).
-
-M7.8 quick share (PR pending): task-level photos and comments/comment photos now open an Android chooser; text-only comments share as text. All 17 catalogs have the three new keys; Dart widget coverage added. No local build, analyzer, or device chooser test ran; CI is authoritative and receiving-app behavior remains unverified.
-
-M7.9 Zillow site link (PR pending): the site editor shows Open Zillow only for valid latitude/longitude and opens the external Zillow homes URL for those coordinates. All 17 catalogs have the label and failure copy. URL and visibility tests added; no local build, analyzer, or device browser check ran, and the live Zillow result is unverified.
+M7.8 quick share (PR #105): task photos and comments/comment photos open an Android chooser; text-only comments share as text. Run [45939607641](https://github.com/centerionware/Clockrove/actions/runs/45939607641) and stacked run [46102928746](https://github.com/centerionware/Clockrove/actions/runs/46102928746) passed; receiving-app behavior remains unverified.
+M7.9 Zillow site link (PR #106, merged): Open Zillow appears only for valid coordinates and opens the external homes URL. Runs [45934378626](https://github.com/centerionware/Clockrove/actions/runs/45934378626) and [46102928746](https://github.com/centerionware/Clockrove/actions/runs/46102928746) passed; live browser handoff remains unverified.
