@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
+import '../business/settings_api.dart';
 import '../help/help_screen.dart';
+import '../l10n/app_localizations.dart';
 import '../tracking/timer_api.dart';
 import '../tracking/timer_providers.dart';
 import 'automation_api.dart';
@@ -189,10 +190,32 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
     }
   }
 
+  String? _customerAddress() {
+    final customerId = ref
+        .read(jobPreferencesProvider(widget.jobId))
+        .asData
+        ?.value
+        .customerId;
+    if (customerId == null) return null;
+    final address = ref
+        .read(businessSettingsProvider)
+        .asData
+        ?.value
+        .customers
+        .where((customer) => customer.id == customerId)
+        .firstOrNull
+        ?.address
+        .trim();
+    return address?.isNotEmpty == true ? address : null;
+  }
+
   Future<void> _edit(AutomationSnapshot state, [WorkSite? site]) async {
     if (_locked) return;
     final result = await Navigator.of(context).push<SiteEditResult>(
-      MaterialPageRoute(builder: (_) => SiteEditor(site: site)),
+      MaterialPageRoute(
+        builder: (_) =>
+            SiteEditor(site: site, fallbackAddress: _customerAddress()),
+      ),
     );
     if (result == null || !mounted) return;
     final api = ref.read(automationApiProvider);

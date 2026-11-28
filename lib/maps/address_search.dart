@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'map_provider_settings.dart';
 
 const nominatimSearchEndpoint = 'https://nominatim.openstreetmap.org/search';
+const nominatimReverseEndpoint = 'https://nominatim.openstreetmap.org/reverse';
 
 class AddressSearchResult {
   const AddressSearchResult({
@@ -161,8 +162,145 @@ class NominatimAddressSearchApi implements AddressSearchApi {
   }
 }
 
+abstract interface class PropertyAddressLookupApi {
+  /// Returns a house-level address, or null when the coordinates only resolve
+  /// to a street or locality. Callers must not present a street as a property.
+  Future<String?> lookup(
+    double latitude,
+    double longitude, {
+    required String languageTag,
+  });
+}
+
+class NominatimPropertyAddressLookup implements PropertyAddressLookupApi {
+  NominatimPropertyAddressLookup(
+    this._client, {
+    this.endpoint = nominatimReverseEndpoint,
+    this.minimumInterval = const Duration(seconds: 1),
+    this.requestTimeout = const Duration(seconds: 12),
+    DateTime Function()? now,
+    Future<void> Function(Duration)? wait,
+  }) : _now = now ?? DateTime.now,
+       _wait = wait ?? Future<void>.delayed;
+
+  final http.Client _client;
+  final String endpoint;
+  final Duration minimumInterval;
+  final Duration requestTimeout;
+  final DateTime Function() _now;
+  final Future<void> Function(Duration) _wait;
+  final _cache = <String, String?>{};
+  DateTime? _lastRequest;
+
+  @override
+  Future<String?> lookup(
+    double latitude,
+    double longitude, {
+    required String languageTag,
+  }) async {
+    if (!latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude.abs() > 90 ||
+        longitude.abs() > 180) {
+      throw ArgumentError('Invalid coordinates');
+    }
+    final cacheKey =
+        '${languageTag.toLowerCase()}\u0000${latitude.toStringAsFixed(6)},'
+        '${longitude.toStringAsFixed(6)}';
+    if (_cache.containsKey(cacheKey)) return _cache[cacheKey];
+
+    final last = _lastRequest;
+    if (last != null) {
+      final earliest = last.add(minimumInterval);
+      final now = _now();
+      if (now.isBefore(earliest)) {
+        await _wait(earliest.difference(now));
+      }
+    }
+    _lastRequest = _now();
+
+    final uri = Uri.parse(endpoint).replace(
+      queryParameters: {
+        'format': 'jsonv2',
+        'lat': latitude.toStringAsFixed(6),
+        'lon': longitude.toStringAsFixed(6),
+        'zoom': '18',
+        'addressdetails': '1',
+      },
+    );
+    final http.Response response;
+    try {
+      response = await _client
+          .get(
+            uri,
+            headers: {
+              'User-Agent': clockroveMapUserAgent,
+              'Accept': 'application/json',
+              'Accept-Language': languageTag,
+            },
+          )
+          .timeout(requestTimeout);
+    } catch (_) {
+      throw const AddressSearchException(AddressSearchFailure.unavailable);
+    }
+    if (response.statusCode == 429) {
+      throw const AddressSearchException(AddressSearchFailure.rateLimited);
+    }
+    if (response.statusCode != 200) {
+      throw const AddressSearchException(AddressSearchFailure.unavailable);
+    }
+    final result = _parse(response.bodyBytes);
+    if (_cache.length >= 20) _cache.remove(_cache.keys.first);
+    _cache[cacheKey] = result;
+    return result;
+  }
+
+  String? _parse(List<int> body) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(body));
+    } catch (_) {
+      throw const AddressSearchException(AddressSearchFailure.unavailable);
+    }
+    if (decoded is! Map || decoded['address'] is! Map) return null;
+    final address = decoded['address'] as Map;
+    String text(Object? value) => value is String ? value.trim() : '';
+    final houseNumber = text(address['house_number']);
+    final road = text(address['road']);
+    if (houseNumber.isEmpty || road.isEmpty) return null;
+    final locality = [
+      address['city'],
+      address['town'],
+      address['village'],
+      address['municipality'],
+      address['hamlet'],
+    ].map(text).firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    final region = [
+      address['state'],
+      address['province'],
+      address['region'],
+    ].map(text).firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    final postcode = text(address['postcode']);
+    if (locality.isEmpty && postcode.isEmpty) return null;
+    return [
+      '$houseNumber $road',
+      if (locality.isNotEmpty) locality,
+      if (region.isNotEmpty) region,
+      if (postcode.isNotEmpty) postcode,
+    ].join(', ');
+  }
+}
+
 final addressSearchApiProvider = Provider<AddressSearchApi>((ref) {
   final client = http.Client();
   ref.onDispose(client.close);
   return NominatimAddressSearchApi(client);
+});
+
+final propertyAddressLookupApiProvider = Provider<PropertyAddressLookupApi>((
+  ref,
+) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return NominatimPropertyAddressLookup(client);
 });
