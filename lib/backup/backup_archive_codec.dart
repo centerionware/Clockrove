@@ -8,15 +8,21 @@ part of 'backup_archive.dart';
 /// unrepresentable. Every media descriptor is SHA-256 checked after the outer
 /// AES-GCM authentication succeeds.
 abstract final class BackupArchiveCodec {
-  static const int currentFormatVersion = 1;
+  /// v2 widens the record and media section lengths to 64 bits. v1 remains
+  /// readable so backups made before the widening still restore.
+  static const int currentFormatVersion = 2;
   static const int latestSchemaVersion = 17;
-  static const int maxArchiveBytes = 64 * 1024 * 1024;
+  static const int maxArchiveBytes = 281474976645120;
   static const int maxRecordBytes = 256 * 1024;
-  static const int maxRecords = 1000000;
-  static const int maxMediaCount = 100000;
+  // Counts use the full 64-bit archive metadata range. There is no configured
+  // record or media-object cap; disk space and the archive byte ceiling are the
+  // practical limits.
+  static const int maxRecords = 0x7fffffffffffffff;
+  static const int maxMediaCount = 0x7fffffffffffffff;
   static const int _maxInt64 = 0x7fffffffffffffff;
   static const int _minInt64 = -0x7fffffffffffffff - 1;
-  static const int _headerLength = 48;
+  static const int _legacyHeaderLength = 48;
+  static const int _headerLength = 56;
   static const List<int> _magic = [
     0x43,
     0x4c,
@@ -219,9 +225,7 @@ abstract final class BackupArchiveCodec {
     });
 
     final totalLength = _headerLength + recordsLength + mediaLength;
-    if (totalLength > maxBytes ||
-        recordsLength > 0xffffffff ||
-        mediaLength > 0xffffffff) {
+    if (totalLength > maxBytes) {
       throw const FormatException(
         'The full backup exceeds the supported size. No media was omitted.',
       );
@@ -245,8 +249,8 @@ abstract final class BackupArchiveCodec {
     header.setInt64(24, capturedAtUtcMillis, Endian.big);
     header.setUint32(32, rows.length, Endian.big);
     header.setUint32(36, blobCount, Endian.big);
-    header.setUint32(40, recordsLength, Endian.big);
-    header.setUint32(44, mediaLength, Endian.big);
+    header.setUint64(40, recordsLength, Endian.big);
+    header.setUint64(48, mediaLength, Endian.big);
 
     final writer = _ArchiveWriter(output, _headerLength);
     for (final prepared in preparedRows) {
@@ -416,9 +420,7 @@ abstract final class BackupArchiveCodec {
     });
 
     final totalLength = _headerLength + recordsLength + mediaLength;
-    if (totalLength > maxBytes ||
-        recordsLength > 0xffffffff ||
-        mediaLength > 0xffffffff) {
+    if (totalLength > maxBytes) {
       throw const FormatException(
         'The full backup exceeds the supported size. No media was omitted.',
       );
@@ -433,8 +435,8 @@ abstract final class BackupArchiveCodec {
     header.setInt64(24, capturedAtUtcMillis, Endian.big);
     header.setUint32(32, rows.length, Endian.big);
     header.setUint32(36, blobCount, Endian.big);
-    header.setUint32(40, recordsLength, Endian.big);
-    header.setUint32(44, mediaLength, Endian.big);
+    header.setUint64(40, recordsLength, Endian.big);
+    header.setUint64(48, mediaLength, Endian.big);
     return BackupArchiveStreamPlan._(
       schemaVersion: schemaVersion,
       stateVersion: stateVersion,
@@ -457,7 +459,7 @@ abstract final class BackupArchiveCodec {
     int maxRows = maxRecords,
     int maxBlobs = maxMediaCount,
   }) async {
-    if (input.length < _headerLength || input.length > maxBytes) {
+    if (input.length < _legacyHeaderLength || input.length > maxBytes) {
       throw const FormatException('This backup has an invalid size.');
     }
     for (var index = 0; index < _magic.length; index++) {
@@ -468,21 +470,29 @@ abstract final class BackupArchiveCodec {
       }
     }
 
-    final header = ByteData.sublistView(input, 0, _headerLength);
-    final formatVersion = header.getUint16(8, Endian.big);
-    final headerLength = header.getUint16(10, Endian.big);
+    final prefix = ByteData.sublistView(input, 0, _legacyHeaderLength);
+    final formatVersion = prefix.getUint16(8, Endian.big);
+    final headerLength = prefix.getUint16(10, Endian.big);
+    final legacy = formatVersion == 1 && headerLength == _legacyHeaderLength;
+    if (input.length < headerLength ||
+        (!legacy &&
+            (formatVersion != currentFormatVersion ||
+                headerLength != _headerLength))) {
+      throw const FormatException('This backup format is not supported.');
+    }
+    final header = ByteData.sublistView(input, 0, headerLength);
     final schemaVersion = header.getUint32(12, Endian.big);
     final stateVersion = header.getInt64(16, Endian.big);
     final capturedAt = header.getInt64(24, Endian.big);
     final rowCount = header.getUint32(32, Endian.big);
     final blobCount = header.getUint32(36, Endian.big);
-    final recordsLength = header.getUint32(40, Endian.big);
-    final mediaLength = header.getUint32(44, Endian.big);
+    final recordsLength = legacy
+        ? header.getUint32(40, Endian.big)
+        : header.getUint64(40, Endian.big);
+    final mediaLength = legacy
+        ? header.getUint32(44, Endian.big)
+        : header.getUint64(48, Endian.big);
 
-    if (formatVersion != currentFormatVersion ||
-        headerLength != _headerLength) {
-      throw const FormatException('This backup format is not supported.');
-    }
     _validateMetadata(
       schemaVersion: schemaVersion,
       stateVersion: stateVersion,
@@ -494,11 +504,11 @@ abstract final class BackupArchiveCodec {
     );
     if (rowCount > maxRows ||
         blobCount > maxBlobs ||
-        _headerLength + recordsLength + mediaLength != input.length) {
+        headerLength + recordsLength + mediaLength != input.length) {
       throw const FormatException('This backup has invalid size metadata.');
     }
 
-    final recordStart = _headerLength;
+    final recordStart = headerLength;
     final recordEnd = recordStart + recordsLength;
     final reader = _ArchiveReader(
       Uint8List.sublistView(input, recordStart, recordEnd),
@@ -662,7 +672,7 @@ abstract final class BackupArchiveCodec {
         stateVersion > _maxInt64 ||
         capturedAtUtcMillis < 0 ||
         capturedAtUtcMillis > _maxInt64 ||
-        maxBytes < _headerLength ||
+        maxBytes < _legacyHeaderLength ||
         maxBytes > maxArchiveBytes ||
         maxRows < 0 ||
         maxRows > maxRecords ||

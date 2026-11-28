@@ -328,7 +328,9 @@ final class BackupSnapshotExporter {
     while (!done) {
       _checkCancelled(isCancelled);
       pageCount++;
-      if (pageCount > info.maxRecords + 1) {
+      // Every page carries at least one record, so more than one page per
+      // declared record (plus the terminal page) cannot be a valid sequence.
+      if (pageCount > started.recordCount + 1) {
         throw const FormatException(
           'The backup snapshot page sequence is invalid.',
         );
@@ -351,8 +353,7 @@ final class BackupSnapshotExporter {
 
       for (final record in page.records) {
         _checkCancelled(isCancelled);
-        if (recordCount >= started.recordCount ||
-            recordCount >= info.maxRecords) {
+        if (recordCount >= started.recordCount) {
           throw const FormatException(
             'The backup snapshot contains too many records.',
           );
@@ -365,8 +366,7 @@ final class BackupSnapshotExporter {
         final blobs = <BackupArchiveBlobSource>[];
         for (final descriptor in record.blobs) {
           mediaCount++;
-          if (mediaCount > started.mediaCount ||
-              mediaCount > info.maxMediaCount) {
+          if (mediaCount > started.mediaCount) {
             throw const FormatException(
               'The backup snapshot contains too many media files.',
             );

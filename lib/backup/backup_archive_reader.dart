@@ -136,35 +136,55 @@ abstract final class BackupArchiveReader {
       authenticatedArchiveBytes,
     );
     try {
-      if (authenticatedArchiveBytes < 48 ||
+      if (authenticatedArchiveBytes < BackupArchiveCodec._legacyHeaderLength ||
           authenticatedArchiveBytes > BackupArchiveCodec.maxArchiveBytes ||
           authenticatedArchiveSha256.length != 32) {
         throw const FormatException('The backup archive bounds are invalid.');
       }
 
-      final headerBytes = await reader.readExactly(48);
+      final prefix = await reader.readExactly(
+        BackupArchiveCodec._legacyHeaderLength,
+      );
       for (var index = 0; index < BackupArchiveCodec._magic.length; index++) {
-        if (headerBytes[index] != BackupArchiveCodec._magic[index]) {
+        if (prefix[index] != BackupArchiveCodec._magic[index]) {
           throw const FormatException(
             'This is not a supported Clockrove archive.',
           );
         }
       }
 
+      final prefixData = ByteData.sublistView(prefix);
+      final formatVersion = prefixData.getUint16(8, Endian.big);
+      final headerLength = prefixData.getUint16(10, Endian.big);
+      final legacy =
+          formatVersion == 1 &&
+          headerLength == BackupArchiveCodec._legacyHeaderLength;
+      if (!legacy &&
+          (formatVersion != BackupArchiveCodec.currentFormatVersion ||
+              headerLength != BackupArchiveCodec._headerLength)) {
+        throw const FormatException('This backup format is not supported.');
+      }
+      final extraHeader = headerLength == prefix.length
+          ? null
+          : await reader.readExactly(headerLength - prefix.length);
+      final headerBytes = extraHeader == null
+          ? prefix
+          : Uint8List.fromList([...prefix, ...extraHeader]);
       final headerData = ByteData.sublistView(headerBytes);
-      final formatVersion = headerData.getUint16(8, Endian.big);
-      final headerLength = headerData.getUint16(10, Endian.big);
       final schemaVersion = headerData.getUint32(12, Endian.big);
       final stateVersion = headerData.getInt64(16, Endian.big);
       final capturedAt = headerData.getInt64(24, Endian.big);
       final recordCount = headerData.getUint32(32, Endian.big);
       final mediaCount = headerData.getUint32(36, Endian.big);
-      final recordBytes = headerData.getUint32(40, Endian.big);
-      final mediaBytes = headerData.getUint32(44, Endian.big);
+      final recordBytes = legacy
+          ? headerData.getUint32(40, Endian.big)
+          : headerData.getUint64(40, Endian.big);
+      final mediaBytes = legacy
+          ? headerData.getUint32(44, Endian.big)
+          : headerData.getUint64(48, Endian.big);
 
-      if (formatVersion != BackupArchiveCodec.currentFormatVersion ||
-          headerLength != 48 ||
-          48 + recordBytes + mediaBytes != authenticatedArchiveBytes ||
+      if (headerLength + recordBytes + mediaBytes !=
+              authenticatedArchiveBytes ||
           recordCount > BackupArchiveCodec.maxRecords ||
           mediaCount > BackupArchiveCodec.maxMediaCount) {
         throw const FormatException('This backup has invalid size metadata.');
@@ -196,7 +216,7 @@ abstract final class BackupArchiveReader {
         );
       }
 
-      final recordEnd = 48 + recordBytes;
+      final recordEnd = headerLength + recordBytes;
       final descriptors = <_BlobDescriptor>[];
       final blobIds = <String>{};
       var declaredMediaBytes = 0;

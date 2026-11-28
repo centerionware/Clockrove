@@ -12,7 +12,6 @@ import 'package:integration_test/integration_test.dart';
 
 const _jobId = 'ci-document-source';
 const _jobName = 'Synthetic restore source';
-const _password = 'synthetic-document-fixture-password';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -66,12 +65,11 @@ void main() {
         '${Directory.systemTemp.path}/clockrove-picker-fixture.clockrove',
       );
       try {
-        final result = await BackupCryptoV2.encrypt(
-          password: _password,
-          archive: backup.archiveStream,
-          destination: _SyntheticFixtureSink(file),
-        );
-        expect(await file.length(), result.envelopeBytes);
+        final sink = _SyntheticFixtureSink(file);
+        await for (final chunk in backup.archiveStream) {
+          await sink.write(chunk);
+        }
+        await sink.commit();
         // ignore: avoid_print
         print('CLOCKROVE_DOCUMENT_FIXTURE path=${file.path}');
       } finally {

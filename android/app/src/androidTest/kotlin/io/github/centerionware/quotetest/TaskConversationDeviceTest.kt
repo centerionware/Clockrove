@@ -1,5 +1,7 @@
 package io.github.centerionware.quotetest
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -141,6 +143,51 @@ class TaskConversationDeviceTest {
         }
     }
 
+    private fun commentSemantics(): AccessibilityNodeInfo? {
+        fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (node.viewIdResourceName == "task-comment-body") return node
+            for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { found -> return found } }
+            return null
+        }
+        return automation.rootInActiveWindow?.let(::visit)
+    }
+
+    private fun pasteComment(field: AccessibilityNodeInfo, value: String) {
+        instrumentation.runOnMainSync {
+            (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                .setPrimaryClip(ClipData.newPlainText("comment", value))
+        }
+        val semantic = commentSemantics()
+        for (node in listOfNotNull(semantic, field)) {
+            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            if (node.performAction(AccessibilityNodeInfo.ACTION_PASTE) &&
+                commentTextEntered(value, 5_000)
+            ) return
+        }
+    }
+
+    private fun typeWithKeyEvents(value: String) {
+        for (character in value) {
+            when {
+                character == ' ' -> instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_SPACE)
+                character in 'a'..'z' -> instrumentation.sendKeyDownUpSync(
+                    KeyEvent.KEYCODE_A + (character - 'a'),
+                )
+                else -> throw AssertionError("Unsupported comment character '$character'")
+            }
+            SystemClock.sleep(25)
+        }
+    }
+
+    private fun commentTextEntered(value: String, timeoutMs: Long = 5_000): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (find("Add a comment", editable = true)?.text?.toString() == value) return true
+            SystemClock.sleep(100)
+        }
+        return false
+    }
+
     private fun keyboardVisible() = automation.windows.any {
         it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
     }
@@ -172,15 +219,29 @@ class TaskConversationDeviceTest {
             capture("comment-keyboard-missing")
         }
         val editable = waitFor("Add a comment", editable = true)
-        if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
-            assertTrue(editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
+        if (!commentTextEntered(value)) pasteComment(editable, value)
+        if (!commentTextEntered(value) &&
+            editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
+        ) {
+            editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
-            }))
-        } else {
-            // Without an IME the input connection may not expose ACTION_SET_TEXT.
-            // Key events still exercise the focused field on the headless AVD.
+            })
+        }
+        if (!commentTextEntered(value)) {
+            // Flutter's headless semantics can acknowledge set-text without
+            // committing it. Hardware key events still reach the focused field.
+            field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            typeWithKeyEvents(value)
+        }
+        if (!commentTextEntered(value)) {
             instrumentation.sendStringSync(value)
         }
+        if (!commentTextEntered(value)) {
+            automation.executeShellCommand("input text ${value.replace(" ", "%s")}").use {
+                ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+            }
+        }
+        assertTrue("Comment text was not entered", commentTextEntered(value, 30_000))
         hideKeyboard()
     }
 
@@ -246,10 +307,10 @@ class TaskConversationDeviceTest {
 
             click("Task notes & photos")
             waitFor("Task notes & photos")
-            enterComment("Synthetic site progress note")
+            enterComment("synthetic site progress note")
             reveal("Add comment")
             click("Add comment")
-            waitFor("Synthetic site progress note")
+            waitFor("synthetic site progress note")
             hideKeyboard()
             capture("task-comment")
 

@@ -94,7 +94,7 @@ void main() {
       return 'opaque-document-id';
     };
 
-    expect(maxEncryptedBackupBytes, 67134601);
+    expect(maxEncryptedBackupBytes, 281582350827640);
     expect(
       await BackupFileApi(channel: channel).createBackupDocument(
         totalBytes: maxEncryptedBackupBytes,

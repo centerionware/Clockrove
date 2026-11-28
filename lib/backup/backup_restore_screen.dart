@@ -12,6 +12,7 @@ import 'backup_import_api.dart';
 import 'backup_restore_error_details.dart';
 import 'backup_restore_importer.dart';
 import 'backup_restore_preview.dart';
+import 'backup_restore_source_controls.dart';
 
 typedef BackupRestorePreviewRunner =
     Future<BackupRestoreImportResult> Function({
@@ -20,12 +21,24 @@ typedef BackupRestorePreviewRunner =
       BackupCryptoCancellationToken? cancellationToken,
     });
 
-/// User-directed encrypted restore with bounded native conflict pages.
+typedef BackupRestorePlainPreviewRunner =
+    Future<BackupRestoreImportResult> Function({
+      required BackupEncryptedSource archive,
+      BackupCryptoCancellationToken? cancellationToken,
+    });
+
+/// User-directed encrypted or plaintext restore with bounded conflict pages.
 final class BackupRestoreScreen extends StatefulWidget {
-  const BackupRestoreScreen({super.key, this.fileApi, this.previewBackup});
+  const BackupRestoreScreen({
+    super.key,
+    this.fileApi,
+    this.previewBackup,
+    this.previewPlainBackup,
+  });
 
   final BackupFileApi? fileApi;
   final BackupRestorePreviewRunner? previewBackup;
+  final BackupRestorePlainPreviewRunner? previewPlainBackup;
 
   @override
   State<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
@@ -36,6 +49,8 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   late final BackupFileApi _fileApi = widget.fileApi ?? BackupFileApi();
   late final BackupRestorePreviewRunner _previewBackup =
       widget.previewBackup ?? BackupRestoreImporter().decryptAndPreview;
+  late final BackupRestorePlainPreviewRunner _previewPlainBackup =
+      widget.previewPlainBackup ?? BackupRestoreImporter().previewPlainArchive;
 
   BackupEncryptedDocument? _document;
   BackupRestoreImportResult? _restore;
@@ -51,6 +66,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   AppMessage? _passwordError;
   bool _busy = false;
   bool _passwordVisible = false;
+  bool _plainArchive = false;
   bool _applied = false;
   bool _previewNeedsRefresh = false;
 
@@ -137,6 +153,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       }
       setState(() {
         _document = selected;
+        _plainArchive = false;
         _password.clear();
         _passwordError = null;
         _restore = null;
@@ -170,6 +187,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   bool _validatePassword() {
+    if (_plainArchive) return true;
     final byteLength = utf8.encode(_password.text).length;
     setState(() {
       _passwordError = byteLength < 12
@@ -183,7 +201,19 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   Future<void> _createPreview() async {
     final document = _document;
-    if (_busy || document == null || !_validatePassword()) return;
+    if (_busy || document == null) return;
+    var plainArchive = _plainArchive;
+    if (!plainArchive && _password.text.isEmpty) {
+      try {
+        plainArchive = await isPlainBackupArchive(document);
+      } on Object {
+        plainArchive = false;
+      }
+    }
+    if (!plainArchive && !_validatePassword()) return;
+    if (plainArchive && !_plainArchive && mounted) {
+      setState(() => _plainArchive = true);
+    }
     final token = BackupCryptoCancellationToken();
     _cancellationToken = token;
     setState(() {
@@ -191,15 +221,22 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _error = null;
       _errorCode = null;
       _errorDetail = null;
-      _message = AppMessage.restoreAuthenticating;
+      _message = plainArchive
+          ? AppMessage.restoreReadingPlain
+          : AppMessage.restoreAuthenticating;
     });
     BackupRestoreImportResult? restore;
     try {
-      restore = await _previewBackup(
-        encryptedEnvelope: document,
-        password: _password.text,
-        cancellationToken: token,
-      );
+      restore = plainArchive
+          ? await _previewPlainBackup(
+              archive: document,
+              cancellationToken: token,
+            )
+          : await _previewBackup(
+              encryptedEnvelope: document,
+              password: _password.text,
+              cancellationToken: token,
+            );
       if (mounted) {
         setState(() {
           _restore = restore;
@@ -210,7 +247,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ..add(null);
           _pageIndex = 0;
           _furthestReviewedPage = -1;
-          _message = AppMessage.restoreAuthenticated;
+          _message = plainArchive
+              ? AppMessage.restorePlainPreviewReady
+              : AppMessage.restoreAuthenticated;
         });
       } else {
         await restore.close();
@@ -500,69 +539,20 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
               sliver: SliverList.list(
                 children: [
-                  Text(AppMessage.restoreChooseAndProtect.of(context)),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    key: const ValueKey('restore-choose-backup'),
-                    onPressed: _busy ? null : _chooseBackup,
-                    icon: const Icon(Icons.folder_open),
-                    label: Text(
-                      restore != null
-                          ? AppMessage.chooseAnotherBackup.of(context)
-                          : _document == null
-                          ? AppMessage.chooseEncryptedBackup.of(context)
-                          : AppMessage.chooseDifferentBackup.of(context),
-                    ),
+                  BackupRestoreSourceControls(
+                    busy: _busy,
+                    hasDocument: _document != null,
+                    hasRestore: restore != null,
+                    plainArchive: _plainArchive,
+                    totalBytes: _document?.totalBytes,
+                    passwordController: _password,
+                    passwordVisible: _passwordVisible,
+                    passwordError: _passwordError,
+                    onTogglePassword: () =>
+                        setState(() => _passwordVisible = !_passwordVisible),
+                    onChoose: _chooseBackup,
+                    onPreview: _createPreview,
                   ),
-                  if (_document != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      AppMessage.selectedEncryptedFile.format(context, {
-                        'size': (_document!.totalBytes / (1024 * 1024))
-                            .toStringAsFixed(1),
-                      }),
-                      key: const ValueKey('restore-selected-file'),
-                    ),
-                  ],
-                  if (restore == null) ...[
-                    const SizedBox(height: 12),
-                    TextField(
-                      key: const ValueKey('restore-password'),
-                      controller: _password,
-                      enabled: !_busy && _document != null,
-                      obscureText: !_passwordVisible,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        labelText: AppMessage.backupPassword.of(context),
-                        errorText: _passwordError?.of(context),
-                        suffixIcon: IconButton(
-                          tooltip: _passwordVisible
-                              ? AppMessage.hidePassword.of(context)
-                              : AppMessage.showPassword.of(context),
-                          onPressed: () => setState(
-                            () => _passwordVisible = !_passwordVisible,
-                          ),
-                          icon: Icon(
-                            _passwordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      key: const ValueKey('restore-preview'),
-                      onPressed: _busy || _document == null
-                          ? null
-                          : _createPreview,
-                      icon: const Icon(Icons.preview),
-                      label: Text(
-                        AppMessage.authenticateAndPreview.of(context),
-                      ),
-                    ),
-                  ],
                   if (_busy) ...[
                     const SizedBox(height: 12),
                     const LinearProgressIndicator(),
