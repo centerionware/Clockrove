@@ -25,6 +25,8 @@
   coordinates and disappearing when the longitude is no longer valid.
 - `python3 tool/flutter_catalog.py --check` and repository-wide `dart format`
   passed.
+- Exact-head [run 46119471270](https://github.com/centerionware/Clockrove/actions/runs/46119471270)
+  passed all static, Dart, Android/release, native and API 24/35 device stages.
 - No local Flutter test, analyzer, Android build, or device browser check ran,
-  per repository instructions. CI is authoritative; Zillow's rendering and the
-  real browser handoff remain unverified on a device.
+  per repository instructions. Zillow's real browser resolution and the
+  property-address accuracy remain unverified on a device.

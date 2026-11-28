@@ -993,4 +993,4 @@ Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/run
 picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
 requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
 
-M7.9 Zillow site link (PR pending): the site editor shows Open Zillow only for valid latitude/longitude and opens the external Zillow homes URL for those coordinates. All 17 catalogs have the label and failure copy. URL and visibility tests added; no local build, analyzer, or device browser check ran, and the live Zillow result is unverified.
+M7.9 Zillow site link (PR #108, open): exact-head run [46119471270](https://github.com/centerionware/Clockrove/actions/runs/46119471270) passed. Open Zillow reverse-geocodes valid site coordinates to a house-level address and falls back to the job customer's address only when no house number is found. Live browser resolution and address accuracy remain unverified on a device.
