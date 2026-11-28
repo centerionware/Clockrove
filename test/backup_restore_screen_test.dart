@@ -371,6 +371,7 @@ void main() {
     expect(fileCalls.map((call) => call.method), [
       'openBackupDocumentForImport',
       'readBackupDocumentChunk',
+      'readBackupDocumentChunk',
       'closeBackupDocumentImport',
     ]);
   });

@@ -20,3 +20,4 @@ restorePlainNoPassword: "এই ব্যাকআপ এনক্রিপ্�
 previewPlainBackup: "ব্যাকআপ প্রিভিউ"
 restoreReadingPlain: "ব্যাকআপ পড়া হচ্ছে…"
 restorePlainPreviewReady: "ব্যাকআপ পর্যালোচনার জন্য প্রস্তুত।"
+restorePasswordRequired: "এই এনক্রিপ্ট করা ব্যাকআপের পাসওয়ার্ড দিন।"

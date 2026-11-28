@@ -20,3 +20,4 @@ restorePlainNoPassword: "यह बैकअप एन्क्रिप्ट �
 previewPlainBackup: "बैकअप पूर्वावलोकन"
 restoreReadingPlain: "बैकअप पढ़ा जा रहा है…"
 restorePlainPreviewReady: "बैकअप समीक्षा के लिए तैयार है।"
+restorePasswordRequired: "इस एन्क्रिप्टेड बैकअप का पासवर्ड डालें।"

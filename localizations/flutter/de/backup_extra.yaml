@@ -20,3 +20,4 @@ restorePlainNoPassword: "Diese Sicherung ist nicht verschlüsselt. Es ist kein P
 previewPlainBackup: "Sicherung ansehen"
 restoreReadingPlain: "Sicherung wird gelesen…"
 restorePlainPreviewReady: "Sicherung ist bereit zur Prüfung."
+restorePasswordRequired: "Gib das Passwort für diese verschlüsselte Sicherung ein."

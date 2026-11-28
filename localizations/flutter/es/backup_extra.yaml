@@ -20,3 +20,4 @@ restorePlainNoPassword: "Esta copia no está cifrada. No se necesita contraseña
 previewPlainBackup: "Previsualizar copia"
 restoreReadingPlain: "Leyendo copia…"
 restorePlainPreviewReady: "Copia lista para revisar."
+restorePasswordRequired: "Introduce la contraseña de esta copia cifrada."

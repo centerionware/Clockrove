@@ -54,7 +54,7 @@ class BackupPickerDeviceTest {
         click("App settings and customers")
         click("Settings")
         waitFor("Settings backup section") { findLabel("Backup and restore") }
-        click("Restore encrypted backup")
+        click("Restore backup")
         openPicker()
         pressBack()
         waitFor("picker cancellation") { findLabel("File selection cancelled.") }
@@ -63,13 +63,13 @@ class BackupPickerDeviceTest {
         openPicker()
         if (findDocumentTitle(FIXTURE) == null) openSharedFixtureDirectory()
         openDocumentRow(FIXTURE, "backup document staged") {
-            findLabel("Encrypted backup selected", prefix = true)
+            findLabel("Backup selected", prefix = true)
         }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
         // The fixture is a plaintext archive: preview detects it without a
         // password, which also avoids requiring an IME on headless images.
-        click("Authenticate and preview", scroll = true)
+        click("Preview backup", scroll = true)
         val apply = waitFor("plaintext restore preview") {
             findLabel("Backup ready to review", prefix = true)
         }
