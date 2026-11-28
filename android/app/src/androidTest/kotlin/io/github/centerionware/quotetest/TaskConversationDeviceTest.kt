@@ -1,5 +1,7 @@
 package io.github.centerionware.quotetest
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -141,6 +143,20 @@ class TaskConversationDeviceTest {
         }
     }
 
+    private fun pasteComment(field: AccessibilityNodeInfo, value: String) {
+        instrumentation.runOnMainSync {
+            (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                .setPrimaryClip(ClipData.newPlainText("comment", value))
+        }
+        val semantic = findNode { it.viewIdResourceName == "task-comment-body" }
+        for (node in listOfNotNull(semantic, field)) {
+            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            if (node.performAction(AccessibilityNodeInfo.ACTION_PASTE) &&
+                commentTextEntered(value, 5_000)
+            ) return
+        }
+    }
+
     private fun typeWithKeyEvents(value: String) {
         for (character in value) {
             when {
@@ -194,10 +210,13 @@ class TaskConversationDeviceTest {
             capture("comment-keyboard-missing")
         }
         val editable = waitFor("Add a comment", editable = true)
-        if (editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) {
-            assertTrue(editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
+        if (!commentTextEntered(value)) pasteComment(editable, value)
+        if (!commentTextEntered(value) &&
+            editable.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
+        ) {
+            editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
-            }))
+            })
         }
         if (!commentTextEntered(value)) {
             // Flutter's headless semantics can acknowledge set-text without
