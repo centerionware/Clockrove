@@ -1495,6 +1495,8 @@ enum AppMessage {
   siteAddressSearchTooShort("Enter at least 3 characters to search."),
   siteAddressSearchPrivacy("Address searches send the text you enter to OpenStreetMap's Nominatim service. No account is needed."),
   siteAddressSearchAttribution("Search results © OpenStreetMap contributors"),
+  siteOpenZillow("Open Zillow"),
+  siteZillowOpenFailed("Zillow could not be opened."),
   taskPhotoOpenFailed("The photo could not be opened."),
   taskPhotoReviewOne("Review photo"),
   taskPhotoReviewMany("Review {count} photos"),

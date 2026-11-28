@@ -40,3 +40,5 @@ siteAddressSearchBusy: "La ricerca degli indirizzi è occupata. Attendi un momen
 siteAddressSearchTooShort: "Inserisci almeno 3 caratteri per cercare."
 siteAddressSearchPrivacy: "Le ricerche di indirizzi inviano il testo inserito al servizio Nominatim di OpenStreetMap. Non serve un account."
 siteAddressSearchAttribution: "Risultati della ricerca © collaboratori OpenStreetMap"
+siteOpenZillow: "Apri Zillow"
+siteZillowOpenFailed: "Impossibile aprire Zillow."

@@ -992,3 +992,5 @@ Exact PR-head [45275793641](https://github.com/centerionware/Clockrove/actions/r
 Merged-main [45283121562](https://github.com/centerionware/Clockrove/actions/runs/45283121562) (`e2a0d18`) failed only API 24
 picker: the helper selected Downloads, which cannot see the fixture under `/sdcard/Download`. The fix retries revealing and
 requires internal storage before opening the fixture directory. Exact-main Actions pending; no local build/test; localization stays open.
+
+M7.9 Zillow site link (PR pending): the site editor shows Open Zillow only for valid latitude/longitude and opens the external Zillow homes URL for those coordinates. All 17 catalogs have the label and failure copy. URL and visibility tests added; no local build, analyzer, or device browser check ran, and the live Zillow result is unverified.

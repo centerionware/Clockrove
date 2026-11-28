@@ -40,3 +40,5 @@ siteAddressSearchBusy: "Adres arama şu anda meşgul. Biraz bekleyip tekrar dene
 siteAddressSearchTooShort: "Aramak için en az 3 karakter girin."
 siteAddressSearchPrivacy: "Adres aramaları girdiğiniz metni OpenStreetMap'in Nominatim hizmetine gönderir. Hesap gerekmez."
 siteAddressSearchAttribution: "Arama sonuçları © OpenStreetMap katkıda bulunanlar"
+siteOpenZillow: "Zillow'u aç"
+siteZillowOpenFailed: "Zillow açılamadı."

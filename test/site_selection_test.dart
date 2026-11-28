@@ -135,6 +135,25 @@ Future<void> _searchAddress(WidgetTester tester, String query) async {
 }
 
 void main() {
+  testWidgets('Open Zillow appears only after valid coordinates are set', (
+    tester,
+  ) async {
+    final api = FixtureAutomationApi();
+    await _show(tester, api);
+    await _newSite(tester);
+    expect(find.text('Open Zillow'), findsNothing);
+    await tester.enterText(find.byType(TextFormField).at(1), '51.5');
+    await tester.enterText(find.byType(TextFormField).at(2), '-0.1');
+    await tester.pumpAndSettle();
+    expect(find.text('Open Zillow'), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextFormField).at(2),
+      'not-a-coordinate',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Open Zillow'), findsNothing);
+  });
+
   testWidgets(
     'a single explained fix fills a draft and saves only after explicit confirmation',
     (tester) async {

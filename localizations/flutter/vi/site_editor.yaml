@@ -40,3 +40,5 @@ siteAddressSearchBusy: "Tính năng tìm địa chỉ đang bận. Đợi một 
 siteAddressSearchTooShort: "Nhập ít nhất 3 ký tự để tìm kiếm."
 siteAddressSearchPrivacy: "Tìm địa chỉ sẽ gửi văn bản bạn nhập đến dịch vụ Nominatim của OpenStreetMap. Không cần tài khoản."
 siteAddressSearchAttribution: "Kết quả tìm kiếm © những người đóng góp OpenStreetMap"
+siteOpenZillow: "Mở Zillow"
+siteZillowOpenFailed: "Không thể mở Zillow."

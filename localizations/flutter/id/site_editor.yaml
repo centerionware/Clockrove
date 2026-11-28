@@ -40,3 +40,5 @@ siteAddressSearchBusy: "Pencarian alamat sedang sibuk. Tunggu sebentar lalu coba
 siteAddressSearchTooShort: "Masukkan setidaknya 3 karakter untuk mencari."
 siteAddressSearchPrivacy: "Pencarian alamat mengirim teks yang Anda masukkan ke layanan Nominatim OpenStreetMap. Akun tidak diperlukan."
 siteAddressSearchAttribution: "Hasil pencarian © kontributor OpenStreetMap"
+siteOpenZillow: "Buka Zillow"
+siteZillowOpenFailed: "Zillow tidak dapat dibuka."
