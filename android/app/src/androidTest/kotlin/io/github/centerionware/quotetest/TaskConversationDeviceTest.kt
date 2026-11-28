@@ -141,8 +141,8 @@ class TaskConversationDeviceTest {
         }
     }
 
-    private fun commentTextEntered(value: String): Boolean {
-        val deadline = SystemClock.uptimeMillis() + 5_000
+    private fun commentTextEntered(value: String, timeoutMs: Long = 5_000): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
             if (find("Add a comment", editable = true)?.text?.toString() == value) return true
             SystemClock.sleep(100)
@@ -195,7 +195,7 @@ class TaskConversationDeviceTest {
                 ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
             }
         }
-        waitFor("entered comment") { find("Add a comment", editable = true)?.takeIf { it.text?.toString() == value } }
+        assertTrue("Comment text was not entered", commentTextEntered(value, 30_000))
         hideKeyboard()
     }
 
