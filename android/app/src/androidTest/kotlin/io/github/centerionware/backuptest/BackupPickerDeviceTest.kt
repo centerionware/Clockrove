@@ -37,6 +37,14 @@ class BackupPickerDeviceTest {
         val repository = TimerRepository.get(app)
         assertTrue(repository.snapshot().jobs.isEmpty())
         val existingJob = repository.createJob("Synthetic destination job")
+        // API 24 DocumentsUI hides device storage behind an overflow menu that is
+        // not reliably reachable headlessly. The debug flag asks the picker to show
+        // it directly, matching what a user gets after choosing "Show internal storage".
+        assertTrue(
+            "CI advanced picker preference must be saved",
+            app.getSharedPreferences("clockrove_ci_test_flags", android.content.Context.MODE_PRIVATE)
+                .edit().putBoolean("document_picker_show_advanced", true).commit(),
+        )
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
@@ -97,6 +105,9 @@ class BackupPickerDeviceTest {
             instrumentation.targetContext.contentResolver.delete(it, null, null)
         }
         downloadsFixtureUri = null
+        instrumentation.targetContext
+            .getSharedPreferences("clockrove_ci_test_flags", android.content.Context.MODE_PRIVATE)
+            .edit().remove("document_picker_show_advanced").commit()
     }
 
     private fun publishFixtureInDownloads(app: android.content.Context) {
@@ -129,9 +140,9 @@ class BackupPickerDeviceTest {
     }
 
     private fun openSharedFixtureDirectory() {
-        selectDownloadsRoot()
-        openDocumentRow(FIXTURE_DIRECTORY, "the Downloads fixture directory") {
-            findDocumentTitle(FIXTURE)
+        selectSharedStorageRoot()
+        openDocumentRow("Download", "the shared Download directory") {
+            findDocumentTitle(FIXTURE_DIRECTORY)
         }
         // List rows expose a title separate from the selection icon.
         val listView = findLabel("List view") ?: findLabel("View as list")
@@ -144,13 +155,17 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun selectDownloadsRoot() {
+    private fun selectSharedStorageRoot() {
         showPickerRoots()
-        val root = waitFor("Downloads document root") { findLabel("Downloads") }
+        // The debug CI flag makes DocumentsUI list the device root directly.
+        val root = waitFor("internal shared-storage root") { sharedStorageRoot() }
         if (!performAccessibilityClick(root)) tapPickerNode(root)
         if (findLabel("Open from") != null) closePickerRoots()
         waitForClosedPickerRoots()
     }
+
+    private fun sharedStorageRoot(): AccessibilityNodeInfo? =
+        findLabel(Build.MODEL) ?: findLabel("Internal storage")
 
     private fun closePickerRoots() {
         val window = automation.rootInActiveWindow ?: return
