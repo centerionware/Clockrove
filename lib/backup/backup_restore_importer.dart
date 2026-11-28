@@ -2,6 +2,7 @@ import 'package:clockrove/backup/backup_archive.dart';
 import 'package:clockrove/backup/backup_crypto_v2.dart';
 import 'package:clockrove/backup/backup_file_api.dart';
 import 'package:clockrove/backup/backup_import_api.dart';
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/services.dart';
 
 /// Stable, developer-facing reason a restore attempt stopped. Codes are short
@@ -74,11 +75,183 @@ final class BackupRestoreImportResult {
 /// whole-archive buffer. The sealed native preview handle stays open for
 /// conflict paging/resolution and apply until the caller closes the result or
 /// the native idle expiry removes it.
+/// Detects whether a selected file is a plaintext archive or CLKROVE2 envelope.
+Future<bool> isPlainBackupArchive(BackupEncryptedSource source) async {
+  final prefix = await source
+      .openRead()
+      .expand((chunk) => chunk)
+      .take(8)
+      .toList();
+  const magic = [0x43, 0x4c, 0x4b, 0x41, 0x52, 0x43, 0x48, 0x31];
+  if (prefix.length != magic.length) return false;
+  for (var index = 0; index < magic.length; index++) {
+    if (prefix[index] != magic[index]) return false;
+  }
+  return true;
+}
+
 final class BackupRestoreImporter {
   BackupRestoreImporter({BackupImportApi? api})
     : _api = api ?? BackupImportApi();
 
   final BackupImportApi _api;
+
+  /// Stages a plaintext archive without a password. The source is hashed once,
+  /// then streamed through the same bounded parser used by encrypted restore.
+  Future<BackupRestoreImportResult> previewPlainArchive({
+    required BackupEncryptedSource archive,
+    BackupCryptoCancellationToken? cancellationToken,
+  }) async {
+    if (archive.totalBytes < 1 ||
+        archive.totalBytes > maxEncryptedBackupBytes) {
+      throw const BackupRestoreReason('file-size');
+    }
+    final digest = await sha256.bind(archive.openRead()).first;
+    final plaintext = BackupArchivePlaintextChannel();
+    BackupImportStarted? started;
+    _BackupImportPageBuffer? pageBuffer;
+    BackupImportPreview? preview;
+    BackupArchiveReadMetrics? metrics;
+    var retainPreviewHandle = false;
+    Object? operationFailure;
+    StackTrace? operationStack;
+    Object? cleanupFailure;
+
+    final parseFuture = BackupArchiveReader.stage(
+      plaintext: plaintext,
+      authenticatedArchiveBytes: archive.totalBytes,
+      authenticatedArchiveSha256: digest.bytes,
+      onHeader: (header) async {
+        if (header.schemaVersion != currentBackupImportSchemaVersion) {
+          throw BackupRestoreReason(
+            'schema-${header.schemaVersion}-of-$currentBackupImportSchemaVersion',
+          );
+        }
+        if (header.recordCount > maxBackupImportRows) {
+          throw const BackupRestoreReason('row-limit');
+        }
+        if (header.mediaCount > maxBackupImportMediaCount) {
+          throw const BackupRestoreReason('media-count-limit');
+        }
+        if (header.mediaBytes > maxBackupImportMediaBytes) {
+          throw const BackupRestoreReason('media-bytes-limit');
+        }
+        started = await _api.begin(
+          archiveFormatVersion: header.formatVersion,
+          schemaVersion: header.schemaVersion,
+          archiveDigest: _digestHex(digest.bytes),
+          recordCount: header.recordCount,
+          mediaCount: header.mediaCount,
+          mediaBytes: header.mediaBytes,
+        );
+        pageBuffer = _BackupImportPageBuffer(_api, started!);
+        return started!.maxBlobChunkBytes;
+      },
+      onRecord: (ordinal, record) => pageBuffer!.add(ordinal, record),
+      onRecordsComplete: () => pageBuffer!.flush(),
+      onMediaChunk: (blobId, offset, bytes) async {
+        final handle = started;
+        if (handle == null) {
+          throw StateError('Backup import was not started.');
+        }
+        await _api.writeBlob(
+          importId: handle.importId,
+          blobId: blobId,
+          offset: offset,
+          bytes: bytes,
+          maxChunkBytes: handle.maxBlobChunkBytes,
+        );
+      },
+    );
+
+    try {
+      await for (final chunk in archive.openRead()) {
+        if (cancellationToken?.isCancelled ?? false) {
+          throw const BackupCryptoV2CancelledException();
+        }
+        for (
+          var offset = 0;
+          offset < chunk.length;
+          offset += BackupArchivePlaintextChannel.maxChunkBytes
+        ) {
+          final end = offset + BackupArchivePlaintextChannel.maxChunkBytes;
+          await plaintext.add(
+            chunk.sublist(offset, end < chunk.length ? end : chunk.length),
+          );
+        }
+      }
+      await plaintext.close();
+      metrics = await parseFuture;
+      if (metrics.archiveBytes != archive.totalBytes ||
+          !_sameDigest(metrics.archiveSha256, digest.bytes)) {
+        throw const BackupRestoreReason('archive-changed');
+      }
+      final handle = started;
+      if (handle == null) throw StateError('Backup import was not started.');
+      if (cancellationToken?.isCancelled ?? false) {
+        throw const BackupCryptoV2CancelledException();
+      }
+      preview = await _api.finish(handle.importId);
+      if (cancellationToken?.isCancelled ?? false) {
+        throw const BackupCryptoV2CancelledException();
+      }
+      if (preview.recordCount != metrics.recordCount ||
+          preview.mediaCount != metrics.mediaCount ||
+          preview.mediaBytes != metrics.mediaBytes ||
+          preview.stagedRecordBytes + preview.mediaBytes >
+              maxBackupImportStagedBytes) {
+        throw const BackupRestoreReason('stage-mismatch');
+      }
+      retainPreviewHandle = true;
+    } on Object catch (error, stackTrace) {
+      operationFailure = error;
+      operationStack = stackTrace;
+      try {
+        await plaintext.close();
+      } on Object {
+        // The native stage expiry also removes an abandoned preview.
+      }
+      try {
+        await parseFuture;
+      } on Object {
+        // Preserve the source/parser failure that stopped this attempt.
+      }
+    } finally {
+      final handle = started;
+      if (handle != null && !retainPreviewHandle) {
+        try {
+          await _api.close(handle.importId);
+        } on Object catch (error) {
+          cleanupFailure ??= error;
+        }
+      }
+    }
+
+    if (operationFailure != null) {
+      if (cleanupFailure != null) {
+        throw BackupRestoreImportCleanupException(
+          operationFailure: operationFailure,
+          cleanupFailure: cleanupFailure,
+        );
+      }
+      Error.throwWithStackTrace(operationFailure, operationStack!);
+    }
+    if (cleanupFailure != null) {
+      throw BackupRestoreImportCleanupException(
+        operationFailure: null,
+        cleanupFailure: cleanupFailure,
+      );
+    }
+    if (preview == null || metrics == null) {
+      throw StateError('Backup preview did not complete.');
+    }
+    return BackupRestoreImportResult(
+      preview: preview,
+      metrics: metrics,
+      stagedRecordBytes: preview.stagedRecordBytes,
+      api: _api,
+    );
+  }
 
   Future<BackupRestoreImportResult> decryptAndPreview({
     required BackupEncryptedSource encryptedEnvelope,

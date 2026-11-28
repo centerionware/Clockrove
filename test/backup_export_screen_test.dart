@@ -67,13 +67,17 @@ void main() {
   testWidgets(
     'exports, encrypts, saves in bounded chunks and clears passwords',
     (tester) async {
+      const archiveBytes = 196399;
+      final envelopeBytes = BackupCryptoV2.envelopeLengthForArchiveBytes(
+        archiveBytes,
+      );
       var written = 0;
       final chunkLengths = <int>[];
       respond = (call) async {
         switch (call.method) {
           case 'createBackupDocument':
             final args = call.arguments as Map;
-            expect(args['totalBytes'], maxBackupDocumentChunkBytes + 3);
+            expect(args['totalBytes'], envelopeBytes);
             expect(
               (args['suggestedName'] as String).endsWith('.clockrove'),
               isTrue,
@@ -93,7 +97,7 @@ void main() {
             return written;
           case 'finishBackupDocument':
             expect((call.arguments as Map)['documentId'], 'opaque-document-id');
-            expect(written, maxBackupDocumentChunkBytes + 3);
+            expect(written, envelopeBytes);
             return true;
           default:
             throw StateError('Unexpected method ${call.method}.');
@@ -112,13 +116,16 @@ void main() {
                   totalMediaBytes: 0,
                 ),
               );
-              return _snapshot(openSessionCount: 1, archiveByteLength: 196399);
+              return _snapshot(
+                openSessionCount: 1,
+                archiveByteLength: archiveBytes,
+              );
             },
             encryptArchive: _fakeEncryptor(
-              encrypted: Uint8List(maxBackupDocumentChunkBytes + 3),
+              encrypted: Uint8List(envelopeBytes),
               onArchive: (password, archive) {
                 expect(password, 'a-long-backup-password');
-                expect(archive.length, 196399);
+                expect(archive.length, archiveBytes);
               },
             ),
             fileApi: BackupFileApi(channel: channel),
@@ -153,7 +160,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(chunkLengths, [maxBackupDocumentChunkBytes, 3]);
+      expect(chunkLengths, [
+        maxBackupDocumentChunkBytes,
+        envelopeBytes - maxBackupDocumentChunkBytes,
+      ]);
       expect(calls.map((call) => call.method), [
         'createBackupDocument',
         'writeBackupDocumentChunk',

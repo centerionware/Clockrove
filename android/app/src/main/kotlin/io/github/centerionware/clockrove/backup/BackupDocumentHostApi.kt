@@ -3,6 +3,7 @@ package io.github.centerionware.clockrove.backup
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
@@ -196,6 +197,10 @@ internal class BackupDocumentHostApi(
                         Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "*/*"
+                            if (showAdvancedPickerRoots()) {
+                                // API 24 uses the legacy content extra name.
+                                putExtra("android.content.extra.SHOW_ADVANCED", true)
+                            }
                         },
                         REQUEST_OPEN_BACKUP,
                     )
@@ -337,6 +342,12 @@ internal class BackupDocumentHostApi(
             result.error("ACTIVITY_UNAVAILABLE", "Reopen Clockrove to save the backup.", null)
         }
     }
+
+    /** Test-only switch so headless API 24 can reach device storage without its hidden menu. */
+    private fun showAdvancedPickerRoots(): Boolean =
+        (activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+            activity.getSharedPreferences("clockrove_ci_test_flags", Activity.MODE_PRIVATE)
+                .getBoolean("document_picker_show_advanced", false)
 
     private fun sanitizeSuggestedName(value: String): String {
         require(value.isNotBlank() && value.length <= MAX_SUGGESTED_NAME_LENGTH)

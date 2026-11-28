@@ -42,3 +42,6 @@ taskPhotoUnavailable: "এই ছবিটি আর উপলভ্য নে�
 taskPhotoSemantics: "কাজের ছবি {page} / {total}"
 taskPhotoTaskAttachment: "কাজের ছবির সংযুক্তি"
 taskPhotoCommentAttachment: "মন্তব্যের ছবির সংযুক্তি"
+taskSharePhotos: "কাজের ছবি শেয়ার করুন"
+taskShareComment: "মন্তব্য শেয়ার করুন"
+taskShareFailed: "শেয়ার মেনু খোলা যায়নি।"

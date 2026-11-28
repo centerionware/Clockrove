@@ -42,3 +42,6 @@ taskPhotoUnavailable: "यह फ़ोटो अब उपलब्ध नह�
 taskPhotoSemantics: "कार्य फ़ोटो {page} / {total}"
 taskPhotoTaskAttachment: "कार्य फ़ोटो संलग्नक"
 taskPhotoCommentAttachment: "टिप्पणी फ़ोटो संलग्नक"
+taskSharePhotos: "कार्य की फ़ोटो साझा करें"
+taskShareComment: "टिप्पणी साझा करें"
+taskShareFailed: "शेयर मेन्यू नहीं खोला जा सका।"

@@ -193,6 +193,18 @@ class _TaskConversationScreenState
     }
   }
 
+  Future<void> _share(List<String> attachmentIds, {String? text}) async {
+    try {
+      await ref
+          .read(businessApiProvider)
+          .shareTaskImages(attachmentIds: attachmentIds, text: text);
+    } on PlatformException catch (_) {
+      if (mounted) {
+        setState(() => _notice = AppMessage.taskShareFailed.of(context));
+      }
+    }
+  }
+
   Future<void> _viewPhoto(
     TaskConversation conversation,
     TaskAttachmentInfo attachment,
@@ -352,9 +364,25 @@ class _TaskConversationScreenState
               ),
             ],
             const SizedBox(height: 20),
-            Text(
-              AppMessage.taskConversationPhotosTitle.of(context),
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppMessage.taskConversationPhotosTitle.of(context),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                if (conversation.taskAttachments.isNotEmpty)
+                  TextButton.icon(
+                    key: const ValueKey('task-share-photos'),
+                    onPressed: () => _share([
+                      for (final attachment in conversation.taskAttachments)
+                        attachment.id,
+                    ]),
+                    icon: const Icon(Icons.share_outlined),
+                    label: Text(AppMessage.taskSharePhotos.of(context)),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             _attachments(conversation, conversation.taskAttachments),
@@ -416,6 +444,17 @@ class _TaskConversationScreenState
                               child: Text(
                                 AppMessage.taskConversationEdited.of(context),
                               ),
+                            ),
+                          if (comment.body.trim().isNotEmpty ||
+                              comment.attachments.isNotEmpty)
+                            IconButton(
+                              key: ValueKey('task-share-comment-${comment.id}'),
+                              tooltip: AppMessage.taskShareComment.of(context),
+                              onPressed: () => _share([
+                                for (final attachment in comment.attachments)
+                                  attachment.id,
+                              ], text: comment.body),
+                              icon: const Icon(Icons.share_outlined),
                             ),
                           if (!readOnly)
                             IconButton(

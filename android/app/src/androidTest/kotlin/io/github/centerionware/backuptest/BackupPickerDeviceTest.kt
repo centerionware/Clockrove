@@ -13,7 +13,6 @@ import android.provider.MediaStore
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.centerionware.clockrove.MainActivity
@@ -38,6 +37,14 @@ class BackupPickerDeviceTest {
         val repository = TimerRepository.get(app)
         assertTrue(repository.snapshot().jobs.isEmpty())
         val existingJob = repository.createJob("Synthetic destination job")
+        // API 24 DocumentsUI hides device storage behind an overflow menu that is
+        // not reliably reachable headlessly. The debug flag asks the picker to show
+        // it directly, matching what a user gets after choosing "Show internal storage".
+        assertTrue(
+            "CI advanced picker preference must be saved",
+            app.getSharedPreferences("clockrove_ci_test_flags", android.content.Context.MODE_PRIVATE)
+                .edit().putBoolean("document_picker_show_advanced", true).commit(),
+        )
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
@@ -55,15 +62,16 @@ class BackupPickerDeviceTest {
 
         openPicker()
         if (findDocumentTitle(FIXTURE) == null) openSharedFixtureDirectory()
-        openDocumentRow(FIXTURE, "encrypted document staged") {
-            findLabel("Selected encrypted file", prefix = true)
+        openDocumentRow(FIXTURE, "backup document staged") {
+            findLabel("Encrypted backup selected", prefix = true)
         }
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
 
-        enterBackupPassword()
+        // The fixture is a plaintext archive: preview detects it without a
+        // password, which also avoids requiring an IME on headless images.
         click("Authenticate and preview", scroll = true)
-        val apply = waitFor("authenticated restore preview") {
-            findLabel("Backup authenticated", prefix = true)
+        val apply = waitFor("plaintext restore preview") {
+            findLabel("Backup ready to review", prefix = true)
         }
         assertTrue(apply.isVisibleToUser)
         assertEquals(listOf(existingJob), repository.snapshot().jobs.map { it.id })
@@ -97,6 +105,9 @@ class BackupPickerDeviceTest {
             instrumentation.targetContext.contentResolver.delete(it, null, null)
         }
         downloadsFixtureUri = null
+        instrumentation.targetContext
+            .getSharedPreferences("clockrove_ci_test_flags", android.content.Context.MODE_PRIVATE)
+            .edit().remove("document_picker_show_advanced").commit()
     }
 
     private fun publishFixtureInDownloads(app: android.content.Context) {
@@ -128,27 +139,6 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun enterBackupPassword() {
-        val password = waitFor("backup password field", ::findPasswordField)
-        touchNode(password)
-        waitFor("focused backup password and keyboard") {
-            findPasswordField()?.takeIf { it.isFocused && keyboardVisible() }
-        }
-        // Flutter on API 24 can acknowledge ACTION_SET_TEXT without updating the controller.
-        instrumentation.sendStringSync(PASSWORD)
-        waitFor("entered backup password") {
-            findPasswordField()?.takeIf { it.text?.length == PASSWORD.length }
-        }
-        pressBack()
-        waitFor("backup password keyboard dismissal") { true.takeUnless { keyboardVisible() } }
-    }
-
-    private fun findPasswordField(): AccessibilityNodeInfo? =
-        findNode { it.isVisibleToUser && it.isEnabled && it.isEditable && it.isPassword }
-
-    private fun keyboardVisible(): Boolean =
-        automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-
     private fun openSharedFixtureDirectory() {
         selectSharedStorageRoot()
         openDocumentRow("Download", "the shared Download directory") {
@@ -167,34 +157,15 @@ class BackupPickerDeviceTest {
 
     private fun selectSharedStorageRoot() {
         showPickerRoots()
-        var attempts = 0
-        while (sharedStorageRoot() == null && attempts < 3) {
-            closePickerRoots()
-            val overflow = waitFor("Documents options button") { findLabel("More options") }
-            if (!performAccessibilityClick(overflow)) tapPickerNode(overflow)
-            automation.waitForIdle(250, 5_000)
-            val showStorage = (sequenceOf(automation.rootInActiveWindow) +
-                automation.windows.asSequence().map { it.root })
-                .filterNotNull()
-                .filter { it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES }
-                .mapNotNull { root -> findLabel("Show internal storage", root = root) }
-                .firstOrNull { it.isEnabled }
-            if (showStorage != null) {
-                if (!performAccessibilityClick(showStorage)) tapPickerNode(showStorage)
-            } else {
-                // The menu can render before its storage action becomes accessible.
-                pressBack()
-            }
-            showPickerRoots()
-            attempts++
-        }
-        // Downloads is a separate indexed provider. It cannot see a file pushed
-        // directly into /sdcard/Download by the API 24 CI fixture setup.
+        // The debug CI flag makes DocumentsUI list the device root directly.
         val root = waitFor("internal shared-storage root") { sharedStorageRoot() }
-        if (!performAccessibilityClick(root)) touchNode(root)
+        if (!performAccessibilityClick(root)) tapPickerNode(root)
         if (findLabel("Open from") != null) closePickerRoots()
         waitForClosedPickerRoots()
     }
+
+    private fun sharedStorageRoot(): AccessibilityNodeInfo? =
+        findLabel(Build.MODEL) ?: findLabel("Internal storage")
 
     private fun closePickerRoots() {
         val window = automation.rootInActiveWindow ?: return
@@ -291,9 +262,6 @@ class BackupPickerDeviceTest {
         }
     }
 
-    private fun sharedStorageRoot(): AccessibilityNodeInfo? =
-        findLabel(Build.MODEL) ?: findLabel("Internal storage")
-
     private fun pressBack() = runShellInput("keyevent KEYCODE_BACK")
 
     private fun runShellInput(arguments: String) {
@@ -302,7 +270,7 @@ class BackupPickerDeviceTest {
     }
 
     private fun openPicker() {
-        click("Choose encrypted backup")
+        click("Choose backup")
         val picker = waitFor("Android document picker or resolver") {
             automation.rootInActiveWindow?.takeIf {
                 it.packageName?.toString() in DOCUMENT_PICKER_PACKAGES ||
@@ -427,6 +395,5 @@ class BackupPickerDeviceTest {
         private val DOCUMENT_PICKER_PACKAGES = setOf("com.android.documentsui", "com.google.android.documentsui")
         private const val FIXTURE_DIRECTORY = "Clockrove-CI-Backup"
         private const val FIXTURE = "clockrove-picker-fixture.clockrove"
-        private const val PASSWORD = "synthetic-document-fixture-password"
     }
 }

@@ -8,6 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:integration_test/integration_test.dart';
 
+// Keep the device benchmark at the previous maximum sample size; the format
+// bound is much larger, but generating it in a test would exhaust the device.
+const _benchmarkArchiveBytes = 64 * 1024 * 1024;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -25,14 +29,14 @@ void main() {
       final restoredFile = File('${directory.path}/restored.archive');
       try {
         final expectedDigest = await _hashStream(
-          _generatedArchive(BackupCryptoV2.maxArchiveBytes),
+          _generatedArchive(_benchmarkArchiveBytes),
         );
         final baselineRssKiB = await _processHighWaterRssKiB();
 
         final encryptClock = Stopwatch()..start();
         final encrypted = await BackupCryptoV2.encrypt(
           password: 'synthetic-device-benchmark-passphrase',
-          archive: _generatedArchive(BackupCryptoV2.maxArchiveBytes),
+          archive: _generatedArchive(_benchmarkArchiveBytes),
           destination: _FileTransactionalSink(envelopeFile),
         );
         encryptClock.stop();
@@ -70,12 +74,12 @@ void main() {
           reason: 'v2 maximum-size codec must stay within 64 MiB RSS.',
         );
 
-        expect(encrypted.archiveBytes, BackupCryptoV2.maxArchiveBytes);
-        expect(encrypted.dataFrameCount, BackupCryptoV2.maxDataFrames);
-        expect(encrypted.envelopeBytes, BackupCryptoV2.maxEnvelopeBytes);
-        expect(await envelopeFile.length(), BackupCryptoV2.maxEnvelopeBytes);
-        expect(restored.archiveBytes, BackupCryptoV2.maxArchiveBytes);
-        expect(restored.dataFrameCount, BackupCryptoV2.maxDataFrames);
+        expect(encrypted.archiveBytes, _benchmarkArchiveBytes);
+        expect(encrypted.dataFrameCount, 1024);
+        expect(encrypted.envelopeBytes, 67134609);
+        expect(await envelopeFile.length(), 67134609);
+        expect(restored.archiveBytes, _benchmarkArchiveBytes);
+        expect(restored.dataFrameCount, 1024);
         expect(restored.archiveSha256, expectedDigest);
         expect(await _hashStream(restoredFile.openRead()), expectedDigest);
 

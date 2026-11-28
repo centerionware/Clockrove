@@ -1,10 +1,17 @@
 package io.github.centerionware.clockrove.tracking
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.github.centerionware.clockrove.R
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.github.centerionware.clockrove.invoice.TaskShareProvider
 import io.github.centerionware.clockrove.widget.TimerWidget
 import java.util.Currency
 import org.json.JSONObject
@@ -12,10 +19,16 @@ import org.json.JSONObject
 /** Strict transport codec. All prices cross the channel as decimal integer strings. */
 internal class BusinessHostApi(context: Context, messenger: BinaryMessenger) {
     private val app = context.applicationContext
+    private val activity = context as? Activity
+    private val main = Handler(Looper.getMainLooper())
     private val repository = TimerRepository.get(app)
     private val channel = MethodChannel(messenger, "clockrove/business/v1", io.flutter.plugin.common.StandardMethodCodec.INSTANCE, messenger.makeBackgroundTaskQueue())
     init {
         channel.setMethodCallHandler { call, result ->
+            if (call.method == "shareTaskImages") {
+                share(call, result)
+                return@setMethodCallHandler
+            }
             try {
                 val response = BusinessDispatch(repository) { token -> io.github.centerionware.clockrove.invoice.LogoImages.recall(app, token) }.call(call)
                 if (response == null) result.notImplemented() else {
@@ -32,7 +45,58 @@ internal class BusinessHostApi(context: Context, messenger: BinaryMessenger) {
             catch (_: Exception) { result.error("STORAGE_UNAVAILABLE", "Business storage is unavailable", null) }
         }
     }
+    /** Builds one chooser intent; images ride on grant-only content URIs. */
+    private fun share(call: MethodCall, result: MethodChannel.Result) {
+        val input = call.arguments as? Map<*, *> ?: emptyMap<String, Any?>()
+        val rawIds = input["attachmentIds"] as? List<*> ?: emptyList<Any?>()
+        val ids = rawIds.map { requireNotNull(it as? String) }
+        require(ids.all { ATTACHMENT_ID.matches(it) })
+        val text = input["text"] as? String
+        require(text == null || text.length <= 100_000)
+        require(ids.isNotEmpty() || !text.isNullOrBlank())
+        val target = activity
+        if (target == null) {
+            result.error("ACTIVITY_UNAVAILABLE", "Reopen the task to share", null)
+            return
+        }
+        val uris = ids.map { TaskShareProvider.uri(app, it) }
+        main.post {
+            val intent = when {
+                uris.isEmpty() -> Intent(Intent.ACTION_SEND).apply { type = "text/plain" }
+                uris.size == 1 -> Intent(Intent.ACTION_SEND).apply {
+                    type = "image/*"
+                    putExtra(Intent.EXTRA_STREAM, uris.single())
+                }
+                else -> Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                    type = "image/*"
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                }
+            }
+            if (!text.isNullOrEmpty()) intent.putExtra(Intent.EXTRA_TEXT, text)
+            if (uris.isNotEmpty()) {
+                val clip = ClipData.newUri(target.contentResolver, "Clockrove task image", uris.first())
+                for (uri in uris.drop(1)) clip.addItem(ClipData.Item(uri))
+                intent.clipData = clip
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            try {
+                target.startActivity(Intent.createChooser(intent, null))
+                result.success(true)
+            } catch (_: ActivityNotFoundException) {
+                result.error("NO_COMPATIBLE_APP", "No compatible app is installed", null)
+            } catch (_: SecurityException) {
+                result.error("SHARE_UNAVAILABLE", "The task images could not be shared", null)
+            } catch (_: RuntimeException) {
+                result.error("SHARE_UNAVAILABLE", "The share app could not accept this task", null)
+            }
+        }
+    }
+
     fun detach() { channel.setMethodCallHandler(null) }
+
+    private companion object {
+        val ATTACHMENT_ID = Regex("[A-Za-z0-9_-]{1,200}")
+    }
 }
 
 internal class BusinessDispatch(private val repository: TimerRepository, private val logoLoader: (String) -> LogoStore.Asset? = { null }) {
