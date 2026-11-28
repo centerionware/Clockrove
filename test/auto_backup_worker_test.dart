@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:clockrove/auto_backup_worker.dart';
 import 'package:clockrove/backup/backup_snapshot_exporter.dart';
 import 'package:flutter/services.dart';
