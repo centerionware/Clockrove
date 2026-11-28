@@ -11,6 +11,12 @@ http.Response _results(List<Map<String, Object?>> items) => http.Response(
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
 
+http.Response _reverse(Map<String, Object?> item) => http.Response(
+  jsonEncode(item),
+  200,
+  headers: {'content-type': 'application/json; charset=utf-8'},
+);
+
 void main() {
   test(
     'sends an explicit keyless Nominatim search with identifying headers',
@@ -133,6 +139,86 @@ void main() {
       ),
     );
   });
+
+  test('reverse lookup returns a house-level address for a property', () async {
+    late http.Request request;
+    final api = NominatimPropertyAddressLookup(
+      MockClient((value) async {
+        request = value;
+        return _reverse({
+          'display_name': '123 Main Street, Fort Collins, Colorado, 80521',
+          'address': {
+            'house_number': '123',
+            'road': 'Main Street',
+            'city': 'Fort Collins',
+            'state': 'Colorado',
+            'postcode': '80521',
+          },
+        });
+      }),
+      now: () => DateTime.utc(2026, 11, 28),
+      wait: (_) async {},
+    );
+
+    final address = await api.lookup(
+      40.59142,
+      -105.100065,
+      languageTag: 'en-US',
+    );
+
+    expect(request.url.path, '/reverse');
+    expect(request.url.queryParameters['lat'], '40.591420');
+    expect(request.url.queryParameters['lon'], '-105.100065');
+    expect(request.url.queryParameters['zoom'], '18');
+    expect(request.url.queryParameters['addressdetails'], '1');
+    expect(request.headers['user-agent'], contains('Clockrove'));
+    expect(request.headers['accept-language'], 'en-US');
+    expect(address, '123 Main Street, Fort Collins, Colorado, 80521');
+  });
+
+  test(
+    'reverse lookup refuses a street or locality without a house number',
+    () async {
+      final api = NominatimPropertyAddressLookup(
+        MockClient(
+          (_) async => _reverse({
+            'display_name': 'Fort Collins, Colorado',
+            'address': {
+              'road': 'Main Street',
+              'city': 'Fort Collins',
+              'state': 'Colorado',
+            },
+          }),
+        ),
+        now: () => DateTime.utc(2026, 11, 28),
+        wait: (_) async {},
+      );
+
+      expect(
+        await api.lookup(40.59142, -105.100065, languageTag: 'en'),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'reverse lookup rejects invalid coordinates without a request',
+    () async {
+      var calls = 0;
+      final api = NominatimPropertyAddressLookup(
+        MockClient((_) async {
+          calls++;
+          return _results(const []);
+        }),
+      );
+
+      await expectLater(
+        api.lookup(double.nan, 0, languageTag: 'en'),
+        throwsArgumentError,
+      );
+      expect(calls, 0);
+    },
+  );
 
   test(
     'reports an unavailable service for server or payload failures',

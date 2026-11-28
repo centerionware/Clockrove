@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
+import '../maps/address_search.dart';
 import '../maps/zillow_link.dart';
 import 'automation_api.dart';
 import 'site_map_picker.dart';
@@ -20,8 +21,12 @@ class SiteEditResult {
 }
 
 class SiteEditor extends ConsumerStatefulWidget {
-  const SiteEditor({super.key, this.site});
+  const SiteEditor({super.key, this.site, this.fallbackAddress});
   final WorkSite? site;
+
+  /// The job customer's address, used only when reverse geocoding cannot
+  /// resolve a house-level address for the site coordinates.
+  final String? fallbackAddress;
   @override
   ConsumerState<SiteEditor> createState() => _SiteEditorState();
 }
@@ -30,6 +35,7 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
   final _form = GlobalKey<FormState>();
   late final AutomationApi _api;
   bool _locating = false;
+  bool _openingZillow = false;
   String? _notice;
   SitePosition? _position;
   @override
@@ -175,10 +181,35 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
 
   Future<void> _openZillow() async {
     final coordinates = _coordinates;
-    if (coordinates == null) return;
+    if (coordinates == null || _openingZillow) return;
+    setState(() {
+      _openingZillow = true;
+      _notice = null;
+    });
     try {
+      String? address;
+      try {
+        address = await ref
+            .read(propertyAddressLookupApiProvider)
+            .lookup(
+              coordinates.$1,
+              coordinates.$2,
+              languageTag: Localizations.localeOf(context).toLanguageTag(),
+            );
+      } catch (_) {
+        // A failed lookup can still use the customer's saved address.
+      }
+      if (!mounted) return;
+      final target = zillowSearchAddress(
+        propertyAddress: address,
+        customerAddress: widget.fallbackAddress,
+      );
+      if (target == null) {
+        setState(() => _notice = AppMessage.siteZillowOpenFailed.of(context));
+        return;
+      }
       final opened = await launchUrl(
-        zillowUriForCoordinates(coordinates.$1, coordinates.$2),
+        zillowUriForAddress(target),
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
@@ -188,6 +219,8 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
       if (mounted) {
         setState(() => _notice = AppMessage.siteZillowOpenFailed.of(context));
       }
+    } finally {
+      if (mounted) setState(() => _openingZillow = false);
     }
   }
 
@@ -340,8 +373,13 @@ class _SiteEditorState extends ConsumerState<SiteEditor> {
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
                       key: const ValueKey('site-open-zillow'),
-                      onPressed: _openZillow,
-                      icon: const Icon(Icons.open_in_new),
+                      onPressed: _openingZillow ? null : _openZillow,
+                      icon: _openingZillow
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.open_in_new),
                       label: Text(AppMessage.siteOpenZillow.of(context)),
                     ),
                   ),

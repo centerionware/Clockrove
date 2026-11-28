@@ -2,20 +2,43 @@ import 'package:clockrove/maps/zillow_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('builds a Zillow homes URL from site coordinates', () {
+  test('builds a Zillow property search URL from a house-level address', () {
     expect(
-      zillowUriForCoordinates(40.7484, -73.9857),
-      Uri.parse('https://www.zillow.com/homes/40.748400,-73.985700_rb/'),
+      zillowUriForAddress('2040 Broadway St APT 303, San Francisco, CA 94115'),
+      Uri.parse(
+        'https://www.zillow.com/homes/2040-Broadway-St-APT-303,-San-Francisco,-CA-94115_rb/',
+      ),
     );
   });
 
-  test('rejects non-finite or out-of-range coordinates', () {
-    expect(() => zillowUriForCoordinates(double.nan, 0), throwsArgumentError);
+  test('normalizes surrounding and repeated whitespace', () {
     expect(
-      () => zillowUriForCoordinates(0, double.infinity),
-      throwsArgumentError,
+      zillowUriForAddress('  123 Main St,  Fort Collins, CO 80521  '),
+      Uri.parse(
+        'https://www.zillow.com/homes/123-Main-St,-Fort-Collins,-CO-80521_rb/',
+      ),
     );
-    expect(() => zillowUriForCoordinates(90.1, 0), throwsArgumentError);
-    expect(() => zillowUriForCoordinates(0, -180.1), throwsArgumentError);
+  });
+
+  test('rejects an empty address', () {
+    expect(() => zillowUriForAddress('   '), throwsArgumentError);
+  });
+
+  test('prefers the property address and falls back to the customer', () {
+    expect(
+      zillowSearchAddress(
+        propertyAddress: ' 123 Main St, Fort Collins, CO 80521 ',
+        customerAddress: '500 Customer Rd, Loveland, CO 80537',
+      ),
+      '123 Main St, Fort Collins, CO 80521',
+    );
+    expect(
+      zillowSearchAddress(
+        propertyAddress: '  ',
+        customerAddress: '500 Customer Rd, Loveland, CO 80537',
+      ),
+      '500 Customer Rd, Loveland, CO 80537',
+    );
+    expect(zillowSearchAddress(), isNull);
   });
 }
