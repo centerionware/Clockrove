@@ -198,7 +198,8 @@ internal class BackupDocumentHostApi(
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "*/*"
                             if (showAdvancedPickerRoots()) {
-                                putExtra("android.provider.extra.SHOW_ADVANCED", true)
+                                // API 24 uses the legacy content extra name.
+                                putExtra("android.content.extra.SHOW_ADVANCED", true)
                             }
                         },
                         REQUEST_OPEN_BACKUP,

@@ -141,6 +141,19 @@ class TaskConversationDeviceTest {
         }
     }
 
+    private fun typeWithKeyEvents(value: String) {
+        for (character in value) {
+            when {
+                character == ' ' -> instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_SPACE)
+                character in 'a'..'z' -> instrumentation.sendKeyDownUpSync(
+                    KeyEvent.KEYCODE_A + (character - 'a'),
+                )
+                else -> throw AssertionError("Unsupported comment character '$character'")
+            }
+            SystemClock.sleep(25)
+        }
+    }
+
     private fun commentTextEntered(value: String, timeoutMs: Long = 5_000): Boolean {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
@@ -187,7 +200,12 @@ class TaskConversationDeviceTest {
             }))
         }
         if (!commentTextEntered(value)) {
-            // Some API 24 images acknowledge set-text without committing it.
+            // Flutter's headless semantics can acknowledge set-text without
+            // committing it. Hardware key events still reach the focused field.
+            field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            typeWithKeyEvents(value)
+        }
+        if (!commentTextEntered(value)) {
             instrumentation.sendStringSync(value)
         }
         if (!commentTextEntered(value)) {
@@ -261,10 +279,10 @@ class TaskConversationDeviceTest {
 
             click("Task notes & photos")
             waitFor("Task notes & photos")
-            enterComment("Synthetic site progress note")
+            enterComment("synthetic site progress note")
             reveal("Add comment")
             click("Add comment")
-            waitFor("Synthetic site progress note")
+            waitFor("synthetic site progress note")
             hideKeyboard()
             capture("task-comment")
 
