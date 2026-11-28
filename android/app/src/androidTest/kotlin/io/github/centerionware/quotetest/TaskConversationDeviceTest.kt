@@ -143,12 +143,21 @@ class TaskConversationDeviceTest {
         }
     }
 
+    private fun commentSemantics(): AccessibilityNodeInfo? {
+        fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (node.viewIdResourceName == "task-comment-body") return node
+            for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it)?.let { found -> return found } }
+            return null
+        }
+        return automation.rootInActiveWindow?.let(::visit)
+    }
+
     private fun pasteComment(field: AccessibilityNodeInfo, value: String) {
         instrumentation.runOnMainSync {
             (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                 .setPrimaryClip(ClipData.newPlainText("comment", value))
         }
-        val semantic = findNode { it.viewIdResourceName == "task-comment-body" }
+        val semantic = commentSemantics()
         for (node in listOfNotNull(semantic, field)) {
             node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
             if (node.performAction(AccessibilityNodeInfo.ACTION_PASTE) &&
