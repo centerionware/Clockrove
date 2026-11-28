@@ -110,12 +110,12 @@ records on both installs before starting.
 1. Export an encrypted backup from Settings through Android's save picker.
    Transfer the encrypted file to the destination profile. Use a test-only
    password and keep its value out of captures and logs.
-2. On the destination, open Restore encrypted backup and cancel the Android
+2. On the destination, open Restore backup and cancel the Android
    picker. Confirm destination records are unchanged. Open the picker again and
    select the transferred file from Downloads. Enter an incorrect password.
    Confirm an error appears, the selected file remains available, and the
    destination records are unchanged.
-3. Enter the correct password and review the preview. Cancel the final apply
+3. Enter the correct password if the backup is encrypted and review the preview. Unencrypted backups need no password. Cancel the final apply
    confirmation and verify that no source records appear. Then confirm apply.
    Reopen the app and verify the source job, time entry and attachment coexist
    with the original destination job and entry. Verify no timer started and

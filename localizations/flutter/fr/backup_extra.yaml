@@ -20,3 +20,4 @@ restorePlainNoPassword: "Cette sauvegarde n’est pas chiffrée. Aucun mot de pa
 previewPlainBackup: "Aperçu de la sauvegarde"
 restoreReadingPlain: "Lecture de la sauvegarde…"
 restorePlainPreviewReady: "Sauvegarde prête à vérifier."
+restorePasswordRequired: "Saisissez le mot de passe de cette sauvegarde chiffrée."

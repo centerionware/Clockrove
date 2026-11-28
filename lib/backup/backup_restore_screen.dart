@@ -67,6 +67,7 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   bool _busy = false;
   bool _passwordVisible = false;
   bool _plainArchive = false;
+  bool _archiveTypeKnown = false;
   bool _applied = false;
   bool _previewNeedsRefresh = false;
 
@@ -151,9 +152,15 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         await selected.close();
         return;
       }
+      final plainArchive = await _detectPlainArchive(selected);
+      if (!mounted) {
+        await selected.close();
+        return;
+      }
       setState(() {
         _document = selected;
-        _plainArchive = false;
+        _plainArchive = plainArchive;
+        _archiveTypeKnown = true;
         _password.clear();
         _passwordError = null;
         _restore = null;
@@ -186,11 +193,24 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     }
   }
 
+  Future<bool> _detectPlainArchive(BackupEncryptedDocument document) async {
+    try {
+      return await isPlainBackupArchive(document);
+    } on Object {
+      // A short or unreadable prefix is left to the encrypted path, which
+      // reports the precise failure without pretending the file is plaintext.
+      return false;
+    }
+  }
+
   bool _validatePassword() {
     if (_plainArchive) return true;
-    final byteLength = utf8.encode(_password.text).length;
+    final text = _password.text;
+    final byteLength = utf8.encode(text).length;
     setState(() {
-      _passwordError = byteLength < 12
+      _passwordError = text.isEmpty
+          ? AppMessage.restorePasswordRequired
+          : byteLength < 12
           ? AppMessage.restorePasswordShort
           : byteLength > 1024
           ? AppMessage.restorePasswordLong
@@ -203,12 +223,9 @@ final class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final document = _document;
     if (_busy || document == null) return;
     var plainArchive = _plainArchive;
-    if (!plainArchive && _password.text.isEmpty) {
-      try {
-        plainArchive = await isPlainBackupArchive(document);
-      } on Object {
-        plainArchive = false;
-      }
+    if (!plainArchive && !_archiveTypeKnown) {
+      plainArchive = await _detectPlainArchive(document);
+      if (mounted) setState(() => _archiveTypeKnown = true);
     }
     if (!plainArchive && !_validatePassword()) return;
     if (plainArchive && !_plainArchive && mounted) {

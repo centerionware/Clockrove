@@ -20,3 +20,4 @@ restorePlainNoPassword: "Esta cópia não está encriptada. Não é necessária 
 previewPlainBackup: "Pré-visualizar cópia"
 restoreReadingPlain: "A ler cópia…"
 restorePlainPreviewReady: "Cópia pronta para rever."
+restorePasswordRequired: "Introduza a palavra-passe desta cópia encriptada."

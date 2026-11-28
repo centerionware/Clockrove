@@ -20,3 +20,4 @@ restorePlainNoPassword: "Bản sao lưu này không được mã hóa. Không c�
 previewPlainBackup: "Xem trước bản sao lưu"
 restoreReadingPlain: "Đang đọc bản sao lưu…"
 restorePlainPreviewReady: "Bản sao lưu sẵn sàng để xem xét."
+restorePasswordRequired: "Nhập mật khẩu cho bản sao lưu đã mã hóa này."

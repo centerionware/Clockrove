@@ -20,3 +20,4 @@ restorePlainNoPassword: "هذه النسخة غير مشفّرة. لا حاجة 
 previewPlainBackup: "معاينة النسخة"
 restoreReadingPlain: "جارٍ قراءة النسخة…"
 restorePlainPreviewReady: "النسخة جاهزة للمراجعة."
+restorePasswordRequired: "أدخل كلمة مرور هذه النسخة المشفّرة."

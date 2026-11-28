@@ -20,3 +20,4 @@ restorePlainNoPassword: "이 백업은 암호화되지 않았습니다. 비밀�
 previewPlainBackup: "백업 미리보기"
 restoreReadingPlain: "백업 읽는 중…"
 restorePlainPreviewReady: "백업을 검토할 준비가 되었습니다."
+restorePasswordRequired: "이 암호화된 백업의 비밀번호를 입력하세요."

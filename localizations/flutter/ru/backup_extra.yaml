@@ -20,3 +20,4 @@ restorePlainNoPassword: "Эта копия не зашифрована. Паро
 previewPlainBackup: "Просмотреть копию"
 restoreReadingPlain: "Чтение копии…"
 restorePlainPreviewReady: "Копия готова к проверке."
+restorePasswordRequired: "Введите пароль этой зашифрованной резервной копии."

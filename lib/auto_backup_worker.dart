@@ -10,24 +10,33 @@ const _maxChunkBytes = 192 * 1024;
 /// Runs in a short-lived headless Flutter engine created by [AutoBackupWorker].
 /// Errors are reduced to bounded codes; the native worker records the status.
 @pragma('vm:entry-point')
-Future<void> autoBackupMain() async {
+Future<void> autoBackupMain() => runAutoBackup();
+
+/// Testable body of the headless entrypoint. Native passes no arguments; tests
+/// inject a channel and snapshot source to exercise the same protocol.
+Future<void> runAutoBackup({
+  MethodChannel? channel,
+  Future<BackupSnapshotStreamExport> Function()? exportSnapshot,
+}) async {
   WidgetsFlutterBinding.ensureInitialized();
+  final autoBackupChannel = channel ?? _autoBackupChannel;
   String? runId;
   BackupSnapshotStreamExport? snapshot;
   try {
-    final session = await _autoBackupChannel.invokeMapMethod<String, Object?>(
+    final session = await autoBackupChannel.invokeMapMethod<String, Object?>(
       'beginSession',
     );
     if (session == null) throw const FormatException('AUTO_SESSION_MISSING');
     final encrypted = session['encrypt'] as bool? ?? false;
     final password = session['password'] as String? ?? '';
-    snapshot = await BackupSnapshotExporter().exportStream();
+    snapshot =
+        await (exportSnapshot ?? BackupSnapshotExporter().exportStream)();
     final expectedBytes = encrypted
         ? BackupCryptoV2.envelopeLengthForArchiveBytes(
             snapshot.archiveByteLength,
           )
         : snapshot.archiveByteLength;
-    final started = await _autoBackupChannel.invokeMapMethod<String, Object?>(
+    final started = await autoBackupChannel.invokeMapMethod<String, Object?>(
       'startDocument',
       {
         'totalBytes': expectedBytes,
@@ -38,7 +47,7 @@ Future<void> autoBackupMain() async {
     runId = started?['runId'] as String?;
     if (runId == null) throw const FormatException('AUTO_RUN_MISSING');
     final sink = _AutoBackupSink(
-      channel: _autoBackupChannel,
+      channel: autoBackupChannel,
       runId: runId,
       expectedBytes: expectedBytes,
     );
@@ -60,11 +69,11 @@ Future<void> autoBackupMain() async {
       await sink.commit();
     }
     runId = null;
-    await _finished(ok: true, retry: false, code: 'SUCCESS');
+    await _finished(autoBackupChannel, ok: true, retry: false, code: 'SUCCESS');
   } on Object catch (error) {
     if (runId != null) {
       try {
-        await _autoBackupChannel.invokeMethod<void>('cancelDocument', {
+        await autoBackupChannel.invokeMethod<void>('cancelDocument', {
           'runId': runId,
         });
       } on Object {
@@ -72,6 +81,7 @@ Future<void> autoBackupMain() async {
       }
     }
     await _finished(
+      autoBackupChannel,
       ok: false,
       retry: _isRetryable(error),
       code: _failureCode(error),
@@ -85,13 +95,14 @@ Future<void> autoBackupMain() async {
   }
 }
 
-Future<void> _finished({
+Future<void> _finished(
+  MethodChannel channel, {
   required bool ok,
   required bool retry,
   required String code,
 }) async {
   try {
-    await _autoBackupChannel.invokeMethod<void>('autoBackupFinished', {
+    await channel.invokeMethod<void>('autoBackupFinished', {
       'ok': ok,
       'retry': retry,
       'code': code,

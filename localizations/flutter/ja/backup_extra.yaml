@@ -20,3 +20,4 @@ restorePlainNoPassword: "このバックアップは暗号化されていませ�
 previewPlainBackup: "バックアップをプレビュー"
 restoreReadingPlain: "バックアップを読み込み中…"
 restorePlainPreviewReady: "バックアップを確認できます。"
+restorePasswordRequired: "この暗号化バックアップのパスワードを入力してください。"
